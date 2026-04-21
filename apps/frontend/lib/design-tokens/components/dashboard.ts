@@ -776,6 +776,17 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
     default: '',
     raised: 'ring-1 ring-primary/20 shadow-md',
   } as const,
+  /**
+   * compact=true + grid 레이아웃 전용 소형 카드 토큰
+   *
+   * 좁은 컨테이너(≈95px/col)에 최적화 — 아이콘·레이블·카운트 세로 스택.
+   * Card 컴포넌트 오버헤드 없이 div 직접 사용.
+   */
+  gridCompactCard: `group border border-border bg-card rounded-lg p-2.5 flex flex-col items-center text-center gap-1 cursor-pointer hover:shadow-sm hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  gridCompactIconWrap: 'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+  gridCompactIcon: 'h-[18px] w-[18px]',
+  gridCompactLabel: 'text-[10px] font-medium text-foreground leading-tight line-clamp-2 w-full',
+  gridCompactCount: 'font-mono tabular-nums font-bold text-lg tracking-tight leading-none mt-0.5',
 } as const;
 
 // ============================================================================

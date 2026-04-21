@@ -298,6 +298,8 @@ export {
   NC_REPAIR_RESULT_LABELS,
   NC_ELEVATION,
   NC_DOCUMENTS_SECTION_TOKENS,
+  NC_LIST_MOBILE_TOKENS,
+  NC_SPACING_TOKENS,
   type NCKpiVariant,
 } from './components/non-conformance';
 

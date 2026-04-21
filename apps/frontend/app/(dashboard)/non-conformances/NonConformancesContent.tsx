@@ -36,6 +36,7 @@ import {
   getNCKpiCardClasses,
   NC_FILTER_TOKENS,
   NC_LIST_TOKENS,
+  NC_LIST_MOBILE_TOKENS,
   NC_TYPE_CHIP_TOKENS,
   NC_MINI_WORKFLOW_TOKENS,
   NC_WORKFLOW_STEPS,
@@ -49,6 +50,7 @@ import {
   NC_REJECTION_BADGE_TOKENS,
   getStaggerDelay,
   ANIMATION_PRESETS,
+  NC_SPACING_TOKENS,
   type NCKpiVariant,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
@@ -190,7 +192,7 @@ export default function NonConformancesContent({
       </div>
 
       {/* KPI 스트립 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={cn('grid grid-cols-3 gap-3', NC_SPACING_TOKENS.afterHeader)}>
         {(Object.keys(KPI_ICONS) as NCKpiVariant[]).map((variant) => {
           const Icon = KPI_ICONS[variant];
           const tokens = NC_KPI_TOKENS[variant];
@@ -199,15 +201,27 @@ export default function NonConformancesContent({
             <button
               key={variant}
               type="button"
-              className={getNCKpiCardClasses(variant, isActive)}
+              className={cn(
+                getNCKpiCardClasses(variant, isActive),
+                variant === 'open' && kpiCounts.open > 0 && NC_KPI_CARD_TOKENS.heroCard
+              )}
               onClick={() => updateStatus(isActive ? '' : variant)}
+              aria-pressed={isActive}
+              aria-label={`${t('kpi.' + variant)} ${kpiCounts[variant]}건 필터${isActive ? ' 해제' : ''}`}
             >
               <div className={cn(NC_KPI_CARD_TOKENS.iconWrap, tokens.iconBg)}>
                 <Icon className={cn('h-5 w-5', tokens.iconColor)} />
               </div>
               <div>
                 <p className={NC_KPI_CARD_TOKENS.label}>{t('kpi.' + variant)}</p>
-                <p className={cn(NC_KPI_CARD_TOKENS.value, tokens.valueColor)}>
+                <p
+                  className={cn(
+                    variant === 'open' && kpiCounts.open > 0
+                      ? NC_KPI_CARD_TOKENS.heroValue
+                      : NC_KPI_CARD_TOKENS.value,
+                    tokens.valueColor
+                  )}
+                >
                   {kpiCounts[variant]}
                 </p>
                 <p className={NC_KPI_CARD_TOKENS.filterHint}>
@@ -366,6 +380,7 @@ export default function NonConformancesContent({
               disabled={pagination.currentPage <= 1}
               className={cn(NC_PAGINATION_TOKENS.pageButton, 'disabled:opacity-40')}
               onClick={() => updatePage(pagination.currentPage - 1)}
+              aria-label={t('list.paginationPrev')}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -378,6 +393,8 @@ export default function NonConformancesContent({
                   p === pagination.currentPage && NC_PAGINATION_TOKENS.pageButtonActive
                 )}
                 onClick={() => updatePage(p)}
+                aria-label={t('list.paginationPage', { page: p })}
+                aria-current={p === pagination.currentPage ? 'page' : undefined}
               >
                 {p}
               </button>
@@ -387,6 +404,7 @@ export default function NonConformancesContent({
               disabled={pagination.currentPage >= pagination.totalPages}
               className={cn(NC_PAGINATION_TOKENS.pageButton, 'disabled:opacity-40')}
               onClick={() => updatePage(pagination.currentPage + 1)}
+              aria-label={t('list.paginationNext')}
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -412,67 +430,94 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
   const hasRejection = !!nc.rejectionReason && nc.status === NCStatusVal.OPEN;
 
+  const elapsedNode =
+    nc.status !== NCStatusVal.CLOSED ? (
+      <span className={getNCElapsedDaysClasses(elapsedDays)}>
+        {t('list.elapsedDays', { days: elapsedDays })}
+      </span>
+    ) : (
+      <span className="text-[13px] text-muted-foreground">—</span>
+    );
+
   return (
-    <Link
-      href={`/non-conformances/${nc.id}`}
+    <div
       className={cn(
-        NC_LIST_TOKENS.row,
+        NC_LIST_TOKENS.itemWrapper,
         longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue,
         ANIMATION_PRESETS.slideUpFade,
         'motion-safe:duration-200'
       )}
       style={{ animationDelay: getStaggerDelay(index, 'list') }}
     >
-      {/* 상태 + 미니 워크플로우 */}
-      <div className="flex flex-col gap-0.5">
-        <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
-          {t('ncStatus.' + nc.status)}
-        </span>
-        {hasRejection && (
-          <span className={NC_REJECTION_BADGE_TOKENS.badge}>{t('list.rejectedBadge')}</span>
-        )}
-        <MiniWorkflow currentStepIndex={statusIndex} isLongOverdue={longOverdue} />
-      </div>
-
-      {/* 유형 */}
-      <div>
-        <span className={NC_TYPE_CHIP_TOKENS.base}>{t('ncType.' + nc.ncType)}</span>
-      </div>
-
-      {/* 장비 */}
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{nc.equipment?.name ?? '—'}</p>
-        <p className={NC_LIST_TOKENS.managementNumber}>{nc.equipment?.managementNumber ?? '—'}</p>
-      </div>
-
-      {/* 원인 */}
-      <div className="min-w-0">
-        <CauseText cause={nc.cause} />
-      </div>
-
-      {/* 발견일 */}
-      <div>
-        <span className={NC_LIST_TOKENS.date}>{fmtDate(nc.discoveryDate)}</span>
-      </div>
-
-      {/* 경과일 */}
-      <div>
-        {nc.status !== NCStatusVal.CLOSED ? (
-          <span className={getNCElapsedDaysClasses(elapsedDays)}>
-            {t('list.elapsedDays', { days: elapsedDays })}
+      {/* 데스크톱 레이아웃 (lg 이상 grid) */}
+      <Link href={`/non-conformances/${nc.id}`} className={NC_LIST_TOKENS.desktopRow}>
+        {/* 상태 + 미니 워크플로우 */}
+        <div className="flex flex-col gap-0.5">
+          <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
+            {t('ncStatus.' + nc.status)}
           </span>
-        ) : (
-          <span className="text-[13px] text-muted-foreground">—</span>
-        )}
-      </div>
+          {hasRejection && (
+            <span className={NC_REJECTION_BADGE_TOKENS.badge}>{t('list.rejectedBadge')}</span>
+          )}
+          <MiniWorkflow currentStepIndex={statusIndex} isLongOverdue={longOverdue} />
+        </div>
+        {/* 유형 */}
+        <div>
+          <span className={NC_TYPE_CHIP_TOKENS.base}>{t('ncType.' + nc.ncType)}</span>
+        </div>
+        {/* 장비 */}
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">
+            {nc.equipment?.name ?? '—'}
+          </p>
+          <p className={NC_LIST_TOKENS.managementNumber}>{nc.equipment?.managementNumber ?? '—'}</p>
+        </div>
+        {/* 원인 */}
+        <div className="min-w-0">
+          <CauseText cause={nc.cause} />
+        </div>
+        {/* 발견일 */}
+        <div>
+          <span className={NC_LIST_TOKENS.date}>{fmtDate(nc.discoveryDate)}</span>
+        </div>
+        {/* 경과일 */}
+        <div>{elapsedNode}</div>
+        {/* 액션 */}
+        <div>
+          <span className={NC_LIST_TOKENS.actionButton}>
+            <Eye className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </Link>
 
-      {/* 액션 */}
-      <div>
-        <span className={NC_LIST_TOKENS.actionButton}>
-          <Eye className="h-3.5 w-3.5" />
-        </span>
-      </div>
-    </Link>
+      {/* 모바일 카드 레이아웃 (lg 미만) */}
+      <Link href={`/non-conformances/${nc.id}`} className={NC_LIST_TOKENS.mobileRow}>
+        {/* 상단: 상태배지 + 유형칩 / 경과일 */}
+        <div className={NC_LIST_MOBILE_TOKENS.topRow}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
+              {t('ncStatus.' + nc.status)}
+            </span>
+            <span className={NC_TYPE_CHIP_TOKENS.base}>{t('ncType.' + nc.ncType)}</span>
+          </div>
+          {elapsedNode}
+        </div>
+        {/* 중간: 장비명 + 관리번호 */}
+        <div className={NC_LIST_MOBILE_TOKENS.middleRow}>
+          <p className={NC_LIST_MOBILE_TOKENS.equipmentName}>{nc.equipment?.name ?? '—'}</p>
+          <span className={NC_LIST_MOBILE_TOKENS.managementNum}>
+            {nc.equipment?.managementNumber ?? '—'}
+          </span>
+        </div>
+        {/* 하단: 원인 + Eye 버튼 */}
+        <div className={NC_LIST_MOBILE_TOKENS.bottomRow}>
+          <p className={NC_LIST_MOBILE_TOKENS.causeText}>{nc.cause}</p>
+          <span className={NC_LIST_TOKENS.actionButton}>
+            <Eye className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </Link>
+    </div>
   );
 }
 
@@ -487,7 +532,7 @@ function MiniWorkflow({
   isLongOverdue: boolean;
 }) {
   return (
-    <div className={NC_MINI_WORKFLOW_TOKENS.container}>
+    <div className={NC_MINI_WORKFLOW_TOKENS.container} aria-hidden="true">
       {NC_WORKFLOW_STEPS.map((_: string, stepIdx: number) => (
         <div key={stepIdx} className="flex items-center">
           {stepIdx > 0 && (

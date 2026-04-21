@@ -394,8 +394,7 @@ export function PendingApprovalCard({
     );
   }
 
-  // grid (기존 동작 완전 보존)
-  // 카테고리 수에 맞는 그리드 컬럼 결정
+  // grid
   const gridCols = compact
     ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
     : dashboardCategories.length <= 3
@@ -417,12 +416,61 @@ export function PendingApprovalCard({
     >
       {cardHeader}
 
-      <div className={cn('grid gap-4', gridCols)}>
+      <div className={cn('grid', compact ? 'gap-3' : 'gap-4', gridCols)}>
         {dashboardCategories.map((category) => {
           const Icon = getCategoryIcon(category.key);
           const count = counts?.[category.key] || 0;
           const hasItems = count > 0;
 
+          // compact 컨테이너 — 좁은 컬럼(≈95px)에 최적화된 소형 카드
+          if (compact) {
+            return (
+              <Link
+                key={category.key}
+                href={category.href}
+                className="block"
+                aria-label={t('categoryAriaLabel', { label: category.label, count })}
+              >
+                <div
+                  className={cn(
+                    DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactCard,
+                    hasItems && 'ring-1 ring-brand-critical/20'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactIconWrap,
+                      DASHBOARD_MOTION.iconTransition,
+                      category.bgColor,
+                      'group-hover:scale-110'
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactIcon,
+                        category.color
+                      )}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <span className={DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactLabel}>
+                    {category.label}
+                  </span>
+                  <span
+                    className={cn(
+                      DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactCount,
+                      DASHBOARD_MOTION.textColor,
+                      hasItems ? 'text-brand-critical' : 'text-muted-foreground'
+                    )}
+                  >
+                    {count}
+                  </span>
+                </div>
+              </Link>
+            );
+          }
+
+          // 넓은 컨테이너 (compact=false) — 기존 Card 디자인 유지
           return (
             <Link
               key={category.key}

@@ -700,7 +700,9 @@ function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegis
   const needsRepair = prerequisiteType === 'repair';
 
   return (
-    <div className={NC_INFO_CARD_TOKENS.grid}>
+    <div
+      className={hasRepairLink ? NC_INFO_CARD_TOKENS.gridRepairLinked : NC_INFO_CARD_TOKENS.grid}
+    >
       {/* 기본 정보 */}
       <div className={NC_INFO_CARD_TOKENS.card}>
         <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>{t('detail.infoCard.basicInfo')}</h3>
@@ -770,13 +772,6 @@ function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegis
             {t('detail.infoCard.repairNotNeeded')}
           </p>
         )}
-
-        {/* 추가 메타 */}
-        <div className="mt-4 pt-3 border-t border-border/40">
-          <InfoRow label={t('fields.createdAt')} value={fmtDate(nc.createdAt)} />
-          <InfoRow label={t('fields.updatedAt')} value={fmtDate(nc.updatedAt)} />
-          <InfoRow label={t('fields.version')} value={String(nc.version)} />
-        </div>
       </div>
     </div>
   );

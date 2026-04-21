@@ -209,6 +209,10 @@ export const NC_KPI_CARD_TOKENS = {
   value: 'text-2xl font-bold tabular-nums leading-tight',
   /** 필터 토글 힌트 (접근성 — 클릭 의미 전달) */
   filterHint: 'text-[10px] text-muted-foreground/60 mt-0.5 leading-none',
+  /** hero 값 — open count > 0 시 강조 (P9) */
+  heroValue: 'text-3xl font-bold tabular-nums leading-tight',
+  /** hero 카드 — open 카드 최우선 강조 (P9) */
+  heroCard: 'shadow-md ring-1 ring-brand-critical/15',
 } as const;
 
 /**
@@ -266,7 +270,24 @@ export const NC_LIST_TOKENS = {
     'text-xs font-semibold text-muted-foreground tracking-wide',
     NC_LIST_GRID_COLS,
   ].join(' '),
-  /** 데이터 행 */
+  /** 행 아이템 래퍼 (desktop + mobile 공통 — stripe, border, overdue 적용 단위) */
+  itemWrapper: 'border-b border-border/40 last:border-b-0 even:bg-muted/20',
+  /** 데스크톱 행 (lg 이상 grid 레이아웃, mobile 숨김) */
+  desktopRow: [
+    'hidden lg:grid px-4 py-3.5 w-full',
+    'hover:bg-muted/30',
+    TRANSITION_PRESETS.instantBg,
+    NC_LIST_GRID_COLS,
+  ].join(' '),
+  /** 모바일 행 (lg 미만 카드 레이아웃, desktop 숨김) */
+  mobileRow: [
+    'lg:hidden flex flex-col gap-1.5 py-3 px-4',
+    'hover:bg-muted/30',
+    TRANSITION_PRESETS.instantBg,
+  ].join(' '),
+  /** 줄무늬 — itemWrapper에 포함되어 있음, 필요 시 단독 참조 */
+  stripe: 'even:bg-muted/20',
+  /** 데이터 행 (레거시 — desktopRow 사용 권장) */
   row: [
     'px-4 py-3.5 border-b border-border/40 last:border-b-0',
     'hover:bg-muted/30',
@@ -295,6 +316,24 @@ export const NC_LIST_TOKENS = {
     'hover:bg-muted hover:text-foreground',
     TRANSITION_PRESETS.fastBgColor,
   ].join(' '),
+} as const;
+
+/**
+ * 모바일 카드 레이아웃 토큰 (lg 미만)
+ */
+export const NC_LIST_MOBILE_TOKENS = {
+  /** 상단 행: 상태배지 + 유형칩 / 경과일 */
+  topRow: 'flex items-center justify-between gap-2',
+  /** 중간 행: 장비명 + 관리번호 */
+  middleRow: 'flex items-center gap-2 min-w-0',
+  /** 하단 행: 원인 + Eye 버튼 */
+  bottomRow: 'flex items-center justify-between gap-2 mt-0.5',
+  /** 장비명 */
+  equipmentName: 'text-sm font-medium text-foreground truncate',
+  /** 관리번호 */
+  managementNum: 'font-mono text-[11px] text-muted-foreground shrink-0',
+  /** 원인 텍스트 */
+  causeText: 'text-sm text-muted-foreground truncate flex-1',
 } as const;
 
 /**
@@ -531,6 +570,8 @@ export const NC_INFO_CARD_TOKENS = {
   repairNeededCard: 'border-brand-warning/30 bg-brand-warning/[0.03]',
   /** 수리 필요 제목 */
   repairNeededTitle: 'text-brand-warning',
+  /** 수리 연결 시 그리드 비율 조정 (수리카드가 더 중요한 컨텍스트) */
+  gridRepairLinked: 'grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-4',
 } as const;
 
 // ============================================================================
@@ -680,7 +721,28 @@ export const NC_EMPTY_STATE_TOKENS = {
 } as const;
 
 // ============================================================================
-// 16. NC_MOTION — 모션 프리셋
+// 16. NC_SPACING_TOKENS — 리스트 페이지 섹션 간격 리듬
+// ============================================================================
+
+/**
+ * NC 리스트 페이지 섹션 간격 (P9)
+ * - space-y-5 일변도에서 섹션 경계를 시각화하는 리듬으로 개선
+ */
+export const NC_SPACING_TOKENS = {
+  /** 페이지 외부 기본 (기존 유지) */
+  pageOuter: 'space-y-5',
+  /** 헤더 → KPI 간격 (섹션 경계 강조) */
+  afterHeader: 'mt-6',
+  /** KPI → 필터 (연관 요소) */
+  afterKpi: 'mt-4',
+  /** 필터 → 리스트 (밀접) */
+  afterFilter: 'mt-3',
+  /** 리스트 → 페이지네이션 */
+  afterList: 'mt-4',
+} as const;
+
+// ============================================================================
+// 17. NC_MOTION — 모션 프리셋
 // ============================================================================
 
 export const NC_MOTION = {
