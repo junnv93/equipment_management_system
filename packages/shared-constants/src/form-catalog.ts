@@ -42,6 +42,14 @@ export interface FormCatalogEntry {
    * 호출자는 전용 엔드포인트(예: `GET /api/equipment/:uuid/history-card`) 를 사용해야 한다.
    */
   dedicatedEndpoint?: boolean;
+  /**
+   * site 단위 전용 리소스 여부.
+   *
+   * true 이면 teamId 스코프 사용자(팀 리더/기술자)는 이 양식을 내보낼 수 없다.
+   * 백엔드 서비스의 `if (filter.teamId) throw ForbiddenException(SCOPE_RESOURCE_MISMATCH)`
+   * 조건과 1:1 대응 — 프론트엔드에서 버튼을 미리 숨겨 불필요한 403 요청을 방지한다.
+   */
+  siteOnly?: boolean;
 }
 
 export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
@@ -96,6 +104,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionLabel: '5년',
     implemented: true,
     category: 'technical',
+    siteOnly: true,
   },
   'UL-QP-18-08': {
     formNumber: 'UL-QP-18-08',
@@ -112,6 +121,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionLabel: '5년',
     implemented: true,
     category: 'technical',
+    siteOnly: true,
   },
   'UL-QP-18-10': {
     formNumber: 'UL-QP-18-10',
