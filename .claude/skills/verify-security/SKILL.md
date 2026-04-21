@@ -89,6 +89,27 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 
 **PASS:** 4-param 시그니처, `ErrorCode.ScopeAccessDenied` SSOT, `scope.type === 'none'` fail-close, team→site defense-in-depth.
 
+### Step 11: ExportDataService deny-by-default 스코프 가드 (2026-04-21 추가)
+
+스코프 필터(`EnforcedScope.site` or `teamId`)가 활성화된 ExportDataService에서
+빈 items 배열에서 `some()`이 false를 반환해 검증이 스킵되는 패턴 탐지.
+
+**11a: scopeActive && items.length === 0 가드 존재 확인**
+```bash
+grep -rn "scopeActive.*items.length\|items.length.*scopeActive" \
+  apps/backend/src --include="*-export-data.service.ts"
+# 결과: scope filter를 items.some()으로 검증하는 서비스 전부 가드 있어야 함
+```
+
+**11b: export-data 서비스에서 some() 전 빈 배열 가드 누락 패턴 탐지**
+```bash
+grep -rn "items\.some\|filter\.site.*some\|some.*filter\.site" \
+  apps/backend/src --include="*-export-data.service.ts"
+# 결과: some() 사용 파일마다 items.length === 0 가드 선행 여부 수동 확인
+```
+
+**PASS:** some() 사용 서비스 전부 빈 배열 deny-by-default 가드 보유. **FAIL:** 가드 없이 some() 직접 사용.
+
 ## Output Format
 
 ```markdown
@@ -104,6 +125,7 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 | 8   | Throttle Guard 등록         | PASS/FAIL | InternalApiThrottlerGuard 사용 여부        |
 | 9   | SSR X-Internal-Api-Key      | PASS/FAIL | 헤더 전송 코드 존재 여부                   |
 | 10  | enforceSiteAccess 팀 격리   | PASS/FAIL | entityTeamId 전달 여부                     |
+| 11  | ExportDataService deny-by-default | PASS/FAIL | items.some() 전 빈 배열 가드 누락 서비스   |
 ```
 
 ## Exceptions

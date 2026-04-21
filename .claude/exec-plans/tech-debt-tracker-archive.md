@@ -5,6 +5,24 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — form-export-services + 보안 수정
+
+- [x] **[2026-04-20 skill-gap] 🟢 LOW calibration-plan-exportability.ts 전용 verify 없음** — ✅ 2026-04-21 Won't Do. verify-hardcoding Step 23 + verify-ssot로 이미 커버. 별도 스킬 추가 없음.
+- [x] **[2026-04-21 form-export-services] 보안 — checkout 스코프 검증 빈 items 엣지케이스** — ✅ 2026-04-21 완료. deny-by-default 가드 추가 (`6872c419`). `scopeActive && items.length === 0` 조건 즉시 404 반환.
+
+---
+
+## 2026-04-21 — ssot-status-phase2-3 (할당/인자 패턴 + 전체 종결)
+
+- [x] **[2026-04-17 history-card-qp1802] multi-form 3-way 분리 패턴 확산** — ✅ 2026-04-21 완료. QP-18-06/07/08/10 모두 Data/Renderer/Layout 3-way 분리 완료 (tech-debt-batch-0421b).
+- [x] **[2026-04-17 history-card-qp1802] 프론트엔드 E2E 검증** — ✅ 2026-04-21 완료. `wf-history-card-export.spec.ts`에 §5 섹션 유형 라벨 검증 test block 추가 (TIMELINE_ENTRY_TYPE_LABELS SSOT).
+- [x] **[2026-04-17 history-card-qp1802] 시스템 관리자 승인 경로 접근 제어 확인** — ✅ 2026-04-21 완료. Phase D 분석: lab_manager 직접 승인은 UL-QP-18 §5.2 절차 준수, Permission guard + audit 이중 보호.
+- [x] **[2026-04-17 ul-qp-18-forms] 🟢 LOW 양식 교체 운영 반영** — ✅ 2026-04-21 완료. `docs/operations/form-template-replacement.md` runbook 작성 (Phase E).
+- [x] **[2026-04-17 ul-qp-18-forms] 🟢 LOW review-W4 EXPORT_QUERY_LIMITS.FULL_EXPORT 스트리밍** — ✅ 2026-04-21 완료. Phase C 분석: No-Go 결정. 현재 규모 안전 범위. `docs/references/export-streaming-decision.md` 참조.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 6 — Permission.EXPORT_REPORTS TE 정책 재확인** — ✅ 2026-04-21 완료. 의도된 정책. UL-QP-18 §5.2 준수, SiteScopeInterceptor 팀 격리 확인.
+
+---
+
 ## 2026-04-21 — tech-debt-batch-b (E2E globalPrefix + cplan axe-core + M4.8 + ValidationCreateDialog 분리)
 
 - [x] **[2026-04-16 tech-debt-s2s4] E2E globalPrefix 통합** — createTestApp에 setGlobalPrefix('api') 추가 + 22개 E2E 스펙 경로를 API_ENDPOINTS 기반으로 마이그레이션. 완료 2026-04-21.

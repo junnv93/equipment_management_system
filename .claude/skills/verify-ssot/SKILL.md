@@ -287,6 +287,26 @@ grep -n '"labels"' apps/frontend/messages/ko/settings.json apps/frontend/message
 
 **PASS:** 20a·20c 0건, 20b 2건 이상. **FAIL:** t.raw 레거시 패턴 재도입 또는 settings.json에 labels 섹션 복원.
 
+### Step 21: ConditionCheckStepValues SSOT + ExportData 도메인 Step 리터럴 (2026-04-21 추가)
+
+`conditionChecks.step` 필드 비교 시 `'lender_checkout'`/`'lender_return'` 문자열 리터럴 사용 금지.
+`ConditionCheckStepValues.LENDER_CHECKOUT` / `LENDER_RETURN` SSOT 경유 필수.
+
+**21a: conditionCheck step 리터럴 직접 사용 탐지**
+```bash
+grep -rn "'lender_checkout'\|'lender_return'\|\"lender_checkout\"\|\"lender_return\"" \
+  apps/backend/src --include="*.ts"
+# 결과: 0건 (ConditionCheckStepValues 상수로만 참조해야 함)
+```
+
+**21b: ConditionCheckStepValues 올바른 import 경로 확인**
+```bash
+grep -rn "ConditionCheckStepValues" apps/backend/src --include="*.ts" | grep "from '@equipment-management/schemas'"
+# 결과: 사용 파일마다 schemas import 확인
+```
+
+**PASS:** 21a 0건. **FAIL:** step 리터럴 직접 비교.
+
 ## Output Format
 
 ```markdown
@@ -317,6 +337,7 @@ grep -n '"labels"' apps/frontend/messages/ko/settings.json apps/frontend/message
 | 19  | 프론트엔드 Status/Type 리터럴 | PASS/FAIL | ValidationStatus/ValidationType raw 리터럴 비교 위치 |
 | 19c | 도메인 폼 아이템 loose index  | PASS/FAIL | `[key: string]: string` 인터페이스 위치 (AcquisitionOrProcessingItem/ControlItem 대체) |
 | 20  | Permission 라벨 렌더링 SSOT   | PASS/FAIL | t.raw 레거시 패턴 또는 settings.json labels 섹션 재도입 위치 |
+| 21  | ConditionCheckStep SSOT       | PASS/FAIL | 'lender_checkout'/'lender_return' 리터럴 직접 비교 위치 |
 ```
 
 ## Exceptions
