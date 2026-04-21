@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -21,7 +21,6 @@ import {
   Check,
   X,
   Pencil,
-  Clock,
 } from 'lucide-react';
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -29,6 +28,8 @@ import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
 import NCEditDialog from '@/components/non-conformances/NCEditDialog';
 import NCRepairDialog from '@/components/non-conformances/NCRepairDialog';
 import { NCDocumentsSection } from '@/components/non-conformances/NCDocumentsSection';
+import { GuidanceCallout } from '@/components/non-conformances/GuidanceCallout';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
@@ -55,12 +56,15 @@ import {
   NC_ACTION_BAR_TOKENS,
   NC_APPROVE_BUTTON_TOKENS,
   NC_REJECTION_ALERT_TOKENS,
-  NC_URGENT_BADGE_TOKENS,
+  URGENT_BADGE_TOKENS,
   NC_REPAIR_DETAIL_TOKENS,
   getNCElapsedDaysClasses,
   isNCLongOverdue,
-  NC_INFO_NOTICE_TOKENS,
+  NC_SPACING_TOKENS,
+  ANIMATION_PRESETS,
+  getStaggerFadeInStyle,
 } from '@/lib/design-tokens';
+import { deriveGuidance } from '@/lib/non-conformances/guidance';
 import { cn } from '@/lib/utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { Button } from '@/components/ui/button';
@@ -268,6 +272,25 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     },
   });
 
+  // ── 훅: early return 이전에 선언 (Rules of Hooks) ──
+  const actionBarRef = useRef<HTMLDivElement>(null);
+
+  const scrollToActionBar = useCallback(() => {
+    actionBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => {
+      actionBarRef.current?.querySelector<HTMLElement>('button')?.focus();
+    }, 150);
+  }, []);
+
+  const guidance = useMemo(() => (nc ? deriveGuidance(nc, canCloseNC) : null), [nc, canCloseNC]);
+
+  // 상태 전환 후 가이던스 제목으로 포커스 복귀 (접근성)
+  useEffect(() => {
+    if (!guidance?.key) return;
+    const title = document.getElementById(`nc-guidance-title-${guidance.key}`);
+    title?.focus();
+  }, [guidance?.key]);
+
   if (!nc) return null;
 
   const currentStepIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
@@ -276,9 +299,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     : 0;
   const longOverdue = isNCLongOverdue(elapsedDays);
   const isClosed = nc.status === NCVal.CLOSED;
-  const prerequisite = getNCPrerequisite(nc.ncType);
-  const needsRepair = prerequisite === 'repair' && !nc.repairHistoryId;
-  const needsRecalibration = prerequisite === 'recalibration' && !nc.calibrationId;
+  const { needsRepair, needsRecalibration } = guidance!;
   const hasUnmetPrerequisite = needsRepair || needsRecalibration;
 
   /** 조치 편집 시작 */
@@ -289,216 +310,238 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   };
 
   return (
-    <div className="space-y-5">
-      {/* 헤더 */}
-      <div className={NC_DETAIL_HEADER_TOKENS.container}>
-        <div>
-          <div className={NC_DETAIL_HEADER_TOKENS.titleArea}>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t('detail.backButton')}
-              className="h-8 w-8"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className={NC_DETAIL_HEADER_TOKENS.title}>{t('detail.title')}</h1>
-            <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
-              {t('ncStatus.' + nc.status)}
-            </span>
-            {longOverdue && !isClosed && (
-              <span className={NC_URGENT_BADGE_TOKENS.badge}>{t('detail.urgentBadge')}</span>
-            )}
-          </div>
-          <div className={NC_DETAIL_HEADER_TOKENS.meta}>
-            {nc.equipment && (
-              <Link
-                href={`/equipment/${nc.equipmentId}`}
-                className="text-brand-info hover:underline"
-              >
-                {nc.equipment.name} ({nc.equipment.managementNumber})
-              </Link>
-            )}
-            <span>·</span>
-            <span>{t('detail.discoveryDateLabel', { date: fmtDate(nc.discoveryDate) })}</span>
-            {!isClosed && (
-              <>
-                <span>·</span>
-                <span className={getNCElapsedDaysClasses(elapsedDays)}>
-                  {t('detail.elapsedDays', { days: elapsedDays })}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className={NC_DETAIL_HEADER_TOKENS.actionsGroup}>
-          {!isClosed && nc.status === NCVal.OPEN && canEditNC && (
-            <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
-              <Pencil className="h-3.5 w-3.5 mr-1" />
-              {t('detail.editButton')}
-            </Button>
-          )}
-          <Link href="/non-conformances">
-            <Button variant="outline" size="sm">
-              {t('detail.listButton')}
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* 반려 알림 */}
-      {nc.rejectionReason && nc.status === NCVal.OPEN && (
-        <div className={NC_REJECTION_ALERT_TOKENS.container}>
-          <XCircle className={NC_REJECTION_ALERT_TOKENS.icon} />
+    <div className={NC_SPACING_TOKENS.detail.pageWrapper}>
+      {/* ── 상태 그룹: 헤더·반려알림·타임라인·가이던스 ── */}
+      <section className={NC_SPACING_TOKENS.detail.statusGroup}>
+        {/* 헤더 */}
+        <div className={NC_DETAIL_HEADER_TOKENS.container}>
           <div>
-            <p className={NC_REJECTION_ALERT_TOKENS.title}>{t('detail.rejectionAlert.title')}</p>
-            <p className={NC_REJECTION_ALERT_TOKENS.description}>{nc.rejectionReason}</p>
-            {nc.rejectedAt && (
-              <p className={NC_REJECTION_ALERT_TOKENS.date}>
-                {t('detail.rejectionAlert.rejectedAt', { date: fmtDate(nc.rejectedAt) })}
-                {nc.rejector && t('detail.rejectionAlert.rejectedBy', { name: nc.rejector.name })}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 워크플로우 타임라인 */}
-      <WorkflowTimeline
-        nc={nc}
-        currentStepIndex={currentStepIndex}
-        isLongOverdue={longOverdue && !isClosed}
-      />
-
-      {/* 전제조건 미충족 안내 */}
-      {hasUnmetPrerequisite && !isClosed && (
-        <div className={NC_INFO_NOTICE_TOKENS.container}>
-          <div className="flex items-start gap-3">
-            <Wrench className={NC_INFO_NOTICE_TOKENS.icon} />
-            <div>
-              <p className={NC_INFO_NOTICE_TOKENS.text}>
-                {t('detail.prerequisite.typeNotice', { type: t('ncType.' + nc.ncType) })}{' '}
-                {needsRepair
-                  ? t('detail.prerequisite.repairNeeded')
-                  : t('detail.prerequisite.recalibrationNeeded')}
-              </p>
-              {needsRepair ? (
-                <button
-                  type="button"
-                  className="text-sm text-brand-info hover:underline mt-1 inline-block"
-                  onClick={() => setShowRepairDialog(true)}
-                >
-                  {t('detail.prerequisite.repairLink')}
-                </button>
-              ) : (
+            <div className={NC_DETAIL_HEADER_TOKENS.titleArea}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('detail.backButton')}
+                className="h-8 w-8"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h1 className={NC_DETAIL_HEADER_TOKENS.title}>{t('detail.title')}</h1>
+              <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
+                {t('ncStatus.' + nc.status)}
+              </span>
+              {longOverdue && !isClosed && (
+                <span className={URGENT_BADGE_TOKENS.solid}>{t('detail.urgentBadge')}</span>
+              )}
+            </div>
+            <div className={NC_DETAIL_HEADER_TOKENS.meta}>
+              {nc.equipment && (
                 <Link
-                  href={`/equipment/${nc.equipmentId}?tab=calibration`}
-                  className="text-sm text-brand-info hover:underline mt-1 inline-block"
+                  href={`/equipment/${nc.equipmentId}`}
+                  className="text-brand-info hover:underline"
                 >
-                  {t('detail.prerequisite.recalibrationLink')}
+                  {nc.equipment.name} ({nc.equipment.managementNumber})
                 </Link>
+              )}
+              <span>·</span>
+              <span>{t('detail.discoveryDateLabel', { date: fmtDate(nc.discoveryDate) })}</span>
+              {!isClosed && (
+                <>
+                  <span>·</span>
+                  <span className={getNCElapsedDaysClasses(elapsedDays)}>
+                    {t('detail.elapsedDays', { days: elapsedDays })}
+                  </span>
+                </>
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 정보 카드 */}
-      <InfoCards nc={nc} onRepairRegister={() => setShowRepairDialog(true)} />
-
-      {/* 조치/종결 섹션 */}
-      <CollapsibleSection
-        contentId="nc-correction-section"
-        title={
-          <>
-            <Wrench className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            {t('detail.correction.sectionTitle')}
-          </>
-        }
-        isOpen={correctionOpen}
-        onToggle={() => setCorrectionOpen(!correctionOpen)}
-        canEdit={nc.status === NCVal.OPEN && !isClosed}
-        isEditing={editingCorrection}
-        onEdit={startEditCorrection}
-      >
-        {editingCorrection ? (
-          <div>
-            <textarea
-              className={NC_COLLAPSIBLE_EDIT_TOKENS.textarea}
-              value={correctionText}
-              onChange={(e) => setCorrectionText(e.target.value)}
-              placeholder={t('detail.correction.placeholder')}
-              rows={4}
-            />
-            <div className={NC_COLLAPSIBLE_EDIT_TOKENS.saveRow}>
-              <Button variant="ghost" size="sm" onClick={() => setEditingCorrection(false)}>
-                {t('detail.correction.cancel')}
+          <div className={NC_DETAIL_HEADER_TOKENS.actionsGroup}>
+            {!isClosed && nc.status === NCVal.OPEN && canEditNC && (
+              <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                {t('detail.editButton')}
               </Button>
-              <Button
-                size="sm"
-                disabled={saveMutation.isPending}
-                onClick={() => saveMutation.mutate({ correctionContent: correctionText })}
-              >
-                {t('detail.correction.save')}
-              </Button>
-            </div>
-          </div>
-        ) : nc.correctionContent ? (
-          <div>
-            <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.correctionContent}</p>
-            {nc.correctionDate && (
-              <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                {t('detail.correction.dateLabel', { date: fmtDate(nc.correctionDate) })}
-                {nc.corrector && t('detail.correction.actorLabel', { name: nc.corrector.name })}
-              </p>
             )}
+            <Link href="/non-conformances">
+              <Button variant="outline" size="sm">
+                {t('detail.listButton')}
+              </Button>
+            </Link>
           </div>
-        ) : (
-          <div className={NC_COLLAPSIBLE_TOKENS.emptyState}>
-            <FileText className={NC_COLLAPSIBLE_TOKENS.emptyStateIcon} />
-            <p className={NC_COLLAPSIBLE_TOKENS.emptyStateText}>{t('detail.correction.empty')}</p>
-          </div>
-        )}
-      </CollapsibleSection>
+        </div>
 
-      {(nc.closureNotes || isClosed) && (
-        <CollapsibleSection
-          contentId="nc-closure-section"
-          title={
-            <>
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              {t('detail.closure.sectionTitle')}
-            </>
-          }
-          isOpen={closureOpen}
-          onToggle={() => setClosureOpen(!closureOpen)}
-        >
-          {nc.closureNotes ? (
+        {/* 반려 알림 */}
+        {nc.rejectionReason && nc.status === NCVal.OPEN && (
+          <div className={NC_REJECTION_ALERT_TOKENS.container}>
+            <XCircle className={NC_REJECTION_ALERT_TOKENS.icon} />
             <div>
-              <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.closureNotes}</p>
-              {nc.closedAt && (
-                <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                  {t('detail.closure.dateLabel', { date: fmtDate(nc.closedAt) })}
-                  {nc.closer && t('detail.closure.actorLabel', { name: nc.closer.name })}
+              <p className={NC_REJECTION_ALERT_TOKENS.title}>{t('detail.rejectionAlert.title')}</p>
+              <p className={NC_REJECTION_ALERT_TOKENS.description}>{nc.rejectionReason}</p>
+              {nc.rejectedAt && (
+                <p className={NC_REJECTION_ALERT_TOKENS.date}>
+                  {t('detail.rejectionAlert.rejectedAt', { date: fmtDate(nc.rejectedAt) })}
+                  {nc.rejector && t('detail.rejectionAlert.rejectedBy', { name: nc.rejector.name })}
                 </p>
               )}
             </div>
-          ) : (
-            <div className={NC_COLLAPSIBLE_TOKENS.emptyState}>
-              <CheckCircle2 className={NC_COLLAPSIBLE_TOKENS.emptyStateIcon} />
-              <p className={NC_COLLAPSIBLE_TOKENS.emptyStateText}>{t('detail.closure.empty')}</p>
-            </div>
-          )}
-        </CollapsibleSection>
-      )}
+          </div>
+        )}
 
-      {/* 첨부 문서 (현장 사진 등) */}
-      <NCDocumentsSection nonConformanceId={nc.id} />
+        {/* 워크플로우 타임라인 */}
+        <WorkflowTimeline
+          nc={nc}
+          currentStepIndex={currentStepIndex}
+          isLongOverdue={longOverdue && !isClosed}
+        />
+
+        {/* 다음 단계 가이던스 콜아웃 */}
+        <div className={NC_SPACING_TOKENS.detail.calloutAfterTimeline}>
+          <GuidanceCallout
+            guidanceKey={guidance!.key}
+            onScrollToAction={scrollToActionBar}
+            onRepairRegister={() => setShowRepairDialog(true)}
+          />
+        </div>
+      </section>
+
+      {/* ── 컨텍스트 그룹: 정보카드·조치·종결·문서 ── */}
+      <section
+        className={cn(
+          NC_SPACING_TOKENS.detail.contextGroup,
+          NC_SPACING_TOKENS.detail.statusToContextGap
+        )}
+      >
+        {/* 정보 카드 */}
+        <div
+          className={ANIMATION_PRESETS.staggerFadeInItem}
+          style={getStaggerFadeInStyle(0, 'section')}
+        >
+          <InfoCards nc={nc} onRepairRegister={() => setShowRepairDialog(true)} />
+        </div>
+
+        {/* 조치 섹션 */}
+        <div
+          className={ANIMATION_PRESETS.staggerFadeInItem}
+          style={getStaggerFadeInStyle(1, 'section')}
+        >
+          <CollapsibleSection
+            contentId="nc-correction-section"
+            title={
+              <>
+                <Wrench className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {t('detail.correction.sectionTitle')}
+              </>
+            }
+            isOpen={correctionOpen}
+            onToggle={() => setCorrectionOpen(!correctionOpen)}
+            canEdit={nc.status === NCVal.OPEN && !isClosed}
+            isEditing={editingCorrection}
+            onEdit={startEditCorrection}
+          >
+            {editingCorrection ? (
+              <div>
+                <textarea
+                  className={NC_COLLAPSIBLE_EDIT_TOKENS.textarea}
+                  value={correctionText}
+                  onChange={(e) => setCorrectionText(e.target.value)}
+                  placeholder={t('detail.correction.placeholder')}
+                  rows={4}
+                />
+                <div className={NC_COLLAPSIBLE_EDIT_TOKENS.saveRow}>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingCorrection(false)}>
+                    {t('detail.correction.cancel')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={saveMutation.isPending}
+                    onClick={() => saveMutation.mutate({ correctionContent: correctionText })}
+                  >
+                    {t('detail.correction.save')}
+                  </Button>
+                </div>
+              </div>
+            ) : nc.correctionContent ? (
+              <div>
+                <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.correctionContent}</p>
+                {nc.correctionDate && (
+                  <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
+                    {t('detail.correction.dateLabel', { date: fmtDate(nc.correctionDate) })}
+                    {nc.corrector && t('detail.correction.actorLabel', { name: nc.corrector.name })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <EmptyState
+                variant="default"
+                icon={FileText}
+                title={t('detail.correction.emptyTitle')}
+                description={t('detail.correction.empty')}
+                canAct={canEditNC}
+                primaryAction={
+                  !hasUnmetPrerequisite && nc.status === NCVal.OPEN
+                    ? { label: t('detail.correction.addAction'), onClick: startEditCorrection }
+                    : undefined
+                }
+              />
+            )}
+          </CollapsibleSection>
+        </div>
+
+        {/* 종결 섹션 */}
+        {(nc.closureNotes || isClosed) && (
+          <div
+            className={ANIMATION_PRESETS.staggerFadeInItem}
+            style={getStaggerFadeInStyle(2, 'section')}
+          >
+            <CollapsibleSection
+              contentId="nc-closure-section"
+              title={
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t('detail.closure.sectionTitle')}
+                </>
+              }
+              isOpen={closureOpen}
+              onToggle={() => setClosureOpen(!closureOpen)}
+            >
+              {nc.closureNotes ? (
+                <div>
+                  <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.closureNotes}</p>
+                  {nc.closedAt && (
+                    <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
+                      {t('detail.closure.dateLabel', { date: fmtDate(nc.closedAt) })}
+                      {nc.closer && t('detail.closure.actorLabel', { name: nc.closer.name })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <EmptyState
+                  variant="default"
+                  icon={CheckCircle2}
+                  title={t('detail.closure.empty')}
+                  description=""
+                  canAct={false}
+                />
+              )}
+            </CollapsibleSection>
+          </div>
+        )}
+
+        {/* 첨부 문서 (현장 사진 등) */}
+        <div
+          className={ANIMATION_PRESETS.staggerFadeInItem}
+          style={getStaggerFadeInStyle(3, 'section')}
+        >
+          <NCDocumentsSection nonConformanceId={nc.id} />
+        </div>
+      </section>
+
+      {/* 컨텍스트-액션 갭 */}
+      <div className={NC_SPACING_TOKENS.detail.contextToActionGap} />
 
       {/* 액션 바 — sticky bottom-4로 스크롤 시 항상 노출 */}
       {!isClosed && (
-        <div className={NC_ACTION_BAR_TOKENS.stickyWrapper}>
+        <div ref={actionBarRef} className={NC_ACTION_BAR_TOKENS.stickyWrapper}>
           <ActionBar
             nc={nc}
             canCloseNC={canCloseNC}
@@ -588,7 +631,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       {nc && <NCEditDialog nc={nc} open={showEditDialog} onOpenChange={setShowEditDialog} />}
 
       {/* 수리이력 등록 다이얼로그 */}
-      {nc && needsRepair && (
+      {guidance?.needsRepair && (
         <NCRepairDialog nc={nc} open={showRepairDialog} onOpenChange={setShowRepairDialog} />
       )}
     </div>
@@ -931,27 +974,17 @@ function ActionBar({
           <Button
             size="sm"
             onClick={onMarkCorrected}
-            disabled={isUpdating || hasUnmetPrerequisite}
-            title={hasUnmetPrerequisite ? prerequisiteMessage : undefined}
+            disabled={isUpdating || hasUnmetPrerequisite || !nc.correctionContent?.trim()}
+            title={
+              hasUnmetPrerequisite
+                ? prerequisiteMessage
+                : !nc.correctionContent?.trim()
+                  ? t('detail.actionBar.hintNeedsContent')
+                  : undefined
+            }
           >
             {t('detail.actionBar.markCorrected')}
           </Button>
-        )}
-        {/* CORRECTED + 권한 없음: 보조 텍스트 대신 명시적 대기 안내 */}
-        {nc.status === NCVal.CORRECTED && !canCloseNC && (
-          <div className={NC_ACTION_BAR_TOKENS.waitingGuidance}>
-            <Clock className={NC_ACTION_BAR_TOKENS.waitingGuidanceIcon} aria-hidden="true" />
-            <span className={NC_ACTION_BAR_TOKENS.roleHintActive}>
-              {t('detail.actionBar.hintWaitingApproval')}
-            </span>
-          </div>
-        )}
-        {nc.status === NCVal.OPEN && (
-          <span className={NC_ACTION_BAR_TOKENS.roleHint}>
-            {hasUnmetPrerequisite
-              ? prerequisiteMessage
-              : t('detail.actionBar.hintNeedsCorrectionApproval')}
-          </span>
         )}
       </div>
       <div className={NC_ACTION_BAR_TOKENS.right}>

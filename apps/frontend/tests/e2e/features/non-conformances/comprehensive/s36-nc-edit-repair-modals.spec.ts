@@ -84,7 +84,6 @@ test.describe('Suite 36: NC 편집 모달 + 수리이력 등록 모달', () => {
 
     const testNcId = NC_IDS.NC_001_MALFUNCTION_OPEN;
     let originalCause: string;
-    let originalVersion: number;
 
     test('36-04a: 편집 전 원본 데이터 확인', async ({ techManagerPage: page }) => {
       const token = await getBackendToken(page, 'technical_manager');
@@ -92,7 +91,6 @@ test.describe('Suite 36: NC 편집 모달 + 수리이력 등록 모달', () => {
       // ResponseTransformInterceptor가 { success, data } 래핑 — data가 NC 객체
       const nc = ncResponse.data ?? ncResponse;
       originalCause = nc.cause;
-      originalVersion = nc.version;
     });
 
     test('36-04b: 모달에서 원인을 수정하고 저장한다', async ({ techManagerPage: page }) => {
@@ -136,19 +134,21 @@ test.describe('Suite 36: NC 편집 모달 + 수리이력 등록 모달', () => {
   });
 
   // ============================================================================
-  // 36-05: 전제조건 "수리이력등록" → 수리 등록 모달
+  // 36-05: 가이던스 콜아웃 "수리이력등록" → 수리 등록 모달 (시험실무자)
   // ============================================================================
 
-  test('36-05: malfunction NC에서 전제조건 수리이력등록 클릭 시 수리 모달이 열린다', async ({
-    techManagerPage: page,
+  test('36-05: malfunction NC에서 가이던스 콜아웃 수리이력등록 클릭 시 수리 모달이 열린다', async ({
+    testOperatorPage: page,
   }) => {
-    // NC_001: malfunction, open, 수리 미연결 → 전제조건 안내 표시
+    // NC_001: malfunction, open, 수리 미연결 → operator는 openBlockedRepair_operator 가이던스
     await gotoNcDetail(page, NC_IDS.NC_001_MALFUNCTION_OPEN);
 
-    // 전제조건 안내 영역의 "수리 이력 등록 →" 클릭
-    const prerequisiteLink = page.getByText('수리 이력 등록 →');
-    await expect(prerequisiteLink).toBeVisible();
-    await prerequisiteLink.click();
+    // GuidanceCallout 내 수리 이력 등록 링크 버튼 클릭
+    const callout = page.getByTestId('nc-guidance-callout');
+    await expect(callout).toBeVisible();
+    const repairLink = callout.getByRole('button', { name: /수리 이력 등록/ });
+    await expect(repairLink).toBeVisible();
+    await repairLink.click();
 
     // 수리 등록 모달 열림 (장비 페이지로 이동하지 않음)
     const dialog = page.getByRole('dialog', { name: '수리 이력 등록' });
