@@ -1,5 +1,5 @@
 /**
- * WF-Export-UI: 양식 export 사용자 클릭 동선 가드 (UL-QP-18-NN)
+ * WF-Export-UI: 양식 export 사용자 클릭 동선 가드 (UL-QP-18-NN / UL-QP-19-01)
  *
  * 기존 wf-19b/20b 가 `page.request.get` API 직접 호출만 검증하는 것과 보완 관계.
  * 본 spec 은 `expectFileDownload` SSOT helper 위에 구축되어 사용자 시점의 회귀를 잡는다:
@@ -23,11 +23,13 @@
  *   - UL-QP-18-09: 시험 소프트웨어 유효성확인 (`ValidationDetailContent` — validation 상세 진입 후 클릭)
  *   - UL-QP-18-10: 공용장비 사용/반납 확인서 (`EquipmentImportDetail`)
  *
+ *   - UL-QP-19-01: 연간 교정계획서 (`CalibrationPlanDetailClient`, approved 플랜 상세 — 내보내기 버튼)
+ *
  * 미커버 (UI 진입점 부재):
  *   - UL-QP-18-11 보정인자 및 파라미터 관리대장 — `implemented: false` (backend exporter 미구현).
  *
  * @see apps/frontend/tests/e2e/shared/helpers/download-helpers.ts (SSOT helper)
- * @see .claude/exec-plans/tech-debt-tracker.md L23
+ * @see .claude/exec-plans/tech-debt-tracker.md
  */
 
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -50,6 +52,7 @@ import {
 } from './helpers/workflow-helpers';
 import {
   TEST_CALIBRATION_IDS,
+  TEST_CALIBRATION_PLAN_IDS,
   TEST_EQUIPMENT_IDS,
   TEST_TEAM_IDS,
 } from '../shared/constants/shared-test-data';
@@ -288,5 +291,25 @@ test.describe('WF-Export-UI: 양식 export 사용자 클릭 동선', () => {
     });
 
     expect(download.suggestedFilename()).toMatch(/UL-QP-18-10.*\.(docx|xlsx)$/);
+  });
+
+  test('QP-19-01 연간 교정계획서 — testEngineer approved 플랜 → 내보내기 클릭 → xlsx 다운로드 + 파일명 가드', async ({
+    testOperatorPage: page,
+  }) => {
+    // CPLAN_004는 approved 상태 — CalibrationPlanDetailClient의 내보내기 버튼이 노출됨.
+    // isCalibrationPlanExportable(plan) = true 조건: status === 'approved'
+    await page.goto(
+      FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(TEST_CALIBRATION_PLAN_IDS.CPLAN_004_APPROVED)
+    );
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const exportButton = page.getByRole('button', { name: '내보내기' });
+    await expect(exportButton).toBeVisible();
+
+    const download = await expectFileDownload(page, async () => {
+      await exportButton.click();
+    });
+
+    expect(download.suggestedFilename()).toMatch(/UL-QP-19-01.*\.(docx|xlsx)$/);
   });
 });

@@ -201,6 +201,8 @@ export const TEST_CALIBRATION_PLAN_IDS = {
   CPLAN_005_REJECTED: 'cccc0005-0005-4005-8005-000000000005', // rejected (v1, 2024 suwon FCC)
   CPLAN_006_RESUBMITTED: 'cccc0006-0006-4006-8006-000000000006', // pending_review (v2 from 005)
   CPLAN_007_PENDING_APPROVAL: 'cccc0007-0007-4007-8007-000000000007', // pending_approval (v1, 2023 suwon FCC)
+  CPLAN_008_APPROVED: 'cccc0008-0008-4008-8008-000000000008', // approved (v1, 2026 suwon Automotive EMC) — export test
+  CPLAN_009_APPROVED: 'cccc0009-0009-4009-8009-000000000009', // approved (v1, 2022 suwon FCC EMC/RF) — 28-item flexible-row test
 } as const;
 
 export const TEST_CALIBRATION_PLAN_ITEM_IDS = {
@@ -216,6 +218,16 @@ export const TEST_CALIBRATION_PLAN_ITEM_IDS = {
   ITEM_010: 'cccc1010-0010-4010-8010-000000000010', // CPLAN_005 item 2
   ITEM_011: 'cccc1011-0011-4011-8011-000000000011', // CPLAN_006 item 1
   ITEM_012: 'cccc1012-0012-4012-8012-000000000012', // CPLAN_006 item 2
+  ITEM_013: 'cccc1013-0013-4013-8013-000000000013', // CPLAN_001 item 3 (expanded)
+  ITEM_014: 'cccc1014-0014-4014-8014-000000000014', // CPLAN_001 item 4 (expanded)
+  ITEM_015: 'cccc1015-0015-4015-8015-000000000015', // CPLAN_001 item 5 (expanded)
+  ITEM_016: 'cccc1016-0016-4016-8016-000000000016', // CPLAN_001 item 6 (expanded)
+  ITEM_017: 'cccc1017-0017-4017-8017-000000000017', // CPLAN_007 item 1
+  ITEM_018: 'cccc1018-0018-4018-8018-000000000018', // CPLAN_007 item 2
+  ITEM_019: 'cccc1019-0019-4019-8019-000000000019', // CPLAN_008 item 1 (Harness Coupler)
+  ITEM_020: 'cccc1020-0020-4020-8020-000000000020', // CPLAN_008 item 2 (Current Probe)
+  ITEM_021: 'cccc1021-0021-4021-8021-000000000021', // CPLAN_008 item 3 (Injection Clamp)
+  ITEM_022: 'cccc1022-0022-4022-8022-000000000022', // CPLAN_008 item 4 (BCI Probe)
 } as const;
 
 // =============================================================================
