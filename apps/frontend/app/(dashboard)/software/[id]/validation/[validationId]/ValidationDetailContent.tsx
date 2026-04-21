@@ -60,7 +60,11 @@ export default function ValidationDetailContent({
     [searchParams, router]
   );
 
-  const { data: validation, isLoading } = useQuery({
+  const {
+    data: validation,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.softwareValidations.detail(validationId),
     queryFn: () => softwareValidationApi.get(validationId),
     ...QUERY_CONFIG.SOFTWARE_VALIDATION_DETAIL,
@@ -75,7 +79,7 @@ export default function ValidationDetailContent({
     );
   }
 
-  if (!validation) {
+  if (isError || !validation) {
     return (
       <div className={getPageContainerClasses('detail')}>
         <p className="text-muted-foreground">{t('detail.notFound')}</p>

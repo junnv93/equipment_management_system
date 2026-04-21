@@ -83,8 +83,15 @@ await DashboardCacheInvalidation.invalidateAll(queryClient);
 디렉토리: 기능별 조직 (`components/equipment/`, `components/checkouts/`, `components/calibration/` 등)
 
 **대형 page 컴포넌트 분리 — `_components/` private folder 패턴:**
-300줄 초과 page-specific 컴포넌트는 해당 라우트의 `_components/` 폴더로 분리한다.
+page-specific 컴포넌트가 단일 책임(SRP)을 넘어 여러 관심사를 혼재할 때 `_components/` 폴더로 분리한다.
 Next.js App Router에서 `_` 접두사 폴더는 라우트 세그먼트에서 제외되어 라우트 전용 sub-component임을 명시한다.
+
+**분리 트리거 (줄 수가 아닌 관심사 기준):**
+
+- 독립적으로 자체 API 쿼리/mutation을 가져야 하는 섹션 (예: 첨부파일 섹션)
+- Dialog가 자체 폼 상태 + CAS mutation을 보유해 부모 prop-drilling이 발생하는 경우
+- 특정 조건(validationType, status)에 따라 조건부로만 렌더되는 카드
+- 명확하게 다른 도메인 개념을 표현하는 섹션 (기본정보 vs 공급자정보 vs 승인정보)
 
 ```
 app/(dashboard)/software/[id]/validation/[validationId]/

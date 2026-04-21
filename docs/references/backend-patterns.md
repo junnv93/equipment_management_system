@@ -188,8 +188,20 @@ await db.transaction(async (tx) => {
 
 ### 구조화 로그 패턴 (비즈니스 이벤트)
 
-서비스의 중요 상태 전이(상태 복원, 승인, 반려 등)는 `logger.log(object)` 구조화 로그로 기록한다.
-`logger.debug(string)`은 디버그 채널, `logger.log(object)`는 info 채널로 운영 모니터링에서 구분된다.
+**레벨 구분:**
+
+| 레벨  | 메서드                 | 형식           | 대상                                    |
+| ----- | ---------------------- | -------------- | --------------------------------------- |
+| info  | `logger.log(object)`   | 구조화 JSON    | 비즈니스 상태 전이 (감사·운영 모니터링) |
+| debug | `logger.debug(string)` | 평문           | 개발·진단용 상세 로그                   |
+| warn  | `logger.warn(...)`     | 평문/object    | 예상 가능한 이상 상황                   |
+| error | `logger.error(...)`    | object + stack | 예외·복구 불가 상황                     |
+
+**적용 기준 — 다음 조건 중 하나 이상을 충족하는 메서드에 `logger.log` 추가:**
+
+1. 장비/레코드의 상태가 비가역적으로 변경되는 경우 (close, dispose, approve, reject)
+2. 외부 데이터가 복원·덮어씌워지는 경우 (previousEquipmentStatus 복원 등)
+3. 두 사용자 이상이 동시에 실행 가능하고 추후 감사가 필요한 경우
 
 ```typescript
 // ✅ 비즈니스 이벤트 — logger.log with object (info 레벨)
@@ -206,7 +218,9 @@ this.logger.log({
 this.logger.debug(`NC ${id}: equipment status restore — ...`);
 ```
 
-**기준:** `emitAsync()` 직후, `return` 직전 위치. 상태 복원 여부(`equipmentStatusRestored`)처럼 추후 감사·디버그에 필요한 필드를 포함.
+**위치:** `emitAsync()` 직후, `return` 직전. 상태 복원 여부처럼 추후 감사에 필요한 필드 포함.
+
+> 현재 로그 집계 인프라(Loki 등) 미도입 상태. 구조화 로그는 도입 시 즉시 파싱 가능하도록 일관된 형식을 유지한다.
 
 ### Event Emission: `emit` vs `emitAsync`
 
