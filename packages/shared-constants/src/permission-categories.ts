@@ -27,6 +27,8 @@ export const PERMISSION_CATEGORY_KEYS = [
   'disposal',
   'equipmentImports',
   'selfInspections',
+  'intermediateInspections',
+  'formTemplates',
   'system',
 ] as const;
 
@@ -72,6 +74,8 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.CREATE_NON_CONFORMANCE,
     Permission.UPDATE_NON_CONFORMANCE,
     Permission.CLOSE_NON_CONFORMANCE,
+    Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT,
+    Permission.DELETE_NON_CONFORMANCE_ATTACHMENT,
   ],
   software: [
     Permission.VIEW_TEST_SOFTWARE,
@@ -81,6 +85,9 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.CREATE_SOFTWARE_VALIDATION,
     Permission.SUBMIT_SOFTWARE_VALIDATION,
     Permission.APPROVE_SOFTWARE_VALIDATION,
+    Permission.APPROVE_TECH_SOFTWARE_VALIDATION,
+    Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION,
+    Permission.REVALIDATE_SOFTWARE_VALIDATION,
   ],
   teams: [
     Permission.VIEW_TEAMS,
@@ -124,5 +131,22 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.REJECT_SELF_INSPECTION,
     Permission.DELETE_SELF_INSPECTION,
   ],
-  system: [Permission.MANAGE_SYSTEM_SETTINGS, Permission.VIEW_SYSTEM_SETTINGS],
+  intermediateInspections: [
+    Permission.SUBMIT_INTERMEDIATE_INSPECTION,
+    Permission.WITHDRAW_INTERMEDIATE_INSPECTION,
+    Permission.REVIEW_INTERMEDIATE_INSPECTION,
+    Permission.APPROVE_INTERMEDIATE_INSPECTION,
+    Permission.REJECT_INTERMEDIATE_INSPECTION,
+    Permission.DELETE_INTERMEDIATE_INSPECTION,
+  ],
+  formTemplates: [
+    Permission.VIEW_FORM_TEMPLATES,
+    Permission.MANAGE_FORM_TEMPLATES,
+    Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
+  ],
+  system: [
+    Permission.MANAGE_SYSTEM_SETTINGS,
+    Permission.VIEW_SYSTEM_SETTINGS,
+    Permission.PERFORM_DATA_MIGRATION,
+  ],
 };
