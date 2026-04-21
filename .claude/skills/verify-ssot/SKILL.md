@@ -202,27 +202,28 @@ grep -rn "isCheckoutExportable" \
 # 결과: import 라인만 존재 (정의 라인 없어야 함)
 ```
 
-### Step 18: E2E test-paths SSOT 검증 (2026-04-20 추가)
+### Step 18: E2E createTestApp globalPrefix SSOT 검증 (2026-04-21 업데이트)
 
-`apps/backend/test/helpers/test-paths.ts`의 `toTestPath()`가 API_ENDPOINTS → supertest 경로 변환 SSOT.
-다른 헬퍼/spec 파일에서 동일 변환 로직을 재정의하거나 경로를 직접 조립하면 SSOT 위반.
+`apps/backend/test/helpers/test-app.ts`의 `createTestApp()`에 `app.setGlobalPrefix('api')` 설정.
+모든 E2E spec은 `API_ENDPOINTS.*` SSOT를 직접 사용. `toTestPath()` 래퍼는 2026-04-21 삭제됨.
 
-**18a: toTestPath 로컬 재정의 금지**
+**18a: toTestPath anti-pattern 재도입 탐지**
 ```bash
-grep -rn "function toTestPath\|const toTestPath\s*=" \
-  apps/backend/test \
-  | grep -v "test-paths.ts"
-# 결과: 0건 (test-paths.ts 외 정의 없어야 함)
+grep -rn "toTestPath\|test-paths" apps/backend/test
+# 결과: 0건 (삭제된 래퍼 재도입 금지)
 ```
 
-**18b: spec 파일 내 /api/ 하드코딩 직접 사용 금지**
+**18b: spec 파일 내 /api/ 제거 경로 하드코딩 금지**
 ```bash
-grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]\/api\/" \
-  apps/backend/test --include="*.e2e-spec.ts"
-# 결과: 0건 (모두 toTestPath(API_ENDPOINTS.*) 경유)
+grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`][^/]" \
+  apps/backend/test --include="*.e2e-spec.ts" \
+  | grep -v "API_ENDPOINTS"
+# 결과: 0건 (모두 API_ENDPOINTS.* 경유)
 ```
 
-**PASS:** 재정의 0건 + 하드코딩 0건. **FAIL:** test-paths.ts 외 `toTestPath` 정의 또는 `/api/` 직접 사용.
+**PASS:** toTestPath 0건 + 직접 경로 0건. **FAIL:** `toTestPath` 재정의 또는 `/api/` 없는 bare 경로 직접 사용.
+
+> verify-e2e Step 15d와 연계: E2E 패턴 전반은 verify-e2e가 담당.
 
 ### Step 19: 프론트엔드 도메인 Status/Type 리터럴 비교 SSOT (2026-04-21 추가)
 

@@ -11,9 +11,21 @@ import { SoftwareValidationRendererService } from '../software-validations/servi
 import { SoftwareValidationsModule } from '../software-validations/software-validations.module';
 import { IntermediateInspectionsModule } from '../intermediate-inspections/intermediate-inspections.module';
 import { SelfInspectionsModule } from '../self-inspections/self-inspections.module';
+import { TestSoftwareModule } from '../test-software/test-software.module';
+import { CheckoutsModule } from '../checkouts/checkouts.module';
+import { CablesModule } from '../cables/cables.module';
+import { EquipmentImportsModule } from '../equipment-imports/equipment-imports.module';
 
 @Module({
-  imports: [IntermediateInspectionsModule, SelfInspectionsModule, SoftwareValidationsModule],
+  imports: [
+    IntermediateInspectionsModule,
+    SelfInspectionsModule,
+    SoftwareValidationsModule,
+    TestSoftwareModule,
+    CheckoutsModule,
+    CablesModule,
+    EquipmentImportsModule,
+  ],
   controllers: [ReportsController, FormTemplateController],
   providers: [
     ReportsService,

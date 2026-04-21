@@ -5,6 +5,17 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — tech-debt-batch-b (E2E globalPrefix + cplan axe-core + M4.8 + ValidationCreateDialog 분리)
+
+- [x] **[2026-04-16 tech-debt-s2s4] E2E globalPrefix 통합** — createTestApp에 setGlobalPrefix('api') 추가 + 22개 E2E 스펙 경로를 API_ENDPOINTS 기반으로 마이그레이션. 완료 2026-04-21.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW verify-e2e — UL-QP-19-01 UI 다운로드 E2E 없음** — `wf-export-ui-download.spec.ts`에 QP-19-01 케이스 추가 완료. 완료 2026-04-21.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW verify-seed-integrity — shared-test-data.ts ITEM_013~022 없음** — CPLAN_008/009 + ITEM_013~022 sync 완료. 완료 2026-04-21.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 8 — axe-core E2E** — `tests/e2e/a11y/calibration-plans.a11y.spec.ts` 신규 생성. list/detail/create/Reject dialog 6개 테스트. 완료 2026-04-21.
+- [x] **[2026-04-20 calibration-phase4-7] M4.8 계약 모순** — CalibrationRecord.certificatePath는 M4.3(API 응답 호환성) 유지를 위해 보존. M4.8 범위를 packages/schemas+DTO로 한정, CalibrationRecord는 virtual computed field(documents 조인)로 명시(주석 추가 + contract 업데이트). 완료 2026-04-21.
+- [x] **[2026-04-21 tech-debt-batch-0421] S4 — ValidationCreateDialog.tsx 232줄** (SHOULD ≤150 초과) — VendorValidationFields + SelfValidationFields 분리 완료 (135줄). 완료 2026-04-21.
+
+---
+
 ## 2026-04-21 — batch-a-techdebt-0421 (validation 컴포넌트 분리 + calibration 쿼리키)
 
 - [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM Phase 2 — Sticky 액션 바** — `CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.stickyContainer` 적용 완료. (코드 확인 2026-04-21)
