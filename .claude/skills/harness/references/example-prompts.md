@@ -507,6 +507,491 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 
 ---
 
+## 부적합 관리 페이지 디자인 리뷰 후속 — 1차·2차 전체 이슈 (9건)
+
+> **발견 배경 (2026-04-21)**: `/non-conformances` 목록 + `/non-conformances/[id]` 상세 페이지
+> 2회 디자인 리뷰에서 고유 이슈 22건 발견·2차 검증 완료.
+> 버그 2건·SSOT 위반 3건·온보딩 5건·접근성 3건·i18n 2건·AP 시리즈 7건을 9개 프롬프트로 중복·누락 없이 배정.
+> 의존 순서: **P1 → P2 → P5 → P6 → P7** (P3·P4·P8·P9는 독립 실행 가능).
+
+### 🔴 CRITICAL — P1: NC 워크플로우 종결 노드 색상 버그 수정 (Mode 0)
+
+```
+문제:
+apps/frontend/lib/design-tokens/components/non-conformance.ts:418~431
+getNCWorkflowNodeClasses() — stepIndex === currentStepIndex 분기에 terminal state 처리 없음.
+status=closed(currentStepIndex=2) 시 마지막 노드가 node.current(amber/경고색)로 표시됨.
+동일 버그: :436~450 getNCWorkflowLabelClasses() — closed 라벨도 amber.
+올바른 동작: closed는 완료(terminal) 상태 → 마지막 노드도 node.completed(green)이어야 함.
+
+NCDetailClient.tsx:627 WorkflowTimeline 호출에서 isLongOverdue={longOverdue && !isClosed} 처리는
+이미 올바르게 되어 있으나, getNCWorkflowNodeClasses 유틸 함수 자체에 terminal state 분기가 없음.
+
+작업:
+1. non-conformance.ts getNCWorkflowNodeClasses() 수정
+   기존: if (stepIndex === currentStepIndex) { ... return node.current }
+   수정: if (stepIndex === currentStepIndex) {
+           if (currentStepIndex === NC_WORKFLOW_STEPS.length - 1)  // terminal state
+             return [node.base, node.completed].join(' ');          // amber 대신 green
+           if (isLongOverdue && currentStepIndex === 0) ...
+           if (currentStepIndex === 1) ...
+           return [node.base, node.current].join(' ');
+         }
+
+2. non-conformance.ts getNCWorkflowLabelClasses() 동일 패턴 수정
+   terminal state → label.completed(green)
+
+3. NC_WORKFLOW_STEPS.length - 1 대신 상수 사용
+   non-conformance.ts에 NC_TERMINAL_STEP_INDEX = NC_WORKFLOW_STEPS.length - 1 추가
+
+수정 파일: apps/frontend/lib/design-tokens/components/non-conformance.ts (1파일)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "NC_TERMINAL_STEP_INDEX" apps/frontend/lib/design-tokens/components/non-conformance.ts → 1 hit (상수)
+- status=closed NC 상세 페이지 수동 확인: 마지막 워크플로우 노드 green 표시
+- status=corrected NC는 마지막 노드 amber(현재) 그대로 유지
+```
+
+### 🟠 HIGH — P2: NC 리스트 스태거 애니메이션 Dead Code 제거 + SSOT 복구 (Mode 0)
+
+```
+문제:
+apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx:418
+  style={{ animationDelay: `${index * NC_STAGGER_DELAY_MS}ms` }}
+→ NCListRow의 <Link> 요소에 animate-* CSS 클래스가 없음 → animationDelay 무시됨.
+
+SSOT 위반:
+- motion.ts:75 getStaggerDelay(index, type) SSOT 함수 미사용.
+- 대신 raw 곱셈 (index * NC_STAGGER_DELAY_MS) 사용.
+- motion.ts:263 ANIMATION_PRESETS.slideUpFade ('motion-safe:animate-in motion-safe:fade-in
+  motion-safe:slide-in-from-bottom-3') 가 정확히 이 용도를 위해 설계되었으나 미사용.
+
+작업:
+1. non-conformance.ts 수정
+   - NC_STAGGER_DELAY_MS 상수 제거 (getStaggerDelay로 대체됨)
+   - import { ANIMATION_PRESETS, getStaggerDelay } from '../motion' 추가
+
+2. NonConformancesContent.tsx NCListRow 수정
+   - <Link> 요소에 className에 ANIMATION_PRESETS.slideUpFade, 'motion-safe:duration-200' 추가
+   - style={{ animationDelay: `${index * NC_STAGGER_DELAY_MS}ms` }}
+     → style={{ animationDelay: getStaggerDelay(index, 'list') }} (SSOT 함수 사용)
+
+3. NonConformancesContent.tsx import 정리
+   - NC_STAGGER_DELAY_MS import 제거
+   - ANIMATION_PRESETS, getStaggerDelay import 추가
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "NC_STAGGER_DELAY_MS" apps/frontend → 0 hit (완전 제거됨)
+- grep "getStaggerDelay" apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx → 1 hit
+- 브라우저 /non-conformances → 리스트 행이 순차적으로 fade+slide-in 등장 확인
+- prefers-reduced-motion: motion-safe 래핑이므로 애니메이션 비활성 사용자 영향 없음
+```
+
+### 🟡 MEDIUM — P3: NC i18n 정리 — 내부 데이터 노출 + management.* 레거시 키 (Mode 0)
+
+```
+문제 1 (내부 데이터 노출):
+apps/frontend/components/non-conformances/NCDetailClient.tsx:763~765
+  <InfoRow label={t('fields.createdAt')} value={fmtDate(nc.createdAt)} />
+  <InfoRow label={t('fields.updatedAt')} value={fmtDate(nc.updatedAt)} />
+  <InfoRow label={t('fields.version')} value={String(nc.version)} />
+→ version은 CAS 낙관적 잠금용 내부 카운터. 사용자 도메인 정보 아님.
+→ createdAt/updatedAt도 정보 카드 하단 "추가 메타" 박스에 노출되어 도메인 노이즈 발생.
+
+문제 2 (레거시 dead code):
+apps/frontend/messages/ko/non-conformances.json + en/non-conformances.json:
+"management" 네임스페이스 (70+ 키) — 구 장비 상세 내장 관리 컴포넌트 잔재.
+grep "management\." apps/frontend → 현재 코드에서 미참조 (NCDetailClient, NonConformancesContent 모두 미사용).
+
+작업:
+1. NCDetailClient.tsx InfoCards() 수정 (NCDetailClient.tsx:762~767 블록)
+   - version InfoRow 3줄 제거 (version, createdAt, updatedAt)
+   - 해당 border-t 구분선 블록(line 762: <div className="mt-4 pt-3 border-t border-border/40">)
+     내부에서 InfoRow 3개 제거. 블록 자체도 빈 컨테이너가 되므로 함께 제거.
+
+2. messages/ko/non-conformances.json "management" 객체 제거
+3. messages/en/non-conformances.json "management" 객체 제거
+   (management.form, management.update, management.confirm, management.toasts,
+    management.ncStatus, management.ncType, management.resolutionType 포함)
+
+주의: messages/ko/non-conformances.json 최상위 "fields.version", "fields.createdAt",
+      "fields.updatedAt" 키는 제거하지 않음 — 다른 도메인 코드에서 참조 가능성 확인 후 결정.
+      현재 삭제 범위: NCDetailClient의 3개 InfoRow JSX + management.* i18n 키.
+
+수정 파일:
+- apps/frontend/components/non-conformances/NCDetailClient.tsx
+- apps/frontend/messages/ko/non-conformances.json
+- apps/frontend/messages/en/non-conformances.json
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "fields.version\|fields.createdAt\|fields.updatedAt" apps/frontend/components/non-conformances/NCDetailClient.tsx → 0 hit
+- grep '"management"' apps/frontend/messages/ko/non-conformances.json → 0 hit
+- grep '"management"' apps/frontend/messages/en/non-conformances.json → 0 hit
+- NC 상세 페이지: 정보 카드 하단 "버전/등록일/수정일" 행 미표시
+```
+
+### 🟡 MEDIUM — P4: NC 접근성 일괄 — aria-pressed / aria-hidden / aria-label (Mode 0)
+
+```
+문제:
+A11y-A: NonConformancesContent.tsx:198~215 — KPI <button> 3개에 aria-pressed 없음.
+         필터 토글 버튼임에도 스크린 리더에 상태(활성/비활성) 미전달.
+A11y-B: NonConformancesContent.tsx MiniWorkflow 컴포넌트 — 3개 dot <div>에 aria-hidden 없음.
+         같은 행에 상태 배지가 이미 있어 중복 정보이며 스크린 리더가 의미 없는 div를 읽음.
+A11y-C: NonConformancesContent.tsx:360~388 — 페이지네이션 prev/next <ChevronLeft/Right> 버튼에
+         aria-label 없음. 숫자 버튼에 페이지 이동 맥락 없음. aria-current 없음.
+
+작업:
+1. KPI 버튼 (NonConformancesContent.tsx:198~215)
+   각 <button> 에 추가:
+   - aria-pressed={isActive}
+   - aria-label={`${t('kpi.' + variant)} ${kpiCounts[variant]}건 필터${isActive ? ' 해제' : ''}`}
+
+2. MiniWorkflow 컨테이너 (NonConformancesContent.tsx MiniWorkflow 함수 내)
+   <div className={NC_MINI_WORKFLOW_TOKENS.container}> 에 aria-hidden="true" 추가
+
+3. 페이지네이션 (NonConformancesContent.tsx:360~388)
+   - Prev 버튼: aria-label={t('list.paginationPrev')} // "이전 페이지"
+   - Next 버튼: aria-label={t('list.paginationNext')} // "다음 페이지"
+   - 숫자 버튼: aria-label={t('list.paginationPage', { page: p })} // "N페이지로 이동"
+               aria-current={p === pagination.currentPage ? 'page' : undefined}
+
+4. i18n 키 추가 (messages/ko + en)
+   - list.paginationPrev: "이전 페이지" / "Previous page"
+   - list.paginationNext: "다음 페이지" / "Next page"
+   - list.paginationPage: "{page}페이지로 이동" / "Go to page {page}"
+
+수정 파일:
+- apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx
+(i18n 키 추가 시: messages/ko/non-conformances.json, messages/en/non-conformances.json)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "aria-pressed" apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx → 1+ hit
+- grep "aria-hidden" apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx → 1+ hit (MiniWorkflow)
+- grep "aria-label" apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx → 3+ hit (페이지네이션)
+- 스크린 리더 시나리오: KPI 버튼 활성 시 "미해결 5건 필터 해제" 낭독됨
+```
+
+### 🟠 HIGH — P5: NC SSOT 일괄 — NCDocumentsSection 토큰화 + 이모지 제거 + Collapsible 모션 (Mode 1)
+
+```
+문제:
+SSOT-A: NCDocumentsSection.tsx:118 — <section className="rounded-lg border bg-card p-4 space-y-3">
+         등 raw Tailwind 직접 사용. NC_*_TOKENS 체계 완전 우회. (NC_DOCUMENTS_SECTION_TOKENS 없음)
+SSOT-B: NCDetailClient.tsx:411 — title={'🔧 ' + t('detail.correction.sectionTitle')}
+         NCDetailClient.tsx:460 — title={'✅ ' + t('detail.closure.sectionTitle')}
+         이모지가 컴포넌트 코드에 하드코딩 → 스크린 리더 "렌치 이모지"로 읽음. 번역 파일 미경유.
+SSOT-C (AP-06): NCDetailClient.tsx:871 — {isOpen && <div className={NC_COLLAPSIBLE_TOKENS.content}>}
+         즉각 mount/unmount — motion.ts:179 TRANSITION_PRESETS.fastGridRows 프리셋 미사용.
+         grid-rows 애니메이션 패턴(grid-rows-[0fr] → grid-rows-[1fr])으로 대체해야 함.
+
+작업:
+1. non-conformance.ts에 NC_DOCUMENTS_SECTION_TOKENS 신규 추가
+   export const NC_DOCUMENTS_SECTION_TOKENS = {
+     container: 'rounded-lg border border-border/60 bg-card p-4',
+     header: 'flex items-center justify-between',
+     title: 'text-sm font-semibold flex items-center gap-2',
+     titleIcon: 'h-4 w-4',
+     countBadge: 'text-xs text-muted-foreground font-normal',
+     emptyText: 'text-sm text-muted-foreground',
+     grid: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3',
+   } as const;
+
+2. NCDocumentsSection.tsx — NC_DOCUMENTS_SECTION_TOKENS으로 raw 클래스 교체
+   import { NC_DOCUMENTS_SECTION_TOKENS } from '@/lib/design-tokens';
+   <section className={NC_DOCUMENTS_SECTION_TOKENS.container}>
+   <div className={NC_DOCUMENTS_SECTION_TOKENS.header}>
+   <h3 className={NC_DOCUMENTS_SECTION_TOKENS.title}>
+   등 대응 토큰으로 교체.
+
+3. NCDetailClient.tsx 이모지 제거 → Lucide 아이콘으로 교체
+   기존: title={'🔧 ' + t('detail.correction.sectionTitle')}
+   수정: CollapsibleSection의 title prop을 ReactNode로 받도록 변경하거나
+         섹션 제목 렌더링 시 <Wrench className="h-4 w-4 mr-1.5 text-muted-foreground" aria-hidden="true" />
+         + t('detail.correction.sectionTitle') 으로 구성.
+         Wrench 아이콘은 이미 NCDetailClient.tsx에 import됨.
+         ✅ 이모지 → <CheckCircle2 aria-hidden="true" /> 로 교체 (이미 import됨).
+
+4. non-conformance.ts NC_COLLAPSIBLE_TOKENS에 애니메이션 필드 추가
+   import { TRANSITION_PRESETS } from '../motion';
+   NC_COLLAPSIBLE_TOKENS에 추가:
+   - contentWrapper: 'grid overflow-hidden ' + TRANSITION_PRESETS.fastGridRows
+   - contentInner: 'min-h-0'   // grid-rows 애니메이션을 위한 내부 래퍼
+
+5. NCDetailClient.tsx CollapsibleSection 수정
+   기존: {isOpen && <div className={NC_COLLAPSIBLE_TOKENS.content}>{children}</div>}
+   수정:
+   <div
+     className={cn(
+       NC_COLLAPSIBLE_TOKENS.contentWrapper,
+       isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+     )}
+   >
+     <div className={NC_COLLAPSIBLE_TOKENS.contentInner}>
+       <div className={NC_COLLAPSIBLE_TOKENS.content}>{children}</div>
+     </div>
+   </div>
+   (isOpen && 조건부 렌더 제거 → 항상 DOM에 존재, height만 애니메이션)
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/components/non-conformances/NCDocumentsSection.tsx
+- apps/frontend/components/non-conformances/NCDetailClient.tsx
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "rounded-lg border bg-card" apps/frontend/components/non-conformances/NCDocumentsSection.tsx → 0 hit
+- grep "'🔧\|'✅" apps/frontend/components/non-conformances/NCDetailClient.tsx → 0 hit
+- grep "isOpen &&" apps/frontend/components/non-conformances/NCDetailClient.tsx → 0 hit (Collapsible 관련)
+- NC 상세 페이지: Collapsible 클릭 시 height 애니메이션(부드러운 펼침/접힘) 확인
+- prefers-reduced-motion: motion-safe 래핑 → 애니메이션 없이 즉시 펼쳐짐
+```
+
+### 🟠 HIGH — P6: NC 신규 유저 온보딩 종합 — roleHint 강화 + 빈 상태 CTA + KPI 필터 힌트 (Mode 1)
+
+```
+문제:
+OB-A: NC_ACTION_BAR_TOKENS.roleHint = 'text-xs text-muted-foreground'
+      워크플로우 "다음 액션" 안내문이 페이지에서 시각적으로 가장 작고 흐림.
+OB-B: status=corrected + !canCloseNC 조합에서 ActionBar에 버튼 없음 + roleHint 1줄만 존재.
+      처음 온 시험실무자: "이 페이지에서 무엇을 해야 하지?" 답 없음.
+Onboarding-1: NonConformancesContent.tsx:182~188 헤더에 Download 버튼만, 등록 경로 안내 없음.
+Onboarding-2: KPI 카드가 필터 토글임을 나타내는 시각 힌트 없음 (활성 상태 외).
+AP-09: EmptyState(NonConformancesContent.tsx:500~518) hasFilters=false 시
+        emptyNoFiltersDescription 텍스트만 있고 장비 목록 CTA 버튼 없음.
+
+작업:
+1. non-conformance.ts 토큰 추가 (SSOT)
+
+   NC_ACTION_BAR_TOKENS에 추가:
+   - roleHintActive: 'text-sm text-foreground font-medium'  // 유일 안내인 경우 강조
+   - waitingGuidance: 'flex items-center gap-2 text-sm text-brand-info'  // 대기 상태 안내
+   - waitingGuidanceIcon: 'h-4 w-4 text-brand-info flex-shrink-0'
+
+   NC_KPI_CARD_TOKENS에 추가:
+   - filterHint: 'text-[10px] text-muted-foreground/60 mt-0.5 leading-none'
+
+   NC_EMPTY_STATE_TOKENS에 추가:
+   - ctaWrapper: 'mt-4 flex flex-col items-center gap-2'
+   - ctaLink: 'text-sm text-brand-info hover:underline'
+
+2. NCDetailClient.tsx ActionBar 컴포넌트 수정
+   status=corrected && !canCloseNC 케이스:
+   기존: 좌측 nothing + roleHint 텍스트 1줄
+   수정:
+   <div className={NC_ACTION_BAR_TOKENS.left}>
+     {nc.status === NCVal.CORRECTED && !canCloseNC && (
+       <div className={NC_ACTION_BAR_TOKENS.waitingGuidance}>
+         <ClockIcon className={NC_ACTION_BAR_TOKENS.waitingGuidanceIcon} aria-hidden="true" />
+         <span className={NC_ACTION_BAR_TOKENS.roleHintActive}>
+           {t('detail.actionBar.hintWaitingApproval')}
+         </span>
+       </div>
+     )}
+     {/* 기존 "조치 완료" 버튼 (open 상태) */}
+   </div>
+   ClockIcon: lucide-react에서 import (Clock 아이콘 사용).
+
+3. NonConformancesContent.tsx KPI 카드에 필터 힌트 추가
+   각 KPI button 내부 label/value 아래:
+   <p className={NC_KPI_CARD_TOKENS.filterHint}>
+     {isActive
+       ? t('kpi.filterActive')     // "필터 적용됨 · 클릭하여 해제"
+       : t('kpi.filterInactive')}  // "클릭하여 필터링"
+   </p>
+   i18n 키 추가: kpi.filterActive, kpi.filterInactive
+
+4. NonConformancesContent.tsx EmptyState — CTA 버튼 추가
+   hasFilters=false 일 때:
+   <div className={NC_EMPTY_STATE_TOKENS.ctaWrapper}>
+     <Link href="/equipment" className={NC_EMPTY_STATE_TOKENS.ctaLink}>
+       {t('list.emptyNoFiltersCta')}  {/* "장비 목록에서 부적합 등록하기 →" */}
+     </Link>
+   </div>
+   i18n 키 추가: list.emptyNoFiltersCta
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/components/non-conformances/NCDetailClient.tsx
+- apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx
+(i18n 키: messages/ko + en 각 1개씩 → 총 4파일 이내)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- KPI 카드 hover/click 시 필터 힌트 텍스트 가시 확인
+- 빈 상태에서 "장비 목록에서 부적합 등록하기" 링크 표시
+- status=corrected + 시험실무자(canCloseNC=false): Clock 아이콘 + 안내 문장 표시
+- grep "NC_EMPTY_STATE_TOKENS.ctaWrapper" apps/frontend/app → 1 hit
+```
+
+### 🟠 HIGH — P7: NC 상세 Sticky Action Bar + Elevation 3단계 체계 (Mode 1)
+
+```
+문제:
+Onboarding-4: NCDetailClient.tsx:487 ActionBar가 정적 위치.
+              헤더 → 반려배너 → 워크플로우 → 전제조건 → 정보카드 → Collapsible 2개 → 문서 섹션
+              → (스크롤 후) ActionBar. 처음 온 유저는 액션 버튼을 찾지 못함.
+AP-04: shadow-sm이 워크플로우 타임라인 + ActionBar 2곳뿐.
+       NC_INFO_CARD_TOKENS.card = 'bg-card border border-border/60 rounded-lg p-5' (shadow 없음)
+       KPI 카드: NC_KPI_CARD_TOKENS.card에 shadow 없음 (hover:shadow-sm만)
+       flush/raised/floating 3단계 elevation 체계 없음.
+
+작업:
+1. non-conformance.ts에 NC_ELEVATION 상수 추가
+   export const NC_ELEVATION = {
+     flush:    '',             // 배경과 동일 — 필터 바, 페이지네이션
+     raised:   'shadow-sm',   // 카드 계층 — KPI 카드, 정보 카드, Collapsible
+     floating: [
+       'shadow-md',
+       'ring-1 ring-border/10',
+     ].join(' '),              // 액션 영역 — ActionBar (가장 중요한 인터랙션)
+   } as const;
+
+2. 토큰 업데이트 (non-conformance.ts)
+   - NC_KPI_CARD_TOKENS.card 에 NC_ELEVATION.raised 추가
+   - NC_INFO_CARD_TOKENS.card 에 NC_ELEVATION.raised 추가
+   - NC_COLLAPSIBLE_TOKENS.container 에 NC_ELEVATION.raised 추가
+   - NC_ACTION_BAR_TOKENS.container 의 기존 shadow-sm → NC_ELEVATION.floating으로 교체
+   - NC_ACTION_BAR_TOKENS에 sticky 전용 클래스 추가:
+     stickyWrapper: 'sticky bottom-4 z-10'
+   ※ NC_WORKFLOW_TOKENS.container 의 shadow-sm은 NC_ELEVATION.raised 유지
+
+3. NCDetailClient.tsx ActionBar 렌더링 수정 (line 487~504)
+   기존:
+   {!isClosed && (
+     <ActionBar nc={nc} ... />
+   )}
+   수정:
+   {!isClosed && (
+     <div className={NC_ACTION_BAR_TOKENS.stickyWrapper}>
+       <ActionBar nc={nc} ... />
+     </div>
+   )}
+   ※ sticky bottom-4는 대시보드 레이아웃 내 스크롤 컨테이너 기준으로 동작 확인 필요.
+     레이아웃 overflow 설정에 따라 bottom-0 또는 bottom-4 조정.
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/components/non-conformances/NCDetailClient.tsx
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- grep "NC_ELEVATION" apps/frontend/lib/design-tokens/components/non-conformance.ts → 4+ hit
+- grep "stickyWrapper" apps/frontend/components/non-conformances/NCDetailClient.tsx → 1 hit
+- 상세 페이지 스크롤 시 ActionBar 항상 하단에 고정 (페이지 내 sticky)
+- KPI 카드와 정보 카드에 shadow-sm 가시 확인
+- ActionBar는 그보다 강한 shadow-md + ring 가시 확인
+```
+
+### 🟢 LOW — P8: NC 리스트 모바일 레이아웃 + 테이블 프리미엄 (Mode 1)
+
+```
+문제:
+AP-07: NC_LIST_GRID_COLS = 'lg:grid lg:grid-cols-[...] lg:gap-3 lg:items-center'
+       1024px 미만에서 grid 비활성화 → 7개 셀이 block 스택으로 표시됨 (모바일 레이아웃 없음).
+       stripe(줄무늬), sticky header, 컬럼 강조 없음.
+
+작업:
+1. non-conformance.ts에 모바일 카드 토큰 추가
+   export const NC_LIST_MOBILE_TOKENS = {
+     cardWrapper: 'flex flex-col gap-1.5 py-3 px-4',
+     topRow: 'flex items-center justify-between gap-2',
+     bottomRow: 'flex items-center gap-2',
+     equipmentName: 'text-sm font-medium text-foreground truncate',
+     managementNum: 'font-mono text-[11px] text-muted-foreground',
+   } as const;
+
+   NC_LIST_TOKENS에 추가:
+   - stripe: 'even:bg-muted/20'
+   - mobileRow: 'lg:hidden block border-b border-border/40 last:border-b-0 hover:bg-muted/30'
+   - desktopRow: 'hidden ' + NC_LIST_TOKENS.row (기존 row는 데스크톱 전용으로)
+
+2. NonConformancesContent.tsx NCListRow 컴포넌트 수정
+   기존: <Link href={...} className={cn(NC_LIST_TOKENS.row, ...)}> (단일 레이아웃)
+   수정:
+   - lg 이상 기존 grid 레이아웃 유지 (className에 'hidden lg:grid' 적용)
+   - lg 미만 카드 레이아웃 추가 (className='lg:hidden block ...'):
+     상단: [상태 배지 + 유형 chip] + [경과일]
+     중간: [장비명 + 관리번호]
+     하단: [원인 텍스트 (1줄 truncate)] + [Eye 버튼]
+
+3. 헤더 행에 stripe 클래스 추가
+   NC_LIST_TOKENS.row에 NC_LIST_TOKENS.stripe 추가 (짝수 행)
+   NCListRow에 index 기반 'even:bg-muted/20' 적용 (index % 2 === 0 방식 대신 CSS even: 활용)
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- 375px 뷰포트: 카드형 레이아웃 표시 (상태배지+경과일 / 장비명 / 원인+Eye)
+- 1280px 뷰포트: 기존 7컬럼 grid 레이아웃 유지
+- 짝수 행에 bg-muted/20 subtle 배경 표시
+- 모바일 카드에서 Eye 버튼 클릭 → 상세 페이지 이동 정상 동작
+```
+
+### 🟢 LOW — P9: NC 카드 계층화 + 간격 리듬 재설계 + 타이포 드라마 강화 (Mode 1)
+
+```
+문제:
+AP-01: KPI 3카드 grid-cols-3 완전 균등. open(미해결)이 가장 중요한 지표이나 시각 계층 없음.
+       NCDetailClient 정보카드 2열도 완전 균등 (NC 유형에 따라 수리카드 더 중요한 경우 있음).
+AP-02: getPageContainerClasses('list', 'space-y-5') 일변도.
+       헤더/KPI/필터/리스트/페이지네이션 모두 동일 20px 간격 → 섹션 경계 불명확.
+AP-03(부분): KPI label 'text-xs', value 'text-2xl'. open KPI에 hero 강조(text-3xl) 여지 있음.
+              단 open count=0일 때 hero 강조는 불필요 → 동적 적용.
+
+작업:
+1. non-conformance.ts에 NC_SPACING_TOKENS 추가
+   export const NC_SPACING_TOKENS = {
+     pageOuter: 'space-y-5',       // 섹션 간 기본 (기존 유지)
+     afterHeader: 'mt-6',          // 헤더 → KPI 간격 (섹션 경계 강조)
+     afterKpi: 'mt-4',             // KPI → 필터 (연관 요소)
+     afterFilter: 'mt-3',          // 필터 → 리스트 (밀접)
+     afterList: 'mt-4',            // 리스트 → 페이지네이션
+   } as const;
+
+2. NC_KPI_CARD_TOKENS에 hero 토큰 추가
+   heroValue: 'text-3xl font-bold tabular-nums leading-tight'  // open count > 0 시 사용
+   heroCard: 'shadow-md ring-1 ring-brand-critical/15'         // open 카드 hero elevation
+
+3. NonConformancesContent.tsx 수정
+   - getPageContainerClasses('list', 'space-y-5') 는 유지하되
+     KPI 스트립과 헤더 사이에 NC_SPACING_TOKENS.afterHeader className 추가
+     (또는 KPI div의 className에 NC_SPACING_TOKENS.afterKpi 등으로 미세 조정)
+   - open KPI 카드: kpiCounts.open > 0일 때
+     NC_KPI_CARD_TOKENS.heroCard 추가 + value className에 NC_KPI_CARD_TOKENS.heroValue 적용
+
+4. 정보 카드 그리드 (NCDetailClient.tsx InfoCards)
+   수리 연결 카드가 hasRepairLink=true일 때 md:grid-cols-[1fr_1.2fr] 비율 조정 제안.
+   (수리 연결 상태가 더 중요한 컨텍스트에서 더 넓게)
+   NC_INFO_CARD_TOKENS.grid에 추가:
+   gridRepairLinked: 'grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-4'
+   InfoCards 렌더링 시 hasRepairLink에 따라 gridRepairLinked 적용.
+
+수정 파일:
+- apps/frontend/lib/design-tokens/components/non-conformance.ts
+- apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx
+- apps/frontend/components/non-conformances/NCDetailClient.tsx (정보카드 그리드만)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit → green
+- open count > 0: open KPI 카드가 나머지보다 시각적으로 강조됨 (shadow-md + ring + text-3xl)
+- open count = 0: 균등 카드 (hero 스타일 미적용)
+- NC 상세에서 수리 연결 시: 수리 카드 열이 기본 정보 카드보다 약간 더 넓음
+- grep "NC_SPACING_TOKENS" apps/frontend/app/(dashboard)/non-conformances → 1+ hit
+
+---
+
 ## 34차 후속 — wf20-infra-debt harness 결과 review-architecture tech debt (3건)
 
 > **발견 배경 (2026-04-08, wf20-infra-debt harness PASS 직후 review-architecture)**:
