@@ -23,7 +23,7 @@
 import type { SemanticColorKey } from '../brand';
 import { getSemanticContainerColorClasses, getSemanticLeftBorderClasses } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
-import { FOCUS_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import {
   type NonConformanceStatus,
   NON_CONFORMANCE_STATUS_VALUES,
@@ -208,7 +208,7 @@ export const NC_KPI_CARD_TOKENS = {
   /** 값 */
   value: 'text-2xl font-bold tabular-nums leading-tight',
   /** 필터 토글 힌트 (접근성 — 클릭 의미 전달) */
-  filterHint: 'text-[10px] text-muted-foreground/60 mt-0.5 leading-none',
+  filterHint: `${MICRO_TYPO.badge} text-muted-foreground/60 mt-0.5 leading-none`,
   /** hero 값 — open count > 0 시 강조 (P9) */
   heroValue: 'text-3xl font-bold tabular-nums leading-tight',
   /** hero 카드 — open 카드 최우선 강조 (P9) */
@@ -288,7 +288,7 @@ export const NC_LIST_TOKENS = {
     TRANSITION_PRESETS.fastColor,
   ].join(' '),
   /** 관리번호 */
-  managementNumber: 'font-mono text-[11px] text-muted-foreground tabular-nums',
+  managementNumber: `font-mono ${MICRO_TYPO.meta} text-muted-foreground tabular-nums`,
   /** 원인 주 텍스트 */
   causeMain: 'text-sm text-foreground',
   /** 원인 부가 정보 (괄호 등) */
@@ -317,7 +317,7 @@ export const NC_LIST_MOBILE_TOKENS = {
   /** 장비명 */
   equipmentName: 'text-sm font-medium text-foreground truncate',
   /** 관리번호 */
-  managementNum: 'font-mono text-[11px] text-muted-foreground shrink-0',
+  managementNum: `font-mono ${MICRO_TYPO.meta} text-muted-foreground shrink-0`,
   /** 원인 텍스트 */
   causeText: 'text-sm text-muted-foreground truncate flex-1',
 } as const;
@@ -328,7 +328,7 @@ export const NC_LIST_MOBILE_TOKENS = {
 export const NC_TYPE_CHIP_TOKENS = {
   base: [
     'inline-flex items-center gap-1 px-2 py-0.5 rounded',
-    'text-[11px] font-medium',
+    `${MICRO_TYPO.meta} font-medium`,
     'bg-muted/60 text-muted-foreground border border-border/40',
   ].join(' '),
 } as const;
@@ -429,7 +429,7 @@ export const NC_WORKFLOW_TOKENS = {
   },
   /** 라벨 */
   label: {
-    base: 'mt-2.5 text-[13px] font-semibold text-center',
+    base: `mt-2.5 ${MICRO_TYPO.detail} font-semibold text-center`,
     completed: 'text-brand-ok',
     current: 'text-brand-warning',
     currentCritical: 'text-brand-critical',
@@ -437,9 +437,9 @@ export const NC_WORKFLOW_TOKENS = {
     pending: 'text-muted-foreground',
   },
   /** 날짜 */
-  date: 'mt-1 text-[11px] text-muted-foreground tabular-nums',
+  date: `mt-1 ${MICRO_TYPO.meta} text-muted-foreground tabular-nums`,
   /** 담당자 */
-  actor: 'mt-0.5 text-[11px] text-foreground/60',
+  actor: `mt-0.5 ${MICRO_TYPO.meta} text-foreground/60`,
   /** 커넥터 (스텝 사이 수평선) — flex sibling 패턴 (절대 포지셔닝 제거) */
   connector: {
     base: 'flex-1 h-[2px] self-start mt-5',
@@ -543,11 +543,11 @@ export const NC_INFO_CARD_TOKENS = {
   /** 정보 행 — 세로 (긴 텍스트) */
   infoRowVertical: 'flex flex-col gap-1.5 py-2 border-b border-border/40 last:border-b-0',
   /** 라벨 */
-  infoLabel: 'text-[13px] text-muted-foreground flex-shrink-0 mr-4',
+  infoLabel: `${MICRO_TYPO.detail} text-muted-foreground flex-shrink-0 mr-4`,
   /** 값 */
-  infoValue: 'text-[13px] text-foreground text-right',
+  infoValue: `${MICRO_TYPO.detail} text-foreground text-right`,
   /** 값 — 여러 줄 */
-  infoValueMultiline: 'text-[13px] text-foreground leading-relaxed',
+  infoValueMultiline: `${MICRO_TYPO.detail} text-foreground leading-relaxed`,
   /** 수리 연결됨 카드 */
   repairLinkedCard: 'border-brand-ok/30 bg-brand-ok/[0.03]',
   /** 수리 연결됨 제목 */
@@ -590,9 +590,9 @@ export const NC_COLLAPSIBLE_TOKENS = {
   /** 필드 라벨 */
   fieldLabel: 'text-xs font-semibold text-muted-foreground tracking-wide mb-1.5',
   /** 필드 값 */
-  fieldValue: 'text-[13px] text-foreground leading-relaxed',
+  fieldValue: `${MICRO_TYPO.detail} text-foreground leading-relaxed`,
   /** 필드 메타 (날짜, 작성자) */
-  fieldMeta: 'text-[11px] text-muted-foreground mt-1',
+  fieldMeta: `${MICRO_TYPO.meta} text-muted-foreground mt-1`,
   /** 빈 상태 래퍼 — 아이콘 + 텍스트 수직 중앙 정렬 */
   emptyState: 'flex flex-col items-center justify-center py-6 gap-2',
   /** 빈 상태 아이콘 */
@@ -644,8 +644,8 @@ export const NC_REJECTION_ALERT_TOKENS = {
   ].join(' '),
   icon: 'text-brand-critical flex-shrink-0 mt-0.5 h-5 w-5',
   title: 'text-sm font-semibold text-brand-critical',
-  description: 'text-[13px] text-muted-foreground mt-1 leading-relaxed',
-  date: 'text-[11px] text-brand-critical/70 mt-1.5',
+  description: `${MICRO_TYPO.detail} text-muted-foreground mt-1 leading-relaxed`,
+  date: `${MICRO_TYPO.meta} text-brand-critical/70 mt-1.5`,
 } as const;
 
 // ============================================================================
@@ -668,7 +668,7 @@ export const NC_ELAPSED_THRESHOLDS = {
  * 경과일 스타일
  */
 export const NC_ELAPSED_DAYS_TOKENS = {
-  base: 'font-semibold tabular-nums text-[13px]',
+  base: `font-semibold tabular-nums ${MICRO_TYPO.detail}`,
   normal: 'text-muted-foreground',
   warning: 'text-brand-warning',
   critical: 'text-brand-critical',
@@ -753,7 +753,7 @@ export const NC_PAGINATION_TOKENS = {
   buttons: 'flex gap-1',
   pageButton: [
     'w-8 h-8 flex items-center justify-center rounded-md',
-    'border border-border/60 text-muted-foreground tabular-nums text-[13px]',
+    `border border-border/60 text-muted-foreground tabular-nums ${MICRO_TYPO.detail}`,
     'hover:bg-muted hover:text-foreground',
     TRANSITION_PRESETS.fastBgColor,
   ].join(' '),
@@ -780,7 +780,7 @@ export const NC_INFO_NOTICE_TOKENS = {
 
 export const NC_URGENT_BADGE_TOKENS = {
   badge: [
-    'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold',
+    `inline-flex items-center px-2 py-0.5 rounded ${MICRO_TYPO.badge} font-semibold`,
     'bg-brand-critical text-white',
   ].join(' '),
 } as const;
@@ -791,7 +791,7 @@ export const NC_URGENT_BADGE_TOKENS = {
 
 export const NC_REJECTION_BADGE_TOKENS = {
   badge: [
-    'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium',
+    `inline-flex items-center px-1.5 py-0.5 rounded ${MICRO_TYPO.badge} font-medium`,
     getSemanticContainerColorClasses('critical'),
     'text-brand-critical',
   ].join(' '),
@@ -820,17 +820,17 @@ export const NC_REPAIR_DETAIL_TOKENS = {
   value: 'text-foreground font-medium',
   repairResultBadge: {
     completed: [
-      'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium',
+      `inline-flex items-center px-2 py-0.5 rounded-full ${MICRO_TYPO.meta} font-medium`,
       getSemanticContainerColorClasses('ok'),
       'text-brand-ok',
     ].join(' '),
     partial: [
-      'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium',
+      `inline-flex items-center px-2 py-0.5 rounded-full ${MICRO_TYPO.meta} font-medium`,
       getSemanticContainerColorClasses('warning'),
       'text-brand-warning',
     ].join(' '),
     failed: [
-      'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium',
+      `inline-flex items-center px-2 py-0.5 rounded-full ${MICRO_TYPO.meta} font-medium`,
       getSemanticContainerColorClasses('critical'),
       'text-brand-critical',
     ].join(' '),

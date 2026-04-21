@@ -11,7 +11,7 @@
  */
 
 import { type AuditAction } from '@equipment-management/schemas';
-import { FOCUS_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticBadgeClasses } from '../brand';
 import { PAGE_HEADER_TOKENS } from './page-layout';
@@ -225,10 +225,10 @@ export const AUDIT_SUMMARY_TOKENS = {
   count: 'text-xl font-bold tabular-nums tracking-tight',
 
   /** 서브 라벨 (WCAG: ≥11px) */
-  sublabel: 'text-[11px] text-brand-text-muted mt-0.5',
+  sublabel: `${MICRO_TYPO.meta} text-brand-text-muted mt-0.5`,
 
   /** 로딩 중 액션 배지 폴백 (summary 미제공 시) — 기존 인라인 하드코딩 토큰화 */
-  fallbackBadge: 'text-[11px] px-1.5 py-0.5 self-start mt-0.5',
+  fallbackBadge: `${MICRO_TYPO.meta} px-1.5 py-0.5 self-start mt-0.5`,
 
   /** 건수 로딩 플레이스홀더 (summary 미제공 시 "—" 표시용) */
   loadingPlaceholder: 'opacity-30',
@@ -311,7 +311,7 @@ export const AUDIT_TIMELINE_TOKENS = {
 
   /** 날짜 라벨 */
   /** 날짜 라벨 — "오늘", "어제" 등 한국어 텍스트이므로 font-sans 유지 */
-  groupDate: 'text-[11px] font-bold text-brand-text-muted tracking-widest uppercase shrink-0',
+  groupDate: `${MICRO_TYPO.meta} font-bold text-brand-text-muted tracking-widest uppercase shrink-0`,
 
   /** 구분선 */
   groupLine: 'flex-1 h-px bg-brand-border-subtle',
@@ -319,7 +319,7 @@ export const AUDIT_TIMELINE_TOKENS = {
   /** 건수 배지 (WCAG: ≥11px) */
   /** 건수 배지 — "3건" 등 한글 포함이므로 font-sans, 숫자만 tabular-nums */
   groupCount: [
-    'text-[11px] tabular-nums text-brand-text-muted shrink-0',
+    `${MICRO_TYPO.meta} tabular-nums text-brand-text-muted shrink-0`,
     'px-2 py-0.5 rounded-full border border-brand-border-subtle bg-brand-bg-elevated',
   ].join(' '),
 
@@ -346,7 +346,7 @@ export const AUDIT_TIMELINE_TOKENS = {
   entryGridCols: '56px 16px 1fr' as const,
 
   /** 시간 컬럼 */
-  time: 'font-mono text-[11px] text-brand-text-muted pt-0.5 text-right tabular-nums leading-none',
+  time: `font-mono ${MICRO_TYPO.meta} text-brand-text-muted pt-0.5 text-right tabular-nums leading-none`,
 
   /**
    * 스파인 (점 + 연결선)
@@ -360,28 +360,28 @@ export const AUDIT_TIMELINE_TOKENS = {
   /** 본문 컬럼 */
   contentWrapper: 'min-w-0 pb-0.5',
   mainRow: 'flex items-baseline flex-wrap gap-1.5',
-  actor: 'text-[13px] font-semibold text-brand-text-primary leading-none',
-  targetText: 'text-[12px] text-brand-text-secondary',
+  actor: `${MICRO_TYPO.detail} font-semibold text-brand-text-primary leading-none`,
+  targetText: `${MICRO_TYPO.caption} text-brand-text-secondary`,
   targetId: 'font-semibold',
   entityBadge: [
-    'inline-flex items-center px-1.5 py-0.5 text-[11px] rounded-md border',
+    `inline-flex items-center px-1.5 py-0.5 ${MICRO_TYPO.meta} rounded-md border`,
     'border-brand-border-subtle bg-brand-bg-elevated text-brand-text-muted',
   ].join(' '),
 
   /** 위험 액션(delete) 강조 배지 — 토큰화하여 인라인 하드코딩 제거 (WCAG: ≥11px) */
   dangerLabel: [
-    'inline-flex items-center px-1.5 py-0.5 text-[11px] rounded-md font-semibold',
+    `inline-flex items-center px-1.5 py-0.5 ${MICRO_TYPO.meta} rounded-md font-semibold`,
     'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
   ].join(' '),
 
   subRow: 'flex items-center flex-wrap gap-2.5 mt-1',
-  subItem: 'flex items-center gap-1 text-[11px] text-brand-text-muted',
-  subMono: 'font-mono text-[11px] text-brand-text-muted',
+  subItem: `flex items-center gap-1 ${MICRO_TYPO.meta} text-brand-text-muted`,
+  subMono: `font-mono ${MICRO_TYPO.meta} text-brand-text-muted`,
 
   /** 인라인 Diff 미리보기 */
   diffPreview: [
     'mt-1.5 px-2.5 py-1.5 rounded-lg border border-brand-border-subtle',
-    'bg-brand-bg-elevated font-mono text-[11px] flex items-center gap-2 max-w-full overflow-hidden',
+    `bg-brand-bg-elevated font-mono ${MICRO_TYPO.meta} flex items-center gap-2 max-w-full overflow-hidden`,
   ].join(' '),
   diffOld: 'text-brand-critical truncate shrink-0 max-w-[30%]',
   diffArrow: 'text-brand-text-muted shrink-0',
@@ -466,7 +466,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
   /** 헤더 영역 */
   header: 'px-5 pt-5 pb-4 border-b border-brand-border-subtle flex-shrink-0',
   headerTop: 'flex items-center justify-between mb-3',
-  headerLabel: 'text-[11px] font-bold text-brand-text-muted uppercase tracking-widest',
+  headerLabel: `${MICRO_TYPO.meta} font-bold text-brand-text-muted uppercase tracking-widest`,
   closeBtn: [
     'w-7 h-7 rounded-md border border-brand-border-subtle bg-transparent',
     'flex items-center justify-center text-brand-text-muted',
@@ -475,7 +475,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
     FOCUS_TOKENS.classes.default,
   ].join(' '),
   actionRow: 'flex items-center gap-2',
-  timestamp: 'font-mono text-[11px] text-brand-text-muted',
+  timestamp: `font-mono ${MICRO_TYPO.meta} text-brand-text-muted`,
 
   /** 스크롤 본문 */
   body: 'flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4',
@@ -484,13 +484,13 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
   bodyEmpty: 'flex-1 flex items-center justify-center text-brand-text-muted text-sm',
 
   /** 섹션 */
-  sectionLabel: 'text-[11px] font-bold text-brand-text-muted uppercase tracking-widest mb-2',
+  sectionLabel: `${MICRO_TYPO.meta} font-bold text-brand-text-muted uppercase tracking-widest mb-2`,
   sectionCard: 'bg-brand-bg-elevated border border-brand-border-subtle rounded-xl overflow-hidden',
   row: 'flex items-start gap-2 px-3 py-2 text-sm',
   rowBorder: 'border-t border-brand-border-subtle',
-  rowKey: 'text-[11px] text-brand-text-muted min-w-20 flex-shrink-0 pt-px',
-  rowVal: 'text-[12px] text-brand-text-primary min-w-0 break-all',
-  rowValMono: 'font-mono text-[11px] text-brand-text-secondary min-w-0 break-all',
+  rowKey: `${MICRO_TYPO.meta} text-brand-text-muted min-w-20 flex-shrink-0 pt-px`,
+  rowVal: `${MICRO_TYPO.caption} text-brand-text-primary min-w-0 break-all`,
+  rowValMono: `font-mono ${MICRO_TYPO.meta} text-brand-text-secondary min-w-0 break-all`,
 
   /** 하단 액션 바 */
   footer: 'px-5 py-3 border-t border-brand-border-subtle flex gap-2 flex-shrink-0',

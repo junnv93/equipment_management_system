@@ -328,8 +328,12 @@ export const MICRO_TYPO = {
   badge: 'text-2xs',
   /** 범례·부속 레이블 (--text-2xs = 10px) */
   label: 'text-2xs',
-  /** 일반 부연 설명 (text-xs ≥ 11px) */
+  /** 일반 부연 설명 (text-xs = 12/11px) */
   caption: 'text-xs',
+  /** 메타/타임스탬프/관리번호 (--text-xs-tight = 11px) */
+  meta: 'text-xs-tight',
+  /** 정보 레이블/섹션 내 값 (--text-sm-tight = 13px) */
+  detail: 'text-sm-tight',
 } as const;
 
 /**

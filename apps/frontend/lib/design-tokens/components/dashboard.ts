@@ -12,7 +12,7 @@
  */
 
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
-import { INTERACTIVE_TOKENS, FOCUS_TOKENS } from '../semantic';
+import { INTERACTIVE_TOKENS, FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import { toTailwindSize } from '../primitives';
 import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
 
@@ -319,10 +319,10 @@ export const DASHBOARD_KPI_TOKENS = {
   heroCount: 'font-display tabular-nums font-bold text-[56px] leading-none tracking-tight',
   heroUnit: 'text-2xl font-normal opacity-50',
   heroLabel: 'text-xs font-medium uppercase tracking-wider opacity-60',
-  heroSub: 'text-[13px] opacity-60',
+  heroSub: `${MICRO_TYPO.detail} opacity-60`,
   heroBarTrack: 'h-1.5 rounded-full bg-white/15 overflow-hidden',
   heroBarFill: 'h-full rounded-full bg-gradient-to-r from-brand-ok to-brand-ok/60',
-  heroBarLabels: 'flex justify-between text-[10px] font-mono opacity-40 mt-1',
+  heroBarLabels: `flex justify-between ${MICRO_TYPO.badge} font-mono opacity-40 mt-1`,
   /**
    * 가동률/반출/부적합 상태별 색상 토큰
    *
@@ -397,7 +397,7 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   title: 'text-sm font-semibold text-foreground tabular-nums',
   navButton: `p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.instantTransform}`,
   grid: 'grid grid-cols-7 px-3 pb-3',
-  dayLabel: 'text-center text-[10px] font-medium text-muted-foreground py-1',
+  dayLabel: `text-center ${MICRO_TYPO.badge} font-medium text-muted-foreground py-1`,
   cell: 'relative flex flex-col items-center py-1 rounded hover:bg-muted/50 cursor-default',
   cellToday: 'bg-brand-info/10',
   cellNumber: 'text-xs text-foreground leading-tight',
@@ -410,14 +410,14 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   dotReturn: 'w-1.5 h-1.5 rounded-full bg-brand-info flex-shrink-0',
   popup:
     'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-20 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px] max-w-[220px]',
-  popupTitle: 'text-[10px] font-medium text-muted-foreground mb-1',
+  popupTitle: `${MICRO_TYPO.badge} font-medium text-muted-foreground mb-1`,
   popupItem: 'flex items-center gap-1.5 py-0.5',
   popupItemDot: 'w-1.5 h-1.5 rounded-full flex-shrink-0',
   popupItemText: 'text-xs text-foreground truncate',
   legend: 'px-4 pb-3 flex items-center gap-3 flex-shrink-0 flex-wrap',
   legendItem: 'flex items-center gap-1',
   legendDot: 'w-2 h-2 rounded-full flex-shrink-0',
-  legendText: 'text-[10px] text-muted-foreground',
+  legendText: `${MICRO_TYPO.badge} text-muted-foreground`,
 } as const;
 
 // ============================================================================
@@ -453,7 +453,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   ddayReturn: 'font-mono tabular-nums font-bold text-xs text-brand-info w-12 flex-shrink-0',
   info: 'min-w-0 flex-1',
   name: 'text-xs text-foreground truncate',
-  user: 'text-[10px] text-muted-foreground truncate',
+  user: `${MICRO_TYPO.badge} text-muted-foreground truncate`,
   /** 인라인 빈 상태 (flex row, 한 줄) */
   compactEmpty: 'flex items-center gap-2 py-2 text-muted-foreground',
   compactEmptyIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
@@ -523,20 +523,17 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
     none: 'border-l-4 border-l-transparent',
   },
   /** 원형 카운트 배지 */
-  countCircle:
-    'flex-shrink-0 h-6 w-6 rounded-full bg-brand-critical text-white text-[10px] font-bold flex items-center justify-center tabular-nums',
+  countCircle: `flex-shrink-0 h-6 w-6 rounded-full bg-brand-critical text-white ${MICRO_TYPO.badge} font-bold flex items-center justify-center tabular-nums`,
   /** 요약 텍스트 */
   summaryText: 'text-xs font-medium text-foreground',
   /** pill 칩 컨테이너 — ml-auto로 우측 정렬 (와이어프레임 준수) */
   chips: 'flex items-center gap-2 flex-wrap ml-auto',
   /** 기본 카테고리 pill */
-  chip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border',
+  chip: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-muted text-muted-foreground border border-border`,
   /** 긴급 카테고리 pill (non-conforming 등) */
-  chipUrgent:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+  chipUrgent: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-brand-critical/10 text-brand-critical border border-brand-critical/20`,
   /** 경고 카테고리 pill (overdue 등) */
-  chipWarning:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
+  chipWarning: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-brand-warning/10 text-brand-warning border border-brand-warning/20`,
   /** "이상 없음" 인라인 상태 */
   clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
   clearIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
@@ -562,9 +559,8 @@ export const DASHBOARD_STATUS_MINI_TOKENS = {
   statusDot: 'w-2 h-2 rounded-full flex-shrink-0',
   barTrack: 'flex-1 h-1 rounded-full bg-muted overflow-hidden',
   barFill: 'h-full rounded-full',
-  statusLabel: 'text-[10px] text-muted-foreground w-14 truncate flex-shrink-0',
-  statusCount:
-    'text-[10px] tabular-nums font-medium text-muted-foreground text-right w-5 flex-shrink-0',
+  statusLabel: `${MICRO_TYPO.badge} text-muted-foreground w-14 truncate flex-shrink-0`,
+  statusCount: `${MICRO_TYPO.badge} tabular-nums font-medium text-muted-foreground text-right w-5 flex-shrink-0`,
 } as const;
 
 // ============================================================================
@@ -572,9 +568,9 @@ export const DASHBOARD_STATUS_MINI_TOKENS = {
 // ============================================================================
 
 export const DASHBOARD_KPI_TREND_TOKENS = {
-  up: 'text-brand-ok text-[10px] tabular-nums font-semibold leading-none',
-  down: 'text-brand-critical text-[10px] tabular-nums font-semibold leading-none',
-  same: 'text-muted-foreground text-[10px] tabular-nums leading-none',
+  up: `text-brand-ok ${MICRO_TYPO.badge} tabular-nums font-semibold leading-none`,
+  down: `text-brand-critical ${MICRO_TYPO.badge} tabular-nums font-semibold leading-none`,
+  same: `text-muted-foreground ${MICRO_TYPO.badge} tabular-nums leading-none`,
   badge: 'inline-flex items-center gap-0.5',
 } as const;
 
@@ -785,7 +781,7 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
   gridCompactCard: `group border border-border bg-card rounded-lg p-2.5 flex flex-col items-center text-center gap-1 cursor-pointer hover:shadow-sm hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   gridCompactIconWrap: 'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
   gridCompactIcon: 'h-[18px] w-[18px]',
-  gridCompactLabel: 'text-[10px] font-medium text-foreground leading-tight line-clamp-2 w-full',
+  gridCompactLabel: `${MICRO_TYPO.badge} font-medium text-foreground leading-tight line-clamp-2 w-full`,
   gridCompactCount: 'font-mono tabular-nums font-bold text-lg tracking-tight leading-none mt-0.5',
 } as const;
 

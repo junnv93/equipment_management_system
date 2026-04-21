@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   ClipboardList,
   Clock,
@@ -19,6 +18,7 @@ import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
+import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
 import {
   getCheckoutStatsClasses,
@@ -184,30 +184,6 @@ export default function OutboundCheckoutsTab({
     filters.period === 'all' &&
     !filters.search;
 
-  // ──────────────────────────────────────────────
-  // Render helpers
-  // ──────────────────────────────────────────────
-  const renderLoadingState = () => (
-    <div aria-busy="true" aria-label="반출 목록 로딩 중">
-      <span className="sr-only">반출 목록을 불러오는 중입니다.</span>
-      {[1, 2, 3].map((i) => (
-        <Card key={i} className="overflow-hidden">
-          <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-5 w-[100px]" />
-              <Skeleton className="h-5 w-[120px]" />
-              <Skeleton className="h-5 w-[60px]" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-[60px]" />
-              <Skeleton className="h-5 w-[50px]" />
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-
   const filterActive = !isAllActive;
 
   // ──────────────────────────────────────────────
@@ -296,7 +272,7 @@ export default function OutboundCheckoutsTab({
 
       <div className="space-y-3">
         {checkoutsLoading ? (
-          renderLoadingState()
+          <CheckoutListSkeleton label="반출 목록 로딩 중" srOnly="반출 목록을 불러오는 중입니다." />
         ) : allGroups.length === 0 ? (
           <EmptyState
             variant={filterActive ? 'filtered' : 'no-data'}
@@ -326,6 +302,7 @@ export default function OutboundCheckoutsTab({
             <div
               key={group.key}
               id={group.statuses.includes('overdue') ? 'overdue-group-section' : undefined}
+              tabIndex={group.statuses.includes('overdue') ? -1 : undefined}
             >
               <CheckoutGroupCard
                 group={group}

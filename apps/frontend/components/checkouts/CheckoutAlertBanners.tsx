@@ -48,11 +48,13 @@ export default function CheckoutAlertBanners({
             type="button"
             className={CHECKOUT_ALERT_TOKENS.overdue.action}
             onClick={() => {
-              document
-                .getElementById(overdueSectionId)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              const el = document.getElementById(overdueSectionId);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                el.focus({ preventScroll: true });
+              }
             }}
-            aria-label="기한 초과 항목으로 이동"
+            aria-label={t('alerts.overdueScrollAriaLabel')}
           >
             {t('alerts.overdueAction')}
           </button>
@@ -60,7 +62,7 @@ export default function CheckoutAlertBanners({
             type="button"
             className={CHECKOUT_ALERT_TOKENS.overdue.close}
             onClick={() => setOverdueVisible(false)}
-            aria-label="배너 닫기"
+            aria-label={t('alerts.bannerClose')}
           >
             <X className="h-3.5 w-3.5" />
           </button>

@@ -405,6 +405,8 @@
   "alerts": {
     "overdueTitle": "{count} overdue items need immediate attention",
     "overdueAction": "Jump to overdue →",
+    "overdueScrollAriaLabel": "Jump to overdue items",
+    "bannerClose": "Close banner",
     "pendingCheckTitle": "{count} returned items awaiting return approval",
     "pendingCheckAction": "Process"
   },

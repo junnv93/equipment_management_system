@@ -18,7 +18,7 @@ import {
 import { ClipboardList, FilterX } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { InboundSectionHeader } from '@/components/checkouts/InboundSectionHeader';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useInboundSectionPagination } from '@/hooks/use-inbound-section-pagination';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
@@ -156,27 +156,6 @@ export default function InboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // Render helpers
   // ──────────────────────────────────────────────
-  const renderLoadingState = () => (
-    <div aria-busy="true" aria-label="반입 목록 로딩 중">
-      <span className="sr-only">반입 목록을 불러오는 중입니다.</span>
-      {[1, 2, 3].map((i) => (
-        <Card key={i} className="overflow-hidden">
-          <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-5 w-[100px]" />
-              <Skeleton className="h-5 w-[120px]" />
-              <Skeleton className="h-5 w-[60px]" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-[60px]" />
-              <Skeleton className="h-5 w-[50px]" />
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-
   const renderSectionPagination = (
     currentPage: number,
     totalPages: number,
@@ -245,7 +224,10 @@ export default function InboundCheckoutsTab({
         />
 
         {inboundCheckoutsLoading ? (
-          renderLoadingState()
+          <CheckoutListSkeleton
+            label="타팀 대여 목록 로딩 중"
+            srOnly="타팀 장비 대여 목록을 불러오는 중입니다."
+          />
         ) : !hasInboundCheckouts ? (
           <EmptyState
             variant="no-data"
@@ -287,7 +269,10 @@ export default function InboundCheckoutsTab({
         />
 
         {rentalImportsLoading ? (
-          renderLoadingState()
+          <CheckoutListSkeleton
+            label="외부 렌탈 목록 로딩 중"
+            srOnly="외부 업체 렌탈 목록을 불러오는 중입니다."
+          />
         ) : !hasRentalImports ? (
           <EmptyState
             variant="no-data"
@@ -390,7 +375,10 @@ export default function InboundCheckoutsTab({
         />
 
         {internalSharedImportsLoading ? (
-          renderLoadingState()
+          <CheckoutListSkeleton
+            label="내부 공용장비 목록 로딩 중"
+            srOnly="내부 공용 장비 목록을 불러오는 중입니다."
+          />
         ) : !hasInternalSharedImports ? (
           <EmptyState
             variant="no-data"
