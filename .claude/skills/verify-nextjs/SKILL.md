@@ -210,6 +210,35 @@ const HeavyComponent = dynamic(
 );
 ```
 
+### Step 8: SSR-safe localStorage 클라이언트 상태 패턴
+
+localStorage / sessionStorage를 직접 읽는 훅/컴포넌트에서 hydration mismatch 방지 패턴을 검증한다.
+
+**올바른 패턴 (use-onboarding-hint.ts 기준):**
+```typescript
+// ✅ SSR-safe: 초기값 null → useEffect에서만 localStorage 접근
+const [dismissed, setDismissed] = useState<boolean | null>(null);
+useEffect(() => {
+  const stored = localStorage.getItem(key);
+  setDismissed(stored === 'true');
+}, [key]);
+const isVisible = dismissed === false; // null(서버) = invisible
+```
+
+**탐지:**
+```bash
+# localStorage를 초기값 없이 useState에서 직접 읽는 패턴
+grep -rn "useState.*localStorage\|localStorage.*useState" \
+  apps/frontend/hooks apps/frontend/components --include="*.ts" --include="*.tsx"
+
+# SSR-safe 확인: localStorage 사용 훅에 useEffect 없음
+for f in $(grep -rl "localStorage" apps/frontend/hooks --include="*.ts"); do
+  grep -L "useEffect" "$f" && echo "WARNING: $f - localStorage without useEffect"
+done
+```
+
+**PASS:** localStorage 사용 훅 전체가 `useEffect` + `null` 초기값 패턴 사용. **FAIL:** `useState(localStorage.getItem(...))` 직접 초기화.
+
 ## Output Format
 
 ```markdown
@@ -222,6 +251,7 @@ const HeavyComponent = dynamic(
 | 5   | 서버 컴포넌트 page.tsx  | PASS/FAIL | 'use client' page.tsx 목록         |
 | 6   | error.tsx / loading.tsx | PASS/INFO | 누락 라우트 목록                   |
 | 7   | Dynamic imports         | PASS/INFO | ssr: false 누락, loading 누락 위치 |
+| 8   | SSR-safe localStorage   | PASS/FAIL | useEffect 없는 localStorage 훅 목록 |
 ```
 
 ## Exceptions

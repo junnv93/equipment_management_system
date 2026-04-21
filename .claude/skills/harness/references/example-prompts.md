@@ -505,6 +505,12 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 4개
 ```
 
+> **78-3~78-7 자체감사 후속 수정 (2026-04-21, ada04f1d):**
+> - staggerItem dead token 제거 — CSS transition으로 stagger 구현 불가 (animation-delay 별도 인프라 필요)
+> - 내부 공용장비 테이블 PREMIUM_TABLE_TOKENS 3종(stickyHeader/stripe/importantCol) 누락 보완
+> - `max-w-[160px]` 하드코딩 → `CHECKOUT_INTERACTION_TOKENS.destinationLabel` SSOT 토큰화
+> - `CheckoutGroupCard` `div role="button"` → tech-debt-tracker 등록 (기존 코드, 별도 리팩토링 필요)
+
 ---
 
 ## 부적합 관리 페이지 디자인 리뷰 후속 — 1차·2차 전체 이슈 (9건)

@@ -179,6 +179,35 @@ grep -rn "withPreferences" apps/frontend/hooks --include="*.ts"
 
 **참고:** `withPreferences`는 URL 필터가 아닌 사용자 설정(DisplayPreferences)을 API 파라미터에 병합하는 함수. `showRetired` 같은 preference 기반 필터에 사용.
 
+### Step 6: URL 기반 섹션 독립 페이지네이션 훅
+
+한 페이지 내 여러 독립 섹션이 각각 별도 URL 파라미터로 페이지네이션하는 경우,
+URL이 유일한 진실의 소스(SSOT)여야 한다.
+
+**올바른 패턴 (use-inbound-section-pagination.ts 기준):**
+```typescript
+// ✅ URL에서 파생, useState 없음
+const rentalPage = Number(searchParams.get('rentalPage') ?? '1');
+const setRentalPage = (page: number) => router.replace(`...?rentalPage=${page}`, { scroll: false });
+```
+
+**탐지:**
+```bash
+# 섹션 페이지네이션 훅에서 useState로 page 관리하는 패턴
+grep -rn "useState.*Page\|Page.*useState" \
+  apps/frontend/hooks/use-*pagination*.ts 2>/dev/null
+
+# router.replace에 scroll: false 누락
+grep -rn "router\.replace\|router\.push" \
+  apps/frontend/hooks/use-*pagination*.ts | grep -v "scroll: false"
+
+# FRONTEND_ROUTES SSOT 우회하는 인라인 URL
+grep -rn "router\.replace.*'/checkouts\|router\.push.*'/checkouts" \
+  apps/frontend/hooks --include="*.ts"
+```
+
+**PASS:** 섹션 페이지네이션 훅 전체가 URL searchParams 기반, `scroll: false`, `FRONTEND_ROUTES` SSOT 사용. **FAIL:** `useState` 페이지 이중 관리 또는 인라인 URL.
+
 ## Output Format
 
 ```markdown
@@ -189,6 +218,7 @@ grep -rn "withPreferences" apps/frontend/hooks --include="*.ts"
 | 3   | filter hook 존재          | PASS/FAIL | 누락 hook 목록       |
 | 4   | page.tsx 서버 파싱        | PASS/FAIL | 누락 page.tsx 목록   |
 | 5   | Content.tsx useState 금지 | PASS/FAIL | 위반 위치 목록       |
+| 6   | 섹션 독립 페이지네이션    | PASS/FAIL | useState 이중관리 훅 목록 |
 ```
 
 ## Exceptions

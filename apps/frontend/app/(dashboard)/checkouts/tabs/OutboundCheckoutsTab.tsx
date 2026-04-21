@@ -262,7 +262,7 @@ export default function OutboundCheckoutsTab({
               >
                 {card.value}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{t(card.subKey)}</p>
+              <p className={`${MICRO_TYPO.label} text-muted-foreground mt-0.5`}>{t(card.subKey)}</p>
               {isActive && (
                 <p className={`${MICRO_TYPO.badge} text-primary font-semibold mt-1`}>
                   {t('outbound.activeFilter')}

@@ -234,6 +234,33 @@ grep -n "currentStepIndex === [0-9]" apps/frontend/lib/design-tokens/components/
 
 **상세:** [references/step-details.md](references/step-details.md) Step 12
 
+### Step 13: Dead Token 탐지
+
+`components/*.ts`에 `export const *_TOKENS`로 정의되었지만 컴포넌트/페이지에서 **0회** 사용되는
+dead token은 리팩토링 후 정리되지 않은 누적 엔트로피다. 23%가 dead token이면 개발자가 어느 토큰을
+써야 하는지 혼란해지고 인라인 하드코딩 재발로 이어진다.
+
+**탐지:**
+```bash
+for token in $(grep -rh "^export const [A-Z_]*TOKENS\b" \
+  apps/frontend/lib/design-tokens/components/ | \
+  sed -E 's/.*export const ([A-Z_]+TOKENS).*/\1/'); do
+  count=$(grep -rl "\b${token}\b" apps/frontend --include="*.tsx" --include="*.ts" \
+    | grep -v "lib/design-tokens\|node_modules" | wc -l)
+  [ "$count" -eq 0 ] && echo "DEAD: $token"
+done
+```
+
+**PASS (INFO):** dead token 0개. **INFO:** dead token 목록 출력 후 삭제 또는 사용처 추가 검토 권고.
+
+**예외:**
+- `@deprecated` 주석이 달린 하위 호환 re-export (`EQUIPMENT_EMPTY_STATE_TOKENS` 등) — 마이그레이션 완료 전까지 유예
+- `CHECKOUT_HEADER_TOKENS`, `CHECKOUT_SUB_HEADER_TOKENS` — spread 위임 패턴으로 실제 사용됨
+
+**FAIL 기준:** dead token ≥ 5개 시 FAIL (0~4개는 INFO 레벨). 즉각 삭제보다 tech-debt-tracker 등록 권고.
+
+**상세:** [references/step-details.md](references/step-details.md) Step 13
+
 ## Output Format
 
 ```markdown
@@ -259,6 +286,7 @@ grep -n "currentStepIndex === [0-9]" apps/frontend/lib/design-tokens/components/
 | 10c | `tailwindcss-animate` 재도입 0 hits | PASS/FAIL | package.json 위치 |
 | 10d | `postcss.config.js` 단일 `@tailwindcss/postcss` 플러그인 | PASS/FAIL | 위반 플러그인 |
 | 12  | @theme CSS 변수 ↔ primitives.ts 3-way 동기화 | PASS/FAIL | 불일치 변수 목록 |
+| 13  | Dead Token 탐지 (0 usage exports) | PASS/INFO/FAIL | dead token 목록 |
 ```
 
 ## Exceptions
