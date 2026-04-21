@@ -195,9 +195,11 @@ export const NC_KPI_CARD_TOKENS = {
     NC_ELEVATION.raised,
     TRANSITION_PRESETS.fastBgBorder,
   ].join(' '),
-  /** 카드 hover */
+  /** 카드 hover — hover: prefix 필요로 NC_ELEVATION 직접 참조 불가 (Tailwind JIT 제약).
+   *  raised(shadow-sm) → hover 시 floating 수준(shadow-md)으로 한 단계 승격 */
   cardHover: 'hover:border-border hover:shadow-md cursor-pointer',
-  /** 카드 active (필터 적용됨) */
+  /** 카드 active — hover와 동일 이유로 shadow-md 직접 사용.
+   *  active 상태는 floating 시각 무게를 유지 (filter 적용됨 명시) */
   cardActive: 'border-border bg-muted/30 shadow-md',
   /** 아이콘 래퍼 */
   iconWrap: 'w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0',
@@ -374,8 +376,10 @@ export function getNCMiniConnectorClasses(
  * open → corrected → closed
  */
 export const NC_WORKFLOW_TOKENS = {
-  /** 전체 컨테이너 — shadow-sm으로 hero elevation 부여 (flat card 대비 계층 구분) */
-  container: ['bg-card border border-border/60 rounded-lg p-6 sm:p-7 shadow-sm'].join(' '),
+  /** 전체 컨테이너 — NC_ELEVATION.raised (raised 계층: 워크플로우는 카드보다 상위 정보) */
+  container: [`bg-card border border-border/60 rounded-lg p-6 sm:p-7 ${NC_ELEVATION.raised}`].join(
+    ' '
+  ),
   /** 컨테이너 — 긴급 (장기 미조치) */
   containerUrgent: 'border-brand-critical/30',
   /** 스텝 레이아웃 — flex sibling 패턴, relative 불필요 */
