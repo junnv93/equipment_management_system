@@ -179,12 +179,12 @@ function DashboardClientComponent({
   return (
     <div className={getPageContainerClasses('list')}>
       {/* Row 0: Welcome + QuickActionBar — 입장 애니메이션 */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 motion-safe:animate-fade-in-up">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 motion-safe:animate-fade-in-up">
         <header className="flex-1 min-w-0">
           <WelcomeHeader />
         </header>
         {controlCenter.showQuickActionBar && controlCenter.quickActions.length > 0 && (
-          <div className="sm:flex-shrink-0">
+          <div className="lg:flex-shrink-0">
             <QuickActionBar actions={controlCenter.quickActions} />
           </div>
         )}

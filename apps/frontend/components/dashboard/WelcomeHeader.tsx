@@ -115,7 +115,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
       </div>
 
       {/* 역할 설명 (작은 텍스트) — 모바일에서 QuickActionBar와 공존 시 공간 절약 */}
-      <p className={cn(T.description, 'hidden sm:block')}>{roleDescription}</p>
+      <p className={cn(T.description, 'hidden lg:block')}>{roleDescription}</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-21 (QR Phase 1-3 후속 개선 섹션 완료 10건 전체 archive-domain.md 이동. 사용자 결정 대기 1건(커밋 귀속 오염 복구) → Option A 채택으로 폐기. 미완료 1건: sticky-header CSS 변수(트리거 조건 미달). UR-1/2/3 ultrareview 통합 프롬프트 추가 2026-04-21. 78차 반출입 관리 페이지 디자인/IA 개선 7종 추가 2026-04-21. 78-1 완료 2026-04-21 — primitives 2xs/hairline/pagination + semantic MICRO_TYPO/DIMENSION_TOKENS + checkout.ts SSOT 복구 + globals.css @theme 연동. 78-2부터 실행 대기.)**
+> **마지막 정리일: 2026-04-21 세션2 (78차 NC 페이지 P1-P9 전체 완료. verify-qr-ssot SKILL.md micro 하드코딩 → getSamplerPresetOrder() 동적화. NC_SPACING_TOKENS dead code 4개 제거. 잔여: UR-2 CRITICAL, UR-3 MEDIUM, sticky-header CSS literal LOW, CheckoutsContent QUERY_CONFIG inline override 3건, text-[Npx] 90건 예약.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
