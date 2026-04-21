@@ -2,6 +2,7 @@
 
 import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { SITE_VALUES } from '@equipment-management/schemas';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
@@ -80,7 +81,7 @@ describe('Site Permissions (e2e)', () => {
 
       items.forEach((item: Record<string, unknown>) => {
         if (item.site) {
-          expect(['suwon', 'uiwang']).toContain(item.site);
+          expect(SITE_VALUES).toContain(item.site);
         }
       });
     });

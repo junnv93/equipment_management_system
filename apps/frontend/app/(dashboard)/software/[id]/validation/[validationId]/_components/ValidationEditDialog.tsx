@@ -6,14 +6,13 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { UserCombobox } from '@/components/ui/user-combobox';
 import { softwareValidationApi } from '@/lib/api/software-api';
 import type { UpdateSoftwareValidationDto, SoftwareValidation } from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
+import { VendorEditFields } from './VendorEditFields';
 
 interface ValidationEditDialogProps {
   validationId: string;
@@ -23,7 +22,7 @@ interface ValidationEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface EditForm {
+export interface EditForm {
   vendorName: string;
   vendorSummary: string;
   receivedBy: string;
@@ -129,49 +128,7 @@ export function ValidationEditDialog({
                 onChange={(e) => setEditForm({ ...editForm, testDate: e.target.value })}
               />
             </div>
-            {isVendor && (
-              <>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.vendorNameLabel')}</Label>
-                  <Input
-                    value={editForm.vendorName}
-                    onChange={(e) => setEditForm({ ...editForm, vendorName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.vendorSummaryLabel')}</Label>
-                  <Textarea
-                    value={editForm.vendorSummary}
-                    onChange={(e) => setEditForm({ ...editForm, vendorSummary: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.receivedByLabel')}</Label>
-                    <UserCombobox
-                      value={editForm.receivedBy || undefined}
-                      onChange={(id) => setEditForm({ ...editForm, receivedBy: id ?? '' })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.receivedDateLabel')}</Label>
-                    <Input
-                      type="date"
-                      value={editForm.receivedDate}
-                      onChange={(e) => setEditForm({ ...editForm, receivedDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.attachmentNoteLabel')}</Label>
-                  <Textarea
-                    value={editForm.attachmentNote}
-                    onChange={(e) => setEditForm({ ...editForm, attachmentNote: e.target.value })}
-                    placeholder={t('validation.form.attachmentNotePlaceholder')}
-                  />
-                </div>
-              </>
-            )}
+            {isVendor && <VendorEditFields editForm={editForm} setEditForm={setEditForm} />}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('validation.form.cancel')}

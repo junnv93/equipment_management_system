@@ -465,16 +465,25 @@ describe('CalibrationPlansController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       if (planResponse.body.status === 'approved' && planResponse.body.items?.length > 0) {
-        const itemUuid = planResponse.body.items[0].id;
+        // actualCalibrationId가 연결된 항목만 확인 가능 (서비스 게이트)
+        const confirmableItem = planResponse.body.items.find(
+          (item: Record<string, unknown>) => item.actualCalibrationId,
+        );
 
-        const confirmResponse = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid)))
-          .set('Authorization', `Bearer ${accessToken}`)
-          .send({ confirmedBy: TEST_USER_IDS.manager });
+        if (confirmableItem) {
+          const confirmResponse = await request(ctx.app.getHttpServer())
+            .patch(
+              toTestPath(
+                API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, confirmableItem.id as string),
+              ),
+            )
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({});
 
-        expect(confirmResponse.status).toBe(200);
-        expect(confirmResponse.body).toHaveProperty('confirmedBy');
-        expect(confirmResponse.body).toHaveProperty('confirmedAt');
+          expect(confirmResponse.status).toBe(200);
+          expect(confirmResponse.body).toHaveProperty('confirmedBy');
+          expect(confirmResponse.body).toHaveProperty('confirmedAt');
+        }
       }
     });
 
@@ -599,15 +608,27 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(approveResponse.body.status).toBe('approved');
 
       if (approveResponse.body.items?.length > 0) {
-        const itemUuid = approveResponse.body.items[0].id;
+        // actualCalibrationId가 연결된 항목만 확인 가능 (서비스 게이트)
+        const confirmableItem = approveResponse.body.items.find(
+          (item: Record<string, unknown>) => item.actualCalibrationId,
+        );
 
-        const confirmResponse = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid)))
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({ confirmedBy: TEST_USER_IDS.manager });
+        if (confirmableItem) {
+          const confirmResponse = await request(ctx.app.getHttpServer())
+            .patch(
+              toTestPath(
+                API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(
+                  planUuid,
+                  confirmableItem.id as string,
+                ),
+              ),
+            )
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({});
 
-        expect(confirmResponse.status).toBe(200);
-        expect(confirmResponse.body).toHaveProperty('confirmedBy');
+          expect(confirmResponse.status).toBe(200);
+          expect(confirmResponse.body).toHaveProperty('confirmedBy');
+        }
       }
 
       // Export 엔드포인트는 /export (리네임됨). 양식 템플릿 파일 누락 시 404.

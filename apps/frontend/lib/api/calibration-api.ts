@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import {
@@ -5,6 +6,7 @@ import {
   transformSingleResponse,
   transformPaginatedResponse,
 } from './utils/response-transformers';
+import { queryKeys, QUERY_CONFIG } from './query-config';
 import type {
   CalibrationApprovalStatus,
   CalibrationRegisteredByRole,
@@ -575,5 +577,14 @@ const calibrationApi = {
     },
   },
 };
+
+export function useCalibrationDetail(id: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.calibrations.detail(id ?? ''),
+    queryFn: () => calibrationApi.getCalibration(id!),
+    enabled: !!id,
+    ...QUERY_CONFIG.CALIBRATION_DETAIL,
+  });
+}
 
 export default calibrationApi;
