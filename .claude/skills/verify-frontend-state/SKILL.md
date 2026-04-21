@@ -385,6 +385,54 @@ return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <E
 **INFO:** 에러를 상위 `error.tsx` Error Boundary로 bubble up하는 경우 `isError` 분기 생략 가능.
 **근거:** 2026-04-21 harness W-2 — `ValidationDocumentsSection.tsx` 첨부파일 로드 실패 시 빈 상태와 동일한 UI. `isError` 분기 추가 후 에러/빈 상태 구분 가능.
 
+### Step 19: shared/generic 컴포넌트에서 useAuth 금지 (2026-04-21 추가)
+
+`components/shared/`, `components/ui/` 등 여러 도메인에서 재사용되는 **프레젠테이션 컴포넌트**는
+`useAuth()`를 직접 호출해서는 안 된다. 권한 판단 결과를 props(`canAct`, `canEdit` 등)로 주입받아야 한다.
+
+**이유:** 프레젠테이션 컴포넌트가 인증 컨텍스트(useAuth)에 의존하면:
+- 스토리북/단위 테스트 시 AuthProvider 래핑 강제
+- 컴포넌트를 서버 컴포넌트로 전환하기 어려움
+- 같은 컴포넌트를 다른 권한 조건으로 재사용 불가
+
+**탐지:**
+```bash
+# components/shared/, components/ui/ 에서 useAuth import 탐지
+grep -rn "use-auth\|useAuth" \
+  apps/frontend/components/shared \
+  apps/frontend/components/ui \
+  --include="*.tsx" --include="*.ts"
+```
+
+**❌ 금지 — 프레젠테이션 컴포넌트 내부 권한 판단:**
+```typescript
+// EmptyState.tsx — 수정 전 (anti-pattern)
+export function EmptyState({ primaryAction }: EmptyStateProps) {
+  const { can } = useAuth(); // ← 프레젠테이션 컴포넌트에 인프라 의존성 주입
+  const showPrimary = primaryAction?.permission ? can(primaryAction.permission) : true;
+}
+```
+
+**✅ 올바른 패턴 — Container가 권한 판단 후 props로 전달:**
+```typescript
+// EmptyState.tsx — 수정 후 (presentation)
+export function EmptyState({ canAct }: EmptyStateProps) {
+  const showPrimary = canAct !== false; // props 수신만
+}
+
+// OutboundCheckoutsTab.tsx — Container
+const { can } = useAuth();
+const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
+<EmptyState canAct={canCreateCheckout} />
+```
+
+**PASS:** `components/shared/`, `components/ui/` 내에서 `useAuth` import 0건.
+**FAIL:** shared/ui 컴포넌트에서 `useAuth` 발견 → `canXxx?: boolean` prop으로 전환, 소비처(container)에서 `useAuth().can()` 호출.
+
+**예외:** `hooks/use-auth.ts` 자체 정의 파일 — 제외.
+
+**근거:** 2026-04-21 78차 반출 세션 — `EmptyState.tsx` 내부 `useAuth` 제거 + `canAct?: boolean` prop 전환. 동일 패턴 재도입 방지.
+
 ## Output Format
 
 ```markdown
@@ -412,6 +460,7 @@ return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <E
 | 16  | raw async mutation 금지    | PASS/FAIL | onClick에서 await api.delete/remove/unlink 직접 호출 위치 |
 | 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |
 | 18  | *-api.ts React Hook 금지   | PASS/FAIL | lib/api/*-api.ts에 @tanstack/react-query import 위치 |
+| 19  | shared/ui 컴포넌트 useAuth 금지 | PASS/FAIL | components/shared·ui에서 useAuth import 위치 |
 ```
 
 ## Exceptions
