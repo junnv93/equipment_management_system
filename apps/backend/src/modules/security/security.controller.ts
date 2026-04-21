@@ -8,9 +8,13 @@ import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle
 import { SecurityService } from './security.service';
 import type { NormalizedCspReport } from './security.types';
 
+// PostgreSQL INTEGER 상한 — packages/db/src/schema/csp-reports.ts의 integer('line_number')와 짝
+const PG_INT_MAX = 2_147_483_647;
+
 function parseCspLineNumber(raw: unknown): number | undefined {
-  if (typeof raw === 'number') return Number.isFinite(raw) ? Math.trunc(raw) : undefined;
-  if (typeof raw === 'string' && /^\d+$/.test(raw)) return parseInt(raw, 10);
+  if (typeof raw === 'number')
+    return Number.isFinite(raw) ? Math.min(Math.trunc(raw), PG_INT_MAX) : undefined;
+  if (typeof raw === 'string' && /^\d+$/.test(raw)) return Math.min(parseInt(raw, 10), PG_INT_MAX);
   return undefined;
 }
 

@@ -5,6 +5,14 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — tech-debt-batch-0421e (verify-implementation 후속 3건)
+
+- [x] **`security.controller.ts` lineNumber PG integer 범위 미검증** — ✅ `PG_INT_MAX = 2_147_483_647` 상수 + `parseCspLineNumber()`에 `Math.min(Math.trunc(raw), PG_INT_MAX)` 클램프 추가. string 경로도 동일하게 클램프.
+- [x] **`LoginPageContent.tsx` 하드코딩 한국어 문자열** — ✅ `tLogin('title')` / `tLogin('formSubtitle')` / `tLogin('separator')` 교체. `formSubtitle` 키 ko/en auth.json 추가.
+- [x] **`security.service.spec.ts` `as never` 타입 단언** — ✅ `AppDatabase` import 추가, `mockDb as never` → `mockDb as unknown as AppDatabase` 교체.
+
+---
+
 ## 2026-04-21 — tech-debt-batch-0421d (code-reviewer 지적 12건 전수 수정)
 
 - [x] **LoginProviders error 필드 미소비** — ✅ `error` 구조 분해 추가, `tLogin('serverUnavailable')` vs `tLogin('configRequired')` i18n 분기 UI.

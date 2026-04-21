@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { AppDatabase } from '@equipment-management/db';
 import { SecurityService } from '../security.service';
 import type { NormalizedCspReport } from '../security.types';
 
@@ -18,7 +19,7 @@ describe('SecurityService', () => {
 
   beforeEach(() => {
     mockDb = { insert: jest.fn() };
-    service = new SecurityService(mockDb as never);
+    service = new SecurityService(mockDb as unknown as AppDatabase);
   });
 
   describe('saveReport()', () => {

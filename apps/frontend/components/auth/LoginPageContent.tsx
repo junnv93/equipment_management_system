@@ -46,11 +46,11 @@ function LoginProviders() {
             <div
               className={AUTH_LAYOUT_TOKENS.separator.container}
               role="separator"
-              aria-label={AUTH_CONTENT.separator}
+              aria-label={tLogin('separator')}
             >
               <Separator className="flex-1 bg-brand-border-default" />
               <span className="text-xs text-brand-text-muted font-mono tracking-widest uppercase">
-                or
+                {tLogin('separator')}
               </span>
               <Separator className="flex-1 bg-brand-border-default" />
             </div>
@@ -266,9 +266,9 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
                 className="font-sans text-2xl font-bold text-brand-text-primary mb-1"
                 style={{ letterSpacing: '-0.02em' }}
               >
-                로그인
+                {tLogin('title')}
               </h2>
-              <p className="text-sm text-brand-text-muted">계정으로 로그인하여 계속하세요</p>
+              <p className="text-sm text-brand-text-muted">{tLogin('formSubtitle')}</p>
             </div>
 
             {/* URL 에러 파라미터 배너 (redirect 모드 로그인 실패 시) */}
