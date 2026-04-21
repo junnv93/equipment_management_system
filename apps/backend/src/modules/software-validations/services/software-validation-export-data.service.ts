@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
@@ -80,15 +74,6 @@ export class SoftwareValidationExportDataService {
       throw new BadRequestException({
         code: 'MISSING_VALIDATION_ID',
         message: 'validationId query parameter is required for software validation export.',
-      });
-    }
-
-    // Software validation은 site 단위 리소스. team 스코프 사용자는 접근 불가.
-    if (filter.teamId) {
-      throw new ForbiddenException({
-        code: 'SCOPE_RESOURCE_MISMATCH',
-        message:
-          '팀 스코프 사용자는 소프트웨어 유효성 확인 리포트를 조회할 수 없습니다 (site 단위 리소스).',
       });
     }
 

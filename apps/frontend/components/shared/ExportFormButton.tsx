@@ -5,7 +5,7 @@ import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Permission, FORM_CATALOG } from '@equipment-management/shared-constants';
+import { Permission } from '@equipment-management/shared-constants';
 import { exportFormTemplate } from '@/lib/api/reports-api';
 import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 
@@ -20,9 +20,6 @@ import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
  *
  * 백엔드 `@RequirePermissions(Permission.EXPORT_REPORTS)` + `@SiteScoped` 와 1:1 정렬.
  * cross-site 접근은 서버가 404 반환 → 동일 toast 경로로 사용자 피드백.
- *
- * FORM_CATALOG의 `siteOnly: true` 양식은 teamId 스코프 사용자에게 버튼을 숨긴다.
- * 백엔드 SCOPE_RESOURCE_MISMATCH(403)를 사전에 예방하기 위함.
  *
  * 상태 게이팅(approvalStatus 등)은 호출 측에서 조건부 렌더 (버튼 자체는 노출 여부만 관리).
  */
@@ -54,13 +51,11 @@ export function ExportFormButton({
   iconOnly = false,
   size = 'sm',
 }: ExportFormButtonProps): React.ReactElement | null {
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
 
   if (!can(Permission.EXPORT_REPORTS)) return null;
-
-  if (FORM_CATALOG[formNumber]?.siteOnly && user?.teamId) return null;
 
   const handleExport = async () => {
     setExporting(true);

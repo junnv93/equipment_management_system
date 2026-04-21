@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, or, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { AppDatabase } from '@equipment-management/db';
@@ -44,15 +44,6 @@ export class TestSoftwareRegistryExportDataService {
     params: Record<string, string>,
     filter: EnforcedScope
   ): Promise<TestSoftwareRegistryExportData> {
-    // testSoftware는 site 단위 리소스 — teamId 스코프로 경계를 설정할 방법이 없음
-    if (filter.teamId) {
-      throw new ForbiddenException({
-        code: 'SCOPE_RESOURCE_MISMATCH',
-        message:
-          '팀 스코프 사용자는 소프트웨어 관리대장 리포트를 조회할 수 없습니다 (site 단위 리소스).',
-      });
-    }
-
     const conditions: SQL<unknown>[] = [];
 
     if (filter.site) {
