@@ -680,7 +680,7 @@ A11y-C: NonConformancesContent.tsx:360~388 — 페이지네이션 prev/next <Che
 - 스크린 리더 시나리오: KPI 버튼 활성 시 "미해결 5건 필터 해제" 낭독됨
 ```
 
-### 🟠 HIGH — P5: NC SSOT 일괄 — NCDocumentsSection 토큰화 + 이모지 제거 + Collapsible 모션 (Mode 1)
+### ✅ DONE (2026-04-21, b9e1b989·106ba84d) — P5: NC SSOT 일괄 — NCDocumentsSection 토큰화 + 이모지 제거 + Collapsible 모션 (Mode 1)
 
 ```
 문제:
@@ -755,7 +755,7 @@ SSOT-C (AP-06): NCDetailClient.tsx:871 — {isOpen && <div className={NC_COLLAPS
 - prefers-reduced-motion: motion-safe 래핑 → 애니메이션 없이 즉시 펼쳐짐
 ```
 
-### 🟠 HIGH — P6: NC 신규 유저 온보딩 종합 — roleHint 강화 + 빈 상태 CTA + KPI 필터 힌트 (Mode 1)
+### ✅ DONE (2026-04-21, 106ba84d) — P6: NC 신규 유저 온보딩 종합 — roleHint 강화 + 빈 상태 CTA + KPI 필터 힌트 (Mode 1)
 
 ```
 문제:
@@ -832,7 +832,7 @@ AP-09: EmptyState(NonConformancesContent.tsx:500~518) hasFilters=false 시
 - grep "NC_EMPTY_STATE_TOKENS.ctaWrapper" apps/frontend/app → 1 hit
 ```
 
-### 🟠 HIGH — P7: NC 상세 Sticky Action Bar + Elevation 3단계 체계 (Mode 1)
+### ✅ DONE (2026-04-21, 106ba84d) — P7: NC 상세 Sticky Action Bar + Elevation 3단계 체계 (Mode 1)
 
 ```
 문제:
