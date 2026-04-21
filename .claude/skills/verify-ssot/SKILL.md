@@ -401,3 +401,4 @@ pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "nod
 7. **roles.enum.ts의 TypeScript enum** — 백엔드 호환성을 위한 로컬 enum (SSOT 주석 + re-export 동반 시 면제)
 8. **`Promise<unknown>` 허용 케이스** — `private` 헬퍼 메서드나 단순 delete/count 반환은 면제
 9. **audit-logs route 의 인라인 `resolveDataScope` 호출** — `AUDIT_LOG_SCOPE` + 'none → 빈 보고서' fallback 정책으로 인터셉터 통합 불가, 의도적 예외 (`reports.controller.exportAuditLogs`)
+10. **`CheckoutPermissionKey` 로컬 string union** — `packages/schemas/src/fsm/checkout-fsm.ts`의 `CheckoutPermissionKey` 타입은 `Permission` enum을 직접 import하면 순환 의존성(`schemas ← shared-constants ← schemas`)이 발생하므로, Permission 값을 로컬에서 string union으로 미러링하는 것이 설계 의도. `/verify-checkout-fsm`의 Step 4에서 `shared-constants`와의 동기화 여부를 별도 검증함.

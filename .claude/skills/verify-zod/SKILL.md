@@ -42,6 +42,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/checkouts/checkouts.controller.ts`        | Controller Pipe 적용 참조 (@UsePipes 패턴)      |
 | `apps/backend/src/modules/equipment/equipment.controller.ts`        | Controller Pipe 적용 참조 (파라미터 Pipe 패턴)  |
 | `apps/backend/src/modules/checkouts/dto/handover-token.dto.ts`      | createZodDto 기반 class DTO 참조 구현 (신규 권장) |
+| `packages/schemas/src/fsm/checkout-fsm.ts`                          | FSM SSOT — `NextStepDescriptorSchema` (`z.ZodType<NextStepDescriptor>`) 포함 |
 
 ## Workflow
 
