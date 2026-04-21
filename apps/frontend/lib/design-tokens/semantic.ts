@@ -335,16 +335,8 @@ export const REFETCH_OVERLAY_TOKENS = {
  * Micro Typography Tokens (마이크로 타이포그래피)
  *
  * 배지/레이블/캡션 등 소형 UI 요소 전용 텍스트 크기.
- * TYPOGRAPHY_PRIMITIVES['2xs'] = 10px (WCAG SC 1.4.4 권고 하한)
- *
- * 금지: 7px·8px·9px arbitrary 클래스 — 접근성 하한 미달 (WCAG SC 1.4.4)
- */
-/**
- * Micro Typography Tokens (마이크로 타이포그래피)
- *
- * 배지/레이블/캡션 등 소형 UI 요소 전용 텍스트 크기.
- * globals.css @theme: --text-2xs: 0.625rem (10px) → text-2xs 유틸리티 자동 생성.
- * TYPOGRAPHY_PRIMITIVES['2xs'] = 10px 와 CSS 변수 레벨에서 연동됨.
+ * globals.css @theme CSS 변수 → Tailwind 유틸리티 자동 생성.
+ * primitives.ts TYPOGRAPHY_PRIMITIVES 와 CSS 변수 레벨에서 연동됨.
  *
  * 금지: text-[7px]·[8px]·[9px]·[10px] arbitrary — 접근성 하한 미달 (WCAG SC 1.4.4)
  */
@@ -359,6 +351,8 @@ export const MICRO_TYPO = {
   meta: 'text-xs-tight',
   /** 정보 레이블/섹션 내 값 (--text-sm-tight = 13px) */
   detail: 'text-sm-tight',
+  /** 사이트명/내비 타이틀 — sm(14)과 base(16) 사이 의도적 시각 계층 (--text-sm-wide = 15px) */
+  siteTitle: 'text-sm-wide',
 } as const;
 
 /**
@@ -476,6 +470,23 @@ export function getCalloutClasses(
     CALLOUT_TOKENS.emphasis[emphasis](variant),
   ].join(' ');
 }
+
+/**
+ * Urgent Badge Tokens (긴급 배지)
+ *
+ * D+ 초과, 교정 만료 등 긴급 상황을 표시하는 배지. NC/Checkout/Dashboard 공통 SSOT.
+ * solid: 강조 (filled critical), outlined: 서브 강조 (border only).
+ */
+export const URGENT_BADGE_TOKENS = {
+  solid: [
+    `inline-flex items-center px-2 py-0.5 rounded ${MICRO_TYPO.badge} font-semibold`,
+    'bg-brand-critical text-white',
+  ].join(' '),
+  outlined: [
+    `inline-flex items-center px-2 py-0.5 rounded ${MICRO_TYPO.badge} font-semibold`,
+    'border border-brand-critical text-brand-critical',
+  ].join(' '),
+} as const;
 
 /**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용
