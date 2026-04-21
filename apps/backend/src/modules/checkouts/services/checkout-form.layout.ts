@@ -1,3 +1,7 @@
+import { TEXT_COL, MERGED_TEXT_COL } from '../../../common/docx/docx-cell-indices';
+
+export { TEXT_COL, MERGED_TEXT_COL };
+
 /**
  * UL-QP-18-06 장비 반·출입 확인서 DOCX 레이아웃 SSOT (backend-local).
  *
@@ -61,15 +65,6 @@ export const SIGN_OFF_COLS = {
   requester: 1,
   approver: 2,
 } as const;
-
-/** 단일 데이터 셀 행(주소/사유/특기사항 등)의 열 인덱스 */
-export const TEXT_COL = 1 as const;
-
-/**
- * 병합된 전체 너비 셀의 셀 인덱스.
- * 확인 문장 행(R5 반출, R24 반입)은 원본 docx에서 모든 컬럼이 병합된 단일 셀.
- */
-export const MERGED_TEXT_COL = 0 as const;
 
 /**
  * QP-18-06 전용 날짜 형식: "YYYY . MM . DD ."

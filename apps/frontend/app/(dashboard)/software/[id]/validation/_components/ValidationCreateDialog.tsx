@@ -18,12 +18,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { VALIDATION_TYPE_VALUES, ValidationTypeValues } from '@equipment-management/schemas';
+import {
+  VALIDATION_TYPE_VALUES,
+  ValidationTypeValues,
+  type ValidationType,
+} from '@equipment-management/schemas';
 import { VendorValidationFields } from './VendorValidationFields';
 import { SelfValidationFields } from './SelfValidationFields';
 import type { CreateFormState } from './validation-create-form.types';
-
-export type { CreateFormState };
 
 interface ValidationCreateDialogProps {
   open: boolean;
