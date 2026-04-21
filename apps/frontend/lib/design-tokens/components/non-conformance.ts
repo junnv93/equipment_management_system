@@ -53,6 +53,23 @@ export function ncStatusToSemantic(status: string): SemanticColorKey {
 }
 
 // ============================================================================
+// 0.5. NC_ELEVATION — 3단계 elevation 체계 (SSOT)
+// ============================================================================
+
+/**
+ * NC 페이지 elevation 체계
+ *
+ * - flush:    배경과 동일 — 필터 바, 페이지네이션
+ * - raised:   카드 계층 — KPI 카드, 정보 카드, Collapsible
+ * - floating: 액션 영역 — ActionBar (가장 중요한 인터랙션)
+ */
+export const NC_ELEVATION = {
+  flush: '',
+  raised: 'shadow-sm',
+  floating: 'shadow-md ring-1 ring-border/10',
+} as const;
+
+// ============================================================================
 // 1. NC_BANNER_TOKENS — 부적합 배너 (장비 상세 페이지)
 // ============================================================================
 
@@ -175,18 +192,21 @@ export const NC_KPI_CARD_TOKENS = {
     'bg-card border border-border/60 rounded-lg p-4',
     'flex items-center gap-3.5',
     'border-l-4',
+    NC_ELEVATION.raised,
     TRANSITION_PRESETS.fastBgBorder,
   ].join(' '),
   /** 카드 hover */
-  cardHover: 'hover:border-border hover:shadow-sm cursor-pointer',
+  cardHover: 'hover:border-border hover:shadow-md cursor-pointer',
   /** 카드 active (필터 적용됨) */
-  cardActive: 'border-border bg-muted/30 shadow-sm',
+  cardActive: 'border-border bg-muted/30 shadow-md',
   /** 아이콘 래퍼 */
   iconWrap: 'w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0',
   /** 라벨 */
   label: 'text-xs text-muted-foreground font-medium tracking-wide',
   /** 값 */
   value: 'text-2xl font-bold tabular-nums leading-tight',
+  /** 필터 토글 힌트 (접근성 — 클릭 의미 전달) */
+  filterHint: 'text-[10px] text-muted-foreground/60 mt-0.5 leading-none',
 } as const;
 
 /**
@@ -486,7 +506,7 @@ export const NC_INFO_CARD_TOKENS = {
   /** 그리드 레이아웃 */
   grid: 'grid grid-cols-1 md:grid-cols-2 gap-4',
   /** 카드 공통 */
-  card: 'bg-card border border-border/60 rounded-lg p-5',
+  card: `bg-card border border-border/60 rounded-lg p-5 ${NC_ELEVATION.raised}`,
   /** 카드 제목 */
   cardTitle: 'text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-3.5',
   /** 정보 행 */
@@ -517,8 +537,8 @@ export const NC_INFO_CARD_TOKENS = {
  * Collapsible 섹션 (COLLAPSIBLE_TOKENS 패턴)
  */
 export const NC_COLLAPSIBLE_TOKENS = {
-  /** 컨테이너 */
-  container: 'bg-card border border-border/60 rounded-lg overflow-hidden',
+  /** 컨테이너 (overflow-hidden을 contentWrapper로 이동 — shadow 클리핑 방지) */
+  container: `bg-card border border-border/60 rounded-lg ${NC_ELEVATION.raised}`,
   /** 트리거 버튼 */
   trigger: [
     'flex items-center justify-between w-full px-5 py-4',
@@ -528,6 +548,10 @@ export const NC_COLLAPSIBLE_TOKENS = {
   ].join(' '),
   /** 트리거 아이콘 */
   triggerIcon: 'text-muted-foreground',
+  /** 애니메이션 래퍼 — grid-rows 높이 트랜지션 (항상 DOM에 존재, CSS로만 펼침/접힘) */
+  contentWrapper: ['grid overflow-hidden rounded-b-lg', TRANSITION_PRESETS.fastGridRows].join(' '),
+  /** 애니메이션 내부 래퍼 — min-h-0은 grid-rows 트랜지션 필수 */
+  contentInner: 'min-h-0',
   /** 콘텐츠 영역 */
   content: 'px-5 pb-5',
   /** 필드 그룹 */
@@ -554,17 +578,25 @@ export const NC_COLLAPSIBLE_TOKENS = {
  * 하단 액션 바 (역할별 동적)
  */
 export const NC_ACTION_BAR_TOKENS = {
-  /** 컨테이너 — shadow-sm으로 액션 영역 floating 느낌 강화 */
+  /** sticky 래퍼 — 스크롤 시 하단 고정 */
+  stickyWrapper: 'sticky bottom-4 z-10',
+  /** 컨테이너 — NC_ELEVATION.floating으로 ActionBar가 카드보다 시각적으로 우선 */
   container: [
     'flex flex-col sm:flex-row items-center justify-between gap-3',
-    'bg-card border border-border/60 rounded-lg px-5 py-4 shadow-sm',
+    `bg-card border border-border/60 rounded-lg px-5 py-4 ${NC_ELEVATION.floating}`,
   ].join(' '),
   /** 좌측 (상태 변경 + 저장) */
   left: 'flex items-center gap-2',
   /** 우측 (승인/반려) */
   right: 'flex items-center gap-2',
-  /** 역할 힌트 텍스트 */
+  /** 역할 힌트 텍스트 (보조 — OPEN 상태 전제조건 안내) */
   roleHint: 'text-xs text-muted-foreground',
+  /** 역할 힌트 강조 (유일 안내인 경우 — CORRECTED+!canClose) */
+  roleHintActive: 'text-sm text-foreground font-medium',
+  /** 대기 상태 안내 컨테이너 (Clock + 텍스트) */
+  waitingGuidance: 'flex items-center gap-2 text-sm text-brand-info',
+  /** 대기 상태 안내 아이콘 */
+  waitingGuidanceIcon: 'h-4 w-4 text-brand-info flex-shrink-0',
 } as const;
 
 // ============================================================================
@@ -637,6 +669,10 @@ export const NC_EMPTY_STATE_TOKENS = {
   icon: 'h-12 w-12 text-muted-foreground',
   title: 'text-base font-medium tracking-tight text-foreground mt-4',
   description: 'text-sm text-muted-foreground mt-1 leading-relaxed',
+  /** hasFilters=false 시 워크플로우 진입 CTA 래퍼 */
+  ctaWrapper: 'mt-4 flex flex-col items-center gap-2',
+  /** 장비 목록 진입 링크 */
+  ctaLink: 'text-sm text-brand-info hover:underline',
 } as const;
 
 // ============================================================================
@@ -761,4 +797,23 @@ export const NC_REPAIR_RESULT_LABELS: Record<string, string> = {
   completed: '완료',
   partial: '부분 수리',
   failed: '실패',
+} as const;
+
+// ============================================================================
+// 25. NC_DOCUMENTS_SECTION_TOKENS — 첨부 문서 섹션
+// ============================================================================
+
+/**
+ * NC 첨부 문서 섹션 토큰 (NCDocumentsSection)
+ *
+ * 기존 raw Tailwind 직접 사용 제거 — NC_*_TOKENS 체계 일관성 확보
+ */
+export const NC_DOCUMENTS_SECTION_TOKENS = {
+  container: `rounded-lg border border-border/60 bg-card p-4 space-y-3 ${NC_ELEVATION.raised}`,
+  header: 'flex items-center justify-between',
+  title: 'text-sm font-semibold flex items-center gap-2',
+  titleIcon: 'h-4 w-4',
+  countBadge: 'text-xs text-muted-foreground font-normal',
+  emptyText: 'text-sm text-muted-foreground',
+  grid: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3',
 } as const;

@@ -21,6 +21,7 @@ import {
   Check,
   X,
   Pencil,
+  Clock,
 } from 'lucide-react';
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -408,7 +409,12 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
       {/* 조치/종결 섹션 */}
       <CollapsibleSection
-        title={'🔧 ' + t('detail.correction.sectionTitle')}
+        title={
+          <>
+            <Wrench className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            {t('detail.correction.sectionTitle')}
+          </>
+        }
         isOpen={correctionOpen}
         onToggle={() => setCorrectionOpen(!correctionOpen)}
         canEdit={nc.status === NCVal.OPEN && !isClosed}
@@ -457,7 +463,12 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
       {(nc.closureNotes || isClosed) && (
         <CollapsibleSection
-          title={'✅ ' + t('detail.closure.sectionTitle')}
+          title={
+            <>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {t('detail.closure.sectionTitle')}
+            </>
+          }
           isOpen={closureOpen}
           onToggle={() => setClosureOpen(!closureOpen)}
         >
@@ -483,24 +494,26 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       {/* 첨부 문서 (현장 사진 등) */}
       <NCDocumentsSection nonConformanceId={nc.id} />
 
-      {/* 액션 바 */}
+      {/* 액션 바 — sticky bottom-4로 스크롤 시 항상 노출 */}
       {!isClosed && (
-        <ActionBar
-          nc={nc}
-          canCloseNC={canCloseNC}
-          hasUnmetPrerequisite={hasUnmetPrerequisite}
-          prerequisiteMessage={
-            needsRepair
-              ? t('detail.prerequisite.repairBlocked')
-              : needsRecalibration
-                ? t('detail.prerequisite.recalibrationBlocked')
-                : undefined
-          }
-          onMarkCorrected={() => updateMutation.mutate({ status: NCVal.CORRECTED })}
-          onClose={() => setShowCloseDialog(true)}
-          onReject={() => setShowRejectDialog(true)}
-          isUpdating={updateMutation.isPending}
-        />
+        <div className={NC_ACTION_BAR_TOKENS.stickyWrapper}>
+          <ActionBar
+            nc={nc}
+            canCloseNC={canCloseNC}
+            hasUnmetPrerequisite={hasUnmetPrerequisite}
+            prerequisiteMessage={
+              needsRepair
+                ? t('detail.prerequisite.repairBlocked')
+                : needsRecalibration
+                  ? t('detail.prerequisite.recalibrationBlocked')
+                  : undefined
+            }
+            onMarkCorrected={() => updateMutation.mutate({ status: NCVal.CORRECTED })}
+            onClose={() => setShowCloseDialog(true)}
+            onReject={() => setShowRejectDialog(true)}
+            isUpdating={updateMutation.isPending}
+          />
+        </div>
       )}
 
       {/* 종결 다이얼로그 */}
@@ -827,6 +840,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 /**
  * Collapsible 섹션
+ *
+ * grid-rows 애니메이션: isOpen && 조건부 렌더 대신 항상 DOM에 존재하며 CSS만 변경.
+ * grid-rows-[0fr] → grid-rows-[1fr] + min-h-0 패턴이 height 트랜지션 가능하게 함.
  */
 function CollapsibleSection({
   title,
@@ -837,7 +853,7 @@ function CollapsibleSection({
   onEdit,
   children,
 }: {
-  title: string;
+  title: React.ReactNode;
   isOpen: boolean;
   onToggle: () => void;
   canEdit?: boolean;
@@ -853,8 +869,9 @@ function CollapsibleSection({
           type="button"
           className={cn(NC_COLLAPSIBLE_TOKENS.trigger, 'flex-1')}
           onClick={onToggle}
+          aria-expanded={isOpen}
         >
-          <span>{title}</span>
+          <span className="flex items-center gap-1.5">{title}</span>
           {isOpen ? (
             <ChevronUp className={cn('h-4 w-4', NC_COLLAPSIBLE_TOKENS.triggerIcon)} />
           ) : (
@@ -868,7 +885,16 @@ function CollapsibleSection({
           </Button>
         )}
       </div>
-      {isOpen && <div className={NC_COLLAPSIBLE_TOKENS.content}>{children}</div>}
+      <div
+        className={cn(
+          NC_COLLAPSIBLE_TOKENS.contentWrapper,
+          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className={NC_COLLAPSIBLE_TOKENS.contentInner}>
+          <div className={NC_COLLAPSIBLE_TOKENS.content}>{children}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -910,15 +936,22 @@ function ActionBar({
             {t('detail.actionBar.markCorrected')}
           </Button>
         )}
-        <span className={NC_ACTION_BAR_TOKENS.roleHint}>
-          {nc.status === NCVal.OPEN &&
-            (hasUnmetPrerequisite
+        {/* CORRECTED + 권한 없음: 보조 텍스트 대신 명시적 대기 안내 */}
+        {nc.status === NCVal.CORRECTED && !canCloseNC && (
+          <div className={NC_ACTION_BAR_TOKENS.waitingGuidance}>
+            <Clock className={NC_ACTION_BAR_TOKENS.waitingGuidanceIcon} aria-hidden="true" />
+            <span className={NC_ACTION_BAR_TOKENS.roleHintActive}>
+              {t('detail.actionBar.hintWaitingApproval')}
+            </span>
+          </div>
+        )}
+        {nc.status === NCVal.OPEN && (
+          <span className={NC_ACTION_BAR_TOKENS.roleHint}>
+            {hasUnmetPrerequisite
               ? prerequisiteMessage
-              : t('detail.actionBar.hintNeedsCorrectionApproval'))}
-          {nc.status === NCVal.CORRECTED &&
-            !canCloseNC &&
-            t('detail.actionBar.hintWaitingApproval')}
-        </span>
+              : t('detail.actionBar.hintNeedsCorrectionApproval')}
+          </span>
+        )}
       </div>
       <div className={NC_ACTION_BAR_TOKENS.right}>
         {/* 기술책임자 액션 (corrected 상태만) */}

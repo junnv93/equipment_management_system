@@ -210,6 +210,9 @@ export default function NonConformancesContent({
                 <p className={cn(NC_KPI_CARD_TOKENS.value, tokens.valueColor)}>
                   {kpiCounts[variant]}
                 </p>
+                <p className={NC_KPI_CARD_TOKENS.filterHint}>
+                  {isActive ? t('kpi.filterActive') : t('kpi.filterInactive')}
+                </p>
               </div>
             </button>
           );
@@ -511,10 +514,16 @@ function EmptyState({ hasFilters, onClear }: { hasFilters: boolean; onClear: () 
       <p className={NC_EMPTY_STATE_TOKENS.description}>
         {hasFilters ? t('list.emptyWithFiltersDescription') : t('list.emptyNoFiltersDescription')}
       </p>
-      {hasFilters && (
+      {hasFilters ? (
         <Button variant="outline" size="sm" onClick={onClear} className="mt-4">
           {t('list.filterResetButton')}
         </Button>
+      ) : (
+        <div className={NC_EMPTY_STATE_TOKENS.ctaWrapper}>
+          <Link href="/equipment" className={NC_EMPTY_STATE_TOKENS.ctaLink}>
+            {t('list.emptyNoFiltersCta')}
+          </Link>
+        </div>
       )}
     </div>
   );

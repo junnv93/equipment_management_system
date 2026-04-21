@@ -61,6 +61,7 @@
     "emptyWithFiltersDescription": "Try changing or resetting the filters.",
     "emptyNoFilters": "No non-conformances registered.",
     "emptyNoFiltersDescription": "You can register a non-conformance from the equipment detail page.",
+    "emptyNoFiltersCta": "Register non-conformance from equipment list →",
     "export": "Export",
     "searchPlaceholder": "Search by equipment name, management no., cause...",
     "filterStatus": "Status",
@@ -120,7 +121,9 @@
   "kpi": {
     "open": "Unresolved",
     "corrected": "Corrected",
-    "closed": "Closed"
+    "closed": "Closed",
+    "filterActive": "Filter applied · Click to clear",
+    "filterInactive": "Click to filter"
   },
   "siteLabels": {
     "suwon": "Suwon",

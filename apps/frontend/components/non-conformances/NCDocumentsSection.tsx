@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { FileIcon, Paperclip, Trash2, Upload } from 'lucide-react';
 import { DocumentTypeValues } from '@equipment-management/schemas';
-import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { TRANSITION_PRESETS, NC_DOCUMENTS_SECTION_TOKENS } from '@/lib/design-tokens';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
@@ -115,12 +115,12 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
   const docs = documentsQuery.data ?? [];
 
   return (
-    <section className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Paperclip className="h-4 w-4" aria-hidden="true" />
+    <section className={NC_DOCUMENTS_SECTION_TOKENS.container}>
+      <div className={NC_DOCUMENTS_SECTION_TOKENS.header}>
+        <h3 className={NC_DOCUMENTS_SECTION_TOKENS.title}>
+          <Paperclip className={NC_DOCUMENTS_SECTION_TOKENS.titleIcon} aria-hidden="true" />
           {t('title')}
-          <span className="text-xs text-muted-foreground font-normal">({docs.length})</span>
+          <span className={NC_DOCUMENTS_SECTION_TOKENS.countBadge}>({docs.length})</span>
         </h3>
         {canUpload && (
           <Button
@@ -154,9 +154,9 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
           {t('loading')}
         </p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('empty')}</p>
+        <p className={NC_DOCUMENTS_SECTION_TOKENS.emptyText}>{t('empty')}</p>
       ) : (
-        <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <ul className={NC_DOCUMENTS_SECTION_TOKENS.grid}>
           {docs.map((doc) => (
             <li key={doc.id} className="group relative space-y-1">
               <AttachmentThumbnail

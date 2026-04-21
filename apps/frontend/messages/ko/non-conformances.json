@@ -61,6 +61,7 @@
     "emptyWithFiltersDescription": "필터를 변경하거나 초기화해 보세요.",
     "emptyNoFilters": "등록된 부적합 사항이 없습니다.",
     "emptyNoFiltersDescription": "장비 상세 페이지에서 부적합을 등록할 수 있습니다.",
+    "emptyNoFiltersCta": "장비 목록에서 부적합 등록하기 →",
     "export": "내보내기",
     "searchPlaceholder": "장비명, 관리번호, 원인 검색...",
     "filterStatus": "상태",
@@ -120,7 +121,9 @@
   "kpi": {
     "open": "미해결",
     "corrected": "조치 완료",
-    "closed": "종결"
+    "closed": "종결",
+    "filterActive": "필터 적용됨 · 클릭하여 해제",
+    "filterInactive": "클릭하여 필터링"
   },
   "siteLabels": {
     "suwon": "수원",
