@@ -187,6 +187,7 @@ export const TYPOGRAPHY_PRIMITIVES = {
     '2xs': { mobile: 10, desktop: 10 }, // WCAG SC 1.4.4 권고 하한 — 배지/레이블 최소 크기
     'xs-tight': { mobile: 11, desktop: 11 }, // 메타/타임스탬프/관리번호 (globals.css --text-xs-tight)
     'sm-tight': { mobile: 13, desktop: 13 }, // 정보 레이블/섹션 내 값 (globals.css --text-sm-tight)
+    'sm-wide': { mobile: 15, desktop: 15 }, // 사이트명/내비 타이틀 (globals.css --text-sm-wide)
     xs: { mobile: 12, desktop: 11 },
     sm: { mobile: 14, desktop: 13 },
     base: { mobile: 16, desktop: 15 },

@@ -18,6 +18,7 @@
  */
 
 import { TRANSITION_PRESETS } from '../motion';
+import { MICRO_TYPO } from '../semantic';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 팀 모듈 공유 프리미티브 — DRY 원칙
@@ -99,11 +100,11 @@ export const TEAM_CARD_TOKENS = {
   kpiGrid: 'grid grid-cols-3 gap-2 bg-muted/50 rounded-lg p-2.5',
   kpiItem: 'text-center',
   kpiValue: 'text-lg font-bold tabular-nums leading-none text-foreground',
-  kpiLabel: 'text-[10px] text-muted-foreground mt-0.5',
+  kpiLabel: `${MICRO_TYPO.label} text-muted-foreground mt-0.5`,
 
   /** 팀장 없음 경고 배지 */
   noLeaderBadge: [
-    'inline-flex items-center gap-1 text-[11px] font-medium',
+    `inline-flex items-center gap-1 ${MICRO_TYPO.meta} font-medium`,
     'text-brand-warning',
     'bg-brand-warning/10',
     'border border-brand-warning/20',
@@ -121,7 +122,7 @@ export const TEAM_FILTER_PANEL_TOKENS = {
 
   sectionLabel: [
     'block px-2 pb-1 pt-0.5',
-    'text-[10px] font-semibold uppercase tracking-wider',
+    `${MICRO_TYPO.label} font-semibold uppercase tracking-wider`,
     'text-muted-foreground',
   ].join(' '),
 
@@ -136,7 +137,9 @@ export const TEAM_FILTER_PANEL_TOKENS = {
 
   filterItemActive: 'bg-muted/80 text-foreground font-medium',
 
-  filterCount: ['text-[11px] font-mono tabular-nums text-muted-foreground ml-1 shrink-0'].join(' '),
+  filterCount: [
+    `${MICRO_TYPO.meta} font-mono tabular-nums text-muted-foreground ml-1 shrink-0`,
+  ].join(' '),
 
   filterCountActive: 'text-foreground',
 
@@ -177,13 +180,13 @@ export const SITE_PANEL_TOKENS = {
   accentBar: ACCENT_LINE,
 
   nameRow: 'flex items-center justify-between',
-  /** text-[15px]: text-sm(14)과 text-base(16) 사이 — 사이트명 시각 계층 의도적 튜닝 */
-  name: 'text-[15px] font-bold text-foreground tracking-tight',
-  codeBadge: 'font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded border',
+  /** MICRO_TYPO.siteTitle(text-sm-wide = 15px): text-sm(14)과 text-base(16) 사이 — 사이트명 시각 계층 의도적 튜닝 */
+  name: `${MICRO_TYPO.siteTitle} font-bold text-foreground tracking-tight`,
+  codeBadge: `font-mono ${MICRO_TYPO.badge} font-semibold px-1.5 py-0.5 rounded border`,
 
   metaRow: 'flex items-center gap-3 mt-2',
-  /** text-[11.5px]: text-xs(12)보다 살짝 작게 — compact 패널 메타데이터 밀도 최적화 */
-  metaItem: 'flex items-center gap-1 text-[11.5px] text-muted-foreground',
+  /** MICRO_TYPO.meta(text-xs-tight = 11px): text-xs(12)보다 살짝 작게 — compact 패널 메타데이터 밀도 최적화 */
+  metaItem: `flex items-center gap-1 ${MICRO_TYPO.meta} text-muted-foreground`,
   metaNum: 'font-mono font-semibold text-foreground tabular-nums',
   metaNumWarn: 'font-mono font-semibold text-brand-warning tabular-nums',
 
@@ -224,19 +227,19 @@ export const TEAM_ROW_TOKENS = {
   /** 분류 코드 아이콘 — h-[30px]: h-7(28)과 h-8(32) 사이, 아이콘 원형에 최적화된 크기 */
   clsIcon: [
     'h-[30px] w-[30px] rounded-full flex items-center justify-center',
-    'flex-shrink-0 font-mono font-bold text-[11px]',
+    `flex-shrink-0 font-mono font-bold ${MICRO_TYPO.meta}`,
   ].join(' '),
 
   info: 'flex-1 min-w-0',
-  /** text-[12.5px]: text-xs(12)보다 약간 큼 — compact row에서 팀명 가독성 확보 */
-  clsName: 'text-[12.5px] font-semibold text-foreground truncate leading-tight',
+  /** text-xs(12px): compact row 팀명 가독성 확보 */
+  clsName: 'text-xs font-semibold text-foreground truncate leading-tight',
 
   leaderRow: 'flex items-center gap-1 mt-0.5',
-  leaderName: 'text-[11px] text-muted-foreground truncate',
+  leaderName: `${MICRO_TYPO.meta} text-muted-foreground truncate`,
 
   /** 팀장 미지정 배지 — TEAM_CARD_TOKENS.noLeaderBadge의 compact 버전 */
   noLeaderBadge: [
-    'inline-flex items-center gap-1 text-[10px] font-medium',
+    `inline-flex items-center gap-1 ${MICRO_TYPO.badge} font-medium`,
     'text-brand-warning',
     'bg-brand-warning/10',
     'border border-brand-warning/20',
@@ -244,7 +247,7 @@ export const TEAM_ROW_TOKENS = {
   ].join(' '),
 
   kpiGroup: 'flex items-center gap-2.5 flex-shrink-0',
-  kpiChip: 'flex items-center gap-1 text-[11px] text-muted-foreground',
+  kpiChip: `flex items-center gap-1 ${MICRO_TYPO.meta} text-muted-foreground`,
   kpiNum: 'font-mono font-semibold text-foreground tabular-nums',
 
   divider: 'h-px bg-border mx-3.5',
@@ -263,8 +266,8 @@ export const TEAM_ROW_TOKENS = {
 export const CLS_PILL_TOKENS = {
   pill: [
     'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full',
-    /** text-[11.5px]: pill은 본문보다 작지만 text-[10px]보다 큼 — 터치 가독성 확보 */
-    'text-[11.5px] font-medium cursor-pointer border',
+    /** MICRO_TYPO.meta(text-xs-tight = 11px): pill은 본문보다 작지만 text-2xs(10px)보다 큼 — 터치 가독성 확보 */
+    `${MICRO_TYPO.meta} font-medium cursor-pointer border`,
     'bg-muted/70 border-transparent text-muted-foreground',
     'hover:bg-muted hover:text-foreground',
     TRANSITION_PRESETS.fastColor,
@@ -301,10 +304,10 @@ export const TEAM_MEMBER_GROUP_TOKENS = {
 
   avatar: [
     'h-9 w-9 rounded-full flex items-center justify-center',
-    'flex-shrink-0 font-semibold text-[13px]',
+    `flex-shrink-0 font-semibold ${MICRO_TYPO.detail}`,
   ].join(' '),
 
   memberInfo: 'flex-1 min-w-0',
   memberName: 'text-sm font-medium truncate leading-tight',
-  memberSub: 'text-[11px] text-muted-foreground truncate mt-0.5',
+  memberSub: `${MICRO_TYPO.meta} text-muted-foreground truncate mt-0.5`,
 } as const;

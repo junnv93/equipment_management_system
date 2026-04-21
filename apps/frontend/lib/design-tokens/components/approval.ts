@@ -10,7 +10,7 @@
  * - 정보 그리드 (요청자/팀/일시)
  */
 
-import { FOCUS_TOKENS, MOTION_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, MOTION_TOKENS, MICRO_TYPO } from '../semantic';
 import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticContainerColorClasses,
@@ -355,7 +355,7 @@ export const APPROVAL_ROW_TOKENS = {
     desktop: `lg:grid ${APPROVAL_ROW_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
     mobile: 'flex flex-col gap-2 px-4 py-4 lg:px-0 lg:py-0',
     /** 헤더 행 (컬럼 라벨) — uppercase + tracking으로 데이터 테이블 위계 강화 */
-    header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2.5 bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider`,
+    header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2.5 bg-muted/50 border-b border-border ${MICRO_TYPO.meta} font-semibold text-muted-foreground uppercase tracking-wider`,
   },
 
   /** urgency 기반 행 배경색 (경과일 기반) */
@@ -417,8 +417,8 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   valueEmpty: 'text-muted-foreground/40',
   /** 숫자 단위 (일, 건) */
   valueUnit: 'text-base font-normal text-muted-foreground ml-0.5',
-  label: 'text-[11px] font-medium text-muted-foreground uppercase tracking-wider',
-  sub: 'text-[11px] text-muted-foreground/70',
+  label: `${MICRO_TYPO.meta} font-medium text-muted-foreground uppercase tracking-wider`,
+  sub: `${MICRO_TYPO.meta} text-muted-foreground/70`,
   /** 긴급 pulse dot (urgent KPI 카드 우상단) */
   pulseDot: {
     container: 'absolute top-3 right-3',
@@ -459,7 +459,7 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
  */
 export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
   container: 'w-[220px] flex-shrink-0 sticky top-20 self-start',
-  sectionLabel: 'text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-3 py-2',
+  sectionLabel: `${MICRO_TYPO.meta} font-medium uppercase tracking-wider text-muted-foreground px-3 py-2`,
   item: {
     base: [
       'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm relative',
@@ -557,8 +557,7 @@ export const APPROVAL_DETAIL_PANEL_TOKENS = {
   },
 
   /** 키보드 단축키 배지 */
-  kbdBadge:
-    'ml-auto text-[10px] font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded border border-border',
+  kbdBadge: `ml-auto ${MICRO_TYPO.badge} font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded border border-border`,
 
   /** 빈 상태 (항목 미선택) — 패널 전용 축소판 */
   empty: {

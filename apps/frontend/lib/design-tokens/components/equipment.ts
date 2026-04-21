@@ -9,7 +9,7 @@
  * CRITICAL: 기존 equipment-status-styles.ts, EquipmentHeader.getStatusConfig() 통합
  */
 
-import { FOCUS_TOKENS, EMPTY_STATE_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, EMPTY_STATE_TOKENS, MICRO_TYPO } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticStatusClasses,
@@ -666,7 +666,7 @@ export const EQUIPMENT_INFO_CARD_TOKENS = {
 
   /** dl-grid: 2-column 라벨-값 쌍 */
   body: 'px-4 pb-4',
-  dlGrid: 'grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]',
+  dlGrid: `grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 ${MICRO_TYPO.detail}`,
   dtLabel: 'text-muted-foreground whitespace-nowrap py-1',
   ddValue: 'text-foreground font-medium py-1',
   ddMono: 'font-mono text-xs tracking-wider text-foreground font-medium py-1',
@@ -699,8 +699,8 @@ export const EQUIPMENT_CALIBRATION_TIMELINE_TOKENS = {
     'hover:shadow-md',
     TRANSITION_PRESETS.fastShadow,
   ].join(' '),
-  date: 'font-mono text-[11px] text-muted-foreground tabular-nums',
-  title: 'text-[13px] font-medium text-foreground mt-0.5',
+  date: `font-mono ${MICRO_TYPO.meta} text-muted-foreground tabular-nums`,
+  title: `${MICRO_TYPO.detail} font-medium text-foreground mt-0.5`,
   desc: 'text-xs text-muted-foreground mt-0.5',
 } as const;
 
@@ -734,7 +734,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
   /** 숫자 카운트 값 — tabular-nums로 정렬, font-mono 없음 (한국어 "건" 혼합 폰트 방지) */
   numericValue: 'text-2xl font-semibold tabular-nums leading-tight',
   label: 'text-xs text-muted-foreground uppercase tracking-wide',
-  sub: 'text-[11px] text-muted-foreground/70',
+  sub: `${MICRO_TYPO.meta} text-muted-foreground/70`,
   borderColors: {
     ok: getSemanticLeftBorderClasses('ok'),
     warn: getSemanticLeftBorderClasses('critical'),

@@ -297,8 +297,9 @@ grep -rn "text-\[[0-9]*px\]" \
 
 **PASS:** 0 hits. **FAIL:** 도메인별 78차 스타일 패치로 순차 제거 (MICRO_TYPO.badge/label/caption 교체).
 
-**현재 잔존 목표 도메인 (2026-04-21 기준, 78-7 이후 별도 tech-debt 세션):**
-- non-conformance.ts(19), audit.ts(18), dashboard.ts(16), team.ts(14), settings.ts(8), approval.ts(5), equipment.ts(4), sidebar.ts(2), 기타(4) — 총 약 90건
+**현재 잔존 목표 도메인 (79차 기준 — team/settings/approval/equipment/sidebar/calibration-plans/mobile-nav/software 제거 완료):**
+- non-conformance.ts(19), audit.ts(18), dashboard.ts(16 → `heroCount text-[56px]` 1건만 잔존) — 총 약 38건
+- team(0), settings(0), approval(0), equipment(0), sidebar(0) — 79차 세션에서 MICRO_TYPO 대체 완료
 
 **예외:** `text-[Npx]` 이외의 arbitrary 값(예: `text-[11px]` = text-xs 동등)은 WARN 처리.
 

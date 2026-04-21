@@ -5,7 +5,7 @@
  * SSOT: 모바일 네비게이션의 모든 스타일은 여기서만 정의
  */
 
-import { FOCUS_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 
 /**
@@ -56,7 +56,7 @@ export const MOBILE_NAV_TOKENS = {
  * 모바일 네비게이션 섹션 토큰
  */
 export const MOBILE_NAV_SECTION_TOKENS = {
-  label: 'text-[11px] font-semibold text-muted-foreground uppercase tracking-wider',
+  label: `${MICRO_TYPO.meta} font-semibold text-muted-foreground uppercase tracking-wider`,
   spacing: 'px-3 pt-4 pb-1',
   firstSpacing: 'px-3 pb-1',
   divider: 'border-t border-border mt-2',

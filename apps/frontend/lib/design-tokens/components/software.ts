@@ -21,6 +21,7 @@ import {
   getSemanticLeftBorderClasses,
   getSemanticContainerColorClasses,
 } from '../brand';
+import { MICRO_TYPO } from '../semantic';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ export const SOFTWARE_STATS_TOKENS = {
 
   label: 'text-xs text-muted-foreground font-medium',
   value: 'text-2xl font-bold tabular-nums text-foreground leading-none mt-1',
-  desc: 'text-[11px] text-muted-foreground mt-1.5',
+  desc: `${MICRO_TYPO.meta} text-muted-foreground mt-1.5`,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
  * SSOT: 사이드바의 모든 스타일은 여기서만 정의
  */
 
-import { INTERACTIVE_TOKENS, FOCUS_TOKENS, ELEVATION_TOKENS } from '../semantic';
+import { INTERACTIVE_TOKENS, FOCUS_TOKENS, ELEVATION_TOKENS, MICRO_TYPO } from '../semantic';
 import { toTailwindSize } from '../primitives';
 import { TRANSITION_PRESETS } from '../motion';
 
@@ -116,7 +116,7 @@ export const HEADER_SEARCH_TOKENS = {
   /** 플레이스홀더 텍스트 */
   placeholder: 'flex-1 text-left text-sm text-muted-foreground truncate',
   /** 키보드 단축키 배지 */
-  kbd: 'ml-auto text-[10px] font-medium text-muted-foreground/50 bg-background/80 dark:bg-white/10 px-1.5 py-0.5 rounded border border-border/30 font-sans pointer-events-none',
+  kbd: `ml-auto ${MICRO_TYPO.badge} font-medium text-muted-foreground/50 bg-background/80 dark:bg-white/10 px-1.5 py-0.5 rounded border border-border/30 font-sans pointer-events-none`,
 } as const;
 
 /**
@@ -164,7 +164,7 @@ export const SIDEBAR_ITEM_TOKENS = {
  * 섹션 헤더 토큰
  */
 export const SIDEBAR_SECTION_TOKENS = {
-  label: 'text-[11px] font-semibold text-white/40 uppercase tracking-wider',
+  label: `${MICRO_TYPO.meta} font-semibold text-white/40 uppercase tracking-wider`,
   spacing: 'px-3 pt-4 pb-1',
   /** 첫 번째 섹션은 상단 패딩 없음 */
   firstSpacing: 'px-3 pb-1',

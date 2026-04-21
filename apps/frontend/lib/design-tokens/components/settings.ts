@@ -20,6 +20,7 @@
  */
 
 import { TRANSITION_PRESETS } from '../motion';
+import { MICRO_TYPO } from '../semantic';
 
 // ============================================================================
 // Settings Card Container
@@ -101,7 +102,7 @@ export function getSettingsCardHeaderClasses(): string {
  */
 export const SETTINGS_CHIP_TOKENS = {
   base: [
-    'inline-flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium font-mono select-none',
+    `inline-flex items-center rounded-md px-3 py-1.5 ${MICRO_TYPO.detail} font-medium font-mono select-none`,
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ].join(' '),
 
@@ -355,7 +356,7 @@ export const SETTINGS_PROFILE_HERO_TOKENS = {
   badgeRow: 'flex flex-wrap gap-1.5 mt-2',
   lastLogin: {
     container: 'ml-auto text-right flex-shrink-0',
-    label: 'text-[11px] text-muted-foreground/60 mb-1',
+    label: `${MICRO_TYPO.meta} text-muted-foreground/60 mb-1`,
     value: 'text-xs font-mono text-muted-foreground',
   },
 } as const;
@@ -371,7 +372,7 @@ export const SETTINGS_PROFILE_HERO_TOKENS = {
 export const SETTINGS_PROFILE_GRID_TOKENS = {
   grid: 'grid grid-cols-1 sm:grid-cols-2',
   cell: 'py-3.5 px-5 border-b border-border/40 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(odd)]:border-border/40 sm:[&:nth-last-child(-n+2)]:border-b-0 [&:last-child]:border-b-0',
-  label: 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1',
+  label: `${MICRO_TYPO.label} font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1`,
   value: 'text-sm text-foreground font-mono',
   valueNormal: 'text-sm text-foreground',
   valueEmpty: 'text-sm text-muted-foreground/50 italic font-sans',
@@ -409,10 +410,10 @@ export function getSettingsTextareaClasses(): string {
 export const SETTINGS_PERMISSIONS_CARD_TOKENS = {
   content: 'px-5 py-4 space-y-4',
   categorySection: '',
-  categoryLabel: 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2',
+  categoryLabel: `${MICRO_TYPO.meta} font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2`,
   badgeWrap: 'flex flex-wrap gap-1.5',
-  badge: 'text-[11px] font-medium bg-primary/8 text-primary border-primary/15',
-  readOnlyBadge: 'text-[10px] font-medium',
+  badge: `${MICRO_TYPO.meta} font-medium bg-primary/8 text-primary border-primary/15`,
+  readOnlyBadge: `${MICRO_TYPO.badge} font-medium`,
   totalCount: 'text-xs text-muted-foreground pt-3 border-t border-border/40',
 
   trigger: {
@@ -449,11 +450,9 @@ export const SETTINGS_NAV_TOKENS = {
   container: 'hidden lg:block lg:w-64 flex-shrink-0',
   stickyWrapper: 'sticky top-6',
 
-  sectionLabel:
-    'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5',
+  sectionLabel: `${MICRO_TYPO.label} font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5`,
   adminSeparator: 'mt-4 mb-1.5',
-  adminSectionLabel:
-    'flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-3 border-t border-border',
+  adminSectionLabel: `flex items-center gap-1.5 ${MICRO_TYPO.label} font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-3 border-t border-border`,
   adminIcon: 'h-3 w-3',
   adminHelp: 'mt-4 px-3 text-xs text-muted-foreground/60 leading-relaxed',
 
