@@ -16,6 +16,7 @@
 import { test, expect } from '../shared/fixtures/auth.fixture';
 import { expectFileDownload } from '../shared/helpers/download-helpers';
 import { TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
+import { TIMELINE_ENTRY_TYPE_LABELS } from '@equipment-management/schemas';
 import fs from 'fs';
 import PizZip from 'pizzip';
 
@@ -105,5 +106,35 @@ test.describe('QP-18-02 이력카드 내보내기', () => {
     // 기본정보 영역(관리번호)이 이력 섹션보다 앞에 위치
     const managementNumPos = fullText.indexOf('SUW-E0001');
     expect(managementNumPos).toBeLessThan(locationSectionPos);
+  });
+
+  test('이력카드 DOCX 내용 — §5 섹션 유형 라벨 SSOT 검증', async ({ techManagerPage: page }) => {
+    // §5 "장비 손상, 오작동, 변경 또는 수리 내역" 섹션에서
+    // 사고 유형 라벨이 TIMELINE_ENTRY_TYPE_LABELS SSOT 값과 일치하는지 검증.
+    // seed: INCIDENT_011 (malfunction) — "RF 입력 포트 접촉 불량"
+    await page.goto(detailUrl);
+
+    const historyCardBtn = page.getByRole('button', { name: /이력카드/ });
+    const download = await expectFileDownload(page, () => historyCardBtn.click());
+
+    const filePath = await download.path();
+    expect(filePath).toBeTruthy();
+    const buf = fs.readFileSync(filePath!);
+    const zip = new PizZip(buf);
+    const xml = zip.file('word/document.xml')!.asText();
+    const fullText = [...xml.matchAll(/<w:t[^>]*>([^<]+)<\/w:t>/g)].map((m) => m[1]).join(' ');
+
+    // §5 섹션 제목 위치
+    const section5Pos = fullText.indexOf('장비 손상, 오작동');
+    expect(section5Pos).toBeGreaterThan(-1);
+
+    // SSOT: malfunction 타입 라벨이 §5 섹션 이후 존재
+    const malfunctionLabel = `[${TIMELINE_ENTRY_TYPE_LABELS.malfunction}]`;
+    const malfunctionPos = fullText.indexOf(malfunctionLabel);
+    expect(malfunctionPos).toBeGreaterThan(section5Pos);
+
+    // §5 데이터가 §5 이전 섹션(위치 변동 이력)보다 뒤에 위치 (상단 유출 방지)
+    const locationSectionPos = fullText.indexOf('장비 위치 변동 이력');
+    expect(malfunctionPos).toBeGreaterThan(locationSectionPos);
   });
 });
