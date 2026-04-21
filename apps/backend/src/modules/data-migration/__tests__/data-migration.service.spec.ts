@@ -153,23 +153,22 @@ describe('DataMigrationService', () => {
       sheets: [],
     });
 
-    it('EXECUTING 상태가 10분 초과(stale)이면 FAILED 전환 후 재시도 가능', async () => {
+    it('EXECUTING 상태가 10분 초과(stale)이면 FAILED 전환 후 SESSION_FAILED 반환', async () => {
       // 11분 전에 EXECUTING 시작
       const staleDate = new Date(Date.now() - 11 * 60 * 1000);
       const session = makeExecutingSession(staleDate);
 
       mockCacheService.get.mockReturnValue(session);
-      // executeMultiSheet 진입 후 실제 실행 로직은 세션 상태로만 검증하므로
-      // NotFoundException이 아닌 다른 예외가 나오면 stale 분기 통과 의미
-      // (세션 소유권/상태 체크 후 실제 DB 실행까지는 가지 않아도 됨)
+
+      // stale: FAILED로 전환 후 SESSION_FAILED ConflictException (SESSION_ALREADY_EXECUTING 아님)
       await expect(
         service.executeMultiSheet(
           { sessionId: 'sess-1', autoGenerateManagementNumber: false, skipDuplicates: true },
           'user-1'
         )
-      ).rejects.not.toThrow(ConflictException);
+      ).rejects.toThrow(ConflictException);
 
-      // stale 판정 후 캐시 업데이트 호출 확인 (FAILED 전환)
+      // stale 판정 후 캐시를 failed로 업데이트 확인
       expect(mockCacheService.set).toHaveBeenCalledWith(
         expect.stringContaining('sess-1'),
         expect.objectContaining({ status: 'failed' }),
