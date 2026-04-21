@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { and, lte, gte, isNotNull, eq } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { documents } from '@equipment-management/db/schema/documents';
+import { DocumentStatusValues } from '@equipment-management/schemas';
 import { NotificationsService } from '../notifications.service';
 
 /**
@@ -44,7 +45,7 @@ export class RetentionExpiryScheduler {
             isNotNull(documents.retentionExpiresAt),
             lte(documents.retentionExpiresAt, thirtyDaysLater),
             gte(documents.retentionExpiresAt, now),
-            eq(documents.status, 'active')
+            eq(documents.status, DocumentStatusValues.ACTIVE)
           )
         );
 

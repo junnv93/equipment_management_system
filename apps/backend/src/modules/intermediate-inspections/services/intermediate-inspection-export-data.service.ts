@@ -13,6 +13,7 @@ import { documents } from '@equipment-management/db/schema/documents';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import type { EquipmentClassification, InspectionJudgment } from '@equipment-management/schemas';
+import { DocumentStatusValues } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import type { InspectionResultSectionPreFetched } from '../../reports/docx-xml-helper';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -217,7 +218,7 @@ export class IntermediateInspectionExportDataService {
               and(
                 inArray(inspectionDocumentItems.inspectionItemId, itemIds),
                 eq(inspectionDocumentItems.inspectionItemType, 'intermediate'),
-                eq(documents.status, 'active')
+                eq(documents.status, DocumentStatusValues.ACTIVE)
               )
             )
             .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder)

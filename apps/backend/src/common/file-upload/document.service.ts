@@ -14,7 +14,7 @@ import { calibrations } from '@equipment-management/db/schema';
 import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
-import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
+import type { DocumentType } from '@equipment-management/schemas';
 import { DocumentStatusValues, ValidationStatusValues } from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../storage/storage.interface';
@@ -350,7 +350,7 @@ export class DocumentService {
 
     await this.db
       .update(documents)
-      .set({ status: 'deleted' as DocumentStatus, updatedAt: new Date() })
+      .set({ status: DocumentStatusValues.DELETED, updatedAt: new Date() })
       .where(eq(documents.id, id));
 
     this.logger.log(`Document soft-deleted: ${id}`);
@@ -375,7 +375,7 @@ export class DocumentService {
       await tx
         .update(documents)
         .set({
-          status: 'superseded' as DocumentStatus,
+          status: DocumentStatusValues.SUPERSEDED,
           isLatest: false,
           updatedAt: new Date(),
         })
@@ -565,7 +565,7 @@ export class DocumentService {
         .select({ id: documents.id, filePath: documents.filePath })
         .from(documents)
         .where(
-          and(eq(documents.status, 'deleted' as DocumentStatus), lt(documents.updatedAt, cutoff))
+          and(eq(documents.status, DocumentStatusValues.DELETED), lt(documents.updatedAt, cutoff))
         )
         .limit(BATCH_SIZE);
 

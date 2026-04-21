@@ -82,6 +82,13 @@ module.exports = {
         message:
           "Do not assign a raw domain literal to .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas' (e.g. EquipmentStatusValues.AVAILABLE). For Drizzle insert/update objects, use the Values constant.",
       },
+      // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단 (함수 인자 패턴: eq/ne/gt/lt 등)
+      {
+        selector:
+          "CallExpression[arguments.0.type='MemberExpression'][arguments.0.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][arguments.1.type='Literal'][arguments.1.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+        message:
+          "Do not pass a raw domain literal as function argument for .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas' (e.g. eq(table.status, EquipmentStatusValues.AVAILABLE)).",
+      },
     ],
   },
   overrides: [
@@ -110,6 +117,12 @@ module.exports = {
               "Property[key.name=/^(status|approvalStatus|returnApprovalStatus)$/][value.type='Literal'][value.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
             message:
               "Do not assign a raw domain literal to .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas'.",
+          },
+          {
+            selector:
+              "CallExpression[arguments.0.type='MemberExpression'][arguments.0.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][arguments.1.type='Literal'][arguments.1.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+            message:
+              "Do not pass a raw domain literal as function argument for .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas'.",
           },
         ],
       },

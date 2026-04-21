@@ -15,6 +15,7 @@ import type {
   EquipmentClassification,
   SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
+import { DocumentStatusValues } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import type { InspectionResultSectionPreFetched } from '../../reports/docx-xml-helper';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -297,7 +298,7 @@ export class SelfInspectionExportDataService {
               and(
                 inArray(inspectionDocumentItems.inspectionItemId, itemIds),
                 eq(inspectionDocumentItems.inspectionItemType, 'self'),
-                eq(documents.status, 'active')
+                eq(documents.status, DocumentStatusValues.ACTIVE)
               )
             )
             .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder)

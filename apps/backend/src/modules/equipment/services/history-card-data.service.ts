@@ -20,6 +20,7 @@ import {
   CALIBRATION_REQUIRED_LABELS,
   MANAGEMENT_METHOD_LABELS,
   CALIBRATION_RESULT_LABELS,
+  DocumentStatusValues,
   DocumentTypeValues,
 } from '@equipment-management/schemas';
 import { EquipmentTimelineService } from './equipment-timeline.service';
@@ -201,7 +202,7 @@ export class HistoryCardDataService {
           and(
             eq(documents.equipmentId, equipmentId),
             eq(documents.documentType, DocumentTypeValues.EQUIPMENT_PHOTO),
-            eq(documents.status, 'active'),
+            eq(documents.status, DocumentStatusValues.ACTIVE),
             eq(documents.isLatest, true)
           )
         )
