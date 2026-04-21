@@ -221,6 +221,7 @@
       "referenceDocumentsLabel": "참고 문서",
       "referenceDocumentsPlaceholder": "참고 문서 목록을 입력하세요",
       "operatingUnitLabel": "조작 단위 설명",
+      "operatingUnitDescriptionLabel": "조작 단위 설명",
       "operatingUnitPlaceholder": "소프트웨어가 제어하는 조작 단위를 설명하세요",
       "softwareComponentsLabel": "소프트웨어 구성",
       "softwareComponentsPlaceholder": "소프트웨어 구성 요소를 입력하세요",

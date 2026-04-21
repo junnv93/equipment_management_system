@@ -221,6 +221,7 @@
       "referenceDocumentsLabel": "Reference Documents",
       "referenceDocumentsPlaceholder": "Enter reference documents",
       "operatingUnitLabel": "Operating Unit Description",
+      "operatingUnitDescriptionLabel": "Operating Unit Description",
       "operatingUnitPlaceholder": "Describe the operating unit controlled by the software",
       "softwareComponentsLabel": "Software Components",
       "softwareComponentsPlaceholder": "Enter software components",
