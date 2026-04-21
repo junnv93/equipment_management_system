@@ -65,3 +65,9 @@ export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from 
 // ============================================================
 
 export * from './software-validation';
+
+// ============================================================
+// FSM — Checkout Finite State Machine (PR-1 SSOT)
+// ============================================================
+
+export * from './fsm';

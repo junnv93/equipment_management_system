@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CheckoutStatusEnum, CheckoutStatus, CheckoutPurposeEnum, CheckoutPurpose } from './enums';
 import { uuidString, optionalUuid } from './utils/fields';
+import { NextStepDescriptorSchema } from './fsm/checkout-fsm';
 
 /**
  * ✅ Single Source of Truth 준수
@@ -23,6 +24,7 @@ export const CheckoutSchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  nextStep: NextStepDescriptorSchema.nullable().optional(),
 });
 
 export type Checkout = z.infer<typeof CheckoutSchema>;
