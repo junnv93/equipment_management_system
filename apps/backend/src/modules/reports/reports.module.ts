@@ -7,7 +7,6 @@ import { RetentionService } from './retention.service';
 import { FormTemplateExportService } from './form-template-export.service';
 import { EquipmentRegistryDataService } from './services/equipment-registry-data.service';
 import { EquipmentRegistryRendererService } from './services/equipment-registry-renderer.service';
-import { SoftwareValidationRendererService } from '../software-validations/services/software-validation-renderer.service';
 import { SoftwareValidationsModule } from '../software-validations/software-validations.module';
 import { IntermediateInspectionsModule } from '../intermediate-inspections/intermediate-inspections.module';
 import { SelfInspectionsModule } from '../self-inspections/self-inspections.module';
@@ -34,7 +33,6 @@ import { EquipmentImportsModule } from '../equipment-imports/equipment-imports.m
     FormTemplateExportService,
     EquipmentRegistryDataService,
     EquipmentRegistryRendererService,
-    SoftwareValidationRendererService,
   ],
   exports: [ReportsService, RetentionService, FormTemplateExportService],
 })

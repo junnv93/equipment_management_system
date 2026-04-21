@@ -5,6 +5,7 @@ import { checkouts, checkoutItems } from '@equipment-management/db/schema/checko
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { users } from '@equipment-management/db/schema/users';
+import { ConditionCheckStepValues } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 
 export interface CheckoutFormSigner {
@@ -130,7 +131,9 @@ export class CheckoutFormExportDataService {
         : Promise.resolve([null] as [null]),
     ]);
 
-    const findCondition = (step: 'lender_checkout' | 'lender_return'): string | null => {
+    const findCondition = (
+      step: (typeof ConditionCheckStepValues)[keyof typeof ConditionCheckStepValues]
+    ): string | null => {
       const c = condChecks.find((cc) => cc.step === step);
       if (!c) return null;
       return `${c.appearanceStatus}/${c.operationStatus}`;
@@ -153,8 +156,8 @@ export class CheckoutFormExportDataService {
         conditionBefore: it.conditionBefore ?? null,
         conditionAfter: it.conditionAfter ?? null,
       })),
-      conditionCheckout: findCondition('lender_checkout'),
-      conditionReturn: findCondition('lender_return'),
+      conditionCheckout: findCondition(ConditionCheckStepValues.LENDER_CHECKOUT),
+      conditionReturn: findCondition(ConditionCheckStepValues.LENDER_RETURN),
       requester: requester
         ? { name: requester.name, signaturePath: requester.signaturePath }
         : null,
