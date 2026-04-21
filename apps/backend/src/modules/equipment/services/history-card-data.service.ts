@@ -289,7 +289,7 @@ export class HistoryCardDataService {
         performedAt: formatDate(row.performedAt),
         content: row.content,
       })),
-      timeline: [...timeline].reverse(),
+      timeline: [...timeline].reverse(), // getTimeline DESC → reverse()로 오래된 항목부터 양식에 표시
       approverSignaturePath: approver?.signatureImagePath ?? null,
       equipmentPhotoPath: photoDoc?.filePath ?? null,
       generatedAt: new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE }),

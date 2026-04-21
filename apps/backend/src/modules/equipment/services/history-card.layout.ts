@@ -153,22 +153,26 @@ export const APPROVAL_DATE_PLACEHOLDER = '/   /' as const;
 export const MANUAL_LOCATION_REGEX = /(<w:t[^>]*>)\s*\)/;
 
 /**
- * 이력 섹션 레이아웃 — 각 섹션 제목 + 제목/헤더행 skip 수 + 빈 행 수 + 컬럼 수.
- *
- * 양식 원본은 섹션별로 고정된 수의 빈 행을 제공한다. 데이터가 많으면 뒤쪽 행은 잘리고,
- * 적으면 남은 빈 행은 그대로 유지된다 (양식 서식 보존).
+ * 이력 섹션 레이아웃 — 각 섹션 제목 + 헤더 skip 수 + 템플릿 빈 행 수 + 컬럼 수 + 정렬.
  *
  * - headerSkip: 섹션 제목 행(1) + 컬럼 헤더 행(1) = 2행 건너뛰기
- * - emptyRows: 템플릿에 미리 생성된 빈 데이터 행 수
+ * - emptyRows: 템플릿에 미리 생성된 빈 데이터 행 수 (데이터가 이를 초과하면 서식을 유지한 채 행 자동 추가)
  * - columns: 각 빈 행의 데이터 셀 수 (주입 시 배열 길이)
+ * - alignLeft: true이면 셀 단락의 <w:jc> 정렬 속성을 제거해 왼쪽 정렬 강제
+ *              (템플릿에 center 서식이 내재된 섹션에만 지정)
  */
 export const SECTIONS = {
-  /** §2 장비 위치 변동 이력 — [변동일시, 설치 위치, 비고] */
+  /**
+   * §2 장비 위치 변동 이력 — [변동일시, 설치 위치, 비고]
+   *
+   * alignLeft: 원본 템플릿 셀에 center 정렬이 내재되어 있어 주입 시 왼쪽 정렬 강제 필요.
+   */
   LOCATION: {
     title: '장비 위치 변동 이력',
     headerSkip: 2,
     emptyRows: 5,
     columns: 3,
+    alignLeft: true,
   },
   /** §3 장비 교정 이력 — [교정일시, 주요 결과, 차기 교정 예정일] */
   CALIBRATION: {
@@ -176,6 +180,7 @@ export const SECTIONS = {
     headerSkip: 2,
     emptyRows: 9,
     columns: 3,
+    alignLeft: false,
   },
   /** §4 장비 유지보수 내역 — [일시, 주요 내용] */
   MAINTENANCE: {
@@ -183,6 +188,7 @@ export const SECTIONS = {
     headerSkip: 2,
     emptyRows: 8,
     columns: 2,
+    alignLeft: false,
   },
   /**
    * §5 장비 손상/오작동/변경/수리 내역 (통합 섹션) — [일시, 주요 내용]
@@ -199,10 +205,11 @@ export const SECTIONS = {
     headerSkip: 2,
     emptyRows: 8,
     columns: 2,
+    alignLeft: false,
   },
 } as const satisfies Record<
   string,
-  { title: string; headerSkip: number; emptyRows: number; columns: number }
+  { title: string; headerSkip: number; emptyRows: number; columns: number; alignLeft: boolean }
 >;
 
 /**
