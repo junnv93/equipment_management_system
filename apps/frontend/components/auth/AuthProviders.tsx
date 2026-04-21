@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getProviders } from 'next-auth/react';
+import { queryKeys } from '@/lib/api/query-config';
 
 interface AuthProvidersState {
   hasAzureAD: boolean;
@@ -21,7 +22,7 @@ export function useAuthProviders(): AuthProvidersState {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['auth', 'providers'],
+    queryKey: queryKeys.auth.providers(),
     queryFn: getProviders,
     staleTime: Infinity, // 런타임에 변경되지 않는 서버 설정값
   });

@@ -31,6 +31,7 @@ import {
   IntermediateCheckFilterStatusValues,
   type DocumentType,
   CalibrationPlanStatusValues,
+  DocumentTypeValues,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
@@ -313,7 +314,7 @@ export class CalibrationService extends VersionedBaseService {
             calibration: schema.calibrations,
             certDocPath: sql<
               string | null
-            >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+            >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
           })
           .from(schema.calibrations)
           .where(eq(schema.calibrations.id, id))
@@ -460,8 +461,8 @@ export class CalibrationService extends VersionedBaseService {
       }
 
       const certDocPath =
-        result.documents.find((d) => d.documentType === 'calibration_certificate')?.filePath ??
-        null;
+        result.documents.find((d) => d.documentType === DocumentTypeValues.CALIBRATION_CERTIFICATE)
+          ?.filePath ?? null;
       return {
         calibration: this.transformDbToRecord(result.calibration, certDocPath),
         documents: result.documents,
@@ -1121,7 +1122,7 @@ export class CalibrationService extends VersionedBaseService {
           teamName: schema.teams.name,
           certDocPath: sql<
             string | null
-          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
         })
         .from(schema.calibrations)
         .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -1326,7 +1327,7 @@ export class CalibrationService extends VersionedBaseService {
           approverEmail: approver.email,
           certDocPath: sql<
             string | null
-          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
         })
         .from(schema.calibrations)
         .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -1704,7 +1705,7 @@ export class CalibrationService extends VersionedBaseService {
         calibration: schema.calibrations,
         certDocPath: sql<
           string | null
-        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
       })
       .from(schema.calibrations)
       .where(
@@ -1848,7 +1849,7 @@ export class CalibrationService extends VersionedBaseService {
         teamName: schema.teams.name,
         certDocPath: sql<
           string | null
-        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
       })
       .from(schema.calibrations)
       .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))

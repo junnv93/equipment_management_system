@@ -14,6 +14,7 @@ import type { AcquisitionOrProcessingItem, ControlItem } from '@equipment-manage
 import {
   acquisitionOrProcessingArraySchema,
   controlItemArraySchema,
+  ValidationStatusValues,
 } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 import type { Site } from '@equipment-management/schemas';
@@ -53,7 +54,11 @@ export interface SoftwareValidationExportData {
   qualityApprover: SoftwareValidationSigner | null;
 }
 
-const EXPORTABLE_STATUSES = ['submitted', 'approved', 'quality_approved'] as const;
+const EXPORTABLE_STATUSES = [
+  ValidationStatusValues.SUBMITTED,
+  ValidationStatusValues.APPROVED,
+  ValidationStatusValues.QUALITY_APPROVED,
+] as const;
 
 /**
  * UL-QP-18-09 내보내기용 데이터 조회 서비스.

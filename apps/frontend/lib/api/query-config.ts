@@ -657,4 +657,8 @@ export const queryKeys = {
     svg: (managementNumber: string, appUrl: string) =>
       [...queryKeys.qr.all, 'svg', managementNumber, appUrl] as const,
   },
+  auth: {
+    all: ['auth'] as const,
+    providers: () => [...queryKeys.auth.all, 'providers'] as const,
+  },
 } as const;

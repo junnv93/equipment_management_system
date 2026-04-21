@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { DocumentTypeValues } from '@equipment-management/schemas';
 import { CalibrationService } from '../calibration.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import {
@@ -64,7 +65,7 @@ const MOCK_CALIBRATION_ROW = {
 const MOCK_DOCUMENT_ROW = {
   id: 'doc-uuid-1',
   calibrationId: 'cal-uuid-1',
-  documentType: 'calibration_certificate',
+  documentType: DocumentTypeValues.CALIBRATION_CERTIFICATE,
   fileName: 'cert.pdf',
   originalFileName: 'certificate.pdf',
   filePath: 'calibration/pending/cert.pdf',
@@ -203,7 +204,7 @@ describe('CalibrationService', () => {
       const result = await service.createWithDocuments(
         BASE_DTO,
         [MOCK_FILE],
-        ['calibration_certificate' as never],
+        [DocumentTypeValues.CALIBRATION_CERTIFICATE as never],
         [undefined],
         'user-uuid-1'
       );
@@ -228,7 +229,7 @@ describe('CalibrationService', () => {
       await service.createWithDocuments(
         BASE_DTO,
         [MOCK_FILE],
-        ['calibration_certificate' as never],
+        [DocumentTypeValues.CALIBRATION_CERTIFICATE as never],
         [undefined],
         'user-uuid-1'
       );
@@ -254,7 +255,7 @@ describe('CalibrationService', () => {
         service.createWithDocuments(
           BASE_DTO,
           [MOCK_FILE],
-          ['calibration_certificate' as never],
+          [DocumentTypeValues.CALIBRATION_CERTIFICATE as never],
           [undefined],
           'user-uuid-1'
         )

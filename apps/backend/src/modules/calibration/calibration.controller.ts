@@ -64,7 +64,11 @@ import { CurrentEnforcedScope } from '../../common/decorators/current-scope.deco
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { DocumentService } from '../../common/file-upload/document.service';
-import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
+import {
+  DOCUMENT_TYPE_VALUES,
+  DocumentTypeValues,
+  type DocumentType,
+} from '@equipment-management/schemas';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -656,7 +660,7 @@ export class CalibrationController {
     const docs = await this.documentService.createDocuments(files, options);
 
     // 인증서 문서 업로드/개정 시 캐시 이벤트 발행 (SSOT: Service 계층 emit)
-    const hasCertificate = documentTypes.includes('calibration_certificate' as DocumentType);
+    const hasCertificate = documentTypes.includes(DocumentTypeValues.CALIBRATION_CERTIFICATE);
     if (hasCertificate) {
       const isRevision = existingCalibration.certificatePath !== null;
       await this.calibrationService.recordCertificateDocuments(

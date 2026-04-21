@@ -215,3 +215,8 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-21 ssot-step19] ValidationCreateDialog.tsx** — 2026-04-21 완료: `ValidationTypeValues.VENDOR/SELF` + DocumentUploadButton.tsx 포함 동시 수정.
 - [x] **[2026-04-21 verify-e2e] wf-35-cas-ui-recovery.spec.ts** — 2026-04-21 완료: `auth.fixture` import + type-only `BrowserContext, Page` 분리 (PostToolUse hook 자동 수정).
 - [x] **[2026-04-21 frontend-state] SoftwareValidationContent.tsx isError 미처리** — 2026-04-21 완료: `isError` 추가, 에러 UI 분기(`loadError` i18n 키, `XCircle` 아이콘) 추가.
+- [x] **[2026-04-21 form-export-services] 🟢 LOW renderer 내 단일 열 인덱스 named constant 미적용** — 2026-04-21 완료. checkout/equipment-import layout에 `TEXT_COL = 1` 추가, renderer 리터럴 교체. commit 7458ae0e.
+- [x] **[2026-04-21 docx-layer-fix] 🔴 ARCH domain→reports 단방향 의존성 위반** — 2026-04-21 완료. `src/common/docx/docx-template.util.ts` + `docx-xml-helpers.ts` 신설. 5개 도메인 renderer(checkouts/equipment-imports/software-validations/test-software/equipment) import 경로를 `common/docx/`로 교체. reports/ barrel re-export 유지. commit 7458ae0e.
+- [x] **[2026-04-21 verify-ssot] 🟠 HIGH `'calibration_certificate'` 리터럴** — 2026-04-21 완료. `DocumentTypeValues.CALIBRATION_CERTIFICATE` 교체 (service 6 + controller 1 + spec 3곳).
+- [x] **[2026-04-21 verify-hardcoding] 🟡 MEDIUM `queryKey: ['auth', 'providers']` 하드코딩** — 2026-04-21 완료. `queryKeys.auth.providers()` 네임스페이스 추가 + `AuthProviders.tsx` 경유.
+- [x] **[2026-04-21 verify-hardcoding] 🟢 LOW `EXPORTABLE_STATUSES` 리터럴** — 2026-04-21 완료. `ValidationStatusValues.SUBMITTED/.APPROVED/.QUALITY_APPROVED` 경유.
