@@ -239,7 +239,7 @@ export class HistoryCardRendererService {
   private fillHistorySections(xml: string, data: HistoryCardData): string {
     let currentXml = xml;
 
-    // §2 위치 변동 이력
+    // §2 위치 변동 이력 — 설치위치 셀 왼쪽 정렬 강제 (템플릿 center 서식 덮어쓰기)
     currentXml = fillSectionEmptyRows(
       currentXml,
       SECTIONS.LOCATION.title,
@@ -247,7 +247,8 @@ export class HistoryCardRendererService {
       SECTIONS.LOCATION.headerSkip,
       SECTIONS.LOCATION.emptyRows,
       RUN_RPR_XML,
-      FORM_NUMBER
+      FORM_NUMBER,
+      { alignLeft: true }
     );
 
     // §3 교정 이력 — 주요결과는 `result (agency)` 합성

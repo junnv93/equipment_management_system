@@ -267,7 +267,8 @@ export class HistoryCardDataService {
         // 승인 시점 SSOT: approvedAt 우선, legacy 데이터는 updatedAt fallback
         approvalDate: formatDate(equipmentRow.approvedAt ?? equipmentRow.updatedAt),
       },
-      calibrations: calibrationRows.map((row) => ({
+      // desc 쿼리로 최신 N건 확보 후 reverse — 양식에는 오래된 항목부터 위에 표시
+      calibrations: [...calibrationRows].reverse().map((row) => ({
         calibrationDate: formatDate(row.calibrationDate),
         nextCalibrationDate: formatDate(row.nextCalibrationDate),
         status: row.status ?? '-',
@@ -278,17 +279,17 @@ export class HistoryCardDataService {
         technicianId: row.technicianId ?? '-',
         certificateNumber: row.certificateNumber ?? '-',
       })),
-      locationHistory: locationRows.map((row) => ({
+      locationHistory: [...locationRows].reverse().map((row) => ({
         changedAt: formatDate(row.changedAt),
         previousLocation: row.previousLocation ?? '-',
         newLocation: row.newLocation,
         notes: row.notes ?? '-',
       })),
-      maintenanceHistory: maintenanceRows.map((row) => ({
+      maintenanceHistory: [...maintenanceRows].reverse().map((row) => ({
         performedAt: formatDate(row.performedAt),
         content: row.content,
       })),
-      timeline,
+      timeline: [...timeline].reverse(),
       approverSignaturePath: approver?.signatureImagePath ?? null,
       equipmentPhotoPath: photoDoc?.filePath ?? null,
       generatedAt: new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE }),

@@ -179,14 +179,16 @@ export function assertReplaceRegex(
 /**
  * 섹션 제목 아래의 빈 행 N개에 데이터를 채운다.
  *
- * 기존 양식의 셀 너비/테두리 서식을 보존하기 위해 **행 추가는 하지 않고** 미리 생성된 빈 행에 런만 주입.
- * 데이터가 빈 행 수보다 많으면 뒤쪽 데이터는 drop, 적으면 남는 빈 행은 그대로 유지.
+ * - 데이터가 emptyRowCount 이하이면 남는 빈 행은 그대로 유지 (양식 서식 보존).
+ * - 데이터가 emptyRowCount를 초과하면 마지막 빈 행 XML을 서식 템플릿으로 삼아 행을 추가.
+ *   추가 행은 셀 너비·테두리 등 원본 서식을 그대로 상속한다.
  *
  * @param sectionMarker 섹션 제목 텍스트 (고유 식별자)
  * @param dataRows 행 데이터 배열 (각 원소는 셀 값 배열)
  * @param headerSkip 섹션 제목행 + 컬럼 헤더행을 건너뛸 수 (보통 2)
  * @param emptyRowCount 템플릿에 있는 빈 행 수
  * @param rPrXml 런 속성 XML
+ * @param options.alignLeft true이면 셀 단락 정렬 속성(<w:jc>)을 제거해 왼쪽 정렬 강제
  * @throws FormRenderError 섹션 제목 매칭 실패 or 헤더 행 수 부족 시
  */
 export function fillSectionEmptyRows(
@@ -196,7 +198,8 @@ export function fillSectionEmptyRows(
   headerSkip: number,
   emptyRowCount: number,
   rPrXml: string,
-  formLabel: string
+  formLabel: string,
+  options?: { alignLeft?: boolean }
 ): string {
   const sectionPos = xml.indexOf(sectionMarker);
   if (sectionPos === -1) {
@@ -220,6 +223,26 @@ export function fillSectionEmptyRows(
     pos += '</w:tr>'.length;
   }
 
+  /** 마지막 빈 행 XML — 초과 데이터 삽입 시 서식 템플릿으로 재사용 */
+  let templateRowXml: string | null = null;
+
+  const fillCells = (rowXml: string, cellData: readonly string[]): string => {
+    let cellIdx = 0;
+    return rowXml.replace(
+      /<w:tc\b([^>]*)>([\s\S]*?)<\/w:tc>/g,
+      (match, attrs: string, content: string) => {
+        if (/<w:r\b/.test(content) || cellIdx >= cellData.length) return match;
+        const processedContent = options?.alignLeft
+          ? content.replace(/<w:jc\s[^>]*\/>/g, '')
+          : content;
+        const value = cellData[cellIdx++];
+        const runXml = buildRunXml(value, rPrXml);
+        const newContent = processedContent.replace('</w:p>', runXml + '</w:p>');
+        return `<w:tc${attrs}>${newContent}</w:tc>`;
+      }
+    );
+  };
+
   let currentXml = xml;
   for (let rowIdx = 0; rowIdx < emptyRowCount; rowIdx++) {
     const trStart = currentXml.indexOf('<w:tr', pos);
@@ -227,25 +250,27 @@ export function fillSectionEmptyRows(
     const trEnd = currentXml.indexOf('</w:tr>', trStart) + '</w:tr>'.length;
     const rowXml = currentXml.substring(trStart, trEnd);
 
+    // 마지막 빈 행을 채우기 전에 서식 템플릿으로 저장
+    if (rowIdx === emptyRowCount - 1) {
+      templateRowXml = rowXml;
+    }
+
     if (rowIdx < dataRows.length) {
-      const cellData = dataRows[rowIdx];
-      let cellIdx = 0;
-      const filledRow = rowXml.replace(
-        /<w:tc\b([^>]*)>([\s\S]*?)<\/w:tc>/g,
-        (match, attrs: string, content: string) => {
-          if (/<w:r\b/.test(content) || cellIdx >= cellData.length) return match;
-          const value = cellData[cellIdx++];
-          const runXml = buildRunXml(value, rPrXml);
-          const newContent = content.replace('</w:p>', runXml + '</w:p>');
-          return `<w:tc${attrs}>${newContent}</w:tc>`;
-        }
-      );
+      const filledRow = fillCells(rowXml, dataRows[rowIdx]);
       currentXml = currentXml.substring(0, trStart) + filledRow + currentXml.substring(trEnd);
       pos = trStart + filledRow.length;
     } else {
       pos = trEnd;
     }
   }
+
+  // 초과 데이터: 템플릿 행을 복제해 pos 위치에 삽입
+  if (dataRows.length > emptyRowCount && templateRowXml !== null) {
+    const extraRows = dataRows.slice(emptyRowCount);
+    const insertXml = extraRows.map((cellData) => fillCells(templateRowXml!, cellData)).join('');
+    currentXml = currentXml.substring(0, pos) + insertXml + currentXml.substring(pos);
+  }
+
   return currentXml;
 }
 
