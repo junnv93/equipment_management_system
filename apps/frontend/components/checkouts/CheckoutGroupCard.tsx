@@ -37,6 +37,7 @@ import {
   CHECKOUT_PURPOSE_TOKENS,
   CHECKOUT_OVERDUE_GROUP_TOKENS,
   CHECKOUT_ITEM_ROW_TOKENS,
+  CHECKOUT_INTERACTION_TOKENS,
   RENTAL_FLOW_INLINE_TOKENS,
   CHECKOUT_STEP_LABELS,
   getDdayClasses,
@@ -309,7 +310,7 @@ function CheckoutGroupCard({
                     />
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="truncate max-w-[160px] cursor-help">
+                        <span className={CHECKOUT_INTERACTION_TOKENS.destinationLabel}>
                           {group.destinationKey ? t(group.destinationKey) : group.destination}
                         </span>
                       </TooltipTrigger>

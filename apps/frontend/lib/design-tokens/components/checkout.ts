@@ -497,9 +497,6 @@ export const CHECKOUT_MOTION = {
 
   /** Selectable row: 배경색 + 불투명도 + border */
   selectableRow: TRANSITION_PRESETS.fastBgOpacityBorder,
-
-  /** 목록 아이템 순차 등장 (transform + opacity) */
-  staggerItem: TRANSITION_PRESETS.fastTransformOpacity,
 } as const;
 
 // ============================================================================
@@ -521,6 +518,9 @@ export const CHECKOUT_INTERACTION_TOKENS = {
 
   /** Equipment item: border + rounded + hover + transition */
   equipmentItem: ['border', 'rounded-md', 'hover:bg-muted/50', TRANSITION_PRESETS.fastBg].join(' '),
+
+  /** 반출지 레이블 최대 너비 (Tooltip 트리거용) */
+  destinationLabel: 'truncate max-w-[10rem] cursor-help',
 } as const;
 
 // ============================================================================

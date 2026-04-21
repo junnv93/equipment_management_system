@@ -405,22 +405,39 @@ export default function InboundCheckoutsTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('inbound.equipmentName')}</TableHead>
-                    <TableHead>{t('inbound.classification')}</TableHead>
-                    <TableHead>{t('inbound.ownerDepartment')}</TableHead>
-                    <TableHead>{t('inbound.usagePeriod')}</TableHead>
-                    <TableHead>{t('inbound.status')}</TableHead>
-                    <TableHead>{t('inbound.requestDate')}</TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.equipmentName')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.classification')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.ownerDepartment')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.usagePeriod')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.status')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.requestDate')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {internalSharedImportsData!.data.map((item) => (
                     <TableRow
                       key={item.id}
-                      className={CHECKOUT_INTERACTION_TOKENS.clickableRow}
+                      className={[
+                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                        PREMIUM_TABLE_TOKENS.stripe,
+                      ].join(' ')}
                       onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))}
                     >
-                      <TableCell className="font-medium line-clamp-1">
+                      <TableCell
+                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                      >
                         {item.equipmentName}
                       </TableCell>
                       <TableCell>
