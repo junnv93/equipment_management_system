@@ -1,0 +1,58 @@
+title = "Equipment Management System — gitleaks 프로젝트 룰셋"
+
+# gitleaks 기본 200+ 룰셋 상속. 프로젝트별 사각지대만 추가.
+# 상세 문서: docs/references/ultrareview-usage.md (Pre-upload Secret Gate 섹션)
+[extend]
+  useDefault = true
+
+# ─── 프로젝트별 추가 룰 ────────────────────────────────────────────────────────
+
+[[rules]]
+  id          = "sops-age-private-key"
+  description = "SOPS/age 개인 키 — AGE-SECRET-KEY-... 패턴"
+  regex       = '''AGE-SECRET-KEY-[0-9A-Z]{59}'''
+  keywords    = ["AGE-SECRET-KEY"]
+
+[[rules]]
+  id          = "sops-plaintext-envelope"
+  description = "sops 파일이 복호화된 상태로 커밋됨 (sops: 헤더 누락)"
+  # sops.yaml 파일에 sops 메타데이터 헤더가 없으면 평문으로 간주
+  # pre-commit 1-stage가 이미 검사하지만 working tree 전체 스캔용으로 보강
+  regex       = '''(?i)(POSTGRES_PASSWORD|DB_PASSWORD|DATABASE_PASSWORD)\s*=\s*["']?([^\s"'\$\{]{8,})["']?'''
+  keywords    = ["postgres_password", "db_password", "database_password"]
+  secretGroup = 2
+
+[[rules]]
+  id          = "azure-ad-client-secret-explicit"
+  description = "Azure AD Client Secret (프로젝트 환경변수 명 기반)"
+  regex       = '''(?i)AZURE_AD_CLIENT_SECRET\s*=\s*["']?([A-Za-z0-9\-_~.]{8,})["']?'''
+  keywords    = ["azure_ad_client_secret"]
+  secretGroup = 1
+
+[[rules]]
+  id          = "jwt-signing-keys"
+  description = "JWT signing / refresh secret 환경변수"
+  regex       = '''(?i)(JWT_ACCESS_SECRET|JWT_REFRESH_SECRET)\s*=\s*["']?([A-Za-z0-9+/\-_]{32,})["']?'''
+  keywords    = ["jwt_access_secret", "jwt_refresh_secret"]
+  secretGroup = 2
+
+# ─── 전역 allowlist ────────────────────────────────────────────────────────────
+
+[allowlist]
+  description = "프로젝트 전역 제외 경로 — 암호화된 파일·런타임 시크릿 경로"
+  paths = [
+    # sops 암호화된 파일(커밋 허용) — pre-commit 1-stage가 암호화 상태 검증
+    '''(^|/)infra/secrets/.*\.sops\.yaml$''',
+    # 복호화 대상 런타임 경로 (gitignore에도 있지만 명시 방어)
+    '''(^|/)run/secrets/''',
+    # gitleaks 자신의 config (allowlist 예시 패턴 포함)
+    '''(^|/)\.gitleaks\.toml$''',
+    # sops public key config (수신자 공개키만, secret 없음)
+    '''(^|/)\.sops\.yaml$''',
+    # 환경변수 예시 파일 (placeholder 값만)
+    '''(^|/)\.env\.example$''',
+    '''(^|/)apps/backend/\.env\.example$''',
+    # age keys 백업 문서 (경로 예시 포함, 실제 키 없음)
+    '''(^|/)docs/operations/secret-backup\.md$''',
+    '''(^|/)docs/operations/secret-rotation\.md$''',
+  ]

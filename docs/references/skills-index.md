@@ -40,3 +40,4 @@
 - **manage-skills** — 스킬 유지보수 (커버리지 갭 분석, 생성/업데이트, CLAUDE.md 관리)
 - **playwright-e2e** — E2E 워크플로우 (plan→generate→execute→heal→report, 순차 에이전트, auth.fixture)
 - **harness** — 3-Agent orchestrator (Planner→Generator→Evaluator, auto mode 0/1/2, contract 기반, max 3 retry, load-bearing)
+- **ultrareview-advisor** (스크립트) — `scripts/ultrareview-advisor.mjs` Go/No-Go 판정 (review-learnings.md + CLAUDE.md SSOT 파생), `scripts/ultrareview-preflight.mjs` pre-upload secret gate (.gitleaks.toml)

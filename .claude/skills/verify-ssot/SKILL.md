@@ -224,6 +224,35 @@ grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]\/api\/" \
 
 **PASS:** 재정의 0건 + 하드코딩 0건. **FAIL:** test-paths.ts 외 `toTestPath` 정의 또는 `/api/` 직접 사용.
 
+### Step 19: 프론트엔드 도메인 Status/Type 리터럴 비교 SSOT (2026-04-21 추가)
+
+프론트엔드 컴포넌트에서 `ValidationStatus`, `ValidationType` 등 도메인 enum 값을 raw 문자열 리터럴로
+직접 비교하는 패턴 탐지. `ValidationStatusValues.DRAFT` 등 SSOT 상수를 경유해야 함.
+
+**19a: ValidationStatus 리터럴 비교 탐지**
+```bash
+grep -rn "=== 'draft'\|=== 'submitted'\|=== 'approved'\|=== 'rejected'" \
+  apps/frontend --include="*.tsx" --include="*.ts" \
+  | grep -v "spec\|test\|\.d\.ts\|messages/"
+# 결과: 0건 (ValidationStatusValues.DRAFT 등 SSOT 경유)
+```
+
+**19b: ValidationType 리터럴 비교 탐지**
+```bash
+grep -rn "=== 'vendor'\|=== 'internal'" \
+  apps/frontend --include="*.tsx" --include="*.ts" \
+  | grep -v "spec\|test\|\.d\.ts\|messages/"
+# 결과: 0건 (ValidationType 타입 가드 또는 VALIDATION_TYPE_VALUES 경유)
+```
+
+**PASS:** 두 탐지 명령어 모두 0건. **FAIL:** raw 리터럴 비교 발견 시 SSOT 상수로 교체.
+
+**알려진 잔여 위반 (tech-debt-tracker 등록, 2026-04-21):**
+- `ValidationActionsBar.tsx` — `status === 'draft'/'submitted'/'approved'/'rejected'`
+- `ValidationDetailContent.tsx` — `validation.status === 'draft'`
+- `ValidationEditDialog.tsx` — `validation.validationType === 'vendor'`
+- `ValidationCreateDialog.tsx` — `createForm.validationType === 'vendor'`
+
 ## Output Format
 
 ```markdown
@@ -251,6 +280,7 @@ grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]\/api\/" \
 | 15  | data-migration SSOT           | PASS/FAIL | MigrationSessionStatus 로컬 재정의 또는 raw 리터럴 사용 위치 |
 | 16  | 도메인 유틸 상수 SSOT         | PASS/FAIL | NON_EXPORTABLE_CHECKOUT_STATUSES 등 로컬 재정의 위치 |
 | 17  | Content-Disposition 빌더 SSOT | PASS/FAIL | 컨트롤러 직접 헤더 조립 위치 |
+| 19  | 프론트엔드 Status/Type 리터럴 | PASS/FAIL | ValidationStatus/ValidationType raw 리터럴 비교 위치 |
 ```
 
 ## Exceptions

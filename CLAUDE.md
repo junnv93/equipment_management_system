@@ -152,6 +152,9 @@ CI 게이트는 `.husky/pre-push` (tsc + backend/frontend test)로 이동.
 
 **PC 이동 후**: `git pull && pnpm --filter backend run db:reset && pnpm dev` (로컬 DB는 ephemeral).
 
+**머지 전 고위험 변경 검토 (Layer 6)**: 브랜치 머지 직전 `node scripts/ultrareview-advisor.mjs` 실행 권고.
+Go 판정 시 `node scripts/ultrareview-preflight.mjs` → `/ultrareview <PR번호>`. 상세: [docs/references/ultrareview-usage.md](docs/references/ultrareview-usage.md)
+
 > **상세 절차 (SessionStart hook 해석, db:reset 내부 동작, pre-push 구성 등)**: [docs/references/git-workflow.md](docs/references/git-workflow.md) 참조
 
 ---
@@ -277,6 +280,7 @@ export async function middleware(request: NextRequest) { ... }
 | PostToolUse Hook | [post-tool-use-hook.md](docs/references/post-tool-use-hook.md) | Prettier auto-run, git diff verification |
 | Secret 관리 (sops+age) | [secret-backup.md](docs/operations/secret-backup.md), [secret-rotation.md](docs/operations/secret-rotation.md) | ADR-0005, `infra/secrets/*.sops.yaml`, `pnpm compose:lan`, pre-commit gitleaks |
 | Self-Audit (pre-commit gate) | [self-audit.md](docs/references/self-audit.md) | 7대 체크: 하드코딩URL/eslint-disable/any/SSOT우회/role리터럴/setQueryData/a11y, 예외 승인 절차 |
+| UltraReview 통합 (Layer 6) | [ultrareview-usage.md](docs/references/ultrareview-usage.md), [ultrareview-governance.md](docs/operations/ultrareview-governance.md) | 7-Layer 방어선, SSOT 파생 Trigger, Pre-upload secret gate, 피드백 루프 |
 
 ---
 
@@ -300,5 +304,6 @@ This project has 25+ custom Claude Code skills in `.claude/skills/` organized by
 - **Verify skills (17)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -cache-events / -implementation
 - **Review skills**: review-architecture, review-design
 - **Orchestrators**: generate-prompts, manage-skills, playwright-e2e, harness
+- **UltraReview 스크립트**: `scripts/ultrareview-advisor.mjs` (Go/No-Go 판정), `scripts/ultrareview-preflight.mjs` (pre-upload secret gate)
 
 > **각 스킬의 한줄 요약 + 스코프**: [docs/references/skills-index.md](docs/references/skills-index.md) 참조. 상세 사용법은 `.claude/skills/<name>/SKILL.md`.

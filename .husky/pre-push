@@ -44,3 +44,6 @@ echo "▶ pre-push: frontend tests..."
 pnpm --filter frontend run test --silent --passWithNoTests
 
 echo "✔ pre-push: all checks passed"
+
+# ultrareview 권고 (정보성 — 실패해도 push는 허용)
+node scripts/ultrareview-advisor.mjs --hint || true
