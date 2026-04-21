@@ -324,7 +324,9 @@ export function getNCMiniDotClasses(
   const { dot } = NC_MINI_WORKFLOW_TOKENS;
   if (stepIndex < currentStepIndex) return [dot.base, dot.done].join(' ');
   if (stepIndex === currentStepIndex) {
-    if (isLongOverdue && currentStepIndex === 0) return [dot.base, dot.currentCritical].join(' ');
+    if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [dot.base, dot.done].join(' ');
+    if (isLongOverdue && currentStepIndex === NC_OPEN_STEP_INDEX)
+      return [dot.base, dot.currentCritical].join(' ');
     return [dot.base, dot.current].join(' ');
   }
   return [dot.base, dot.pending].join(' ');
@@ -409,12 +411,15 @@ export const NC_WORKFLOW_STEPS = NON_CONFORMANCE_STATUS_VALUES;
 export const NC_TERMINAL_STEP_INDEX = NC_WORKFLOW_STEPS.length - 1;
 
 /** 상태 → 워크플로우 스텝 인덱스 매핑 (NC_WORKFLOW_STEPS 배열에서 파생 — SSOT) */
-export const NC_STATUS_STEP_INDEX: Record<string, number> = Object.fromEntries(
+export const NC_STATUS_STEP_INDEX = Object.fromEntries(
   NC_WORKFLOW_STEPS.map((status, index) => [status, index])
-);
+) as Record<NonConformanceStatus, number>;
+
+/** open 상태 스텝 인덱스 (overdue 분기용) */
+export const NC_OPEN_STEP_INDEX = NC_STATUS_STEP_INDEX['open'];
 
 /** corrected 상태 스텝 인덱스 (node/label 분기용) */
-export const NC_CORRECTED_STEP_INDEX = NC_STATUS_STEP_INDEX['corrected'] ?? 1;
+export const NC_CORRECTED_STEP_INDEX = NC_STATUS_STEP_INDEX['corrected'];
 
 /**
  * Utility: 워크플로우 노드 클래스
@@ -428,7 +433,8 @@ export function getNCWorkflowNodeClasses(
   if (stepIndex < currentStepIndex) return [node.base, node.completed].join(' ');
   if (stepIndex === currentStepIndex) {
     if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [node.base, node.completed].join(' ');
-    if (isLongOverdue && currentStepIndex === 0) return [node.base, node.currentCritical].join(' ');
+    if (isLongOverdue && currentStepIndex === NC_OPEN_STEP_INDEX)
+      return [node.base, node.currentCritical].join(' ');
     if (currentStepIndex === NC_CORRECTED_STEP_INDEX)
       return [node.base, node.currentInfo].join(' ');
     return [node.base, node.current].join(' ');
@@ -448,7 +454,7 @@ export function getNCWorkflowLabelClasses(
   if (stepIndex < currentStepIndex) return [label.base, label.completed].join(' ');
   if (stepIndex === currentStepIndex) {
     if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [label.base, label.completed].join(' ');
-    if (isLongOverdue && currentStepIndex === 0)
+    if (isLongOverdue && currentStepIndex === NC_OPEN_STEP_INDEX)
       return [label.base, label.currentCritical].join(' ');
     if (currentStepIndex === NC_CORRECTED_STEP_INDEX)
       return [label.base, label.currentInfo].join(' ');
