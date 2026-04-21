@@ -5,6 +5,14 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — tech-debt-batch-0421f (routeMap + cache 문서화 + tracker 정리)
+
+- [x] **routeMap 4개 페이지 미등록** — ✅ `/software-validations`, `/scan`, `/handover`, `/checkouts/import` 추가. `QrCode` 아이콘 추가. `scan`/`handover`/`checkoutsImport` 신규 i18n 키 ko/en 추가.
+- [x] **SW 검증 캐시 하이브리드 패턴 문서화** — ✅ `cache-event.registry.ts` 하이브리드 패턴 주석 보강. 미래 통합 조건 명시.
+- [x] **tracker false positive 7건 정리** — ⚠️ scope.type / ParseUUID 순서 / EquipmentImportDetail role / CheckoutHistoryTab invalidate / 빈 번역 키 5건: 재검증 결과 코드가 이미 올바름 → 오탐 판정.
+
+---
+
 ## 2026-04-21 — tech-debt-batch-0421e (verify-implementation 후속 3건)
 
 - [x] **`security.controller.ts` lineNumber PG integer 범위 미검증** — ✅ `PG_INT_MAX = 2_147_483_647` 상수 + `parseCspLineNumber()`에 `Math.min(Math.trunc(raw), PG_INT_MAX)` 클램프 추가. string 경로도 동일하게 클램프.

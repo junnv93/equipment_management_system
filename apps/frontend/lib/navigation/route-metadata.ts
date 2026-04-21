@@ -24,6 +24,7 @@ import {
   Activity,
   Cable,
   FilePlus,
+  QrCode,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -177,6 +178,11 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/checkouts/[id]',
   },
 
+  '/checkouts/import': {
+    labelKey: 'navigation.checkoutsImport',
+    parent: '/checkouts',
+    hidden: true,
+  },
   '/checkouts/import/[id]': {
     labelKey: 'navigation.checkoutsImportDetail',
     parent: '/checkouts',
@@ -194,6 +200,15 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/checkouts/import/[id]/receive': {
     labelKey: 'navigation.checkoutsImportReceive',
     parent: '/checkouts/import/[id]',
+  },
+
+  // ========================================
+  // SW 유효성 확인 (소프트웨어 검증 목록)
+  // ========================================
+  '/software-validations': {
+    labelKey: 'navigation.softwareValidations',
+    parent: '/',
+    icon: Activity,
   },
 
   // ========================================
@@ -353,6 +368,21 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.adminMonitoring',
     parent: '/',
     icon: Activity,
+  },
+
+  // ========================================
+  // QR 기능 페이지 (브레드크럼 제외)
+  // ========================================
+  '/scan': {
+    labelKey: 'navigation.scan',
+    parent: '/',
+    icon: QrCode,
+    hidden: true,
+  },
+  '/handover': {
+    labelKey: 'navigation.handover',
+    parent: '/',
+    hidden: true,
   },
 
   // ========================================
