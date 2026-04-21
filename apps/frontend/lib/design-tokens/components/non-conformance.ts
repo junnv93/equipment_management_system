@@ -23,7 +23,14 @@
 import type { SemanticColorKey } from '../brand';
 import { getSemanticContainerColorClasses, getSemanticLeftBorderClasses } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
-import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
+import {
+  FOCUS_TOKENS,
+  MICRO_TYPO,
+  URGENT_BADGE_TOKENS,
+  getSectionRhythm,
+  type CalloutVariant,
+  type CalloutEmphasis,
+} from '../semantic';
 import {
   type NonConformanceStatus,
   NON_CONFORMANCE_STATUS_VALUES,
@@ -711,13 +718,27 @@ export const NC_EMPTY_STATE_TOKENS = {
 // ============================================================================
 
 /**
- * NC 리스트 페이지 섹션별 추가 간격.
+ * NC 리스트/상세 페이지 섹션별 간격 리듬.
  * outer wrapper의 space-y-5가 기본 리듬을 담당하며,
  * 여기서는 특정 섹션에 의미 있는 추가 강조가 필요한 경우만 정의한다.
  */
 export const NC_SPACING_TOKENS = {
   /** 헤더 → KPI 간격: space-y-5보다 넓어 섹션 경계를 시각화 */
   afterHeader: 'mt-6',
+  detail: {
+    /** 페이지 최상위 wrapper — 그룹 경계는 mt-* 처리하므로 space-y-0 */
+    pageWrapper: 'space-y-0',
+    /** 그룹 1 (상태 파악): Header + RejectionAlert + Timeline + GuidanceCallout */
+    statusGroup: getSectionRhythm('tight'),
+    /** 그룹 1 → 2 경계 */
+    statusToContextGap: 'mt-8',
+    /** 그룹 2 (컨텍스트): InfoCards + Collapsibles + Docs */
+    contextGroup: getSectionRhythm('comfortable'),
+    /** 그룹 2 → 3 경계 (액션 직전) */
+    contextToActionGap: 'mt-6',
+    /** GuidanceCallout이 Timeline과 긴밀 */
+    calloutAfterTimeline: 'mt-3',
+  },
 } as const;
 
 // ============================================================================
@@ -738,9 +759,10 @@ export const NC_MOTION = {
 } as const;
 
 // ============================================================================
-// 17. NC_FOCUS — 포커스 재export
+// 17b. NC_FOCUS — 포커스 재export
 // ============================================================================
 
+/** @deprecated FOCUS_TOKENS.classes.default를 직접 import 권장 */
 export const NC_FOCUS = FOCUS_TOKENS.classes;
 
 // ============================================================================
@@ -764,6 +786,7 @@ export const NC_PAGINATION_TOKENS = {
 // 19. NC_LEFT_BORDER_INFO — 안내 배너 (info border-l-4)
 // ============================================================================
 
+/** @deprecated Phase 4 이후 getCalloutClasses('info', 'leftBorder')로 교체 권장 */
 export const NC_INFO_NOTICE_TOKENS = {
   container: [
     'border-l-4 p-4 rounded-r-md',
@@ -775,14 +798,152 @@ export const NC_INFO_NOTICE_TOKENS = {
 } as const;
 
 // ============================================================================
+// 20. NC_WORKFLOW_GUIDANCE_TOKENS — 상태×역할 다음 단계 가이던스 매트릭스
+// ============================================================================
+
+export type NCGuidanceStatusKey =
+  | 'open'
+  | 'openRejected'
+  | 'openBlockedRepair'
+  | 'openBlockedRecalibration'
+  | 'corrected'
+  | 'closed';
+
+export type NCGuidanceRole = 'operator' | 'manager' | 'all';
+
+export type NCGuidanceKey = `${NCGuidanceStatusKey}_${NCGuidanceRole}`;
+
+export interface NCGuidanceEntry {
+  variant: CalloutVariant;
+  emphasis: CalloutEmphasis;
+  icon: 'AlertTriangle' | 'Wrench' | 'Clock' | 'CheckCircle2' | 'Lock' | 'ShieldCheck';
+  stepBadgeKey: 'one' | 'two' | 'three';
+  ctaKind: 'primary' | 'link' | 'none';
+  scrollTarget?: 'actionBar' | 'infoRepairCard';
+}
+
+export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry> = {
+  open_operator: {
+    variant: 'warning',
+    emphasis: 'leftBorder',
+    icon: 'AlertTriangle',
+    stepBadgeKey: 'one',
+    ctaKind: 'primary',
+    scrollTarget: 'actionBar',
+  },
+  open_manager: {
+    variant: 'info',
+    emphasis: 'leftBorder',
+    icon: 'Clock',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openRejected_operator: {
+    variant: 'warning',
+    emphasis: 'leftBorder',
+    icon: 'AlertTriangle',
+    stepBadgeKey: 'one',
+    ctaKind: 'primary',
+    scrollTarget: 'actionBar',
+  },
+  openRejected_manager: {
+    variant: 'info',
+    emphasis: 'leftBorder',
+    icon: 'Clock',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openBlockedRepair_operator: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'link',
+    scrollTarget: 'infoRepairCard',
+  },
+  openBlockedRepair_manager: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openBlockedRecalibration_operator: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'link',
+  },
+  openBlockedRecalibration_manager: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  corrected_operator: {
+    variant: 'info',
+    emphasis: 'leftBorder',
+    icon: 'Clock',
+    stepBadgeKey: 'two',
+    ctaKind: 'none',
+  },
+  corrected_manager: {
+    variant: 'warning',
+    emphasis: 'leftBorder',
+    icon: 'ShieldCheck',
+    stepBadgeKey: 'two',
+    ctaKind: 'primary',
+    scrollTarget: 'actionBar',
+  },
+  closed_all: {
+    variant: 'ok',
+    emphasis: 'leftBorder',
+    icon: 'Lock',
+    stepBadgeKey: 'three',
+    ctaKind: 'none',
+  },
+} as const;
+
+export function resolveNCGuidanceKey(args: {
+  status: NonConformanceStatus;
+  canCloseNC: boolean;
+  needsRepair: boolean;
+  needsRecalibration: boolean;
+  hasRejection: boolean;
+}): NCGuidanceKey {
+  const { status, canCloseNC, needsRepair, needsRecalibration, hasRejection } = args;
+  const role: NCGuidanceRole = canCloseNC ? 'manager' : 'operator';
+  if (status === 'closed') return 'closed_all';
+  if (status === 'corrected') return `corrected_${role}`;
+  if (needsRepair) return `openBlockedRepair_${role}`;
+  if (needsRecalibration) return `openBlockedRecalibration_${role}`;
+  if (hasRejection) return `openRejected_${role}`;
+  return `open_${role}`;
+}
+
+export const NC_GUIDANCE_STEP_BADGE_TOKENS = {
+  base: [
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full',
+    `${MICRO_TYPO.badge} font-semibold tabular-nums`,
+  ].join(' '),
+  variant: {
+    info: 'bg-brand-info/10 text-brand-info',
+    warning: 'bg-brand-warning/10 text-brand-warning',
+    critical: 'bg-brand-critical/10 text-brand-critical',
+    ok: 'bg-brand-ok/10 text-brand-ok',
+    neutral: 'bg-muted text-muted-foreground',
+  } satisfies Record<CalloutVariant, string>,
+} as const;
+
+// ============================================================================
 // 21. NC_URGENT_BADGE_TOKENS — 긴급 배지
 // ============================================================================
 
+/** @deprecated Phase 4부터 URGENT_BADGE_TOKENS.solid 직접 사용 권장 */
 export const NC_URGENT_BADGE_TOKENS = {
-  badge: [
-    `inline-flex items-center px-2 py-0.5 rounded ${MICRO_TYPO.badge} font-semibold`,
-    'bg-brand-critical text-white',
-  ].join(' '),
+  badge: URGENT_BADGE_TOKENS.solid,
 } as const;
 
 // ============================================================================

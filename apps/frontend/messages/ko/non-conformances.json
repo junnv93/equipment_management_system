@@ -167,7 +167,9 @@
       "save": "저장",
       "dateLabel": "조치일: {date}",
       "actorLabel": " · 조치자: {name}",
-      "empty": "아직 시정 조치 내용이 없습니다."
+      "empty": "아직 시정 조치 내용이 없습니다.",
+      "emptyTitle": "시정 조치 내용 없음",
+      "addAction": "조치 내용 작성"
     },
     "closure": {
       "sectionTitle": "종결 의견",
@@ -243,6 +245,63 @@
         "error": "수리 이력 등록에 실패했습니다."
       }
     },
+    "guidance": {
+      "stepBadge": {
+        "one": "STEP 1 / 3",
+        "two": "STEP 2 / 3",
+        "three": "STEP 3 / 3"
+      },
+      "scrollToAction": "하단으로 이동",
+      "open_operator": {
+        "title": "시정 조치 내용을 입력하세요",
+        "body": "원인을 해결한 방법을 아래 조치 섹션에 기록한 뒤, 하단 '조치 완료' 버튼을 눌러 기술책임자에게 검토를 요청하세요.",
+        "ctaHint": "아래 조치 섹션 → 조치 완료 버튼"
+      },
+      "open_manager": {
+        "title": "시험실무자의 조치를 기다리는 중",
+        "body": "시험실무자가 조치 내용을 입력하기 전까지 종결 승인은 불가합니다. 필요 시 '수정'으로 원인과 조치 계획을 보완할 수 있습니다."
+      },
+      "openRejected_operator": {
+        "title": "반려 사유를 확인하고 재조치하세요",
+        "body": "기술책임자가 반려한 사유를 위 배너에서 확인한 뒤, 조치 내용을 보완하고 '조치 완료'를 다시 눌러주세요.",
+        "ctaHint": "하단 조치 완료 버튼"
+      },
+      "openRejected_manager": {
+        "title": "재조치 접수 대기",
+        "body": "반려 사유가 시험실무자에게 전달되었습니다. 재조치가 완료되면 상단 상태가 '조치 완료'로 자동 전환됩니다."
+      },
+      "openBlockedRepair_operator": {
+        "title": "수리 이력을 먼저 등록하세요",
+        "body": "손상 유형 부적합은 수리 이력 등록이 선행되어야 합니다. 아래 '수리 이력 등록'을 완료해야 조치 완료가 가능합니다.",
+        "ctaHint": "수리 카드 → 수리 이력 등록"
+      },
+      "openBlockedRepair_manager": {
+        "title": "수리 이력 선행 확인",
+        "body": "조치 완료와 종결 승인은 수리 이력 등록 이후 가능합니다. 필요 시 시험실무자에게 수리 등록을 안내해주세요."
+      },
+      "openBlockedRecalibration_operator": {
+        "title": "재교정 후 조치하세요",
+        "body": "교정 기한 초과 부적합은 재교정 완료가 선행되어야 합니다. 장비의 교정 기록 페이지에서 최신 교정을 등록한 뒤 조치 내용을 입력할 수 있습니다.",
+        "ctaHint": "교정 기록 확인 →"
+      },
+      "openBlockedRecalibration_manager": {
+        "title": "재교정 선행 확인",
+        "body": "조치 완료와 종결 승인은 재교정 기록 등록 이후 가능합니다."
+      },
+      "corrected_operator": {
+        "title": "기술책임자의 종결 승인 대기",
+        "body": "조치 내용이 접수되었습니다. 기술책임자의 종결 승인을 기다리고 있습니다. 반려되면 상단 배너에 사유가 표시됩니다."
+      },
+      "corrected_manager": {
+        "title": "종결 여부를 결정하세요",
+        "body": "조치 내용을 검토한 뒤 하단 '종결 승인' 또는 '조치 반려'를 선택해주세요. 반려 시 사유 입력이 필수입니다.",
+        "ctaHint": "하단 종결 승인 / 조치 반려"
+      },
+      "closed_all": {
+        "title": "부적합 처리가 완료되었습니다",
+        "body": "이 부적합은 종결되었습니다. 편집과 상태 변경은 감사 추적 보호를 위해 잠깁니다."
+      }
+    },
     "dialog": {
       "closeTitle": "부적합 종결",
       "closeDescription": "이 부적합 사항을 종결합니다. 종결 후에는 상태를 변경할 수 없습니다.",
@@ -263,6 +322,7 @@
       "reject": "조치 반려",
       "hintNeedsCorrectionApproval": "조치를 완료하면 기술책임자의 종결 승인이 필요합니다.",
       "hintWaitingApproval": "기술책임자의 종결 승인을 기다리고 있습니다.",
+      "hintNeedsContent": "조치 내용을 먼저 입력해주세요",
       "edit": "편집"
     }
   },

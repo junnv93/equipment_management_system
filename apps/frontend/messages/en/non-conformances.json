@@ -167,7 +167,9 @@
       "save": "Save",
       "dateLabel": "Corrected: {date}",
       "actorLabel": " · Corrector: {name}",
-      "empty": "No corrective action recorded yet."
+      "empty": "No corrective action recorded yet.",
+      "emptyTitle": "No corrective action recorded",
+      "addAction": "Write correction"
     },
     "closure": {
       "sectionTitle": "Closure Notes",
@@ -243,6 +245,63 @@
         "error": "Failed to register repair record."
       }
     },
+    "guidance": {
+      "stepBadge": {
+        "one": "STEP 1 / 3",
+        "two": "STEP 2 / 3",
+        "three": "STEP 3 / 3"
+      },
+      "scrollToAction": "Scroll to action",
+      "open_operator": {
+        "title": "Enter your corrective action",
+        "body": "Record how you resolved the root cause in the correction section below, then click 'Mark as Corrected' to request review from the technical manager.",
+        "ctaHint": "Correction section → Mark as Corrected"
+      },
+      "open_manager": {
+        "title": "Waiting for operator's corrective action",
+        "body": "Closure approval is not available until the operator enters the correction details. You can edit the cause and action plan via 'Edit' if needed."
+      },
+      "openRejected_operator": {
+        "title": "Review the rejection reason and resubmit",
+        "body": "Check the rejection reason in the banner above, update the correction details, then click 'Mark as Corrected' again.",
+        "ctaHint": "Mark as Corrected button below"
+      },
+      "openRejected_manager": {
+        "title": "Waiting for resubmission",
+        "body": "The rejection reason has been sent to the operator. The status will automatically change to 'Corrected' once resubmitted."
+      },
+      "openBlockedRepair_operator": {
+        "title": "Register repair history first",
+        "body": "Damage-type non-conformances require repair history registration before correction. Complete 'Register Repair History' below to enable correction.",
+        "ctaHint": "Repair card → Register Repair History"
+      },
+      "openBlockedRepair_manager": {
+        "title": "Repair history required first",
+        "body": "Correction and closure approval are available only after repair history is registered. Ask the operator to register repair if needed."
+      },
+      "openBlockedRecalibration_operator": {
+        "title": "Complete recalibration first",
+        "body": "Calibration-overdue non-conformances require a new calibration before correction. Register the latest calibration on the equipment's calibration page, then enter the correction.",
+        "ctaHint": "Check calibration records →"
+      },
+      "openBlockedRecalibration_manager": {
+        "title": "Recalibration required first",
+        "body": "Correction and closure approval are available only after a new calibration record is registered."
+      },
+      "corrected_operator": {
+        "title": "Waiting for technical manager's closure approval",
+        "body": "Your correction has been submitted. Waiting for the technical manager's closure approval. If rejected, the reason will appear in the banner above."
+      },
+      "corrected_manager": {
+        "title": "Decide on closure",
+        "body": "Review the correction details, then choose 'Approve Closure' or 'Reject Correction' below. A reason is required for rejection.",
+        "ctaHint": "Approve Closure / Reject Correction below"
+      },
+      "closed_all": {
+        "title": "Non-conformance processing complete",
+        "body": "This non-conformance has been closed. Editing and status changes are locked to protect the audit trail."
+      }
+    },
     "dialog": {
       "closeTitle": "Close Non-Conformance",
       "closeDescription": "This will close the non-conformance. The status cannot be changed after closure.",
@@ -263,6 +322,7 @@
       "reject": "Reject Action",
       "hintNeedsCorrectionApproval": "After completing the action, technical manager approval is required for closure.",
       "hintWaitingApproval": "Waiting for technical manager closure approval.",
+      "hintNeedsContent": "Please enter corrective action content first",
       "edit": "Edit"
     }
   },

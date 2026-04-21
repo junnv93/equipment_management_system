@@ -85,6 +85,7 @@ export {
   getSectionRhythm,
   CALLOUT_TOKENS,
   getCalloutClasses,
+  URGENT_BADGE_TOKENS,
   type InteractiveSize,
   type MotionSpeed,
   type ElevationLayer,
@@ -309,7 +310,14 @@ export {
   NC_DOCUMENTS_SECTION_TOKENS,
   NC_LIST_MOBILE_TOKENS,
   NC_SPACING_TOKENS,
+  NC_WORKFLOW_GUIDANCE_TOKENS,
+  resolveNCGuidanceKey,
+  NC_GUIDANCE_STEP_BADGE_TOKENS,
   type NCKpiVariant,
+  type NCGuidanceStatusKey,
+  type NCGuidanceRole,
+  type NCGuidanceKey,
+  type NCGuidanceEntry,
 } from './components/non-conformance';
 
 // Calibration
