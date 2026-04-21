@@ -239,19 +239,21 @@ grep -rn "=== 'draft'\|=== 'submitted'\|=== 'approved'\|=== 'rejected'" \
 
 **19b: ValidationType 리터럴 비교 탐지**
 ```bash
-grep -rn "=== 'vendor'\|=== 'internal'" \
+grep -rn "=== 'vendor'\|=== 'self'\|=== 'internal'" \
   apps/frontend --include="*.tsx" --include="*.ts" \
   | grep -v "spec\|test\|\.d\.ts\|messages/"
-# 결과: 0건 (ValidationType 타입 가드 또는 VALIDATION_TYPE_VALUES 경유)
+# 결과: 0건 (ValidationTypeValues.VENDOR/SELF 등 SSOT 경유)
 ```
 
-**PASS:** 두 탐지 명령어 모두 0건. **FAIL:** raw 리터럴 비교 발견 시 SSOT 상수로 교체.
+**19c: 도메인 폼 아이템 타입 loose index signature 금지**
+```bash
+grep -rn "interface.*{[[:space:]]*\[key: string\]: string" \
+  apps/frontend --include="*.tsx" --include="*.ts" \
+  | grep -v "spec\|test\|\.d\.ts"
+# 결과: 0건 (AcquisitionOrProcessingItem / ControlItem SSOT 타입 사용)
+```
 
-**알려진 잔여 위반 (tech-debt-tracker 등록, 2026-04-21):**
-- `ValidationActionsBar.tsx` — `status === 'draft'/'submitted'/'approved'/'rejected'`
-- `ValidationDetailContent.tsx` — `validation.status === 'draft'`
-- `ValidationEditDialog.tsx` — `validation.validationType === 'vendor'`
-- `ValidationCreateDialog.tsx` — `createForm.validationType === 'vendor'`
+**PASS:** 세 탐지 명령어 모두 0건. **FAIL:** raw 리터럴 비교 또는 loose index signature 발견 시 SSOT 타입으로 교체.
 
 ## Output Format
 
@@ -281,6 +283,7 @@ grep -rn "=== 'vendor'\|=== 'internal'" \
 | 16  | 도메인 유틸 상수 SSOT         | PASS/FAIL | NON_EXPORTABLE_CHECKOUT_STATUSES 등 로컬 재정의 위치 |
 | 17  | Content-Disposition 빌더 SSOT | PASS/FAIL | 컨트롤러 직접 헤더 조립 위치 |
 | 19  | 프론트엔드 Status/Type 리터럴 | PASS/FAIL | ValidationStatus/ValidationType raw 리터럴 비교 위치 |
+| 19c | 도메인 폼 아이템 loose index  | PASS/FAIL | `[key: string]: string` 인터페이스 위치 (AcquisitionOrProcessingItem/ControlItem 대체) |
 ```
 
 ## Exceptions
