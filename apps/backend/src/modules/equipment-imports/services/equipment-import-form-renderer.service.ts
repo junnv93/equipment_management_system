@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DocxTemplate } from '../../reports/docx-template.util';
-import { insertDocxSignature } from '../../reports/docx-xml-helper';
+import { DocxTemplate } from '../../../common/docx/docx-template.util';
+import { insertDocxSignature } from '../../../common/docx/docx-xml-helpers';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import {
   FORM_NUMBER,
@@ -9,6 +9,7 @@ import {
   LOCATION_PERIOD_ROW_COLS,
   ITEM_COLS,
   SIGN_OFF_COLS,
+  TEXT_COL,
   formatQp1810Date,
   koConditionLabel,
 } from './equipment-import-form.layout';
@@ -75,7 +76,7 @@ export class EquipmentImportFormRendererService {
     );
 
     // R4: 사용목적
-    doc.setCellValue(0, ROWS.usagePurpose, 1, data.reason ?? '-');
+    doc.setCellValue(0, ROWS.usagePurpose, TEXT_COL, data.reason ?? '-');
 
     // R5: 사용 확인 문장 + 날짜
     const checkoutDateStr = formatQp1810Date(data.usagePeriodStart);
@@ -174,7 +175,7 @@ export class EquipmentImportFormRendererService {
     }
 
     // R23: 특기사항
-    doc.setCellValue(0, ROWS.remarks, 1, data.returnedAbnormalDetails ?? '-');
+    doc.setCellValue(0, ROWS.remarks, TEXT_COL, data.returnedAbnormalDetails ?? '-');
 
     // R24: 반납 확인 문장 + 날짜
     const returnDateStr = formatQp1810Date(data.receivedAt);

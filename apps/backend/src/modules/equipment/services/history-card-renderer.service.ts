@@ -15,7 +15,7 @@ import {
   calculateAspectFitDimensions,
   formatYmdSlash,
   stripExplicitPageBreakParas,
-} from '../../reports/docx-xml-helper';
+} from '../../../common/docx/docx-xml-helpers';
 import {
   FORM_NUMBER,
   RUN_RPR_XML,

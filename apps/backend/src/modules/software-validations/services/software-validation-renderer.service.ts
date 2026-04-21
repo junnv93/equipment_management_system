@@ -4,8 +4,8 @@ import {
   DEFAULT_TIMEZONE,
   FORM_CATALOG,
 } from '@equipment-management/shared-constants';
-import { DocxTemplate } from '../../reports/docx-template.util';
-import { insertDocxSignature } from '../../reports/docx-xml-helper';
+import { DocxTemplate } from '../../../common/docx/docx-template.util';
+import { insertDocxSignature } from '../../../common/docx/docx-xml-helpers';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import { FormTemplateService } from '../../reports/form-template.service';
 import {

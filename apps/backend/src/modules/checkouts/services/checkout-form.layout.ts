@@ -62,6 +62,9 @@ export const SIGN_OFF_COLS = {
   approver: 2,
 } as const;
 
+/** 단일 데이터 셀 행(주소/사유/특기사항 등)의 열 인덱스 */
+export const TEXT_COL = 1 as const;
+
 /**
  * QP-18-06 전용 날짜 형식: "YYYY . MM . DD ."
  *

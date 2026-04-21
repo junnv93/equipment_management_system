@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DocxTemplate } from '../../reports/docx-template.util';
-import { insertDocxSignature } from '../../reports/docx-xml-helper';
+import { DocxTemplate } from '../../../common/docx/docx-template.util';
+import { insertDocxSignature } from '../../../common/docx/docx-xml-helpers';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import {
   FORM_NUMBER,
@@ -8,6 +8,7 @@ import {
   DESTINATION_ROW_COLS,
   ITEM_COLS,
   SIGN_OFF_COLS,
+  TEXT_COL,
   formatQp1806Date,
 } from './checkout-form.layout';
 import type { CheckoutFormExportData } from './checkout-form-export-data.service';
@@ -44,9 +45,9 @@ export class CheckoutFormRendererService {
       data.phoneNumber ?? '-'
     );
     // R3: 반출주소
-    doc.setCellValue(0, ROWS.address, 1, data.address ?? '-');
+    doc.setCellValue(0, ROWS.address, TEXT_COL, data.address ?? '-');
     // R4: 반출사유
-    doc.setCellValue(0, ROWS.reason, 1, data.reason ?? '-');
+    doc.setCellValue(0, ROWS.reason, TEXT_COL, data.reason ?? '-');
 
     // R5: 반출 확인 문장 + 날짜
     const checkoutDateStr = formatQp1806Date(data.checkoutDate);
@@ -94,7 +95,7 @@ export class CheckoutFormRendererService {
     }
 
     // R23: 특기사항
-    doc.setCellValue(0, ROWS.remarks, 1, data.inspectionNotes ?? '-');
+    doc.setCellValue(0, ROWS.remarks, TEXT_COL, data.inspectionNotes ?? '-');
 
     // R24: 반입 확인 문장 + 날짜
     const returnDateStr = formatQp1806Date(data.actualReturnDate);

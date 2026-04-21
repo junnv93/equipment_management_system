@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DocxTemplate } from '../../reports/docx-template.util';
+import { DocxTemplate } from '../../../common/docx/docx-template.util';
 import { SOFTWARE_AVAILABILITY_LABELS } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import { FORM_NUMBER, TABLE } from './test-software-registry.layout';
