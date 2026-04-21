@@ -25,7 +25,8 @@ Phase 4 (certificatePath 컬럼 제거 4단계), Phase 5 (actualCalibrationId FK
 | M4.5 | 4c 이후 `POST /api/calibration/:uuid/certificate` → 410 + `{ code: 'ENDPOINT_DEPRECATED' }` | curl |
 | M4.6 | 4c 이후 신규 교정 등록 row의 `certificate_path = NULL` | psql |
 | M4.7 | 4d 이후 `calibrations` 테이블에 `certificate_path` 컬럼 없음 | `\d calibrations` |
-| M4.8 | 4d 이후 `certificatePath` 정의가 packages/schemas, dto, CalibrationRecord에 0 | grep |
+| M4.8 | 4d 이후 `certificatePath` 정의가 packages/schemas와 DB-facing DTO(Nest DTO 클래스)에 0 | grep |
+| M4.8a | `CalibrationRecord.certificatePath`는 documents 조인 virtual field로 유지 — M4.3(API 응답 호환성) 전제. DB column 아님. | grep + service.ts 주석 |
 | M4.9 | `pnpm --filter backend run db:reset` 전체 성공 (Phase 4d 후) | 명령 실행 |
 
 ### Phase 5 — actualCalibrationId FK

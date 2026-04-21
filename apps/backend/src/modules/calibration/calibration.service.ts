@@ -471,8 +471,9 @@ export class CalibrationService extends VersionedBaseService {
       const deleteResults = await Promise.allSettled(
         storedKeys.map((key) => this.fileUploadService.deleteFile(key))
       );
-      // eslint-disable-next-line no-restricted-syntax -- Promise.allSettled result status ('rejected' is not a domain value) // self-audit-exception
-      const failedDeletes = deleteResults.filter((r) => r.status === 'rejected');
+      const failedDeletes = deleteResults.filter(
+        (r): r is PromiseRejectedResult => r.status !== 'fulfilled'
+      );
       if (failedDeletes.length > 0) {
         this.logger.error(
           `calibration_storage_orphan: ${failedDeletes.length}개 파일 삭제 실패 — 수동 정리 필요`,
