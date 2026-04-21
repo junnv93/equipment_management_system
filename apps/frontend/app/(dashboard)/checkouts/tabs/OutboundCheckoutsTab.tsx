@@ -5,9 +5,16 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Clock, AlertTriangle, PackageCheck, PackageOpen } from 'lucide-react';
+import {
+  ClipboardList,
+  Clock,
+  AlertTriangle,
+  PackageCheck,
+  PackageOpen,
+  FilterX,
+} from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
@@ -197,16 +204,7 @@ export default function OutboundCheckoutsTab({
     </>
   );
 
-  const renderEmptyState = () => (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <ClipboardList className="h-12 w-12 text-brand-text-muted mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-medium text-brand-text-primary">{t('outbound.noData')}</h3>
-      <p className="text-sm text-brand-text-muted mt-2 mb-4">{t('outbound.noDataDesc')}</p>
-      <Button variant="outline" onClick={onResetFilters}>
-        {t('actions.resetFilters')}
-      </Button>
-    </div>
-  );
+  const filterActive = !isAllActive;
 
   // ──────────────────────────────────────────────
   // 5개 통계 카드
@@ -277,23 +275,46 @@ export default function OutboundCheckoutsTab({
       {renderStats()}
 
       <div className="space-y-3">
-        {checkoutsLoading
-          ? renderLoadingState()
-          : allGroups.length === 0
-            ? renderEmptyState()
-            : allGroups.map((group) => (
-                <div
-                  key={group.key}
-                  id={group.statuses.includes('overdue') ? 'overdue-group-section' : undefined}
-                >
-                  <CheckoutGroupCard
-                    group={group}
-                    onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
-                    canApprove={canApprove}
-                    isOverdueGroup={group.statuses.includes('overdue')}
-                  />
-                </div>
-              ))}
+        {checkoutsLoading ? (
+          renderLoadingState()
+        ) : allGroups.length === 0 ? (
+          <EmptyState
+            variant={filterActive ? 'filtered' : 'no-data'}
+            icon={filterActive ? FilterX : ClipboardList}
+            title={filterActive ? t('empty.filtered.title') : t('empty.noData.title')}
+            description={
+              filterActive ? t('empty.filtered.description') : t('empty.noData.description')
+            }
+            primaryAction={
+              filterActive
+                ? undefined
+                : {
+                    label: t('actions.create'),
+                    href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
+                    permission: Permission.CREATE_CHECKOUT,
+                  }
+            }
+            secondaryAction={
+              filterActive
+                ? { label: t('actions.resetFilters'), onClick: onResetFilters }
+                : undefined
+            }
+          />
+        ) : (
+          allGroups.map((group) => (
+            <div
+              key={group.key}
+              id={group.statuses.includes('overdue') ? 'overdue-group-section' : undefined}
+            >
+              <CheckoutGroupCard
+                group={group}
+                onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
+                canApprove={canApprove}
+                isOverdueGroup={group.statuses.includes('overdue')}
+              />
+            </div>
+          ))
+        )}
       </div>
 
       {/* 페이지네이션 */}

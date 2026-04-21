@@ -64,6 +64,16 @@
     "viewDetail": "View Detail",
     "exportForm": "Export Form"
   },
+  "empty": {
+    "noData": {
+      "title": "No checkout records",
+      "description": "Submit a checkout request to manage calibration, repair, or rental outbound."
+    },
+    "filtered": {
+      "title": "No results match your filters",
+      "description": "Try changing your filters or resetting them to see all records."
+    }
+  },
   "toasts": {
     "exportFormError": "Failed to export checkout in/out confirmation form.",
     "approveSuccess": "Checkout request approved.",

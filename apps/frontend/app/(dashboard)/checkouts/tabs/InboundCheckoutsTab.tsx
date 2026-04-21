@@ -15,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, FilterX } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
@@ -33,11 +34,7 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
-import {
-  EQUIPMENT_EMPTY_STATE_TOKENS,
-  CHECKOUT_INTERACTION_TOKENS,
-  getSemanticBadgeClasses,
-} from '@/lib/design-tokens';
+import { CHECKOUT_INTERACTION_TOKENS, getSemanticBadgeClasses } from '@/lib/design-tokens';
 import type { UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
 
 interface InboundCheckoutsTabProps {
@@ -62,6 +59,7 @@ export default function InboundCheckoutsTab({
   const searchParams = useSearchParams();
 
   const { status: statusFilter, search: searchTerm } = filters;
+  const filterActive = statusFilter !== 'all' || !!searchTerm;
 
   // URL 페이지 변경 핸들러 (OutboundCheckoutsTab과 동일한 패턴)
   const handlePageChange = (newPage: number) => {
@@ -157,21 +155,6 @@ export default function InboundCheckoutsTab({
     </>
   );
 
-  const renderEmptyState = () => (
-    <div className={EQUIPMENT_EMPTY_STATE_TOKENS.container}>
-      <div className={EQUIPMENT_EMPTY_STATE_TOKENS.iconContainer}>
-        <ClipboardList className={EQUIPMENT_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
-      </div>
-      <h3 className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>{t('inbound.noData')}</h3>
-      <p className={EQUIPMENT_EMPTY_STATE_TOKENS.description}>{t('inbound.noDataDesc')}</p>
-      <div className="flex gap-2 mt-4">
-        <Button variant="outline" onClick={onResetFilters}>
-          {t('actions.resetFilters')}
-        </Button>
-      </div>
-    </div>
-  );
-
   const renderRentalImportsList = () => {
     if (rentalImportsLoading) return renderLoadingState();
     if (!rentalImportsData?.data?.length) return null;
@@ -242,7 +225,17 @@ export default function InboundCheckoutsTab({
   if (isLoading) return renderLoadingState();
 
   if (!hasInboundCheckouts && !hasRentalImports && !hasInternalSharedImports) {
-    return renderEmptyState();
+    return (
+      <EmptyState
+        variant={filterActive ? 'filtered' : 'no-data'}
+        icon={filterActive ? FilterX : ClipboardList}
+        title={filterActive ? t('empty.filtered.title') : t('empty.noData.title')}
+        description={filterActive ? t('empty.filtered.description') : t('empty.noData.description')}
+        secondaryAction={
+          filterActive ? { label: t('actions.resetFilters'), onClick: onResetFilters } : undefined
+        }
+      />
+    );
   }
 
   return (

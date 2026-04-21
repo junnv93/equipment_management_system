@@ -347,9 +347,51 @@ export const DIMENSION_TOKENS = {
   paginationBtn: 'w-pagination h-pagination',
 } as const;
 
+// ============================================================================
+// Empty State Tokens (도메인 중립 — 전체 앱 공용)
+// ============================================================================
+
+/**
+ * 빈 상태 UI 토큰 — 3-variant 공용 EmptyState 컴포넌트가 소비하는 semantic 레이어 토큰.
+ *
+ * variant별 아이콘 색상:
+ *   no-data        → brand-info (초기 진입, 워크플로우 CTA 강조)
+ *   filtered       → muted (검색/필터 결과 없음, 조용한 피드백)
+ *   status-filtered → brand-warning (특정 상태 필터 결과 없음)
+ *
+ * equipment.ts의 EQUIPMENT_EMPTY_STATE_TOKENS는 이 토큰을 re-export (@deprecated).
+ */
+export const EMPTY_STATE_TOKENS = {
+  /** 전체 컨테이너 — 중앙 정렬 + 수직 여백 */
+  container: 'text-center py-12',
+  /** 아이콘 래퍼 — 크기 고정 */
+  iconContainer: 'mx-auto h-12 w-12',
+  /** 아이콘 크기 */
+  icon: 'h-12 w-12',
+  /** 제목 */
+  title: 'mt-4 text-lg font-semibold text-balance',
+  /** 설명 */
+  description: 'mt-2 text-sm text-muted-foreground text-balance max-w-md mx-auto',
+  /** 액션 버튼 영역 */
+  actions: 'mt-5 flex flex-col sm:flex-row gap-3 justify-center',
+  /** variant별 아이콘 색상 */
+  variantIconColor: {
+    'no-data': 'text-brand-info',
+    filtered: 'text-muted-foreground',
+    'status-filtered': 'text-brand-warning',
+  } as const,
+  /** variant별 아이콘 배경 (iconContainer 결합용) */
+  variantIconBg: {
+    'no-data': 'bg-brand-info/5 rounded-full p-3',
+    filtered: '',
+    'status-filtered': 'bg-brand-warning/5 rounded-full p-3',
+  } as const,
+} as const;
+
 /**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용
  */
 export type InteractiveSize = keyof typeof INTERACTIVE_TOKENS.size;
 export type MotionSpeed = keyof typeof MOTION_TOKENS.transition;
 export type ElevationLayer = keyof typeof ELEVATION_TOKENS.layer;
+export type EmptyStateVariant = keyof typeof EMPTY_STATE_TOKENS.variantIconColor;

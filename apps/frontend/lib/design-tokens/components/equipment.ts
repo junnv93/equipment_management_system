@@ -9,7 +9,7 @@
  * CRITICAL: 기존 equipment-status-styles.ts, EquipmentHeader.getStatusConfig() 통합
  */
 
-import { FOCUS_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, EMPTY_STATE_TOKENS } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticStatusClasses,
@@ -448,24 +448,10 @@ export const EQUIPMENT_FILTER_TOKENS = {
 // ============================================================================
 
 /**
- * 빈 상태 스타일
+ * @deprecated semantic.ts의 EMPTY_STATE_TOKENS로 승격됨.
+ * 기존 호출부 호환성을 위해 re-export 유지 — 신규 코드는 EMPTY_STATE_TOKENS 사용.
  */
-export const EQUIPMENT_EMPTY_STATE_TOKENS = {
-  /** 아이콘 컨테이너 */
-  iconContainer: 'mx-auto h-12 w-12 text-muted-foreground',
-
-  /** 아이콘 */
-  icon: 'h-12 w-12',
-
-  /** 제목 */
-  title: 'mt-4 text-lg font-semibold text-balance',
-
-  /** 설명 */
-  description: 'mt-2 text-sm text-muted-foreground text-balance',
-
-  /** 전체 컨테이너 */
-  container: 'text-center py-12',
-} as const;
+export const EQUIPMENT_EMPTY_STATE_TOKENS = EMPTY_STATE_TOKENS;
 
 // ============================================================================
 // Equipment Table Tokens

@@ -64,6 +64,16 @@
     "viewDetail": "상세 보기",
     "exportForm": "양식 내보내기"
   },
+  "empty": {
+    "noData": {
+      "title": "반출 내역이 없습니다",
+      "description": "반출 신청을 통해 교정·수리·렌탈 반출을 관리할 수 있습니다."
+    },
+    "filtered": {
+      "title": "검색 조건에 맞는 반출이 없습니다",
+      "description": "필터를 변경하거나 초기화하여 다시 조회해보세요."
+    }
+  },
   "toasts": {
     "exportFormError": "반·출입 확인서 내보내기에 실패했습니다.",
     "approveSuccess": "반출 요청이 승인되었습니다.",
