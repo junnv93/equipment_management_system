@@ -1,6 +1,5 @@
 import PizZip from 'pizzip';
 import {
-  TABLE_INDEX,
   FUNCTION_ITEM_ROWS,
   FUNCTION_ITEM_DATA_COL,
   CONTROL_DATA_START_ROW,

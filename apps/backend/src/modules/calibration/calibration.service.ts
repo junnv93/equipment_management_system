@@ -75,6 +75,9 @@ type CalibrationRow = typeof schema.calibrations.$inferSelect;
  *
  * SSOT 체인: DB Schema → CalibrationRow → transformDbToRecord() → CalibrationRecord
  * 프론트엔드 Calibration 인터페이스와 1:1 대응
+ *
+ * certificatePath: DB 컬럼이 아닌 virtual computed field — documents 조인 결과.
+ * API 응답 호환성(M4.3) 유지 목적. Phase 4d 이후 DB에서 제거됐으나 응답에는 유지.
  */
 export interface CalibrationRecord {
   id: string;
@@ -85,6 +88,7 @@ export interface CalibrationRecord {
   status: string;
   calibrationAgency: string;
   certificateNumber: string | null;
+  /** documents 조인에서 채워지는 virtual field. DB column 아님 (Phase 4d 이후 제거됨). */
   certificatePath: string | null;
   result: string | null;
   notes: string | null;
@@ -467,6 +471,7 @@ export class CalibrationService extends VersionedBaseService {
       const deleteResults = await Promise.allSettled(
         storedKeys.map((key) => this.fileUploadService.deleteFile(key))
       );
+      // eslint-disable-next-line no-restricted-syntax -- Promise.allSettled result status ('rejected' is not a domain value) // self-audit-exception
       const failedDeletes = deleteResults.filter((r) => r.status === 'rejected');
       if (failedDeletes.length > 0) {
         this.logger.error(

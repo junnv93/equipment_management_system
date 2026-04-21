@@ -647,6 +647,7 @@ export class DashboardService {
       this.getUpcomingCheckoutReturns(days, teamId, site),
     ]);
 
+    /* eslint-disable no-restricted-syntax -- Promise.allSettled result.status is 'fulfilled'|'rejected', not a domain value */ // self-audit-exception
     return {
       summary: summaryResult.status === 'fulfilled' ? summaryResult.value : null,
       equipmentByTeam:
@@ -666,5 +667,6 @@ export class DashboardService {
           ? upcomingCheckoutReturnsResult.value
           : null,
     };
+    /* eslint-enable no-restricted-syntax */
   }
 }

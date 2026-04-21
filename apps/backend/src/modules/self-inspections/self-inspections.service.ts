@@ -24,6 +24,7 @@ import type { DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import {
   SELF_INSPECTION_LEGACY_COLUMN_MAP,
+  SelfInspectionStatusValues,
   type SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
@@ -243,7 +244,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   ): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'draft') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.DRAFT) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only draft inspections can be modified.',
@@ -332,7 +333,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   async submit(id: string, version: number, userId: string): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'draft') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.DRAFT) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only draft inspections can be submitted.',
@@ -368,7 +369,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   async withdraw(id: string, version: number, userId: string): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'submitted') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted inspections can be withdrawn.',
@@ -412,7 +413,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   async approve(id: string, version: number, userId: string): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'submitted') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted inspections can be approved.',
@@ -456,7 +457,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   ): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'submitted') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted inspections can be rejected.',
@@ -494,7 +495,7 @@ export class SelfInspectionsService extends VersionedBaseService {
   async resubmit(id: string, version: number, _userId: string): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
-    if (existing.approvalStatus !== 'rejected') {
+    if (existing.approvalStatus !== SelfInspectionStatusValues.REJECTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only rejected inspections can be resubmitted.',
@@ -537,9 +538,9 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (
       !allowApproved &&
-      existing.approvalStatus !== 'draft' &&
-      existing.approvalStatus !== 'submitted' &&
-      existing.approvalStatus !== 'rejected'
+      existing.approvalStatus !== SelfInspectionStatusValues.DRAFT &&
+      existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED &&
+      existing.approvalStatus !== SelfInspectionStatusValues.REJECTED
     ) {
       throw new BadRequestException({
         code: 'CANNOT_DELETE_APPROVED',

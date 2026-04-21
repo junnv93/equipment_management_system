@@ -15,7 +15,11 @@ import {
   equipment,
   users,
 } from '@equipment-management/db/schema';
-import { UserRoleValues, ApprovalStatusValues } from '@equipment-management/schemas';
+import {
+  UserRoleValues,
+  ApprovalStatusValues,
+  RequestTypeValues,
+} from '@equipment-management/schemas';
 import { DASHBOARD_ITEM_LIMIT, QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
@@ -437,13 +441,13 @@ export class EquipmentApprovalService {
 
         // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
         // UL-QP-18-02 이력카드 "확인" 서명란 승인일 SSOT: EquipmentService.markApprovalMeta 로 일원화.
-        if (request.requestType === 'create') {
+        if (request.requestType === RequestTypeValues.CREATE) {
           const requestData = deserializeRequestData('create', request.requestData);
           const newEquipment = await this.equipmentService.create(requestData, request.requestedBy);
           // 요청에 연결된 문서(사진/매뉴얼)를 신규 장비로 소유 이전
           await this.documentService.transferDocumentsToEquipment(requestUuid, newEquipment.id);
           await this.equipmentService.markApprovalMeta(newEquipment.id, approvedBy, tx);
-        } else if (request.requestType === 'update') {
+        } else if (request.requestType === RequestTypeValues.UPDATE) {
           const equipmentData = this.requireEquipmentId(request.equipmentId);
           const currentEquipment = await tx.query.equipment.findFirst({
             where: eq(equipment.id, equipmentData),
@@ -459,7 +463,7 @@ export class EquipmentApprovalService {
           requestData.version = currentEquipment.version;
           await this.equipmentService.update(currentEquipment.id, requestData, request.requestedBy);
           await this.equipmentService.markApprovalMeta(currentEquipment.id, approvedBy, tx);
-        } else if (request.requestType === 'delete') {
+        } else if (request.requestType === RequestTypeValues.DELETE) {
           const equipmentId = this.requireEquipmentId(request.equipmentId);
           const currentEquipment = await tx.query.equipment.findFirst({
             where: eq(equipment.id, equipmentId),

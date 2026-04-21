@@ -14,7 +14,7 @@ import {
   type InspectionDocumentItem,
 } from '@equipment-management/db/schema';
 import type { DocumentService } from '../../common/file-upload/document.service';
-import type { DocumentType } from '@equipment-management/schemas';
+import { InspectionApprovalStatusValues, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -321,7 +321,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async update(id: string, dto: UpdateInspectionInput): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'draft') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.DRAFT) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only draft inspections can be updated.',
@@ -410,7 +410,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async submit(id: string, version: number, userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'draft') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.DRAFT) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only draft inspections can be submitted.',
@@ -442,7 +442,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async review(id: string, version: number, userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'submitted') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted inspections can be reviewed.',
@@ -474,7 +474,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async approve(id: string, version: number, userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'reviewed') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.REVIEWED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only reviewed inspections can be approved.',
@@ -513,7 +513,10 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   ): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'submitted' && existing.approvalStatus !== 'reviewed') {
+    if (
+      existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED &&
+      existing.approvalStatus !== InspectionApprovalStatusValues.REVIEWED
+    ) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted or reviewed inspections can be rejected.',
@@ -546,7 +549,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async withdraw(id: string, version: number, userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'submitted') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted inspections can be withdrawn.',
@@ -585,7 +588,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   async resubmit(id: string, version: number, _userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
-    if (existing.approvalStatus !== 'rejected') {
+    if (existing.approvalStatus !== InspectionApprovalStatusValues.REJECTED) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only rejected inspections can be resubmitted.',
@@ -624,9 +627,9 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (
       !allowApproved &&
-      existing.approvalStatus !== 'draft' &&
-      existing.approvalStatus !== 'submitted' &&
-      existing.approvalStatus !== 'rejected'
+      existing.approvalStatus !== InspectionApprovalStatusValues.DRAFT &&
+      existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED &&
+      existing.approvalStatus !== InspectionApprovalStatusValues.REJECTED
     ) {
       throw new BadRequestException({
         code: 'CANNOT_DELETE_APPROVED',

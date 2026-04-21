@@ -9,6 +9,7 @@ import type {
   IntermediateCheckFilterStatus,
   SpecMatch,
 } from './calibration';
+import type { CalibrationStatus } from '../calibration';
 import type { CalibrationPlanStatus } from './calibration-plan';
 import type { NonConformanceStatus, NonConformanceType, RepairResult } from './non-conformance';
 import type { ValidationStatus, ValidationType, SoftwareAvailability } from './software';
@@ -27,6 +28,10 @@ import type { CableStatus } from './cable';
 import type { InspectionApprovalStatus } from './intermediate-inspection';
 import type { ManagementMethod } from './equipment';
 import type { ResolutionType } from './non-conformance';
+import type { AttachmentType } from '../equipment-attachment';
+import type { TimelineEntryType } from '../equipment-history';
+import type { RequestType } from '../equipment-request';
+import type { SelfInspectionStatus } from './self-inspection';
 
 // ============================================================================
 // CONST VALUE OBJECTS (TypeScript enum 스타일 접근용)
@@ -402,3 +407,60 @@ export const InspectionApprovalStatusValues = {
   APPROVED: 'approved',
   REJECTED: 'rejected',
 } as const satisfies Record<string, InspectionApprovalStatus>;
+
+/**
+ * 교정 상태 값 객체 (dot-notation 접근용)
+ * @example CalibrationStatusValues.COMPLETED // 'completed'
+ */
+export const CalibrationStatusValues = {
+  SCHEDULED: 'scheduled',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
+} as const satisfies Record<string, CalibrationStatus>;
+
+/**
+ * 첨부 파일 타입 값 객체 (dot-notation 접근용)
+ * @example AttachmentTypeValues.INSPECTION_REPORT // 'inspection_report'
+ */
+export const AttachmentTypeValues = {
+  INSPECTION_REPORT: 'inspection_report',
+  HISTORY_CARD: 'history_card',
+  OTHER: 'other',
+} as const satisfies Record<string, AttachmentType>;
+
+/**
+ * 장비 이력 타임라인 엔트리 타입 값 객체 (dot-notation 접근용)
+ * @example TimelineEntryTypeValues.REPAIR_RECORD // 'repair_record'
+ */
+export const TimelineEntryTypeValues = {
+  DAMAGE: 'damage',
+  MALFUNCTION: 'malfunction',
+  CHANGE: 'change',
+  REPAIR: 'repair',
+  CALIBRATION_OVERDUE: 'calibration_overdue',
+  REPAIR_RECORD: 'repair_record',
+  NON_CONFORMANCE: 'non_conformance',
+} as const satisfies Record<string, TimelineEntryType>;
+
+/**
+ * 장비 요청 타입 값 객체 (dot-notation 접근용)
+ * @example RequestTypeValues.CREATE // 'create'
+ */
+export const RequestTypeValues = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+} as const satisfies Record<string, RequestType>;
+
+/**
+ * 자체점검 상태 값 객체 (dot-notation 접근용)
+ * @example SelfInspectionStatusValues.DRAFT // 'draft'
+ */
+export const SelfInspectionStatusValues = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const satisfies Record<string, SelfInspectionStatus>;

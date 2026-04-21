@@ -11,7 +11,11 @@
  */
 
 import { Pool } from 'pg';
-import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import {
+  CALIBRATION_PLAN_STATUS_VALUES,
+  CalibrationApprovalStatusValues,
+  CheckoutStatusValues,
+} from '@equipment-management/schemas';
 
 import { USERS_SEED_DATA } from '../seed-data/core/users.seed';
 import { TEAMS_SEED_DATA } from '../seed-data/core/teams.seed';
@@ -141,7 +145,7 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     );
 
     const expectedPendingCalibs = CALIBRATIONS_SEED_DATA.filter(
-      (c) => c.approvalStatus === 'pending_approval'
+      (c) => c.approvalStatus === CalibrationApprovalStatusValues.PENDING_APPROVAL
     ).length;
     checks.push(
       await checkCount(
@@ -173,7 +177,7 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     checks.push(await checkCount(pool, 'Checkouts count', 'checkouts', CHECKOUTS_SEED_DATA.length));
 
     const expectedPendingCheckouts = CHECKOUTS_SEED_DATA.filter(
-      (c) => c.status === 'pending'
+      (c) => c.status === CheckoutStatusValues.PENDING
     ).length;
     checks.push(
       await checkCount(

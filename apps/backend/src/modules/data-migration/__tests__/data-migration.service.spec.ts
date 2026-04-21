@@ -139,7 +139,7 @@ describe('DataMigrationService', () => {
   // ─── executeMultiSheet — stale EXECUTING 판정 ─────────────────────────────
 
   describe('executeMultiSheet() — stale EXECUTING 판정', () => {
-    const makeExecutingSession = (executionStartedAt: Date) => ({
+    const makeExecutingSession = (executionStartedAt: Date): Record<string, unknown> => ({
       sessionId: 'sess-1',
       fileName: 'test.xlsx',
       uploadedAt: new Date(),

@@ -509,6 +509,7 @@ async function downloadSectionImages(
   );
 
   for (const outcome of downloads) {
+    // eslint-disable-next-line no-restricted-syntax -- Promise.allSettled outcome.status is not a domain value // self-audit-exception
     if (outcome.status === 'fulfilled') {
       result.set(outcome.value.id, { buffer: outcome.value.buffer, ext: outcome.value.ext });
     } else {

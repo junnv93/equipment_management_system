@@ -15,6 +15,7 @@ import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
+import { ValidationStatusValues } from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../storage/storage.interface';
 import type { MulterFile } from '../../types/common.types';
@@ -657,7 +658,7 @@ export class DocumentService {
       });
     }
 
-    if (validation.status !== 'draft') {
+    if (validation.status !== ValidationStatusValues.DRAFT) {
       throw new ForbiddenException({
         code: 'VALIDATION_NOT_DRAFT',
         message: `Cannot modify documents for validation in '${validation.status}' status. Only 'draft' validations allow document changes.`,

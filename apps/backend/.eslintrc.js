@@ -66,10 +66,22 @@ module.exports = {
         ],
       },
     ],
+    // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector:
+          "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+        message:
+          "Do not compare .status/.approvalStatus against a raw domain literal. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas' (e.g. EquipmentStatusValues.AVAILABLE, CalibrationStatusValues.COMPLETED). For Promise.allSettled (r.status === 'fulfilled'|'rejected'), add: // eslint-disable-next-line no-restricted-syntax -- Promise.allSettled result status",
+      },
+    ],
   },
   overrides: [
     {
       // Controllers must NOT emit events — event dispatch belongs in Service layer (AD-8)
+      // Note: ESLint overrides replace (not merge) global rules. Both selectors must be listed here
+      // to ensure domain literal restriction also applies inside controllers.
       files: ['**/*.controller.ts'],
       rules: {
         'no-restricted-syntax': [
@@ -80,7 +92,20 @@ module.exports = {
             message:
               'Controllers must not call emitAsync. Move event emission to the Service layer.',
           },
+          {
+            selector:
+              "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+            message:
+              "Do not compare .status/.approvalStatus against a raw domain literal. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas'.",
+          },
         ],
+      },
+    },
+    {
+      // seed-data fixture와 테스트 spec은 리터럴 사용이 정상 — SSOT 룰 제외
+      files: ['src/database/seed-data/**/*.ts', '**/__tests__/**/*.spec.ts'],
+      rules: {
+        'no-restricted-syntax': 'off',
       },
     },
   ],
