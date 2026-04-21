@@ -1,9 +1,9 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-// SSOT: packages/shared-constants/src/api-endpoints.ts
-//   API_ENDPOINTS.AUTH.LOGIN
-//   API_ENDPOINTS.SOFTWARE_VALIDATIONS.LIST_ALL
+// k6는 Node.js 런타임이 아니므로 @equipment-management/shared-constants를 import할 수 없음.
+// 아래 경로는 packages/shared-constants/src/api-endpoints.ts의 값을 수동으로 동기화한 복사본.
+// 양식 경로 변경 시 두 곳을 함께 수정해야 한다.
 const BASE = __ENV.API_BASE ?? 'http://localhost:3001';
 const ENDPOINTS = {
   LOGIN: `${BASE}/api/auth/login`,
@@ -24,6 +24,10 @@ export const options = {
 };
 
 export function setup() {
+  if (!__ENV.K6_USER_EMAIL || !__ENV.K6_USER_PASSWORD) {
+    throw new Error('K6_USER_EMAIL and K6_USER_PASSWORD env vars are required');
+  }
+
   const res = http.post(
     ENDPOINTS.LOGIN,
     JSON.stringify({
@@ -32,8 +36,16 @@ export function setup() {
     }),
     { headers: { 'Content-Type': 'application/json' } }
   );
-  check(res, { 'login 200': (r) => r.status === 200 });
+
+  if (res.status !== 200) {
+    throw new Error(`Login failed: HTTP ${res.status} — ${res.body}`);
+  }
+
   const body = res.json();
+  if (!body.accessToken) {
+    throw new Error('Login succeeded but accessToken missing in response body');
+  }
+
   return { token: body.accessToken };
 }
 
