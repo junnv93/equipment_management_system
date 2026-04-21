@@ -11,7 +11,7 @@
  * CRITICAL: CheckoutStatusBadge.tsx 상수 통합, 하드코딩 제거
  */
 
-import { FOCUS_TOKENS } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO, DIMENSION_TOKENS } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticSolidBgClasses,
@@ -193,8 +193,8 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
  */
 export const CHECKOUT_MINI_PROGRESS = {
   dot: {
-    /** 18px 원 공통 — ✓/!/숫자 텍스트 포함 */
-    base: 'w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold shrink-0',
+    /** 18px 원 공통 — ✓/!/숫자는 aria-hidden 처리 (78-3에서 sr-only 이동) */
+    base: 'w-[18px] h-[18px] rounded-full flex items-center justify-center font-bold shrink-0',
     completed: getSemanticSolidBgClasses('ok'),
     current: getSemanticSolidBgClasses('info'),
     late: getSemanticSolidBgClasses('critical'),
@@ -248,15 +248,18 @@ export const CHECKOUT_MINI_PROGRESS = {
 export const RENTAL_FLOW_INLINE_TOKENS = {
   container:
     'hidden sm:flex items-center gap-1 px-2.5 py-1 bg-brand-purple/5 border border-brand-purple/20 rounded-md',
-  arrow: 'text-[9px] text-brand-purple/30 shrink-0',
+  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
+  arrow: `${MICRO_TYPO.badge} text-brand-purple/30 shrink-0`,
   stepWrapper: 'flex flex-col items-center gap-0.5',
+  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
   circle: {
-    base: 'w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold border-[1.5px] shrink-0',
+    base: `w-4 h-4 rounded-full flex items-center justify-center ${MICRO_TYPO.badge} font-bold border-[1.5px] shrink-0`,
     done: 'bg-brand-ok text-white border-brand-ok',
     current: 'bg-brand-purple text-white border-brand-purple',
     future: 'bg-white text-brand-purple/40 border-brand-purple/25',
   },
-  stepLabel: 'text-[8px] text-brand-purple font-medium leading-none',
+  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
+  stepLabel: `${MICRO_TYPO.label} text-brand-purple font-medium leading-none`,
   /**
    * 렌탈 상태 → 0-based 인라인 단계 인덱스 (5원 기준)
    * SSOT: CheckoutGroupCard에서 직접 매핑 상수 정의 금지
@@ -667,7 +670,7 @@ export const CHECKOUT_OVERDUE_GROUP_TOKENS = {
  */
 export const CHECKOUT_PURPOSE_LEGEND_TOKENS = {
   container: 'flex items-center gap-3 px-3 py-1.5 bg-muted/30 border border-border/50 rounded-lg',
-  label: 'text-[10px] text-muted-foreground font-medium uppercase tracking-wide',
+  label: `${MICRO_TYPO.label} text-muted-foreground font-medium uppercase tracking-wide`,
   item: 'flex items-center gap-1.5 text-xs text-foreground/70',
   dot: {
     calibration: 'w-2.5 h-2.5 rounded-[2px] bg-brand-info shrink-0',
@@ -731,7 +734,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
 
   /** 목적별 3px 세로 색상 바 */
   purposeBar: {
-    base: 'w-[3px] self-stretch rounded-full shrink-0',
+    base: `${DIMENSION_TOKENS.purposeBar} self-stretch rounded-full shrink-0`,
     calibration: 'bg-brand-info',
     repair: 'bg-brand-repair',
     rental: 'bg-brand-purple',
@@ -743,7 +746,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   nameRow: 'flex items-center gap-1.5 flex-wrap',
   name: 'text-sm font-semibold text-foreground truncate',
   mgmt: 'text-xs text-muted-foreground font-mono shrink-0',
-  dday: 'text-[10px] px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0',
+  dday: `${MICRO_TYPO.badge} px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0`,
   meta: 'text-xs text-muted-foreground mt-0.5 truncate',
 
   /** 우측 액션 영역 */
@@ -801,7 +804,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
   buttons: 'flex items-center gap-1',
   btn: {
     base: [
-      'w-[30px] h-[30px] flex items-center justify-center',
+      `${DIMENSION_TOKENS.paginationBtn} flex items-center justify-center`,
       'rounded-md border text-xs font-medium',
       'cursor-pointer select-none tabular-nums',
       TRANSITION_PRESETS.fastBgColorBorder,
@@ -810,7 +813,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
     active: 'border-primary bg-primary text-primary-foreground cursor-default',
     disabled: 'border-border/40 text-muted-foreground/40 cursor-default',
   },
-  ellipsis: 'w-[30px] flex items-center justify-center text-xs text-muted-foreground',
+  ellipsis: `${DIMENSION_TOKENS.paginationBtnW} flex items-center justify-center text-xs text-muted-foreground`,
 } as const;
 
 // ============================================================================
@@ -821,7 +824,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
  * 탭 카운트 배지 토큰 — 활성/비활성 상태에 따라 색상 전환
  */
 export const CHECKOUT_TAB_BADGE_TOKENS = {
-  base: 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none tabular-nums',
+  base: `ml-1 px-1.5 py-0.5 rounded-full ${MICRO_TYPO.badge} font-semibold leading-none tabular-nums`,
   active: 'bg-primary/15 text-primary',
   inactive: 'bg-muted text-muted-foreground',
 } as const;

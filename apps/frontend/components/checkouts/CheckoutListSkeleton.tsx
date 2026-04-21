@@ -15,13 +15,13 @@ export function CheckoutListSkeleton({ count = 3 }: { count?: number }) {
         <Card key={i} className="overflow-hidden">
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <div className="flex items-center gap-4">
-              <Skeleton className="h-5 w-[100px]" />
-              <Skeleton className="h-5 w-[120px]" />
-              <Skeleton className="h-5 w-[60px]" />
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-5 w-16" />
             </div>
             <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-[60px]" />
-              <Skeleton className="h-5 w-[50px]" />
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-5 w-12" />
             </div>
           </div>
         </Card>

@@ -47,6 +47,17 @@ export const SIZE_PRIMITIVES = {
     md: { mobile: 20, desktop: 18 },
     lg: { mobile: 24, desktop: 20 },
   },
+
+  /** 페이지네이션 버튼 (정사각) */
+  pagination: 30,
+} as const;
+
+/**
+ * Width Primitives (고정 폭 특수 값)
+ */
+export const WIDTH_PRIMITIVES = {
+  /** 접근성 안전 최소 강조 바 (3px — WCAG 권고 시각 구분선 최소값) */
+  hairline: 3,
 } as const;
 
 /**
@@ -171,6 +182,7 @@ export const RADIUS_PRIMITIVES = {
  */
 export const TYPOGRAPHY_PRIMITIVES = {
   fontSize: {
+    '2xs': { mobile: 10, desktop: 10 }, // WCAG SC 1.4.4 권고 하한 — 배지/레이블 최소 크기
     xs: { mobile: 12, desktop: 11 },
     sm: { mobile: 14, desktop: 13 },
     base: { mobile: 16, desktop: 15 },

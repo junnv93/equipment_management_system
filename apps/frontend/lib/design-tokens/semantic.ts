@@ -307,6 +307,38 @@ export const REFETCH_OVERLAY_TOKENS = {
 } as const;
 
 /**
+ * Micro Typography Tokens (마이크로 타이포그래피)
+ *
+ * 배지/레이블/캡션 등 소형 UI 요소 전용 텍스트 크기.
+ * TYPOGRAPHY_PRIMITIVES['2xs'] = 10px (WCAG SC 1.4.4 권고 하한)
+ *
+ * 금지: 7px·8px·9px arbitrary 클래스 — 접근성 하한 미달 (WCAG SC 1.4.4)
+ */
+export const MICRO_TYPO = {
+  /** 상태 배지 / 카운트 배지 (10px — 2xs primitive) */
+  badge: 'text-[10px]',
+  /** 범례·부속 레이블 (10px — 2xs primitive) */
+  label: 'text-[10px]',
+  /** 일반 부연 설명 (≥11px — xs primitive) */
+  caption: 'text-xs',
+} as const;
+
+/**
+ * UI Dimension Tokens (UI 치수 토큰)
+ *
+ * Tailwind 표준 유틸리티로 표현 불가능한 특정 크기 값을 중앙화.
+ * WIDTH_PRIMITIVES / SIZE_PRIMITIVES 기반.
+ */
+export const DIMENSION_TOKENS = {
+  /** 목적 강조 세로 바 (WIDTH_PRIMITIVES.hairline = 3px) */
+  purposeBar: 'w-[3px]',
+  /** 페이지네이션 버튼 너비 (SIZE_PRIMITIVES.pagination = 30px) */
+  paginationBtnW: 'w-[30px]',
+  /** 페이지네이션 버튼 정사각 (SIZE_PRIMITIVES.pagination = 30px) */
+  paginationBtn: 'w-[30px] h-[30px]',
+} as const;
+
+/**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용
  */
 export type InteractiveSize = keyof typeof INTERACTIVE_TOKENS.size;

@@ -41,7 +41,7 @@ import {
   getDdayClasses,
   formatDday,
 } from '@/lib/design-tokens';
-import { FONT, getManagementNumberClasses } from '@/lib/design-tokens';
+import { FONT, getManagementNumberClasses, MICRO_TYPO } from '@/lib/design-tokens';
 
 // ============================================================================
 // Helpers
@@ -299,7 +299,7 @@ function CheckoutGroupCard({
                     <Badge
                       key={purpose}
                       variant="outline"
-                      className={`text-[10px] py-0 ${CHECKOUT_PURPOSE_TOKENS[purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''}`}
+                      className={`${MICRO_TYPO.badge} py-0 ${CHECKOUT_PURPOSE_TOKENS[purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''}`}
                     >
                       {t(`purpose.${purpose}`)}
                     </Badge>
@@ -432,7 +432,10 @@ function CheckoutGroupCard({
                           currentStatus={row.status}
                           checkoutType={row.checkoutType}
                         />
-                        <CheckoutStatusBadge status={row.status} className="text-[10px] py-0" />
+                        <CheckoutStatusBadge
+                          status={row.status}
+                          className={`${MICRO_TYPO.badge} py-0`}
+                        />
 
                         {/* 인라인 액션 버튼 */}
                         {row.canApproveItem && row.status === CSVal.PENDING && (
