@@ -6,6 +6,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle.constants';
 import { SecurityService } from './security.service';
+import type { NormalizedCspReport } from './security.types';
 
 /**
  * CSP violation report — `Content-Security-Policy` + `Report-To` 헤더의 수집 엔드포인트.
@@ -52,13 +53,14 @@ export class SecurityController {
       const modern = entry as { type?: string; body?: Record<string, unknown> };
 
       if (legacy) {
-        const normalized = {
-          reportShape: 'legacy' as const,
+        const rawLine = legacy['line-number'];
+        const normalized: NormalizedCspReport = {
+          reportShape: 'legacy',
           blockedUri: legacy['blocked-uri'] as string | undefined,
           violatedDirective: legacy['violated-directive'] as string | undefined,
           documentUri: legacy['document-uri'] as string | undefined,
           sourceFile: legacy['source-file'] as string | undefined,
-          lineNumber: String(legacy['line-number'] ?? ''),
+          lineNumber: typeof rawLine === 'number' ? Math.trunc(rawLine) : undefined,
           rawPayload: entry,
           userAgent,
           ipAddress,
@@ -72,13 +74,14 @@ export class SecurityController {
       }
 
       if (modern?.type === 'csp-violation' && modern.body) {
-        const normalized = {
-          reportShape: 'reporting-api' as const,
+        const rawLine = modern.body.lineNumber;
+        const normalized: NormalizedCspReport = {
+          reportShape: 'reporting-api',
           blockedUri: modern.body.blockedURL as string | undefined,
           violatedDirective: modern.body.effectiveDirective as string | undefined,
           documentUri: modern.body.documentURL as string | undefined,
           sourceFile: modern.body.sourceFile as string | undefined,
-          lineNumber: String(modern.body.lineNumber ?? ''),
+          lineNumber: typeof rawLine === 'number' ? Math.trunc(rawLine) : undefined,
           rawPayload: entry,
           userAgent,
           ipAddress,

@@ -132,5 +132,61 @@ describe('SecurityController', () => {
       controller.handleReport([], mockReq);
       expect(warnSpy).not.toHaveBeenCalled();
     });
+
+    it('Legacy lineNumber — 숫자는 integer로, 문자열은 undefined로 파싱', () => {
+      controller.handleReport(
+        { 'csp-report': { 'blocked-uri': 'x', 'violated-directive': 'y', 'line-number': 42 } },
+        mockReq
+      );
+      expect(mockSecurityService.saveReport).toHaveBeenCalledWith(
+        expect.objectContaining({ lineNumber: 42 })
+      );
+
+      jest.clearAllMocks();
+
+      controller.handleReport(
+        {
+          'csp-report': {
+            'blocked-uri': 'x',
+            'violated-directive': 'y',
+            'line-number': 'NaN-string',
+          },
+        },
+        mockReq
+      );
+      expect(mockSecurityService.saveReport).toHaveBeenCalledWith(
+        expect.objectContaining({ lineNumber: undefined })
+      );
+    });
+
+    it('Reporting API lineNumber — 숫자 0은 0으로, null은 undefined로 파싱', () => {
+      controller.handleReport(
+        [
+          {
+            type: 'csp-violation',
+            body: { blockedURL: 'inline', effectiveDirective: 'script-src-elem', lineNumber: 0 },
+          },
+        ],
+        mockReq
+      );
+      expect(mockSecurityService.saveReport).toHaveBeenCalledWith(
+        expect.objectContaining({ lineNumber: 0 })
+      );
+
+      jest.clearAllMocks();
+
+      controller.handleReport(
+        [
+          {
+            type: 'csp-violation',
+            body: { blockedURL: 'inline', effectiveDirective: 'script-src-elem', lineNumber: null },
+          },
+        ],
+        mockReq
+      );
+      expect(mockSecurityService.saveReport).toHaveBeenCalledWith(
+        expect.objectContaining({ lineNumber: undefined })
+      );
+    });
   });
 });

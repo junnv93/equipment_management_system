@@ -1,18 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { cspReports } from '@equipment-management/db/schema';
-
-export interface NormalizedCspReport {
-  reportShape: 'legacy' | 'reporting-api' | 'unknown';
-  blockedUri?: string;
-  violatedDirective?: string;
-  documentUri?: string;
-  sourceFile?: string;
-  lineNumber?: string;
-  rawPayload: unknown;
-  userAgent?: string;
-  ipAddress?: string;
-}
+import type { NormalizedCspReport } from './security.types';
 
 @Injectable()
 export class SecurityService {

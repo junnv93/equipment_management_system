@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, varchar, json, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, varchar, json, integer, index } from 'drizzle-orm/pg-core';
 
 /**
  * CSP Violation Reports (UL-QP 외부 — 보안 모니터링)
@@ -22,7 +22,7 @@ export const cspReports = pgTable(
     violatedDirective: varchar('violated_directive', { length: 200 }),
     documentUri: varchar('document_uri', { length: 2000 }),
     sourceFile: varchar('source_file', { length: 2000 }),
-    lineNumber: varchar('line_number', { length: 20 }),
+    lineNumber: integer('line_number'),
 
     // 원본 payload (감사·재분석용)
     rawPayload: json('raw_payload').notNull(),
