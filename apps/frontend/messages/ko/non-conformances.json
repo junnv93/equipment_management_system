@@ -175,6 +175,7 @@
       "sectionTitle": "종결 의견",
       "dateLabel": "종결일: {date}",
       "actorLabel": " · 종결자: {name}",
+      "emptyTitle": "종결 의견 없음",
       "empty": "종결 의견이 없습니다."
     },
     "attachments": {

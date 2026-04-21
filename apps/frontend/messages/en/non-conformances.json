@@ -175,7 +175,8 @@
       "sectionTitle": "Closure Notes",
       "dateLabel": "Closed: {date}",
       "actorLabel": " · Closed by: {name}",
-      "empty": "No closure notes."
+      "emptyTitle": "No closure notes",
+      "empty": "No closure notes have been recorded."
     },
     "attachments": {
       "title": "Attachments",

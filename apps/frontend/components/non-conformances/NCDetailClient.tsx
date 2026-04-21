@@ -274,18 +274,20 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
   // ── 훅: early return 이전에 선언 (Rules of Hooks) ──
   const actionBarRef = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(false);
 
   const scrollToActionBar = useCallback(() => {
     actionBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    setTimeout(() => {
-      actionBarRef.current?.querySelector<HTMLElement>('button')?.focus();
-    }, 150);
   }, []);
 
   const guidance = useMemo(() => (nc ? deriveGuidance(nc, canCloseNC) : null), [nc, canCloseNC]);
 
-  // 상태 전환 후 가이던스 제목으로 포커스 복귀 (접근성)
+  // 상태 전환 후 가이던스 제목으로 포커스 복귀 — 초기 마운트는 제외
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     if (!guidance?.key) return;
     const title = document.getElementById(`nc-guidance-title-${guidance.key}`);
     title?.focus();
@@ -518,8 +520,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 <EmptyState
                   variant="default"
                   icon={CheckCircle2}
-                  title={t('detail.closure.empty')}
-                  description=""
+                  title={t('detail.closure.emptyTitle')}
+                  description={t('detail.closure.empty')}
                   canAct={false}
                 />
               )}
