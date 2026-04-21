@@ -18,6 +18,7 @@ interface UserComboboxProps {
   onChange: (userId: string | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
+  'aria-labelledby'?: string;
 }
 
 /**
@@ -27,7 +28,13 @@ interface UserComboboxProps {
  * - 1글자 이상 입력 시 서버 사이드 검색 (debounce 300ms)
  * - 선택된 사용자의 이름을 트리거 버튼에 표시
  */
-export function UserCombobox({ value, onChange, placeholder, disabled }: UserComboboxProps) {
+export function UserCombobox({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  'aria-labelledby': ariaLabelledby,
+}: UserComboboxProps) {
   const t = useTranslations('common.userCombobox');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -72,6 +79,7 @@ export function UserCombobox({ value, onChange, placeholder, disabled }: UserCom
             role="combobox"
             aria-expanded={open}
             aria-haspopup="listbox"
+            aria-labelledby={ariaLabelledby}
             disabled={disabled}
             className={cn(
               'w-full justify-start text-left font-normal h-10',

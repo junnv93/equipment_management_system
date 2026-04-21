@@ -37,6 +37,7 @@ export function VendorEditFields({ editForm, setEditForm }: VendorEditFieldsProp
         <div className="space-y-2">
           <Label id="edit-received-by-label">{t('validation.form.receivedByLabel')}</Label>
           <UserCombobox
+            aria-labelledby="edit-received-by-label"
             value={editForm.receivedBy || undefined}
             onChange={(id) => setEditForm({ ...editForm, receivedBy: id ?? '' })}
           />

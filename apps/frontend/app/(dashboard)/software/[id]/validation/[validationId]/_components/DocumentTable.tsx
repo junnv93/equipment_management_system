@@ -6,14 +6,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
 import type { DocumentRecord } from '@/lib/api/document-api';
-import type { ValidationStatus } from '@equipment-management/schemas';
+import { ValidationStatusValues } from '@equipment-management/schemas';
+import type { ValidationStatus, ValidationType } from '@equipment-management/schemas';
 import { DocumentUploadButton } from './DocumentUploadButton';
 import { DocumentTableRow } from './DocumentTableRow';
 
 interface DocumentTableProps {
   docs: DocumentRecord[];
   validationId: string;
-  validationType: string;
+  validationType: ValidationType;
   validationStatus: ValidationStatus;
   docsLoading: boolean;
   docsError: boolean;
@@ -37,7 +38,7 @@ export function DocumentTable({
 
   return (
     <>
-      {validationStatus === 'draft' && (
+      {validationStatus === ValidationStatusValues.DRAFT && (
         <DocumentUploadButton validationId={validationId} validationType={validationType} />
       )}
 

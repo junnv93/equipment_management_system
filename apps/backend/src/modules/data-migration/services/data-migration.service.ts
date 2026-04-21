@@ -415,11 +415,12 @@ export class DataMigrationService {
         Date.now() - session.executionStartedAt.getTime() > MIGRATION_EXECUTION_TIMEOUT_MS;
 
       if (isStale) {
-        this.logger.warn('EXECUTING 세션 stale 판정 — FAILED 전환 후 재시도 허용', {
+        // PREVIEW로 리셋: 이후 FAILED 체크를 통과해 현재 요청이 재실행됨
+        this.logger.warn('EXECUTING 세션 stale 판정 — PREVIEW 리셋 후 재실행 허용', {
           sessionId: dto.sessionId,
           elapsedMs: Date.now() - (session.executionStartedAt?.getTime() ?? 0),
         });
-        session.status = MIGRATION_SESSION_STATUS.FAILED;
+        session.status = MIGRATION_SESSION_STATUS.PREVIEW;
         session.executionStartedAt = undefined;
         this.cacheService.set(
           `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,

@@ -153,27 +153,22 @@ describe('DataMigrationService', () => {
       sheets: [],
     });
 
-    it('EXECUTING 상태가 10분 초과(stale)이면 FAILED 전환 후 SESSION_FAILED 반환', async () => {
+    it('EXECUTING 상태가 10분 초과(stale)이면 PREVIEW 리셋 후 재실행 시도', async () => {
       // 11분 전에 EXECUTING 시작
       const staleDate = new Date(Date.now() - 11 * 60 * 1000);
       const session = makeExecutingSession(staleDate);
 
       mockCacheService.get.mockReturnValue(session);
 
-      // stale: FAILED로 전환 후 SESSION_FAILED ConflictException (SESSION_ALREADY_EXECUTING 아님)
-      await expect(
-        service.executeMultiSheet(
-          { sessionId: 'sess-1', autoGenerateManagementNumber: false, skipDuplicates: true },
-          'user-1'
-        )
-      ).rejects.toThrow(ConflictException);
-
-      // stale 판정 후 캐시를 failed로 업데이트 확인
-      expect(mockCacheService.set).toHaveBeenCalledWith(
-        expect.stringContaining('sess-1'),
-        expect.objectContaining({ status: 'failed' }),
-        expect.any(Number)
+      // stale: PREVIEW로 리셋 후 재실행 — ConflictException(SESSION_ALREADY_EXECUTING) 미발생
+      const result = await service.executeMultiSheet(
+        { sessionId: 'sess-1', autoGenerateManagementNumber: false, skipDuplicates: true },
+        'user-1'
       );
+      expect(result).toBeDefined();
+
+      // cacheService.set이 호출됨 (PREVIEW → EXECUTING → COMPLETED 전환)
+      expect(mockCacheService.set).toHaveBeenCalled();
     });
 
     it('EXECUTING 상태가 10분 이내(non-stale)이면 ConflictException', async () => {

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { DOCUMENT_TABLE } from '@/lib/design-tokens';
-import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
+import { DOCUMENT_TYPE_LABELS, ValidationStatusValues } from '@equipment-management/schemas';
 import type { DocumentType, ValidationStatus } from '@equipment-management/schemas';
 import type { DocumentRecord } from '@/lib/api/document-api';
 import { formatFileSize } from '@/lib/utils/format';
@@ -80,7 +80,7 @@ export function DocumentTableRow({
           >
             <Download className="h-4 w-4" />
           </Button>
-          {validationStatus === 'draft' && (
+          {validationStatus === ValidationStatusValues.DRAFT && (
             <Button
               variant="ghost"
               size="icon"

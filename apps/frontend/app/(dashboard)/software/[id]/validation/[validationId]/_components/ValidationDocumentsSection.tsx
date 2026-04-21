@@ -8,12 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import type { ValidationStatus } from '@equipment-management/schemas';
+import type { ValidationStatus, ValidationType } from '@equipment-management/schemas';
 import { DocumentTable } from './DocumentTable';
 
 interface ValidationDocumentsSectionProps {
   validationId: string;
-  validationType: string;
+  validationType: ValidationType;
   validationStatus: ValidationStatus;
 }
 

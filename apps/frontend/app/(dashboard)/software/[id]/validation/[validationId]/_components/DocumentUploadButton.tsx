@@ -9,11 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { documentApi } from '@/lib/api/document-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { DocumentTypeValues } from '@equipment-management/schemas';
+import type { ValidationType } from '@equipment-management/schemas';
 import { ALLOWED_EXTENSIONS } from '@equipment-management/shared-constants';
 
 interface DocumentUploadButtonProps {
   validationId: string;
-  validationType: string;
+  validationType: ValidationType;
 }
 
 export function DocumentUploadButton({ validationId, validationType }: DocumentUploadButtonProps) {
