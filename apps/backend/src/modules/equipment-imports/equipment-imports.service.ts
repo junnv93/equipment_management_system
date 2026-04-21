@@ -156,7 +156,6 @@ export class EquipmentImportsService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_CREATED, {
       importId: created.id,
       equipmentName: dto.equipmentName,
-      managementNumber: '',
       requesterId,
       requesterTeamId: teamId,
       site,
@@ -351,7 +350,6 @@ export class EquipmentImportsService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_APPROVED, {
       importId: id,
       equipmentName: updated.equipmentName,
-      managementNumber: '',
       requesterId: updated.requesterId,
       requesterTeamId: updated.teamId ?? '',
       site: updated.site ?? '',
@@ -405,7 +403,6 @@ export class EquipmentImportsService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
       importId: id,
       equipmentName: updated.equipmentName,
-      managementNumber: '',
       requesterId: updated.requesterId,
       requesterTeamId: updated.teamId ?? '',
       site: updated.site ?? '',

@@ -4,7 +4,7 @@ import {
   INSPECTION_JUDGMENT_LABELS,
 } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
-import { DocxTemplate } from '../../reports/docx-template.util';
+import { DocxTemplate } from '../../../common/docx/docx-template.util';
 import { insertDocxSignature, renderResultSections } from '../../reports/docx-xml-helper';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import {
