@@ -93,10 +93,19 @@ export interface QuickActionItem {
 export const DASHBOARD_GRID = {
   /** KPI 카드 행 — 비대칭: Hero(2fr) + Compact 3 + StatusMini */
   kpi: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4',
-  /** 3컬럼 액션 행: 승인대기 | 반출현황 | 교정현황 */
-  actionRow: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_280px] gap-4 items-start',
-  /** 하단 행: 최근활동(2fr) | 팀분포+달력(1fr) */
-  bottomRow: 'grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start',
+  /**
+   * Row 3 외부 그리드: [교정현황 2fr | 승인대기+반출현황 서브그리드 1.5fr]
+   *
+   * 교정현황이 좌측/2fr(더 중요) → 반출현황 우측/1.5fr
+   * 시각적 무게감이 도메인 우선순위와 일치
+   */
+  row3: 'grid grid-cols-1 lg:grid-cols-[2fr_1.5fr] gap-4 items-start',
+  /**
+   * 하단 행: 최근활동(2fr) | 사이드바(1fr)
+   *
+   * items-stretch: 사이드바가 최근활동 높이에 맞게 늘어남 (MiniCalendar 높이 동기화)
+   */
+  bottomRow: 'grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-stretch',
 } as const;
 
 // ─── Control Center 설정 ────────────────────────────────────────

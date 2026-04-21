@@ -47,13 +47,25 @@ export default function DashboardLoading() {
         </div>
       </div>
 
-      {/* Row 3: 액션 카드 (mb-8) */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start mb-8"
-        aria-hidden="true"
-      >
+      {/* Row 3: 액션 카드 (mb-8) — DASHBOARD_GRID.row3 CLS 방지 */}
+      {/* 순서: 교정현황(좌/2fr) → 승인대기+반출현황 서브그리드(우/1.5fr) */}
+      <div className={`${DASHBOARD_GRID.row3} mb-8`} aria-hidden="true">
+        {/* 교정 현황 — 좌측 2fr */}
+        <div className="rounded-lg border bg-muted p-4 space-y-3 min-h-[12rem] shadow-sm">
+          <Skeleton className="h-4 w-24" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="w-1 h-8 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* 승인 대기 + 반출 현황 서브그리드 — 우측 1.5fr */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 승인 대기 */}
           <div className="rounded-lg border bg-muted p-4 space-y-3 min-h-[12rem] shadow-sm">
             <div className="flex items-center justify-between">
               <Skeleton className="h-5 w-24" />
@@ -65,7 +77,6 @@ export default function DashboardLoading() {
               ))}
             </div>
           </div>
-          {/* 반출 현황 */}
           <div className="rounded-lg border bg-muted p-4 space-y-3 min-h-[12rem] shadow-sm">
             <div className="flex items-center justify-between">
               <Skeleton className="h-4 w-24" />
@@ -79,20 +90,6 @@ export default function DashboardLoading() {
               <Skeleton key={i} className="h-10 rounded" />
             ))}
           </div>
-        </div>
-        {/* 교정 현황 */}
-        <div className="rounded-lg border bg-muted p-4 space-y-3 min-h-[12rem] shadow-sm">
-          <Skeleton className="h-4 w-24" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="w-1 h-8 rounded-full" />
-              <Skeleton className="h-4 w-12" />
-              <div className="flex-1 space-y-1">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-3 w-28" />
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -110,7 +107,7 @@ export default function DashboardLoading() {
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 h-full">
           <div className="rounded-lg border bg-muted p-4 space-y-3 shadow-sm">
             <Skeleton className="h-4 w-24" />
             {Array.from({ length: 3 }).map((_, i) => (
@@ -123,7 +120,7 @@ export default function DashboardLoading() {
               </div>
             ))}
           </div>
-          <Skeleton className="h-[200px] rounded-lg" />
+          <Skeleton className="flex-1 rounded-lg" />
         </div>
       </div>
     </div>

@@ -216,21 +216,31 @@ function DashboardClientComponent({
       </div>
 
       {/*
-       * Row 3: 액션 행 — 2컬럼 외부 [1fr_280px]
+       * Row 3: 액션 행 — 2컬럼 외부 [교정현황 2fr | 승인대기+반출현황 1.5fr]
        *
-       * CalibrationDday를 항상 우측 280px 고정 컬럼에 배치하기 위해
-       * 외부를 [1fr_280px]로 분리하고, 내부에서 승인대기/반출현황을 서브그리드로 처리.
+       * 교정현황(좌/2fr)이 반출현황(우/1.5fr)보다 시각적 무게감을 가져
+       * 도메인 우선순위(교정 > 반출)와 레이아웃이 일치
        *
-       * v3 개선 (AP-01): 좌측 아이템이 1개뿐이면 grid-cols-1로 풀너비 차지
+       * v3 개선 (AP-01): 우측 아이템이 1개뿐이면 grid-cols-1로 풀너비 차지
        */}
       {(controlCenter.showPendingApprovals ||
         controlCenter.showCheckoutOverdue ||
         controlCenter.showCalibrationDday) && (
         <div
-          className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start mb-8 motion-safe:animate-fade-in-up"
+          className={cn(DASHBOARD_GRID.row3, 'mb-8 motion-safe:animate-fade-in-up')}
           style={{ animationDelay: '240ms' }}
         >
-          {/* 좌측: 승인대기 + 반출현황 서브그리드 — 아이템 수에 따라 컬럼 분기 */}
+          {/* 좌측: 교정현황 — 2fr 우선 컬럼 */}
+          {controlCenter.showCalibrationDday && (
+            <CalibrationDdayList
+              overdueCalibrations={overdueCalibrations}
+              upcomingCalibrations={upcomingCalibrations}
+              scope={scope}
+              loading={isLoading}
+            />
+          )}
+
+          {/* 우측: 승인대기 + 반출현황 서브그리드 — 아이템 수에 따라 컬럼 분기 */}
           {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
             <div
               className={cn(
@@ -256,16 +266,6 @@ function DashboardClientComponent({
               )}
             </div>
           )}
-
-          {/* 우측: 교정현황 — 항상 280px 고정 컬럼 */}
-          {controlCenter.showCalibrationDday && (
-            <CalibrationDdayList
-              overdueCalibrations={overdueCalibrations}
-              upcomingCalibrations={upcomingCalibrations}
-              scope={scope}
-              loading={isLoading}
-            />
-          )}
         </div>
       )}
 
@@ -283,7 +283,7 @@ function DashboardClientComponent({
           <RecentActivities data={recentActivities} loading={isLoading} />
         </section>
         {controlCenter.sidebarWidgets.length > 0 && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 h-full">
             {controlCenter.sidebarWidgets.map((widget) => {
               const sidebarProps: SidebarWidgetRendererProps = {
                 equipmentByTeam,

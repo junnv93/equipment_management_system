@@ -364,7 +364,7 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   barUrgent: 'bg-brand-warning',
   barWarning: 'bg-brand-warning',
   barOk: 'bg-brand-ok',
-  dday: 'font-mono tabular-nums font-bold text-sm w-14 flex-shrink-0',
+  dday: 'font-mono tabular-nums font-bold text-base w-14 flex-shrink-0',
   ddayOverdue: 'text-brand-critical',
   ddayUrgent: 'text-brand-warning',
   ddayWarning: 'text-brand-warning',
@@ -392,7 +392,7 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
  * - 월간 그리드, 이벤트 도트, 헤더 네비게이션
  */
 export const DASHBOARD_CALENDAR_TOKENS = {
-  container: `bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  container: `flex-1 bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground tabular-nums',
   navButton: `p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.instantTransform}`,
