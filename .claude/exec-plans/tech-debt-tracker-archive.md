@@ -5,6 +5,12 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — SW 검증 캐시 책임 경계 분리 (아키텍처 수정)
+
+- [x] **SW 검증 캐시 APPROVALS 이중 삭제 제거** — ✅ `invalidateCache()`에서 `deleteByPrefix(APPROVALS)` 제거. 책임 경계 명시: 서비스=도메인 로컬 캐시(sw-validations/test-software), 레지스트리=크로스 도메인(dashboard+approvals). `cache-event.registry.ts` 및 `software-validations.service.ts` 주석 정합성 수정.
+
+---
+
 ## 2026-04-21 — tech-debt-batch-0421f (routeMap + cache 문서화 + tracker 정리)
 
 - [x] **routeMap 4개 페이지 미등록** — ✅ `/software-validations`, `/scan`, `/handover`, `/checkouts/import` 추가. `QrCode` 아이콘 추가. `scan`/`handover`/`checkoutsImport` 신규 i18n 키 ko/en 추가.
