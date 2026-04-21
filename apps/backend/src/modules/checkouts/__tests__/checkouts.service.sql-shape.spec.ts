@@ -33,6 +33,7 @@ import {
   createMockEquipmentImportsService,
 } from '../../../common/testing/mock-providers';
 import type { CheckoutQueryDto } from '../dto/checkout-query.dto';
+import { AuditService } from '../../audit/audit.service';
 
 describe('CheckoutsService — SQL shape regression', () => {
   let service: CheckoutsService;
@@ -58,6 +59,10 @@ describe('CheckoutsService — SQL shape regression', () => {
         { provide: TeamsService, useValue: { findOne: jest.fn() } },
         { provide: EquipmentImportsService, useValue: createMockEquipmentImportsService() },
         { provide: EventEmitter2, useValue: createMockEventEmitter() },
+        {
+          provide: AuditService,
+          useValue: { create: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
