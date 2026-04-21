@@ -165,3 +165,24 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-16 e2e-infra-redesign] S2 — data-migration.service.spec.ts lint 에러** — ✅ 완료 2026-04-16.
 - [x] **[2026-04-16 e2e-infra-redesign] S3 — beforeAll 축소** — ✅ 완료 2026-04-16.
 - [x] **[2026-04-16 e2e-infra-redesign] S4 — afterAll 축소** — ✅ 완료 2026-04-16.
+
+## 2026-04-21 — tech-debt-batch-0421 + ssot-validation-cleanup + isError fix
+
+- [x] **[2026-04-20 calibration-plan-confirm] S7 — CPLAN_008 항목 주석 미비** — 2026-04-21 완료: ITEM_019~022 각 항목 위에 확인완료/bulk-confirm대상/actualCalibrationId 상태 주석 추가.
+- [x] **[2026-04-17 history-card-qp1802] equipment_attachments seed 경로 형식 교정** — 2026-04-21 완료: 6건 절대경로 → 상대경로(`inspection_reports/`, `history_cards/`, `other/`) 교정. `SEED_PLACEHOLDER_ATTACHMENT_PATHS` export + `seed-test-new.ts` placeholder 자동 생성 (PDF/JPEG).
+- [x] **[2026-04-18 arch-review] 🟡 MEDIUM M2 — data-migration 세션 상태 메모리 의존** — 2026-04-21 완료: `executionStartedAt` 타임스탬프 + `MIGRATION_EXECUTION_TIMEOUT_MS` (10분) stale 판정으로 서버 재시작 후 재시도 가능.
+- [x] **[2026-04-18 arch-rev2] 🟢 LOW EquipmentRegistryDataService SELECT \*** — 2026-04-21 재검증: equipment-registry-data.service.ts:102-119에 이미 16컬럼 projection 적용됨. 코드 변경 불필요.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW software-validations.service.ts approve() 인라인 검사** — 2026-04-21 재검증: line 385에 이미 assertIndependentApprover 사용 중. 코드 변경 불필요.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM Phase 3 — 10개 컴포넌트 미추출** — 2026-04-21 완료: `ValidationCreateDialog`, `ValidationActionsBar`, `ValidationFunctionsTable`, `ValidationControlTable` 추출. `SoftwareValidationContent.tsx` 1033→404줄.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW Phase 7 — 운영 가이드 문서 없음** — 2026-04-21 완료: `docs/references/software-validation-workflow.md` 생성.
+- [x] **[2026-04-19 review-arch] 🟢 LOW form-templates-api GET 패턴 불일치** — 2026-04-21 완료: `docs/references/frontend-patterns.md`에 "API GET 응답 패턴 선택" 섹션 추가.
+- [x] **[2026-04-19 verify-e2e] 🟢 LOW wf-35:103 토스트 .first() 직접 사용** — 2026-04-21 완료: `expectToastVisible(pageB, /데이터 충돌|.../)` 교체.
+- [x] **[2026-04-20 skill-gap] 🟢 LOW calibration-plan-renderer.service.ts iCell.alignment 직접 조작** — 2026-04-21 완료: `calibration-plan.layout.ts`에 `ALIGNMENT.CENTER_MIDDLE` / `CENTER_MIDDLE_SHRINK` 토큰 추출.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 3 — KPI aria-pressed** — 2026-04-21 재검증: button 분기(line 253)에 aria-pressed={isActive} 이미 적용. div 분기는 toggle 버튼이 아님 — 미적용 의도된 설계.
+- [x] **[2026-04-21 cleanup-0421] DocumentTable.tsx 213줄** — 2026-04-21 완료: DocumentUploadButton + DocumentTableRow 분리 → DocumentTable.tsx 85줄.
+- [x] **[2026-04-21 ssot-step19] ValidationActionsBar.tsx** — 2026-04-21 완료: `ValidationStatusValues.DRAFT/SUBMITTED/APPROVED/REJECTED` 교체 (PostToolUse hook 자동 수정).
+- [x] **[2026-04-21 ssot-step19] ValidationDetailContent.tsx** — 2026-04-21 완료: `ValidationStatusValues.DRAFT` + `ValidationTypeValues.VENDOR/SELF` 교체.
+- [x] **[2026-04-21 ssot-step19] ValidationEditDialog.tsx** — 2026-04-21 완료: `ValidationTypeValues.VENDOR` 교체.
+- [x] **[2026-04-21 ssot-step19] ValidationCreateDialog.tsx** — 2026-04-21 완료: `ValidationTypeValues.VENDOR/SELF` + DocumentUploadButton.tsx 포함 동시 수정.
+- [x] **[2026-04-21 verify-e2e] wf-35-cas-ui-recovery.spec.ts** — 2026-04-21 완료: `auth.fixture` import + type-only `BrowserContext, Page` 분리 (PostToolUse hook 자동 수정).
+- [x] **[2026-04-21 frontend-state] SoftwareValidationContent.tsx isError 미처리** — 2026-04-21 완료: `isError` 추가, 에러 UI 분기(`loadError` i18n 키, `XCircle` 아이콘) 추가.

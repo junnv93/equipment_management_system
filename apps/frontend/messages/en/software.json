@@ -136,6 +136,7 @@
     "globalSubtitle": "UL-QP-18-09 — All validation records across software",
     "createButton": "New Validation",
     "empty": "No validation records",
+    "loadError": "Failed to load validation records",
     "backToDetail": "Back to Software Detail",
     "selfApprovalForbidden": "You cannot approve a validation you submitted",
     "dualApprovalForbidden": "Technical and quality approvals must be by different people",
