@@ -462,12 +462,6 @@ export class CheckoutsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const approverId = extractUserId(req);
-    if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
-      throw new BadRequestException({
-        code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
-        message: 'Rejection reason is required.',
-      });
-    }
     return this.checkoutsService.reject(uuid, { ...rejectDto, approverId }, req);
   }
 
