@@ -24,6 +24,7 @@ import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
+  ConditionCheckStepValues as CCSVal,
   type ConditionCheckStep,
   type CheckoutPurpose,
   canPerformAction,
@@ -1994,7 +1995,6 @@ export class CheckoutsService extends VersionedBaseService {
 
       const checkout = await this.findOne(uuid);
       const rejectReturnPermissions: readonly string[] = req.user?.permissions ?? [];
-      this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
       if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
         throw new BadRequestException({
@@ -2021,6 +2021,8 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      // 스코프 검증 이후 FSM 검사 — 스코프 외 사용자가 FSM 오류로 상태 역추론하는 정보 노출 방지
+      this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
       let approverClassification: string | null | undefined;
       if (rejectReturnDto.approverTeamId) {
@@ -2127,17 +2129,23 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // 단계별 현재 상태 검증 및 상태 전이 매핑
-      const stepTransitions: Record<string, { requiredStatus: string; nextStatus: string }> = {
-        lender_checkout: { requiredStatus: CSVal.APPROVED, nextStatus: CSVal.LENDER_CHECKED },
-        borrower_receive: {
+      const stepTransitions: Record<
+        ConditionCheckStep,
+        { requiredStatus: string; nextStatus: string }
+      > = {
+        [CCSVal.LENDER_CHECKOUT]: {
+          requiredStatus: CSVal.APPROVED,
+          nextStatus: CSVal.LENDER_CHECKED,
+        },
+        [CCSVal.BORROWER_RECEIVE]: {
           requiredStatus: CSVal.LENDER_CHECKED,
           nextStatus: CSVal.BORROWER_RECEIVED,
         },
-        borrower_return: {
+        [CCSVal.BORROWER_RETURN]: {
           requiredStatus: CSVal.BORROWER_RECEIVED,
           nextStatus: CSVal.BORROWER_RETURNED,
         },
-        lender_return: {
+        [CCSVal.LENDER_RETURN]: {
           requiredStatus: CSVal.BORROWER_RETURNED,
           nextStatus: CSVal.LENDER_RECEIVED,
         },
@@ -2160,7 +2168,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 트랜잭션: condition_check 삽입 + checkout 상태 전환 + 장비 상태 변경을 원자적으로 처리
       const needsEquipmentStatusChange =
-        dto.step === 'lender_checkout' || dto.step === 'lender_return';
+        dto.step === CCSVal.LENDER_CHECKOUT || dto.step === CCSVal.LENDER_RETURN;
       let equipmentIds: string[] = [];
 
       if (needsEquipmentStatusChange) {
@@ -2196,7 +2204,7 @@ export class CheckoutsService extends VersionedBaseService {
         };
 
         // 3. 단계별 날짜 및 장비 상태 업데이트
-        if (dto.step === 'lender_checkout') {
+        if (dto.step === CCSVal.LENDER_CHECKOUT) {
           checkoutUpdateData.checkoutDate = new Date();
           await this.equipmentService.updateStatusBatch(
             equipmentIds,
@@ -2204,7 +2212,7 @@ export class CheckoutsService extends VersionedBaseService {
             undefined,
             tx
           );
-        } else if (dto.step === 'lender_return') {
+        } else if (dto.step === CCSVal.LENDER_RETURN) {
           checkoutUpdateData.actualReturnDate = new Date();
           await this.equipmentService.updateStatusBatch(
             equipmentIds,
