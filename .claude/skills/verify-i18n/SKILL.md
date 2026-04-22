@@ -190,6 +190,27 @@ ctaKindNoneKeys.forEach(k => {
 > `NC_WORKFLOW_GUIDANCE_TOKENS` 에 있고 → i18n에도 존재해야 런타임 에러 없음.
 > 3곳 (토큰 정의 / i18n / `resolveNCGuidanceKey` 반환값)이 항상 동기화되어야 함.
 
+### Step 13: checkouts v2 네임스페이스 107개 필수 키 존재 확인
+
+**배경**: `check-i18n-keys.mjs`는 FSM 40개 + v2 67개 = 107개 필수 키를 게이트로 검증.
+v2 네임스페이스: `guidance.*`, `list.subtab.*`, `list.count.*`, `timeline.*`,
+`emptyState.*`, `yourTurn.*`, `toast.transition.*`, `help.status.*`
+
+```bash
+node scripts/check-i18n-keys.mjs --all
+```
+
+**PASS**: `ko/en checkouts.json — fsm 40개 + v2 67개 = 107개 키 모두 존재`
+**FAIL**: stderr에 누락 키 경로 출력 → JSON 파일 해당 경로에 값 추가
+
+**소유권 규칙**:
+- `guidance.*` → 신규 GuidanceCallout / NextStepPanel v2 전용
+- `fsm.*` → 기존 NextStepPanel / FSMStepDisplay 전용 (레거시)
+- 두 네임스페이스를 동시에 사용하는 컴포넌트 금지
+
+**pre-commit 연동**: `.husky/pre-commit`에서 `check-i18n-keys.mjs --changed` 실행
+staged에 checkouts.json 없어도 LOCALES 전체 폴백 검사 (false negative 방지)
+
 ## Output Format
 
 ```markdown
@@ -207,6 +228,7 @@ ctaKindNoneKeys.forEach(k => {
 | 10  | audit SSOT enum ↔ i18n 동기화   | PASS/FAIL | 누락 entityType/action 목록 |
 | 11  | getSamplerPresetOrder ↔ qr.json | PASS/FAIL | sampler.header/size 누락·초과 preset 목록 |
 | 12  | NCGuidanceKey ↔ non-conformances.json 동기화 | PASS/FAIL | en/ko 누락 guidance 키, ctaHint 잔재 목록 |
+| 13  | checkouts v2 네임스페이스 107개 필수 키 존재 | PASS/FAIL | 누락 키 경로 목록 |
 ```
 
 ## Exceptions

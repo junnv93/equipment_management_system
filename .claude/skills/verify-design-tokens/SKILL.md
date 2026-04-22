@@ -425,6 +425,19 @@ grep -n "NCGuidanceKeyReachable" apps/frontend/components/non-conformances/Guida
 
 **상세:** [references/step-details.md](references/step-details.md) Step 16
 
+### Step 17: hex 색상 직접 하드코딩 감지 (AP-01·AP-04)
+
+**대상**: `apps/frontend/components/checkouts/**/*.{ts,tsx}`
+
+```bash
+node scripts/self-audit.mjs --all 2>&1 | grep "⑨ hex"
+```
+
+**PASS**: 출력 없음 (위반 0건)
+**FAIL**: `[⑨ hex 색상]` 항목 출력 → `BRAND_CLASS_MATRIX` 또는 Tailwind semantic token으로 교체
+
+**예외**: JSDoc `/* */` 주석, `:root{}` CSS 변수 정의 블록 내 hex는 자동 제외됨
+
 ### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
 
 배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
@@ -468,6 +481,7 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 15  | staggerFadeInItem SSOT + NC_SPACING_TOKENS.detail 우회 금지 | PASS/FAIL | raw index 곱셈 또는 `'link'` ctaKind 잔재 위치 |
 | 16a | SPACING_RHYTHM_TOKENS `.replace()` 안티패턴 금지 | PASS/FAIL | `.replace('p','px')` 발견 위치 |
 | 16b | NCGuidanceKeyReachable narrowing (Record 타입 좁힘) | PASS/FAIL | `Record<NCGuidanceKey,...>` 잔재 또는 dead entry 존재 |
+| 17  | hex 색상 하드코딩 감지 (checkouts/**) | PASS/FAIL | `[⑨ hex 색상]` 위반 위치 목록 |
 ```
 
 ## Exceptions
