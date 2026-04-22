@@ -681,6 +681,14 @@
       "return_rejected": {
         "title": "Return Rejected",
         "description": "The return was rejected during review. Please check the status and reprocess."
+      },
+      "return_approved": {
+        "title": "Return Approved",
+        "description": "The return has been approved and the equipment has been returned to storage."
+      },
+      "lender_received": {
+        "title": "Return Received",
+        "description": "The lender has received the returned equipment. Please proceed with return processing."
       }
     }
   },

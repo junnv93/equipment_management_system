@@ -370,20 +370,21 @@ function checkHexColors(file, content) {
   if (!file.startsWith('apps/frontend/components/checkouts/')) return;
   if (isTestFile(file)) return;
 
-  // JSDoc 주석과 :root{} CSS 변수 정의 블록 제외
-  const stripped = content
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/:root\s*\{[^}]*\}/g, '');
+  // stripComments()로 // 인라인 + /* */ 블록 주석 모두 제거 후 :root{} CSS 변수 정의 블록 제외
+  const stripped = stripComments(content).replace(/:root\s*\{[^}]*\}/g, '');
 
-  const matches = stripped.match(HEX_COLOR_RE);
-  if (matches?.length) {
-    fail(
-      '⑨ hex 색상',
-      file,
-      0,
-      `hex 하드코딩: ${matches.join(', ')} — BRAND_CLASS_MATRIX 또는 Tailwind semantic token 경유 필요`,
-    );
-  }
+  // 라인별 탐지 — 정확한 라인 번호 제공
+  stripped.split('\n').forEach((line, i) => {
+    const matches = line.match(HEX_COLOR_RE);
+    if (matches?.length) {
+      fail(
+        '⑨ hex 색상',
+        file,
+        i + 1,
+        `hex 하드코딩: ${matches.join(', ')} — BRAND_CLASS_MATRIX 또는 Tailwind semantic token 경유 필요`,
+      );
+    }
+  });
 }
 
 // ─── 메인 실행 ─────────────────────────────────────────────────────────────

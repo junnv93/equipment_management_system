@@ -153,6 +153,10 @@ const REQUIRED_PATHS = [
   'help.status.overdue.description',
   'help.status.return_rejected.title',
   'help.status.return_rejected.description',
+  'help.status.return_approved.title',
+  'help.status.return_approved.description',
+  'help.status.lender_received.title',
+  'help.status.lender_received.description',
 ];
 
 // ─── 헬퍼 ────────────────────────────────────────────────────────────────────

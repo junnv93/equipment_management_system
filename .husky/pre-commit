@@ -35,3 +35,6 @@ pnpm lint-staged
 
 # 4. self-audit — 7대 아키텍처 원칙 위반 감지 (staged 파일만)
 node scripts/self-audit.mjs --staged
+
+# 5. i18n 키 무결성 검증 — checkouts.json 변경 시 필수 키 누락 차단
+node scripts/check-i18n-keys.mjs --changed

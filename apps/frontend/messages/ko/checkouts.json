@@ -681,6 +681,14 @@
       "return_rejected": {
         "title": "반입 반려",
         "description": "반입 검토에서 반려되었습니다. 상태를 확인하고 재처리해주세요."
+      },
+      "return_approved": {
+        "title": "반입 최종 승인",
+        "description": "반입이 최종 승인되어 장비가 보관 상태로 복귀되었습니다."
+      },
+      "lender_received": {
+        "title": "반납 수령 완료",
+        "description": "반납된 장비를 대여자가 수령했습니다. 반입 처리를 진행해주세요."
       }
     }
   },
