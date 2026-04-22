@@ -435,7 +435,8 @@ export class EquipmentController {
 
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? '';
-    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
+    // UL-QP-18 직무분리: system_admin만 승인 절차 없이 직접 수정 가능
+    const isSystemAdmin = userRoles.includes(UserRoleValues.SYSTEM_ADMIN);
 
     // 운영 책임자 역할/사이트 자격 사전 검증 (승인 워크플로우 분기 전 공통 적용)
     const hasManagerChange =
@@ -466,7 +467,7 @@ export class EquipmentController {
     }
 
     // 시스템 관리자는 직접 승인 가능
-    if (isAdmin && updateEquipmentDto.approvalStatus === ApprovalStatusEnum.enum.approved) {
+    if (isSystemAdmin && updateEquipmentDto.approvalStatus === ApprovalStatusEnum.enum.approved) {
       const updated = await this.equipmentService.update(uuid, updateEquipmentDto, userId);
       // UL-QP-18-02 이력카드 "확인" 서명란 SSOT — 관리자 직접 승인도 동일 경로
       await this.equipmentService.markApprovalMeta(uuid, userId);
@@ -522,10 +523,11 @@ export class EquipmentController {
 
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? '';
-    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
+    // UL-QP-18 직무분리: system_admin만 승인 절차 없이 직접 삭제 가능
+    const isSystemAdmin = userRoles.includes(UserRoleValues.SYSTEM_ADMIN);
 
     // 시스템 관리자는 직접 삭제 가능
-    if (isAdmin) {
+    if (isSystemAdmin) {
       const parsedVersion = versionStr !== undefined ? parseInt(versionStr, 10) : undefined;
       const effectiveVersion =
         parsedVersion !== undefined && !isNaN(parsedVersion)
