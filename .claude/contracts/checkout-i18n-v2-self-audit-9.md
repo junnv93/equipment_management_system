@@ -38,7 +38,9 @@ created: 2026-04-22
 
 ### M7: self-audit.mjs 체크 ⑨ 추가
 - `apps/frontend/components/checkouts/**/*.{ts,tsx}` 대상 hex 색상 탐지
-- `node scripts/self-audit.mjs --all` → exit 0 (기존 코드에 hex 없음)
+- `checkHexColors()` 함수 존재 + 경로 필터 `startsWith('apps/frontend/components/checkouts/')`
+- `node scripts/self-audit.mjs` (인수 없음) → exit 0 (usage 출력)
+- `node scripts/self-audit.mjs --all` → 체크 ⑨ 위반 0건 (pre-existing ⑧ 위반은 별개 tech-debt)
 - 체크 ⑧ (FSM 리터럴) 유지됨
 
 ### M8: pnpm --filter frontend run tsc --noEmit 성공
