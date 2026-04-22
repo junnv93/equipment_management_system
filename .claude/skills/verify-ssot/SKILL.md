@@ -353,6 +353,30 @@ pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "nod
 
 > **연계:** verify-hardcoding Step 23(export allowlist 상태 리터럴)과 상호 보완 — ESLint가 BinaryExpression/Property/CallExpression을 정적으로 차단하고, Step 23은 배열 요소로 사용된 리터럴을 grep으로 탐지.
 
+### Step 24: UnifiedApprovalStatus (UASVal) SSOT — approvals-api.ts (2026-04-22 추가)
+
+`apps/frontend/lib/api/approvals-api.ts`의 `mapCheckoutToApprovalItem` / `mapNonConformanceToApprovalItem` /
+`mapInspectionToApprovalItem` 등 매핑 함수에서 `UnifiedApprovalStatus` 값을 raw 문자열 리터럴로
+할당하는 패턴 탐지. `UnifiedApprovalStatusValues` (= `UASVal`)에서 상수를 경유해야 함.
+
+**24a: approvals-api.ts 내 UnifiedApprovalStatus raw 리터럴 탐지**
+```bash
+grep -n "status: 'pending'\|status: 'pending_review'\|status: 'approved'\|status: 'rejected'\|status: 'in_progress'" \
+  apps/frontend/lib/api/approvals-api.ts \
+  | grep -v "//\|import\|type\|interface"
+# 결과: 0건 (UASVal.PENDING 등 SSOT 상수 경유)
+```
+
+**24b: UASVal import 확인**
+```bash
+grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals-api.ts | head -5
+# 결과: import 라인 존재해야 함
+```
+
+**PASS:** 24a 0건 + 24b import 확인. **FAIL:** raw 리터럴 직접 할당 발견 시 `UASVal.PENDING_REVIEW` 등 상수로 교체.
+
+> **배경:** 2026-04-22 verify-implementation에서 `status: 'pending_review'`(L1142), `status: 'pending'`(L1165, L1192) 3건 발견. 현재 값이 SSOT 값과 우연히 일치하여 런타임 버그는 없으나, 향후 SSOT 값 변경 시 approvals-api.ts가 무결성 보장을 받지 못함.
+
 ## Output Format
 
 ```markdown
@@ -386,6 +410,7 @@ pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "nod
 | 21  | ConditionCheckStep SSOT       | PASS/FAIL | 'lender_checkout'/'lender_return' 리터럴 직접 비교 위치 |
 | 22  | ESLint 3-layer selector 완전성 | PASS/FAIL | BinaryExpression/Property/CallExpression selector 누락 또는 lint 에러 위치 |
 | 23  | DocxTemplate 레거시 barrel 경로 | PASS/FAIL | `reports/docx-template.util` 경유 import 위치 (canonical: `common/docx/`) |
+| 24  | UASVal SSOT — approvals-api.ts | PASS/FAIL | UnifiedApprovalStatus raw 리터럴 직접 할당 위치 |
 ```
 
 ## Exceptions
