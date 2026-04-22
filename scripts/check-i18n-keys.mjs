@@ -72,13 +72,22 @@ const REQUIRED_BLOCKED_KEYS = ['permission', 'role_mismatch'];
 const REQUIRED_URGENCY_KEYS = ['normal', 'warning', 'critical'];
 
 // ─── PR-8 v2: 신규 7개 네임스페이스 필수 경로 ─────────────────────────────────
-// guidance / list.subtab / list.count / timeline / emptyState / yourTurn / toast / help
+//
+// 네임스페이스 소유권 규칙 (SSOT):
+//   fsm.*          → 기존 NextStepPanel / FSMStepDisplay 컴포넌트 (레거시)
+//   guidance.*     → 신규 GuidanceCallout / NextStepPanel v2 컴포넌트
+//
+// guidance.panelTitle ("다음 할 일") ≠ fsm.panelTitle ("다음 단계")
+//   - fsm.panelTitle  : 단계 레이블 ("Next Step") — 기존 컴포넌트 전용
+//   - guidance.panelTitle : 사용자 지향 패널 제목 ("What to do next") — v2 전용
+//   두 키를 동시에 사용하는 컴포넌트 금지. 소유권 위반은 review-architecture에서 검출.
+
 const REQUIRED_PATHS = [
-  // guidance
+  // guidance — GuidanceCallout / NextStepPanel v2 전용
   'guidance.nextStep',
   'guidance.currentStep',
   'guidance.actor',
-  'guidance.panelTitle',
+  'guidance.panelTitle',       // ← v2 패널 제목. fsm.panelTitle은 레거시 전용
   'guidance.terminal',
   'guidance.blockedHint',
   'guidance.stepOf',
@@ -171,9 +180,12 @@ function getChangedLocales() {
   try {
     const out = execSync('git diff --staged --name-only --diff-filter=ACM', { encoding: 'utf8', cwd: ROOT });
     const changed = out.trim().split('\n');
-    return LOCALES.filter((locale) =>
+    const changedLocales = LOCALES.filter((locale) =>
       changed.some((f) => f.includes(`messages/${locale}/checkouts.json`))
     );
+    // staged에 checkouts.json이 없어도 전체 검사로 폴백 — false negative 방지.
+    // 다른 파일이 stage되는 도중에도 번역 키 무결성을 항상 보장한다.
+    return changedLocales.length > 0 ? changedLocales : LOCALES;
   } catch {
     return LOCALES;
   }
@@ -182,12 +194,6 @@ function getChangedLocales() {
 // ─── 메인 ────────────────────────────────────────────────────────────────────
 
 const localesToCheck = isAll ? LOCALES : getChangedLocales();
-
-if (localesToCheck.length === 0) {
-  const mode = isChanged ? 'changed' : 'all';
-  console.log(`✅ i18n check (${mode}): 검사할 변경된 checkouts.json 없음`);
-  process.exit(0);
-}
 
 let exitCode = 0;
 
