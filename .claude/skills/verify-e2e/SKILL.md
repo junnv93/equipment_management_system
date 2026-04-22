@@ -359,6 +359,58 @@ grep -rn "data-guidance-key" \
 **PASS:** spec의 `data-guidance-key` 값이 `NC_WORKFLOW_GUIDANCE_TOKENS` 키 집합에 속함.
 **FAIL:** spec이 존재하지 않는 guidance key를 참조 → 항상 false negative.
 
+### Step 17: 브라우저 기반 Feature Flag 감지 패턴 (2026-04-22 추가)
+
+`NEXT_PUBLIC_*` 환경 변수는 Next.js 빌드 타임에 앱 번들에 인라인된다.
+E2E 테스트 러너(Node.js)의 `process.env.NEXT_PUBLIC_*`는 빌드된 앱의 플래그 상태를 반영하지 않으므로,
+이를 기반으로 `testInfo.skip()` 또는 `test.describe.skip()`을 결정하는 것은 **무음 오검출**을 유발한다.
+
+**올바른 패턴:**
+`test.describe.configure({ mode: 'serial' })` + `beforeAll`에서 `browser.newContext({ baseURL, storageState })`로
+임시 컨텍스트를 생성해 실제 앱 DOM을 확인해야 한다.
+
+```typescript
+// ✅ 올바른 패턴 — 브라우저 DOM으로 플래그 감지
+test.describe.configure({ mode: 'serial' });
+let flagEnabled = false;
+test.beforeAll(async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',  // baseURL 필수
+    storageState: path.join(__dirname, '../../../.auth/technical-manager.json'),
+  });
+  const probe = await context.newPage();
+  await probe.goto('/some-page');
+  await probe.waitForLoadState('domcontentloaded');
+  flagEnabled = await probe.locator('[data-feature-panel]').isVisible();
+  await context.close();
+});
+
+// ❌ 잘못된 패턴 — 테스트 러너 env는 빌드 타임 플래그를 반영 안 함
+const FLAG_ENABLED = process.env.NEXT_PUBLIC_MY_FEATURE === 'true';
+```
+
+**탐지:**
+```bash
+# spec에서 NEXT_PUBLIC_* env 직접 조건 분기 탐지
+grep -rn "process\.env\.NEXT_PUBLIC_" \
+  apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -v "shared-test-data\|BASE_URLS\|process\.env\.NEXT_PUBLIC_API_URL"
+# → 0건 (NEXT_PUBLIC_API_URL은 BASE_URLS 경유로 허용됨)
+
+# browser.newContext에 baseURL 없는 패턴 탐지
+grep -rn "browser\.newContext(" \
+  apps/frontend/tests/e2e --include="*.spec.ts" -A3 \
+  | grep -B1 "storageState" | grep -v "baseURL"
+# 결과가 있으면 해당 컨텍스트에 baseURL 없음 — 상대경로 goto 실패
+```
+
+**PASS:** `NEXT_PUBLIC_*` env 직접 조건 분기 0건, `browser.newContext` 호출 시 `baseURL` 포함.
+**FAIL:** spec에서 `process.env.NEXT_PUBLIC_FEATURE === 'true'` 분기 → `beforeAll` DOM 검사 패턴으로 교체.
+
+**예외:**
+- `process.env.NEXT_PUBLIC_API_URL` — API 엔드포인트 URL(feature flag 아님), `BASE_URLS` 폴백 경유 허용
+- `shared-test-data.ts` 내 `BASE_URLS.BACKEND/FRONTEND` 정의 — SSOT 상수 정의이므로 허용
+
 ## Output Format
 
 ```markdown
@@ -387,6 +439,7 @@ grep -rn "data-guidance-key" \
 | 15d | API_ENDPOINTS SSOT (E2E) | PASS/FAIL | 하드코딩 경로 리터럴 또는 toTestPath 재도입 |
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 | 16c | `toHaveAttribute` 기반 상태 검증 | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부 |
+| 17  | 브라우저 기반 feature flag 감지 | PASS/FAIL | `process.env.NEXT_PUBLIC_*` 직접 분기 또는 `browser.newContext` baseURL 누락 |
 ```
 
 ## Exceptions

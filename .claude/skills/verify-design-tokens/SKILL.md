@@ -372,6 +372,59 @@ grep -n "ctaKind" apps/frontend/components/non-conformances/GuidanceCallout.tsx
 
 **상세:** [references/step-details.md](references/step-details.md) Step 15
 
+### Step 16: SPACING_RHYTHM_TOKENS 축 분리 필드 + Record 타입 narrowing (2026-04-22 추가)
+
+**16a: SPACING_RHYTHM_TOKENS 축 분리 필드 — `.replace()` 안티패턴 금지**
+
+Layer 2 `SPACING_RHYTHM_TOKENS`의 밀도(density) 값에서 x/y 축 padding을 분리할 때
+`.replace('p', 'px')` 문자열 조작은 금지된다. 각 density에 `paddingX`/`paddingY` 필드를 명시적으로 선언해야 한다.
+
+```bash
+# .replace('p', 'px') 패턴 탐지 (Tailwind padding 조작)
+grep -rn "\.replace('p',\s*'px')\|\.replace(\"p\",\s*\"px\")" \
+  apps/frontend --include="*.ts" --include="*.tsx"
+# → 0건 (SPACING_RHYTHM_TOKENS.tight.paddingX 직접 참조)
+
+# SPACING_RHYTHM_TOKENS paddingX/paddingY 필드 존재 확인
+grep -n "paddingX\|paddingY" apps/frontend/lib/design-tokens/semantic.ts
+# → 각 density(tight/comfortable/relaxed/spacious)에 paddingX, paddingY 존재
+```
+
+**PASS:** `.replace('p', 'px')` 0건, semantic.ts에 paddingX/paddingY 필드 존재.
+**FAIL:** 문자열 조작 발견 → `SPACING_RHYTHM_TOKENS.<density>.paddingX` 직접 참조로 교체.
+
+**16b: N×M 조합 타입을 실제 도달 가능 키로 좁히는 패턴 (NCGuidanceKeyReachable)**
+
+상태(N개) × 역할(M개) = N×M 전체 조합 타입을 `Record` 키로 쓰면, 실제 도달 불가능한 조합에 대해
+dead entry를 채워야 한다. 대신 실제 FSM이 반환하는 키만으로 구성된 **Reachable 타입**을 별도 정의해야 한다.
+
+```bash
+# NCGuidanceKeyReachable 타입이 non-conformance.ts에 정의되어 있는지 확인
+grep -n "NCGuidanceKeyReachable" \
+  apps/frontend/lib/design-tokens/components/non-conformance.ts
+# → export type NCGuidanceKeyReachable = ... (도달 가능한 11개 키)
+
+# NC_WORKFLOW_GUIDANCE_TOKENS가 NCGuidanceKeyReachable로 좁혀져 있는지 확인
+grep -n "Record<NCGuidanceKey" \
+  apps/frontend/lib/design-tokens/components/non-conformance.ts
+# → 0건 (NCGuidanceKeyReachable로 교체됨)
+
+# resolveNCGuidanceKey 반환 타입이 NCGuidanceKeyReachable인지 확인
+grep -n "NCGuidanceKeyReachable" apps/frontend/lib/non-conformances/guidance.ts
+grep -n "NCGuidanceKeyReachable" apps/frontend/components/non-conformances/GuidanceCallout.tsx
+```
+
+**PASS:** `Record<NCGuidanceKey, ...>` 0건, `resolveNCGuidanceKey`/`GuidanceCallout` props가 `NCGuidanceKeyReachable` 사용.
+**FAIL:** 도달 불가 조합에 dead entry 존재 → `NCGuidanceKeyReachable` 타입 도입 + `Record` 좁힘.
+
+**Related Files:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `SPACING_RHYTHM_TOKENS` (paddingX/paddingY SSOT)
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NCGuidanceKeyReachable`, `NC_WORKFLOW_GUIDANCE_TOKENS`
+- `apps/frontend/lib/non-conformances/guidance.ts` — `deriveGuidance()` 반환 타입
+- `apps/frontend/components/non-conformances/GuidanceCallout.tsx` — `guidanceKey: NCGuidanceKeyReachable`
+
+**상세:** [references/step-details.md](references/step-details.md) Step 16
+
 ### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
 
 배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
@@ -413,6 +466,8 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 13  | Dead Token 탐지 (0 usage exports) | PASS/INFO/FAIL | dead token 목록 |
 | 14  | Collapsible button: aria-expanded + aria-controls 쌍 | PASS/FAIL | aria-controls 누락 button 위치 |
 | 15  | staggerFadeInItem SSOT + NC_SPACING_TOKENS.detail 우회 금지 | PASS/FAIL | raw index 곱셈 또는 `'link'` ctaKind 잔재 위치 |
+| 16a | SPACING_RHYTHM_TOKENS `.replace()` 안티패턴 금지 | PASS/FAIL | `.replace('p','px')` 발견 위치 |
+| 16b | NCGuidanceKeyReachable narrowing (Record 타입 좁힘) | PASS/FAIL | `Record<NCGuidanceKey,...>` 잔재 또는 dead entry 존재 |
 ```
 
 ## Exceptions
