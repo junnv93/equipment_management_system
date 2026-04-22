@@ -5,6 +5,19 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-22 — checkout-subtab-ia + subtab-ssot-fix 후속 (63261b0d)
+
+### 2026-04-22: subtab-ia tech-debt 4건 해소 — WCAG / Select / QUERY_CONFIG / URL SSOT
+
+- [x] **🟡 MEDIUM QUERY_CONFIG 인라인 오버라이드** — `query-config.ts`에 `CHECKOUT_LIST/CHECKOUT_SUMMARY/CHECKOUT_DESTINATIONS` 프리셋 추가. `CheckoutsContent.tsx:141,149,165` + `OutboundCheckoutsTab.tsx` 교체. 4차 재발 종결.
+- [x] **🟡 MEDIUM Radix Select spurious onValueChange 가드 누락** — `handleStatusChange/handleLocationChange/handlePurposeChange/handlePeriodChange` 첫 라인에 `if (value === filters.X) return;` 가드 추가. 의도치 않은 URL 리셋 방지.
+- [x] **🟡 MEDIUM role="tabpanel" 내부 role="tablist" (WCAG 4.1.2)** — `CheckoutListTabs`(tablist)를 `role="tabpanel"` div 외부 sibling으로 이동. tabpanel에는 목록+페이지네이션만 잔류. axe-core 위반 해소.
+- [x] **🟢 LOW handlePageChange URL SSOT 이중 경로** — `handlePageChange` → `filtersToSearchParams({ ...filters, page: newPage })` 일원화. `URLSearchParams` 직접 조작 패턴 제거.
+- [x] **🟢 LOW handleSubTabChange URL 직접 조작** — `filtersToSearchParams({ ...filters, subTab: newSubTab, status: 'all', page: 1 })`으로 일원화. `useSearchParams` 직접 의존성 제거.
+- [x] **🟡 MEDIUM InboundCheckoutsTab CACHE_TIMES.SHORT 직접 지정 3곳** — inbound checkout → `CHECKOUT_LIST`, rental/internal import → `EQUIPMENT_IMPORT_LIST` 프리셋 교체. `query-config.ts`에 `EQUIPMENT_IMPORT_LIST` 신규 추가.
+
+---
+
 ## 2026-04-22 — checkout-lender-guard (harness Mode 1)
 
 ### 2026-04-22 harness: checkout-lender-guard — MEDIUM+LOW 보안 결함 수정 (0a3b851f)

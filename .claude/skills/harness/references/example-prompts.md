@@ -1843,7 +1843,7 @@ SSOT 주의:
 
 ---
 
-### 🟠 HIGH — PR-20: Backend 보안/SSOT 강화 — rejectReturn 스코프 순서 역전 + submitConditionCheck step 리터럴 + approveReturn 패리티 (Mode 1)
+### 🟡 MEDIUM — PR-20: Backend SSOT/패리티 — approveReturn checkTeamPermission 패리티 + approve 테스트 mock 수정 (Mode 1) [부분완료: 1·2번 ✅ 547485f5]
 
 ```
 배경 (2026-04-22 p1p3 + review-arch tech-debt):
@@ -1918,7 +1918,7 @@ SSOT 주의:
 
 ---
 
-### 🟡 MEDIUM — PR-21: 프론트엔드 구조 수정 — WCAG tablist 위치 + Radix Select 가드 + QUERY_CONFIG SSOT + URL 일원화 (Mode 1)
+### ~~🟡 MEDIUM — PR-21: 프론트엔드 구조 수정 — WCAG tablist 위치 + Radix Select 가드 + QUERY_CONFIG SSOT + URL 일원화 (Mode 1)~~ ✅
 
 ```
 배경 (2026-04-22 subtab-ia tech-debt 4건):
