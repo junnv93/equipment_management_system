@@ -10,11 +10,14 @@ import {
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type NextStepDescriptor,
 } from '@equipment-management/schemas';
 
 interface CheckoutMiniProgressProps {
   currentStatus: string;
   checkoutType: 'calibration' | 'repair' | 'rental';
+  /** FSM descriptor — 제공 시 currentStepIndex/totalSteps/urgency를 descriptor 기반으로 계산 */
+  descriptor?: NextStepDescriptor;
 }
 
 /**
@@ -27,7 +30,11 @@ interface CheckoutMiniProgressProps {
  * - rejected/canceled: XCircle 아이콘 (icon-only)
  * - 모바일: "단계명 (3/5)" 텍스트, 데스크톱: 도트 진행바
  */
-export function CheckoutMiniProgress({ currentStatus, checkoutType }: CheckoutMiniProgressProps) {
+export function CheckoutMiniProgress({
+  currentStatus,
+  checkoutType,
+  descriptor,
+}: CheckoutMiniProgressProps) {
   const t = useTranslations('checkouts');
   const isSpecial = (MINI_PROGRESS_SPECIAL_STATUSES as readonly string[]).includes(currentStatus);
 
@@ -44,14 +51,15 @@ export function CheckoutMiniProgress({ currentStatus, checkoutType }: CheckoutMi
     );
   }
 
-  const stepCount = CHECKOUT_MINI_PROGRESS.stepCount[checkoutType] ?? 4;
+  const stepCount = descriptor?.totalSteps ?? CHECKOUT_MINI_PROGRESS.stepCount[checkoutType] ?? 4;
   const isFullyComplete =
     currentStatus === CSVal.RETURN_APPROVED ||
     (checkoutType === CPVal.RENTAL && currentStatus === CSVal.LENDER_RECEIVED);
-  const isLate = currentStatus === CSVal.OVERDUE;
-  const currentStepIndex = isFullyComplete
-    ? stepCount
-    : (CHECKOUT_MINI_PROGRESS.statusToStepIndex[currentStatus] ?? 0);
+  // descriptor.urgency === 'critical'이면 overdue와 동일하게 late 처리
+  const isLate = currentStatus === CSVal.OVERDUE || descriptor?.urgency === 'critical';
+  const currentStepIndex =
+    descriptor?.currentStepIndex ??
+    (isFullyComplete ? stepCount : (CHECKOUT_MINI_PROGRESS.statusToStepIndex[currentStatus] ?? 0));
 
   const currentStepNumber = isFullyComplete ? stepCount : currentStepIndex + 1;
   const stepLabelKey = CHECKOUT_STEP_LABELS[currentStatus];

@@ -11,7 +11,14 @@
  * CRITICAL: CheckoutStatusBadge.tsx 상수 통합, 하드코딩 제거
  */
 
-import { FOCUS_TOKENS, MICRO_TYPO, DIMENSION_TOKENS } from '../semantic';
+import {
+  ELEVATION_TOKENS,
+  FOCUS_TOKENS,
+  MICRO_TYPO,
+  SPACING_RHYTHM_TOKENS,
+  TYPOGRAPHY_TOKENS,
+  DIMENSION_TOKENS,
+} from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticSolidBgClasses,
@@ -332,7 +339,7 @@ export const CHECKOUT_STEPPER_TOKENS = {
     desktop: 'w-10 h-10',
   },
 
-  /** 노드 상태별 스타일 (completed/current/pending) */
+  /** 노드 상태별 스타일 (completed/current/pending/next) */
   status: {
     completed: {
       node: 'bg-brand-ok/15',
@@ -348,6 +355,12 @@ export const CHECKOUT_STEPPER_TOKENS = {
       node: 'bg-brand-neutral/10',
       icon: 'text-brand-neutral/50',
       label: 'text-brand-text-muted',
+    },
+    /** 다음 단계 미리보기 — FSM descriptor.currentStepIndex+1 */
+    next: {
+      node: 'bg-brand-info/5 ring-2 ring-brand-info/40',
+      icon: 'text-brand-info',
+      label: 'text-brand-info font-medium',
     },
   },
 
@@ -396,6 +409,9 @@ export const CHECKOUT_STEPPER_TOKENS = {
 
 /**
  * Checkout 통계 카드 variant별 색상 (brand 시멘틱 토큰)
+ *
+ * valueTypography: 숫자 값 표시 타이포그래피 (TYPOGRAPHY_TOKENS 기반)
+ * elevation: 카드 배경 깊이 (ELEVATION_TOKENS.surface 기반)
  */
 export const CHECKOUT_STATS_VARIANTS = {
   total: {
@@ -404,6 +420,10 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-info/10',
     iconColor: 'text-brand-info',
     alertRing: '',
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
   pending: {
     hoverBorder: 'hover:border-brand-warning/30',
@@ -411,13 +431,21 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-warning/10',
     iconColor: 'text-brand-warning',
     alertRing: 'ring-1 ring-brand-warning/20',
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
   overdue: {
     hoverBorder: 'hover:border-brand-critical/30',
     activeBorder: 'border-brand-critical',
     activeBg: 'bg-brand-critical/10',
     iconColor: 'text-brand-critical',
-    alertRing: 'ring-2 ring-brand-critical/30 shadow-md',
+    alertRing: `ring-2 ring-brand-critical/30 ${ELEVATION_TOKENS.shadow.medium}`,
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
   /** @deprecated checkedOut과 동일 — checkedOut 사용 권장 */
   inProgress: {
@@ -426,6 +454,10 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-purple/10',
     iconColor: 'text-brand-purple',
     alertRing: '',
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
   checkedOut: {
     hoverBorder: 'hover:border-brand-purple/30',
@@ -433,6 +465,10 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-purple/10',
     iconColor: 'text-brand-purple',
     alertRing: '',
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
   returned: {
     hoverBorder: 'hover:border-brand-ok/30',
@@ -440,6 +476,10 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-ok/10',
     iconColor: 'text-brand-ok',
     alertRing: '',
+    elevation: ELEVATION_TOKENS.surface.raised,
+    valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
   },
 } as const;
 

@@ -209,6 +209,58 @@
     "rejected": "Rejected",
     "canceled": "Canceled"
   },
+  "fsm": {
+    "panelTitle": "Next Step",
+    "action": {
+      "approve": "Approve",
+      "approve_return": "Approve Return",
+      "borrower_receive": "Confirm Receipt",
+      "borrower_return": "Return",
+      "cancel": "Cancel",
+      "lender_check": "Lender Check",
+      "lender_receive": "Confirm Receipt",
+      "mark_in_use": "Start Use",
+      "reject": "Reject",
+      "reject_return": "Reject Return",
+      "start": "Start Checkout",
+      "submit_return": "Process Return",
+      "terminal": "Completed Checkout"
+    },
+    "hint": {
+      "pendingApprove": "Waiting for approver review.",
+      "waitingApprover": "Will be rejected after approver review.",
+      "pendingCancel": "The requester can cancel directly.",
+      "approvedStart": "Approved. Please start the checkout.",
+      "approvedLenderCheck": "Check the equipment condition and prepare for handover.",
+      "lenderCheckedBorrowerReceive": "The borrower needs to confirm receipt.",
+      "borrowerReceivedMarkInUse": "Starting use will be recorded.",
+      "inUseBorrowerReturn": "Press the return button when returning.",
+      "borrowerReturnedLenderReceive": "The lender should confirm receipt of the return.",
+      "checkedOutSubmitReturn": "Final approval by approver required after processing return.",
+      "overdueReturn": "Overdue. Please return immediately.",
+      "returnedApproveReturn": "Review the return and give final approval.",
+      "returnedRejectReturn": "Rejecting will return the equipment to checked-out status.",
+      "terminal": "All procedures are complete."
+    },
+    "actor": {
+      "requester": "Requester",
+      "approver": "Approver",
+      "logistics": "Logistics",
+      "lender": "Lender",
+      "borrower": "Borrower",
+      "system": "System",
+      "none": "N/A"
+    },
+    "blocked": {
+      "permission": "You do not have permission for this action.",
+      "role_mismatch": "This action is not for your role."
+    },
+    "urgency": {
+      "normal": "Normal",
+      "warning": "Warning",
+      "critical": "Critical"
+    }
+  },
   "condition": {
     "comparisonTitle": "Before/After Comparison",
     "comparisonDesc": "Equipment condition comparison before and after rental.",

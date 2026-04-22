@@ -63,8 +63,11 @@ import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
+import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { HandoverQRDisplay } from '@/components/checkouts/HandoverQRDisplay';
+import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
+import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -101,6 +104,13 @@ export default function CheckoutDetailClient({
     placeholderData: initialCheckout,
     staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
     refetchOnMount: false, // Server Component이 이미 최신 데이터 제공
+  });
+
+  // FSM 다음 단계 descriptor (feature flag on일 때만 실질적으로 사용)
+  const nextStepDescriptor = useCheckoutNextStep({
+    status: checkout.status,
+    purpose: checkout.purpose as import('@equipment-management/schemas').CheckoutPurpose,
+    dueAt: checkout.expectedReturnDate ?? null,
   });
 
   // 브레드크럼 동적 라벨 설정
@@ -473,6 +483,11 @@ export default function CheckoutDetailClient({
         </Alert>
       )}
 
+      {/* 다음 단계 안내 패널 (Feature Flag: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL) */}
+      {isNextStepPanelEnabled() && (
+        <NextStepPanel descriptor={nextStepDescriptor} checkoutId={checkout.id} />
+      )}
+
       {/* 상태 진행 표시 */}
       <Card>
         <CardHeader>
@@ -482,6 +497,11 @@ export default function CheckoutDetailClient({
           <CheckoutStatusStepper
             currentStatus={checkout.status}
             checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
+            nextStepIndex={
+              isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null
+                ? nextStepDescriptor.currentStepIndex + 1
+                : undefined
+            }
           />
         </CardContent>
       </Card>

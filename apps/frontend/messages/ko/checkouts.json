@@ -209,6 +209,58 @@
     "rejected": "거절됨",
     "canceled": "취소됨"
   },
+  "fsm": {
+    "panelTitle": "다음 단계",
+    "action": {
+      "approve": "승인",
+      "approve_return": "반입 승인",
+      "borrower_receive": "수령 확인",
+      "borrower_return": "반납",
+      "cancel": "취소",
+      "lender_check": "대여자 확인",
+      "lender_receive": "수령",
+      "mark_in_use": "사용 시작",
+      "reject": "반려",
+      "reject_return": "반입 반려",
+      "start": "반출 시작",
+      "submit_return": "반입 처리",
+      "terminal": "완료된 반출"
+    },
+    "hint": {
+      "pendingApprove": "승인자의 검토를 기다리고 있습니다.",
+      "waitingApprover": "승인자가 확인한 후 반려됩니다.",
+      "pendingCancel": "요청자가 직접 취소할 수 있습니다.",
+      "approvedStart": "승인되었습니다. 반출을 시작하세요.",
+      "approvedLenderCheck": "대여 장비 상태를 확인하고 인계 준비를 하세요.",
+      "lenderCheckedBorrowerReceive": "차용자가 수령을 확인해야 합니다.",
+      "borrowerReceivedMarkInUse": "사용을 시작하면 기록됩니다.",
+      "inUseBorrowerReturn": "반납 시 반납 버튼을 눌러 주세요.",
+      "borrowerReturnedLenderReceive": "대여자가 반납 수령을 확인하세요.",
+      "checkedOutSubmitReturn": "반입 처리 후 승인자 최종 승인 필요.",
+      "overdueReturn": "기한이 초과되었습니다. 즉시 반입하세요.",
+      "returnedApproveReturn": "반입 내용을 확인하고 최종 승인하세요.",
+      "returnedRejectReturn": "반입 검사 이상 시 반려하면 장비는 반출 상태로 복귀합니다.",
+      "terminal": "모든 절차가 완료되었습니다."
+    },
+    "actor": {
+      "requester": "요청자",
+      "approver": "승인자",
+      "logistics": "반출 담당자",
+      "lender": "대여자",
+      "borrower": "차용자",
+      "system": "시스템",
+      "none": "해당 없음"
+    },
+    "blocked": {
+      "permission": "현재 역할에는 이 작업 권한이 없습니다.",
+      "role_mismatch": "담당 역할이 아닙니다."
+    },
+    "urgency": {
+      "normal": "일반",
+      "warning": "주의",
+      "critical": "긴급"
+    }
+  },
   "condition": {
     "comparisonTitle": "상태 전후 비교",
     "comparisonDesc": "대여 전후 장비 상태 비교입니다.",

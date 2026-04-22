@@ -490,7 +490,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               </div>
             ) : (
               <EmptyState
-                variant="default"
+                variant="no-data"
                 icon={FileText}
                 title={t('detail.correction.emptyTitle')}
                 description={t('detail.correction.empty')}
@@ -534,7 +534,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 </div>
               ) : (
                 <EmptyState
-                  variant="default"
+                  variant="no-data"
                   icon={CheckCircle2}
                   title={t('detail.closure.emptyTitle')}
                   description={t('detail.closure.empty')}

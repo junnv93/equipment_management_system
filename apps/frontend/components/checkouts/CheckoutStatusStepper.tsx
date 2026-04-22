@@ -9,6 +9,8 @@ import { CHECKOUT_STEPPER_TOKENS, CHECKOUT_STEP_LABELS } from '@/lib/design-toke
 interface CheckoutStatusStepperProps {
   currentStatus: CheckoutStatus;
   checkoutType: 'calibration' | 'repair' | 'rental';
+  /** FSM descriptor 기반 다음 단계 인덱스 (0-based). 제공 시 next 노드 하이라이트. */
+  nextStepIndex?: number;
 }
 
 /**
@@ -62,6 +64,7 @@ const SPECIAL_STATUSES: CheckoutStatus[] = [CSVal.REJECTED, CSVal.CANCELED, CSVa
 export default function CheckoutStatusStepper({
   currentStatus,
   checkoutType,
+  nextStepIndex,
 }: CheckoutStatusStepperProps) {
   const t = useTranslations('checkouts');
   const steps = STEP_STATUSES[checkoutType] || STEP_STATUSES.calibration;
@@ -108,13 +111,16 @@ export default function CheckoutStatusStepper({
         {steps.map((status, index) => {
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
-          const isPending = currentIndex < index;
+          const isNext =
+            nextStepIndex !== undefined && index === nextStepIndex && !isCurrent && !isCompleted;
+          const isPending = !isCompleted && !isCurrent && !isNext;
 
           return (
             <div
               key={status}
               className="flex items-center gap-3"
               aria-current={isCurrent ? 'step' : undefined}
+              data-step-state={isNext ? 'next' : undefined}
             >
               {/* 아이콘 */}
               <div
@@ -123,6 +129,7 @@ export default function CheckoutStatusStepper({
                   CHECKOUT_STEPPER_TOKENS.node.mobile,
                   isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.node,
                   isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.node,
+                  isNext && CHECKOUT_STEPPER_TOKENS.status.next.node,
                   isPending && CHECKOUT_STEPPER_TOKENS.status.pending.node
                 )}
               >
@@ -134,11 +141,13 @@ export default function CheckoutStatusStepper({
                     )}
                   />
                 )}
-                {isCurrent && (
+                {(isCurrent || isNext) && (
                   <Circle
                     className={cn(
                       CHECKOUT_STEPPER_TOKENS.icon.mobile,
-                      CHECKOUT_STEPPER_TOKENS.status.current.icon
+                      isCurrent
+                        ? CHECKOUT_STEPPER_TOKENS.status.current.icon
+                        : CHECKOUT_STEPPER_TOKENS.status.next.icon
                     )}
                   />
                 )}
@@ -158,6 +167,7 @@ export default function CheckoutStatusStepper({
                   CHECKOUT_STEPPER_TOKENS.label.mobile,
                   isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.label,
                   isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.label,
+                  isNext && CHECKOUT_STEPPER_TOKENS.status.next.label,
                   isPending && CHECKOUT_STEPPER_TOKENS.status.pending.label
                 )}
               >
@@ -173,7 +183,9 @@ export default function CheckoutStatusStepper({
         {steps.map((status, index) => {
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
-          const isPending = currentIndex < index;
+          const isNext =
+            nextStepIndex !== undefined && index === nextStepIndex && !isCurrent && !isCompleted;
+          const isPending = !isCompleted && !isCurrent && !isNext;
           const isLast = index === steps.length - 1;
 
           return (
@@ -181,6 +193,7 @@ export default function CheckoutStatusStepper({
               key={status}
               className="flex items-center flex-1"
               aria-current={isCurrent ? 'step' : undefined}
+              data-step-state={isNext ? 'next' : undefined}
             >
               {/* 단계 */}
               <div className="flex flex-col items-center">
@@ -191,6 +204,7 @@ export default function CheckoutStatusStepper({
                     CHECKOUT_STEPPER_TOKENS.node.desktop,
                     isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.node,
                     isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.node,
+                    isNext && CHECKOUT_STEPPER_TOKENS.status.next.node,
                     isPending && CHECKOUT_STEPPER_TOKENS.status.pending.node
                   )}
                 >
@@ -202,11 +216,13 @@ export default function CheckoutStatusStepper({
                       )}
                     />
                   )}
-                  {isCurrent && (
+                  {(isCurrent || isNext) && (
                     <Circle
                       className={cn(
                         CHECKOUT_STEPPER_TOKENS.icon.desktop,
-                        CHECKOUT_STEPPER_TOKENS.status.current.icon
+                        isCurrent
+                          ? CHECKOUT_STEPPER_TOKENS.status.current.icon
+                          : CHECKOUT_STEPPER_TOKENS.status.next.icon
                       )}
                     />
                   )}
@@ -227,6 +243,7 @@ export default function CheckoutStatusStepper({
                     CHECKOUT_STEPPER_TOKENS.label.desktop,
                     isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.label,
                     isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.label,
+                    isNext && CHECKOUT_STEPPER_TOKENS.status.next.label,
                     isPending && CHECKOUT_STEPPER_TOKENS.status.pending.label
                   )}
                 >

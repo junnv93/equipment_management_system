@@ -200,10 +200,14 @@ export default function OutboundCheckoutsTab({
           (card.variantKey === 'pending' &&
             summary.pending > CHECKOUT_STATS_ALERT_THRESHOLD.pending);
 
+        const variantTokens = CHECKOUT_STATS_VARIANTS[card.variantKey];
         const finalCardClasses = [
           getCheckoutStatsClasses(card.variantKey, isActive, isAlert),
           CHECKOUT_MOTION.statsCard,
-        ].join(' ');
+          'elevation' in variantTokens ? variantTokens.elevation : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
 
         const IconComponent = card.icon;
         const iconColorClass = isActive
@@ -229,7 +233,13 @@ export default function OutboundCheckoutsTab({
               }
             }}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-3 px-3">
+            <CardHeader
+              className={
+                'headerPadding' in variantTokens
+                  ? variantTokens.headerPadding
+                  : 'flex flex-row items-center justify-between p-3'
+              }
+            >
               <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <span
                   className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${card.dotColor}`}
@@ -242,11 +252,20 @@ export default function OutboundCheckoutsTab({
                 aria-hidden="true"
               />
             </CardHeader>
-            <CardContent className="px-3 pb-3">
+            <CardContent
+              className={'contentPadding' in variantTokens ? variantTokens.contentPadding : 'p-3'}
+            >
               <div
-                className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular} ${
-                  card.variantKey === 'overdue' && card.value > 0 ? 'text-brand-critical' : ''
-                } ${card.variantKey === 'pending' && card.value > 0 ? 'text-brand-warning' : ''}`}
+                aria-label={`${'labelKey' in card ? String(card.labelKey) : ''} ${'value' in card ? String(card.value) : ''}건`}
+                className={[
+                  'valueTypography' in variantTokens
+                    ? variantTokens.valueTypography
+                    : `text-xl font-bold ${CONTENT_TOKENS.numeric.tabular}`,
+                  card.variantKey === 'overdue' && card.value > 0 ? 'text-brand-critical' : '',
+                  card.variantKey === 'pending' && card.value > 0 ? 'text-brand-warning' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 {card.value}
               </div>

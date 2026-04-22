@@ -79,18 +79,23 @@ export {
   FOCUS_TOKENS,
   REFETCH_OVERLAY_TOKENS,
   MICRO_TYPO,
+  TYPOGRAPHY_TOKENS,
   DIMENSION_TOKENS,
   EMPTY_STATE_TOKENS,
   SECTION_RHYTHM_TOKENS,
   getSectionRhythm,
+  SPACING_RHYTHM_TOKENS,
   CALLOUT_TOKENS,
   getCalloutClasses,
   URGENT_BADGE_TOKENS,
   type InteractiveSize,
   type MotionSpeed,
   type ElevationLayer,
+  type ElevationSurface,
   type EmptyStateVariant,
   type SectionRhythm,
+  type SpacingRhythm,
+  type TypographyScale,
   type CalloutVariant,
   type CalloutEmphasis,
   type CalloutSize,
@@ -711,6 +716,9 @@ export {
   PAGE_HEADER_ONBOARDING_TOKENS,
   PREMIUM_TABLE_TOKENS,
 } from './components/page-layout';
+
+// Workflow Panel
+export { WORKFLOW_PANEL_TOKENS, type WorkflowPanelUrgency } from './components/workflow-panel';
 
 // ============================================================================
 // Usage Guidelines

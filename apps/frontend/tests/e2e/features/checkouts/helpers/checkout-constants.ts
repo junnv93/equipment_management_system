@@ -42,7 +42,6 @@ import {
   CHECKOUT_009_ID,
   CHECKOUT_011_ID,
   CHECKOUT_013_ID,
-  CHECKOUT_014_ID,
   CHECKOUT_015_ID,
   CHECKOUT_016_ID,
   CHECKOUT_017_ID,
@@ -64,7 +63,6 @@ import {
   CHECKOUT_041_ID,
   CHECKOUT_042_ID,
   CHECKOUT_044_ID,
-  CHECKOUT_046_ID,
   CHECKOUT_048_ID,
   CHECKOUT_050_ID,
   CHECKOUT_052_ID,
@@ -238,6 +236,20 @@ export const SUITE_19 = {
 export const SUITE_20 = {
   PENDING_FOR_APPROVE: CHECKOUT_052_ID, // Suwon, return_approved, repair → reset to pending
   APPROVED_FOR_START: CHECKOUT_011_ID, // Suwon, approved, repair → reset to approved
+} as const;
+
+// ============================================================================
+// Suite NS: Next-Step Panel (parallel, read-only) — Suwon 시드
+// NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true 환경에서만 의미 있음
+// ============================================================================
+export const SUITE_NS = {
+  PENDING_CAL: CHECKOUT_001_ID, // Suwon, pending, calibration
+  APPROVED_CAL: CHECKOUT_009_ID, // Suwon, approved, calibration
+  CHECKED_OUT_CAL: CHECKOUT_019_ID, // Suwon, checked_out, calibration
+  OVERDUE_CAL: CHECKOUT_059_ID, // Suwon, overdue, calibration (공유: Suite 01/17)
+  LENDER_CHECKED_RENTAL: CHECKOUT_027_ID, // Suwon, lender_checked, rental (공유: Suite 10)
+  RETURNED_CAL: CHECKOUT_042_ID, // Suwon, returned, calibration (공유: Suite 07)
+  RETURN_APPROVED_CAL: CHECKOUT_050_ID, // Suwon, return_approved, calibration (공유: Suite 01)
 } as const;
 
 // ============================================================================

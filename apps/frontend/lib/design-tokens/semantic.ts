@@ -225,6 +225,22 @@ export const ELEVATION_TOKENS = {
     prominent: ELEVATION_PRIMITIVES.shadow.lg,
     dramatic: ELEVATION_PRIMITIVES.shadow.xl,
   },
+
+  /**
+   * 표면 계층 (Surface Layer)
+   *
+   * 카드/패널 배경 깊이를 shadow + ring 조합으로 표현.
+   * z-index(layer)와 독립 — 시각적 레이어링에만 사용.
+   *
+   * flush:    배경과 동일 (인라인 정보, 테이블 행)
+   * raised:   카드 계층 (정보 카드, KPI, 통계)
+   * floating: 액션 영역 (NextStepPanel, ActionBar, 드롭다운 대안)
+   */
+  surface: {
+    flush: '',
+    raised: 'shadow-sm',
+    floating: 'shadow-md ring-1 ring-border/10',
+  },
 } as const;
 
 /**
@@ -262,6 +278,22 @@ export type SectionRhythm = keyof typeof SECTION_RHYTHM_TOKENS;
 export function getSectionRhythm(density: SectionRhythm = 'comfortable'): string {
   return SECTION_RHYTHM_TOKENS[density];
 }
+
+/**
+ * Spacing Rhythm Tokens (컴포넌트 내부 간격 리듬)
+ *
+ * SECTION_RHYTHM_TOKENS(섹션 간 수직 간격)와 구분:
+ * 이 토큰은 단일 컴포넌트 내부의 padding/gap/stack 리듬.
+ * 카드, 패널, 폼 등 재사용 컴포넌트에서 density prop으로 활용.
+ */
+export const SPACING_RHYTHM_TOKENS = {
+  tight: { padding: 'p-3', gap: 'gap-2', stack: 'space-y-2' },
+  comfortable: { padding: 'p-4', gap: 'gap-3', stack: 'space-y-3' },
+  relaxed: { padding: 'p-5', gap: 'gap-4', stack: 'space-y-4' },
+  spacious: { padding: 'p-6', gap: 'gap-5', stack: 'space-y-5' },
+} as const;
+
+export type SpacingRhythm = keyof typeof SPACING_RHYTHM_TOKENS;
 
 /**
  * Focus Tokens (포커스 상태)
@@ -330,6 +362,38 @@ export const REFETCH_OVERLAY_TOKENS = {
   /** 스피너 아이콘 */
   spinner: 'h-5 w-5 text-brand-text-muted motion-safe:animate-spin',
 } as const;
+
+/**
+ * Typography Tokens (타이포그래피 스케일)
+ *
+ * heading/body/label/caption 4계층 semantic 타이포그래피.
+ * MICRO_TYPO(배지·레이블 전용)와 구분: 이 토큰은 본문·제목·설명 레이아웃용.
+ *
+ * 금지: text-[<px>] arbitrary — WCAG SC 1.4.4 접근성 하한 위반
+ */
+export const TYPOGRAPHY_TOKENS = {
+  heading: {
+    h1: 'text-2xl font-bold leading-tight tracking-tight',
+    h2: 'text-xl font-semibold leading-snug',
+    h3: 'text-lg font-semibold leading-snug',
+    h4: 'text-base font-semibold leading-snug',
+  },
+  body: {
+    base: 'text-sm leading-normal',
+    large: 'text-base leading-relaxed',
+    small: 'text-xs leading-normal',
+  },
+  label: {
+    base: 'text-xs font-medium uppercase tracking-wide text-muted-foreground',
+    compact: 'text-2xs font-semibold uppercase tracking-wide',
+  },
+  caption: {
+    base: 'text-xs text-muted-foreground',
+    meta: 'text-xs-tight text-muted-foreground tabular-nums',
+  },
+} as const;
+
+export type TypographyScale = keyof typeof TYPOGRAPHY_TOKENS;
 
 /**
  * Micro Typography Tokens (마이크로 타이포그래피)
@@ -494,4 +558,5 @@ export const URGENT_BADGE_TOKENS = {
 export type InteractiveSize = keyof typeof INTERACTIVE_TOKENS.size;
 export type MotionSpeed = keyof typeof MOTION_TOKENS.transition;
 export type ElevationLayer = keyof typeof ELEVATION_TOKENS.layer;
+export type ElevationSurface = keyof typeof ELEVATION_TOKENS.surface;
 export type EmptyStateVariant = keyof typeof EMPTY_STATE_TOKENS.variantIconColor;

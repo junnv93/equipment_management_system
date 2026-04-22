@@ -24,6 +24,7 @@ import type { SemanticColorKey } from '../brand';
 import { getSemanticContainerColorClasses, getSemanticLeftBorderClasses } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
 import {
+  ELEVATION_TOKENS,
   FOCUS_TOKENS,
   MICRO_TYPO,
   URGENT_BADGE_TOKENS,
@@ -66,15 +67,11 @@ export function ncStatusToSemantic(status: string): SemanticColorKey {
 /**
  * NC 페이지 elevation 체계
  *
- * - flush:    배경과 동일 — 필터 바, 페이지네이션
- * - raised:   카드 계층 — KPI 카드, 정보 카드, Collapsible
- * - floating: 액션 영역 — ActionBar (가장 중요한 인터랙션)
+ * ELEVATION_TOKENS.surface re-export — 글로벌 SSOT로 통합됨.
+ * @deprecated 신규 코드에서는 ELEVATION_TOKENS.surface 직접 사용.
+ *             하위 호환 유지 (3주 후 제거 예정).
  */
-export const NC_ELEVATION = {
-  flush: '',
-  raised: 'shadow-sm',
-  floating: 'shadow-md ring-1 ring-border/10',
-} as const;
+export const NC_ELEVATION = ELEVATION_TOKENS.surface;
 
 // ============================================================================
 // 1. NC_BANNER_TOKENS — 부적합 배너 (장비 상세 페이지)
@@ -199,7 +196,7 @@ export const NC_KPI_CARD_TOKENS = {
     'bg-card border border-border/60 rounded-lg p-4',
     'flex items-center gap-3.5',
     'border-l-4',
-    NC_ELEVATION.raised,
+    ELEVATION_TOKENS.surface.raised,
     TRANSITION_PRESETS.fastBgBorder,
   ].join(' '),
   /** 카드 hover — hover: prefix 필요로 NC_ELEVATION 직접 참조 불가 (Tailwind JIT 제약).
@@ -408,10 +405,10 @@ export function getNCMiniConnectorClasses(
  * open → corrected → closed
  */
 export const NC_WORKFLOW_TOKENS = {
-  /** 전체 컨테이너 — NC_ELEVATION.raised (raised 계층: 워크플로우는 카드보다 상위 정보) */
-  container: [`bg-card border border-border/60 rounded-lg p-6 sm:p-7 ${NC_ELEVATION.raised}`].join(
-    ' '
-  ),
+  /** 전체 컨테이너 — ELEVATION_TOKENS.surface.raised (raised 계층: 워크플로우는 카드보다 상위 정보) */
+  container: [
+    `bg-card border border-border/60 rounded-lg p-6 sm:p-7 ${ELEVATION_TOKENS.surface.raised}`,
+  ].join(' '),
   /** 컨테이너 — 긴급 (장기 미조치) */
   containerUrgent: 'border-brand-critical/30',
   /** 스텝 레이아웃 — flex sibling 패턴, relative 불필요 */
@@ -542,7 +539,7 @@ export const NC_INFO_CARD_TOKENS = {
   /** 그리드 레이아웃 */
   grid: 'grid grid-cols-1 md:grid-cols-2 gap-4',
   /** 카드 공통 */
-  card: `bg-card border border-border/60 rounded-lg p-5 ${NC_ELEVATION.raised}`,
+  card: `bg-card border border-border/60 rounded-lg p-5 ${ELEVATION_TOKENS.surface.raised}`,
   /** 카드 제목 */
   cardTitle: 'text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-3.5',
   /** 정보 행 */
@@ -576,7 +573,7 @@ export const NC_INFO_CARD_TOKENS = {
  */
 export const NC_COLLAPSIBLE_TOKENS = {
   /** 컨테이너 (overflow-hidden을 contentWrapper로 이동 — shadow 클리핑 방지) */
-  container: `bg-card border border-border/60 rounded-lg ${NC_ELEVATION.raised}`,
+  container: `bg-card border border-border/60 rounded-lg ${ELEVATION_TOKENS.surface.raised}`,
   /** 트리거 버튼 */
   trigger: [
     'flex items-center justify-between w-full px-5 py-4',
@@ -618,10 +615,10 @@ export const NC_COLLAPSIBLE_TOKENS = {
 export const NC_ACTION_BAR_TOKENS = {
   /** sticky 래퍼 — 스크롤 시 하단 고정 */
   stickyWrapper: 'sticky bottom-4 z-10',
-  /** 컨테이너 — NC_ELEVATION.floating으로 ActionBar가 카드보다 시각적으로 우선 */
+  /** 컨테이너 — ELEVATION_TOKENS.surface.floating으로 ActionBar가 카드보다 시각적으로 우선 */
   container: [
     'flex flex-col sm:flex-row items-center justify-between gap-3',
-    `bg-card border border-border/60 rounded-lg px-5 py-4 ${NC_ELEVATION.floating}`,
+    `bg-card border border-border/60 rounded-lg px-5 py-4 ${ELEVATION_TOKENS.surface.floating}`,
   ].join(' '),
   /** 좌측 (상태 변경 + 저장) */
   left: 'flex items-center gap-2',
@@ -904,6 +901,56 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry>
     stepBadgeKey: 'three',
     ctaKind: 'none',
   },
+  // _all variants: resolveNCGuidanceKey does not produce these — present for Record<NCGuidanceKey, …> exhaustiveness
+  open_all: {
+    variant: 'warning',
+    emphasis: 'leftBorder',
+    icon: 'AlertTriangle',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openRejected_all: {
+    variant: 'warning',
+    emphasis: 'leftBorder',
+    icon: 'AlertTriangle',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openBlockedRepair_all: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  openBlockedRecalibration_all: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+  },
+  corrected_all: {
+    variant: 'info',
+    emphasis: 'leftBorder',
+    icon: 'Clock',
+    stepBadgeKey: 'two',
+    ctaKind: 'none',
+  },
+  closed_operator: {
+    variant: 'ok',
+    emphasis: 'leftBorder',
+    icon: 'Lock',
+    stepBadgeKey: 'three',
+    ctaKind: 'none',
+  },
+  closed_manager: {
+    variant: 'ok',
+    emphasis: 'leftBorder',
+    icon: 'Lock',
+    stepBadgeKey: 'three',
+    ctaKind: 'none',
+  },
 } as const;
 
 export function resolveNCGuidanceKey(args: {
@@ -1015,7 +1062,7 @@ export const NC_REPAIR_RESULT_LABELS: Record<string, string> = {
  * 기존 raw Tailwind 직접 사용 제거 — NC_*_TOKENS 체계 일관성 확보
  */
 export const NC_DOCUMENTS_SECTION_TOKENS = {
-  container: `rounded-lg border border-border/60 bg-card p-4 space-y-3 ${NC_ELEVATION.raised}`,
+  container: `rounded-lg border border-border/60 bg-card p-4 space-y-3 ${ELEVATION_TOKENS.surface.raised}`,
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold flex items-center gap-2',
   titleIcon: 'h-4 w-4',

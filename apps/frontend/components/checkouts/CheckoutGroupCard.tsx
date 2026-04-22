@@ -26,12 +26,18 @@ import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, getPermissions } from '@equipment-management/shared-constants';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  getNextStep,
   type CheckoutStatus,
+  type CheckoutPurpose,
+  type NextStepDescriptor,
 } from '@equipment-management/schemas';
+import { useSession } from 'next-auth/react';
+import type { UserRole } from '@equipment-management/schemas';
+import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
 import {
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
@@ -168,13 +174,30 @@ function CheckoutGroupCard({
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup); // 기한 초과 그룹은 기본 펼침
 
+  // FSM descriptor 계산용 permissions (feature flag on일 때만 사용)
+  const { data: session } = useSession();
+  const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  const userPermissions = useMemo(() => getPermissions(role) as readonly string[], [role]);
+
   // ──────────────────────────────────────────────
   // 장비 행 데이터 (checkout > equipment[] 평탄화)
   // ──────────────────────────────────────────────
   const equipmentRows = useMemo(
     () =>
-      group.checkouts.flatMap((checkout) =>
-        (checkout.equipment || []).map((equip) => ({
+      group.checkouts.flatMap((checkout) => {
+        // N+1 훅 방지: useMemo 내부에서 getNextStep 직접 호출
+        const descriptor: NextStepDescriptor | undefined = isNextStepPanelEnabled()
+          ? getNextStep(
+              {
+                status: checkout.status,
+                purpose: checkout.purpose as CheckoutPurpose,
+                dueAt: checkout.expectedReturnDate ?? null,
+              },
+              userPermissions
+            )
+          : undefined;
+
+        return (checkout.equipment || []).map((equip) => ({
           equipmentId: equip.id,
           equipmentName: equip.name,
           managementNumber: equip.managementNumber,
@@ -188,9 +211,10 @@ function CheckoutGroupCard({
           destination: checkout.destination || checkout.location,
           // 서버가 계산한 가능한 액션 우선, 없으면 역할 기반 폴백
           canApproveItem: checkout.meta?.availableActions?.canApprove ?? canApprove,
-        }))
-      ),
-    [group.checkouts, t, canApprove]
+          descriptor,
+        }));
+      }),
+    [group.checkouts, t, canApprove, userPermissions]
   );
 
   // 그룹 내 pending 건수 + 일괄 승인 가능 여부
@@ -465,6 +489,7 @@ function CheckoutGroupCard({
                         <CheckoutMiniProgress
                           currentStatus={row.status}
                           checkoutType={row.checkoutType}
+                          descriptor={row.descriptor}
                         />
                         <CheckoutStatusBadge
                           status={row.status}
