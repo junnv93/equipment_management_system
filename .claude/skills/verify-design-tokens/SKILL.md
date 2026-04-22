@@ -438,6 +438,54 @@ node scripts/self-audit.mjs --all 2>&1 | grep "⑨ hex"
 
 **예외**: JSDoc `/* */` 주석, `:root{}` CSS 변수 정의 블록 내 hex는 자동 제외됨
 
+### Step 18: UI 파생 상태 값 객체 `satisfies` 제약 + barrel export (2026-04-22 추가)
+
+DB에 저장되지 않는 UI 전용 상태(`IntermediateCheckStatusKey` 등)를 dot-notation으로 접근하는
+`*StatusValues` 상수는 반드시 `as const satisfies Record<string, *Key>` 제약을 사용해야 한다.
+이 제약은 토큰 맵(`*_TOKENS`)에 새 키가 추가될 때 Values 객체도 강제 업데이트되도록 보장한다.
+
+**올바른 패턴 (ISVal 기준):**
+```typescript
+// ✅ SSOT — satisfies로 양방향 동기화 강제
+export type IntermediateCheckStatusKey = keyof typeof INTERMEDIATE_CHECK_STATUS_TOKENS;
+export const IntermediateCheckStatusValues = {
+  OVERDUE: 'overdue',
+  TODAY: 'today',
+  UPCOMING: 'upcoming',
+  FUTURE: 'future',
+} as const satisfies Record<string, IntermediateCheckStatusKey>;
+
+// 컴포넌트에서 ISVal 별칭 사용
+import { IntermediateCheckStatusValues as ISVal } from '@/lib/design-tokens';
+if (status === ISVal.OVERDUE) { ... }  // ✅ 리터럴 직접 비교 금지
+```
+
+**탐지:**
+```bash
+# satisfies 제약 없는 *StatusValues 탐지
+grep -rn "export const.*StatusValues" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts" \
+  | grep -v "satisfies"
+
+# index.ts barrel에 누락된 StatusValues export 탐지
+grep -oP "export const \K\w+StatusValues" \
+  apps/frontend/lib/design-tokens/components/*.ts 2>/dev/null \
+  | while read name; do
+    grep -q "$name" apps/frontend/lib/design-tokens/index.ts \
+      || echo "MISSING barrel: $name"
+  done
+```
+
+**PASS:** 모든 `*StatusValues`에 `satisfies` 제약 존재 + 모두 `index.ts` barrel export.
+**FAIL:** `satisfies` 미사용 → `as const satisfies Record<string, *Key>` 추가. barrel 누락 → `index.ts`에 export 추가.
+
+**현재 등록된 패턴 (2026-04-22 기준):**
+- `IntermediateCheckStatusValues` (ISVal) — `components/software.ts:343` — UI 파생 (중간점검 표시 상태)
+
+**주의:** DB 저장 enum의 Values 객체 (`CheckoutStatusValues`, `EquipmentStatusValues` 등)는
+`packages/schemas/`에서 관리하며 이 Step의 검사 대상이 아님. Design-tokens layer 전용 Step.
+
 ### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
 
 배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
@@ -482,6 +530,7 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 16a | SPACING_RHYTHM_TOKENS `.replace()` 안티패턴 금지 | PASS/FAIL | `.replace('p','px')` 발견 위치 |
 | 16b | NCGuidanceKeyReachable narrowing (Record 타입 좁힘) | PASS/FAIL | `Record<NCGuidanceKey,...>` 잔재 또는 dead entry 존재 |
 | 17  | hex 색상 하드코딩 감지 (checkouts/**) | PASS/FAIL | `[⑨ hex 색상]` 위반 위치 목록 |
+| 18  | UI 파생 `*StatusValues` `satisfies` 제약 + barrel export | PASS/FAIL | satisfies 미사용 또는 index.ts 누락 위치 |
 ```
 
 ## Exceptions

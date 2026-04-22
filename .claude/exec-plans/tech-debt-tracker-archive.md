@@ -341,3 +341,15 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-21 verify-ssot] 🟠 HIGH `'calibration_certificate'` 리터럴** — 2026-04-21 완료. `DocumentTypeValues.CALIBRATION_CERTIFICATE` 교체 (service 6 + controller 1 + spec 3곳).
 - [x] **[2026-04-21 verify-hardcoding] 🟡 MEDIUM `queryKey: ['auth', 'providers']` 하드코딩** — 2026-04-21 완료. `queryKeys.auth.providers()` 네임스페이스 추가 + `AuthProviders.tsx` 경유.
 - [x] **[2026-04-21 verify-hardcoding] 🟢 LOW `EXPORTABLE_STATUSES` 리터럴** — 2026-04-21 완료. `ValidationStatusValues.SUBMITTED/.APPROVED/.QUALITY_APPROVED` 경유.
+
+### 2026-04-22 harness: fsm-literal-audit (PR-24 세션)
+
+- [x] **[2026-04-22 checkout-arch-pr3-11] 🟢 LOW self-audit ⑧ 기존 파일 7건 FSM 리터럴 위반** — ✅ 2026-04-22 fsm-literal-audit harness 분석 완료: 7개 파일 모두 CheckoutStatus FSM 값 아님. 5개(CreateEquipmentContent/ResultSection/CreateNC/NCDocuments/document-upload): Promise.allSettled JS 표준 'rejected'/'fulfilled'로 CSVal 변환 불가 (의미론적 오류). 2개(IntermediateCheckAlert:153,219): IntermediateCheckStatusKey 로컬 변수 비교, ESLint MemberExpression 규칙 비발동. NCDocumentsSection.tsx:78 `; self-audit-exception` 태그 추가 완료. pnpm lint PASS.
+- [x] **[2026-04-22 nc-p4-guidance] 🟢 LOW pre-existing ⑧ FSM 리터럴 7건 (NC/IntermediateCheck/document 영역)** — ✅ checkout-arch-pr3-11 항목과 동일. fsm-literal-audit 분석으로 닫힘. 모두 비-CSVal 도메인 (Promise.allSettled / UploadedFile UI / IntermediateCheckStatusKey). 전환 불필요, 기존 eslint-disable 예외 올바름.
+- [x] **[2026-04-22 fsm-literal-audit] 🟢 LOW self-audit.md 문서 미반영** — ✅ 2026-04-22 `docs/references/self-audit.md` "9대 아키텍처 원칙"으로 갱신 완료. ⑧ FSM 리터럴 / ⑨ hex 색상 섹션 추가 + self-audit-exception 마커 위치표 추가. `verify-design-tokens` Step 18 (ISVal `satisfies` 제약) 추가.
+- [x] **[2026-04-22 subtab-ia] 🟢 LOW verify-zod: verifyHandoverToken @UseInterceptors 누락 (기존 파일)** — ✅ 2026-04-22 PR-22 세션에서 `checkouts.controller.ts:194`에 `@UseInterceptors(ZodSerializerInterceptor)` 추가 완료.
+
+### 2026-04-22 harness: checkout-lender-guard-p1p3 (PR-20 세션)
+
+- [x] **[2026-04-22 review-arch] 🟢 LOW approveReturn checkTeamPermission 미적용** — ✅ 2026-04-22 PR-20 세션에서 `approveReturn`에 `checkTeamPermission` 루프 추가 완료 (ClassificationEnum.enum SSOT 참조). CROSS_TEAM_FORBIDDEN 테스트도 추가. approve/rejectReturn 패리티 달성.
+- [x] **[2026-04-22 p1p3] 🟢 LOW approve 테스트 mockDrizzle.where.then 오버라이드 패턴 비작동** — ✅ 2026-04-22 PR-20 세션에서 `describe('approve')` success/LENDER_TEAM_ONLY 테스트의 `mockDrizzle.where.then` → `mockChain.then` 오버라이드 패턴으로 완전 교체 완료. approveReturn 테스트 패턴과 통일.

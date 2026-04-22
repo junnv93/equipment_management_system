@@ -1483,3 +1483,19 @@ BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequentia
 > 검증: 3건 모두 42차 harness Batch A2/A3에서 이미 수정 완료. (1) ResultSectionsPanel.tsx:216-247 — moveUp/moveDown/editSection/deleteSection aria-label 적용, (2) result-sections.service.ts:100 — `Partial<NewInspectionResultSection>` 사용 중, (3) inspection-result-sections.ts:74 — updatedBy 컬럼 + 인덱스 + JSDoc 완비.
 
 ---
+
+---
+
+## 반출입 관리 — 완료 항목 (2026-04-22 81차 정리)
+
+### ~~🔴 CRITICAL — PR-1: FSM SSOT 도입 — `checkout-fsm.ts` + unit tests (Mode 1)~~ ✅
+
+> 완료: checkout-fsm.ts(packages/schemas/src/fsm/), CheckoutAction/NextActor/TransitionRule/NextStepDescriptor 타입, CHECKOUT_TRANSITIONS 전이 테이블(calibration/repair 5단, rental 7단), getNextStep/canPerformAction/computeStepIndex/computeUrgency 공개 API, assertFsmInvariants 불변식 검증, checkout-fsm.test.ts 10개 스냅샷 PASS.
+
+### ~~🔴 CRITICAL — PR-2: Backend FSM 통합 — guard 교체 + audit + cache event (Mode 2)~~ ✅
+
+> 완료: checkouts.service.ts 8개 guard site → canPerformAction() 교체, calculateAvailableActions FSM 기반 재구현, buildNextStep 메서드 + CheckoutWithMeta.nextStep 필드 추가, AuditLogService.create() 전이 8곳 연결, emitAsync 페이로드 nextActor 확장, checkouts.fsm.e2e-spec.ts 신규(valid/invalid 전이 + 권한 + audit_logs 확인).
+
+### ~~🟡 MEDIUM — PR-21: 프론트엔드 구조 수정 — WCAG tablist 위치 + Radix Select 가드 + QUERY_CONFIG SSOT + URL 일원화 (Mode 1)~~ ✅
+
+> 완료(2026-04-22): OutboundCheckoutsTab tablist → tabpanel sibling으로 이동(WCAG 4.1.2), CheckoutsContent.tsx 4개 Select 핸들러 spurious 가드 추가, QUERY_CONFIG.checkout 프리셋 신규 + staleTime 3곳 교체, handlePageChange/handleSubTabChange → filtersToSearchParams 경유 일원화.
