@@ -5,6 +5,59 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-22 — checkout-lender-guard (harness Mode 1)
+
+### 2026-04-22 harness: checkout-lender-guard — MEDIUM+LOW 보안 결함 수정 (0a3b851f)
+
+- [x] **🟡 MEDIUM approve lenderTeam identity-rule 강제** — `if (... && approverTeamId)` → `if (...)` + `if (!approverTeamId || ...)` 패턴. 팀 미소속 사용자 RENTAL 승인 바이패스 차단. 928 tests PASS.
+- [x] **🟡 MEDIUM rejectReturn lenderTeam identity-rule 강제** — 동일 패턴. `rejectReturn` L2032 수정.
+- [x] **🟢 LOW approve NO_EQUIPMENT 가드 추가** — `if (!firstEquip) throw BadRequestException(NO_EQUIPMENT)` — `enforceScopeFromData` 이전 배치.
+- [x] **🟢 LOW rejectReturn NO_EQUIPMENT 가드 추가** — 동일 패턴. `rejectReturn` L2009 수정.
+
+---
+
+## 2026-04-22 — checkout-fsm + checkouts cleanup + design-token arbitrary text
+
+### 2026-04-22 harness: checkout-fsm-backend (PR-2) review-architecture 후속
+
+- [x] **🟡 MEDIUM CHECKOUT_FORBIDDEN을 400→403으로 수정** — 완료 (db7f5be3)
+- [x] **🟡 MEDIUM approve-return/reject-return 컨트롤러 가드 FSM과 정렬** — 완료 (db7f5be3)
+- [x] **🟡 MEDIUM writeTransitionAudit 실패 명시적 로깅** — 완료 (refactor로 캡슐화 4c9db711)
+- [x] **🟡 MEDIUM approve guard VIEW_CHECKOUTS → APPROVE_CHECKOUT** — 완료 (4c9db711)
+- [x] **🟡 MEDIUM rejectReturn lenderTeam BadRequestException → ForbiddenException** — 완료 (d27fd09b)
+- [x] **🟡 MEDIUM ConflictException 4개 메서드 catch 블록 누락** — 완료 (d27fd09b)
+- [x] **[PR-2] 🟢 LOW CheckoutErrorCode enum 도입** — ✅ `checkout-error-codes.ts` 신규 생성 (23개 코드, JSDoc), service.ts 인라인 30건 전환.
+- [x] **[PR-2] 🟢 LOW rejectReturn 스코프 검증 무조건 실행** — ✅ `enforceScopeFromData` 호출을 approverTeamId 조건 밖으로 이동. 방어선 일관성 확보.
+- [x] **[PR-2] 🟢 LOW reject 엔드포인트 반려 사유 검증 이중 위치** — ✅ controller.ts L465-470 중복 검증 블록 제거, 서비스 단일 경로로 통일.
+
+### 2026-04-22 harness: checkout-fsm-backend PR-2 후속
+
+- [x] **[PR-2] 🔴 HIGH checkout-fsm E2E 격리 검증 필요** — ✅ 18/18 PASS (라이브 DB). approve_return 테스트 기대값 수정 — guard APPROVE_CHECKOUT 강화로 `AUTH_INSUFFICIENT_PERMISSIONS` 반환 (이전: `CHECKOUT_FORBIDDEN`). 격리 완전 검증.
+- [x] **[PR-2] 🟢 LOW checkout service spec mockReq permissions 패턴 문서화** — ✅ `docs/references/backend-patterns.md` "FSM assertFsmAction 서비스 테스트 픽스처 패턴" 섹션 추가.
+- [x] **[PR-2] 🟡 MEDIUM approve (최초 승인) 엔드포인트 guard 과소제어** — ✅ 확인 결과 이미 APPROVE_CHECKOUT으로 설정됨. Evaluator 오탐. E2E 기대값(CHECKOUT_FORBIDDEN→AUTH_INSUFFICIENT_PERMISSIONS) 수정 완료.
+
+### 2026-04-21 harness: checkout-fsm-schemas PR-1 후속
+
+- [x] **[PR-1] 🟢 LOW canPerformAction 권한 매트릭스 5 role 미완성** — ✅ quality_manager(조회전용 3케이스) + lab_manager(전체권한 4케이스) describe 블록 추가. 18/18 E2E PASS와 함께 검증.
+
+### 2026-04-21 harness: 78-1 typo-primitives-checkout-ssot 후속
+
+- [x] **[78-1] 🟡 MEDIUM `checkout.ts:197` `w-[18px] h-[18px]` 잔존** — ✅ `--spacing-step-dot` @theme + `DIMENSION_TOKENS.stepDot` 3-layer 적용.
+- [x] **[78-8] 🟢 LOW top-3 도메인 arbitrary text-[Npx] 53건 제거** — ✅ MICRO_TYPO.meta(11px)/detail(13px) 신규 토큰 + globals.css @theme + primitives.ts 3-way SSOT 체인. non-conformance.ts(21건), audit.ts(18건), dashboard.ts(14건) 적용. display 크기(`text-[5rem]`/`text-[56px]`) 예외 유지.
+- [x] **[78-1] 🟢 LOW 잔여 design-tokens 도메인 arbitrary text-[Npx] ~37건** — ✅ text-sm-wide(15px) 신규 3-layer 토큰 + MICRO_TYPO.siteTitle 추가. team/settings/approval/equipment/sidebar/calibration-plans/mobile-nav/software.ts 8개 파일 전량 처리. 11.5px→meta(11), 12.5px→text-xs(12) 라운딩. display 예외 보존.
+- [x] CheckoutGroupCard 행 `div role="button"` → `<button>` 시맨틱 — ✅ 내부 `<Button>/<Link>` 중첩으로 `<button>` 사용 불가 (HTML5 spec). `div[role=button]` + WCAG 준수 패턴 유지 + 명시적 주석 추가.
+- [x] **[78-7] 🟡 MEDIUM InboundCheckoutsTab 전역 isLoading vs 섹션별 로딩 dead code** — ✅ 전역 가드 제거 + `isAnyLoading` 가드로 전체 빈상태 보호.
+- [x] **[78-7] 🟢 LOW EmptyState `useAuth()` 직접 호출 → props 주입 패턴** — ✅ `canAct?: boolean` prop 추가, useAuth 제거, 3 소비처 업데이트.
+
+### 2026-04-21 harness: checkout-78-round2 후속
+
+- [x] **[78-r2] 🟢 LOW renderLoadingState 중복 제거** — ✅ `CheckoutListSkeleton`에 `label`/`srOnly` props + `aria-busy` 추가, 양 탭 파일의 로컬 함수 제거.
+- [x] **[78-r2] 🟢 LOW Overdue 배너 aria-label i18n + 앵커 포커스 이동** — ✅ `overdueScrollAriaLabel`/`bannerClose` i18n 추출, `tabIndex={-1}` + `focus()` 추가.
+- [x] **[78-r2] 🟢 LOW skeleton label/srOnly 하드코딩 → i18n** — ✅ `checkouts.loading.*` 8개 키 추가, `t()` 교체.
+- [x] **[78-r2] 🟢 LOW 배너 닫기 후 포커스 소실** — ✅ WCAG 2.1 SC 2.4.3: rAF + pendingCheckRef 포커스 이전.
+
+---
+
 ## 2026-04-21 — SW 검증 캐시 책임 경계 분리 (아키텍처 수정)
 
 - [x] **SW 검증 캐시 APPROVALS 이중 삭제 제거** — ✅ `invalidateCache()`에서 `deleteByPrefix(APPROVALS)` 제거. 책임 경계 명시: 서비스=도메인 로컬 캐시(sw-validations/test-software), 레지스트리=크로스 도메인(dashboard+approvals). `cache-event.registry.ts` 및 `software-validations.service.ts` 주석 정합성 수정.

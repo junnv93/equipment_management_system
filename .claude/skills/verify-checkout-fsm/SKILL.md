@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지. packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치. packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -407,9 +407,60 @@ grep -n "BadRequestException" \
 | 17 | Controller 레이어 경계 준수         | PASS/FAIL | controller reason.trim 중복 검증 0건 |
 ```
 
+### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
+
+RENTAL + lenderTeamId 조건 성립 시 `approverTeamId`의 존재 유무와 **무관하게** identity 검증이 실행되어야 한다.
+`&& approverTeamId` 조건이 외부 if에 포함되면 팀 미소속 사용자가 바이패스 가능.
+
+```bash
+# approve: 올바른 패턴 — 외부 조건에 approverTeamId 없어야 함
+grep -A3 "purpose.*RENTAL.*lenderTeamId\|lenderTeamId.*purpose.*RENTAL" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -v "approverTeamId" | head -5
+# 기대: 'if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId)' 형태 존재
+
+# 구버전 바이패스 패턴 탐지 (금지)
+grep -n "RENTAL.*lenderTeamId.*approverTeamId\|lenderTeamId.*approverTeamId" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "if ("
+# 결과: 0건 (PASS) — && approverTeamId 외부 조건 잔존 금지
+
+# 내부에 !approverTeamId 분기 존재 확인
+grep -c "!approverTeamId\|!rejectReturnDto\.approverTeamId" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 2 이상 (approve 1건 + rejectReturn 1건, PASS)
+```
+
+**PASS:** 외부 조건에 `&& approverTeamId` 0건 + `!approverTeamId` 분기 ≥ 2건.
+**FAIL:** `if (... && lenderTeamId && approverTeamId)` 형태 잔존 → approverTeamId 조건 제거 후 내부 `!approverTeamId` 분기 추가.
+
+### Step 19: NO_EQUIPMENT 가드 배치 — enforceScopeFromData 이전 위치 확인 (2026-04-22 이후)
+
+`approve`와 `rejectReturn`에서 items가 빈 경우 `enforceScopeFromData`가 묵시적으로 통과되지 않도록
+`NO_EQUIPMENT` 가드가 scope 검증 **이전**에 위치해야 한다.
+
+```bash
+# NO_EQUIPMENT 가드 존재 확인 (approve + rejectReturn 각 1건)
+grep -c "NO_EQUIPMENT" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 2 이상 (PASS)
+
+# 가드 패턴: !firstEquip → throw BadRequestException(NO_EQUIPMENT)
+grep -n "!firstEquip" apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: approve + rejectReturn 각 1건 (PASS)
+
+# 구버전 묵시적 통과 패턴 탐지 (금지): if (firstEquip) { enforceScopeFromData ...}
+grep -n "if (firstEquip)" apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS) — 조건부 scope 검증 금지
+```
+
+**PASS:** `NO_EQUIPMENT` 가드 ≥ 2건 + `if (firstEquip)` 패턴 0건.
+**FAIL:** `if (firstEquip) { this.enforceScopeFromData(...) }` 잔존 → `!firstEquip` throw 패턴으로 변환.
+
 ## Exceptions
 
 1. **`checkout-fsm.ts` 자체의 상수 정의** — `TERMINAL_STATES`, `CAL_REPAIR`, `RENTAL`, `ALL` 등 모듈 내부 상수는 로컬 정의 허용
 2. **`assertFsmInvariants` 함수 정의 자체** — 함수 정의 내부 로직은 검사 대상 아님, 모듈 레벨 *호출*만 검사
 3. **테스트 파일의 mock 데이터** — `checkout-fsm.test.ts` 내 임시 CheckoutStatus/Purpose 값은 면제
 4. **`NextStepDescriptorSchema`의 `z.enum` 인라인 값** — CheckoutAction/NextActor enum 값이 인라인으로 나열되어 있는 것은 Zod 스키마 특성상 허용 (SSOT는 TypeScript type `CheckoutAction`)
+5. **`approveReturn`의 NO_EQUIPMENT 가드 미적용** — 현재 tech-debt로 기록됨 (2026-04-22). 수정 전까지 Step 19는 approve + rejectReturn 2건만 검증.
