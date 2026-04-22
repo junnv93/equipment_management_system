@@ -405,15 +405,18 @@ grep -n "BadRequestException" \
 | 15 | 예외 계층 일관화 (7개 메서드)       | PASS/FAIL | ForbiddenException+ConflictException ≥7건 |
 | 16 | CheckoutErrorCode SSOT 인라인 금지  | PASS/FAIL | service+controller 인라인 'CHECKOUT_*' 0건 |
 | 17 | Controller 레이어 경계 준수         | PASS/FAIL | controller reason.trim 중복 검증 0건 |
-| 18 | lenderTeam identity-rule 강제       | PASS/FAIL | 외부 && approverTeamId 0건 + !approverTeamId ≥ 2건 |
+| 18 | lenderTeam identity-rule 강제       | PASS/FAIL | 외부 && approverTeamId 0건 + !approverTeamId ≥ 1건 (approve만) |
 | 19 | NO_EQUIPMENT 가드 배치              | PASS/FAIL | ≥ 4건 + if (firstEquip) 0건 |
-| 20 | rejectReturn checkTeamPermission unconditional | PASS/FAIL | for 루프가 if (approverTeamId) 외부에 위치 |
+| 20 | rejectReturn checkTeamPermission unconditional | PASS/FAIL | rejectReturnDto.approverTeamId 0건 + req.user?.teamId 직접 참조 |
+| 21 | checkTeamPermission ClassificationEnum SSOT | PASS/FAIL | 하드코딩 'general_emc'/'general_rf' 0건 + ClassificationEnum.enum.* 참조 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
 
 RENTAL + lenderTeamId 조건 성립 시 `approverTeamId`의 존재 유무와 **무관하게** identity 검증이 실행되어야 한다.
 `&& approverTeamId` 조건이 외부 if에 포함되면 팀 미소속 사용자가 바이패스 가능.
+
+`approve`만 RENTAL identity-rule 대상 (rejectReturn의 identity-rule은 `approve`와 동일 진입점에서 처리).
 
 ```bash
 # approve: 올바른 패턴 — 외부 조건에 approverTeamId 없어야 함
@@ -428,14 +431,16 @@ grep -n "RENTAL.*lenderTeamId.*approverTeamId\|lenderTeamId.*approverTeamId" \
   | grep "if ("
 # 결과: 0건 (PASS) — && approverTeamId 외부 조건 잔존 금지
 
-# 내부에 !approverTeamId 분기 존재 확인
-grep -c "!approverTeamId\|!rejectReturnDto\.approverTeamId" \
+# approve 내부에 !approverTeamId 분기 존재 확인 (1건)
+grep -n "!approverTeamId" \
   apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 2 이상 (approve 1건 + rejectReturn 1건, PASS)
+# 결과: 1건 이상 (approve identity-rule 분기, PASS)
 ```
 
-**PASS:** 외부 조건에 `&& approverTeamId` 0건 + `!approverTeamId` 분기 ≥ 2건.
+**PASS:** 외부 조건에 `&& approverTeamId` 0건 + `!approverTeamId` 분기 ≥ 1건.
 **FAIL:** `if (... && lenderTeamId && approverTeamId)` 형태 잔존 → approverTeamId 조건 제거 후 내부 `!approverTeamId` 분기 추가.
+
+> **Note (2026-04-22):** `rejectReturn`의 `approverTeamId`는 더 이상 DTO 경유가 아닌 `req.user?.teamId` 직접 참조 (Rule 2 패턴 통일). `rejectReturnDto.approverTeamId` 참조는 더 이상 존재하지 않으므로 grep 패턴에서 제거.
 
 ### Step 19: NO_EQUIPMENT 가드 배치 — enforceScopeFromData 이전 위치 확인 (2026-04-22 이후)
 
@@ -466,23 +471,55 @@ grep -n "if (firstEquip)" apps/backend/src/modules/checkouts/checkouts.service.t
 `approverTeamId`가 없으면 `approverClassification`이 `undefined`이 되고, `checkTeamPermission`은 `undefined`를 허용해야 한다.
 이전 패턴: `if (equip && approverTeamId)` → 승인자 팀 미제공 시 장비 분류 검증 바이패스 가능.
 
-```bash
-# rejectReturn 내부에서 approverTeamId 없을 때도 checkTeamPermission 호출되는지 확인
-# (for 루프가 if (rejectReturnDto.approverTeamId) 조건 밖에 있어야 함)
-grep -A 15 "for (const item of items)" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -B5 "checkTeamPermission" | head -10
+> **2026-04-22 업데이트:** `approverTeamId`는 더 이상 DTO에서 전달받지 않고 `req.user?.teamId` 직접 참조 (Rule 2 통일).
+> `if (rejectReturnDto.approverTeamId)` 패턴은 더 이상 존재하지 않으며, `const approverTeamId = req.user?.teamId` + `if (approverTeamId)` 패턴을 사용.
 
-# 금지 패턴: checkTeamPermission이 approverTeamId 조건 내부에 있는 경우
-# grep으로 for..checkTeamPermission 구조가 approverTeamId if 블록 안에 있으면 FAIL
+```bash
+# rejectReturn 내부에서 approverTeamId = req.user?.teamId 직접 참조 확인 (Rule 2)
+grep -A5 "async rejectReturn" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "req.user"
+# 기대: req.user?.teamId 참조 라인 존재
+
+# for 루프가 if (approverTeamId) 블록 밖에 위치하는지 확인
 grep -A 30 "let approverClassification" \
   apps/backend/src/modules/checkouts/checkouts.service.ts \
   | grep -B5 "checkTeamPermission" | head -15
 # 기대: for (const item of items) 루프가 if (approverTeamId) 블록 밖에 위치
+
+# 금지 패턴: rejectReturnDto.approverTeamId DTO 필드 참조 잔존 (Rule 2 위반)
+grep -n "rejectReturnDto\.approverTeamId" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS) — DTO 필드 경유 금지, req.user?.teamId 직접 참조 필수
 ```
 
-**PASS:** `for (const item of items)` 루프가 `if (rejectReturnDto.approverTeamId)` 블록 외부에 위치 + 루프 내에서 `this.checkTeamPermission(equip, approverClassification)` 호출.
-**FAIL:** `checkTeamPermission` 호출이 `if (rejectReturnDto.approverTeamId)` 블록 내부에 포함되어 approverTeamId 미제공 시 장비 분류 검증이 바이패스됨.
+**PASS:** `rejectReturnDto.approverTeamId` 참조 0건 + `req.user?.teamId` 직접 참조 존재 + `for (const item of items)` 루프가 `if (approverTeamId)` 블록 외부에 위치 + 루프 내 `this.checkTeamPermission(equip, approverClassification)` 호출.
+**FAIL:** `rejectReturnDto.approverTeamId` 참조 잔존(Rule 2 위반) 또는 `checkTeamPermission`이 `if (approverTeamId)` 블록 내부에 포함되어 미소속 사용자 장비 분류 검증 바이패스됨.
+
+### Step 21: checkTeamPermission ClassificationEnum SSOT — 하드코딩 금지 (2026-04-22 이후)
+
+`checkTeamPermission`에서 팀 분류 비교 시 `'general_emc'`, `'general_rf'` 문자열 리터럴을 하드코딩하면 안 됩니다.
+`ClassificationEnum.enum.general_emc` / `ClassificationEnum.enum.general_rf` SSOT 참조를 사용해야 합니다.
+
+```bash
+# ClassificationEnum import 확인
+grep -n "ClassificationEnum" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | head -5
+# 기대: ClassificationEnum import 라인 존재
+
+# SSOT 참조 확인
+grep -n "ClassificationEnum\.enum\." \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: general_emc, general_rf 각 1건 이상
+
+# 하드코딩 잔존 탐지 (금지)
+grep -n "'general_emc'\|'general_rf'\|\"general_emc\"\|\"general_rf\"" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS) — 하드코딩 금지
+```
+
+**PASS:** `ClassificationEnum` import 존재 + `ClassificationEnum.enum.general_emc/general_rf` 참조 + 하드코딩 0건.
+**FAIL:** `'general_emc'` / `'general_rf'` 문자열 리터럴 잔존 → `ClassificationEnum.enum.*` SSOT 참조로 교체.
 
 ## Exceptions
 
