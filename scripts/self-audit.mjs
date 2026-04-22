@@ -372,11 +372,14 @@ function checkHexColors(file, content) {
   if (!file.startsWith('apps/frontend/components/checkouts/')) return;
   if (isTestFile(file)) return;
 
+  const rawLines = content.split('\n');
   // stripComments()로 // 인라인 + /* */ 블록 주석 모두 제거 후 :root{} CSS 변수 정의 블록 제외
   const stripped = stripComments(content).replace(/:root\s*\{[^}]*\}/g, '');
 
   // 라인별 탐지 — 정확한 라인 번호 제공
   stripped.split('\n').forEach((line, i) => {
+    // self-audit-exception 마커가 있으면 승인된 예외로 처리
+    if (/self-audit-exception/.test(rawLines[i] ?? '')) return;
     const matches = line.match(HEX_COLOR_RE);
     if (matches?.length) {
       fail(

@@ -27,6 +27,7 @@ import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   INTERMEDIATE_CHECK_STATUS_TOKENS,
+  IntermediateCheckStatusValues as ISVal,
   type IntermediateCheckStatusKey,
 } from '@/lib/design-tokens';
 
@@ -49,7 +50,7 @@ interface IntermediateCheckAlertProps {
 }
 
 // 중간점검 상태 계산
-function getCheckStatus(checkDate: string): 'overdue' | 'today' | 'upcoming' | 'future' {
+function getCheckStatus(checkDate: string): IntermediateCheckStatusKey {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const date = new Date(checkDate);
@@ -57,10 +58,10 @@ function getCheckStatus(checkDate: string): 'overdue' | 'today' | 'upcoming' | '
 
   const diff = differenceInDays(date, today);
 
-  if (diff < 0) return 'overdue';
-  if (diff === 0) return 'today';
-  if (diff <= 7) return 'upcoming';
-  return 'future';
+  if (diff < 0) return ISVal.OVERDUE;
+  if (diff === 0) return ISVal.TODAY;
+  if (diff <= 7) return ISVal.UPCOMING;
+  return ISVal.FUTURE;
 }
 
 // 상태별 아이콘 매핑 (스타일은 INTERMEDIATE_CHECK_STATUS_TOKENS에서 관리)
@@ -150,9 +151,9 @@ export function IntermediateCheckAlert({
             )}
           </div>
           <Badge className={style.badgeClass}>
-            {status === 'overdue'
+            {status === ISVal.OVERDUE
               ? t('overdueDays', { days: Math.abs(daysUntil) })
-              : status === 'today'
+              : status === ISVal.TODAY
                 ? statusLabel
                 : `D-${daysUntil}`}
           </Badge>
@@ -216,9 +217,9 @@ export function IntermediateCheckAlert({
       <AlertTitle className="flex items-center gap-2">
         {t('title', { status: statusLabel })}
         <Badge className={style.badgeClass}>
-          {status === 'overdue'
+          {status === ISVal.OVERDUE
             ? t('overdueDays', { days: Math.abs(daysUntil) })
-            : status === 'today'
+            : status === ISVal.TODAY
               ? statusLabel
               : `D-${daysUntil}`}
         </Badge>

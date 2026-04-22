@@ -680,6 +680,7 @@ export {
   SOFTWARE_APPROVAL_PAGE_TOKENS,
   SOFTWARE_HISTORY_PAGE_TOKENS,
   INTERMEDIATE_CHECK_STATUS_TOKENS,
+  IntermediateCheckStatusValues,
   type IntermediateCheckStatusKey,
 } from './components/software';
 

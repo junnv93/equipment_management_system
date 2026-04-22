@@ -338,3 +338,11 @@ export const INTERMEDIATE_CHECK_STATUS_TOKENS = {
 } as const;
 
 export type IntermediateCheckStatusKey = keyof typeof INTERMEDIATE_CHECK_STATUS_TOKENS;
+
+/** 중간점검 상태 값 객체 (dot-notation 접근용) — CheckoutStatusValues 패턴과 동일 */
+export const IntermediateCheckStatusValues = {
+  OVERDUE: 'overdue',
+  TODAY: 'today',
+  UPCOMING: 'upcoming',
+  FUTURE: 'future',
+} as const satisfies Record<string, IntermediateCheckStatusKey>;

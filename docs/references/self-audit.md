@@ -1,11 +1,11 @@
-# Self-Audit — 7대 아키텍처 원칙 자동 검증
+# Self-Audit — 9대 아키텍처 원칙 자동 검증
 
 `scripts/self-audit.mjs`가 pre-commit + CI 양방향으로 실행하는 검증 규칙과 예외 승인 절차를 설명합니다.
 
 ## 실행 방법
 
 ```bash
-# pre-commit (staged 파일만, 7개 규칙 전체 적용)
+# pre-commit (staged 파일만, 9개 규칙 전체 적용)
 node scripts/self-audit.mjs --staged
 
 # CI full scan (전체 codebase, ①④⑤⑥ 4개 규칙 적용)
@@ -14,7 +14,7 @@ node scripts/self-audit.mjs --all
 
 | 모드       | 트리거                      | 적용 규칙                         |
 | ---------- | --------------------------- | --------------------------------- |
-| `--staged` | `.husky/pre-commit`         | ①②③④⑤⑥⑦ 전체                      |
+| `--staged` | `.husky/pre-commit`         | ①②③④⑤⑥⑦⑧⑨ 전체                    |
 | `--all`    | `main.yml` quality-gate job | ①④⑤⑥ (나머지는 기존 tracked 제외) |
 
 ---
@@ -180,6 +180,55 @@ onSuccess: async () => {
 
 ---
 
+### ⑧ CheckoutStatus FSM 리터럴 직접 비교
+
+**의도**: FSM 상태 문자열을 `===` 직접 비교하면 오타·확장 시 silent bug 위험. `CheckoutStatusValues` (CSVal) 상수 또는 FSM descriptor 경유가 원칙.
+
+**적용**: `--staged` + `--all` 전체
+
+**감지 패턴**: `.status|.currentStatus|.checkoutStatus === '<checkout-literal>'` (`pending|approved|rejected|...` 등 13개 값)
+
+**SSOT 제외 파일**: `checkout-fsm.ts`, `enums/checkout.ts`, `lib/design-tokens/` (토큰 정의 파일)
+
+**올바른 대안**:
+
+```typescript
+// ❌
+if (checkout.status === 'approved') { ... }
+
+// ✅ CSVal 상수 경유
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
+if (checkout.status === CSVal.APPROVED) { ... }
+```
+
+**예외 처리**: 감지 패턴이 발동하지만 도메인 FSM 값이 아닌 경우 (Promise.allSettled 결과 `r.status`, UI 로컬 상태 등) — 해당 라인에 `// eslint-disable-line no-restricted-syntax -- <이유>; self-audit-exception` 추가.
+
+> ⚠️ `self-audit-exception` 마커가 **raw 라인**에 있어야 함. `stripComments` 후 체크하는 규칙에서 유효하려면 주석 내에 위치해야 함.
+
+---
+
+### ⑨ hex 색상 직접 하드코딩 (checkouts 컴포넌트 한정)
+
+**의도**: AP-01·AP-04 — `apps/frontend/components/checkouts/` 내 hex 직접 사용 금지. Tailwind semantic token 또는 `BRAND_CLASS_MATRIX` 경유 필수.
+
+**적용**: `--staged` 모드 전용, `checkouts/` 하위 파일만 검사
+
+**감지 패턴**: `#[0-9a-fA-F]{3,8}` hex 리터럴
+
+**올바른 대안**:
+
+```typescript
+// ❌
+style={{ color: '#ef4444' }}
+
+// ✅ Tailwind semantic token
+className="text-brand-critical"
+```
+
+**예외 처리**: 불가피한 경우 해당 라인에 `// self-audit-exception` 마커 추가.
+
+---
+
 ## 예외 승인 절차
 
 불가피하게 규칙을 위반해야 하는 경우:
@@ -187,6 +236,14 @@ onSuccess: async () => {
 1. **이유 명시**: 코드 주변에 `// self-audit-exception: <이유>` 주석 추가
 2. **Whitelist 등록**: `scripts/self-audit.mjs`의 해당 check 함수에 파일/패턴 예외 추가 후 PR 설명에 이유 기록
 3. **Maintainer 승인**: PR 리뷰 시 예외 타당성 검토
+
+### `self-audit-exception` 마커 적용 규칙
+
+| rule             | 마커 위치                | 이유                                 |
+| ---------------- | ------------------------ | ------------------------------------ |
+| ② eslint-disable | raw 라인 (strip 전 체크) | eslint-disable 주석 안에 마커가 있음 |
+| ⑧ FSM 리터럴     | raw 라인 (strip 전 체크) | strip 전 raw 라인에서 마커 확인      |
+| ⑨ hex 색상       | raw 라인 (strip 전 체크) | strip 전 raw 라인에서 마커 확인      |
 
 ---
 
