@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations, useFormatter } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -13,6 +14,8 @@ import checkoutApi, {
   CreateConditionCheckDto,
 } from '@/lib/api/checkout-api';
 import { ConditionCheckStep } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import { getPageContainerClasses } from '@/lib/design-tokens';
@@ -43,6 +46,8 @@ export default function ConditionCheckClient({
   const t = useTranslations('checkouts');
   const formatter = useFormatter();
   const queryClient = useQueryClient();
+  const { can } = useAuth();
+  const canComplete = can(Permission.COMPLETE_CHECKOUT);
 
   // 상태 확인 제출 mutation
   const submitMutation = useMutation({
@@ -67,6 +72,15 @@ export default function ConditionCheckClient({
   const handleCancel = () => {
     router.push(`/checkouts/${checkout.id}`);
   };
+
+  // UL-QP-18 직무분리: 권한 없는 역할은 상세 페이지로 리다이렉트 (hooks 이후)
+  useEffect(() => {
+    if (!canComplete) {
+      router.replace(`/checkouts/${checkout.id}`);
+    }
+  }, [canComplete, router, checkout.id]);
+
+  if (!canComplete) return null;
 
   return (
     <div className={getPageContainerClasses('form')}>

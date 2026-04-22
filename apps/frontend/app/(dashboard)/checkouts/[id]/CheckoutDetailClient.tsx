@@ -92,8 +92,10 @@ export default function CheckoutDetailClient({
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const { can } = useAuth();
-  // SSOT: 백엔드 @RequirePermissions(APPROVE_CHECKOUT)와 일치 (role-permissions.ts)
+  // SSOT: 백엔드 @RequirePermissions와 일치 (role-permissions.ts)
   const canApprove = can(Permission.APPROVE_CHECKOUT);
+  const canStart = can(Permission.START_CHECKOUT);
+  const canComplete = can(Permission.COMPLETE_CHECKOUT);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -307,7 +309,7 @@ export default function CheckoutDetailClient({
   const renderActions = () => {
     const buttons: React.ReactNode[] = [];
 
-    // 승인 대기 상태 — technical_manager, lab_manager만 승인/반려 가능
+    // 승인 대기 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
     if (checkout.status === CSVal.PENDING && canApprove) {
       buttons.push(
         <Button
@@ -332,8 +334,8 @@ export default function CheckoutDetailClient({
     }
 
     // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
-    // technical_manager, lab_manager만 반출 시작 가능
-    if (checkout.status === CSVal.APPROVED && checkout.purpose !== CPVal.RENTAL && canApprove) {
+    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능 (승인과 직무 분리)
+    if (checkout.status === CSVal.APPROVED && checkout.purpose !== CPVal.RENTAL && canStart) {
       buttons.push(
         <Button
           key="start"
@@ -347,7 +349,8 @@ export default function CheckoutDetailClient({
     }
 
     // 반출 중 상태 - 교정/수리만 반입 처리 가능 (대여는 4단계 상태 확인으로 진행)
-    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== CPVal.RENTAL) {
+    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
+    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== CPVal.RENTAL && canComplete) {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -359,7 +362,9 @@ export default function CheckoutDetailClient({
     }
 
     // 대여 목적 특수 상태 - 상태 확인 필요
+    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
     if (
+      canComplete &&
       checkout.purpose === CPVal.RENTAL &&
       (
         [
@@ -403,7 +408,12 @@ export default function CheckoutDetailClient({
     }
 
     // 대여 목적 최종 단계 - lender_received 상태에서 반입 처리
-    if (checkout.status === CSVal.LENDER_RECEIVED && checkout.purpose === CPVal.RENTAL) {
+    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
+    if (
+      checkout.status === CSVal.LENDER_RECEIVED &&
+      checkout.purpose === CPVal.RENTAL &&
+      canComplete
+    ) {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -414,7 +424,7 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 반입 완료 상태 - 최종 승인/반려 가능 (technical_manager, lab_manager만)
+    // 반입 완료 상태 - 최종 승인/반려 가능 (UL-QP-18 직무분리: technical_manager만)
     if (checkout.status === CSVal.RETURNED && canApprove) {
       buttons.push(
         <Button

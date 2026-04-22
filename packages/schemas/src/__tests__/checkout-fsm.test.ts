@@ -32,7 +32,13 @@ const TECHNICAL_MANAGER_PERMS = [
   'update:checkout',
   'delete:checkout',
 ];
-const TEST_ENGINEER_PERMS = ['view:checkouts', 'create:checkout'];
+// test_engineer: 반출 신청 + 시작 + 반입 처리 가능 (UL-QP-18: 승인과 직무 분리)
+const TEST_ENGINEER_PERMS = [
+  'view:checkouts',
+  'create:checkout',
+  START_CHECKOUT, // 반출 시작 (장비 인도)
+  COMPLETE_CHECKOUT, // 반입 처리 (장비 수령 검사)
+];
 const SYSTEM_ADMIN_PERMS = [...TECHNICAL_MANAGER_PERMS, 'manage:roles'];
 // quality_manager: 반출입 기록 검토(조회)만 — approve/reject/start/complete/cancel 없음
 const QUALITY_MANAGER_PERMS = ['view:checkouts'];
@@ -255,6 +261,33 @@ describe('canPerformAction', () => {
 
   it('technical_manager can approve_return from returned', () => {
     expect(canPerformAction(returned, 'approve_return', TECHNICAL_MANAGER_PERMS).ok).toBe(true);
+  });
+
+  // UL-QP-18 직무분리: 승인(approve)은 기술책임자 전담, 시작·반입은 실무자도 가능
+  describe('test_engineer — 시작·반입 처리 가능, 승인 불가 (UL-QP-18 직무분리)', () => {
+    it('cannot approve pending (승인 권한 없음)', () => {
+      const result = canPerformAction(pendingCal, 'approve', TEST_ENGINEER_PERMS);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toBe('permission');
+    });
+
+    it('can start approved calibration checkout (반출 시작 가능)', () => {
+      const approvedCal = {
+        status: 'approved' as CheckoutStatus,
+        purpose: 'calibration' as CheckoutPurpose,
+      };
+      expect(canPerformAction(approvedCal, 'start', TEST_ENGINEER_PERMS).ok).toBe(true);
+    });
+
+    it('can submit_return from checked_out (반입 처리 가능)', () => {
+      expect(canPerformAction(checkedOut, 'submit_return', TEST_ENGINEER_PERMS).ok).toBe(true);
+    });
+
+    it('cannot approve_return from returned (반입 최종 승인 불가)', () => {
+      const result = canPerformAction(returned, 'approve_return', TEST_ENGINEER_PERMS);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toBe('permission');
+    });
   });
 
   it('system_admin (superset of technical_manager) can perform all actions', () => {

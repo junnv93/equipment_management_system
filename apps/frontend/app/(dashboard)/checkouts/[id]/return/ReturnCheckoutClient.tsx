@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations, useFormatter } from 'next-intl';
+import { useEffect } from 'react';
 import { ArrowLeft, Package, MapPin, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +15,9 @@ import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { getErrorMessage } from '@/lib/api/error';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys } from '@/lib/api/query-config';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
+import { useAuth } from '@/hooks/use-auth';
 import ReturnInspectionForm, {
   InspectionFormData,
 } from '@/components/checkouts/ReturnInspectionForm';
@@ -43,6 +45,8 @@ export default function ReturnCheckoutClient({
   const router = useRouter();
   const t = useTranslations('checkouts');
   const formatter = useFormatter();
+  const { can } = useAuth();
+  const canComplete = can(Permission.COMPLETE_CHECKOUT);
 
   // 반입 처리 mutation — useOptimisticMutation 패턴 (CheckoutDetailClient과 일관성)
   // 성공 시 onSettledCallback에서 네비게이션 (캐시 무효화 완료 후)
@@ -63,6 +67,13 @@ export default function ReturnCheckoutClient({
       router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     },
   });
+
+  // UL-QP-18 직무분리: 권한 없는 역할은 상세 페이지로 리다이렉트 (hooks 이후)
+  useEffect(() => {
+    if (!canComplete) {
+      router.replace(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
+    }
+  }, [canComplete, router, checkout.id]);
 
   // 제출 핸들러
   const handleSubmit = (data: InspectionFormData) => {
@@ -92,6 +103,8 @@ export default function ReturnCheckoutClient({
     status === 'normal'
       ? t('condition.conditionStatus.normal')
       : t('condition.conditionStatus.abnormal');
+
+  if (!canComplete) return null;
 
   return (
     <div className={getPageContainerClasses('form')}>
