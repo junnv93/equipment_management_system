@@ -1894,6 +1894,21 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
+      // 팀별 권한 체크: approve/rejectReturn과 동일한 EMC↔RF 교차 금지 (트랜잭션 이전)
+      const approverTeamId = req.user?.teamId;
+      let approverTeamClassification: string | null | undefined;
+      if (approverTeamId) {
+        const approverTeam = await this.teamsService.findOne(approverTeamId);
+        approverTeamClassification = approverTeam?.classification;
+      }
+      const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+      for (const item of items) {
+        const equip = equipmentMap.get(item.equipmentId);
+        if (equip) {
+          this.checkTeamPermission(equip, approverTeamClassification);
+        }
+      }
+
       const updated = await this.db.transaction(async (tx) => {
         // 1. CAS를 사용한 checkout 상태 전환
         const result = await this.updateWithVersion<Checkout>(

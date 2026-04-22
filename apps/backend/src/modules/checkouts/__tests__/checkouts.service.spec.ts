@@ -309,10 +309,10 @@ describe('CheckoutsService', () => {
 
       // findOne: getOrSet가 factory 건너뛰고 직접 반환 (내부 DB 체인 mock 불필요)
       mockCacheService.getOrSet.mockResolvedValue({ ...mockPendingCheckout, version: 1 });
-      // select checkoutItems: await db.select().from().where() → thenable
-      // chain.then은 기본 [] 반환이므로 override
-      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+      // select checkoutItems: await db.select().from().where() → chain을 await → chain.then 호출
+      // mockDrizzle.where.then이 아닌 mockChain.then을 override해야 실제 동작
+      const originalThen = mockChain.then;
+      mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
           resolve([{ equipmentId: mockEquipment.id }])
@@ -334,8 +334,7 @@ describe('CheckoutsService', () => {
 
       const result = await service.approve(checkoutId, mockApproveDto, mockReq);
 
-      // 복원
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+      mockChain.then = originalThen;
 
       expect(result).toBeDefined();
       expect(result.status).toBe('approved');
@@ -389,8 +388,8 @@ describe('CheckoutsService', () => {
       } as unknown as AuthenticatedRequest;
 
       mockCacheService.getOrSet.mockResolvedValue(rentalCheckout);
-      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+      const originalThen = mockChain.then;
+      mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
           resolve([{ equipmentId: mockRentalEquipment.id }])
@@ -404,7 +403,7 @@ describe('CheckoutsService', () => {
         ForbiddenException
       );
 
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+      mockChain.then = originalThen;
     });
   });
 
@@ -561,6 +560,7 @@ describe('CheckoutsService', () => {
       ]);
       // getCheckoutItemsWithFirstEquipment: db.select().from().leftJoin().where() → chain.then 직접 오버라이드
       // (chain.where.then 패턴은 chain.where()가 chain을 반환하므로 await가 chain.then을 사용 — 오버라이드 불가)
+      const originalThen = mockChain.then;
       mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
@@ -573,6 +573,19 @@ describe('CheckoutsService', () => {
           ])
         )
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // 팀 체크: teamsService.findOne (RF팀 승인자) + equipmentService.findByIds (RF팀 장비)
+      mockTeamsService.findOne.mockResolvedValueOnce({
+        id: mockReq.user.teamId,
+        classification: 'general_rf',
+      });
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([
+          [
+            '550e8400-e29b-41d4-a716-446655440001',
+            { id: '550e8400-e29b-41d4-a716-446655440001', team: { classification: 'general_rf' } },
+          ],
+        ])
+      );
       // transaction: updateWithVersion → returning
       mockDrizzle.returning.mockResolvedValueOnce([mockApprovedReturn]);
       // equipmentService.updateStatusBatch
@@ -582,8 +595,56 @@ describe('CheckoutsService', () => {
 
       const result = await service.approveReturn(checkoutId, mockApproveReturnDto, mockReq);
 
+      mockChain.then = originalThen;
+
       expect(result).toBeDefined();
       expect(result.status).toBe('return_approved');
+    });
+
+    it('should throw ForbiddenException (CROSS_TEAM_FORBIDDEN) when EMC team approves RF team equipment return', async () => {
+      const rfEquipmentId = '550e8400-e29b-41d4-a716-446655440001';
+      const emcTeamId = 'emc0b94c-82b8-488e-9ea5-4fe71bb086e1';
+
+      const mockReqEmc = {
+        user: {
+          ...mockReq.user,
+          teamId: emcTeamId,
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue({ ...mockReturnedCheckout, version: 1 });
+      // enforceScopeFromCheckout
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([
+            {
+              equipmentId: rfEquipmentId,
+              equipmentName: 'RF Equipment',
+              managementNumber: 'SUW-R0001',
+            },
+          ])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // teamsService.findOne → EMC팀
+      mockTeamsService.findOne.mockResolvedValueOnce({
+        id: emcTeamId,
+        classification: 'general_emc',
+      });
+      // equipmentService.findByIds → RF팀 장비
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([[rfEquipmentId, { id: rfEquipmentId, team: { classification: 'general_rf' } }]])
+      );
+
+      await expect(
+        service.approveReturn(checkoutId, mockApproveReturnDto, mockReqEmc)
+      ).rejects.toThrow(ForbiddenException);
+
+      mockChain.then = originalThen;
     });
 
     it('should throw BadRequestException when checkout is not in returned status', async () => {
