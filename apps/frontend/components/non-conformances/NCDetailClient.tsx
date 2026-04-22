@@ -402,6 +402,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             guidanceKey={guidance!.key}
             onScrollToAction={scrollToActionBar}
             onRepairRegister={() => setShowRepairDialog(true)}
+            onCalibrationNav={() => router.push(`/equipment/${nc.equipmentId}?tab=calibration`)}
           />
         </div>
       </section>

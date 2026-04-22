@@ -10,6 +10,7 @@ import {
   Lock,
   ShieldCheck,
   ArrowDown,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   NC_WORKFLOW_GUIDANCE_TOKENS,
@@ -34,12 +35,14 @@ interface GuidanceCalloutProps {
   guidanceKey: NCGuidanceKey;
   onScrollToAction?: () => void;
   onRepairRegister?: () => void;
+  onCalibrationNav?: () => void;
 }
 
 export const GuidanceCallout = memo(function GuidanceCallout({
   guidanceKey,
   onScrollToAction,
   onRepairRegister,
+  onCalibrationNav,
 }: GuidanceCalloutProps) {
   const t = useTranslations('non-conformances');
   const entry = NC_WORKFLOW_GUIDANCE_TOKENS[guidanceKey];
@@ -100,23 +103,36 @@ export const GuidanceCallout = memo(function GuidanceCallout({
             </button>
           </div>
         )}
-        {entry.ctaKind === 'link' &&
-          onRepairRegister &&
-          guidanceKey.startsWith('openBlockedRepair') && (
-            <div className={CALLOUT_TOKENS.action}>
-              <button
-                type="button"
-                onClick={onRepairRegister}
-                className={cn(
-                  'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
-                  FOCUS_TOKENS.classes.default
-                )}
-              >
-                <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('detail.prerequisite.repairLink')}
-              </button>
-            </div>
-          )}
+        {entry.ctaKind === 'repairLink' && onRepairRegister && (
+          <div className={CALLOUT_TOKENS.action}>
+            <button
+              type="button"
+              onClick={onRepairRegister}
+              className={cn(
+                'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
+                FOCUS_TOKENS.classes.default
+              )}
+            >
+              <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('detail.prerequisite.repairLink')}
+            </button>
+          </div>
+        )}
+        {entry.ctaKind === 'calibrationLink' && onCalibrationNav && (
+          <div className={CALLOUT_TOKENS.action}>
+            <button
+              type="button"
+              onClick={onCalibrationNav}
+              className={cn(
+                'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
+                FOCUS_TOKENS.classes.default
+              )}
+            >
+              <CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              {t(`detail.guidance.${guidanceKey}.ctaHint` as Parameters<typeof t>[0])}
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

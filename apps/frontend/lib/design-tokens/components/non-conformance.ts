@@ -818,7 +818,7 @@ export interface NCGuidanceEntry {
   emphasis: CalloutEmphasis;
   icon: 'AlertTriangle' | 'Wrench' | 'Clock' | 'CheckCircle2' | 'Lock' | 'ShieldCheck';
   stepBadgeKey: 'one' | 'two' | 'three';
-  ctaKind: 'primary' | 'link' | 'none';
+  ctaKind: 'primary' | 'repairLink' | 'calibrationLink' | 'none';
   scrollTarget?: 'actionBar' | 'infoRepairCard';
 }
 
@@ -858,7 +858,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry>
     emphasis: 'leftBorder',
     icon: 'Wrench',
     stepBadgeKey: 'one',
-    ctaKind: 'link',
+    ctaKind: 'repairLink',
     scrollTarget: 'infoRepairCard',
   },
   openBlockedRepair_manager: {
@@ -873,7 +873,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry>
     emphasis: 'leftBorder',
     icon: 'Wrench',
     stepBadgeKey: 'one',
-    ctaKind: 'link',
+    ctaKind: 'calibrationLink',
   },
   openBlockedRecalibration_manager: {
     variant: 'critical',
