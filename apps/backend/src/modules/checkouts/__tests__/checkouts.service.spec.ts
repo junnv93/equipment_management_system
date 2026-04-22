@@ -558,34 +558,33 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([
         { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
       ]);
-      // getCheckoutItemsWithFirstEquipment: db.select().from().leftJoin().where() → chain.then 직접 오버라이드
-      // (chain.where.then 패턴은 chain.where()가 chain을 반환하므로 await가 chain.then을 사용 — 오버라이드 불가)
+      // db.select().from(checkoutItems).where(): approve 패턴 — equipmentId만 반환
       const originalThen = mockChain.then;
       mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
-          resolve([
-            {
-              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-              equipmentName: 'Test Equipment',
-              managementNumber: 'SUW-E0001',
-            },
-          ])
+          resolve([{ equipmentId: '550e8400-e29b-41d4-a716-446655440001' }])
         )
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
-      // 팀 체크: teamsService.findOne (RF팀 승인자) + equipmentService.findByIds (RF팀 장비)
-      mockTeamsService.findOne.mockResolvedValueOnce({
-        id: mockReq.user.teamId,
-        classification: 'general_rf',
-      });
+      // equipmentService.findByIds: 팀 체크 + 알림용 데이터 통합 (approve 패턴 통일)
       mockEquipmentService.findByIds.mockResolvedValueOnce(
         new Map([
           [
             '550e8400-e29b-41d4-a716-446655440001',
-            { id: '550e8400-e29b-41d4-a716-446655440001', team: { classification: 'general_rf' } },
+            {
+              id: '550e8400-e29b-41d4-a716-446655440001',
+              name: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+              team: { classification: 'general_rf' },
+            },
           ],
         ])
       );
+      // teamsService.findOne (RF팀 승인자)
+      mockTeamsService.findOne.mockResolvedValueOnce({
+        id: mockReq.user.teamId,
+        classification: 'general_rf',
+      });
       // transaction: updateWithVersion → returning
       mockDrizzle.returning.mockResolvedValueOnce([mockApprovedReturn]);
       // equipmentService.updateStatusBatch
@@ -621,24 +620,28 @@ describe('CheckoutsService', () => {
       mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
-          resolve([
-            {
-              equipmentId: rfEquipmentId,
-              equipmentName: 'RF Equipment',
-              managementNumber: 'SUW-R0001',
-            },
-          ])
+          resolve([{ equipmentId: rfEquipmentId }])
         )
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // equipmentService.findByIds → RF팀 장비 (NO_EQUIPMENT 통과 후 팀 체크에서 차단)
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([
+          [
+            rfEquipmentId,
+            {
+              id: rfEquipmentId,
+              name: 'RF Equipment',
+              managementNumber: 'SUW-R0001',
+              team: { classification: 'general_rf' },
+            },
+          ],
+        ])
+      );
       // teamsService.findOne → EMC팀
       mockTeamsService.findOne.mockResolvedValueOnce({
         id: emcTeamId,
         classification: 'general_emc',
       });
-      // equipmentService.findByIds → RF팀 장비
-      mockEquipmentService.findByIds.mockResolvedValueOnce(
-        new Map([[rfEquipmentId, { id: rfEquipmentId, team: { classification: 'general_rf' } }]])
-      );
 
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReqEmc)
@@ -767,19 +770,32 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([
         { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
       ]);
-      // getCheckoutItemsWithFirstEquipment: chain.then 직접 오버라이드 (chain.where.then 패턴 비작동)
+      // db.select().from(checkoutItems).where(): approve 패턴 — equipmentId만 반환
       mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
-          resolve([
-            {
-              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-              equipmentName: 'Test Equipment',
-              managementNumber: 'SUW-E0001',
-            },
-          ])
+          resolve([{ equipmentId: '550e8400-e29b-41d4-a716-446655440001' }])
         )
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // equipmentService.findByIds: 팀 체크 + 알림 데이터 통합 (approve 패턴)
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([
+          [
+            '550e8400-e29b-41d4-a716-446655440001',
+            {
+              id: '550e8400-e29b-41d4-a716-446655440001',
+              name: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+              team: { classification: 'general_rf' },
+            },
+          ],
+        ])
+      );
+      // teamsService.findOne (mockReq.user.teamId 있으므로 호출됨)
+      mockTeamsService.findOne.mockResolvedValueOnce({
+        id: mockReq.user.teamId,
+        classification: 'general_rf',
+      });
       // transaction → updateWithVersion + updateStatusBatch
       mockDrizzle.returning.mockResolvedValueOnce([approvedReturn]);
       mockEquipmentService.updateStatusBatch.mockResolvedValue([]);

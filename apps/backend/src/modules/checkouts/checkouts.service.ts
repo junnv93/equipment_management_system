@@ -1883,11 +1883,17 @@ export class CheckoutsService extends VersionedBaseService {
       const approveReturnPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'approve_return', approveReturnPermissions);
 
-      // ✅ 트랜잭션: checkout 상태 변경 + 장비 상태 복원을 원자적으로 처리
-      const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
-      const equipmentIds = items.map((item) => item.equipmentId);
+      // approve 패턴 통일: items + 장비 정보를 단일 findByIds로 획득 (팀 체크 + 알림 데이터 재사용)
+      const items = await this.db
+        .select()
+        .from(checkoutItems)
+        .where(eq(checkoutItems.checkoutId, uuid));
 
-      if (!firstEquipment) {
+      const equipmentIds = items.map((item) => item.equipmentId);
+      const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+
+      const firstEquip = items.length > 0 ? equipmentMap.get(items[0].equipmentId) : undefined;
+      if (!firstEquip) {
         throw new BadRequestException({
           code: CheckoutErrorCode.NO_EQUIPMENT,
           message: 'No equipment found for this checkout',
@@ -1901,7 +1907,6 @@ export class CheckoutsService extends VersionedBaseService {
         const approverTeam = await this.teamsService.findOne(approverTeamId);
         approverTeamClassification = approverTeam?.classification;
       }
-      const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
       for (const item of items) {
         const equip = equipmentMap.get(item.equipmentId);
         if (equip) {
@@ -1959,13 +1964,13 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행 — JOIN 결과 재사용 (DB 0회)
-      if (items.length > 0 && firstEquipment) {
+      // 📢 알림 이벤트 발행 — equipmentMap 재사용 (approve 패턴, DB 0회)
+      if (items.length > 0) {
         await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
-          equipmentName: firstEquipment.name,
-          managementNumber: firstEquipment.managementNumber,
+          equipmentName: firstEquip.name ?? null,
+          managementNumber: firstEquip.managementNumber ?? null,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: approveReturnDto.approverId,
