@@ -121,6 +121,29 @@ Swagger 메타의 nullable/$ref/enum 정합성은 `main.ts` 에서 `cleanupOpenA
 - **Auto Refresh:** JWT 콜백에서 만료 60초 전 자동 갱신
 - **E2E Test Auth:** `GET /api/auth/test-login?role=xxx` (dev/test 환경만)
 
+### FSM assertFsmAction 서비스 테스트 픽스처 패턴
+
+`assertFsmAction`은 `req.user.permissions`를 직접 참조한다. 서비스 단위 테스트에서 `mockReq`를 구성할 때 반드시 `derivePermissionsFromRoles`로 permissions 배열을 파생해야 한다 — 빈 배열이면 모든 FSM 전이가 FORBIDDEN으로 차단된다.
+
+```typescript
+import { derivePermissionsFromRoles } from '@equipment-management/shared-constants';
+import type { AuthenticatedRequest } from '../../../types/auth';
+
+const mockReq = {
+  user: {
+    userId: '550e8400-e29b-41d4-a716-446655440004',
+    roles: ['technical_manager'],
+    permissions: derivePermissionsFromRoles(['technical_manager']), // ← 필수
+    site: 'suwon',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+  },
+} as unknown as AuthenticatedRequest;
+```
+
+역할별로 다른 시나리오를 테스트할 때는 `describe` 블록마다 별도 `mockReq`를 정의하거나 팩토리 함수를 사용한다.
+
+**Key Files:** `modules/checkouts/__tests__/checkouts.service.spec.ts`
+
 ### Audit Trail
 
 ```typescript

@@ -7,6 +7,7 @@ import {
   ConflictException,
   forwardRef,
 } from '@nestjs/common';
+import { CheckoutErrorCode } from './checkout-error-codes';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateCheckoutDto } from './dto/update-checkout.dto';
 import { CheckoutQueryDto } from './dto/checkout-query.dto';
@@ -205,12 +206,12 @@ export class CheckoutsService extends VersionedBaseService {
     if (check.ok) return;
     if (check.reason === 'invalid_transition') {
       throw new BadRequestException({
-        code: 'CHECKOUT_INVALID_TRANSITION',
+        code: CheckoutErrorCode.INVALID_TRANSITION,
         message: `Action "${action}" not allowed from status "${checkout.status}" (purpose: ${checkout.purpose})`,
       });
     }
     throw new ForbiddenException({
-      code: 'CHECKOUT_FORBIDDEN',
+      code: CheckoutErrorCode.FORBIDDEN,
       message: `Missing required permission for action "${action}"`,
     });
   }
@@ -290,13 +291,13 @@ export class CheckoutsService extends VersionedBaseService {
   private validateUuid(uuid: string, fieldName: string): void {
     if (!uuid || typeof uuid !== 'string') {
       throw new BadRequestException({
-        code: 'CHECKOUT_INVALID_UUID',
+        code: CheckoutErrorCode.INVALID_UUID,
         message: `${fieldName} is required and must be a string`,
       });
     }
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
       throw new BadRequestException({
-        code: 'CHECKOUT_INVALID_UUID',
+        code: CheckoutErrorCode.INVALID_UUID,
         message: `Invalid ${fieldName} UUID format`,
       });
     }
@@ -963,7 +964,7 @@ export class CheckoutsService extends VersionedBaseService {
 
           if (!checkout) {
             throw new NotFoundException({
-              code: 'CHECKOUT_NOT_FOUND',
+              code: CheckoutErrorCode.NOT_FOUND,
               message: `Checkout with UUID ${uuid} not found`,
             });
           }
@@ -1074,7 +1075,7 @@ export class CheckoutsService extends VersionedBaseService {
       equipmentData.team.classification === 'general_rf'
     ) {
       throw new ForbiddenException({
-        code: 'CHECKOUT_CROSS_TEAM_FORBIDDEN',
+        code: CheckoutErrorCode.CROSS_TEAM_FORBIDDEN,
         message: 'EMC team does not have checkout permission for RF team equipment',
       });
     }
@@ -1175,7 +1176,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       if (!createCheckoutDto.equipmentIds || createCheckoutDto.equipmentIds.length === 0) {
         throw new BadRequestException({
-          code: 'CHECKOUT_NO_EQUIPMENT',
+          code: CheckoutErrorCode.NO_EQUIPMENT,
           message: 'At least one equipment must be selected for checkout',
         });
       }
@@ -1190,7 +1191,7 @@ export class CheckoutsService extends VersionedBaseService {
       } catch (error) {
         if (error instanceof BadRequestException) {
           throw new BadRequestException({
-            code: 'CHECKOUT_EQUIPMENT_NOT_FOUND',
+            code: CheckoutErrorCode.EQUIPMENT_NOT_FOUND,
             message: (error.getResponse() as { message: string }).message,
           });
         }
@@ -1229,7 +1230,7 @@ export class CheckoutsService extends VersionedBaseService {
           .map((id) => equipmentMap.get(id)?.name ?? id)
           .join(', ');
         throw new BadRequestException({
-          code: 'CHECKOUT_EQUIPMENT_ALREADY_ACTIVE',
+          code: CheckoutErrorCode.EQUIPMENT_ALREADY_ACTIVE,
           message: `이미 반출 진행 중인 장비가 포함되어 있습니다: ${duplicateNames}`,
         });
       }
@@ -1251,7 +1252,7 @@ export class CheckoutsService extends VersionedBaseService {
             EQUIPMENT_STATUS_LABELS[equip.status as keyof typeof EQUIPMENT_STATUS_LABELS] ??
             equip.status;
           throw new BadRequestException({
-            code: 'CHECKOUT_EQUIPMENT_STATUS_INVALID',
+            code: CheckoutErrorCode.EQUIPMENT_STATUS_INVALID,
             message: `Equipment ${equip.name} is in "${statusLabel}" status and cannot be checked out`,
           });
         }
@@ -1261,7 +1262,7 @@ export class CheckoutsService extends VersionedBaseService {
           // 교정/수리: 자기 팀 장비만 가능
           if (userTeamId && equip.teamId && equip.teamId !== userTeamId) {
             throw new BadRequestException({
-              code: 'CHECKOUT_OWN_TEAM_ONLY',
+              code: CheckoutErrorCode.OWN_TEAM_ONLY,
               message: 'Calibration/repair checkouts are only allowed for own team equipment',
             });
           }
@@ -1269,7 +1270,7 @@ export class CheckoutsService extends VersionedBaseService {
           // 외부 대여: 다른 팀 장비만 가능
           if (userTeamId && equip.teamId && equip.teamId === userTeamId) {
             throw new BadRequestException({
-              code: 'CHECKOUT_OTHER_TEAM_ONLY',
+              code: CheckoutErrorCode.OTHER_TEAM_ONLY,
               message: 'External rental is only allowed for other team equipment',
             });
           }
@@ -1285,7 +1286,7 @@ export class CheckoutsService extends VersionedBaseService {
       // expectedReturnDate 유효성 검증
       if (isNaN(expectedReturnDate.getTime())) {
         throw new BadRequestException({
-          code: 'CHECKOUT_INVALID_RETURN_DATE',
+          code: CheckoutErrorCode.INVALID_RETURN_DATE,
           message: 'Invalid expected return date format',
         });
       }
@@ -1294,7 +1295,7 @@ export class CheckoutsService extends VersionedBaseService {
       const now = new Date();
       if (expectedReturnDate <= now) {
         throw new BadRequestException({
-          code: 'CHECKOUT_RETURN_DATE_PAST',
+          code: CheckoutErrorCode.RETURN_DATE_PAST,
           message: 'Expected return date must be in the future',
         });
       }
@@ -1399,7 +1400,7 @@ export class CheckoutsService extends VersionedBaseService {
       // approverId는 컨트롤러에서 세션으로부터 주입되므로 반드시 존재해야 함
       if (!approveDto.approverId) {
         throw new BadRequestException({
-          code: 'CHECKOUT_APPROVER_REQUIRED',
+          code: CheckoutErrorCode.APPROVER_REQUIRED,
           message: 'Approver information is required',
         });
       }
@@ -1443,7 +1444,7 @@ export class CheckoutsService extends VersionedBaseService {
       if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId && approverTeamId) {
         if (approverTeamId !== checkout.lenderTeamId) {
           throw new ForbiddenException({
-            code: 'CHECKOUT_LENDER_TEAM_ONLY',
+            code: CheckoutErrorCode.LENDER_TEAM_ONLY,
             message: 'Only the technical manager of the lending team can approve',
           });
         }
@@ -1531,7 +1532,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 반려 사유 필수 검증
       if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
         throw new BadRequestException({
-          code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
+          code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
           message: 'Rejection reason is required',
         });
       }
@@ -1741,7 +1742,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 모든 유형: workingStatusChecked 필수
       if (!returnDto.workingStatusChecked) {
         throw new BadRequestException({
-          code: 'CHECKOUT_WORKING_STATUS_REQUIRED',
+          code: CheckoutErrorCode.WORKING_STATUS_REQUIRED,
           message: 'Working status check is required',
         });
       }
@@ -1749,7 +1750,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 교정 목적: calibrationChecked 필수
       if (purpose === CPVal.CALIBRATION && !returnDto.calibrationChecked) {
         throw new BadRequestException({
-          code: 'CHECKOUT_CALIBRATION_CHECK_REQUIRED',
+          code: CheckoutErrorCode.CALIBRATION_CHECK_REQUIRED,
           message: 'Calibration check is required for calibration purpose checkouts',
         });
       }
@@ -1757,7 +1758,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 수리 목적: repairChecked 필수
       if (purpose === CPVal.REPAIR && !returnDto.repairChecked) {
         throw new BadRequestException({
-          code: 'CHECKOUT_REPAIR_CHECK_REQUIRED',
+          code: CheckoutErrorCode.REPAIR_CHECK_REQUIRED,
           message: 'Repair check is required for repair purpose checkouts',
         });
       }
@@ -1985,7 +1986,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
         throw new BadRequestException({
-          code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
+          code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
           message: 'Rejection reason is required',
         });
       }
@@ -1999,13 +2000,13 @@ export class CheckoutsService extends VersionedBaseService {
       const equipmentIds = items.map((item) => item.equipmentId);
       const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
 
-      if (rejectReturnDto.approverTeamId) {
-        // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
-        const firstEquip = equipmentMap.values().next().value;
-        if (firstEquip) {
-          this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
-        }
+      // ✅ 스코프 접근 제어 — approverTeamId 유무와 무관하게 항상 실행 (방어선 일관성)
+      const firstEquip = equipmentMap.values().next().value;
+      if (firstEquip) {
+        this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      }
 
+      if (rejectReturnDto.approverTeamId) {
         const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
         const approverClassification = approverTeam?.classification;
 
@@ -2025,7 +2026,7 @@ export class CheckoutsService extends VersionedBaseService {
       ) {
         if (rejectReturnDto.approverTeamId !== checkout.lenderTeamId) {
           throw new ForbiddenException({
-            code: 'CHECKOUT_LENDER_TEAM_ONLY',
+            code: CheckoutErrorCode.LENDER_TEAM_ONLY,
             message: 'Only the technical manager of the lending team can reject return',
           });
         }
@@ -2117,7 +2118,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 대여 목적만 상태 확인 가능
       if (checkout.purpose !== CPVal.RENTAL) {
         throw new BadRequestException({
-          code: 'CHECKOUT_CONDITION_CHECK_RENTAL_ONLY',
+          code: CheckoutErrorCode.CONDITION_CHECK_RENTAL_ONLY,
           message: 'Condition check is only available for rental purpose checkouts',
         });
       }
@@ -2142,14 +2143,14 @@ export class CheckoutsService extends VersionedBaseService {
       const transition = stepTransitions[dto.step];
       if (!transition) {
         throw new BadRequestException({
-          code: 'CHECKOUT_INVALID_CONDITION_STEP',
+          code: CheckoutErrorCode.INVALID_CONDITION_STEP,
           message: `Invalid condition check step: ${dto.step}`,
         });
       }
 
       if (checkout.status !== transition.requiredStatus) {
         throw new BadRequestException({
-          code: 'CHECKOUT_INVALID_STATUS_FOR_STEP',
+          code: CheckoutErrorCode.INVALID_STATUS_FOR_STEP,
           message: `Cannot perform step ${dto.step} in current status (${checkout.status}). Required status: ${transition.requiredStatus}`,
         });
       }
@@ -2358,7 +2359,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 승인된 반출은 수정 불가
       if (existingCheckout.status !== CSVal.PENDING) {
         throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_PENDING_CAN_UPDATE',
+          code: CheckoutErrorCode.ONLY_PENDING_CAN_UPDATE,
           message: 'Only pending checkouts can be updated',
         });
       }
@@ -2375,7 +2376,7 @@ export class CheckoutsService extends VersionedBaseService {
         // 날짜 유효성 검증
         if (isNaN(expectedReturnDate.getTime())) {
           throw new BadRequestException({
-            code: 'CHECKOUT_INVALID_RETURN_DATE',
+            code: CheckoutErrorCode.INVALID_RETURN_DATE,
             message: 'Invalid expected return date format',
           });
         }
@@ -2384,7 +2385,7 @@ export class CheckoutsService extends VersionedBaseService {
         const now = new Date();
         if (expectedReturnDate <= now) {
           throw new BadRequestException({
-            code: 'CHECKOUT_RETURN_DATE_PAST',
+            code: CheckoutErrorCode.RETURN_DATE_PAST,
             message: 'Expected return date must be in the future',
           });
         }
@@ -2477,14 +2478,14 @@ export class CheckoutsService extends VersionedBaseService {
 
     if (!result) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: CheckoutErrorCode.NOT_FOUND,
         message: `Checkout ${checkoutId} not found.`,
       });
     }
 
     if (!result.site) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: CheckoutErrorCode.NOT_FOUND,
         message: `Checkout ${checkoutId} requester not found.`,
       });
     }
