@@ -350,6 +350,14 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: false,
     retry: 2,
   },
+
+  /** 반입 목록 (rental/internal_shared) - NORMAL (승인·반입 mutation 후 무효화) */
+  EQUIPMENT_IMPORT_LIST: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
 } as const;
 
 /**

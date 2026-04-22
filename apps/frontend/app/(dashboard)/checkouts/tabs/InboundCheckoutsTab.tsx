@@ -28,7 +28,7 @@ import {
   EquipmentImportStatusValues,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
@@ -85,7 +85,7 @@ export default function InboundCheckoutsTab({
       if (statusFilter !== 'all') query.statuses = statusFilter;
       return checkoutApi.getCheckouts(query);
     },
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 
   // ──────────────────────────────────────────────
@@ -105,7 +105,7 @@ export default function InboundCheckoutsTab({
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
       }),
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.EQUIPMENT_IMPORT_LIST,
   });
 
   // ──────────────────────────────────────────────
@@ -125,7 +125,7 @@ export default function InboundCheckoutsTab({
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
       }),
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.EQUIPMENT_IMPORT_LIST,
   });
 
   // ──────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -122,7 +122,6 @@ export default function OutboundCheckoutsTab({
 }: OutboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { can } = useAuth();
   const canApprove = can(Permission.APPROVE_CHECKOUT);
   const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
@@ -139,17 +138,14 @@ export default function OutboundCheckoutsTab({
     );
   };
 
-  // 서브탭 전환: status + page 리셋 (다른 탭의 상태 필터를 그대로 가져오면 혼란)
+  // 서브탭 전환: status + page 리셋 — filtersToSearchParams가 기본값(inProgress/all/1)을 자동 생략
   const handleSubTabChange = (newSubTab: CheckoutSubTab) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (newSubTab === 'inProgress') {
-      params.delete('subTab');
-    } else {
-      params.set('subTab', newSubTab);
-    }
-    params.delete('status');
-    params.delete('page'); // 기본값(1)은 URL에서 생략하는 규칙 (filtersToSearchParams 일관성)
-    router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, { scroll: false });
+    const params = filtersToSearchParams({ ...filters, subTab: newSubTab, status: 'all', page: 1 });
+    const qs = params.toString();
+    router.replace(
+      qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
+      { scroll: false }
+    );
   };
 
   // ──────────────────────────────────────────────
