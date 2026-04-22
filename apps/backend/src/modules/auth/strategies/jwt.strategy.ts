@@ -7,6 +7,7 @@ import { TOKEN_BLACKLIST, TokenBlacklistProvider } from '../blacklist/token-blac
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { UsersService } from '../../users/users.service';
+import { getPermissions, type UserRole } from '@equipment-management/shared-constants';
 
 /**
  * JWT 토큰 페이로드 타입
@@ -109,11 +110,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    const primaryRole = payload.roles?.[0] as UserRole | undefined;
+
     return {
       userId: payload.sub,
       email: payload.email,
       name: payload.name,
       roles: payload.roles,
+      permissions: primaryRole ? getPermissions(primaryRole) : [],
       department: payload.department,
       site: payload.site,
       location: payload.location,

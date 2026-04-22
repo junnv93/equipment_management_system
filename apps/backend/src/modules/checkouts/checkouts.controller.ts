@@ -392,7 +392,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/approve')
-  @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(ApproveCheckoutValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
@@ -592,7 +592,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/approve-return')
-  @RequirePermissions(Permission.APPROVE_CHECKOUT) // 기술책임자 권한
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(ApproveReturnValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
