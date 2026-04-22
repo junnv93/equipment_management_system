@@ -327,6 +327,38 @@ grep -rn '\[data-[a-z]' \
 **PASS:** spec의 `[data-xxx]` 셀렉터가 컴포넌트에 attribute로 실재함.
 **FAIL:** spec이 존재하지 않는 attribute를 참조 → 셀렉터가 항상 0 match → 결과가 false negative.
 
+**16c: `toHaveAttribute` 기반 상태 검증 패턴 (2026-04-22 추가)**
+
+상태 머신(FSM) 컴포넌트의 현재 상태를 E2E에서 검증할 때 `data-<domain>-key` attribute +
+`toHaveAttribute(attr, value)` 패턴을 사용한다.
+텍스트 내용(`toHaveText`)이나 클래스(`toHaveClass`)로 상태를 추론하면 UI 리팩토링 시 silent break.
+
+**올바른 패턴 (GuidanceCallout 기준):**
+```typescript
+// ✅ attribute 기반 상태 검증 — 리팩토링에 안전
+const callout = page.getByTestId('nc-guidance-callout');
+await expect(callout).toHaveAttribute('data-guidance-key', 'openBlockedRepair_operator');
+
+// ❌ 텍스트 기반 상태 추론 — UI 문구 변경 시 silent break
+await expect(callout).toContainText('수리 이력을 먼저');
+```
+
+**탐지 — data-guidance-key 일관성:**
+```bash
+# spec에서 사용하는 data-guidance-key 값 목록
+grep -rn "data-guidance-key" \
+  apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -oE "'[a-z_]+'" | sort -u
+
+# 컴포넌트에서 해당 attribute가 부착되어 있는지 확인
+grep -rn "data-guidance-key" \
+  apps/frontend/components --include="*.tsx"
+# 결과: 1건 이상 (GuidanceCallout.tsx의 data-guidance-key={guidanceKey})
+```
+
+**PASS:** spec의 `data-guidance-key` 값이 `NC_WORKFLOW_GUIDANCE_TOKENS` 키 집합에 속함.
+**FAIL:** spec이 존재하지 않는 guidance key를 참조 → 항상 false negative.
+
 ## Output Format
 
 ```markdown
@@ -354,6 +386,7 @@ grep -rn '\[data-[a-z]' \
 | 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
 | 15d | API_ENDPOINTS SSOT (E2E) | PASS/FAIL | 하드코딩 경로 리터럴 또는 toTestPath 재도입 |
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
+| 16c | `toHaveAttribute` 기반 상태 검증 | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부 |
 ```
 
 ## Exceptions

@@ -141,6 +141,55 @@ sections.forEach(({ name, enKeys, koKeys }) => {
 
 > **연동 검증**: `EquipmentQRButton.tsx`에서 `getSamplerPresetOrder().map((preset) => t(\`size.${preset}\`))` 패턴으로 동적 키를 생성하므로, i18n 키가 누락되면 런타임에서 raw 키(`size.xl` 등)가 그대로 노출된다.
 
+### Step 12: NCGuidanceKey ↔ non-conformances.json 가이던스 키 동기화 (2026-04-22 추가)
+
+`NC_WORKFLOW_GUIDANCE_TOKENS`의 키(`NCGuidanceKey` union)와 `non-conformances.json`의
+`detail.guidance.*` 서브 키가 완전히 동기화되어야 한다.
+
+`GuidanceCallout.tsx`는 `t(\`detail.guidance.${guidanceKey}.title\`)`, `.body`, `.ctaHint` 등
+동적 키를 생성하므로, guidance 토큰 키 추가 시 i18n 누락이 런타임 raw 키 표시 버그를 유발한다.
+
+**검사 대상 키 (현재 11개):**
+`open_operator`, `open_manager`, `openRejected_operator`, `openRejected_manager`,
+`openBlockedRepair_operator`, `openBlockedRepair_manager`,
+`openBlockedRecalibration_operator`, `openBlockedRecalibration_manager`,
+`corrected_operator`, `corrected_manager`, `closed_all`
+
+```bash
+node -e "
+const en = require('./apps/frontend/messages/en/non-conformances.json');
+const ko = require('./apps/frontend/messages/ko/non-conformances.json');
+
+// NC_WORKFLOW_GUIDANCE_TOKENS의 키 집합 (하드코딩 없이 i18n 키로 검증)
+const enKeys = Object.keys(en.detail?.guidance ?? {}).filter(k => k !== 'stepBadge' && k !== 'scrollToAction');
+const koKeys = Object.keys(ko.detail?.guidance ?? {}).filter(k => k !== 'stepBadge' && k !== 'scrollToAction');
+
+const missing_en = koKeys.filter(k => !enKeys.includes(k));
+const missing_ko = enKeys.filter(k => !koKeys.includes(k));
+
+if (missing_en.length === 0 && missing_ko.length === 0) {
+  console.log('PASS: NCGuidanceKey i18n 키 완전 동기화 (' + enKeys.length + '개)');
+} else {
+  if (missing_en.length) console.log('FAIL: en/non-conformances.json 누락 키: ' + missing_en.join(', '));
+  if (missing_ko.length) console.log('FAIL: ko/non-conformances.json 누락 키: ' + missing_ko.join(', '));
+}
+
+// ctaHint는 ctaKind !== 'none' 인 키에만 존재해야 함 — 불필요한 ctaHint 잔재 탐지
+const ctaKindNoneKeys = ['open_manager', 'openRejected_manager', 'openBlockedRepair_manager', 'openBlockedRecalibration_manager', 'corrected_operator', 'closed_all'];
+ctaKindNoneKeys.forEach(k => {
+  if (en.detail?.guidance?.[k]?.ctaHint) console.log('WARN: en.' + k + '.ctaHint 불필요 (ctaKind=none)');
+  if (ko.detail?.guidance?.[k]?.ctaHint) console.log('WARN: ko.' + k + '.ctaHint 불필요 (ctaKind=none)');
+});
+" 2>/dev/null
+```
+
+**PASS:** en/ko 가이던스 키 완전 동기화, ctaHint 잔재 0건.
+**FAIL:** 한쪽에만 guidance 키 존재 → 누락된 언어에 추가. `'link'` ctaKind를 사용했던 구 버전 구조 잔재 탐지.
+
+> **연동 검증:** `deriveGuidance()` (`lib/non-conformances/guidance.ts`)가 반환하는 `NCGuidanceKey`가
+> `NC_WORKFLOW_GUIDANCE_TOKENS` 에 있고 → i18n에도 존재해야 런타임 에러 없음.
+> 3곳 (토큰 정의 / i18n / `resolveNCGuidanceKey` 반환값)이 항상 동기화되어야 함.
+
 ## Output Format
 
 ```markdown
@@ -157,6 +206,7 @@ sections.forEach(({ name, enKeys, koKeys }) => {
 | 9   | fieldLabels cross-namespace 중복 | PASS/FAIL | 중복 정의 파일 목록      |
 | 10  | audit SSOT enum ↔ i18n 동기화   | PASS/FAIL | 누락 entityType/action 목록 |
 | 11  | getSamplerPresetOrder ↔ qr.json | PASS/FAIL | sampler.header/size 누락·초과 preset 목록 |
+| 12  | NCGuidanceKey ↔ non-conformances.json 동기화 | PASS/FAIL | en/ko 누락 guidance 키, ctaHint 잔재 목록 |
 ```
 
 ## Exceptions

@@ -324,6 +324,54 @@ grep -n "aria-controls\|contentId\|id=\"nc-" \
 
 **상세:** [references/step-details.md](references/step-details.md) Step 14
 
+### Step 15: `staggerFadeInItem` + `getStaggerFadeInStyle` SSOT 패턴 (2026-04-22 추가)
+
+페이지 섹션 단위 stagger 애니메이션은 `ANIMATION_PRESETS.staggerFadeInItem` (className) +
+`getStaggerFadeInStyle(index, type)` (인라인 스타일) 조합을 SSOT로 사용한다.
+`index * N` raw 계산 또는 `animationDelay: '${index * 100}ms'` 형태 하드코딩 금지.
+
+`NC_SPACING_TOKENS.detail.*` 서브 키(`statusGroup`, `contextGroup`, `statusToContextGap` 등)는
+섹션 간격 리듬의 SSOT다. 페이지 레이아웃 래퍼에 `space-y-N` 또는 `mt-N` 직접 하드코딩 금지.
+
+**탐지:**
+```bash
+# 섹션 stagger에 raw index 곱셈 사용 탐지
+grep -rn "animationDelay.*index\s*\*\|style.*index\s*\*.*ms" \
+  apps/frontend/components --include="*.tsx" \
+  | grep -v "getStaggerFadeInStyle\|node_modules"
+
+# NC_SPACING_TOKENS.detail 우회 — 상세 페이지 wrapper에 space-y 직접 하드코딩
+grep -rn "NCDetailClient\|nc-detail" apps/frontend/components/non-conformances \
+  --include="*.tsx" -l | xargs grep -n "space-y-[0-9]\|mt-[0-9]" \
+  | grep -v "NC_SPACING_TOKENS\|getSectionRhythm\|node_modules"
+```
+
+**ctaKind discriminated union 타입 SSOT 검사:**
+
+`NCGuidanceEntry.ctaKind`는 `'primary' | 'repairLink' | 'calibrationLink' | 'none'` discriminated union.
+이전 `'link'` 리터럴은 제거됨. GuidanceCallout.tsx에서 조건부 렌더링이 exhaustive한지 확인.
+
+```bash
+# 구 'link' ctaKind 리터럴 잔재 탐지 (완전 제거 확인)
+grep -rn "ctaKind.*['\"]link['\"]" \
+  apps/frontend/components apps/frontend/lib/design-tokens \
+  --include="*.tsx" --include="*.ts"
+
+# GuidanceCallout에서 ctaKind 분기가 4가지 값을 모두 처리하는지 확인
+grep -n "ctaKind" apps/frontend/components/non-conformances/GuidanceCallout.tsx
+```
+
+**PASS:** raw index 곱셈 0건, `'link'` ctaKind 잔재 0건.
+**FAIL:** 위반 발견 시 `getStaggerFadeInStyle(index, 'section')` 또는 `NC_SPACING_TOKENS.detail.*` SSOT 사용.
+
+**Related Files:**
+- `apps/frontend/lib/design-tokens/motion.ts` — `ANIMATION_PRESETS.staggerFadeInItem`, `getStaggerFadeInStyle`
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_SPACING_TOKENS.detail.*`, `NCGuidanceEntry.ctaKind`
+- `apps/frontend/lib/non-conformances/guidance.ts` — `deriveGuidance()` 순수 함수 (비즈니스 로직)
+- `apps/frontend/components/non-conformances/GuidanceCallout.tsx` — ctaKind 분기 소비처
+
+**상세:** [references/step-details.md](references/step-details.md) Step 15
+
 ### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
 
 배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
@@ -364,6 +412,7 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 12  | @theme CSS 변수 ↔ primitives.ts 3-way 동기화 | PASS/FAIL | 불일치 변수 목록 |
 | 13  | Dead Token 탐지 (0 usage exports) | PASS/INFO/FAIL | dead token 목록 |
 | 14  | Collapsible button: aria-expanded + aria-controls 쌍 | PASS/FAIL | aria-controls 누락 button 위치 |
+| 15  | staggerFadeInItem SSOT + NC_SPACING_TOKENS.detail 우회 금지 | PASS/FAIL | raw index 곱셈 또는 `'link'` ctaKind 잔재 위치 |
 ```
 
 ## Exceptions

@@ -385,6 +385,45 @@ return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <E
 **INFO:** 에러를 상위 `error.tsx` Error Boundary로 bubble up하는 경우 `isError` 분기 생략 가능.
 **근거:** 2026-04-21 harness W-2 — `ValidationDocumentsSection.tsx` 첨부파일 로드 실패 시 빈 상태와 동일한 UI. `isError` 분기 추가 후 에러/빈 상태 구분 가능.
 
+### Step 20: `isMounted` ref skip-first-render 패턴 (2026-04-22 추가)
+
+`useEffect`가 마운트 시 실행되어 상태를 변경하는 것을 방지하려면 `useRef<boolean>`으로
+마운트 여부를 추적하고 첫 번째 렌더링 시 effect를 건너뛰는 패턴을 사용한다.
+
+이 패턴은 "상태 변경 → 가이던스 키 갱신 → 포커스 이전" 연쇄에서 마운트 시 불필요한
+포커스 이전/애니메이션 실행을 방지하기 위해 도입됨 (NCDetailClient.tsx 기준).
+
+**올바른 패턴:**
+```typescript
+const isMounted = useRef(false);
+
+useEffect(() => {
+  if (!isMounted.current) {
+    isMounted.current = true;
+    return; // 마운트 시 실행 건너뜀
+  }
+  // 실제 동작 (상태 변경 후에만 실행)
+  guidanceTitleRef.current?.focus();
+}, [guidanceKey]);
+```
+
+**탐지 — isMounted ref 없이 마운트 시 실행되는 포커스/애니메이션 effect:**
+```bash
+# guidanceKey, status 등 상태 의존 useEffect에서 isMounted guard 없이 focus 호출
+grep -rn "useEffect" apps/frontend/components --include="*.tsx" -A 5 \
+  | grep -B 3 "\.focus()" | grep -v "isMounted\|requestAnimationFrame"
+```
+
+**PASS:** 마운트 시 실행 방지가 필요한 포커스 전환 effect에 `isMounted.current` guard 존재.
+**FAIL:** `useEffect(() => { ref.current?.focus() }, [someState])` — 첫 렌더에도 포커스 강제 이전.
+
+**예외:**
+- `useEffect(() => { ref.current?.focus() }, [])` — 의도적 마운트 포커스 (모달 오픈 등)
+- `useEffect(() => { ref.current?.focus() }, [open])` — 열기/닫기 조건 포커스
+
+**관련 파일:**
+- `apps/frontend/components/non-conformances/NCDetailClient.tsx` — isMounted 패턴 최초 도입 (NC 가이던스 키 갱신 후 포커스 이전)
+
 ### Step 19: shared/generic 컴포넌트에서 useAuth 금지 (2026-04-21 추가)
 
 `components/shared/`, `components/ui/` 등 여러 도메인에서 재사용되는 **프레젠테이션 컴포넌트**는
@@ -461,6 +500,7 @@ const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 | 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |
 | 18  | *-api.ts React Hook 금지   | PASS/FAIL | lib/api/*-api.ts에 @tanstack/react-query import 위치 |
 | 19  | shared/ui 컴포넌트 useAuth 금지 | PASS/FAIL | components/shared·ui에서 useAuth import 위치 |
+| 20  | isMounted ref skip-first-render | PASS/FAIL | 상태 의존 포커스 effect에 isMounted guard 누락 위치 |
 ```
 
 ## Exceptions
