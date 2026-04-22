@@ -183,7 +183,7 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
       expect(res.body.code).toBe('CHECKOUT_FORBIDDEN');
     });
 
-    it('denies approve_return from test_engineer (no approve:checkout permission)', async () => {
+    it('denies approve_return from test_engineer — controller guard blocks (AUTH_INSUFFICIENT_PERMISSIONS)', async () => {
       const { id, version } = await createPendingCheckout();
       const approved = await approveCheckout(id, version);
       const started = await startCheckout(id, approved.version);
@@ -194,8 +194,10 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({ version: returned.version });
 
+      // approve-return guard는 APPROVE_CHECKOUT 요구 — test_engineer가 갖지 않으므로
+      // PermissionsGuard에서 먼저 차단(AUTH_INSUFFICIENT_PERMISSIONS). assertFsmAction 도달 불가.
       expect(res.status).toBe(403);
-      expect(res.body.code).toBe('CHECKOUT_FORBIDDEN');
+      expect(res.body.code).toBe('AUTH_INSUFFICIENT_PERMISSIONS');
     });
   });
 

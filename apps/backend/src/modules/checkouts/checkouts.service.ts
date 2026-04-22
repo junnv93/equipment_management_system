@@ -255,25 +255,32 @@ export class CheckoutsService extends VersionedBaseService {
     nextStatus: CheckoutStatus,
     req: AuthenticatedRequest
   ): Promise<void> {
-    await this.auditService.create({
-      userId: req.user?.userId ?? null,
-      userName: req.user?.name ?? 'system',
-      userRole: (req.user?.roles?.[0] ?? 'system') as AuditLogUserRole,
-      action: CheckoutsService.FSM_TO_AUDIT_ACTION[action],
-      entityType: 'checkout' as AuditEntityType,
-      entityId,
-      entityName: checkout.reason ?? undefined,
-      details: {
-        additionalInfo: {
-          fsmEvent: `checkout.${this.resolveAuditSuffix(checkout, action)}`,
-          from: checkout.status,
-          to: nextStatus,
-          purpose: checkout.purpose,
+    try {
+      await this.auditService.create({
+        userId: req.user?.userId ?? null,
+        userName: req.user?.name ?? 'system',
+        userRole: (req.user?.roles?.[0] ?? 'system') as AuditLogUserRole,
+        action: CheckoutsService.FSM_TO_AUDIT_ACTION[action],
+        entityType: 'checkout' as AuditEntityType,
+        entityId,
+        entityName: checkout.reason ?? undefined,
+        details: {
+          additionalInfo: {
+            fsmEvent: `checkout.${this.resolveAuditSuffix(checkout, action)}`,
+            from: checkout.status,
+            to: nextStatus,
+            purpose: checkout.purpose,
+          },
         },
-      },
-      userSite: req.user?.site,
-      userTeamId: req.user?.teamId,
-    });
+        userSite: req.user?.site,
+        userTeamId: req.user?.teamId,
+      });
+    } catch (err) {
+      this.logger.error(
+        `감사 로그 기록 실패 — action: ${action}, entityId: ${entityId}, error: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err.stack : undefined
+      );
+    }
   }
 
   /**
@@ -1453,20 +1460,13 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'approve',
-          uuid,
-          CSVal.APPROVED as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반출 승인 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'approve',
+        uuid,
+        CSVal.APPROVED as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1546,20 +1546,13 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'reject',
-          uuid,
-          CSVal.REJECTED as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반출 반려 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'reject',
+        uuid,
+        CSVal.REJECTED as CheckoutStatus,
+        req
+      );
 
       // ✅ 캐시 무효화 + 알림 데이터를 병렬로 가져오기 (순차 → 병렬)
       const [affectedTeams, { items: rejectItems, firstEquipment: rejectFirstEquip }] =
@@ -1673,20 +1666,13 @@ export class CheckoutsService extends VersionedBaseService {
         return result;
       });
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'start',
-          uuid,
-          CSVal.CHECKED_OUT as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반출 시작 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'start',
+        uuid,
+        CSVal.CHECKED_OUT as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
