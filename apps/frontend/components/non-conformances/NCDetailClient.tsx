@@ -116,6 +116,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE);
   // 헤더 편집 버튼도 canCloseNC와 동일 경계 사용 — UL-QP-18 §14: 기술책임자만 NC 전체 수정 가능
   const canEditNC = canCloseNC;
+  // calibrationLink CTA는 CREATE_CALIBRATION 보유자(시험실무자/기술책임자)에게만 표시
+  // quality_manager는 canCloseNC=false → operator guidance 받지만 CREATE_CALIBRATION 없음
+  const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
@@ -403,8 +406,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             guidanceKey={guidance!.key}
             onScrollToAction={scrollToActionBar}
             onRepairRegister={() => setShowRepairDialog(true)}
-            onCalibrationNav={() =>
-              router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+            onCalibrationNav={
+              canCreateCalibration
+                ? () => router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+                : undefined
             }
           />
         </div>
