@@ -1494,7 +1494,8 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }
@@ -1584,7 +1585,8 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }
@@ -1699,7 +1701,8 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }
@@ -2021,7 +2024,7 @@ export class CheckoutsService extends VersionedBaseService {
         rejectReturnDto.approverTeamId
       ) {
         if (rejectReturnDto.approverTeamId !== checkout.lenderTeamId) {
-          throw new BadRequestException({
+          throw new ForbiddenException({
             code: 'CHECKOUT_LENDER_TEAM_ONLY',
             message: 'Only the technical manager of the lending team can reject return',
           });
@@ -2324,7 +2327,8 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }
