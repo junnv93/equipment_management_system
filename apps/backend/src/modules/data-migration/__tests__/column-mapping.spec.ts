@@ -119,7 +119,8 @@ describe('Deprecated Aliases - Sheet Isolation', () => {
   it('장비 deprecated 컬럼 수가 예상 값과 일치해야 한다', () => {
     // equipmentType (DB 삭제), calibrationResult (교정이력 시트로 이동)
     // isShared, sharedSource, owner, usagePeriodStart, usagePeriodEnd, externalIdentifier (공용장비 시트로 분리)
-    expect(DEPRECATED_EQUIPMENT_COLUMNS).toHaveLength(8);
+    // technicalManager varchar (DB 삭제 → manager_id UUID FK로 대체)
+    expect(DEPRECATED_EQUIPMENT_COLUMNS).toHaveLength(9);
     expect(DEPRECATED_EQUIPMENT_ALIAS_SET.size).toBeGreaterThan(0);
   });
 

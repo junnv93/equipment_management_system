@@ -88,7 +88,6 @@ export const baseEquipmentSchema = z.object({
   firmwareVersion: z.string().optional(),
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
-  technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
   managerId: nullableOptionalUuid(), // 담당자 ID (운영 책임자 정 — 기술책임자 이상)
   deputyManagerId: nullableOptionalUuid(), // 부담당자 ID (운영 책임자 부 — 기술책임자 이상)
 
@@ -142,7 +141,9 @@ export const equipmentSchema = baseEquipmentSchema.extend({
   updatedAt: z.coerce.date(),
   // DB에 있는 추가 필드들
   managerId: z.string().optional().nullable(), // 담당자 ID (운영 책임자 정)
-  deputyManagerId: z.string().optional().nullable(), // 부담당자 ID (운영 책임자 부) — QP-18-02
+  managerName: z.string().optional().nullable(), // 담당자 이름 (운영 책임자 정, 조회 시 resolve)
+  deputyManagerId: z.string().optional().nullable(), // 부담당자 ID (운영 책임자 부)
+  deputyManagerName: z.string().optional().nullable(), // 부담당자 이름 (조회 시 resolve)
   intermediateCheckSchedule: z.coerce.date().optional().nullable(), // 중간점검 일정
   repairHistory: z.string().optional().nullable(), // 수리 내역
 });

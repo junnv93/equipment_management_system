@@ -75,8 +75,8 @@ export function StatusLocationSection({
       isInitialMount.current = false;
       return;
     }
-    // 팀이 변경되면 이전 팀의 기술책임자/부담당자 선택값을 초기화
-    setValue('technicalManager', '');
+    // 팀이 변경되면 이전 팀의 담당자/부담당자 선택값을 초기화
+    setValue('managerId', null);
     setValue('deputyManagerId', null);
   }, [currentTeamId, setValue]);
 
@@ -219,17 +219,17 @@ export function StatusLocationSection({
             )}
           />
 
-          {/* 기술책임자 */}
+          {/* 운영책임자 (정) — UUID 저장 */}
           <FormField
             control={control}
-            name="technicalManager"
+            name="managerId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
                   {t('fields.technicalManager')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <Select
-                  onValueChange={field.onChange}
+                  onValueChange={(v) => field.onChange(v === '__none__' ? null : v)}
                   value={field.value || undefined}
                   disabled={!currentSite || isLoadingManagers}
                 >
@@ -243,9 +243,7 @@ export function StatusLocationSection({
                               ? t('form.statusLocation.techManagerNoTeam')
                               : isLoadingManagers
                                 ? t('form.statusLocation.techManagerLoading')
-                                : technicalManagers.length === 0
-                                  ? t('form.statusLocation.techManagerDirectInput')
-                                  : t('form.statusLocation.techManagerPlaceholder')
+                                : t('form.statusLocation.techManagerPlaceholder')
                         }
                       />
                     </SelectTrigger>
@@ -254,26 +252,18 @@ export function StatusLocationSection({
                     {technicalManagers.map((manager) => (
                       <SelectItem
                         key={manager.uuid ?? `manager-${manager.id}`}
-                        value={manager.name}
+                        value={manager.uuid}
                       >
                         {manager.name}
                       </SelectItem>
                     ))}
                     {technicalManagers.length === 0 && (
-                      <SelectItem value="__placeholder__" disabled>
+                      <SelectItem value="__none__" disabled>
                         {t('form.statusLocation.techManagerNoList')}
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
-                {technicalManagers.length === 0 && currentSite && !isLoadingManagers && (
-                  <Input
-                    placeholder={t('form.statusLocation.techManagerDirectInputPlaceholder')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    className="mt-2"
-                  />
-                )}
                 <FormDescription>
                   {currentTeamId
                     ? t('form.statusLocation.techManagerDescriptionWithTeam')

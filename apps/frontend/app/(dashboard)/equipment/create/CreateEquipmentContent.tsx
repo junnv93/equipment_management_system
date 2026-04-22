@@ -193,12 +193,20 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
         subtitle={t('form.create.pageDescription')}
         onBack={handleCancel}
         actions={
-          <Link href="/equipment/create-shared">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Info className="h-4 w-4" />
-              {t('form.create.sharedLink')}
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/checkouts/import/shared">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Info className="h-4 w-4" />
+                {t('form.create.sharedLink')}
+              </Button>
+            </Link>
+            <Link href="/checkouts/import/rental">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Info className="h-4 w-4" />
+                {t('form.create.rentalLink')}
+              </Button>
+            </Link>
+          </div>
         }
       />
 

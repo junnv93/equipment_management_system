@@ -164,7 +164,8 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     firmwareVersion: equipment.firmwareVersion || undefined,
     manualLocation: equipment.manualLocation || undefined,
     accessories: equipment.accessories || undefined,
-    technicalManager: equipment.technicalManager || undefined,
+    managerId: equipment.managerId || null,
+    deputyManagerId: equipment.deputyManagerId || null,
     initialLocation: (equipment as Record<string, unknown>).initialLocation as string | undefined,
     installationDate: (equipment as Record<string, unknown>).installationDate
       ? new Date((equipment as Record<string, unknown>).installationDate as string)

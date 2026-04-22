@@ -338,10 +338,6 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     transform: parseExcelDate,
   },
   {
-    dbField: 'technicalManager',
-    aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
-  },
-  {
     dbField: 'correctionFactor',
     aliases: ['보정계수', '보정 계수', 'Correction Factor'],
   },
@@ -414,6 +410,12 @@ export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
   {
     dbField: 'externalIdentifier',
     aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
+  },
+  // technicalManager varchar 컬럼 제거 — manager_id UUID FK로 대체됨
+  // 기존 Excel 시트의 '기술책임자' 컬럼은 '운영책임자(정)' alias(managerName FK)로 처리
+  {
+    dbField: 'technicalManager',
+    aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
   },
 ];
 

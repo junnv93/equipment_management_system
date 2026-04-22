@@ -120,7 +120,6 @@ async function pushSchema(): Promise<void> {
         manual_location text,
         accessories text,
         main_features text,
-        technical_manager varchar(100),
         status varchar(50) DEFAULT 'available' NOT NULL,
         is_active boolean DEFAULT true,
         approval_status varchar(50) DEFAULT 'approved',

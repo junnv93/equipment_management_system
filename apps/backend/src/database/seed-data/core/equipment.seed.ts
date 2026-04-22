@@ -144,7 +144,6 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
       supplierContact: '031-987-6543',
       accessories: 'RF 케이블 3m x2, N-SMA 어댑터, 전용 캐리어 케이스',
       firmwareVersion: 'A.25.41',
-      technicalManager: '김기술',
       initialLocation: 'SUWON Lab A-201',
       installationDate: new Date('2023-06-15'),
       calibrationResult: '적합',

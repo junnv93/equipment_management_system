@@ -309,6 +309,13 @@
       "when": 1745712000000,
       "tag": "0043_drop_equipment_type_column",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1745798400000,
+      "tag": "0044_drop_technical_manager_column",
+      "breakpoints": true
     }
   ]
 }

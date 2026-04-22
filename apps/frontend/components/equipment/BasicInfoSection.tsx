@@ -127,7 +127,7 @@ export interface FormValues {
   firmwareVersion?: string;
   manualLocation?: string;
   accessories?: string;
-  technicalManager?: string;
+  managerId?: string | null; // 담당자 UUID (운영책임자 정)
   deputyManagerId?: string | null; // 부담당자 UUID
   initialLocation?: string;
   installationDate?: string;
@@ -280,7 +280,7 @@ export function BasicInfoSection({
       setValue('classification', selectedClassification);
       onManagementNumberChangeRef.current?.(managementNumberPreview);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: selectedClassification은 managementNumberPreview useMemo의 deps에 이미 포함됨
   }, [managementNumberPreview, isEdit, setValue]);
 
   // test_engineer: 팀 자동 선택 (userTeamId가 있으면 자동 설정)

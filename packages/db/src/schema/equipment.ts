@@ -108,8 +108,6 @@ export const equipment = pgTable(
     firmwareVersion: varchar('firmware_version', { length: 50 }),
     manualLocation: text('manual_location'),
     accessories: text('accessories'),
-    technicalManager: varchar('technical_manager', { length: 100 }),
-
     // 상태 정보
     status: varchar('status', { length: 50 })
       .$type<EquipmentStatus>()

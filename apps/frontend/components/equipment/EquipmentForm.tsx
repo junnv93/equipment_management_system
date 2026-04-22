@@ -217,7 +217,7 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   managementMethod: 'managementMethod',
   lastIntermediateCheckDate: 'lastIntermediateCheckDate',
   intermediateCheckCycle: 'intermediateCheckCycle',
-  technicalManager: 'technicalManager',
+  managerId: 'managerId',
   deputyManagerId: 'deputyManagerId',
 };
 
@@ -441,7 +441,7 @@ export function EquipmentForm({
       firmwareVersion: initialData?.firmwareVersion || '',
       manualLocation: initialData?.manualLocation || '',
       accessories: initialData?.accessories || '',
-      technicalManager: initialData?.technicalManager || '',
+      managerId: initialData?.managerId || null,
       deputyManagerId: initialData?.deputyManagerId || null,
       initialLocation: initialData?.initialLocation || '',
       installationDate: initialData?.installationDate
@@ -823,7 +823,7 @@ export function EquipmentForm({
         firmwareVersion: data.firmwareVersion,
         manualLocation: data.manualLocation,
         accessories: data.accessories,
-        technicalManager: data.technicalManager,
+        managerId: data.managerId,
         deputyManagerId: data.deputyManagerId,
         initialLocation: data.initialLocation,
         status: isTemporary ? 'temporary' : data.status,
@@ -835,7 +835,14 @@ export function EquipmentForm({
       },
       {
         // nullable 필드 명시 (schema에서 .nullable()인 필드)
-        nullableFields: ['teamId', 'sharedSource', 'owner', 'externalIdentifier'],
+        nullableFields: [
+          'teamId',
+          'sharedSource',
+          'owner',
+          'externalIdentifier',
+          'managerId',
+          'deputyManagerId',
+        ],
       }
     );
 

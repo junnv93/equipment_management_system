@@ -583,7 +583,8 @@
       "unknownError": "An unknown error occurred while registering the equipment.",
       "documentUploadPartialFail": "Some documents failed to upload",
       "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page.",
-      "sharedLink": "Register Shared Equipment"
+      "sharedLink": "Shared Equipment Import",
+      "rentalLink": "Rental Equipment Import"
     },
     "temporary": {
       "title": "Temporary Equipment Info",

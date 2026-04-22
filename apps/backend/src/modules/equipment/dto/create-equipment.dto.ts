@@ -160,9 +160,6 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   @ApiPropertyOptional({ description: '부속품' })
   accessories?: string;
 
-  @ApiPropertyOptional({ description: '기술 책임자 (사이트/팀 기준 필터링)' })
-  technicalManager?: string;
-
   @ApiPropertyOptional({ description: '담당자 ID (운영 책임자 정, UUID — 기술책임자 이상)' })
   managerId?: string | null;
 

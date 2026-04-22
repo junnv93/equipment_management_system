@@ -983,36 +983,37 @@ export class EquipmentService extends VersionedBaseService {
             teamMap = new Map(teamData.map((t) => [t.id, t.name]));
           }
 
-          // 부담당자 ID 목록 추출 (중복 제거)
-          const deputyManagerIds = [
+          // 담당자/부담당자 ID 목록 추출 (중복 제거)
+          const allManagerIds = [
             ...new Set(
               rawItems
-                .filter((item) => item.deputyManagerId)
-                .map((item) => item.deputyManagerId as string)
+                .flatMap((item) => [item.managerId, item.deputyManagerId])
+                .filter((id): id is string => !!id)
             ),
           ];
 
-          // 부담당자 이름 일괄 조회 (N+1 방지)
-          let deputyManagerMap: Map<string, string> = new Map();
-          if (deputyManagerIds.length > 0) {
-            const deputyData = await this.db
+          // 담당자/부담당자 이름 일괄 조회 (N+1 방지)
+          let managerMap: Map<string, string> = new Map();
+          if (allManagerIds.length > 0) {
+            const managerData = await this.db
               .select({ id: users.id, name: users.name })
               .from(users)
               .where(
                 sql`${users.id} IN (${sql.join(
-                  deputyManagerIds.map((id) => sql`${id}`),
+                  allManagerIds.map((id) => sql`${id}`),
                   sql`, `
                 )})`
               );
-            deputyManagerMap = new Map(deputyData.map((u) => [u.id, u.name]));
+            managerMap = new Map(managerData.map((u) => [u.id, u.name]));
           }
 
-          // 장비 데이터에 팀 이름 + 부담당자 이름 추가
+          // 장비 데이터에 팀 이름 + 담당자/부담당자 이름 추가
           const items = rawItems.map((item) => ({
             ...item,
             teamName: item.teamId ? teamMap.get(item.teamId) || null : null,
+            managerName: item.managerId ? managerMap.get(item.managerId) || null : null,
             deputyManagerName: item.deputyManagerId
-              ? deputyManagerMap.get(item.deputyManagerId) || null
+              ? managerMap.get(item.deputyManagerId) || null
               : null,
           }));
 
@@ -1072,8 +1073,17 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
-          // 부담당자 이름 resolve
+          // 담당자/부담당자 이름 resolve
+          let managerName: string | null = null;
           let deputyManagerName: string | null = null;
+          if (equipmentData.managerId) {
+            const [manager] = await this.db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, equipmentData.managerId))
+              .limit(1);
+            managerName = manager?.name ?? null;
+          }
           if (equipmentData.deputyManagerId) {
             const [deputy] = await this.db
               .select({ name: users.name })
@@ -1083,7 +1093,7 @@ export class EquipmentService extends VersionedBaseService {
             deputyManagerName = deputy?.name ?? null;
           }
 
-          return { ...equipmentData, deputyManagerName };
+          return { ...equipmentData, managerName, deputyManagerName };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;
@@ -1137,7 +1147,16 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
+          let managerName: string | null = null;
           let deputyManagerName: string | null = null;
+          if (equipmentData.managerId) {
+            const [manager] = await this.db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, equipmentData.managerId))
+              .limit(1);
+            managerName = manager?.name ?? null;
+          }
           if (equipmentData.deputyManagerId) {
             const [deputy] = await this.db
               .select({ name: users.name })
@@ -1147,7 +1166,7 @@ export class EquipmentService extends VersionedBaseService {
             deputyManagerName = deputy?.name ?? null;
           }
 
-          return { ...equipmentData, deputyManagerName };
+          return { ...equipmentData, managerName, deputyManagerName };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;

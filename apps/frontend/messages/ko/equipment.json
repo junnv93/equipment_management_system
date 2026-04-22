@@ -583,7 +583,8 @@
       "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다.",
       "documentUploadPartialFail": "일부 문서 업로드 실패",
       "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요.",
-      "sharedLink": "공용장비 등록"
+      "sharedLink": "공용장비 반입",
+      "rentalLink": "렌탈장비 반입"
     },
     "temporary": {
       "title": "임시등록 장비 정보",
