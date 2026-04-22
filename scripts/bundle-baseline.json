@@ -1,0 +1,6 @@
+{
+  "generatedAt": "2026-04-22",
+  "tolerancePct": 5,
+  "note": "PR-5 머지 후 실제 빌드로 갱신 필요: pnpm --filter frontend build 2>&1 | node scripts/check-bundle-size.mjs --baseline",
+  "routes": {}
+}

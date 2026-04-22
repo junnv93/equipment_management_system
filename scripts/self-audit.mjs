@@ -324,6 +324,42 @@ function checkIconButtonA11y(file, lines) {
   }
 }
 
+// ─── 체크 ⑧ CheckoutStatus FSM 리터럴 직접 비교 ──────────────────────────
+// --staged, --all 모두 적용
+// FSM 상태 문자열을 직접 === 비교하는 경우 감지.
+// SSOT: CheckoutStatusValues (CSVal.X) 또는 getNextStep descriptor 사용 필요.
+
+const CHECKOUT_STATUS_LITERAL_RE = new RegExp(
+  String.raw`\b(status|currentStatus|checkoutStatus)\s*[!=]==\s*['"\`](pending|approved|rejected|checked_out|returned|return_approved|lender_checked|borrower_received|borrower_returned|lender_received|in_use|overdue|canceled)['"\`]`
+);
+
+/** FSM 리터럴 감지 예외 파일 */
+function isFsmSsotFile(f) {
+  return (
+    f.includes('checkout-fsm') ||
+    f.includes('enums/checkout') ||
+    f.startsWith('apps/frontend/lib/design-tokens/') ||
+    isSsotDefinitionFile(f)
+  );
+}
+
+function checkFsmLiterals(file, lines) {
+  if (isTestFile(file)) return;
+  if (isFsmSsotFile(file)) return;
+
+  lines.forEach((raw, i) => {
+    const line = stripComments(raw);
+    if (CHECKOUT_STATUS_LITERAL_RE.test(line)) {
+      fail(
+        '⑧ FSM 리터럴',
+        file,
+        i + 1,
+        'CheckoutStatus 문자열 직접 비교 — CheckoutStatusValues (CSVal.X) 상수 또는 FSM descriptor 사용 필요',
+      );
+    }
+  });
+}
+
 // ─── 메인 실행 ─────────────────────────────────────────────────────────────
 
 for (const file of files) {
@@ -339,6 +375,7 @@ for (const file of files) {
   checkRoleLiterals(file, lines);
   checkSetQueryDataInOnSuccess(file, content, lines);
   checkIconButtonA11y(file, lines);
+  checkFsmLiterals(file, lines);
 }
 
 // ─── 결과 출력 ─────────────────────────────────────────────────────────────
