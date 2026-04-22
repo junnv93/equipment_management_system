@@ -5,7 +5,7 @@ import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
 import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import type { AuthenticatedRequest } from '../../../types/auth';
 import { derivePermissionsFromRoles } from '@equipment-management/shared-constants';
@@ -349,6 +349,61 @@ describe('CheckoutsService', () => {
         BadRequestException
       );
     });
+
+    it('should throw BadRequestException (NO_EQUIPMENT) when checkout has no items', async () => {
+      // items 쿼리 기본 반환값: [] (chain.then default)
+      mockCacheService.getOrSet.mockResolvedValue({ ...mockPendingCheckout, version: 1 });
+      mockEquipmentService.findByIds.mockResolvedValue(new Map());
+
+      await expect(service.approve(checkoutId, mockApproveDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('should throw ForbiddenException (LENDER_TEAM_ONLY) when team-less user approves RENTAL checkout', async () => {
+      const rentalCheckout = {
+        ...mockPendingCheckout,
+        purpose: 'rental',
+        lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        lenderSiteId: 'suwon',
+        version: 1,
+      };
+      const mockRentalEquipment = {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test Equipment',
+        managementNumber: 'SUW-E0001',
+        site: 'suwon',
+        teamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+      };
+      // 팀 미소속 사용자: teamId undefined → enforceScopeFromData site fallback 통과 후 LENDER_TEAM_ONLY 도달
+      const mockReqNoTeam = {
+        user: {
+          userId: mockReq.user.userId,
+          roles: ['technical_manager'],
+          permissions: mockReq.user.permissions,
+          site: 'suwon',
+          teamId: undefined,
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue(rentalCheckout);
+      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([{ equipmentId: mockRentalEquipment.id }])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValue(
+        new Map([[mockRentalEquipment.id, mockRentalEquipment]])
+      );
+
+      await expect(service.approve(checkoutId, mockApproveDto, mockReqNoTeam)).rejects.toThrow(
+        ForbiddenException
+      );
+
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+    });
   });
 
   describe('reject', () => {
@@ -545,6 +600,34 @@ describe('CheckoutsService', () => {
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('rejectReturn', () => {
+    const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
+    const approverId = '550e8400-e29b-41d4-a716-446655440004';
+    const mockRejectReturnDto = {
+      version: 1,
+      reason: '반입 검사 항목 미충족: 재검사 필요',
+      approverId,
+      approverTeamId: mockReq.user.teamId,
+    };
+
+    const mockReturnedCheckout = {
+      id: checkoutId,
+      requesterId: '550e8400-e29b-41d4-a716-446655440002',
+      status: 'returned',
+      purpose: 'calibration',
+    };
+
+    it('should throw BadRequestException (NO_EQUIPMENT) when checkout has no items', async () => {
+      // items 쿼리 기본 반환값: [] (chain.then default)
+      mockCacheService.getOrSet.mockResolvedValue({ ...mockReturnedCheckout, version: 1 });
+      mockEquipmentService.findByIds.mockResolvedValue(new Map());
+
+      await expect(service.rejectReturn(checkoutId, mockRejectReturnDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 

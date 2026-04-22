@@ -1421,9 +1421,13 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
       const firstEquip = equipmentMap.values().next().value;
-      if (firstEquip) {
-        this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      if (!firstEquip) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.NO_EQUIPMENT,
+          message: 'No equipment found for this checkout',
+        });
       }
+      this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
 
       // 사용자 팀 classification 조회 (1회)
       const approverTeamId = req.user?.teamId;
@@ -1441,8 +1445,9 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 승인 가능
-      if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId && approverTeamId) {
-        if (approverTeamId !== checkout.lenderTeamId) {
+      // approverTeamId 미존재(팀 미소속) 시에도 반드시 거부 — identity-rule 강제
+      if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId) {
+        if (!approverTeamId || approverTeamId !== checkout.lenderTeamId) {
           throw new ForbiddenException({
             code: CheckoutErrorCode.LENDER_TEAM_ONLY,
             message: 'Only the technical manager of the lending team can approve',
@@ -2002,9 +2007,13 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 스코프 접근 제어 — approverTeamId 유무와 무관하게 항상 실행 (방어선 일관성)
       const firstEquip = equipmentMap.values().next().value;
-      if (firstEquip) {
-        this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      if (!firstEquip) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.NO_EQUIPMENT,
+          message: 'No equipment found for this checkout',
+        });
       }
+      this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
 
       if (rejectReturnDto.approverTeamId) {
         const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
@@ -2019,12 +2028,12 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 반려 가능
-      if (
-        checkout.purpose === CPVal.RENTAL &&
-        checkout.lenderTeamId &&
-        rejectReturnDto.approverTeamId
-      ) {
-        if (rejectReturnDto.approverTeamId !== checkout.lenderTeamId) {
+      // approverTeamId 미존재(팀 미소속) 시에도 반드시 거부 — identity-rule 강제
+      if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId) {
+        if (
+          !rejectReturnDto.approverTeamId ||
+          rejectReturnDto.approverTeamId !== checkout.lenderTeamId
+        ) {
           throw new ForbiddenException({
             code: CheckoutErrorCode.LENDER_TEAM_ONLY,
             message: 'Only the technical manager of the lending team can reject return',
