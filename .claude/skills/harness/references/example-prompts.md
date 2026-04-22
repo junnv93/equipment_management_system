@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-22 (반출입 v2 프롬프트 9개 신규 PR-12~PR-19 + 기존 9개 PR-3~PR-11 [v2 보강] 마커 부착, 총 18 active PR. PR-1·PR-2 완료 ✅, NC-P1~P4 완료 → archive)**
+> **마지막 정리일: 2026-04-22 (반출입 v2 프롬프트 9개 신규 PR-12~PR-19 + 기존 9개 PR-3~PR-11 [v2 보강] 마커 부착 + tech-debt 미처리 5건 PR-20~PR-24 신규, 총 23 active PR. PR-1·PR-2 완료 ✅, NC-P1~P4 완료 → archive)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -1841,7 +1841,465 @@ SSOT 주의:
 
 ---
 
-> **PR 실행 순서 (의존성 그래프, 18 PR — PR-1·2 완료 ✅)**
+---
+
+### 🟠 HIGH — PR-20: Backend 보안/SSOT 강화 — rejectReturn 스코프 순서 역전 + submitConditionCheck step 리터럴 + approveReturn 패리티 (Mode 1)
+
+```
+배경 (2026-04-22 p1p3 + review-arch tech-debt):
+apps/backend/src/modules/checkouts/checkouts.service.ts에 3개의 독립적 이슈가 공존.
+보안 이슈 1건 + SSOT 위반 1건 + 패턴 비대칭 1건.
+
+문제:
+1. [보안 🔴] rejectReturn 스코프 체크 순서 역전 (L1995~2023)
+   assertFsmAction 호출이 enforceScopeFromData보다 먼저 실행됨.
+   → 스코프 외 사용자가 scope 차단 대신 FSM 오류 메시지를 먼저 수신 (정보 노출).
+   approve(L1421)/approveReturn은 enforceScopeFromCheckout을 FSM 전에 호출하는 올바른 패턴 사용.
+
+2. [SSOT 🟠] submitConditionCheck step 리터럴 (L2131-2207)
+   'lender_checkout' / 'lender_return' 문자열 리터럴 3개소가 직접 비교됨.
+   stepTransitions 객체 키도 동일한 리터럴 사용.
+   SSOT: ConditionCheckStepValues.LENDER_CHECKOUT / ConditionCheckStepValues.LENDER_RETURN 상수 존재.
+
+3. [패턴 비대칭 🟡] approveReturn checkTeamPermission 미적용
+   approve/rejectReturn은 EMC/RF 교차 금지 checkTeamPermission() 호출.
+   approveReturn은 동일 호출 없음.
+   또한 approveReturn은 enforceScopeFromCheckout(추가 DB 쿼리) 사용 vs approve/rejectReturn의 enforceScopeFromData(쿼리 0).
+
+4. [테스트 🟢] approve 테스트 mockDrizzle.where.then 패턴 비작동
+   describe('approve') success/LENDER_TEAM_ONLY 테스트(spec L312-336, 390-405)가
+   chain.where.then 오버라이드 사용하나 실제로 비작동.
+   현재 findByIds mock이 입력 무관하게 equipment 반환하여 우연히 통과.
+   → mockChain.then 패턴으로 통일.
+
+조건: PR-2(backend FSM) 이후 독립 진행 가능. frontend와 무관.
+
+작업:
+
+1. checkouts.service.ts — rejectReturn 스코프 체크 순서 수정 (수술적 변경)
+   L1995 근처: assertFsmAction 호출을 enforceScopeFromData 이후로 이동.
+   패턴 참조: approve 메서드 구조 (enforceScopeFromData → checkTeamPermission → assertFsmAction 순서).
+   변경 범위: rejectReturn 메서드 내 2줄 순서 교환만. 인접 로직 변경 금지.
+
+2. checkouts.service.ts — submitConditionCheck step 리터럴 교체 (수술적 변경)
+   L2131-2207 범위:
+   'lender_checkout' → ConditionCheckStepValues.LENDER_CHECKOUT  (3개소)
+   'lender_return'   → ConditionCheckStepValues.LENDER_RETURN    (3개소)
+   stepTransitions 객체 키: computed property key 문법 사용
+     { [ConditionCheckStepValues.LENDER_CHECKOUT]: ..., [ConditionCheckStepValues.LENDER_RETURN]: ... }
+   ConditionCheckStepValues import 경로: @equipment-management/schemas (기존 import 확인 후 추가)
+   변경 범위: L2131-2207 이내만. 다른 메서드 변경 금지.
+
+3. checkouts.service.ts — approveReturn 패리티 검토 + 적용
+   먼저 approveReturn 메서드를 읽고:
+   - 반납 최종 승인자에게 팀 분류 제약이 도메인상 없다면: 파일 상단 주석으로 의도 명시하고 종료.
+   - 제약이 있어야 한다면: approve/rejectReturn 패턴으로 checkTeamPermission() 추가.
+   - enforceScopeFromCheckout → enforceScopeFromData 교체 여부: 추가 DB 쿼리 제거가 성능상 유리하나,
+     데이터 이미 로드된 경우에만 안전. approveReturn에서 checkout이 select된 직후 호출인지 확인 후 판단.
+   ※ 의도적 생략이면 코드 변경 없이 주석만 추가. 코드 추측으로 변경 금지.
+
+4. checkouts.service.spec.ts — approve 테스트 mock 패턴 수정
+   spec L312-336, L390-405:
+   chain.where.then 오버라이드 → mockChain.then 직접 오버라이드 패턴으로 교체.
+   기존 테스트 파일의 mockChain 설정 방식(파일 내 다른 테스트) 참조하여 일관성 유지.
+   테스트 결과는 동일(pass) — mock 신뢰성만 개선.
+
+SSOT 주의:
+- ConditionCheckStepValues는 @equipment-management/schemas에서 import (로컬 재정의 금지)
+- assertFsmAction, enforceScopeFromData, checkTeamPermission 호출 순서는 approve 메서드를 SSOT로 참조
+- 변경 파일: checkouts.service.ts + checkouts.service.spec.ts 2개만
+
+검증:
+- pnpm --filter backend exec tsc --noEmit
+- pnpm --filter backend run test -- checkouts.service
+- grep "'lender_checkout'\|'lender_return'" apps/backend/src/modules/checkouts/checkouts.service.ts → 0 hit
+- rejectReturn: enforceScopeFromData 호출이 assertFsmAction보다 앞에 있음을 grep으로 확인
+```
+
+---
+
+### 🟡 MEDIUM — PR-21: 프론트엔드 구조 수정 — WCAG tablist 위치 + Radix Select 가드 + QUERY_CONFIG SSOT + URL 일원화 (Mode 1)
+
+```
+배경 (2026-04-22 subtab-ia tech-debt 4건):
+CheckoutsContent.tsx/OutboundCheckoutsTab.tsx에서 발견된 구조적 이슈 4건.
+각 이슈는 독립적이지만 모두 checkout 필터/탭 레이어에 집중되어 있어 단일 PR로 처리.
+
+문제:
+1. [WCAG 4.1.2 🟠] role="tabpanel" 내부에 role="tablist" 위치
+   OutboundCheckoutsTab.tsx:348-357:
+   <div role="tabpanel" aria-labelledby="...">
+     <CheckoutListTabs ... />   {/* CheckoutListTabs가 tablist 렌더 */}
+     ...
+   </div>
+   WCAG 2.1 Tab Pattern: tablist는 tabpanel의 sibling이어야 함 (자식 불가).
+   axe-core: "Elements with role="tablist" must not be contained in elements with role="tabpanel"".
+
+2. [아키텍처 🟡] Radix Select spurious onValueChange 가드 누락
+   CheckoutsContent.tsx의 4개 핸들러가 동일 값 선택 시에도 URL 업데이트 실행:
+   handleStatusChange / handleLocationChange / handlePurposeChange / handlePeriodChange
+   Radix Select는 네비게이션 중 spurious 발화 가능 → 의도치 않은 필터 리셋 위험.
+
+3. [SSOT 🟡] QUERY_CONFIG 인라인 오버라이드 (4차 재발)
+   CheckoutsContent.tsx:141: staleTime: CACHE_TIMES.SHORT (pendingCount)
+   CheckoutsContent.tsx:149: staleTime: CACHE_TIMES.LONG  (destinations)
+   CheckoutsContent.tsx:165: staleTime: CACHE_TIMES.SHORT (liveSummary)
+   QUERY_CONFIG에 프리셋이 없어 매번 인라인 지정. 기존 모듈(equipment 등)은 QUERY_CONFIG 프리셋 사용.
+
+4. [아키텍처 🟢] handlePageChange URL SSOT 이중 경로
+   OutboundCheckoutsTab.tsx:132-148:
+   handlePageChange → new URLSearchParams(searchParams.toString()).set('page', ...)
+   handleSubTabChange → new URLSearchParams(searchParams.toString()).set('subTab', ...)
+   CheckoutsContent.tsx의 updateUrl(filtersToSearchParams(...)) 패턴과 이중 경로.
+
+조건: PR-12(서브탭 + 목록 IA) 완료 후 진행. PR-16(접근성 강화)과 병렬 가능.
+      WCAG 이슈(1번)는 PR-16 전에 해결하는 것이 권장.
+
+작업:
+
+1. OutboundCheckoutsTab.tsx — tablist 위치 수정 (수술적)
+   현재:
+   <div id={`subtab-panel-${filters.subTab}`} role="tabpanel" aria-labelledby="...">
+     <CheckoutListTabs ... />
+     <div className="space-y-3">...</div>
+   </div>
+
+   수정 후:
+   <CheckoutListTabs ... />   {/* tabpanel 외부로 이동 */}
+   <div id={`subtab-panel-${filters.subTab}`} role="tabpanel" aria-labelledby="...">
+     <div className="space-y-3">...</div>
+   </div>
+
+   주의: CheckoutListTabs의 aria-labelledby 연결이 tabpanel id와 일치하는지 확인.
+   WCAG Tab Pattern: tablist와 tabpanel은 같은 레벨 sibling 구조.
+
+2. CheckoutsContent.tsx — Radix Select 가드 추가 (4개 핸들러)
+   각 핸들러 첫 줄에 early-return 가드:
+   const handleStatusChange = (value: string) => {
+     if (value === filters.status) return;   // ← 추가
+     const inferredSubTab = getSubTabForStatus(value);
+     updateUrl({ ...filters, status: value, subTab: inferredSubTab ?? filters.subTab, page: 1 });
+   };
+   동일 패턴: handleLocationChange(destination), handlePurposeChange(purpose), handlePeriodChange(period)
+   변경 범위: 각 핸들러 첫 줄만. 핸들러 내부 로직 변경 금지.
+
+3. lib/api/query-config.ts — CHECKOUT 쿼리 프리셋 추가
+   기존 QUERY_CONFIG 객체에 checkout 섹션 추가:
+   checkout: {
+     pendingCount: { staleTime: CACHE_TIMES.SHORT },
+     destinations: { staleTime: CACHE_TIMES.LONG },
+     summary:      { staleTime: CACHE_TIMES.SHORT },
+     list:         { staleTime: CACHE_TIMES.SHORT },
+   }
+   CACHE_TIMES는 동일 파일에 이미 존재 — import 변경 불필요.
+
+   CheckoutsContent.tsx 3곳 교체:
+   L141: staleTime: CACHE_TIMES.SHORT → ...QUERY_CONFIG.checkout.pendingCount
+   L149: staleTime: CACHE_TIMES.LONG  → ...QUERY_CONFIG.checkout.destinations
+   L165: staleTime: CACHE_TIMES.SHORT → ...QUERY_CONFIG.checkout.summary
+   스프레드(...)로 교체하여 staleTime 외 필드(gcTime 등) 확장 가능하게 유지.
+
+4. OutboundCheckoutsTab.tsx — handlePageChange/handleSubTabChange 일원화
+   현재 두 함수가 URLSearchParams 직접 조작 → filtersToSearchParams 경유로 통일.
+
+   handlePageChange 수정:
+   const handlePageChange = (newPage: number) => {
+     const updated = { ...filters, page: newPage };
+     const params = filtersToSearchParams(updated);
+     const qs = params.toString();
+     router.replace(qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST, { scroll: false });
+   };
+
+   handleSubTabChange 수정:
+   const handleSubTabChange = (newSubTab: CheckoutSubTab) => {
+     const updated = { ...filters, subTab: newSubTab, status: 'all' as const, page: 1 };
+     const params = filtersToSearchParams(updated);
+     const qs = params.toString();
+     router.replace(qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST, { scroll: false });
+   };
+
+   filtersToSearchParams는 이미 import됨 — 추가 import 불필요.
+   FRONTEND_ROUTES.CHECKOUTS.LIST import 확인 (이미 있으면 추가 불필요).
+   변경 범위: 두 함수 본문만. prop/인터페이스 변경 금지.
+
+SSOT 주의:
+- filtersToSearchParams: @/lib/utils/checkout-filter-utils에서 import (이미 있음, 재확인만)
+- QUERY_CONFIG: @/lib/api/query-config에서 import
+- CACHE_TIMES: query-config.ts 내부에서 참조 (외부 재정의 금지)
+- role="tabpanel" id는 기존 `subtab-panel-${filters.subTab}` 유지 (aria 연결 보존)
+- hex 하드코딩 금지 / 기존 파일 70%+ 전면 교체 금지
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit
+- grep "staleTime: CACHE_TIMES" apps/frontend/app/\(dashboard\)/checkouts/CheckoutsContent.tsx → 0 hit
+- grep "new URLSearchParams" apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx → 0 hit
+- axe-core: role="tablist" contained in role="tabpanel" 위반 0
+- 수동 확인: 동일 상태 Select 재선택 시 URL 변경 없음
+```
+
+---
+
+### 🟡 MEDIUM — PR-22: Checkout API 정리 — getCheckoutSummary() 데드 코드 + 레거시 필드 + verifyHandoverToken Zod (Mode 1)
+
+```
+배경 (checkout-api.ts 분석 + 2026-04-22 subtab-ia verify-zod tech-debt):
+checkout-api.ts에 실제로 사용되지 않는 코드와 레거시 호환 필드가 누적되어 있음.
+데드 코드는 유지 비용과 혼란을 증가시키므로 제거.
+
+문제:
+1. [데드 코드 🟡] getCheckoutSummary() — hardcoded zeros, 실 호출 없음
+   apps/frontend/lib/api/checkout-api.ts:414-425:
+   async getCheckoutSummary(): Promise<CheckoutSummary> {
+     const response = await this.getCheckouts({ pageSize: 1 });
+     return {
+       total: response.meta.pagination.total,
+       pending: 0,   // ← hardcoded
+       approved: 0,  // ← hardcoded
+       overdue: 0,   // ← hardcoded
+       returnedToday: 0, // ← hardcoded
+     };
+   }
+   실제 summary는 getCheckouts({ includeSummary: true })를 통해 result.meta.summary로 수신.
+   getCheckoutSummary()는 CheckoutsContent의 liveSummary 쿼리가 이미 올바른 방법으로 대체.
+   → 제거 대상. 제거 전 codebase 전체 사용처 확인 필수.
+
+2. [레거시 필드 🟡] Checkout 인터페이스 레거시 호환 필드 쌍
+   checkout-api.ts Checkout 인터페이스:
+   - requesterId?: string  vs  userId?: string         (레거시)
+   - destination: string  vs  location?: string        (레거시)
+   - phoneNumber?: string  vs  contactNumber?: string  (레거시)
+   - checkoutDate?: string  vs  startDate?: string     (레거시)
+   - approverId?: string  vs  approvedById?: string    (레거시)
+   ※ 백엔드가 이미 신규 필드명으로 통일된 경우, 프론트 레거시 필드는 제거 가능.
+   제거 전: codebase 전체에서 레거시 필드명 사용처를 grep으로 확인.
+   사용처가 있으면 신규 필드명으로 교체 후 레거시 제거.
+   백엔드 응답에 레거시 필드가 없으면 레거시 필드 타입만 제거 (런타임 안전).
+
+3. [verify-zod 🟢] verifyHandoverToken @UseInterceptors 누락
+   apps/backend/src/modules/checkouts/checkouts.controller.ts:194:
+   @ZodResponse 데코레이터 있으나 메서드 단위 @UseInterceptors(ZodSerializerInterceptor) 없음.
+   → Swagger 스펙은 바뀌나 실제 직렬화 미적용.
+   ZodSerializerInterceptor 글로벌 승격 전까지 메서드 단위 추가.
+   참조: issueHandoverToken 메서드(같은 컨트롤러)의 기존 패턴.
+
+조건: PR-2(backend) 이후 독립 진행. 다른 PR과 무관.
+
+작업:
+
+1. getCheckoutSummary() 제거
+   사전 확인:
+   grep -rn "getCheckoutSummary" apps/frontend/
+   → 호출처 0이면 함수 제거.
+   → 호출처 있으면 각 호출처를 getCheckouts({ includeSummary: true })로 교체 후 제거.
+   제거 범위: checkout-api.ts:410-425의 함수 정의 블록만.
+   CheckoutSummary 타입은 유지 (다른 곳에서 사용됨).
+
+2. Checkout 인터페이스 레거시 필드 제거
+   사전 확인 (각 레거시 필드별 grep):
+   grep -rn "\.userId\b\|\.location\b\|\.contactNumber\b\|\.startDate\b\|\.approvedById\b" apps/frontend/ --include="*.ts" --include="*.tsx"
+   → 각 사용처 목록 확보
+   → 신규 필드명으로 교체 가능한 경우: 교체 후 레거시 필드 제거
+   → 교체 불가능한 경우(백엔드 응답 포함): 레거시 필드 유지 + 주석 업데이트
+   ※ 제거 여부는 실측 grep 결과에만 근거. 추측으로 제거 금지.
+
+3. verifyHandoverToken @UseInterceptors 추가
+   checkouts.controller.ts:194 근처 verifyHandoverToken 메서드에:
+   @UseInterceptors(ZodSerializerInterceptor) 추가 (메서드 레벨 데코레이터)
+   ZodSerializerInterceptor import 확인 (issueHandoverToken 메서드 상단에 이미 있으면 추가 불필요).
+   변경 범위: 데코레이터 1줄 + import 1줄(필요 시).
+
+SSOT 주의:
+- CheckoutSummary 타입: checkout-api.ts에서 export됨 — 삭제 금지 (함수만 제거)
+- 레거시 필드: grep 실측 기반 판단 (의존성 있으면 유지)
+- ZodSerializerInterceptor: 기존 import 경로 재사용 (새 경로 불필요)
+- 백엔드 컨트롤러: 변경 파일 수 최소화 (checkouts.controller.ts 1개만)
+
+금지:
+- 사용처 확인 없이 일괄 제거
+- 레거시 → 신규 필드 일괄 rename (개별 확인 필수)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit
+- pnpm --filter backend exec tsc --noEmit
+- grep "getCheckoutSummary" apps/frontend/ → 0 hit (제거된 경우)
+- grep "verifyHandoverToken" apps/backend/ | grep "UseInterceptors\|ZodResponse" → 양쪽 존재 확인
+```
+
+---
+
+### 🟡 MEDIUM — PR-23: 마무리 정리 — NextStepPanel 플래그 상시화 + .env.example + focus-visible + i18n urgency (Mode 1)
+
+```
+배경 (2026-04-22 checkout-arch-pr3-11 tech-debt 4건):
+PR-5에서 도입된 NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 피처 플래그가
+Beta 2 세션 안정화 완료 후 제거 대상. 동시에 소규모 접근성/i18n 마무리 3건 처리.
+
+트리거 조건: 이 PR은 다음 조건 모두 충족 후 진행:
+- E2E 11 시나리오 2 세션 연속 안정 (PR-9 이후)
+- NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true 개발 환경 1주 이상 운영
+
+문제:
+1. [플래그 제거 🟡] NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 코드 정리
+   CheckoutDetailClient.tsx: showNextStepPanel 분기 + LegacyActionsBlock
+   CheckoutGroupCard.tsx:    showNextStepPanel 분기 + LegacyInlineActions
+   checkout-flags.ts (있다면): isNextStepPanelEnabled() 호출부 3곳
+
+2. [접근성 🟢] workflow-panel.ts:49-52 blocked 버튼 focus-visible 누락
+   WORKFLOW_PANEL_TOKENS.action.blocked에 FOCUS_TOKENS.classes.default 없음.
+   primary 버튼에는 이미 존재.
+   → blocked 버튼도 동일하게 focus-visible ring 추가.
+
+3. [문서화 🟢] .env.example 플래그 문서화 누락
+   .env.example, apps/frontend/.env.local.example 양쪽에
+   # NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=false 항목 누락.
+   → 플래그 제거 시: 항목 삭제. 제거 전이면: 항목 추가.
+
+4. [i18n 🟢] checkouts.json guidance.urgency.normal 빈 문자열
+   apps/frontend/messages/ko/checkouts.json + en/checkouts.json:
+   "guidance": { "urgency": { "normal": "" } }  ← 빈 문자열
+   런타임 호출 코드가 현재 없으나 키 정의는 유지해야 함.
+   → 적절한 fallback 텍스트 추가 또는 명시적 빈 문자열 유지 (의도 주석 추가).
+
+조건: PR-5(플래그 도입) + E2E 11 시나리오 안정 확인 후. 트리거 조건 충족 전 대기.
+
+작업:
+
+1. NextStepPanel 플래그 상시화 (트리거 조건 충족 시)
+   CheckoutDetailClient.tsx:
+   - showNextStepPanel 분기 삭제
+   - LegacyActionsBlock 컴포넌트 제거 (로컬 함수 또는 별도 파일 모두)
+   - NextStepPanel 단일 렌더만 남김
+
+   CheckoutGroupCard.tsx:
+   - showNextStepPanel 분기 삭제
+   - LegacyInlineActions 컴포넌트 제거
+   - NextStepPanel compact variant 단일 렌더만 남김
+
+   checkout-flags.ts (파일 존재 시):
+   - isNextStepPanelEnabled() 함수 제거
+   - 파일 전체 비면 파일 삭제
+   - import 정리: 해당 파일 import하던 모든 곳에서 제거
+
+   환경변수:
+   - .env.local: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true 줄 삭제
+   - .env.local.example: 해당 줄 삭제
+   - .env.example: 해당 줄 삭제 (있으면)
+
+2. workflow-panel.ts blocked 버튼 focus-visible 추가
+   apps/frontend/lib/design-tokens/components/workflow-panel.ts:49-52:
+   WORKFLOW_PANEL_TOKENS.action.blocked 객체에:
+   focusVisible: FOCUS_TOKENS.classes.default   ← 추가
+   참조: 동일 파일의 primary 버튼 focusVisible 속성 (이미 존재하는 값 재사용).
+   FOCUS_TOKENS import: @/lib/design-tokens에서 import (이미 있으면 추가 불필요).
+
+3. .env.example 문서화 (트리거 조건 충족 전인 경우만)
+   이 항목은 PR-23 트리거 전에 먼저 실행 가능:
+   apps/frontend/.env.local.example 파일에 추가:
+   # Next Step Panel 피처 플래그 (Beta 완료 후 제거 예정)
+   # NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=false
+   .env.example에도 동일하게 추가.
+
+4. guidance.urgency.normal i18n 처리
+   apps/frontend/messages/ko/checkouts.json:
+   "guidance": { "urgency": { "normal": "일반" } }  ← 빈 문자열 → 의미있는 값 또는
+   또는 키 자체를 제거 (런타임 미사용이면 PR-8의 check-i18n-keys.mjs REQUIRED_KEYS에도 없으므로 제거 안전).
+   apps/frontend/messages/en/checkouts.json 동일.
+   선택: "일반" / "Normal" 추가 또는 키 제거 — 어느 쪽이든 빈 문자열 불허.
+
+SSOT 주의:
+- FOCUS_TOKENS: @/lib/design-tokens에서 import (하드코딩 금지)
+- 레거시 컴포넌트 제거 시: 참조 import 흔적 0 확인 필수
+- i18n 키 제거 시: check-i18n-keys.mjs REQUIRED_KEYS에서 해당 키도 제거
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit
+- grep "NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL\|showNextStepPanel\|LegacyActionsBlock\|LegacyInlineActions" apps/frontend/ → 0 hit (플래그 제거 시)
+- grep "blocked" apps/frontend/lib/design-tokens/components/workflow-panel.ts → focusVisible 존재 확인
+- grep '"normal": ""' apps/frontend/messages/ → 0 hit
+```
+
+---
+
+### 🟢 LOW — PR-24: FSM 리터럴 7건 외과적 교체 — status === '<literal>' → CSVal.* (Mode 1)
+
+```
+배경 (2026-04-22 checkout-arch-pr3-11 + nc-p4-guidance tech-debt):
+기존 파일 7곳에서 status 직접 리터럴 비교가 발견됨.
+PR-2에서 적용한 canPerformAction/CSVal 패턴과 불일치.
+self-audit ⑧ 체크 대상 (PR-11에서 게이트 추가된 패턴).
+
+문제:
+파일별 위반 목록 (grep으로 사전 확인 필수 — 리팩토링 이후 라인 번호 이동 가능):
+1. apps/frontend/components/equipment/CreateEquipmentContent.tsx:115
+   status === 'checked_out' 류 비교
+
+2. apps/frontend/components/non-conformances/ResultSectionFormDialog.tsx:154
+   status 리터럴 비교
+
+3. apps/frontend/components/non-conformances/CreateNonConformanceForm.tsx:145
+   status 리터럴 비교
+
+4. apps/frontend/components/non-conformances/NCDocumentsSection.tsx:78
+   status 리터럴 비교
+
+5. apps/frontend/components/equipment/IntermediateCheckAlert.tsx:153
+   status 리터럴 비교
+
+6. apps/frontend/components/equipment/IntermediateCheckAlert.tsx:219
+   status 리터럴 비교
+
+7. apps/frontend/lib/utils/document-upload-utils.ts:59
+   status 리터럴 비교
+
+조건: PR-2(FSM/CSVal) 완료 후 독립 진행. 파일별 독립적이므로 순서 무관.
+
+작업:
+
+각 파일별 외과적 변경 (파일당 변경 최소화):
+
+사전 확인 (실제 라인 번호 확인):
+grep -n "status === '\|status !== '" apps/frontend/components/equipment/CreateEquipmentContent.tsx
+grep -n "status === '\|status !== '" apps/frontend/components/non-conformances/ResultSectionFormDialog.tsx
+(... 7개 파일 모두)
+
+각 파일에서:
+- 변경 전: if (checkout.status === 'checked_out')
+- 변경 후: if (checkout.status === CSVal.CHECKED_OUT)
+  또는: if (checkout.status === CheckoutStatusValues.CHECKED_OUT)
+  (사용 중인 import alias 확인 후 일관성 유지)
+
+CSVal import 추가 (각 파일에 없는 경우만):
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
+또는 기존 import에서 CheckoutStatusValues 추가.
+
+수술적 변경 원칙:
+- 해당 리터럴 비교 라인만 변경. 인접 코드(에러 메시지, 타입, 주석 등) 변경 금지.
+- 각 파일의 기존 import 스타일(named import alias 등) 유지.
+- 빈 파일 생성 금지, 기존 파일 전면 교체 금지.
+
+✅ 변경 대상:
+- 각 파일의 리터럴 비교 라인 (최대 2줄/파일)
+- import 추가 (필요 시, 파일당 1줄)
+
+❌ 변경 금지:
+- 인접 로직, 함수 시그니처, 타입 정의, 주석
+- NC 도메인 로직 (NC 파일은 status 비교 의미 변경 없이 상수만 교체)
+
+SSOT 주의:
+- CheckoutStatusValues (CSVal): @equipment-management/schemas에서 import
+- EquipmentStatus 리터럴이 있으면: EquipmentStatusValues 상수 사용 (별도 import)
+- 파일별 실측 grep으로 정확한 라인 확인 후 Edit 실행 (라인 번호 추측 금지)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit
+- node scripts/self-audit.mjs → 체크 ⑧ FSM 리터럴 위반 0
+- 각 파일별: grep "status === '" <파일경로> → 0 hit (status 비교 패턴 제거 확인)
+- pnpm --filter frontend run test (NC, equipment 단위 테스트 회귀 0)
+```
+
+---
+
+> **PR 실행 순서 (의존성 그래프, 23 PR — PR-1·2 완료 ✅)**
 >
 > **Phase 1 (완료)**: PR-1 (FSM schemas) ✅ → PR-2 (backend) ✅
 >
@@ -1870,8 +2328,20 @@ SSOT 주의:
 >
 > **Phase 16 (최종)**: PR-3~PR-19 전부 완료 → PR-17 (최종 리뷰 + 번들 + Flag rollout)
 >
+> **Phase A (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-20 (Backend 보안/SSOT)
+>
+> **Phase B (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-22 (API 정리 + Zod)
+>
+> **Phase C (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-24 (FSM 리터럴 7건)
+>
+> **Phase D**: PR-12(서브탭) 완료 후 → PR-21 (WCAG + QUERY_CONFIG + URL SSOT)
+>
+> **Phase E (조건부)**: PR-5 + E2E 2세션 안정 후 → PR-23 (플래그 상시화 + 마무리)
+>
 > ※ PR-3과 PR-8은 병렬 가능. PR-5·6·7·14는 PR-3 이후 병렬 가능.
 > ※ PR-10은 별도 분리 PR (NC e2e PASS 선행). PR-11은 PR-2 이후 독립.
+> ※ PR-20·PR-22·PR-24는 frontend PR과 완전 독립 → 즉시 실행 가능.
+> ※ PR-23은 트리거 조건(E2E 2세션 안정) 충족 전 대기 필수.
 
 ---
 
