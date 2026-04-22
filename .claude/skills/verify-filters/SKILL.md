@@ -179,6 +179,29 @@ grep -rn "withPreferences" apps/frontend/hooks --include="*.ts"
 
 **참고:** `withPreferences`는 URL 필터가 아닌 사용자 설정(DisplayPreferences)을 API 파라미터에 병합하는 함수. `showRetired` 같은 preference 기반 필터에 사용.
 
+### Step 7: subTab SSOT 파생 확인 (checkout-filter-utils 전용)
+
+`checkout-filter-utils.ts`의 `SUBTAB_STATUS_GROUPS`가 `CHECKOUT_STATUS_VALUES.filter()`로 자동 파생되는지,
+그리고 `getSubTabForStatus()`가 stat 카드 클릭 핸들러에서 사용되는지 확인합니다.
+
+```bash
+# SUBTAB_STATUS_GROUPS.inProgress가 CHECKOUT_STATUS_VALUES.filter()로 파생되는지 확인
+# 문자열 리터럴 하드코딩이면 FAIL
+grep -A3 "SUBTAB_STATUS_GROUPS" apps/frontend/lib/utils/checkout-filter-utils.ts | grep "inProgress"
+```
+
+**PASS 기준:** `inProgress: CHECKOUT_STATUS_VALUES.filter(...)` 형태로 파생됨.
+**FAIL 기준:** `inProgress: ['pending', 'approved', ...]` 등 문자열 리터럴 직접 배열.
+
+```bash
+# getSubTabForStatus가 CheckoutsContent.tsx의 stat 카드 핸들러에서 사용되는지 확인
+grep -n "getSubTabForStatus" \
+  apps/frontend/app/\(dashboard\)/checkouts/CheckoutsContent.tsx
+```
+
+**PASS 기준:** `handleStatCardClick` 또는 `handleStatusChange` 내에서 `getSubTabForStatus` 호출 확인.
+**FAIL 기준:** `getSubTabForStatus` 정의는 있으나 stat 카드 핸들러에서 미사용 → subTab 자동 정렬 누락.
+
 ### Step 6: URL 기반 섹션 독립 페이지네이션 훅
 
 한 페이지 내 여러 독립 섹션이 각각 별도 URL 파라미터로 페이지네이션하는 경우,
@@ -219,6 +242,7 @@ grep -rn "router\.replace.*'/checkouts\|router\.push.*'/checkouts" \
 | 4   | page.tsx 서버 파싱        | PASS/FAIL | 누락 page.tsx 목록   |
 | 5   | Content.tsx useState 금지 | PASS/FAIL | 위반 위치 목록       |
 | 6   | 섹션 독립 페이지네이션    | PASS/FAIL | useState 이중관리 훅 목록 |
+| 7   | subTab SSOT 파생 (checkout) | PASS/FAIL | inProgress 하드코딩 여부 |
 ```
 
 ## Exceptions
@@ -235,3 +259,4 @@ grep -rn "router\.replace.*'/checkouts\|router\.push.*'/checkouts" \
 8. **audit-log-filter-utils.ts에 대응하는 hook 미존재** — 감사 로그 필터는 `page.tsx`에서 직접 서버 파싱 후 Content에 props 전달하는 패턴. 별도 클라이언트 hook 불필요 (admin 전용 페이지, URL 직접 조작 없음)
 9. **checkout-filter-utils.ts에 대응하는 hook 미존재** — 반출 필터는 `CheckoutsContent.tsx`가 `useSearchParams()`로 직접 파싱하는 패턴 (`parseCheckoutFiltersFromSearchParams(searchParams)` 사용). 별도 hook 불필요 (탭 전환 시 필터 리셋 로직이 Content에 포함됨)
 10. **software-filter-utils.ts에 대응하는 hook 미존재** — 소프트웨어 필터는 `TestSoftwareListContent.tsx`가 `useSearchParams()`로 직접 파싱하는 패턴 (`parseTestSoftwareFiltersFromSearchParams(searchParams)` 사용). 별도 hook 불필요 (단일 목록 페이지, 필터 리셋 로직이 Content에 포함됨)
+11. **checkout-filter-utils.ts의 `ApiCheckoutParams` 타입명** — `Api*Filters` 패턴 불일치이나 의도적 명명. API 파라미터임을 명시하는 `Params` 접미사 사용. Step 2 grep 패턴에서 false negative 발생 가능하나 실제 `ApiCheckoutParams` export 존재 확인으로 대체.
