@@ -2035,20 +2035,6 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 반려 가능
-      // approverTeamId 미존재(팀 미소속) 시에도 반드시 거부 — identity-rule 강제
-      if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId) {
-        if (
-          !rejectReturnDto.approverTeamId ||
-          rejectReturnDto.approverTeamId !== checkout.lenderTeamId
-        ) {
-          throw new ForbiddenException({
-            code: CheckoutErrorCode.LENDER_TEAM_ONLY,
-            message: 'Only the technical manager of the lending team can reject return',
-          });
-        }
-      }
-
       // ✅ Optimistic locking: returned → checked_out (재반입 프로세스)
       // 클라이언트가 보낸 version으로 CAS 수행 (서버 최신값 사용 금지)
       const updated = await this.updateCheckoutStatus(
