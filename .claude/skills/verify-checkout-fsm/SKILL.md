@@ -339,6 +339,50 @@ grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
 **PASS:** ForbiddenException ≥ 7건 + ConflictException ≥ 7건 + lenderTeam ForbiddenException 2건/BadRequestException 0건.
 **FAIL:** 어느 하나라도 카운트 미달이거나 BadRequestException으로 잘못 분류.
 
+### Step 16: CheckoutErrorCode SSOT — 인라인 에러 코드 문자열 금지 (2026-04-22 이후)
+
+`checkouts.service.ts`와 `checkouts.controller.ts`에서 `code: 'CHECKOUT_*'` 인라인 문자열을 사용하지 않고 `CheckoutErrorCode` 상수를 경유하는지 확인.
+
+```bash
+# service.ts 인라인 에러 코드 문자열 탐지
+grep -c "code: 'CHECKOUT_" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0 (PASS)
+
+# controller.ts 인라인 에러 코드 문자열 탐지
+grep -c "code: 'CHECKOUT_" \
+  apps/backend/src/modules/checkouts/checkouts.controller.ts
+# 결과: 0 (PASS)
+
+# CheckoutErrorCode import 확인
+grep "from './checkout-error-codes'" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: import 라인 1건 (PASS)
+```
+
+**PASS:** service.ts + controller.ts 모두 인라인 `'CHECKOUT_*'` 문자열 0건, `CheckoutErrorCode` import 존재.
+**FAIL:** 인라인 문자열 1건 이상 → `checkout-error-codes.ts`에 해당 키 추가 후 참조 전환.
+
+### Step 17: Controller 레이어 경계 — 서비스 중복 검증 금지 (2026-04-22 이후)
+
+컨트롤러가 서비스 레이어의 비즈니스 검증을 복제하지 않는지 확인. reject 반려 사유 검증이 컨트롤러에서 다시 수행되면 에러 메시지가 달라지는 드리프트가 발생한다.
+
+```bash
+# controller에서 reason 빈 문자열 직접 검증 탐지
+grep -n "reason.*trim\|reason.*length.*0" \
+  apps/backend/src/modules/checkouts/checkouts.controller.ts
+# 결과: 0건 (PASS) — 서비스 단일 경로
+
+# controller의 BadRequestException 사용이 서비스 로직 복제가 아닌지 확인
+grep -n "BadRequestException" \
+  apps/backend/src/modules/checkouts/checkouts.controller.ts
+# 허용: handover token 상태 검증 등 컨트롤러 전용 흐름
+# 금지: 서비스와 동일한 code/message로 throw
+```
+
+**PASS:** controller에 `reason.*trim` 패턴 0건. 서비스가 비즈니스 검증 단일 경로.
+**FAIL:** controller에서 서비스와 동일한 코드/메시지로 BadRequestException throw → 컨트롤러 블록 제거.
+
 ## Output Format
 
 ```markdown
@@ -359,6 +403,8 @@ grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
 | 13 | Controller guard ↔ FSM 정렬        | PASS/FAIL | approve/approve-return/reject-return guard |
 | 14 | writeTransitionAudit 캡슐화        | PASS/FAIL | 메서드 내부 try/catch, 콜사이트 0건    |
 | 15 | 예외 계층 일관화 (7개 메서드)       | PASS/FAIL | ForbiddenException+ConflictException ≥7건 |
+| 16 | CheckoutErrorCode SSOT 인라인 금지  | PASS/FAIL | service+controller 인라인 'CHECKOUT_*' 0건 |
+| 17 | Controller 레이어 경계 준수         | PASS/FAIL | controller reason.trim 중복 검증 0건 |
 ```
 
 ## Exceptions
