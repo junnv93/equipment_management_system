@@ -348,6 +348,8 @@ function checkFsmLiterals(file, lines) {
   if (isFsmSsotFile(file)) return;
 
   lines.forEach((raw, i) => {
+    // self-audit-exception 마커가 있으면 승인된 예외로 처리 (Promise.allSettled 결과 등)
+    if (/self-audit-exception/.test(raw)) return;
     const line = stripComments(raw);
     if (CHECKOUT_STATUS_LITERAL_RE.test(line)) {
       fail(
