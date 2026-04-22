@@ -10,6 +10,7 @@ export const EXCEL_SHEET_NAMES = {
   SUMMARY: '요약',
   MIGRATION_RESULT: '마이그레이션 결과',
   EQUIPMENT: '장비 등록',
+  SHARED_EQUIPMENT: '공용장비',
   CALIBRATION: '교정 이력',
   REPAIR: '수리 이력',
   INCIDENT: '사고 이력',
@@ -17,6 +18,7 @@ export const EXCEL_SHEET_NAMES = {
   TEST_SOFTWARE: '시험용 소프트웨어',
   CALIBRATION_FACTOR: '교정 인자',
   NON_CONFORMANCE: '부적합',
+  CHECKOUT: '반출입 이력',
   REFERENCE: '참고값',
 } as const;
 
@@ -55,6 +57,17 @@ export const REFERENCE_LABELS = {
   RESOLUTION_TYPE: '해결방법(resolutionType)',
   DATE_FORMAT: '날짜 형식',
   DATE_FORMAT_VALUE: 'YYYY-MM-DD 또는 YYYY.MM.DD',
+  // 공용장비 시트 전용
+  SHARED_SOURCE: '공용출처(sharedSource) — 공용장비 시트 전용',
+  CLASSIFICATION: '장비분류(classification) — 공용장비 시트 전용',
+  SHARED_MGMT_NUMBER_FORMAT: '공용장비 관리번호 자동생성 규칙',
+  SHARED_MGMT_NUMBER_FORMAT_VALUE: '미입력 시 TEMP-SUW-E0001 형식 자동 생성 (사이트+분류 기반)',
+  // 반출입 이력 시트 전용
+  CHECKOUT_PURPOSE: '반출목적(purpose) — 반출입 이력 시트 전용',
+  CHECKOUT_TYPE: '반출유형(checkoutType) — 반출입 이력 시트 전용',
+  CHECKOUT_STATUS_AUTO: '반출상태 자동결정 규칙',
+  CHECKOUT_STATUS_AUTO_VALUE:
+    '실제반입일 있음→return_approved | 없음(과거반출일)→checked_out | 없음(미래반출일)→approved',
 } as const;
 
 /** 마이그레이션 행 상태 → 표시 라벨 매핑 */

@@ -23,6 +23,9 @@ import {
   SoftwareAvailabilityValues,
   CalibrationFactorApprovalStatusValues,
   NonConformanceStatusValues,
+  type CheckoutStatus,
+  type CheckoutPurpose,
+  type CheckoutType,
 } from '@equipment-management/schemas';
 import type { Site, MigrationSheetType } from '@equipment-management/schemas';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
@@ -34,6 +37,7 @@ import { cables } from '@equipment-management/db/schema/cables';
 import { testSoftware } from '@equipment-management/db/schema/test-software';
 import { calibrationFactors } from '@equipment-management/db/schema/calibration-factors';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import type { AppDatabase } from '@equipment-management/db';
 import type { MulterFile } from '../../../types/common.types';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
@@ -58,7 +62,7 @@ import { MIGRATION_NOTE } from '../constants/excel-labels';
 import { MigrationValidatorService } from './migration-validator.service';
 import { HistoryValidatorService } from './history-validator.service';
 import { FkResolutionService } from './fk-resolution.service';
-import type { FkResolutionResult } from './fk-resolution.service';
+import type { FkResolutionResult, CheckoutFkResult } from './fk-resolution.service';
 import { BATCH_QUERY_LIMITS } from '@equipment-management/shared-constants';
 import type { PreviewEquipmentMigrationDto } from '../dto/preview-migration.dto';
 import type { ExecuteEquipmentMigrationDto } from '../dto/execute-migration.dto';
@@ -151,17 +155,49 @@ export class DataMigrationService {
             unmappedColumns: parsedSheet.unmappedColumns,
             rows: rowPreviews,
           });
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT) {
+          // 공용장비: TEMP- 자동 생성 + isShared/status/approvalStatus 자동 주입
+          const rowPreviews = await this.migrationValidatorService.validateSharedBatch(
+            parsedSheet.rows,
+            { defaultSite: effectiveSite }
+          );
+
+          // 공용장비 관리번호도 이력 크로스 검증 Set에 추가
+          for (const row of rowPreviews) {
+            if (row.managementNumber && INSERTABLE_STATUSES.has(row.status)) {
+              equipmentMgmtNumbers.add(row.managementNumber);
+            }
+          }
+
+          const summary = this.buildSummary(rowPreviews);
+          sheetResults.push({
+            sheetType: parsedSheet.sheetType,
+            sheetName: parsedSheet.sheetName,
+            totalRows: parsedSheet.rows.length,
+            ...summary,
+            unmappedColumns: parsedSheet.unmappedColumns,
+            rows: rowPreviews,
+          });
         }
       }
 
-      // 장비 시트는 1개만 지원 — FK 해석 Map이 단일 validRows 인덱스 기준으로 구성되기 때문
+      // 동일 타입 시트 중복 방지: EQUIPMENT 1개 + SHARED_EQUIPMENT 1개까지 허용
       const equipmentSheets = sheetResults.filter(
         (s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT
+      );
+      const sharedEquipmentSheets = sheetResults.filter(
+        (s) => s.sheetType === MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT
       );
       if (equipmentSheets.length > 1) {
         throw new BadRequestException({
           code: MigrationErrorCode.MULTIPLE_EQUIPMENT_SHEETS,
-          message: '장비 시트는 1개만 허용됩니다.',
+          message: '일반 장비 시트는 1개만 허용됩니다.',
+        });
+      }
+      if (sharedEquipmentSheets.length > 1) {
+        throw new BadRequestException({
+          code: MigrationErrorCode.MULTIPLE_EQUIPMENT_SHEETS,
+          message: '공용장비 시트는 1개만 허용됩니다.',
         });
       }
 
@@ -256,9 +292,13 @@ export class DataMigrationService {
         }
       }
 
-      // 이력 시트 처리 (장비 시트 완료 후)
+      // 이력 시트 처리 (장비/공용장비 시트 완료 후)
       for (const parsedSheet of parsedSheets) {
-        if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) continue;
+        if (
+          parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT ||
+          parsedSheet.sheetType === MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT
+        )
+          continue;
 
         let rowPreviews: MigrationRowPreview[];
 
@@ -286,9 +326,14 @@ export class DataMigrationService {
             parsedSheet.rows,
             equipmentMgmtNumbers
           );
-        } else {
-          // NON_CONFORMANCE
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.NON_CONFORMANCE) {
           rowPreviews = this.historyValidatorService.validateNonConformanceBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        } else {
+          // CHECKOUT
+          rowPreviews = this.historyValidatorService.validateCheckoutBatch(
             parsedSheet.rows,
             equipmentMgmtNumbers
           );
@@ -328,6 +373,46 @@ export class DataMigrationService {
         });
       }
 
+      // FK 해석: 반출입 이력 시트의 requester/approver/returner UUID 해석
+      let checkoutFkResolutions: Map<number, CheckoutFkResult> | undefined;
+      const checkoutSheet = sheetResults.find((s) => s.sheetType === MIGRATION_SHEET_TYPE.CHECKOUT);
+      if (checkoutSheet) {
+        const validCheckoutRows = checkoutSheet.rows.filter((r) =>
+          INSERTABLE_STATUSES.has(r.status)
+        );
+        const hasFkFields = validCheckoutRows.some(
+          (r) =>
+            r.data.requesterEmail ||
+            r.data.requesterName ||
+            r.data.approverEmail ||
+            r.data.approverName ||
+            r.data.returnerEmail ||
+            r.data.returnerName
+        );
+        if (hasFkFields) {
+          const resolved = await this.fkResolutionService.resolveCheckoutBatch(validCheckoutRows);
+          checkoutFkResolutions = resolved;
+
+          // requester 미해석 행은 ERROR 처리
+          for (const [idx, res] of resolved) {
+            const row = validCheckoutRows[idx];
+            if (!row) continue;
+            if (res.errors.length > 0) {
+              row.status = MIGRATION_ROW_STATUS.ERROR;
+              row.errors.push(
+                ...res.errors.map((msg) => ({
+                  field: 'requesterEmail',
+                  message: msg,
+                  code: MigrationErrorCode.CHECKOUT_REQUESTER_NOT_FOUND,
+                }))
+              );
+            } else if (res.warnings.length > 0) {
+              row.warnings.push(...res.warnings);
+            }
+          }
+        }
+      }
+
       const sessionId = uuidv4();
       const totalRows = sheetResults.reduce((acc, s) => acc + s.totalRows, 0);
       const validRows = sheetResults.reduce((acc, s) => acc + s.validRows, 0);
@@ -353,6 +438,7 @@ export class DataMigrationService {
         filePath: savedFile.filePath,
         fkResolutions,
         testSoftwareFkResolutions,
+        checkoutFkResolutions,
         fkResolutionSummary,
         sheets: sheetResults.map((s) => ({
           sheetType: s.sheetType,
@@ -544,6 +630,77 @@ export class DataMigrationService {
           totalCreated += createdCount;
           totalSkipped += skippedCount;
           totalErrors += sheetErrors.length;
+        }
+
+        // ── 1b. 공용장비 시트 INSERT ───────────────────────────────────────────
+        for (const sheet of session.sheets) {
+          if (sheet.sheetType !== MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT) continue;
+
+          const validRows = sheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
+          const errorRowsForSheet = sheet.rows.filter(
+            (r) =>
+              r.status === MIGRATION_ROW_STATUS.ERROR || r.status === MIGRATION_ROW_STATUS.DUPLICATE
+          );
+          const skippedCount = sheet.rows.length - validRows.length - errorRowsForSheet.length;
+
+          const locationEntries: Parameters<
+            typeof this.equipmentHistoryService.createLocationHistoryBatch
+          >[0] = [];
+
+          const sharedChunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
+          let chunkOffset = 0;
+          for (const chunk of sharedChunks) {
+            const entities = chunk.map((row) => {
+              // 공용장비 고정 필드 오버라이드 (사용자 입력 불허)
+              return {
+                ...this.buildEntityFromRow(row, userId),
+                isShared: true,
+                status: EquipmentStatusEnum.enum.temporary,
+                approvalStatus: ApprovalStatusValues.APPROVED,
+              } as typeof equipment.$inferInsert;
+            });
+            const createdRows = await tx
+              .insert(equipment)
+              .values(entities)
+              .returning({ id: equipment.id, managementNumber: equipment.managementNumber });
+
+            for (let i = 0; i < chunk.length; i++) {
+              const row = chunk[i];
+              const created = createdRows[i];
+              if (row.managementNumber) {
+                mgmtNumToId.set(row.managementNumber, created.id);
+              }
+              if (row.data.initialLocation || row.data.location) {
+                locationEntries.push({
+                  equipmentId: created.id,
+                  changedAt: (
+                    (row.data.usagePeriodStart as Date | undefined) ?? new Date()
+                  ).toISOString(),
+                  newLocation: (row.data.initialLocation || row.data.location) as string,
+                  previousLocation: null,
+                  notes: MIGRATION_NOTE,
+                });
+              }
+            }
+            chunkOffset += chunk.length;
+          }
+
+          await this.equipmentHistoryService.createLocationHistoryBatch(
+            locationEntries,
+            userId,
+            tx
+          );
+
+          sheetSummaries.push({
+            sheetType: MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT,
+            createdCount: validRows.length,
+            skippedCount,
+            errorCount: errorRowsForSheet.length,
+          });
+          allErrors.push(...errorRowsForSheet);
+          totalCreated += validRows.length;
+          totalSkipped += skippedCount;
+          totalErrors += errorRowsForSheet.length;
         }
 
         // ── 2. DB에서 기존 장비 관리번호 배치 조회 (이력의 미해결 관리번호용) ──
@@ -814,6 +971,84 @@ export class DataMigrationService {
           totalCreated += createdCount;
           totalErrors += sheetErrors.length;
         }
+        // ── 10. 반출입 이력 INSERT (장비 참조: checkouts + checkout_items) ───────
+        for (const sheet of session.sheets) {
+          if (sheet.sheetType !== MIGRATION_SHEET_TYPE.CHECKOUT) continue;
+
+          const candidateRows = sheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
+          const sheetErrors: MigrationRowPreview[] = sheet.rows.filter(
+            (r) => r.status === MIGRATION_ROW_STATUS.ERROR
+          );
+
+          let createdCount = 0;
+          let chunkOffset = 0;
+
+          for (const chunk of chunkArray(candidateRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE)) {
+            for (let i = 0; i < chunk.length; i++) {
+              const row = chunk[i];
+              const globalIdx = chunkOffset + i;
+              const mgmtNum = row.managementNumber;
+              const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
+
+              if (!equipmentId) {
+                sheetErrors.push({
+                  ...row,
+                  status: MIGRATION_ROW_STATUS.ERROR,
+                  errors: [
+                    {
+                      field: 'managementNumber',
+                      message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
+                      code: MigrationErrorCode.EQUIPMENT_NOT_FOUND,
+                    },
+                  ],
+                });
+                continue;
+              }
+
+              const fkResult = session.checkoutFkResolutions?.get(globalIdx);
+
+              // requester 없으면 DB INSERT 불가 (NOT NULL 제약)
+              if (!fkResult?.requesterId) {
+                sheetErrors.push({
+                  ...row,
+                  status: MIGRATION_ROW_STATUS.ERROR,
+                  errors: [
+                    {
+                      field: 'requesterEmail',
+                      message:
+                        fkResult?.errors[0] ?? '신청자를 찾을 수 없습니다. (requesterId NOT NULL)',
+                      code: MigrationErrorCode.CHECKOUT_REQUESTER_NOT_FOUND,
+                    },
+                  ],
+                });
+                continue;
+              }
+
+              const checkoutValues = this.buildCheckoutValues(row, fkResult);
+              const [createdCheckout] = await tx
+                .insert(checkouts)
+                .values(checkoutValues)
+                .returning({ id: checkouts.id });
+
+              await tx
+                .insert(checkoutItems)
+                .values(this.buildCheckoutItemValues(createdCheckout.id, equipmentId));
+
+              createdCount++;
+            }
+            chunkOffset += chunk.length;
+          }
+
+          sheetSummaries.push({
+            sheetType: MIGRATION_SHEET_TYPE.CHECKOUT,
+            createdCount,
+            skippedCount: 0,
+            errorCount: sheetErrors.length,
+          });
+          allErrors.push(...sheetErrors);
+          totalCreated += createdCount;
+          totalErrors += sheetErrors.length;
+        }
       });
 
       // 캐시 무효화
@@ -871,6 +1106,23 @@ export class DataMigrationService {
         sheetSummaries.some((s) => s.sheetType === MIGRATION_SHEET_TYPE.CABLE && s.createdCount > 0)
       ) {
         this.cacheService.deleteByPrefix(CABLES_CACHE_PREFIX);
+      }
+      // 공용장비가 등록된 경우 장비 목록 캐시 무효화 (장비 테이블에 같이 저장)
+      if (
+        sheetSummaries.some(
+          (s) => s.sheetType === MIGRATION_SHEET_TYPE.SHARED_EQUIPMENT && s.createdCount > 0
+        )
+      ) {
+        await this.cacheInvalidationHelper.invalidateEquipmentLists();
+      }
+      // 반출입 이력이 등록된 경우 checkout + 장비 detail 캐시 무효화
+      if (
+        sheetSummaries.some(
+          (s) => s.sheetType === MIGRATION_SHEET_TYPE.CHECKOUT && s.createdCount > 0
+        )
+      ) {
+        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CHECKOUTS);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.EQUIPMENT}detail:`);
       }
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)
@@ -1225,6 +1477,70 @@ export class DataMigrationService {
   }
 
   /**
+   * 반출입 이력 행 → checkouts 테이블 INSERT values
+   * status 자동 결정:
+   *   actualReturnDate 있음 → 'return_approved'
+   *   없음 + checkoutDate 과거 → 'checked_out'
+   *   없음 + checkoutDate 미래/없음 → 'approved'
+   */
+  private buildCheckoutValues(
+    row: MigrationRowPreview,
+    fkResult: CheckoutFkResult
+  ): typeof checkouts.$inferInsert {
+    const now = new Date();
+    const actualReturnDate = row.data.actualReturnDate as Date | undefined;
+    const checkoutDate = row.data.checkoutDate as Date | undefined;
+
+    let status: CheckoutStatus;
+    if (actualReturnDate) {
+      status = 'return_approved';
+    } else if (checkoutDate && checkoutDate < now) {
+      status = 'checked_out';
+    } else {
+      status = 'approved';
+    }
+
+    return {
+      requesterId: fkResult.requesterId!,
+      approverId: fkResult.approverId ?? null,
+      returnerId: fkResult.returnerId ?? null,
+      purpose: row.data.purpose as CheckoutPurpose,
+      checkoutType: (row.data.checkoutType as CheckoutType | undefined) ?? 'calibration',
+      destination: row.data.destination as string,
+      reason: row.data.reason as string,
+      phoneNumber: row.data.phoneNumber as string | undefined,
+      address: row.data.address as string | undefined,
+      checkoutDate: checkoutDate ?? null,
+      expectedReturnDate: row.data.expectedReturnDate as Date,
+      actualReturnDate: actualReturnDate ?? null,
+      status,
+      approvedAt: fkResult.approverId ? (checkoutDate ?? now) : null,
+      rejectionReason: row.data.rejectionReason as string | undefined,
+      returnApprovedBy: actualReturnDate ? (fkResult.approverId ?? null) : null,
+      returnApprovedAt: actualReturnDate ?? null,
+      version: 1,
+      createdAt: checkoutDate ?? now,
+      updatedAt: checkoutDate ?? now,
+    };
+  }
+
+  /**
+   * 반출된 장비 목록 → checkout_items 테이블 INSERT values
+   * 마이그레이션: 1행 = 1 checkout + 1 checkout_item (장비 1개 기준)
+   */
+  private buildCheckoutItemValues(
+    checkoutId: string,
+    equipmentId: string
+  ): typeof checkoutItems.$inferInsert {
+    return {
+      checkoutId,
+      equipmentId,
+      sequenceNumber: 1,
+      quantity: 1,
+    };
+  }
+
+  /**
    * 이력 행 배치 INSERT 헬퍼
    *
    * bulkInsertInChunks를 사용해 `unknown as` 캐스팅 없이 타입 안전하게 처리.
@@ -1328,8 +1644,8 @@ export class DataMigrationService {
           .where(inArray(equipmentIncidentHistory.equipmentId, ids))
       );
     } else {
-      // CABLE / TEST_SOFTWARE / CALIBRATION_FACTOR / NON_CONFORMANCE:
-      // 독립 엔티티 — equipment FK 기반 중복 필터 없음. 모두 삽입 대상.
+      // CABLE / TEST_SOFTWARE / CALIBRATION_FACTOR / NON_CONFORMANCE / CHECKOUT:
+      // 독립 엔티티 또는 복합키 중복 검사 미구현 — 모두 삽입 대상.
       filterResult = { toInsert: rowPreviews, duplicates: [] };
     }
 

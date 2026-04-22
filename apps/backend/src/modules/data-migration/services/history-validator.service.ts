@@ -9,6 +9,8 @@ import {
   CALIBRATION_FACTOR_TYPE_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
   RESOLUTION_TYPE_VALUES,
+  CHECKOUT_PURPOSE_VALUES,
+  CHECKOUT_TYPE_VALUES,
   MIGRATION_ROW_STATUS,
 } from '@equipment-management/schemas';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
@@ -77,6 +79,44 @@ const nonConformanceRowSchema = z.object({
   resolutionType: z.enum([...RESOLUTION_TYPE_VALUES] as [string, ...string[]]).optional(),
 });
 
+/**
+ * 반출입 이력 행 스키마
+ * requesterId는 NOT NULL — requesterEmail/requesterName 중 최소 1개 필수
+ */
+const checkoutRowSchema = z
+  .object({
+    managementNumber: z.string().min(1, '관리번호는 필수입니다.'),
+    checkoutDate: z.date(),
+    expectedReturnDate: z.date(),
+    purpose: z.enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
+      error: '허용되지 않는 반출목적입니다.',
+    }),
+    destination: z.string().min(1, '반출장소는 필수입니다.'),
+    reason: z.string().min(1, '반출사유는 필수입니다.'),
+    // 선택 필드
+    actualReturnDate: z.date().optional(),
+    checkoutType: z.enum([...CHECKOUT_TYPE_VALUES] as [string, ...string[]]).optional(),
+    phoneNumber: z.string().optional(),
+    address: z.string().optional(),
+    rejectionReason: z.string().optional(),
+    // FK 가상 필드 (FkResolutionService에서 UUID로 변환)
+    requesterEmail: z.string().email().optional(),
+    requesterName: z.string().optional(),
+    approverEmail: z.string().email().optional(),
+    approverName: z.string().optional(),
+    returnerEmail: z.string().email().optional(),
+    returnerName: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.requesterEmail && !data.requesterName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: '신청자이메일 또는 신청자 중 최소 1개는 필수입니다.',
+        path: ['requesterEmail'],
+      });
+    }
+  });
+
 @Injectable()
 export class HistoryValidatorService {
   validateCalibrationBatch(
@@ -124,6 +164,19 @@ export class HistoryValidatorService {
     validManagementNumbers: Set<string>
   ): MigrationRowPreview[] {
     return this.validateBatch(rows, nonConformanceRowSchema, validManagementNumbers);
+  }
+
+  /**
+   * 반출입 이력 배치 검증
+   * - managementNumber 크로스 검증 (장비 시트 or DB 기준)
+   * - requesterEmail/requesterName 중 최소 1개 필수 (checkoutRowSchema.superRefine)
+   * - 실제 requester UUID 해석은 FkResolutionService.resolveCheckoutBatch에서 수행
+   */
+  validateCheckoutBatch(
+    rows: MappedRow[],
+    validManagementNumbers: Set<string>
+  ): MigrationRowPreview[] {
+    return this.validateBatch(rows, checkoutRowSchema, validManagementNumbers);
   }
 
   private validateBatch(

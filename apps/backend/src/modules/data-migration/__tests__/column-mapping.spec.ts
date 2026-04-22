@@ -106,15 +106,21 @@ describe('Template Round-Trip', () => {
 // ── Deprecated Aliases — 시트별 격리 ────────────────────────────────────────
 
 describe('Deprecated Aliases - Sheet Isolation', () => {
-  it('장비 시트 deprecated alias가 장비 alias index에 없어야 한다', () => {
-    // 모든 항목이 active 승격됨 — DEPRECATED가 비어있으면 이 루프는 실행되지 않음
-    // 아래 단언이 실제 "empty" 계약을 명시적으로 보장
-    expect(DEPRECATED_EQUIPMENT_COLUMNS).toHaveLength(0);
+  it('장비 시트 deprecated alias가 장비 alias index에 없어야 한다 (크로스 오염 방지)', () => {
+    // DEPRECATED_EQUIPMENT_COLUMNS: equipmentType + calibrationResult (Excel 이전 형식 호환)
+    // 이 alias들은 active COLUMN_ALIAS_INDEX에 있으면 안 됨 — 파서가 무시하기 때문
     for (const entry of DEPRECATED_EQUIPMENT_COLUMNS) {
       for (const alias of entry.aliases) {
         expect(COLUMN_ALIAS_INDEX.has(alias.toLowerCase().trim())).toBe(false);
       }
     }
+  });
+
+  it('장비 deprecated 컬럼 수가 예상 값과 일치해야 한다', () => {
+    // equipmentType (DB 삭제), calibrationResult (교정이력 시트로 이동)
+    // isShared, sharedSource, owner, usagePeriodStart, usagePeriodEnd, externalIdentifier (공용장비 시트로 분리)
+    expect(DEPRECATED_EQUIPMENT_COLUMNS).toHaveLength(8);
+    expect(DEPRECATED_EQUIPMENT_ALIAS_SET.size).toBeGreaterThan(0);
   });
 
   it('DEPRECATED_ALIAS_BY_SHEET에 모든 시트 타입이 등록되어야 한다', () => {
@@ -127,6 +133,8 @@ describe('Deprecated Aliases - Sheet Isolation', () => {
       'cable',
       'calibration_factor',
       'non_conformance',
+      'shared_equipment',
+      'checkout',
     ];
     for (const sheet of expectedSheets) {
       expect(DEPRECATED_ALIAS_BY_SHEET[sheet]).toBeDefined();
@@ -147,27 +155,34 @@ describe('Deprecated Aliases - Sheet Isolation', () => {
       'cable',
       'calibration_factor',
       'non_conformance',
+      'shared_equipment',
+      'checkout',
     ];
     for (const sheet of sheetsWithoutDeprecated) {
       expect(DEPRECATED_ALIAS_BY_SHEET[sheet].size).toBe(0);
     }
   });
 
-  it('모든 장비 deprecated 컬럼이 active 매핑으로 승격되어 DEPRECATED Set이 비어야 한다', () => {
-    // 9개 항목(externalIdentifier 등)이 EQUIPMENT_COLUMN_MAPPING으로 승격됨
-    expect(DEPRECATED_EQUIPMENT_ALIAS_SET.size).toBe(0);
+  it('FK 해석 가상 필드 alias가 active alias index에 존재해야 한다', () => {
+    // 담당자이메일 / 부담당자이메일은 FK 해석용 — 일반 장비 시트에 있어야 함
+    const fkAliases = ['담당자이메일', '부담당자이메일'];
+    for (const header of fkAliases) {
+      expect(COLUMN_ALIAS_INDEX.has(header.toLowerCase())).toBe(true);
+    }
   });
 
-  it('승격된 장비 컬럼 alias가 active alias index에 존재해야 한다', () => {
-    const promotedAliases = [
+  it('공용장비 전용 컬럼 alias가 일반 장비 시트 active index에 없어야 한다', () => {
+    // 공용장비 시트로 분리된 후 일반 장비 시트 active index에서 제거됨
+    const sharedOnlyAliases = [
       '공용여부',
-      '담당자이메일',
-      '부담당자이메일',
+      '공용출처',
       '소유처',
+      '사용시작일',
+      '사용종료일',
       '외부식별번호',
     ];
-    for (const header of promotedAliases) {
-      expect(COLUMN_ALIAS_INDEX.has(header.toLowerCase())).toBe(true);
+    for (const header of sharedOnlyAliases) {
+      expect(COLUMN_ALIAS_INDEX.has(header.toLowerCase())).toBe(false);
     }
   });
 });

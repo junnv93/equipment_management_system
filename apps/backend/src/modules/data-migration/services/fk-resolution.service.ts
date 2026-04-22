@@ -19,6 +19,20 @@ export interface FkResolutionResult {
   warnings: string[];
 }
 
+/** 반출입 이력 FK 해석 결과 (행 단위) */
+export interface CheckoutFkResult {
+  /** 신청자 UUID (필수 — 미해석 시 errors에 기록) */
+  requesterId?: string;
+  /** 승인자 UUID (선택 — 미해석 시 warnings에 기록) */
+  approverId?: string;
+  /** 반입처리자 UUID (선택 — 미해석 시 warnings에 기록) */
+  returnerId?: string;
+  /** 해석 오류 (requester 미해석 — 행을 ERROR 처리해야 함) */
+  errors: string[];
+  /** 해석 경고 (approver/returner 미해석 등) */
+  warnings: string[];
+}
+
 /** 배치 FK 해석 요약 */
 export interface FkResolutionSummary {
   /** 해석된 담당자 수 */
@@ -167,6 +181,102 @@ export class FkResolutionService {
     );
 
     return { results, summary };
+  }
+
+  /**
+   * 반출입 이력 배치 FK 해석
+   * requester(필수)/approver(선택)/returner(선택) 3쌍 동시 해석
+   *
+   * @returns 행 인덱스 → CheckoutFkResult 맵
+   */
+  async resolveCheckoutBatch(
+    rows: Array<{ data: Record<string, unknown> }>
+  ): Promise<Map<number, CheckoutFkResult>> {
+    // 1. 고유 이메일/이름 수집 (3쌍 전체)
+    const emails = new Set<string>();
+    const names = new Set<string>();
+
+    for (const row of rows) {
+      const d = row.data;
+      for (const field of ['requesterEmail', 'approverEmail', 'returnerEmail']) {
+        if (d[field]) emails.add(String(d[field]).trim().toLowerCase());
+      }
+      for (const field of ['requesterName', 'approverName', 'returnerName']) {
+        if (d[field]) names.add(String(d[field]).trim());
+      }
+    }
+
+    // 2. 배치 DB 조회
+    const emailToUser = await this.resolveUsersByEmail([...emails]);
+    const nameToUsers = await this.resolveUsersByName([...names]);
+
+    // 3. 행별 해석
+    const results = new Map<number, CheckoutFkResult>();
+
+    for (let i = 0; i < rows.length; i++) {
+      const d = rows[i].data;
+      const result: CheckoutFkResult = { errors: [], warnings: [] };
+
+      // 신청자 (필수 — 미해석 시 errors)
+      const reqEmail = d.requesterEmail ? String(d.requesterEmail).trim().toLowerCase() : undefined;
+      const reqName = d.requesterName ? String(d.requesterName).trim() : undefined;
+      if (reqEmail || reqName) {
+        const resolved = this.resolveUser(reqEmail, reqName, emailToUser, nameToUsers, '신청자');
+        result.requesterId = resolved.userId;
+        if (!resolved.userId) {
+          // requester 미해석 → ERROR (FK NOT NULL)
+          result.errors.push(
+            resolved.warnings.length > 0
+              ? resolved.warnings.join('; ')
+              : `신청자(${reqEmail ?? reqName})를 찾을 수 없습니다. (requesterId NOT NULL)`
+          );
+        } else {
+          result.warnings.push(...resolved.warnings);
+        }
+      }
+
+      // 승인자 (선택 — 미해석 시 warnings)
+      const aprEmail = d.approverEmail ? String(d.approverEmail).trim().toLowerCase() : undefined;
+      const aprName = d.approverName ? String(d.approverName).trim() : undefined;
+      if (aprEmail || aprName) {
+        const resolved = this.resolveUser(aprEmail, aprName, emailToUser, nameToUsers, '승인자');
+        result.approverId = resolved.userId;
+        result.warnings.push(...resolved.warnings);
+      }
+
+      // 반입처리자 (선택 — 미해석 시 warnings)
+      const retEmail = d.returnerEmail ? String(d.returnerEmail).trim().toLowerCase() : undefined;
+      const retName = d.returnerName ? String(d.returnerName).trim() : undefined;
+      if (retEmail || retName) {
+        const resolved = this.resolveUser(
+          retEmail,
+          retName,
+          emailToUser,
+          nameToUsers,
+          '반입처리자'
+        );
+        result.returnerId = resolved.userId;
+        result.warnings.push(...resolved.warnings);
+      }
+
+      if (
+        result.requesterId ||
+        result.approverId ||
+        result.returnerId ||
+        result.errors.length > 0 ||
+        result.warnings.length > 0
+      ) {
+        results.set(i, result);
+      }
+    }
+
+    this.logger.log(
+      `Checkout FK Resolution: ${rows.length}행 처리 — ` +
+        `requester 해석=${[...results.values()].filter((r) => r.requesterId).length}, ` +
+        `error=${[...results.values()].filter((r) => r.errors.length > 0).length}`
+    );
+
+    return results;
   }
 
   // ── Private 헬퍼 ──────────────────────────────────────────────────────────────

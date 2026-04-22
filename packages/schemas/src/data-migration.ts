@@ -90,6 +90,7 @@ export type MigrationSessionStatus =
 /** 멀티시트 마이그레이션 시트 타입 상수 */
 export const MIGRATION_SHEET_TYPE = {
   EQUIPMENT: 'equipment',
+  SHARED_EQUIPMENT: 'shared_equipment',
   CALIBRATION: 'calibration',
   REPAIR: 'repair',
   INCIDENT: 'incident',
@@ -97,6 +98,7 @@ export const MIGRATION_SHEET_TYPE = {
   TEST_SOFTWARE: 'test_software',
   CALIBRATION_FACTOR: 'calibration_factor',
   NON_CONFORMANCE: 'non_conformance',
+  CHECKOUT: 'checkout',
 } as const;
 
 /** 멀티시트 마이그레이션 시트 타입 */

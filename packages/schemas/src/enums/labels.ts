@@ -2,7 +2,7 @@ import type { EquipmentStatus, ManagementMethod, UserRole } from './equipment';
 import { EquipmentStatusEnum, ManagementMethodEnum, UserRoleEnum } from './equipment';
 import type { EquipmentClassification, InspectionJudgment } from './intermediate-inspection';
 import type { SelfInspectionItemJudgment } from './self-inspection';
-import type { CheckoutStatus, CheckoutPurpose } from './checkout';
+import type { CheckoutStatus, CheckoutPurpose, CheckoutType } from './checkout';
 import type {
   CalibrationApprovalStatus,
   CalibrationFactorApprovalStatus,
@@ -29,7 +29,7 @@ import type {
 import type { UnifiedApprovalStatus } from './approval';
 import type { DisposalReason, DisposalReviewStatus } from './disposal';
 import type { EquipmentImportSource, EquipmentImportStatus } from './equipment-import';
-import type { UserStatus } from './shared';
+import type { UserStatus, SharedSource } from './shared';
 
 // ============================================================================
 // LABELS 맵 정의 (서버 사이드 전용 — 백엔드 응답, 로그, 알림 등)
@@ -191,6 +191,24 @@ export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
   repair: '수리',
   rental: '대여',
   return_to_vendor: '렌탈 반납',
+};
+
+/**
+ * 반출 유형 라벨 (마이그레이션 참고값 시트용)
+ */
+export const CHECKOUT_TYPE_LABELS: Record<CheckoutType, string> = {
+  calibration: '교정',
+  repair: '수리',
+  rental: '대여',
+};
+
+/**
+ * 공용장비 출처 라벨 (마이그레이션 참고값 시트용)
+ */
+export const SHARED_SOURCE_LABELS: Record<SharedSource, string> = {
+  safety_lab: '시험소 공용',
+  external: '외부 렌탈',
+  internal_shared: '내부 공용',
 };
 
 /**

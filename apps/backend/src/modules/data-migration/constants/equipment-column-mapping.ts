@@ -283,10 +283,6 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     headerLabel: `교정필요(${enumHintFromLabels(CALIBRATION_REQUIRED_LABELS)})`,
   },
   {
-    dbField: 'calibrationResult',
-    aliases: ['교정결과', '교정 결과', 'Calibration Result'],
-  },
-  {
     dbField: 'specMatch',
     aliases: ['시방일치', 'Spec Match', '시방 일치'],
     transform: mapSpecMatch,
@@ -327,10 +323,6 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['펌웨어버전', 'FW Version', 'Firmware Version'],
   },
   {
-    dbField: 'equipmentType',
-    aliases: ['장비유형', '장비타입', '유형', 'Equipment Type', 'Type'],
-  },
-  {
     dbField: 'intermediateCheckCycle',
     aliases: ['중간점검주기', '중간 점검 주기', 'Intermediate Check Cycle'],
     transform: toInteger,
@@ -350,35 +342,8 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
   },
   {
-    dbField: 'externalIdentifier',
-    aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
-  },
-  {
     dbField: 'correctionFactor',
     aliases: ['보정계수', '보정 계수', 'Correction Factor'],
-  },
-  {
-    dbField: 'isShared',
-    aliases: ['공용여부', '공용', 'Shared', 'Is Shared'],
-    transform: toBoolean,
-  },
-  {
-    dbField: 'sharedSource',
-    aliases: ['공용출처', '공용 출처', 'Shared Source'],
-  },
-  {
-    dbField: 'owner',
-    aliases: ['소유처', '소유자', 'Owner'],
-  },
-  {
-    dbField: 'usagePeriodStart',
-    aliases: ['사용시작일', '사용 시작일', 'Usage Start', 'Usage Period Start'],
-    transform: parseExcelDate,
-  },
-  {
-    dbField: 'usagePeriodEnd',
-    aliases: ['사용종료일', '사용 종료일', 'Usage End', 'Usage Period End'],
-    transform: parseExcelDate,
   },
 
   // ── FK 해석용 가상 필드 (DB 컬럼에 직접 매핑 안 됨, FkResolutionService가 해석) ──
@@ -413,8 +378,44 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
  * 마이그레이션 템플릿에서 제거되었지만 기존 Excel 호환을 위해 무시할 컬럼 정의.
  * 이 배열에서 DEPRECATED_ALIAS_INDEX가 자동 생성됨 — 하드코딩 Set 아님.
  */
-export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [];
-// 모든 항목이 EQUIPMENT_COLUMN_MAPPING으로 승격됨 — DEPRECATED_EQUIPMENT_ALIAS_SET export는 유지
+export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
+  // equipment_type DB 컬럼 제거 — 사용처 없음. alias는 Excel 호환을 위해 무시 처리
+  {
+    dbField: 'equipmentType',
+    aliases: ['장비유형', '장비타입', '유형', 'Equipment Type', 'Type'],
+  },
+  // calibrationResult는 DB/UI에서 유지되지만 마이그레이션 템플릿에서 제거
+  // (교정 이력 시트의 result 컬럼이 SSOT — 장비 시트 중복 입력 제거)
+  {
+    dbField: 'calibrationResult',
+    aliases: ['교정결과', '교정 결과', 'Calibration Result'],
+  },
+  // 공용장비 전용 필드 — 공용장비 시트로 분리됨. 일반 장비 시트에 입력 시 무시
+  {
+    dbField: 'isShared',
+    aliases: ['공용여부', '공용', 'Shared', 'Is Shared'],
+  },
+  {
+    dbField: 'sharedSource',
+    aliases: ['공용출처', '공용 출처', 'Shared Source'],
+  },
+  {
+    dbField: 'owner',
+    aliases: ['소유처', '소유자', 'Owner'],
+  },
+  {
+    dbField: 'usagePeriodStart',
+    aliases: ['사용시작일', '사용 시작일', 'Usage Start', 'Usage Period Start'],
+  },
+  {
+    dbField: 'usagePeriodEnd',
+    aliases: ['사용종료일', '사용 종료일', 'Usage End', 'Usage Period End'],
+  },
+  {
+    dbField: 'externalIdentifier',
+    aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
+  },
+];
 
 import { DEPRECATED_CALIBRATION_COLUMNS } from './calibration-column-mapping';
 import { DEPRECATED_TEST_SOFTWARE_COLUMNS } from './test-software-column-mapping';
@@ -464,6 +465,8 @@ export const DEPRECATED_ALIAS_BY_SHEET: Record<string, Set<string>> = {
   cable: new Set(),
   calibration_factor: new Set(),
   non_conformance: new Set(),
+  shared_equipment: new Set(),
+  checkout: new Set(),
 };
 
 /**

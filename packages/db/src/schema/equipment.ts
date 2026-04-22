@@ -127,9 +127,8 @@ export const equipment = pgTable(
     // legacy 데이터는 null 유지 — 서비스 레이어에서 `approvedAt ?? updatedAt`으로 graceful fallback.
     approvedAt: timestamp('approved_at'), // 승인 일시
 
-    // 추가 필수 필드 (프롬프트 3 요구사항)
-    equipmentType: varchar('equipment_type', { length: 50 }), // 장비 타입
-    calibrationResult: text('calibration_result'), // 교정 결과
+    // 추가 필드
+    calibrationResult: text('calibration_result'), // 최신 교정 결과 요약 (교정 이력의 최신 result 스냅샷)
     correctionFactor: varchar('correction_factor', { length: 50 }), // 보정계수
     intermediateCheckSchedule: timestamp('intermediate_check_schedule'), // 중간점검일정
 

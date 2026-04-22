@@ -1,15 +1,21 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { and, eq, inArray, max } from 'drizzle-orm';
-import { createEquipmentSchema } from '@equipment-management/schemas';
+import { and, eq, inArray, max, like } from 'drizzle-orm';
+import { z } from 'zod';
 import {
+  createEquipmentSchema,
+  baseEquipmentSchema,
   parseManagementNumber,
   generateManagementNumber,
+  generateTemporaryManagementNumber,
   SITE_TO_CODE,
   CLASSIFICATION_TO_CODE,
+  ClassificationEnum,
   type Site,
   type Classification,
   MIGRATION_ROW_STATUS,
   INSERTABLE_STATUSES,
+  ApprovalStatusValues,
+  EquipmentStatusEnum,
 } from '@equipment-management/schemas';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import type { AppDatabase } from '@equipment-management/db';
@@ -20,7 +26,19 @@ import type {
   ManagementNumberGroup,
 } from '../types/data-migration.types';
 import { EQUIPMENT_COLUMN_MAPPING } from '../constants/equipment-column-mapping';
+import { SHARED_EQUIPMENT_COLUMN_MAPPING } from '../constants/shared-equipment-column-mapping';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
+
+/**
+ * 공용장비 마이그레이션 전용 Zod 스키마
+ * baseEquipmentSchema에서 공용장비 필수 필드만 추려서 검증
+ */
+const createSharedEquipmentMigrationSchema = baseEquipmentSchema.extend({
+  initialLocation: z.string().min(1, '설치위치는 필수입니다.'),
+  owner: z.string().min(1, '소유처는 필수입니다.'),
+  classification: ClassificationEnum,
+  usagePeriodStart: z.coerce.date(),
+});
 
 /**
  * 마이그레이션 행 검증 서비스
@@ -85,6 +103,124 @@ export class MigrationValidatorService {
     for (const row of rowsWithMgmtNum) {
       const preview = this.validateRow(row, existingInDb, inFileDuplicates);
       results.push(preview);
+    }
+
+    return results;
+  }
+
+  /**
+   * 공용장비 배치 검증 (Preview용)
+   *
+   * 일반 장비와의 차이점:
+   * - isShared=true, status='temporary', approvalStatus='approved' 자동 주입
+   * - 관리번호 미기입 시 TEMP- 형식 자동 생성 (site + classification 기반)
+   * - createSharedEquipmentMigrationSchema로 공용장비 필수 필드 검증
+   */
+  async validateSharedBatch(
+    mappedRows: MappedRow[],
+    options: { defaultSite?: string }
+  ): Promise<MigrationRowPreview[]> {
+    // 자동 주입: 사용자가 입력하지 않는 필드
+    const rowsWithDefaults = mappedRows.map((row) => ({
+      ...row,
+      mappedData: {
+        ...row.mappedData,
+        ...(!row.mappedData.site && options.defaultSite ? { site: options.defaultSite } : {}),
+        isShared: true,
+        status: EquipmentStatusEnum.enum.temporary,
+        approvalStatus: ApprovalStatusValues.APPROVED,
+      },
+    }));
+
+    // TEMP- 관리번호 자동 생성
+    const rowsWithMgmtNum = await this.assignTemporaryManagementNumbers(rowsWithDefaults);
+
+    // DB 중복 체크 (TEMP- 번호 포함)
+    const allMgmtNumbers = rowsWithMgmtNum
+      .map((r) => r.mappedData.managementNumber)
+      .filter((n): n is string => typeof n === 'string' && n.trim().length > 0);
+    const existingInDb = await this.fetchExistingManagementNumbers(allMgmtNumbers);
+
+    // 파일 내 중복 탐지
+    const inFileDuplicates = this.detectInFileDuplicates(rowsWithMgmtNum);
+
+    const results: MigrationRowPreview[] = [];
+    for (const row of rowsWithMgmtNum) {
+      const errors: RowFieldError[] = [];
+      const warnings: string[] = [];
+      const data = { ...row.mappedData };
+
+      // 파일 내 중복
+      if (inFileDuplicates.has(row.rowNumber)) {
+        const firstRow = inFileDuplicates.get(row.rowNumber)!;
+        results.push({
+          rowNumber: row.rowNumber,
+          status: MIGRATION_ROW_STATUS.DUPLICATE,
+          data,
+          errors: [
+            {
+              field: 'managementNumber',
+              message: `파일 내 중복 관리번호입니다. (첫 번째 발생: ${firstRow}행)`,
+              code: MigrationErrorCode.IN_FILE_DUPLICATE,
+            },
+          ],
+          warnings: [],
+          managementNumber: data.managementNumber as string | undefined,
+        });
+        continue;
+      }
+
+      // DB 중복
+      const mgmtNum = data.managementNumber as string | undefined;
+      if (mgmtNum && existingInDb.has(mgmtNum)) {
+        results.push({
+          rowNumber: row.rowNumber,
+          status: MIGRATION_ROW_STATUS.DUPLICATE,
+          data,
+          errors: [
+            {
+              field: 'managementNumber',
+              message: '이미 등록된 관리번호입니다.',
+              code: MigrationErrorCode.DB_DUPLICATE,
+            },
+          ],
+          warnings: [],
+          managementNumber: mgmtNum,
+          existingEquipmentId: existingInDb.get(mgmtNum),
+        });
+        continue;
+      }
+
+      // Zod 검증 (공용장비 전용 스키마)
+      const parseResult = createSharedEquipmentMigrationSchema.safeParse(data);
+      if (!parseResult.success) {
+        const zodErrors = parseResult.error.issues.map(
+          (e): RowFieldError => ({
+            field: e.path.join('.') || 'unknown',
+            message: this.translateSharedZodError(e.message, e.path[0] as string),
+            code: e.code.toUpperCase(),
+          })
+        );
+        errors.push(...zodErrors);
+      }
+
+      if (row.unmappedColumns.length > 0) {
+        warnings.push(`인식되지 않은 컬럼: ${row.unmappedColumns.join(', ')}`);
+      }
+
+      results.push({
+        rowNumber: row.rowNumber,
+        status:
+          errors.length > 0
+            ? MIGRATION_ROW_STATUS.ERROR
+            : warnings.length > 0
+              ? MIGRATION_ROW_STATUS.WARNING
+              : MIGRATION_ROW_STATUS.VALID,
+        data,
+        errors,
+        warnings,
+        managementNumber: mgmtNum,
+      });
     }
 
     return results;
@@ -346,6 +482,80 @@ export class MigrationValidatorService {
       return `${prefix}숫자를 입력해 주세요.`;
     }
     return `${prefix}${message}`;
+  }
+
+  /**
+   * TEMP- 관리번호 자동 생성 (공용장비 전용)
+   * site + classification 기반으로 그룹별 max 조회 후 순차 할당
+   */
+  private async assignTemporaryManagementNumbers(rows: MappedRow[]): Promise<MappedRow[]> {
+    const rowsNeedingNumber = rows.filter((r) => !r.mappedData.managementNumber);
+    if (rowsNeedingNumber.length === 0) return rows;
+
+    // (site, classification) 그룹별 최대 TEMP- 일련번호 조회
+    const groups = new Map<string, { nextSerial: number }>();
+
+    for (const row of rowsNeedingNumber) {
+      const site = row.mappedData.site as string | undefined;
+      const classification = row.mappedData.classification as string | undefined;
+      if (!site || !classification) continue; // 필수 필드 누락 — Zod 검증에서 에러 처리
+
+      const siteCode = SITE_TO_CODE[site as keyof typeof SITE_TO_CODE];
+      const classCode =
+        CLASSIFICATION_TO_CODE[classification as keyof typeof CLASSIFICATION_TO_CODE];
+      if (!siteCode || !classCode) continue;
+
+      const groupKey = `${siteCode}-${classCode}`;
+      if (!groups.has(groupKey)) {
+        // DB에서 해당 그룹의 최대 TEMP- 번호 조회 (LIKE 패턴)
+        const prefix = `TEMP-${siteCode}-${classCode}`;
+        const existingRows = await this.db
+          .select({ managementNumber: equipment.managementNumber })
+          .from(equipment)
+          .where(like(equipment.managementNumber, `${prefix}%`));
+
+        let maxSerial = 0;
+        for (const r of existingRows) {
+          const numPart = r.managementNumber.substring(prefix.length);
+          const parsed = parseInt(numPart, 10);
+          if (!isNaN(parsed) && parsed > maxSerial) maxSerial = parsed;
+        }
+        groups.set(groupKey, { nextSerial: maxSerial + 1 });
+      }
+
+      const group = groups.get(groupKey)!;
+      const siteCode2 = SITE_TO_CODE[site as keyof typeof SITE_TO_CODE];
+      row.mappedData.managementNumber = generateTemporaryManagementNumber(
+        site as Site,
+        classification as Classification,
+        String(group.nextSerial).padStart(4, '0')
+      );
+      group.nextSerial++;
+    }
+
+    return rows;
+  }
+
+  /**
+   * DB 필드명 → 한국어 라벨 (공용장비 매핑 기반)
+   */
+  private translateSharedZodError(message: string, field?: string): string {
+    const fieldLabel = this.getSharedFieldLabel(field);
+    const prefix = fieldLabel ? `${fieldLabel}: ` : '';
+    if (message.includes('Required') || message.includes('required')) {
+      return `${prefix}필수 입력 항목입니다.`;
+    }
+    if (message.includes('Invalid enum')) return `${prefix}허용되지 않는 값입니다.`;
+    if (message.includes('date')) return `${prefix}올바른 날짜 형식이 아닙니다.`;
+    return `${prefix}${message}`;
+  }
+
+  private getSharedFieldLabel(field?: string): string {
+    if (!field) return '';
+    const entry = SHARED_EQUIPMENT_COLUMN_MAPPING.find((e) => e.dbField === field);
+    if (entry) return entry.aliases[0];
+    const equipEntry = EQUIPMENT_COLUMN_MAPPING.find((e) => e.dbField === field);
+    return equipEntry?.aliases[0] ?? field;
   }
 
   /**

@@ -73,7 +73,11 @@ export interface MigrationSession {
 }
 
 import type { MigrationSheetType } from '../constants/sheet-config';
-import type { FkResolutionResult, FkResolutionSummary } from '../services/fk-resolution.service';
+import type {
+  FkResolutionResult,
+  FkResolutionSummary,
+  CheckoutFkResult,
+} from '../services/fk-resolution.service';
 
 /** 멀티시트 세션 데이터 — 메모리 캐시 (내부 전용) */
 export interface MultiSheetMigrationSession {
@@ -91,6 +95,8 @@ export interface MultiSheetMigrationSession {
   fkResolutions?: Map<number, FkResolutionResult>;
   /** FK 해석 결과 (시험용 SW): 행 인덱스 → 해석된 primaryManagerId/secondaryManagerId */
   testSoftwareFkResolutions?: Map<number, FkResolutionResult>;
+  /** FK 해석 결과 (반출입 이력): 행 인덱스 → 해석된 requesterId/approverId/returnerId */
+  checkoutFkResolutions?: Map<number, CheckoutFkResult>;
   /** FK 해석 요약 (프론트엔드 표시용) */
   fkResolutionSummary?: FkResolutionSummary;
   sheets: {

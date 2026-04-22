@@ -37,6 +37,10 @@ export const MigrationErrorCode = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   /** 장비 시트가 2개 이상 포함된 경우 — FK 인덱스 단일 시트 계약 위반 */
   MULTIPLE_EQUIPMENT_SHEETS: 'MIGRATION_MULTIPLE_EQUIPMENT_SHEETS',
+  /** 공용장비 시트의 owner 필드 누락 */
+  SHARED_EQUIPMENT_MISSING_OWNER: 'MIGRATION_SHARED_EQUIPMENT_MISSING_OWNER',
+  /** 반출입 이력 시트의 신청자 email/name 매칭 실패 (requesterId NOT NULL 제약 위반) */
+  CHECKOUT_REQUESTER_NOT_FOUND: 'MIGRATION_CHECKOUT_REQUESTER_NOT_FOUND',
 } as const;
 
 export type MigrationErrorCode = (typeof MigrationErrorCode)[keyof typeof MigrationErrorCode];

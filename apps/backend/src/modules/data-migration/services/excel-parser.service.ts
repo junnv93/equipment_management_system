@@ -31,6 +31,14 @@ import {
   NON_CONFORMANCE_ALIAS_INDEX,
   NON_CONFORMANCE_COLUMN_MAPPING,
 } from '../constants/non-conformance-column-mapping';
+import {
+  SHARED_EQUIPMENT_ALIAS_INDEX,
+  SHARED_EQUIPMENT_COLUMN_MAPPING,
+} from '../constants/shared-equipment-column-mapping';
+import {
+  CHECKOUT_ALIAS_INDEX,
+  CHECKOUT_COLUMN_MAPPING,
+} from '../constants/checkout-column-mapping';
 import { detectSheetType, type MigrationSheetType } from '../constants/sheet-config';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
 import {
@@ -56,6 +64,8 @@ import {
   CALIBRATION_FACTOR_TYPE_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
   RESOLUTION_TYPE_VALUES,
+  CHECKOUT_PURPOSE_VALUES,
+  CHECKOUT_TYPE_VALUES,
   MIGRATION_ROW_STATUS,
   SITE_LABELS,
   MANAGEMENT_METHOD_LABELS,
@@ -66,6 +76,11 @@ import {
   NON_CONFORMANCE_TYPE_LABELS,
   RESOLUTION_TYPE_LABELS,
   TEST_FIELD_LABELS,
+  CHECKOUT_PURPOSE_LABELS,
+  CHECKOUT_TYPE_LABELS,
+  SHARED_SOURCE_VALUES,
+  SHARED_SOURCE_LABELS,
+  CLASSIFICATION_LABELS,
 } from '@equipment-management/schemas';
 
 /** SSOT enum + 라벨 → "value(한국어)" 형식 */
@@ -220,6 +235,10 @@ export class ExcelParserService {
         return CALIBRATION_FACTOR_ALIAS_INDEX;
       case 'non_conformance':
         return NON_CONFORMANCE_ALIAS_INDEX;
+      case 'shared_equipment':
+        return SHARED_EQUIPMENT_ALIAS_INDEX;
+      case 'checkout':
+        return CHECKOUT_ALIAS_INDEX;
       default: {
         const _exhaustive: never = type;
         throw new Error(`Unknown sheet type: ${_exhaustive}`);
@@ -684,6 +703,56 @@ export class ExcelParserService {
       actionPlan: '재교정 실시',
     });
 
+    // ── 공용장비 시트 ───────────────────────────────────────────────────────────
+    const sharedEquipSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.SHARED_EQUIPMENT, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    sharedEquipSheet.columns = SHARED_EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
+      header: getTemplateHeader(entry),
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      sharedEquipSheet,
+      SHARED_EQUIPMENT_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    sharedEquipSheet.addRow({
+      site: 'suwon',
+      name: '신호 발생기 (공용)',
+      initialLocation: '수원랩 B동 203호',
+      owner: '수원 시험소',
+      classification: 'fcc_emc_rf',
+      usagePeriodStart: '2024-01-01',
+      usagePeriodEnd: '2025-12-31',
+      sharedSource: 'safety_lab',
+      manufacturer: 'Keysight',
+      modelName: 'E8257D',
+    });
+
+    // ── 반출입 이력 시트 ────────────────────────────────────────────────────────
+    const checkoutSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.CHECKOUT, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    checkoutSheet.columns = CHECKOUT_COLUMN_MAPPING.map((entry) => ({
+      header: getTemplateHeader(entry),
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      checkoutSheet,
+      CHECKOUT_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    checkoutSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      checkoutDate: '2024-03-15',
+      expectedReturnDate: '2024-04-15',
+      purpose: 'calibration',
+      destination: 'HCT 교정소',
+      reason: '연간 정기 교정',
+      requesterEmail: 'engineer@example.com',
+      actualReturnDate: '2024-04-10',
+    });
+
     // ── 참고값 시트 (SSOT: enum + 라벨 맵 기반 이중언어 동적 생성) ──────────
     const refSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.REFERENCE);
     refSheet.addRow([REFERENCE_LABELS.FIELD_NAME, REFERENCE_LABELS.ALLOWED_VALUES]);
@@ -722,6 +791,32 @@ export class ExcelParserService {
       formatEnumWithLabels(RESOLUTION_TYPE_VALUES, RESOLUTION_TYPE_LABELS),
     ]);
     refSheet.addRow([REFERENCE_LABELS.DATE_FORMAT, REFERENCE_LABELS.DATE_FORMAT_VALUE]);
+    // 공용장비 전용 참고값
+    refSheet.addRow([
+      REFERENCE_LABELS.SHARED_SOURCE,
+      formatEnumWithLabels(SHARED_SOURCE_VALUES, SHARED_SOURCE_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.CLASSIFICATION,
+      formatEnumWithLabels(Object.keys(CLASSIFICATION_LABELS) as string[], CLASSIFICATION_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.SHARED_MGMT_NUMBER_FORMAT,
+      REFERENCE_LABELS.SHARED_MGMT_NUMBER_FORMAT_VALUE,
+    ]);
+    // 반출입 이력 전용 참고값
+    refSheet.addRow([
+      REFERENCE_LABELS.CHECKOUT_PURPOSE,
+      formatEnumWithLabels(CHECKOUT_PURPOSE_VALUES, CHECKOUT_PURPOSE_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.CHECKOUT_TYPE,
+      formatEnumWithLabels(CHECKOUT_TYPE_VALUES, CHECKOUT_TYPE_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.CHECKOUT_STATUS_AUTO,
+      REFERENCE_LABELS.CHECKOUT_STATUS_AUTO_VALUE,
+    ]);
     refSheet.getColumn(1).width = 35;
     refSheet.getColumn(2).width = 80;
 
