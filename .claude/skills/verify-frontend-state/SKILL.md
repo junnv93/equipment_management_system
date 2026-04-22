@@ -313,6 +313,40 @@ useQuery({
 
 **INFO:** 스프레드 오버라이드가 반복되면 QUERY_CONFIG에 새 프리셋 추가 검토.
 
+### Step 14b: placeholderData는 QUERY_CONFIG 스프레드 다음에 위치 (2026-04-22 추가)
+
+`placeholderData`는 `...QUERY_CONFIG.XXX` 스프레드 **다음에** 위치해야 한다.
+QUERY_CONFIG 프리셋이 미래에 `placeholderData` 키를 추가하면 스프레드가 먼저 오는 값을 덮어쓰기 때문이다.
+
+**올바른 패턴:**
+```typescript
+useQuery({
+  queryKey: queryKeys.checkouts.summary(),
+  queryFn: () => checkoutApi.getSummary(),
+  ...QUERY_CONFIG.CHECKOUT_SUMMARY,    // ← 스프레드 먼저
+  placeholderData: initialSummary,     // ← placeholderData 나중에
+});
+```
+
+**금지 패턴:**
+```typescript
+useQuery({
+  queryKey: queryKeys.checkouts.summary(),
+  queryFn: () => checkoutApi.getSummary(),
+  placeholderData: initialSummary,     // ← QUERY_CONFIG 스프레드보다 먼저 오면 silent overwrite 위험
+  ...QUERY_CONFIG.CHECKOUT_SUMMARY,
+});
+```
+
+**탐지:**
+```bash
+# placeholderData 다음에 QUERY_CONFIG 스프레드가 오는 역순 패턴
+grep -rn "placeholderData" apps/frontend --include="*.tsx" --include="*.ts" -A 3 \
+  | grep "QUERY_CONFIG"
+```
+
+**PASS:** `placeholderData`가 `...QUERY_CONFIG.XXX` 스프레드 이후에 위치. **FAIL:** `placeholderData`가 스프레드 이전에 위치 → 순서 교환 필요.
+
 ### Step 16: raw async mutation 금지 — delete/simple mutation도 useMutation 필수 (2026-04-21 추가)
 
 파일 삭제·연결 해제 등 optimistic update가 불필요한 mutation도 **`useMutation`으로 감싸야 한다**.
@@ -495,6 +529,7 @@ const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 | 13  | 타이머 cleanup (useRef)    | PASS/FAIL | window.setTimeout + setState 직접 호출 위치 |
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 | 14  | QUERY_CONFIG 스프레드 오버라이드 | PASS/INFO | `...QUERY_CONFIG.XXX, extraKey` 주석 없는 위치 |
+| 14b | placeholderData 순서        | PASS/FAIL | QUERY_CONFIG 스프레드 이전에 placeholderData 위치 |
 | 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 VERSION_CONFLICT 처리 또는 수동 casVersion 조합 위치 |
 | 16  | raw async mutation 금지    | PASS/FAIL | onClick에서 await api.delete/remove/unlink 직접 호출 위치 |
 | 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |

@@ -235,6 +235,34 @@ grep -n "widthMm\s*[:=]\s*[0-9]\|heightMm\s*[:=]\s*[0-9]" \
 
 **PASS:** 모두 0건. **FAIL:** `43.7` 인라인, 또는 SSOT를 거치지 않는 임의 치수 할당.
 
+### Step 23: staleTime/gcTime 직접 지정 (QUERY_CONFIG 프리셋 우회) (2026-04-22 추가)
+
+`apps/frontend/lib/api/query-config.ts`의 `QUERY_CONFIG` 프리셋이 SSOT.
+`useQuery`에서 `staleTime: CACHE_TIMES.X`를 직접 지정하면 캐시 전략이 분산되어 일괄 변경 불가.
+
+**올바른 패턴:**
+```typescript
+// ✅ QUERY_CONFIG 프리셋 스프레드 (placeholderData 등 추가 옵션은 스프레드 후 명시)
+const { data } = useQuery({
+  queryKey: queryKeys.checkouts.list(params),
+  queryFn: () => checkoutApi.getCheckouts(params),
+  ...QUERY_CONFIG.CHECKOUT_LIST,
+  placeholderData: initialData,  // ← 스프레드 후 오버라이드 (실수로 덮힘 방지)
+});
+```
+
+**탐지:**
+```bash
+# useQuery/useInfiniteQuery 내 staleTime: CACHE_TIMES.X 직접 지정
+grep -rn "staleTime:\s*CACHE_TIMES\." \
+  apps/frontend/app apps/frontend/components apps/frontend/hooks \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "// \|node_modules"
+```
+
+**PASS:** 0건 (또는 주석 있는 예외). **FAIL:** `staleTime: CACHE_TIMES.SHORT` 등 직접 지정.
+**예외:** `staleTime: Infinity` (런타임 불변, 주석 필수), `query-config.ts` 자체 정의.
+
 ### Step 20: 파일 확장자/MIME 타입 SSOT
 
 **탐지 명령어:**

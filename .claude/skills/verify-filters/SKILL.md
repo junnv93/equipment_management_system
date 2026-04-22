@@ -231,6 +231,47 @@ grep -rn "router\.replace.*'/checkouts\|router\.push.*'/checkouts" \
 
 **PASS:** 섹션 페이지네이션 훅 전체가 URL searchParams 기반, `scroll: false`, `FRONTEND_ROUTES` SSOT 사용. **FAIL:** `useState` 페이지 이중 관리 또는 인라인 URL.
 
+### Step 8: 필터 핸들러에서 filtersToSearchParams SSOT 우회 탐지
+
+필터 값 변경 핸들러(handleXxxChange, handlePageChange, handleSubTabChange 등)에서 URL 파라미터를 직접 생성·편집하는 패턴은 `filtersToSearchParams` SSOT를 우회한다.
+`filtersToSearchParams`는 기본값(inProgress/all/1 등)을 자동으로 omit하므로, 직접 URLSearchParams를 구성하면 기본값이 URL에 남아 라우팅 이력이 오염된다.
+
+**올바른 패턴 (checkout-filter-utils.ts 기반):**
+```typescript
+// ✅ filtersToSearchParams SSOT 경유
+const handlePageChange = (newPage: number) => {
+  const params = filtersToSearchParams({ ...filters, page: newPage });
+  const qs = params.toString();
+  router.replace(qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST, { scroll: false });
+};
+```
+
+**금지 패턴:**
+```typescript
+// ❌ new URLSearchParams(searchParams.toString()) 직접 조작
+const handlePageChange = (newPage: number) => {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set('page', newPage.toString());
+  router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, { scroll: false });
+};
+```
+
+**탐지:**
+```bash
+# 필터 핸들러에서 new URLSearchParams(searchParams.toString()) 직접 조작 패턴
+grep -rn "new URLSearchParams(searchParams" \
+  apps/frontend/app apps/frontend/components \
+  --include="*.tsx" --include="*.ts"
+
+# 필터 핸들러에서 params.set/params.delete 직접 호출 (SSOT 우회 가능성)
+grep -rn "params\.set\|params\.delete" \
+  apps/frontend/app/\(dashboard\) \
+  --include="*.tsx" | grep -v "filtersToSearchParams\|filter-utils\|\/\/"
+```
+
+**PASS:** 필터 핸들러에서 `new URLSearchParams(searchParams.toString())` 직접 조작 0건.
+**FAIL:** 핸들러 내부에서 `new URLSearchParams`를 생성하거나 `params.set/delete`로 개별 키 조작 → `filtersToSearchParams({ ...filters, changedKey: value })` 패턴으로 교체.
+
 ## Output Format
 
 ```markdown
@@ -243,6 +284,7 @@ grep -rn "router\.replace.*'/checkouts\|router\.push.*'/checkouts" \
 | 5   | Content.tsx useState 금지 | PASS/FAIL | 위반 위치 목록       |
 | 6   | 섹션 독립 페이지네이션    | PASS/FAIL | useState 이중관리 훅 목록 |
 | 7   | subTab SSOT 파생 (checkout) | PASS/FAIL | inProgress 하드코딩 여부 |
+| 8   | filtersToSearchParams SSOT | PASS/FAIL | new URLSearchParams 직접 조작 위치 |
 ```
 
 ## Exceptions

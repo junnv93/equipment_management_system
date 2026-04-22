@@ -5,16 +5,19 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
-## 2026-04-22 — checkout-subtab-ia + subtab-ssot-fix 후속 (63261b0d)
+## 2026-04-22 — checkout-subtab-ia + subtab-ssot-fix 후속 (63261b0d + followup)
 
-### 2026-04-22: subtab-ia tech-debt 4건 해소 — WCAG / Select / QUERY_CONFIG / URL SSOT
+### 2026-04-22: subtab-ia tech-debt 4건 + verify/review 후속 3건 — WCAG / Select / QUERY_CONFIG / URL SSOT
 
-- [x] **🟡 MEDIUM QUERY_CONFIG 인라인 오버라이드** — `query-config.ts`에 `CHECKOUT_LIST/CHECKOUT_SUMMARY/CHECKOUT_DESTINATIONS` 프리셋 추가. `CheckoutsContent.tsx:141,149,165` + `OutboundCheckoutsTab.tsx` 교체. 4차 재발 종결.
+- [x] **🟡 MEDIUM QUERY_CONFIG 인라인 오버라이드** — `query-config.ts`에 `CHECKOUT_LIST/CHECKOUT_SUMMARY/CHECKOUT_DESTINATIONS/EQUIPMENT_IMPORT_LIST` 프리셋 추가. `CheckoutsContent.tsx` + `OutboundCheckoutsTab.tsx` + `InboundCheckoutsTab.tsx` 교체. 4차 재발 종결.
 - [x] **🟡 MEDIUM Radix Select spurious onValueChange 가드 누락** — `handleStatusChange/handleLocationChange/handlePurposeChange/handlePeriodChange` 첫 라인에 `if (value === filters.X) return;` 가드 추가. 의도치 않은 URL 리셋 방지.
 - [x] **🟡 MEDIUM role="tabpanel" 내부 role="tablist" (WCAG 4.1.2)** — `CheckoutListTabs`(tablist)를 `role="tabpanel"` div 외부 sibling으로 이동. tabpanel에는 목록+페이지네이션만 잔류. axe-core 위반 해소.
 - [x] **🟢 LOW handlePageChange URL SSOT 이중 경로** — `handlePageChange` → `filtersToSearchParams({ ...filters, page: newPage })` 일원화. `URLSearchParams` 직접 조작 패턴 제거.
 - [x] **🟢 LOW handleSubTabChange URL 직접 조작** — `filtersToSearchParams({ ...filters, subTab: newSubTab, status: 'all', page: 1 })`으로 일원화. `useSearchParams` 직접 의존성 제거.
 - [x] **🟡 MEDIUM InboundCheckoutsTab CACHE_TIMES.SHORT 직접 지정 3곳** — inbound checkout → `CHECKOUT_LIST`, rental/internal import → `EQUIPMENT_IMPORT_LIST` 프리셋 교체. `query-config.ts`에 `EQUIPMENT_IMPORT_LIST` 신규 추가.
+- [x] **🟡 MEDIUM CHECKOUT_DESTINATIONS staleTime/gcTime DAY 티어 불일치** — `query-config.ts` CHECKOUT_DESTINATIONS 프리셋을 `LONG/VERY_LONG` → `staleTime: CACHE_TIMES.DAY, gcTime: CACHE_TIMES.DAY`로 수정. `cache-config.ts:31` 주석이 DAY 티어 예시로 "반출 목적지 목록"을 명시하고 있었음.
+- [x] **🟡 MEDIUM isAllActive 5-필드 인라인이 countActiveFilters SSOT 우회** — `OutboundCheckoutsTab.tsx` `isAllActive` 계산을 `countActiveFilters(filters) > 0` SSOT로 교체. 새 필터 추가 시 동기화 누락 위험 제거.
+- [x] **🟢 LOW placeholderData가 QUERY_CONFIG 스프레드보다 앞에 위치** — `CheckoutsContent.tsx` liveSummary 쿼리에서 `placeholderData: initialSummary`를 `...QUERY_CONFIG.CHECKOUT_SUMMARY` 이후로 이동. 미래 프리셋 확장 시 silent overwrite 방지.
 
 ---
 
