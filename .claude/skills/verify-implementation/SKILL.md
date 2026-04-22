@@ -40,7 +40,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 16 | `verify-cache-events`   | backend  | 이벤트 기반 캐시 무효화 — 레지스트리 커버리지, 리스너 async, SSOT 패턴 |
 | 17 | `verify-handover-security` | backend | QR 인수인계 토큰 — 시크릿 분리, jti nonce 소비, TTL SSOT, dev 엔드포인트 이중 가드 |
 | 18 | `verify-qr-ssot`        | both     | QR URL/설정/액션 SSOT — 인라인 URL·경로·액션 배열 하드코딩 탐지 |
-| 19 | `verify-checkout-fsm`   | both     | Checkout FSM — Dependency Inversion, assertFsmInvariants, CheckoutPermissionKey 동기화 |
+| 19 | `verify-checkout-fsm`   | both     | Checkout FSM — Dependency Inversion, assertFsmInvariants, CheckoutPermissionKey 동기화, NO_EQUIPMENT 가드(Step 19 ≥4건), rejectReturn checkTeamPermission unconditional(Step 20) |
 
 ## 워크플로우
 

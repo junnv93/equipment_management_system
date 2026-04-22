@@ -405,6 +405,9 @@ grep -n "BadRequestException" \
 | 15 | 예외 계층 일관화 (7개 메서드)       | PASS/FAIL | ForbiddenException+ConflictException ≥7건 |
 | 16 | CheckoutErrorCode SSOT 인라인 금지  | PASS/FAIL | service+controller 인라인 'CHECKOUT_*' 0건 |
 | 17 | Controller 레이어 경계 준수         | PASS/FAIL | controller reason.trim 중복 검증 0건 |
+| 18 | lenderTeam identity-rule 강제       | PASS/FAIL | 외부 && approverTeamId 0건 + !approverTeamId ≥ 2건 |
+| 19 | NO_EQUIPMENT 가드 배치              | PASS/FAIL | ≥ 4건 + if (firstEquip) 0건 |
+| 20 | rejectReturn checkTeamPermission unconditional | PASS/FAIL | for 루프가 if (approverTeamId) 외부에 위치 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -436,26 +439,50 @@ grep -c "!approverTeamId\|!rejectReturnDto\.approverTeamId" \
 
 ### Step 19: NO_EQUIPMENT 가드 배치 — enforceScopeFromData 이전 위치 확인 (2026-04-22 이후)
 
-`approve`와 `rejectReturn`에서 items가 빈 경우 `enforceScopeFromData`가 묵시적으로 통과되지 않도록
+`approve`, `approveReturn`, `rejectReturn`에서 items가 빈 경우 `enforceScopeFromData`가 묵시적으로 통과되지 않도록
 `NO_EQUIPMENT` 가드가 scope 검증 **이전**에 위치해야 한다.
 
 ```bash
-# NO_EQUIPMENT 가드 존재 확인 (approve + rejectReturn 각 1건)
+# NO_EQUIPMENT 가드 존재 확인 (approve + approveReturn + rejectReturn + 기타 포함 4건 이상)
 grep -c "NO_EQUIPMENT" \
   apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 2 이상 (PASS)
+# 결과: 4 이상 (PASS)
 
 # 가드 패턴: !firstEquip → throw BadRequestException(NO_EQUIPMENT)
-grep -n "!firstEquip" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: approve + rejectReturn 각 1건 (PASS)
+grep -n "!firstEquip\|!firstEquipment" apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: approve + approveReturn + rejectReturn 각 1건 이상 (PASS)
 
 # 구버전 묵시적 통과 패턴 탐지 (금지): if (firstEquip) { enforceScopeFromData ...}
 grep -n "if (firstEquip)" apps/backend/src/modules/checkouts/checkouts.service.ts
 # 결과: 0건 (PASS) — 조건부 scope 검증 금지
 ```
 
-**PASS:** `NO_EQUIPMENT` 가드 ≥ 2건 + `if (firstEquip)` 패턴 0건.
+**PASS:** `NO_EQUIPMENT` 가드 ≥ 4건 + `if (firstEquip)` 패턴 0건.
 **FAIL:** `if (firstEquip) { this.enforceScopeFromData(...) }` 잔존 → `!firstEquip` throw 패턴으로 변환.
+
+### Step 20: rejectReturn checkTeamPermission unconditional 패턴 (checkout-lender-guard-p1p3 세션 이후)
+
+`rejectReturn`에서 `checkTeamPermission`이 `approverTeamId` 유무와 무관하게 for 루프 내에서 **무조건** 호출되어야 한다.
+`approverTeamId`가 없으면 `approverClassification`이 `undefined`이 되고, `checkTeamPermission`은 `undefined`를 허용해야 한다.
+이전 패턴: `if (equip && approverTeamId)` → 승인자 팀 미제공 시 장비 분류 검증 바이패스 가능.
+
+```bash
+# rejectReturn 내부에서 approverTeamId 없을 때도 checkTeamPermission 호출되는지 확인
+# (for 루프가 if (rejectReturnDto.approverTeamId) 조건 밖에 있어야 함)
+grep -A 15 "for (const item of items)" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -B5 "checkTeamPermission" | head -10
+
+# 금지 패턴: checkTeamPermission이 approverTeamId 조건 내부에 있는 경우
+# grep으로 for..checkTeamPermission 구조가 approverTeamId if 블록 안에 있으면 FAIL
+grep -A 30 "let approverClassification" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -B5 "checkTeamPermission" | head -15
+# 기대: for (const item of items) 루프가 if (approverTeamId) 블록 밖에 위치
+```
+
+**PASS:** `for (const item of items)` 루프가 `if (rejectReturnDto.approverTeamId)` 블록 외부에 위치 + 루프 내에서 `this.checkTeamPermission(equip, approverClassification)` 호출.
+**FAIL:** `checkTeamPermission` 호출이 `if (rejectReturnDto.approverTeamId)` 블록 내부에 포함되어 approverTeamId 미제공 시 장비 분류 검증이 바이패스됨.
 
 ## Exceptions
 
@@ -463,4 +490,5 @@ grep -n "if (firstEquip)" apps/backend/src/modules/checkouts/checkouts.service.t
 2. **`assertFsmInvariants` 함수 정의 자체** — 함수 정의 내부 로직은 검사 대상 아님, 모듈 레벨 *호출*만 검사
 3. **테스트 파일의 mock 데이터** — `checkout-fsm.test.ts` 내 임시 CheckoutStatus/Purpose 값은 면제
 4. **`NextStepDescriptorSchema`의 `z.enum` 인라인 값** — CheckoutAction/NextActor enum 값이 인라인으로 나열되어 있는 것은 Zod 스키마 특성상 허용 (SSOT는 TypeScript type `CheckoutAction`)
-5. **`approveReturn`의 NO_EQUIPMENT 가드 미적용** — 현재 tech-debt로 기록됨 (2026-04-22). 수정 전까지 Step 19는 approve + rejectReturn 2건만 검증.
+5. **RENTAL purpose의 `reject_return` FSM 미지원** — FSM `reject_return` 전이는 `purposes: CAL_REPAIR`만 허용. RENTAL 반출의 `rejectReturn` 호출 시 `assertFsmAction`에서 INVALID_TRANSITION으로 차단되므로, `rejectReturn` 내부의 `LENDER_TEAM_ONLY` 체크는 RENTAL에 대해 dead code. Step 20은 CAL_REPAIR 목적 흐름만 검증 대상.
+6. **`mockChain.then` 테스트 패턴** — `chain.where.then` 오버라이드가 불가한 jest mock 제약으로 `mockChain.then`을 직접 오버라이드하는 패턴은 테스트 전용 관용구. 서비스 코드 검증 대상 아님.
