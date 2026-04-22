@@ -392,7 +392,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/approve')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @RequirePermissions(Permission.APPROVE_CHECKOUT)
   @UsePipes(ApproveCheckoutValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({

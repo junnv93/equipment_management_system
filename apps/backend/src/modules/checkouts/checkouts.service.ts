@@ -1804,20 +1804,13 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'submit_return',
-          uuid,
-          CSVal.RETURNED as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반납 제출 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'submit_return',
+        uuid,
+        CSVal.RETURNED as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1922,20 +1915,13 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'approve_return',
-          uuid,
-          CSVal.RETURN_APPROVED as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반납 최종 승인 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'approve_return',
+        uuid,
+        CSVal.RETURN_APPROVED as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2059,20 +2045,13 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'reject_return',
-          uuid,
-          CSVal.CHECKED_OUT as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반납 반려 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'reject_return',
+        uuid,
+        CSVal.CHECKED_OUT as CheckoutStatus,
+        req
+      );
 
       // ✅ 캐시 무효화 — items/equipmentMap은 이미 보유, 팀 ID만 추가 조회
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2328,20 +2307,13 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      try {
-        await this.writeTransitionAudit(
-          checkout,
-          'cancel',
-          uuid,
-          CSVal.CANCELED as CheckoutStatus,
-          req
-        );
-      } catch (auditErr) {
-        this.logger.error(
-          `반출 취소 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
-          auditErr instanceof Error ? auditErr.stack : undefined
-        );
-      }
+      await this.writeTransitionAudit(
+        checkout,
+        'cancel',
+        uuid,
+        CSVal.CANCELED as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
