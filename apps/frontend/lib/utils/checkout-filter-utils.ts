@@ -28,7 +28,7 @@
 
 import {
   findCheckoutStatusGroupKey,
-  CHECKOUT_STATUS_GROUPS,
+  CHECKOUT_STATUS_VALUES,
   type CheckoutStatus,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -36,23 +36,50 @@ import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 /**
  * 서브탭 상태 그룹 (UI-only SSOT)
  *
- * CHECKOUT_STATUS_GROUPS (stat 카드용)과 다른 기준:
- * - 'returned': lender_received → returned → return_approved 흐름에서
- *   아직 최종 승인 전이므로 inProgress에 포함
- * - 합집합 = CHECKOUT_STATUS_VALUES 13개 전체 (누락/중복 없음)
+ * 설계 원칙: completed를 명시 고정, inProgress를 자동 파생
+ * - completed: terminal state (의도적으로 종료된 반출) — 명시
+ * - inProgress: CHECKOUT_STATUS_VALUES 중 completed를 제외한 나머지 — 자동 파생
+ *   → 스키마에 새로운 CheckoutStatus가 추가되면 자동으로 inProgress에 포함됨
+ *
+ * 불변 조건: inProgress ∪ completed = CHECKOUT_STATUS_VALUES (누락/중복 없음)
  */
+const COMPLETED_STATUSES = new Set<CheckoutStatus>(['return_approved', 'canceled', 'rejected']);
+
 export const SUBTAB_STATUS_GROUPS = {
-  inProgress: [
-    'pending',
-    'approved',
-    'overdue',
-    'returned',
-    ...CHECKOUT_STATUS_GROUPS.in_progress,
-  ] as CheckoutStatus[],
-  completed: ['return_approved', 'canceled', 'rejected'] as CheckoutStatus[],
+  inProgress: CHECKOUT_STATUS_VALUES.filter((s) => !COMPLETED_STATUSES.has(s)) as CheckoutStatus[],
+  completed: [...COMPLETED_STATUSES] as CheckoutStatus[],
 } as const;
 
 export type CheckoutSubTab = keyof typeof SUBTAB_STATUS_GROUPS;
+
+// 모듈 레벨 Set — 매 호출마다 재생성 방지 (O(1) lookup 보장)
+const IN_PROGRESS_SET = new Set(SUBTAB_STATUS_GROUPS.inProgress);
+
+/**
+ * status 필터 값으로부터 올바른 서브탭을 추론하는 순수함수 (SSOT)
+ *
+ * - 단일 상태 또는 그룹이 특정 서브탭에만 속하면 해당 서브탭 반환
+ * - 'all'(toggle-off) → null 반환: 호출처에서 현재 서브탭을 유지해야 함
+ *   (toggle-off는 현재 탭 컨텍스트를 유지하는 것이 올바른 UX)
+ * - 여러 서브탭에 걸친 혼합 상태(예: returned+return_approved)는 null 반환
+ *   → null 수신처는 현재 서브탭을 유지해야 함
+ *
+ * @param statusValue - filters.status 값 ('all', 단일 상태, 또는 쉼표 구분 그룹)
+ * @returns 대응하는 CheckoutSubTab 또는 null (현재 서브탭 유지)
+ */
+export function getSubTabForStatus(statusValue: string): CheckoutSubTab | null {
+  if (statusValue === 'all') return null;
+
+  const statuses = statusValue.split(',') as CheckoutStatus[];
+
+  const allInProgress = statuses.every((s) => IN_PROGRESS_SET.has(s));
+  if (allInProgress) return 'inProgress';
+
+  const allCompleted = statuses.every((s) => COMPLETED_STATUSES.has(s));
+  if (allCompleted) return 'completed';
+
+  return null;
+}
 
 /**
  * UI에서 사용하는 반출 필터 타입 (URL 파라미터와 1:1 대응)

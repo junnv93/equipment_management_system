@@ -53,6 +53,7 @@ import {
   DEFAULT_UI_FILTERS,
   countActiveFilters,
   getStatusFilterDisplayKey,
+  getSubTabForStatus,
   type UICheckoutFilters,
   type CheckoutPeriod,
 } from '@/lib/utils/checkout-filter-utils';
@@ -192,12 +193,22 @@ export default function CheckoutsContent({
   const handleStatCardClick = useCallback(
     (status: string) => {
       const newStatus = filters.status === status ? 'all' : status;
-      updateUrl({ ...filters, status: newStatus, page: 1 });
+      // status → subTab 자동 추론: 명확한 귀속이 있으면 전환, 혼합(null)이면 현재 유지
+      const inferredSubTab = getSubTabForStatus(newStatus);
+      updateUrl({
+        ...filters,
+        status: newStatus,
+        subTab: inferredSubTab ?? filters.subTab,
+        page: 1,
+      });
     },
     [filters, updateUrl]
   );
 
-  const handleStatusChange = (value: string) => updateUrl({ ...filters, status: value, page: 1 });
+  const handleStatusChange = (value: string) => {
+    const inferredSubTab = getSubTabForStatus(value);
+    updateUrl({ ...filters, status: value, subTab: inferredSubTab ?? filters.subTab, page: 1 });
+  };
   const handleLocationChange = (value: string) =>
     updateUrl({ ...filters, destination: value, page: 1 });
   const handlePurposeChange = (value: string) => updateUrl({ ...filters, purpose: value, page: 1 });
