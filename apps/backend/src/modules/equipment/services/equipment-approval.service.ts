@@ -252,14 +252,14 @@ export class EquipmentApprovalService {
   async findPendingRequests(
     userRoles: string[],
     _userSite?: string,
-    userTeamId?: string
+    userTeamId?: string,
+    currentUserId?: string
   ): Promise<EquipmentRequest[]> {
     try {
-      // 기술책임자 또는 관리자만 승인 대기 목록 조회 가능
-      const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
-      const canViewAll = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) || isLabManager;
+      // UL-QP-18 직무분리: 기술책임자만 장비 승인 대기 목록 조회 가능
+      const isTechnicalManager = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
 
-      if (!canViewAll) {
+      if (!isTechnicalManager) {
         throw new ForbiddenException({
           code: 'EQUIPMENT_REQUEST_NO_VIEW_PERMISSION',
           message: 'No permission to view pending approval list.',
@@ -280,15 +280,17 @@ export class EquipmentApprovalService {
         },
       });
 
-      // technical_manager: 같은 팀 요청자의 대기 건만 반환
-      if (!isLabManager && userTeamId) {
+      // 기술책임자는 같은 팀 요청만, 자기 요청 제외 (self-approval 방지)
+      if (userTeamId) {
         return requests.filter((r) => {
           const requester = (r as EquipmentRequest & { requester?: UserSelect | null }).requester;
-          return requester?.teamId === userTeamId;
+          const isSameTeam = requester?.teamId === userTeamId;
+          const isOwnRequest = currentUserId ? r.requestedBy === currentUserId : false;
+          return isSameTeam && !isOwnRequest;
         });
       }
 
-      return requests;
+      return [];
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;
@@ -379,10 +381,8 @@ export class EquipmentApprovalService {
     expectedVersion: number
   ): Promise<EquipmentRequest> {
     try {
-      // 권한 확인: 기술책임자 또는 관리자만 승인 가능
-      const canApprove =
-        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-        userRoles.includes(UserRoleValues.LAB_MANAGER);
+      // UL-QP-18 직무분리: 기술책임자만 승인 가능 (lab_manager 제외)
+      const canApprove = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
 
       if (!canApprove) {
         throw new ForbiddenException({
@@ -402,6 +402,14 @@ export class EquipmentApprovalService {
         });
       }
 
+      // UL-QP-18 §6.2.2 직무분리: 자기 요청 자기 승인 금지
+      if (request.requestedBy === approvedBy) {
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_SELF_APPROVAL_FORBIDDEN',
+          message: '자신이 요청한 장비 등록을 직접 승인할 수 없습니다.',
+        });
+      }
+
       // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
@@ -411,6 +419,17 @@ export class EquipmentApprovalService {
         throw new NotFoundException({
           code: 'USER_NOT_FOUND',
           message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
+
+      // 같은 팀 소속 검증 — 기술책임자는 자기 팀 요청만 승인 가능
+      const requester = await this.db.query.users.findFirst({
+        where: eq(users.id, request.requestedBy),
+      });
+      if (!requester || approver.teamId !== requester.teamId) {
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_TEAM_SCOPE_VIOLATION',
+          message: '같은 팀의 요청만 승인할 수 있습니다.',
         });
       }
 
@@ -525,10 +544,8 @@ export class EquipmentApprovalService {
     expectedVersion: number
   ): Promise<EquipmentRequest> {
     try {
-      // 권한 확인
-      const canReject =
-        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-        userRoles.includes(UserRoleValues.LAB_MANAGER);
+      // UL-QP-18 직무분리: 기술책임자만 반려 가능 (lab_manager 제외)
+      const canReject = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
 
       if (!canReject) {
         throw new ForbiddenException({
@@ -556,6 +573,14 @@ export class EquipmentApprovalService {
         });
       }
 
+      // UL-QP-18 §6.2.2 직무분리: 자기 요청 자기 반려 금지
+      if (request.requestedBy === approvedBy) {
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_SELF_REJECTION_FORBIDDEN',
+          message: '자신이 요청한 장비 등록을 직접 반려할 수 없습니다.',
+        });
+      }
+
       // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
@@ -565,6 +590,17 @@ export class EquipmentApprovalService {
         throw new NotFoundException({
           code: 'USER_NOT_FOUND',
           message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
+
+      // 같은 팀 소속 검증 — 기술책임자는 자기 팀 요청만 반려 가능
+      const requester = await this.db.query.users.findFirst({
+        where: eq(users.id, request.requestedBy),
+      });
+      if (!requester || approver.teamId !== requester.teamId) {
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_TEAM_SCOPE_VIOLATION',
+          message: '같은 팀의 요청만 반려할 수 있습니다.',
         });
       }
 

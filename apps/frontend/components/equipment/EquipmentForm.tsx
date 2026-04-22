@@ -166,11 +166,15 @@ interface EquipmentFormProps {
 
 /**
  * 역할별 권한 정보 (i18n 키와 정적 속성만 유지)
+ *
+ * UL-QP-18 직무분리:
+ * - test_engineer · technical_manager: 승인 요청 생성 (같은 팀 기술책임자가 승인)
+ * - system_admin: 직접 등록 (승인 절차 없음)
+ * - lab_manager · quality_manager: CREATE_EQUIPMENT 권한 없음 → 폼 접근 불가
  */
 const ROLE_SEMANTIC: Record<string, SemanticColorKey> = {
   test_engineer: 'warning',
   technical_manager: 'warning',
-  lab_manager: 'info',
   system_admin: 'purple',
 };
 
@@ -184,11 +188,6 @@ const ROLE_INFO = {
     needsApproval: true,
     icon: Clock,
     color: getSemanticStatusClasses(ROLE_SEMANTIC.technical_manager),
-  },
-  lab_manager: {
-    needsApproval: false,
-    icon: Shield,
-    color: getSemanticStatusClasses(ROLE_SEMANTIC.lab_manager),
   },
   system_admin: {
     needsApproval: false,
@@ -248,12 +247,10 @@ export function EquipmentForm({
       ? String(initialData.teamId)
       : userDefaults?.teamId || userTeamId || undefined;
 
-  // 사용자 역할 결정 - useMemo 내부에서 직접 roles 접근하여 의존성 안정화
+  // 사용자 역할 결정 - lab_manager·quality_manager는 CREATE_EQUIPMENT 권한 없음 → 폼 접근 불가
   const userRole = useMemo(() => {
     const roles = (user as { roles?: string[] })?.roles || [];
-    // SSOT: UserRoleValues만 사용 (존재하지 않는 역할 폴백 제거)
     if (roles.includes(URVal.SYSTEM_ADMIN)) return URVal.SYSTEM_ADMIN;
-    if (roles.includes(URVal.LAB_MANAGER)) return URVal.LAB_MANAGER;
     if (roles.includes(URVal.TECHNICAL_MANAGER)) return URVal.TECHNICAL_MANAGER;
     return URVal.TEST_ENGINEER;
   }, [user]);

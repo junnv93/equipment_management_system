@@ -511,11 +511,7 @@
       },
       "technical_manager": {
         "label": "Technical Manager",
-        "description": "Approval from Lab Manager is required after submitting a create/edit request."
-      },
-      "lab_manager": {
-        "label": "Lab Manager",
-        "description": "Full access for direct create/edit."
+        "description": "Approval from another Technical Manager in the same team is required after submitting a create/edit request."
       },
       "system_admin": {
         "label": "System Administrator",
@@ -639,7 +635,7 @@
       "editDescription": "Do you want to submit an update request for this equipment?",
       "createDescription": "Do you want to submit a registration request for new equipment?",
       "approvalProcessTitle": "Approval Process Guide",
-      "approvalProcessStep1": "Approval from Technical Manager is required after submitting the request.",
+      "approvalProcessStep1": "Approval from a Technical Manager in the same team is required after submitting the request.",
       "approvalProcessStep2": "Equipment information will not be reflected until approved.",
       "approvalProcessStep3": "Request status can be checked in notifications.",
       "cancel": "Cancel",

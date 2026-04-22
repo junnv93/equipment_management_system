@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { type Site, EQUIPMENT_STATUS_VALUES } from '@equipment-management/schemas';
+import { EQUIPMENT_MANAGER_ELIGIBLE_ROLES } from '@equipment-management/shared-constants';
 import {
   FormControl,
   FormDescription,
@@ -24,7 +25,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
-import usersApi from '@/lib/api/users-api';
+import usersApi, { type UserOption } from '@/lib/api/users-api';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
@@ -32,15 +33,7 @@ import { useTranslations } from 'next-intl';
 
 // 장비 상태 라벨은 i18n (useTranslations('equipment').status.*)으로 관리
 // 색상 스타일은 @/lib/design-tokens/getEquipmentStatusTokenStyle에서 import (SSOT)
-
-interface TechnicalManager {
-  id: number;
-  uuid: string;
-  name: string;
-  email: string;
-  site: Site;
-  teamId?: number;
-}
+// 운영책임자 자격 역할: SSOT — packages/shared-constants EQUIPMENT_MANAGER_ELIGIBLE_ROLES
 
 interface StatusLocationSectionProps {
   control: Control<FormValues>;
@@ -80,19 +73,21 @@ export function StatusLocationSection({
     setValue('deputyManagerId', null);
   }, [currentTeamId, setValue]);
 
-  // 기술책임자 목록 로드 (사이트/팀 기준 필터링) — useQuery SSOT 패턴
-  const { data: technicalManagers = [], isLoading: isLoadingManagers } = useQuery({
-    queryKey: queryKeys.users.search({
-      roles: 'technical_manager',
-      site: currentSite,
-      teams: currentTeamId ? String(currentTeamId) : undefined,
-    }),
-    queryFn: () =>
-      usersApi.listForSelect<TechnicalManager>({
-        roles: 'technical_manager',
-        site: currentSite!,
-        ...(currentTeamId ? { teams: String(currentTeamId) } : {}),
-      }),
+  // SSOT: EQUIPMENT_MANAGER_ELIGIBLE_ROLES (technical_manager, quality_manager, lab_manager, system_admin)
+  // undefined를 queryKey에 포함하면 캐시 키 불일치 → 정규화된 params 객체를 메모이제이션
+  const managerQueryParams = useMemo<Record<string, string>>(() => {
+    const params: Record<string, string> = {
+      roles: EQUIPMENT_MANAGER_ELIGIBLE_ROLES.join(','),
+    };
+    if (currentSite) params.site = currentSite;
+    if (currentTeamId) params.teams = String(currentTeamId);
+    return params;
+  }, [currentSite, currentTeamId]);
+
+  // 운영책임자 목록 로드 (사이트/팀 기준 필터링) — useQuery SSOT 패턴
+  const { data: eligibleManagers = [], isLoading: isLoadingManagers } = useQuery<UserOption[]>({
+    queryKey: queryKeys.users.search(managerQueryParams),
+    queryFn: () => usersApi.listForSelect(managerQueryParams),
     enabled: !!currentSite,
     ...QUERY_CONFIG.USERS,
   });
@@ -249,15 +244,12 @@ export function StatusLocationSection({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {technicalManagers.map((manager) => (
-                      <SelectItem
-                        key={manager.uuid ?? `manager-${manager.id}`}
-                        value={manager.uuid}
-                      >
+                    {eligibleManagers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
                         {manager.name}
                       </SelectItem>
                     ))}
-                    {technicalManagers.length === 0 && (
+                    {eligibleManagers.length === 0 && (
                       <SelectItem value="__none__" disabled>
                         {t('form.statusLocation.techManagerNoList')}
                       </SelectItem>
@@ -284,6 +276,7 @@ export function StatusLocationSection({
                 <Select
                   onValueChange={(v) => field.onChange(v === '__none__' ? null : v)}
                   value={field.value || undefined}
+                  disabled={!currentSite || isLoadingManagers}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -300,8 +293,8 @@ export function StatusLocationSection({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="__none__">-</SelectItem>
-                    {technicalManagers.map((manager) => (
-                      <SelectItem key={manager.uuid ?? `deputy-${manager.id}`} value={manager.uuid}>
+                    {eligibleManagers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
                         {manager.name}
                       </SelectItem>
                     ))}

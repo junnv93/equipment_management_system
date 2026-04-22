@@ -172,13 +172,12 @@ export class EquipmentController {
     const userId = req.user?.userId ?? '';
     const userSite = req.user?.site;
     const userTeamId = req.user?.teamId;
-    const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
+    // UL-QP-18 직무분리: system_admin만 승인 절차 없이 직접 등록 가능
+    // test_engineer · technical_manager는 같은 팀 내에서만 등록 요청 가능
+    const isSystemAdmin = userRoles.includes(UserRoleValues.SYSTEM_ADMIN);
 
-    // 🔒 보안: lab_manager를 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
-    // - test_engineer(시험실무자): 자기 팀만
-    // - technical_manager(기술책임자): 자기 팀만
-    // - lab_manager(시험소장): 제한 없음 (전체 시험소 관리)
-    if (!isLabManager) {
+    // 🔒 보안: system_admin을 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
+    if (!isSystemAdmin) {
       if (userSite && createEquipmentDto.site && createEquipmentDto.site !== userSite) {
         throw new ForbiddenException({
           code: 'EQUIPMENT_SITE_SCOPE_ONLY',
@@ -205,17 +204,15 @@ export class EquipmentController {
       attachmentUuids = attachments.map((a) => a.id);
     }
 
-    // 시험소 관리자(lab_manager)는 자체 승인 가능 (UL-QP-18 Section 4)
-    if (isLabManager) {
-      // DTO에 approvalStatus가 없어도 자동으로 approved 처리
+    // 시스템 관리자는 승인 절차 없이 직접 등록 (UL-QP-18 직무분리 예외)
+    if (isSystemAdmin) {
       const approvedDto = { ...createEquipmentDto, approvalStatus: ApprovalStatusValues.APPROVED };
       const created = await this.equipmentService.create(approvedDto, userId);
-      // UL-QP-18-02 이력카드 "확인" 서명란 SSOT — 자체 승인 시에도 동일 경로로 기록
       await this.equipmentService.markApprovalMeta(created.id, userId);
       return created;
     }
 
-    // 일반 사용자는 승인 요청 생성
+    // test_engineer · technical_manager: 기술책임자 승인 요청 생성
     const request = await this.approvalService.createEquipmentRequest(
       createEquipmentDto,
       userId,
@@ -662,7 +659,8 @@ export class EquipmentController {
     const userRoles = req.user?.roles || [];
     const userSite = req.user?.site;
     const userTeamId = req.user?.teamId;
-    return this.approvalService.findPendingRequests(userRoles, userSite, userTeamId);
+    const userId = req.user?.userId;
+    return this.approvalService.findPendingRequests(userRoles, userSite, userTeamId, userId);
   }
 
   @Get('requests/:requestUuid')

@@ -6,11 +6,14 @@
  *
  * UL-QP-18 기준 + 3단계 교정계획서 승인:
  * - 시험실무자: 장비 조회, 장비 등록/수정/삭제 요청, 반출 신청, 교정 등록 요청
- * - 기술책임자: 장비 승인, 반출 승인, 교정 승인, 팀 관리, 교정계획서 작성/검토요청
- * - 품질책임자: 교정계획서 검토 (신규)
- * - 시험소장: 모든 권한 (해당 시험소 내, 단 교정 등록 제외), 교정계획서 최종 승인
+ * - 기술책임자: 장비 등록/승인(같은 팀, self-approval 불가), 반출 승인, 교정 승인, 교정계획서 작성/검토요청
+ * - 품질책임자: 교정계획서 검토 (장비 등록/승인 권한 없음)
+ * - 시험소장: 장비 등록/승인 권한 없음 (UL-QP-18 직무분리), 교정계획서 최종 승인
+ * - 시스템관리자: 장비 직접 등록 가능 (승인 요청 없이 즉시 처리)
  *
- * ⚠️ 교정 등록 특수 정책: 시험실무자만 교정 기록 등록 가능 (등록/승인 완전 분리)
+ * ⚠️ 장비 등록 정책: test_engineer·technical_manager·system_admin만 등록 가능
+ * ⚠️ 장비 승인 정책: technical_manager만 승인 가능 (같은 팀, self-approval 불가)
+ * ⚠️ 교정 등록 특수 정책: 시험실무자/기술책임자만 교정 기록 등록 가능 (등록/승인 완전 분리)
  *
  * 참고: 대여(Rentals)는 제거되었으며, 반출(Checkouts)이 교정/수리/시험소간 대여 모두 포함
  */
@@ -214,15 +217,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
   // ⚠️ 새 권한 추가 시 의도적으로 여기에도 추가해야 함 (블랙리스트 자동 부여 방지)
   // 제외: CREATE_CALIBRATION (시험실무자/기술책임자만 가능), MANAGE_SYSTEM_SETTINGS (시스템관리자 전용)
+  // 제외: CREATE/UPDATE/DELETE_EQUIPMENT, APPROVE/REJECT_EQUIPMENT, VIEW_EQUIPMENT_REQUESTS
+  //        (UL-QP-18 직무분리 — 장비 등록·승인은 기술책임자 전담)
   lab_manager: [
-    // 장비 관리
+    // 장비 관리 (조회만 — 등록/수정/삭제/승인은 기술책임자 전담)
     Permission.VIEW_EQUIPMENT,
-    Permission.CREATE_EQUIPMENT,
-    Permission.UPDATE_EQUIPMENT,
-    Permission.DELETE_EQUIPMENT,
-    Permission.APPROVE_EQUIPMENT,
-    Permission.REJECT_EQUIPMENT,
-    Permission.VIEW_EQUIPMENT_REQUESTS,
     // 반출 관리
     Permission.VIEW_CHECKOUTS,
     Permission.CREATE_CHECKOUT,

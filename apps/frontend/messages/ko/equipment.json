@@ -511,11 +511,7 @@
       },
       "technical_manager": {
         "label": "기술책임자",
-        "description": "등록/수정 요청 후 시험소장의 승인이 필요합니다."
-      },
-      "lab_manager": {
-        "label": "시험소 관리자",
-        "description": "전체 권한으로 직접 등록/수정이 가능합니다."
+        "description": "등록/수정 요청 후 같은 팀 기술책임자의 승인이 필요합니다."
       },
       "system_admin": {
         "label": "시스템 관리자",
@@ -639,7 +635,7 @@
       "editDescription": "장비 정보 수정을 요청하시겠습니까?",
       "createDescription": "새 장비 등록을 요청하시겠습니까?",
       "approvalProcessTitle": "승인 프로세스 안내",
-      "approvalProcessStep1": "요청 후 기술책임자의 승인이 필요합니다.",
+      "approvalProcessStep1": "요청 후 같은 팀 기술책임자의 승인이 필요합니다.",
       "approvalProcessStep2": "승인 전까지 장비 정보는 반영되지 않습니다.",
       "approvalProcessStep3": "요청 상태는 알림에서 확인할 수 있습니다.",
       "cancel": "취소",
