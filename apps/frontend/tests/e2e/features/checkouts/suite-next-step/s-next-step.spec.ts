@@ -45,11 +45,12 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({
+      baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
       storageState: path.join(__dirname, '../../../.auth/technical-manager.json'),
     });
     const probe = await context.newPage();
     await probe.goto(`/checkouts/${CHECKOUT_050_ID}`);
-    await probe.waitForLoadState('networkidle');
+    await probe.waitForLoadState('domcontentloaded');
     flagEnabled = await probe.locator('section[data-checkout-id]').isVisible();
     await context.close();
   });
@@ -68,7 +69,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     techManagerPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_001_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -86,7 +87,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     testOperatorPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_001_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -100,7 +101,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
   // ── S3: approved → logistics (기술책임자 — start 액션) ──────────────────
   test('S3: approved/calibration — start 액션 표시', async ({ techManagerPage: page }) => {
     await page.goto(`/checkouts/${CHECKOUT_009_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -116,7 +117,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     techManagerPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_019_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -129,7 +130,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     techManagerPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_059_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -143,7 +144,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     techManagerPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_027_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -157,7 +158,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
   // ── S7: returned → approve_return (기술책임자) ───────────────────────────
   test('S7: returned/calibration — approve_return 액션 표시', async ({ techManagerPage: page }) => {
     await page.goto(`/checkouts/${CHECKOUT_042_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -170,7 +171,7 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     techManagerPage: page,
   }) => {
     await page.goto(`/checkouts/${CHECKOUT_050_ID}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const panel = panelStatus(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
