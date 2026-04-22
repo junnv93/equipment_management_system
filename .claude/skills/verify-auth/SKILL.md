@@ -74,6 +74,30 @@ POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 
 | 8 | SYSTEM_USER_UUID 사용 (비-UUID 문자열 하드코딩 금지) |
 | 9 | AuthenticatedRequest 옵셔널 파라미터 탐지 |
 | 10 | enforceSiteAccess() 뮤테이션 엔드포인트 적용 |
+| 14 | jwt.strategy.ts — permissions 필드 파생 패턴 |
+
+### Step 14: JwtStrategy.validate() permissions 파생 (PR-2 이후)
+
+`jwt.strategy.ts`의 `validate()` 반환값에 `permissions` 필드가 `derivePermissionsFromRoles`를 통해 파생되어야 함.
+이를 통해 모든 컨트롤러에서 `req.user.permissions`가 항상 채워짐.
+
+```bash
+# derivePermissionsFromRoles import 확인
+grep -n "derivePermissionsFromRoles" \
+  apps/backend/src/modules/auth/strategies/jwt.strategy.ts
+
+# validate() 반환값에 permissions 필드 포함 확인
+grep -n "permissions:" \
+  apps/backend/src/modules/auth/strategies/jwt.strategy.ts
+
+# 구 패턴(getPermissions + roles[0]) 잔존 금지
+grep -n "getPermissions\|roles\[0\]" \
+  apps/backend/src/modules/auth/strategies/jwt.strategy.ts | grep -v "//"
+# 결과: 0건 (PASS — derivePermissionsFromRoles로 대체됨)
+```
+
+**PASS:** `derivePermissionsFromRoles` import + `permissions: derivePermissionsFromRoles(payload.roles)` 패턴.
+**FAIL:** `permissions` 필드 없음, 또는 `getPermissions(roles[0])` 구 패턴 잔존.
 
 상세: [references/auth-checks.md](references/auth-checks.md) Step 5~10
 
@@ -95,6 +119,7 @@ POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 
 | 11  | 라우트 선언 순서            | PASS/FAIL | 정적 sub-path 가 /:param 뒤에 선언된 위치 |
 | 12  | assertIndependentApprover   | PASS/FAIL | 승인 워크플로우 모듈 approve() 미적용 목록 |
 | 13  | FE role 리터럴 직접 비교   | PASS/WARN | URVal.* 직접 비교로 Permission 우회하는 액션 게이트 위치 |
+| 14  | jwt.strategy.ts permissions 파생 | PASS/FAIL | derivePermissionsFromRoles 사용 여부 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
