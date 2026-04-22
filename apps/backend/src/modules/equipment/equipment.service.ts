@@ -1073,27 +1073,28 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
-          // 담당자/부담당자 이름 resolve
-          let managerName: string | null = null;
-          let deputyManagerName: string | null = null;
-          if (equipmentData.managerId) {
-            const [manager] = await this.db
-              .select({ name: users.name })
+          // 담당자/부담당자 이름 단일 배치 쿼리로 resolve (2 round-trip → 1)
+          const allIds = [equipmentData.managerId, equipmentData.deputyManagerId].filter(
+            (id): id is string => !!id
+          );
+          const managerMap = new Map<string, string>();
+          if (allIds.length > 0) {
+            const rows = await this.db
+              .select({ id: users.id, name: users.name })
               .from(users)
-              .where(eq(users.id, equipmentData.managerId))
-              .limit(1);
-            managerName = manager?.name ?? null;
-          }
-          if (equipmentData.deputyManagerId) {
-            const [deputy] = await this.db
-              .select({ name: users.name })
-              .from(users)
-              .where(eq(users.id, equipmentData.deputyManagerId))
-              .limit(1);
-            deputyManagerName = deputy?.name ?? null;
+              .where(inArray(users.id, allIds));
+            for (const row of rows) managerMap.set(row.id, row.name);
           }
 
-          return { ...equipmentData, managerName, deputyManagerName };
+          return {
+            ...equipmentData,
+            managerName: equipmentData.managerId
+              ? (managerMap.get(equipmentData.managerId) ?? null)
+              : null,
+            deputyManagerName: equipmentData.deputyManagerId
+              ? (managerMap.get(equipmentData.deputyManagerId) ?? null)
+              : null,
+          };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;
@@ -1147,26 +1148,28 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
-          let managerName: string | null = null;
-          let deputyManagerName: string | null = null;
-          if (equipmentData.managerId) {
-            const [manager] = await this.db
-              .select({ name: users.name })
+          // 담당자/부담당자 이름 단일 배치 쿼리로 resolve (2 round-trip → 1)
+          const allIds = [equipmentData.managerId, equipmentData.deputyManagerId].filter(
+            (id): id is string => !!id
+          );
+          const managerMap = new Map<string, string>();
+          if (allIds.length > 0) {
+            const rows = await this.db
+              .select({ id: users.id, name: users.name })
               .from(users)
-              .where(eq(users.id, equipmentData.managerId))
-              .limit(1);
-            managerName = manager?.name ?? null;
-          }
-          if (equipmentData.deputyManagerId) {
-            const [deputy] = await this.db
-              .select({ name: users.name })
-              .from(users)
-              .where(eq(users.id, equipmentData.deputyManagerId))
-              .limit(1);
-            deputyManagerName = deputy?.name ?? null;
+              .where(inArray(users.id, allIds));
+            for (const row of rows) managerMap.set(row.id, row.name);
           }
 
-          return { ...equipmentData, managerName, deputyManagerName };
+          return {
+            ...equipmentData,
+            managerName: equipmentData.managerId
+              ? (managerMap.get(equipmentData.managerId) ?? null)
+              : null,
+            deputyManagerName: equipmentData.deputyManagerId
+              ? (managerMap.get(equipmentData.deputyManagerId) ?? null)
+              : null,
+          };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;

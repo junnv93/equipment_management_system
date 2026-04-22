@@ -215,6 +215,7 @@ export type EquipmentFilter = z.input<typeof equipmentFilterSchema>;
  */
 export const equipmentResponseSchema = equipmentSchema.extend({
   teamName: z.string().nullable().optional(), // 팀 테이블에서 조인된 팀 이름
+  managerName: z.string().nullable().optional(), // 담당자 이름 (users 조인, equipmentSchema 상속 명시)
   deputyManagerName: z.string().nullable().optional(), // 부담당자 이름 (users 조인)
 });
 export type EquipmentResponse = z.infer<typeof equipmentResponseSchema>;

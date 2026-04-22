@@ -94,7 +94,6 @@ describe('EquipmentController (e2e)', () => {
         firmwareVersion: 'v2.0.0',
         manualLocation: '/manuals/test.pdf',
         accessories: 'Test Accessories',
-        technicalManager: 'Test Manager',
         status: 'available',
         site: 'suwon',
         initialLocation: 'Test Location',
