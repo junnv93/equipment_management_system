@@ -214,6 +214,16 @@
         "completed": "완료",
         "partial": "부분 수리",
         "failed": "실패"
+      },
+      "calibrationCard": {
+        "overdueTitle": "⚠ 재교정 필요",
+        "overdueLinkedTitle": "✓ 재교정 완료",
+        "failureTitle": "교정 현황",
+        "linkedBadge": "재교정 완료",
+        "overdueDescription": "{type} 유형의 부적합은 재교정 완료 후 조치가 가능합니다. 교정 등록 후 승인이 완료되면 자동으로 반영됩니다.",
+        "failureDescription": "{type} 유형의 부적합입니다. 교정 현황을 확인하고 필요 시 재교정을 진행하세요.",
+        "registerLink": "교정 등록하기 →",
+        "viewLink": "교정 기록 확인 →"
       }
     },
     "editDialog": {
@@ -282,8 +292,8 @@
       },
       "openBlockedRecalibration_operator": {
         "title": "재교정 후 조치하세요",
-        "body": "교정 기한 초과 부적합은 재교정 완료가 선행되어야 합니다. 장비의 교정 기록 페이지에서 최신 교정을 등록한 뒤 조치 내용을 입력할 수 있습니다.",
-        "ctaHint": "교정 기록 확인 →"
+        "body": "교정 기한 초과 부적합은 재교정 완료가 선행되어야 합니다. 교정 등록 → 승인 완료 후 조치 내용을 입력할 수 있습니다.",
+        "ctaHint": "교정 등록하기 →"
       },
       "openBlockedRecalibration_manager": {
         "title": "재교정 선행 확인",

@@ -214,6 +214,16 @@
         "completed": "Completed",
         "partial": "Partial Repair",
         "failed": "Failed"
+      },
+      "calibrationCard": {
+        "overdueTitle": "⚠ Recalibration Required",
+        "overdueLinkedTitle": "✓ Recalibration Complete",
+        "failureTitle": "Calibration Status",
+        "linkedBadge": "Recalibration Linked",
+        "overdueDescription": "{type} non-conformances require a new calibration before corrective action. Once the calibration is registered and approved, it will be automatically applied.",
+        "failureDescription": "{type} non-conformance. Review the calibration status and recalibrate if necessary.",
+        "registerLink": "Register calibration →",
+        "viewLink": "Check calibration records →"
       }
     },
     "editDialog": {
@@ -282,8 +292,8 @@
       },
       "openBlockedRecalibration_operator": {
         "title": "Complete recalibration first",
-        "body": "Calibration-overdue non-conformances require a new calibration before correction. Register the latest calibration on the equipment's calibration page, then enter the correction.",
-        "ctaHint": "Check calibration records →"
+        "body": "Calibration-overdue non-conformances require a new calibration before correction. After registering and getting the calibration approved, you can enter the corrective action.",
+        "ctaHint": "Register calibration →"
       },
       "openBlockedRecalibration_manager": {
         "title": "Recalibration required first",

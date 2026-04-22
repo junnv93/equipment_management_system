@@ -21,6 +21,7 @@ import {
   Check,
   X,
   Pencil,
+  CalendarCheck,
 } from 'lucide-react';
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -402,7 +403,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             guidanceKey={guidance!.key}
             onScrollToAction={scrollToActionBar}
             onRepairRegister={() => setShowRepairDialog(true)}
-            onCalibrationNav={() => router.push(`/equipment/${nc.equipmentId}?tab=calibration`)}
+            onCalibrationNav={() =>
+              router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+            }
           />
         </div>
       </section>
@@ -419,7 +422,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           className={ANIMATION_PRESETS.staggerFadeInItem}
           style={getStaggerFadeInStyle(0, 'section')}
         >
-          <InfoCards nc={nc} onRepairRegister={() => setShowRepairDialog(true)} />
+          <InfoCards
+            nc={nc}
+            onRepairRegister={() => setShowRepairDialog(true)}
+            onCalibrationRegister={() =>
+              router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+            }
+            onCalibrationView={() => router.push(`/equipment/${nc.equipmentId}?tab=calibration`)}
+          />
         </div>
 
         {/* 조치 섹션 */}
@@ -738,19 +748,42 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
 }
 
 /**
- * 정보 카드 (2-column)
+ * 정보 카드 (1~2-column)
+ *
+ * 두 번째 카드는 NC 유형에 따라 분기:
+ * - damage/malfunction → RepairCard (수리 이력)
+ * - calibration_overdue/calibration_failure → CalibrationCard (교정 기록)
+ * - 그 외 → 카드 없음 (단일 컬럼)
  */
-function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegister: () => void }) {
+function InfoCards({
+  nc,
+  onRepairRegister,
+  onCalibrationRegister,
+  onCalibrationView,
+}: {
+  nc: NonConformance;
+  onRepairRegister: () => void;
+  onCalibrationRegister: () => void;
+  onCalibrationView: () => void;
+}) {
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
   const hasRepairLink = !!nc.repairHistoryId;
+  const hasCalibrationLink = !!nc.calibrationId;
   const prerequisiteType = getNCPrerequisite(nc.ncType);
   const needsRepair = prerequisiteType === 'repair';
+  const isCalibrationRelated =
+    nc.ncType === 'calibration_failure' || nc.ncType === 'calibration_overdue';
+
+  const gridClass =
+    (needsRepair && hasRepairLink) || (isCalibrationRelated && hasCalibrationLink)
+      ? NC_INFO_CARD_TOKENS.gridRepairLinked
+      : needsRepair || isCalibrationRelated
+        ? NC_INFO_CARD_TOKENS.grid
+        : 'grid grid-cols-1';
 
   return (
-    <div
-      className={hasRepairLink ? NC_INFO_CARD_TOKENS.gridRepairLinked : NC_INFO_CARD_TOKENS.grid}
-    >
+    <div className={gridClass}>
       {/* 기본 정보 */}
       <div className={NC_INFO_CARD_TOKENS.card}>
         <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>{t('detail.infoCard.basicInfo')}</h3>
@@ -772,55 +805,143 @@ function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegis
         )}
       </div>
 
-      {/* 수리 연결 */}
-      <div
+      {/* 수리 카드 — damage, malfunction */}
+      {needsRepair && <RepairCard nc={nc} onRepairRegister={onRepairRegister} />}
+
+      {/* 교정 카드 — calibration_overdue, calibration_failure */}
+      {isCalibrationRelated && (
+        <CalibrationCard
+          nc={nc}
+          onCalibrationRegister={onCalibrationRegister}
+          onCalibrationView={onCalibrationView}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 수리 연결 카드 (damage / malfunction 전용) */
+function RepairCard({
+  nc,
+  onRepairRegister,
+}: {
+  nc: NonConformance;
+  onRepairRegister: () => void;
+}) {
+  const t = useTranslations('non-conformances');
+  const hasRepairLink = !!nc.repairHistoryId;
+
+  return (
+    <div
+      className={cn(
+        NC_INFO_CARD_TOKENS.card,
+        hasRepairLink ? NC_INFO_CARD_TOKENS.repairLinkedCard : NC_INFO_CARD_TOKENS.repairNeededCard
+      )}
+    >
+      <h3
         className={cn(
-          NC_INFO_CARD_TOKENS.card,
+          NC_INFO_CARD_TOKENS.cardTitle,
           hasRepairLink
-            ? NC_INFO_CARD_TOKENS.repairLinkedCard
-            : needsRepair
-              ? NC_INFO_CARD_TOKENS.repairNeededCard
-              : ''
+            ? NC_INFO_CARD_TOKENS.repairLinkedTitle
+            : NC_INFO_CARD_TOKENS.repairNeededTitle
         )}
       >
-        <h3
-          className={cn(
-            NC_INFO_CARD_TOKENS.cardTitle,
-            hasRepairLink
-              ? NC_INFO_CARD_TOKENS.repairLinkedTitle
-              : needsRepair
-                ? NC_INFO_CARD_TOKENS.repairNeededTitle
-                : ''
-          )}
-        >
-          {hasRepairLink
-            ? t('detail.infoCard.repairLinked')
-            : needsRepair
-              ? t('detail.infoCard.repairNeeded')
-              : t('detail.infoCard.repairCard')}
-        </h3>
-        {hasRepairLink ? (
-          <RepairDetail nc={nc} />
-        ) : needsRepair ? (
-          <div className="space-y-2 py-2">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('detail.infoCard.repairNeededDescription', { type: t('ncType.' + nc.ncType) })}
-            </p>
-            <button
-              type="button"
-              className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
-              onClick={onRepairRegister}
-            >
-              <Wrench className="h-3.5 w-3.5" />
-              {t('detail.infoCard.repairRegisterLink')}
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground py-2">
-            {t('detail.infoCard.repairNotNeeded')}
+        {hasRepairLink ? t('detail.infoCard.repairLinked') : t('detail.infoCard.repairNeeded')}
+      </h3>
+      {hasRepairLink ? (
+        <RepairDetail nc={nc} />
+      ) : (
+        <div className="space-y-2 py-2">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {t('detail.infoCard.repairNeededDescription', {
+              type: t(`ncType.${nc.ncType}` as Parameters<typeof t>[0]),
+            })}
           </p>
-        )}
-      </div>
+          <button
+            type="button"
+            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
+            onClick={onRepairRegister}
+          >
+            <Wrench className="h-3.5 w-3.5" />
+            {t('detail.infoCard.repairRegisterLink')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 교정 기록 카드 (calibration_overdue / calibration_failure 전용) */
+function CalibrationCard({
+  nc,
+  onCalibrationRegister,
+  onCalibrationView,
+}: {
+  nc: NonConformance;
+  onCalibrationRegister: () => void;
+  onCalibrationView: () => void;
+}) {
+  const t = useTranslations('non-conformances');
+  const hasCalibrationLink = !!nc.calibrationId;
+  const isBlocking = nc.ncType === 'calibration_overdue';
+
+  const cardClass = hasCalibrationLink
+    ? NC_INFO_CARD_TOKENS.repairLinkedCard
+    : isBlocking
+      ? NC_INFO_CARD_TOKENS.repairNeededCard
+      : '';
+
+  const titleClass = hasCalibrationLink
+    ? NC_INFO_CARD_TOKENS.repairLinkedTitle
+    : isBlocking
+      ? NC_INFO_CARD_TOKENS.repairNeededTitle
+      : '';
+
+  const title = hasCalibrationLink
+    ? t('detail.infoCard.calibrationCard.overdueLinkedTitle')
+    : isBlocking
+      ? t('detail.infoCard.calibrationCard.overdueTitle')
+      : t('detail.infoCard.calibrationCard.failureTitle');
+
+  const typeLabel = t(`ncType.${nc.ncType}` as Parameters<typeof t>[0]);
+
+  return (
+    <div className={cn(NC_INFO_CARD_TOKENS.card, cardClass)}>
+      <h3 className={cn(NC_INFO_CARD_TOKENS.cardTitle, titleClass)}>{title}</h3>
+      {hasCalibrationLink ? (
+        <div className="flex items-center gap-2 py-2 flex-wrap">
+          <CalendarCheck className="h-4 w-4 text-brand-ok" aria-hidden="true" />
+          <span className={NC_REPAIR_LINKED_TOKENS.badge}>
+            {t('detail.infoCard.calibrationCard.linkedBadge')}
+          </span>
+          <button
+            type="button"
+            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1 ml-auto"
+            onClick={onCalibrationView}
+          >
+            {t('detail.infoCard.calibrationCard.viewLink')}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2 py-2">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {t(
+              isBlocking
+                ? 'detail.infoCard.calibrationCard.overdueDescription'
+                : 'detail.infoCard.calibrationCard.failureDescription',
+              { type: typeLabel }
+            )}
+          </p>
+          <button
+            type="button"
+            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
+            onClick={onCalibrationRegister}
+          >
+            <CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('detail.infoCard.calibrationCard.registerLink')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
