@@ -1,6 +1,6 @@
 # Evaluation: checkout-fsm-hardening
 Date: 2026-04-22
-Iteration: 1
+Iteration: 2 (QA Agent re-verification)
 
 ## MUST Criteria
 | # | Criterion | Verdict | Evidence |
