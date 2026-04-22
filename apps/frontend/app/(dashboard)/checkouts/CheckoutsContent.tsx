@@ -161,8 +161,8 @@ export default function CheckoutsContent({
       });
       return result.meta.summary ?? initialSummary;
     },
-    placeholderData: initialSummary,
     ...QUERY_CONFIG.CHECKOUT_SUMMARY,
+    placeholderData: initialSummary,
   });
 
   const summary = liveSummary ?? initialSummary;

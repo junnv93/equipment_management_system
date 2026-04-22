@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   convertFiltersToApiParams,
   filtersToSearchParams,
+  countActiveFilters,
   type UICheckoutFilters,
   type CheckoutSubTab,
 } from '@/lib/utils/checkout-filter-utils';
@@ -191,16 +192,10 @@ export default function OutboundCheckoutsTab({
   const allGroups = [...overdueGroups, ...normalGroups];
 
   // ──────────────────────────────────────────────
-  // 활성 필터 판단
+  // 활성 필터 판단 — countActiveFilters SSOT (새 필터 추가 시 자동 동기화)
   // ──────────────────────────────────────────────
-  const isAllActive =
-    filters.status === 'all' &&
-    filters.destination === 'all' &&
-    filters.purpose === 'all' &&
-    filters.period === 'all' &&
-    !filters.search;
-
-  const filterActive = !isAllActive;
+  const filterActive = countActiveFilters(filters) > 0;
+  const isAllActive = !filterActive;
 
   // ──────────────────────────────────────────────
   // 5개 통계 카드

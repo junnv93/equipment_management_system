@@ -343,10 +343,10 @@ export const QUERY_CONFIG = {
     retry: 2,
   },
 
-  /** 반출지 목록 - 준정적 (관리자 설정 변경 시에만 갱신, window focus refetch 불필요) */
+  /** 반출지 목록 - DAY (CACHE_TTL.DAY 주석에 "반출 목적지 목록"이 명시된 티어, mutation invalidation으로만 갱신) */
   CHECKOUT_DESTINATIONS: {
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
+    staleTime: CACHE_TIMES.DAY,
+    gcTime: CACHE_TIMES.DAY,
     refetchOnWindowFocus: false,
     retry: 2,
   },
