@@ -25,6 +25,7 @@ const mockReq = {
 describe('CheckoutsService', () => {
   let service: CheckoutsService;
   let mockDrizzle: Record<string, jest.Mock>;
+  let mockChain: Record<string, unknown>; // getCheckoutItemsWithFirstEquipment 등 thenable 직접 override용
   let mockCacheService: Record<string, jest.Mock>;
   let mockEquipmentService: Record<string, jest.Mock>;
   let mockTeamsService: Record<string, jest.Mock>;
@@ -34,6 +35,7 @@ describe('CheckoutsService', () => {
     // 매 테스트마다 새로운 mock 객체 생성
     // chain: 체이닝 + thenable (await 시 빈 배열 반환) — DI value와 분리
     const chain: Record<string, jest.Mock> = {};
+    mockChain = chain; // .then 직접 접근용 (getCheckoutItemsWithFirstEquipment 등)
     const chainMethods = [
       'select',
       'from',
@@ -557,9 +559,9 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([
         { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
       ]);
-      // getCheckoutItemsWithFirstEquipment: await db.select().from().leftJoin().where()
-      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+      // getCheckoutItemsWithFirstEquipment: db.select().from().leftJoin().where() → chain.then 직접 오버라이드
+      // (chain.where.then 패턴은 chain.where()가 chain을 반환하므로 await가 chain.then을 사용 — 오버라이드 불가)
+      mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
           resolve([
@@ -579,9 +581,6 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
 
       const result = await service.approveReturn(checkoutId, mockApproveReturnDto, mockReq);
-
-      // 복원
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
 
       expect(result).toBeDefined();
       expect(result.status).toBe('return_approved');
@@ -626,6 +625,34 @@ describe('CheckoutsService', () => {
       mockEquipmentService.findByIds.mockResolvedValue(new Map());
 
       await expect(service.rejectReturn(checkoutId, mockRejectReturnDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('should throw BadRequestException (INVALID_TRANSITION) for RENTAL checkout — FSM does not permit reject_return for rental purpose', async () => {
+      // 아키텍처 제약: FSM이 reject_return을 CAL_REPAIR 목적에만 허용 (checkout-fsm.ts purposes: CAL_REPAIR)
+      // RENTAL 반출의 rejectReturn은 assertFsmAction에서 INVALID_TRANSITION으로 차단됨.
+      // 결과적으로 rejectReturn 내부의 LENDER_TEAM_ONLY 체크는 RENTAL에 대해 dead code가 됨.
+      // TODO: FSM에 RENTAL reject_return 추가 또는 dead code 제거 검토 필요
+      const rentalReturnedCheckout = {
+        id: checkoutId,
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'returned',
+        purpose: 'rental',
+        lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        version: 1,
+      };
+      const dtoNoTeam = {
+        version: 1,
+        reason: '반입 검사 항목 미충족',
+        approverId,
+        approverTeamId: undefined as string | undefined,
+      };
+
+      // FSM이 즉시 차단 — items 조회 미진입
+      mockCacheService.getOrSet.mockResolvedValue(rentalReturnedCheckout);
+
+      await expect(service.rejectReturn(checkoutId, dtoNoTeam, mockReq)).rejects.toThrow(
         BadRequestException
       );
     });
@@ -679,9 +706,8 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([
         { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
       ]);
-      // getCheckoutItemsWithFirstEquipment: where thenable
-      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+      // getCheckoutItemsWithFirstEquipment: chain.then 직접 오버라이드 (chain.where.then 패턴 비작동)
+      mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) =>
           resolve([
@@ -706,9 +732,6 @@ describe('CheckoutsService', () => {
         { version: 1, approverId: '550e8400-e29b-41d4-a716-446655440004', comment: '확인' },
         mockReq
       );
-
-      // 복원
-      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
 
       expect(result.status).toBe('return_approved');
       expect(mockImportsService.onReturnCompleted).toHaveBeenCalledWith(checkoutId);

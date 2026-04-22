@@ -1886,6 +1886,13 @@ export class CheckoutsService extends VersionedBaseService {
       const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
       const equipmentIds = items.map((item) => item.equipmentId);
 
+      if (!firstEquipment) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.NO_EQUIPMENT,
+          message: 'No equipment found for this checkout',
+        });
+      }
+
       const updated = await this.db.transaction(async (tx) => {
         // 1. CAS를 사용한 checkout 상태 전환
         const result = await this.updateWithVersion<Checkout>(
@@ -2015,15 +2022,16 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
 
+      let approverClassification: string | null | undefined;
       if (rejectReturnDto.approverTeamId) {
         const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
-        const approverClassification = approverTeam?.classification;
+        approverClassification = approverTeam?.classification;
+      }
 
-        for (const item of items) {
-          const equip = equipmentMap.get(item.equipmentId);
-          if (equip) {
-            this.checkTeamPermission(equip, approverClassification);
-          }
+      for (const item of items) {
+        const equip = equipmentMap.get(item.equipmentId);
+        if (equip) {
+          this.checkTeamPermission(equip, approverClassification);
         }
       }
 
