@@ -360,6 +360,32 @@ function checkFsmLiterals(file, lines) {
   });
 }
 
+// ─── 체크 ⑨ hex 색상 직접 하드코딩 감지 ────────────────────────────────────
+// AP-01·AP-04 금지: Tailwind/semantic token 대신 hex 직접 사용 탐지
+// 범위: apps/frontend/components/checkouts/**/*.{ts,tsx}
+
+const HEX_COLOR_RE = /#[0-9a-fA-F]{3,8}\b/g;
+
+function checkHexColors(file, content) {
+  if (!file.startsWith('apps/frontend/components/checkouts/')) return;
+  if (isTestFile(file)) return;
+
+  // JSDoc 주석과 :root{} CSS 변수 정의 블록 제외
+  const stripped = content
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/:root\s*\{[^}]*\}/g, '');
+
+  const matches = stripped.match(HEX_COLOR_RE);
+  if (matches?.length) {
+    fail(
+      '⑨ hex 색상',
+      file,
+      0,
+      `hex 하드코딩: ${matches.join(', ')} — BRAND_CLASS_MATRIX 또는 Tailwind semantic token 경유 필요`,
+    );
+  }
+}
+
 // ─── 메인 실행 ─────────────────────────────────────────────────────────────
 
 for (const file of files) {
@@ -376,6 +402,7 @@ for (const file of files) {
   checkSetQueryDataInOnSuccess(file, content, lines);
   checkIconButtonA11y(file, lines);
   checkFsmLiterals(file, lines);
+  checkHexColors(file, content);
 }
 
 // ─── 결과 출력 ─────────────────────────────────────────────────────────────

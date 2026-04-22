@@ -502,7 +502,16 @@
   },
   "list": {
     "empty": "No checkouts found.",
-    "emptyDescription": "Start by submitting a checkout request."
+    "emptyDescription": "Start by submitting a checkout request.",
+    "subtab": {
+      "inProgress": "In Progress",
+      "completed": "Completed"
+    },
+    "count": {
+      "checkouts": "{count} checkouts",
+      "equipment": "{count} equipment",
+      "separator": " · "
+    }
   },
   "returnPage": {
     "backToDetail": "Back to Detail",
@@ -552,6 +561,128 @@
     },
     "alertDescription": "{label} is required for this item.",
     "actionButton": "Proceed with {label}"
+  },
+  "guidance": {
+    "nextStep": "Next Step",
+    "currentStep": "Current Step",
+    "actor": "Actor",
+    "panelTitle": "What to do next",
+    "urgency": {
+      "normal": "",
+      "warning": "Warning",
+      "critical": "Overdue"
+    },
+    "terminal": "Complete",
+    "blockedHint": "This step requires {actor}",
+    "stepOf": "Step {current} of {total}"
+  },
+  "timeline": {
+    "status": {
+      "past": "Completed",
+      "current": "In Progress",
+      "next": "Next",
+      "future": "Upcoming",
+      "skipped": "Skipped"
+    },
+    "tooltip": {
+      "completedAt": "Completed on {date}",
+      "pendingActor": "Waiting for {actor}"
+    }
+  },
+  "emptyState": {
+    "inProgress": {
+      "title": "No checkouts in progress",
+      "description": "New checkout requests will appear here once submitted",
+      "cta": "Request Checkout"
+    },
+    "completed": {
+      "title": "No completed checkouts",
+      "description": "Completed checkout history will be shown here"
+    },
+    "filtered": {
+      "title": "No results found",
+      "description": "Try changing your filters or search term",
+      "cta": "Reset Filters"
+    }
+  },
+  "yourTurn": {
+    "label": "Your Turn",
+    "tooltip": "{action} required"
+  },
+  "toast": {
+    "transition": {
+      "approve": {
+        "success": "{equipmentName} checkout approved. Awaiting logistics team."
+      },
+      "start": {
+        "success": "{equipmentName} checkout started. Expected return: {dueAt}"
+      },
+      "submitReturn": {
+        "success": "{equipmentName} return submitted. Awaiting approver review."
+      },
+      "approveReturn": {
+        "success": "{equipmentName} return approved. Equipment returned to storage."
+      },
+      "overdue": {
+        "warning": "{equipmentName} is overdue. Please return immediately."
+      }
+    }
+  },
+  "help": {
+    "status": {
+      "pending": {
+        "title": "Pending Approval",
+        "description": "Waiting for technical manager's review and approval."
+      },
+      "approved": {
+        "title": "Approved",
+        "description": "Checkout is ready. Logistics staff can now start the checkout."
+      },
+      "rejected": {
+        "title": "Rejected",
+        "description": "The approver rejected this request. Please review the reason and resubmit."
+      },
+      "lender_checked": {
+        "title": "Lender Confirmed",
+        "description": "The lender has confirmed the equipment condition. Awaiting borrower receipt confirmation."
+      },
+      "borrower_received": {
+        "title": "Received",
+        "description": "The borrower has received the equipment. Please start use."
+      },
+      "in_use": {
+        "title": "In Use",
+        "description": "The equipment is currently in use. Please confirm return when ready."
+      },
+      "borrower_returned": {
+        "title": "Return Confirmed",
+        "description": "The borrower has confirmed return. Please proceed with receiving the equipment."
+      },
+      "checked_out": {
+        "title": "Checked Out",
+        "description": "The equipment is currently checked out. Please submit a return request."
+      },
+      "returned": {
+        "title": "Return Submitted",
+        "description": "Return request submitted. Awaiting approver review."
+      },
+      "completed": {
+        "title": "Completed",
+        "description": "All checkout and return procedures are complete."
+      },
+      "canceled": {
+        "title": "Canceled",
+        "description": "The checkout request has been canceled."
+      },
+      "overdue": {
+        "title": "Overdue",
+        "description": "The return deadline has passed. Immediate return processing is required."
+      },
+      "return_rejected": {
+        "title": "Return Rejected",
+        "description": "The return was rejected during review. Please check the status and reprocess."
+      }
+    }
   },
   "conditionCheck": {
     "backToDetail": "Back to Detail",
