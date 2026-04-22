@@ -16,6 +16,7 @@
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| NC 상세 가이던스 Phase 1~4 (4건, 2026-04-22) | [archive-design.md](./archive-design.md) | SECTION_RHYTHM/CALLOUT_TOKENS, NC_WORKFLOW_GUIDANCE_TOKENS 11 state×role, URGENT_BADGE 승격, GuidanceCallout + deriveGuidance + NCDetailClient 2-섹션 구조화 |
 | 78차 — 반출입 관리 페이지 디자인/IA 개선 (7건, 2026-04-21) | [archive-design.md](./archive-design.md) | primitives 2xs·MICRO_TYPO, EmptyState 3-variant, MiniProgress·RentalFlow 칩, 반입탭 독립페이지네이션, alertRing elevation, PageHeader onboardingHint, STAGGER_PRESETS |
 | NC 디자인 리뷰 후속 (9건, 2026-04-21) | [archive-design.md](./archive-design.md) | terminal 색상버그, 스태거SSOT, i18n management.* 제거, aria 3건(aria-pressed/hidden/label), NC_DOCUMENTS 토큰, NC_ELEVATION 3단계, 온보딩 강화, 모바일 카드, NC_SPACING_TOKENS |
 | 72차 — 데이터 마이그레이션 도메인 종합 리뷰 (12건) | [archive-migration.md](./archive-migration.md) | FK 자동 해석, 중복 감지 키 확장, 컬럼 매핑 9건, 파일 정리, completionDate 버그, Excel 하드코딩, enum SSOT, 세션 상태 머신, DB 검증, 권한 분리, 에러 리포트, 도메인 확장 |

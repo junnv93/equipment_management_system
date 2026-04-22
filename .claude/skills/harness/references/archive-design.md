@@ -5,6 +5,50 @@
 
 ---
 
+## ~~NC 상세 페이지 "다음 단계 가이던스" — Phase 1~4 프롬프트 (4건)~~ ✅ 전체 완료 (2026-04-22)
+
+> **배경 (2026-04-21, /review-design 부적합관리 상세 64/100)**: AP-01~10 개선 + 4개 안내 UI(반려 배너·전제조건 블록·roleHint·waitingGuidance)를 단일 GuidanceCallout 추상화로 통합.
+> 실행 순서: NC-P1 → NC-P2·NC-P3 병렬 → NC-P4.
+
+### ~~🟠 HIGH — NC-P1: Layer 2 Semantic 토큰 추가 — SECTION_RHYTHM, CALLOUT_TOKENS, staggerFadeInItem (Mode 0)~~ ✅
+
+```
+조치: semantic.ts에 SECTION_RHYTHM_TOKENS(tight/comfortable/spacious/dramatic) + getSectionRhythm(),
+CALLOUT_TOKENS(5 variant × 3 emphasis × 3 size) + getCalloutClasses() 추가.
+motion.ts에 ANIMATION_PRESETS.staggerFadeInItem(motion-reduce:opacity-100 guard) + getStaggerFadeInStyle() 추가.
+index.ts re-export 추가. 비파괴 — 기존 export 불변.
+```
+
+### ~~🟠 HIGH — NC-P2: Layer 3 NC 토큰 + i18n — NC_WORKFLOW_GUIDANCE_TOKENS + detail spacing + 섹션 정리 (Mode 0)~~ ✅
+
+```
+조치: non-conformance.ts 섹션 20 추가 — NC_WORKFLOW_GUIDANCE_TOKENS(11 state×role 매트릭스) + resolveNCGuidanceKey() 순수 함수.
+NC_SPACING_TOKENS.detail 6개 속성(pageWrapper/statusGroup/statusToContextGap/contextGroup/contextToActionGap/calloutAfterTimeline) getSectionRhythm() 경유.
+섹션 17b 중복 정리 + NC_INFO_NOTICE_TOKENS @deprecated + NC_GUIDANCE_STEP_BADGE_TOKENS 추가.
+ko/en i18n detail.guidance 11 시나리오 × 3 필드 + nextStep 레이블 + correction.emptyTitle/addAction + actionBar.hintNeedsContent 추가.
+```
+
+### ~~🟡 MEDIUM — NC-P3: URGENT_BADGE_TOKENS Semantic 승격 + NC_URGENT_BADGE_TOKENS @deprecated re-export (Mode 0)~~ ✅
+
+```
+조치: semantic.ts에 URGENT_BADGE_TOKENS(solid/outlined) Semantic Layer 2 추가.
+NC_URGENT_BADGE_TOKENS → URGENT_BADGE_TOKENS.solid @deprecated re-export 유지(NCDetailClient.tsx:311 현재 사용 중).
+```
+
+### ~~🔴 CRITICAL — NC-P4: NCDetailClient.tsx 리팩토링 + GuidanceCallout 컴포넌트 + EmptyState 전환 + E2E (Mode 1)~~ ✅
+
+```
+조치:
+- libs/non-conformances/guidance.ts — deriveGuidance() 순수함수(getNCPrerequisite + resolveNCGuidanceKey 경유).
+- GuidanceCallout.tsx — React.memo + role="status" aria-live="polite", 11 state×role, ctaKind discriminated union('primary'|'repairLink'|'calibrationLink'|'none').
+- NCDetailClient.tsx — statusGroup/contextGroup 2-섹션 구조, NC_INFO_NOTICE_TOKENS 블록 제거,
+  correction/closure EmptyState 전환, scrollToActionBar(smooth+focus 400ms 가드),
+  nc.status 전환 후 guidance title 포커스 복귀(h2 tabIndex={-1}), URGENT_BADGE_TOKENS.solid 교체.
+- nc-guidance.spec.ts — 5 시나리오 E2E(blockedRepair/emptyCorrection/OPEN→CORRECTED/반려반려/CLOSED).
+```
+
+---
+
 ## ~~78차 — 반출입 관리 페이지 디자인/IA 개선 (2026-04-21)~~ ✅ 전체 완료 (2026-04-21)
 
 > **배경**: 디자인 리뷰 64/100 판정. SSOT 토큰 우회·워크플로우 진입 실패·반입탭 IA 혼란·모바일 숨김 등 아키텍처 결함.
