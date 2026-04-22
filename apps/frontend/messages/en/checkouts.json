@@ -505,7 +505,8 @@
     "emptyDescription": "Start by submitting a checkout request.",
     "subtab": {
       "inProgress": "In Progress",
-      "completed": "Completed"
+      "completed": "Completed",
+      "ariaLabel": "Checkout status category"
     },
     "count": {
       "checkouts": "{count} checkouts",

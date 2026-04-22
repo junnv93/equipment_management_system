@@ -26,8 +26,33 @@
  * ============================================================================
  */
 
-import { findCheckoutStatusGroupKey } from '@equipment-management/schemas';
+import {
+  findCheckoutStatusGroupKey,
+  CHECKOUT_STATUS_GROUPS,
+  type CheckoutStatus,
+} from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+
+/**
+ * 서브탭 상태 그룹 (UI-only SSOT)
+ *
+ * CHECKOUT_STATUS_GROUPS (stat 카드용)과 다른 기준:
+ * - 'returned': lender_received → returned → return_approved 흐름에서
+ *   아직 최종 승인 전이므로 inProgress에 포함
+ * - 합집합 = CHECKOUT_STATUS_VALUES 13개 전체 (누락/중복 없음)
+ */
+export const SUBTAB_STATUS_GROUPS = {
+  inProgress: [
+    'pending',
+    'approved',
+    'overdue',
+    'returned',
+    ...CHECKOUT_STATUS_GROUPS.in_progress,
+  ] as CheckoutStatus[],
+  completed: ['return_approved', 'canceled', 'rejected'] as CheckoutStatus[],
+} as const;
+
+export type CheckoutSubTab = keyof typeof SUBTAB_STATUS_GROUPS;
 
 /**
  * UI에서 사용하는 반출 필터 타입 (URL 파라미터와 1:1 대응)
@@ -37,6 +62,8 @@ export type CheckoutPeriod = 'all' | 'this_week' | 'this_month' | 'last_month';
 export interface UICheckoutFilters {
   /** 탭 뷰 모드 */
   view: 'outbound' | 'inbound';
+  /** 반출 목록 서브탭 (반출 탭 전용) */
+  subTab: CheckoutSubTab;
   /** 검색어 */
   search: string;
   /** 반출 상태 ('all' 또는 특정 status 값) */
@@ -76,6 +103,7 @@ export interface ApiCheckoutParams {
  */
 export const DEFAULT_UI_FILTERS: UICheckoutFilters = {
   view: 'outbound',
+  subTab: 'inProgress',
   search: '',
   status: 'all',
   destination: 'all',
@@ -119,6 +147,9 @@ export function parseCheckoutFiltersFromSearchParams(
     view = 'inbound';
   }
 
+  const subTabRaw = get('subTab');
+  const subTab: CheckoutSubTab = subTabRaw === 'completed' ? 'completed' : 'inProgress';
+
   const search = get('search') || DEFAULT_UI_FILTERS.search;
   const status = get('status') || DEFAULT_UI_FILTERS.status;
   const destination = get('destination') || DEFAULT_UI_FILTERS.destination;
@@ -137,7 +168,7 @@ export function parseCheckoutFiltersFromSearchParams(
   const pageSize =
     isNaN(pageSizeRaw) || pageSizeRaw < 1 ? DEFAULT_UI_FILTERS.pageSize : pageSizeRaw;
 
-  return { view, search, status, destination, purpose, period, page, pageSize };
+  return { view, subTab, search, status, destination, purpose, period, page, pageSize };
 }
 
 /**
@@ -173,11 +204,15 @@ function periodToDateRange(period: CheckoutPeriod): { checkoutFrom?: string; che
 }
 
 export function convertFiltersToApiParams(filters: UICheckoutFilters): ApiCheckoutParams {
+  // status 명시 시 해당 값 우선, 없으면 subTab 상태 목록 전체 전달
+  const statuses =
+    filters.status !== 'all' ? filters.status : SUBTAB_STATUS_GROUPS[filters.subTab].join(',');
+
   return {
     page: filters.page,
     pageSize: filters.pageSize,
     search: filters.search || undefined,
-    statuses: filters.status !== 'all' ? filters.status : undefined,
+    statuses,
     destination: filters.destination !== 'all' ? filters.destination : undefined,
     purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
     ...periodToDateRange(filters.period),
@@ -197,6 +232,7 @@ export function filtersToSearchParams(filters: UICheckoutFilters): URLSearchPara
 
   // 기본값과 다른 경우만 URL에 포함
   if (filters.view !== DEFAULT_UI_FILTERS.view) params.set('view', filters.view);
+  if (filters.subTab !== DEFAULT_UI_FILTERS.subTab) params.set('subTab', filters.subTab);
   if (filters.search) params.set('search', filters.search);
   if (filters.status !== 'all') params.set('status', filters.status);
   if (filters.destination !== 'all') params.set('destination', filters.destination);

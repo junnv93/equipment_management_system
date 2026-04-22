@@ -505,7 +505,8 @@
     "emptyDescription": "반출 신청을 시작하세요.",
     "subtab": {
       "inProgress": "진행 중",
-      "completed": "완료"
+      "completed": "완료",
+      "ariaLabel": "반출 상태 분류"
     },
     "count": {
       "checkouts": "반출 {count}건",
