@@ -143,11 +143,6 @@ export interface CreateConditionCheckDto {
   notes?: string;
 }
 
-export interface CheckoutHistory extends Checkout {
-  returnCondition?: string;
-  returnNotes?: string;
-}
-
 // ✅ Single Source of Truth: 공통 타입 사용
 // PaginatedResponse는 lib/api/types.ts에서 import
 
@@ -165,7 +160,6 @@ export interface CheckoutQuery {
   checkoutFrom?: string; // ✅ 반출일 시작 (YYYY-MM-DD)
   checkoutTo?: string; // ✅ 반출일 종료 (YYYY-MM-DD)
   search?: string;
-  location?: string;
   destination?: string;
   includeSummary?: boolean; // ✅ 성능 최적화: 요약 정보 포함 여부
 }
@@ -210,10 +204,6 @@ export interface ReturnCheckoutDto {
     equipmentId: string;
     conditionAfter: string;
   }>; // 장비별 반입 후 상태 기록
-  // 레거시 호환성
-  actualReturnDate?: string;
-  returnCondition?: string;
-  returnNotes?: string;
 }
 
 export interface ApproveReturnDto {
