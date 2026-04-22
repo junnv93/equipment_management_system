@@ -56,7 +56,7 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
 
   for (const checkout of checkouts) {
     const { date, hasCheckoutDate } = getGroupDate(checkout);
-    const destination = checkout.destination || checkout.location || UNSPECIFIED_DESTINATION;
+    const destination = checkout.destination || UNSPECIFIED_DESTINATION;
     const key = `${date}|${destination}`;
 
     const existing = groupMap.get(key);

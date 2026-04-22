@@ -208,7 +208,7 @@ function CheckoutGroupCard({
           checkoutId: checkout.id,
           expectedReturnDate: checkout.expectedReturnDate,
           version: checkout.version,
-          destination: checkout.destination || checkout.location,
+          destination: checkout.destination,
           // 서버가 계산한 가능한 액션 우선, 없으면 역할 기반 폴백
           canApproveItem: checkout.meta?.availableActions?.canApprove ?? canApprove,
           descriptor,

@@ -1091,7 +1091,7 @@ class ApprovalsApi {
       id: checkout.id,
       category,
       status: this.mapCheckoutStatus(checkout.status),
-      requesterId: checkout.requesterId || checkout.userId || '',
+      requesterId: checkout.requesterId || '',
       requesterName: checkout.user?.name || 'Unknown',
       requesterTeam: team?.name ?? '',
       requestedAt: checkout.createdAt,

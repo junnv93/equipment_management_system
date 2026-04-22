@@ -532,7 +532,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                             <CheckoutStatusBadge status={checkout.status} />
                           </div>
                           <h4 className="text-lg font-semibold text-foreground">
-                            {checkout.destination || checkout.location}
+                            {checkout.destination}
                           </h4>
                         </div>
                         {/* action slot: 미래 row-level 액션도 이 영역에 합류 */}

@@ -57,7 +57,6 @@ export interface Checkout {
     status: string;
   }>;
   requesterId?: string; // ✅ 백엔드 필드명
-  userId?: string; // 레거시 호환성
   user?: {
     id: string;
     name: string;
@@ -65,15 +64,12 @@ export interface Checkout {
     department: string;
     team?: { name: string };
   };
-  destination: string; // ✅ 백엔드 필드명에 맞게 수정 (location → destination)
-  location?: string; // 레거시 호환성
+  destination: string; // ✅ 백엔드 필드명
   phoneNumber?: string; // ✅ 백엔드 필드명
-  contactNumber?: string; // 레거시 호환성
   address?: string;
   purpose: string; // ✅ CheckoutPurpose (calibration, repair, rental)
   reason: string; // ✅ 백엔드 필수 필드
   checkoutDate?: string; // ✅ 백엔드 필드명
-  startDate?: string; // 레거시 호환성
   expectedReturnDate: string;
   actualReturnDate?: string;
   status: CheckoutStatus; // ✅ SSOT에서 import한 타입
@@ -93,14 +89,12 @@ export interface Checkout {
   // 반출 승인 정보
   approverId?: string; // ✅ 백엔드 필드명
   approvedAt?: string; // ✅ 백엔드 필드명
-  approvedById?: string; // 레거시 호환성
   approvedBy?: {
     id: string;
     name: string;
     email: string;
   };
   rejectionReason?: string; // ✅ 백엔드 필드명
-  notes?: string; // 레거시 호환성
   // 상태 확인 기록 (대여 목적)
   conditionChecks?: ConditionCheck[];
   // ✅ Phase 2: Server-Driven UI - 서버가 계산한 가능한 액션
@@ -198,14 +192,12 @@ export interface CreateCheckoutDto {
 
 export interface UpdateCheckoutDto {
   version: number; // ✅ Phase 1: Optimistic Locking
-  location?: string;
-  contactNumber?: string;
+  destination?: string;
+  phoneNumber?: string;
   address?: string;
-  purpose?: string;
-  startDate?: string;
+  reason?: string;
   expectedReturnDate?: string;
   notes?: string;
-  status?: CheckoutStatus;
 }
 
 export interface ReturnCheckoutDto {
@@ -405,23 +397,6 @@ const checkoutApi = {
     query: CheckoutQuery = {}
   ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     return this.getCheckouts({ ...query, statuses: 'returned' });
-  },
-
-  /**
-   * 반출 요약 정보를 조회합니다.
-   * ⚠️ 백엔드에 엔드포인트가 없음 - findAll로 대체하거나 백엔드에 구현 필요
-   */
-  async getCheckoutSummary(): Promise<CheckoutSummary> {
-    // ✅ 백엔드에 summary 엔드포인트가 없으므로 findAll로 대체
-    const response = await this.getCheckouts({ pageSize: 1 });
-    // 간단한 요약 정보 생성 (실제로는 백엔드에서 제공해야 함)
-    return {
-      total: response.meta.pagination.total,
-      pending: 0, // findAll에 status 필터로 조회 필요
-      approved: 0,
-      overdue: 0,
-      returnedToday: 0,
-    };
   },
 
   /**

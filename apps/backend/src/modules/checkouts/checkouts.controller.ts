@@ -191,6 +191,7 @@ export class CheckoutsController {
       '반환하며, 프론트엔드는 이 정보로 기존 condition-check 페이지로 redirect합니다.',
   })
   @ApiBody({ type: VerifyHandoverTokenDto })
+  @UseInterceptors(ZodSerializerInterceptor)
   @ZodResponse({
     status: HttpStatus.OK,
     description: '검증 성공 + jti 소비',
