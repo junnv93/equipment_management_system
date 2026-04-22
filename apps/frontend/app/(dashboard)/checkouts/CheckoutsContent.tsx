@@ -46,7 +46,7 @@ import {
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   parseCheckoutFiltersFromSearchParams,
   filtersToSearchParams,
@@ -138,7 +138,7 @@ export default function CheckoutsContent({
   const { data: pendingChecksData } = useQuery({
     queryKey: queryKeys.checkouts.pendingCount(),
     queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.CHECKOUT_SUMMARY,
   });
   const pendingChecksCount = pendingChecksData?.meta?.pagination?.total ?? 0;
 
@@ -146,7 +146,7 @@ export default function CheckoutsContent({
   const { data: destinations } = useQuery({
     queryKey: queryKeys.checkouts.destinations(),
     queryFn: () => checkoutApi.getDestinations(),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.CHECKOUT_DESTINATIONS,
   });
 
   // 통계 요약
@@ -162,7 +162,7 @@ export default function CheckoutsContent({
       return result.meta.summary ?? initialSummary;
     },
     placeholderData: initialSummary,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.CHECKOUT_SUMMARY,
   });
 
   const summary = liveSummary ?? initialSummary;
@@ -206,14 +206,22 @@ export default function CheckoutsContent({
   );
 
   const handleStatusChange = (value: string) => {
+    if (value === filters.status) return;
     const inferredSubTab = getSubTabForStatus(value);
     updateUrl({ ...filters, status: value, subTab: inferredSubTab ?? filters.subTab, page: 1 });
   };
-  const handleLocationChange = (value: string) =>
+  const handleLocationChange = (value: string) => {
+    if (value === filters.destination) return;
     updateUrl({ ...filters, destination: value, page: 1 });
-  const handlePurposeChange = (value: string) => updateUrl({ ...filters, purpose: value, page: 1 });
-  const handlePeriodChange = (value: string) =>
+  };
+  const handlePurposeChange = (value: string) => {
+    if (value === filters.purpose) return;
+    updateUrl({ ...filters, purpose: value, page: 1 });
+  };
+  const handlePeriodChange = (value: string) => {
+    if (value === filters.period) return;
     updateUrl({ ...filters, period: value as CheckoutPeriod, page: 1 });
+  };
 
   const resetFilters = useCallback(() => {
     setSearchInput('');

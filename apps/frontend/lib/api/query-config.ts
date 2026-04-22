@@ -326,6 +326,30 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: true,
     retry: 2,
   },
+
+  /** 반출 목록 - NORMAL (필터/서브탭 URL 변경 시 갱신, mutation 후 무효화) */
+  CHECKOUT_LIST: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 반출 요약 통계 / 확인 건수 - NORMAL (승인·상태변경 mutation 후 무효화) */
+  CHECKOUT_SUMMARY: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 반출지 목록 - 준정적 (관리자 설정 변경 시에만 갱신, window focus refetch 불필요) */
+  CHECKOUT_DESTINATIONS: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  },
 } as const;
 
 /**

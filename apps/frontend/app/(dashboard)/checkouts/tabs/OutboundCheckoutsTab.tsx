@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
@@ -33,6 +33,7 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import {
   convertFiltersToApiParams,
+  filtersToSearchParams,
   type UICheckoutFilters,
   type CheckoutSubTab,
 } from '@/lib/utils/checkout-filter-utils';
@@ -130,9 +131,12 @@ export default function OutboundCheckoutsTab({
 
   // URL 페이지 변경 핸들러
   const handlePageChange = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', String(newPage));
-    router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, { scroll: false });
+    const params = filtersToSearchParams({ ...filters, page: newPage });
+    const qs = params.toString();
+    router.replace(
+      qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
+      { scroll: false }
+    );
   };
 
   // 서브탭 전환: status + page 리셋 (다른 탭의 상태 필터를 그대로 가져오면 혼란)
@@ -174,7 +178,7 @@ export default function OutboundCheckoutsTab({
       };
       return checkoutApi.getCheckouts(query);
     },
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 
   // ──────────────────────────────────────────────
@@ -344,18 +348,18 @@ export default function OutboundCheckoutsTab({
     <>
       {renderStats()}
 
-      {/* 서브탭 (진행 중 / 완료) */}
+      {/* 서브탭 (진행 중 / 완료) — tablist는 tabpanel의 sibling으로 배치 (WCAG 4.1.2) */}
+      <CheckoutListTabs
+        currentSubTab={filters.subTab}
+        onSubTabChange={handleSubTabChange}
+        currentCount={checkoutsData?.meta.pagination.total}
+      />
+
       <div
         id={`subtab-panel-${filters.subTab}`}
         role="tabpanel"
         aria-labelledby={`subtab-trigger-${filters.subTab}`}
       >
-        <CheckoutListTabs
-          currentSubTab={filters.subTab}
-          onSubTabChange={handleSubTabChange}
-          currentCount={checkoutsData?.meta.pagination.total}
-        />
-
         <div className="space-y-3">
           {checkoutsLoading ? (
             <CheckoutListSkeleton label={t('loading.outbound')} srOnly={t('loading.outboundSr')} />
