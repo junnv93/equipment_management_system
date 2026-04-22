@@ -25,6 +25,7 @@ import {
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
   ConditionCheckStepValues as CCSVal,
+  ClassificationEnum,
   type ConditionCheckStep,
   type CheckoutPurpose,
   canPerformAction,
@@ -1072,8 +1073,8 @@ export class CheckoutsService extends VersionedBaseService {
 
     // EMC팀은 RF팀 장비 반출 신청/승인 불가
     if (
-      userTeamClassification === 'general_emc' &&
-      equipmentData.team.classification === 'general_rf'
+      userTeamClassification === ClassificationEnum.enum.general_emc &&
+      equipmentData.team.classification === ClassificationEnum.enum.general_rf
     ) {
       throw new ForbiddenException({
         code: CheckoutErrorCode.CROSS_TEAM_FORBIDDEN,
@@ -2006,7 +2007,7 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async rejectReturn(
     uuid: string,
-    rejectReturnDto: RejectReturnDto & { approverId: string; approverTeamId?: string },
+    rejectReturnDto: RejectReturnDto & { approverId: string },
     req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
@@ -2044,9 +2045,10 @@ export class CheckoutsService extends VersionedBaseService {
       // 스코프 검증 이후 FSM 검사 — 스코프 외 사용자가 FSM 오류로 상태 역추론하는 정보 노출 방지
       this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
+      const approverTeamId = req.user?.teamId;
       let approverClassification: string | null | undefined;
-      if (rejectReturnDto.approverTeamId) {
-        const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
+      if (approverTeamId) {
+        const approverTeam = await this.teamsService.findOne(approverTeamId);
         approverClassification = approverTeam?.classification;
       }
 

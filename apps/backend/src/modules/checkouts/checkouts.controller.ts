@@ -675,16 +675,7 @@ export class CheckoutsController {
     @Request() req: AuthenticatedRequest
   ): Promise<Checkout> {
     const approverId = extractUserId(req);
-    const approverTeamId = req.user?.teamId;
-    return this.checkoutsService.rejectReturn(
-      uuid,
-      {
-        ...rejectReturnDto,
-        approverId,
-        approverTeamId,
-      },
-      req
-    );
+    return this.checkoutsService.rejectReturn(uuid, { ...rejectReturnDto, approverId }, req);
   }
 
   @Post(':uuid/condition-check')

@@ -673,7 +673,6 @@ describe('CheckoutsService', () => {
       version: 1,
       reason: '반입 검사 항목 미충족: 재검사 필요',
       approverId,
-      approverTeamId: mockReq.user.teamId,
     };
 
     const mockReturnedCheckout = {
