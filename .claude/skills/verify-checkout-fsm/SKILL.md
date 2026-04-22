@@ -239,6 +239,106 @@ grep -n "nextStep" packages/schemas/src/checkout.ts
 
 **PASS:** `nextStep` 필드가 `NextStepDescriptorSchema` 타입으로 포함. **FAIL:** 필드 누락.
 
+### Step 12: assertFsmAction HTTP 의미론 — 403/400 분리 (세션 이후)
+
+`assertFsmAction`이 `invalid_transition`→`BadRequestException(400)`, permission denied→`ForbiddenException(403)` 를 구분하는지 확인.
+
+```bash
+# invalid_transition → BadRequestException 확인
+grep -A 5 "invalid_transition" apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "BadRequestException"
+# 결과: 1건 이상 (PASS)
+
+# permission denied → ForbiddenException 확인 (BadRequestException 금지)
+grep -A 10 "assertFsmAction" apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -A5 "check\.reason" | grep "ForbiddenException"
+# 결과: 1건 이상 (PASS)
+
+# assertFsmAction 내부에서 BadRequestException을 CHECKOUT_FORBIDDEN에 쓰면 위반
+grep -B2 "CHECKOUT_FORBIDDEN" apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "BadRequestException"
+# 결과: 0건 (PASS)
+```
+
+**PASS:** `invalid_transition`→400, `CHECKOUT_FORBIDDEN`→403 분리. **FAIL:** `CHECKOUT_FORBIDDEN`이 `BadRequestException`에 포함.
+
+### Step 13: Controller guard ↔ FSM permission 정렬 (세션 이후)
+
+approve/approve-return/reject-return 엔드포인트가 FSM 전이에서 요구하는 Permission과 동일한 guard를 갖는지 확인.
+
+```bash
+# approve 엔드포인트: APPROVE_CHECKOUT 요구
+grep -B1 "async approve\b" apps/backend/src/modules/checkouts/checkouts.controller.ts \
+  | grep "APPROVE_CHECKOUT"
+# 결과: 1건 (PASS)
+
+# approve-return 엔드포인트: APPROVE_CHECKOUT 요구
+grep -B3 "approve-return" apps/backend/src/modules/checkouts/checkouts.controller.ts \
+  | grep "APPROVE_CHECKOUT"
+# 결과: 1건 (PASS)
+
+# reject-return 엔드포인트: REJECT_CHECKOUT 요구
+grep -B3 "reject-return" apps/backend/src/modules/checkouts/checkouts.controller.ts \
+  | grep "REJECT_CHECKOUT"
+# 결과: 1건 (PASS)
+
+# VIEW_CHECKOUTS가 approve/approve-return/reject-return에 잔존하면 위반
+grep -A3 "'(:uuid/approve\|:uuid/approve-return\|:uuid/reject-return)" \
+  apps/backend/src/modules/checkouts/checkouts.controller.ts \
+  | grep "VIEW_CHECKOUTS"
+# 결과: 0건 (PASS)
+```
+
+**PASS:** approve→APPROVE_CHECKOUT, approve-return→APPROVE_CHECKOUT, reject-return→REJECT_CHECKOUT.
+**FAIL:** VIEW_CHECKOUTS가 세 엔드포인트 중 하나에 사용됨.
+
+### Step 14: writeTransitionAudit best-effort 캡슐화 (세션 이후)
+
+`writeTransitionAudit` 메서드 내부에 try/catch가 있고, 콜사이트(7개 메서드)에는 없는지 확인.
+
+```bash
+# 메서드 내부 try/catch 확인 (writeTransitionAudit 정의 블록 내)
+grep -A 20 "private async writeTransitionAudit" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "try {"
+# 결과: 1건 (PASS)
+
+# 콜사이트 주변 try/catch 잔존 금지
+# writeTransitionAudit 호출 전후 5줄에 "} catch (auditErr)" 패턴 금지
+grep -B2 "await this\.writeTransitionAudit(" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "try {"
+# 결과: 0건 (PASS) — 콜사이트에 별도 try 없어야 함
+```
+
+**PASS:** 메서드 내부 try/catch 1건 + 콜사이트 try/catch 0건. **FAIL:** 콜사이트에 try/catch 잔존.
+
+### Step 15: 예외 계층 일관화 — 7개 FSM 메서드 catch 블록 (세션 이후)
+
+approve/reject/startCheckout/returnCheckout/approveReturn/rejectReturn/cancel 7개 outer catch 블록이 `ForbiddenException`과 `ConflictException`을 모두 포함하는지 확인.
+
+```bash
+# ForbiddenException이 모든 outer catch에 있는지 (7개 메서드 기준)
+grep -c "error instanceof ForbiddenException" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 7 이상 (PASS)
+
+# ConflictException이 모든 outer catch에 있는지 (7개 메서드 기준)
+grep -c "error instanceof ConflictException" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 7 이상 (PASS) — writeTransitionAudit 외부 catch 포함
+
+# lenderTeam 전용 체크가 ForbiddenException으로 일관화되었는지
+grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "ForbiddenException"
+# 결과: 2건 (approve + rejectReturn, PASS)
+
+grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "BadRequestException"
+# 결과: 0건 (PASS)
+```
+
+**PASS:** ForbiddenException ≥ 7건 + ConflictException ≥ 7건 + lenderTeam ForbiddenException 2건/BadRequestException 0건.
+**FAIL:** 어느 하나라도 카운트 미달이거나 BadRequestException으로 잘못 분류.
+
 ## Output Format
 
 ```markdown
@@ -255,6 +355,10 @@ grep -n "nextStep" packages/schemas/src/checkout.ts
 | 9  | calculateAvailableActions sync    | PASS/FAIL | async 제거 + Permission 하드코딩 0건   |
 | 10 | buildNextStep + findOne 메타       | PASS/FAIL | 정의 + meta.nextStep 조합              |
 | 11 | FSM_TO_AUDIT_ACTION 커버리지       | PASS/FAIL | Record<CheckoutAction, AuditAction> 타입 |
+| 12 | assertFsmAction HTTP 의미론        | PASS/FAIL | invalid_transition→400, forbidden→403 분리 |
+| 13 | Controller guard ↔ FSM 정렬        | PASS/FAIL | approve/approve-return/reject-return guard |
+| 14 | writeTransitionAudit 캡슐화        | PASS/FAIL | 메서드 내부 try/catch, 콜사이트 0건    |
+| 15 | 예외 계층 일관화 (7개 메서드)       | PASS/FAIL | ForbiddenException+ConflictException ≥7건 |
 ```
 
 ## Exceptions
