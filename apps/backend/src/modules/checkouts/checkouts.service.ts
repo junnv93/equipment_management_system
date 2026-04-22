@@ -203,13 +203,16 @@ export class CheckoutsService extends VersionedBaseService {
     };
     const check = canPerformAction(fsmInput, action, userPermissions);
     if (check.ok) return;
-    const code =
-      check.reason === 'invalid_transition' ? 'CHECKOUT_INVALID_TRANSITION' : 'CHECKOUT_FORBIDDEN';
-    const message =
-      check.reason === 'invalid_transition'
-        ? `Action "${action}" not allowed from status "${checkout.status}" (purpose: ${checkout.purpose})`
-        : `Missing required permission for action "${action}"`;
-    throw new BadRequestException({ code, message });
+    if (check.reason === 'invalid_transition') {
+      throw new BadRequestException({
+        code: 'CHECKOUT_INVALID_TRANSITION',
+        message: `Action "${action}" not allowed from status "${checkout.status}" (purpose: ${checkout.purpose})`,
+      });
+    }
+    throw new ForbiddenException({
+      code: 'CHECKOUT_FORBIDDEN',
+      message: `Missing required permission for action "${action}"`,
+    });
   }
 
   private resolveAuditSuffix(
@@ -1450,13 +1453,20 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      await this.writeTransitionAudit(
-        checkout,
-        'approve',
-        uuid,
-        CSVal.APPROVED as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'approve',
+          uuid,
+          CSVal.APPROVED as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반출 승인 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1481,7 +1491,11 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(
@@ -1532,13 +1546,20 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      await this.writeTransitionAudit(
-        checkout,
-        'reject',
-        uuid,
-        CSVal.REJECTED as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'reject',
+          uuid,
+          CSVal.REJECTED as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반출 반려 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 캐시 무효화 + 알림 데이터를 병렬로 가져오기 (순차 → 병렬)
       const [affectedTeams, { items: rejectItems, firstEquipment: rejectFirstEquip }] =
@@ -1567,7 +1588,11 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(
@@ -1648,13 +1673,20 @@ export class CheckoutsService extends VersionedBaseService {
         return result;
       });
 
-      await this.writeTransitionAudit(
-        checkout,
-        'start',
-        uuid,
-        CSVal.CHECKED_OUT as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'start',
+          uuid,
+          CSVal.CHECKED_OUT as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반출 시작 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1678,7 +1710,11 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(
@@ -1782,13 +1818,20 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
-      await this.writeTransitionAudit(
-        checkout,
-        'submit_return',
-        uuid,
-        CSVal.RETURNED as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'submit_return',
+          uuid,
+          CSVal.RETURNED as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반납 제출 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1817,6 +1860,7 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
         error instanceof ConflictException
       ) {
         // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
@@ -1892,13 +1936,20 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      await this.writeTransitionAudit(
-        checkout,
-        'approve_return',
-        uuid,
-        CSVal.RETURN_APPROVED as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'approve_return',
+          uuid,
+          CSVal.RETURN_APPROVED as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반납 최종 승인 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1925,6 +1976,7 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
         error instanceof ConflictException
       ) {
         // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
@@ -2021,13 +2073,20 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      await this.writeTransitionAudit(
-        checkout,
-        'reject_return',
-        uuid,
-        CSVal.CHECKED_OUT as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'reject_return',
+          uuid,
+          CSVal.CHECKED_OUT as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반납 반려 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 캐시 무효화 — items/equipmentMap은 이미 보유, 팀 ID만 추가 조회
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2057,6 +2116,7 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
         error instanceof ConflictException
       ) {
         // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
@@ -2282,13 +2342,20 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      await this.writeTransitionAudit(
-        checkout,
-        'cancel',
-        uuid,
-        CSVal.CANCELED as CheckoutStatus,
-        req
-      );
+      try {
+        await this.writeTransitionAudit(
+          checkout,
+          'cancel',
+          uuid,
+          CSVal.CANCELED as CheckoutStatus,
+          req
+        );
+      } catch (auditErr) {
+        this.logger.error(
+          `반출 취소 감사 로그 기록 실패 — checkoutId: ${uuid}, error: ${auditErr instanceof Error ? auditErr.message : String(auditErr)}`,
+          auditErr instanceof Error ? auditErr.stack : undefined
+        );
+      }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2296,7 +2363,11 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(

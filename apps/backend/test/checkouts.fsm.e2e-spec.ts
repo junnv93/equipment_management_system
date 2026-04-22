@@ -179,7 +179,7 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({ version });
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.body.code).toBe('CHECKOUT_FORBIDDEN');
     });
 
@@ -194,7 +194,7 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({ version: returned.version });
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.body.code).toBe('CHECKOUT_FORBIDDEN');
     });
   });
