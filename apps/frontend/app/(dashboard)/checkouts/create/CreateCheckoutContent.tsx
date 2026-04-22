@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,7 +57,11 @@ import {
   CheckoutPurposeValues as CPVal,
   type EquipmentStatus,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  SELECTOR_PAGE_SIZE,
+  Permission,
+} from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -73,7 +77,9 @@ export default function CreateCheckoutContent() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canCreate = can(Permission.CREATE_CHECKOUT);
+  const hasPreselected = useRef(false);
 
   // URL searchParams에서 프리셀렉션 equipmentId 읽기
   const searchParams = useSearchParams();
@@ -104,10 +110,11 @@ export default function CreateCheckoutContent() {
   });
 
   useEffect(() => {
-    if (preselectedEquipment && selectedEquipments.length === 0) {
+    if (preselectedEquipment && !hasPreselected.current) {
+      hasPreselected.current = true;
       setSelectedEquipments([preselectedEquipment]);
     }
-  }, [preselectedEquipment]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preselectedEquipment]);
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({
@@ -273,6 +280,15 @@ export default function CreateCheckoutContent() {
     // 반출 신청 제출
     createCheckoutMutation.mutate(checkoutData);
   };
+
+  // UL-QP-18 직무분리: 권한 없는 역할은 목록으로 리다이렉트 (hooks 이후)
+  useEffect(() => {
+    if (!canCreate) {
+      router.replace(FRONTEND_ROUTES.CHECKOUTS.LIST);
+    }
+  }, [canCreate, router]);
+
+  if (!canCreate) return null;
 
   return (
     <div className={getPageContainerClasses()}>
@@ -582,9 +598,9 @@ export default function CreateCheckoutContent() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                aria-label={t('create.removeEquipment', { name: equipment.name })}
                                 onClick={() => handleRemoveEquipment(equipment.id)}
                                 className="hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
-                                aria-label={t('create.removeEquipment', { name: equipment.name })}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

@@ -362,9 +362,11 @@ export default function CheckoutDetailClient({
     }
 
     // 대여 목적 특수 상태 - 상태 확인 필요
+    // FSM: APPROVED→lender_check = start:checkout, 이후 단계 = complete:checkout
     // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
+    const canDoConditionCheck = checkout.status === CSVal.APPROVED ? canStart : canComplete;
     if (
-      canComplete &&
+      canDoConditionCheck &&
       checkout.purpose === CPVal.RENTAL &&
       (
         [
