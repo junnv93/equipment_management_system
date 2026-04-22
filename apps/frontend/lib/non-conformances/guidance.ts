@@ -2,14 +2,14 @@ import {
   getNCPrerequisite,
   NonConformanceStatusValues as NCVal,
 } from '@equipment-management/schemas';
-import { resolveNCGuidanceKey, type NCGuidanceKey } from '@/lib/design-tokens';
+import { resolveNCGuidanceKey, type NCGuidanceKeyReachable } from '@/lib/design-tokens';
 import type { NonConformance } from '@/lib/api/non-conformances-api';
 
 export function deriveGuidance(
   nc: NonConformance,
   canCloseNC: boolean
 ): {
-  key: NCGuidanceKey;
+  key: NCGuidanceKeyReachable;
   needsRepair: boolean;
   needsRecalibration: boolean;
 } {

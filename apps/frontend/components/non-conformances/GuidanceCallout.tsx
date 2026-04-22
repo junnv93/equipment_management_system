@@ -18,7 +18,7 @@ import {
   CALLOUT_TOKENS,
   getCalloutClasses,
   FOCUS_TOKENS,
-  type NCGuidanceKey,
+  type NCGuidanceKeyReachable,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +32,7 @@ const ICON_MAP = {
 } as const;
 
 interface GuidanceCalloutProps {
-  guidanceKey: NCGuidanceKey;
+  guidanceKey: NCGuidanceKeyReachable;
   onScrollToAction?: () => void;
   onRepairRegister?: () => void;
   onCalibrationNav?: () => void;

@@ -1,5 +1,5 @@
 /**
- * Suite Next-Step: NextStepPanel FSM 렌더링 검증 (Read-Only, Parallel)
+ * Suite Next-Step: NextStepPanel FSM 렌더링 검증 (Serial)
  *
  * 검증 대상:
  * - `NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true` 환경에서 NextStepPanel 렌더 확인
@@ -7,14 +7,18 @@
  * - 역할별 panel 가시성 및 버튼 활성/비활성 상태
  * - terminal 상태에서 role="status", 액션 버튼 미표시
  *
- * Mode: parallel (상태 변경 없음, 기존 시드 조회만)
+ * Mode: serial (beforeAll 브라우저 감지에 serial 필요)
  *
  * 사이트: Suwon (모든 픽스처가 Suwon 소속)
  *
- * Feature Flag 의존:
- *   NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true 일 때만 실행 (미설정 시 skip)
+ * Feature Flag 감지 방식:
+ *   process.env는 테스트 러너(Node.js) 환경 변수로, Next.js 빌드 타임에 번들된
+ *   NEXT_PUBLIC_* 값을 반영하지 않는다.
+ *   beforeAll에서 실제 브라우저로 페이지를 방문해 DOM에 section[data-checkout-id]가
+ *   존재하는지 확인하는 방식으로 플래그 활성 여부를 판단한다.
  */
 
+import path from 'path';
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   CHECKOUT_001_ID, // Suwon, pending, calibration
@@ -26,9 +30,6 @@ import {
   CHECKOUT_059_ID, // Suwon, overdue, calibration
 } from '../../../shared/constants/test-checkout-ids';
 
-/** 플래그 미설정 환경에서 전체 스위트 skip */
-const FLAG_ENABLED = process.env.NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL === 'true';
-
 /** NextStepPanel 활성 영역 선택자 (terminal 아닌 상태) */
 const panelRegion = (page: import('@playwright/test').Page) =>
   page.locator('section[role="region"][data-checkout-id]');
@@ -37,10 +38,28 @@ const panelRegion = (page: import('@playwright/test').Page) =>
 const panelStatus = (page: import('@playwright/test').Page) =>
   page.locator('section[role="status"][data-checkout-id]');
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
+  let flagEnabled = false;
+
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: path.join(__dirname, '../../../.auth/technical-manager.json'),
+    });
+    const probe = await context.newPage();
+    await probe.goto(`/checkouts/${CHECKOUT_050_ID}`);
+    await probe.waitForLoadState('networkidle');
+    flagEnabled = await probe.locator('section[data-checkout-id]').isVisible();
+    await context.close();
+  });
+
   test.beforeEach(async ({}, testInfo) => {
-    if (!FLAG_ENABLED) {
-      testInfo.skip(true, 'NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 플래그 미활성 — 스킵');
+    if (!flagEnabled) {
+      testInfo.skip(
+        true,
+        'NextStepPanel 미렌더 — NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 플래그 비활성'
+      );
     }
   });
 
@@ -56,7 +75,6 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     await expect(panel).toHaveAttribute('data-next-action', 'approve');
     await expect(panel).toHaveAttribute('data-checkout-id', CHECKOUT_001_ID);
 
-    // 액션 버튼 활성 확인
     const btn = panel.getByTestId('next-step-action');
     await expect(btn).toBeVisible();
     await expect(btn).not.toHaveAttribute('disabled');
@@ -72,10 +90,8 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
 
     const panel = panelRegion(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
-    // 패널은 표시되어야 하지만 nextAction은 동일 (approve)
     await expect(panel).toHaveAttribute('data-next-action', 'approve');
 
-    // 시험실무자는 승인 권한 없음 → 버튼 disabled
     const btn = panel.getByTestId('next-step-action');
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute('aria-disabled', 'true');
@@ -156,17 +172,13 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     await page.goto(`/checkouts/${CHECKOUT_050_ID}`);
     await page.waitForLoadState('networkidle');
 
-    // terminal 패널은 role="status"
     const panel = panelStatus(page);
     await expect(panel).toBeVisible({ timeout: 10_000 });
     await expect(panel).toHaveAttribute('data-checkout-id', CHECKOUT_050_ID);
     await expect(panel).toHaveAttribute('data-urgency', 'normal');
     await expect(panel).toHaveAttribute('data-next-action', 'none');
 
-    // 액션 버튼은 존재하지 않아야 함
     await expect(page.getByTestId('next-step-action')).not.toBeVisible();
-
-    // role="region" 패널도 없어야 함
     await expect(panelRegion(page)).not.toBeVisible();
   });
 });

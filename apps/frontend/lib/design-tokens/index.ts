@@ -322,6 +322,7 @@ export {
   type NCGuidanceStatusKey,
   type NCGuidanceRole,
   type NCGuidanceKey,
+  type NCGuidanceKeyReachable,
   type NCGuidanceEntry,
 } from './components/non-conformance';
 
