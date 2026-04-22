@@ -808,7 +808,16 @@ export type NCGuidanceStatusKey =
 
 export type NCGuidanceRole = 'operator' | 'manager' | 'all';
 
+/** 모든 가능한 조합 (6 × 3 = 18). 실제 도달 가능한 키는 NCGuidanceKeyReachable 사용. */
 export type NCGuidanceKey = `${NCGuidanceStatusKey}_${NCGuidanceRole}`;
+
+/**
+ * resolveNCGuidanceKey가 실제로 반환하는 11개 키.
+ * NC_WORKFLOW_GUIDANCE_TOKENS 인덱싱 및 컴포넌트 prop에 이 타입을 사용한다.
+ */
+export type NCGuidanceKeyReachable =
+  | `${'open' | 'openRejected' | 'openBlockedRepair' | 'openBlockedRecalibration' | 'corrected'}_${'operator' | 'manager'}`
+  | 'closed_all';
 
 export interface NCGuidanceEntry {
   variant: CalloutVariant;
@@ -819,7 +828,7 @@ export interface NCGuidanceEntry {
   scrollTarget?: 'actionBar' | 'infoRepairCard';
 }
 
-export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry> = {
+export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuidanceEntry> = {
   open_operator: {
     variant: 'warning',
     emphasis: 'leftBorder',
@@ -901,56 +910,6 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKey, NCGuidanceEntry>
     stepBadgeKey: 'three',
     ctaKind: 'none',
   },
-  // _all variants: resolveNCGuidanceKey does not produce these — present for Record<NCGuidanceKey, …> exhaustiveness
-  open_all: {
-    variant: 'warning',
-    emphasis: 'leftBorder',
-    icon: 'AlertTriangle',
-    stepBadgeKey: 'one',
-    ctaKind: 'none',
-  },
-  openRejected_all: {
-    variant: 'warning',
-    emphasis: 'leftBorder',
-    icon: 'AlertTriangle',
-    stepBadgeKey: 'one',
-    ctaKind: 'none',
-  },
-  openBlockedRepair_all: {
-    variant: 'critical',
-    emphasis: 'leftBorder',
-    icon: 'Wrench',
-    stepBadgeKey: 'one',
-    ctaKind: 'none',
-  },
-  openBlockedRecalibration_all: {
-    variant: 'critical',
-    emphasis: 'leftBorder',
-    icon: 'Wrench',
-    stepBadgeKey: 'one',
-    ctaKind: 'none',
-  },
-  corrected_all: {
-    variant: 'info',
-    emphasis: 'leftBorder',
-    icon: 'Clock',
-    stepBadgeKey: 'two',
-    ctaKind: 'none',
-  },
-  closed_operator: {
-    variant: 'ok',
-    emphasis: 'leftBorder',
-    icon: 'Lock',
-    stepBadgeKey: 'three',
-    ctaKind: 'none',
-  },
-  closed_manager: {
-    variant: 'ok',
-    emphasis: 'leftBorder',
-    icon: 'Lock',
-    stepBadgeKey: 'three',
-    ctaKind: 'none',
-  },
 } as const;
 
 export function resolveNCGuidanceKey(args: {
@@ -959,7 +918,7 @@ export function resolveNCGuidanceKey(args: {
   needsRepair: boolean;
   needsRecalibration: boolean;
   hasRejection: boolean;
-}): NCGuidanceKey {
+}): NCGuidanceKeyReachable {
   const { status, canCloseNC, needsRepair, needsRecalibration, hasRejection } = args;
   const role: NCGuidanceRole = canCloseNC ? 'manager' : 'operator';
   if (status === 'closed') return 'closed_all';

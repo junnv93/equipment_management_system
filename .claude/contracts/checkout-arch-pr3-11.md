@@ -1,3 +1,5 @@
+> ⚠️ **SUPERSEDED by v2 plan** — 이 계약(MUST 40/SHOULD 16)은 v2 재구성(PR-3~PR-19, 18 PR)으로 확장됨. 최신 설계는 `/home/kmjkds/.claude/plans/zany-swimming-feigenbaum.md` 참조. 본 파일은 PR-3~PR-11 v1 기준선 참조용 보존.
+
 # Contract: Checkout Architecture PR-3~PR-11
 
 **날짜**: 2026-04-22

@@ -287,10 +287,22 @@ export function getSectionRhythm(density: SectionRhythm = 'comfortable'): string
  * 카드, 패널, 폼 등 재사용 컴포넌트에서 density prop으로 활용.
  */
 export const SPACING_RHYTHM_TOKENS = {
-  tight: { padding: 'p-3', gap: 'gap-2', stack: 'space-y-2' },
-  comfortable: { padding: 'p-4', gap: 'gap-3', stack: 'space-y-3' },
-  relaxed: { padding: 'p-5', gap: 'gap-4', stack: 'space-y-4' },
-  spacious: { padding: 'p-6', gap: 'gap-5', stack: 'space-y-5' },
+  tight: { padding: 'p-3', paddingX: 'px-3', paddingY: 'py-3', gap: 'gap-2', stack: 'space-y-2' },
+  comfortable: {
+    padding: 'p-4',
+    paddingX: 'px-4',
+    paddingY: 'py-4',
+    gap: 'gap-3',
+    stack: 'space-y-3',
+  },
+  relaxed: { padding: 'p-5', paddingX: 'px-5', paddingY: 'py-5', gap: 'gap-4', stack: 'space-y-4' },
+  spacious: {
+    padding: 'p-6',
+    paddingX: 'px-6',
+    paddingY: 'py-6',
+    gap: 'gap-5',
+    stack: 'space-y-5',
+  },
 } as const;
 
 export type SpacingRhythm = keyof typeof SPACING_RHYTHM_TOKENS;

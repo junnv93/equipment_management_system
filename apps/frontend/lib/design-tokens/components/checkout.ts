@@ -422,8 +422,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: '',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   pending: {
     hoverBorder: 'hover:border-brand-warning/30',
@@ -433,8 +433,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: 'ring-1 ring-brand-warning/20',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   overdue: {
     hoverBorder: 'hover:border-brand-critical/30',
@@ -444,8 +444,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: `ring-2 ring-brand-critical/30 ${ELEVATION_TOKENS.shadow.medium}`,
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   /** @deprecated checkedOut과 동일 — checkedOut 사용 권장 */
   inProgress: {
@@ -456,8 +456,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: '',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   checkedOut: {
     hoverBorder: 'hover:border-brand-purple/30',
@@ -467,8 +467,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: '',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   returned: {
     hoverBorder: 'hover:border-brand-ok/30',
@@ -478,8 +478,8 @@ export const CHECKOUT_STATS_VARIANTS = {
     alertRing: '',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.padding.replace('p', 'px')} pb-3`,
+    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
+    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
 } as const;
 
