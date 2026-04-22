@@ -36,18 +36,8 @@ const TEST_ENGINEER_PERMS = ['view:checkouts', 'create:checkout'];
 const SYSTEM_ADMIN_PERMS = [...TECHNICAL_MANAGER_PERMS, 'manage:roles'];
 // quality_manager: 반출입 기록 검토(조회)만 — approve/reject/start/complete/cancel 없음
 const QUALITY_MANAGER_PERMS = ['view:checkouts'];
-// lab_manager: 시험소장 — checkout 전체 권한 (technical_manager 상위집합)
-const LAB_MANAGER_PERMS = [
-  APPROVE_CHECKOUT,
-  REJECT_CHECKOUT,
-  START_CHECKOUT,
-  COMPLETE_CHECKOUT,
-  CANCEL_CHECKOUT,
-  'view:checkouts',
-  'create:checkout',
-  'update:checkout',
-  'delete:checkout',
-];
+// lab_manager: 시험소장 — checkout 조회만 (UL-QP-18 직무분리: 신청·승인은 기술책임자 전담)
+const LAB_MANAGER_PERMS = ['view:checkouts'];
 
 // ============================================================================
 // FSM Invariants
@@ -306,21 +296,24 @@ describe('canPerformAction', () => {
     });
   });
 
-  describe('lab_manager — 시험소장, checkout 전체 권한', () => {
-    it('can approve pending', () => {
-      expect(canPerformAction(pendingCal, 'approve', LAB_MANAGER_PERMS).ok).toBe(true);
+  describe('lab_manager — 시험소장, checkout 조회만 (UL-QP-18 직무분리)', () => {
+    it('cannot approve pending (no approve:checkout)', () => {
+      const result = canPerformAction(pendingCal, 'approve', LAB_MANAGER_PERMS);
+      expect(result.ok).toBe(false);
+      expect((result as { ok: false; reason: string }).reason).toBe('permission');
     });
 
-    it('can reject pending', () => {
-      expect(canPerformAction(pendingCal, 'reject', LAB_MANAGER_PERMS).ok).toBe(true);
+    it('cannot reject pending (no reject:checkout)', () => {
+      const result = canPerformAction(pendingCal, 'reject', LAB_MANAGER_PERMS);
+      expect(result.ok).toBe(false);
     });
 
-    it('can submit_return from checked_out', () => {
-      expect(canPerformAction(checkedOut, 'submit_return', LAB_MANAGER_PERMS).ok).toBe(true);
+    it('cannot submit_return from checked_out (no complete:checkout)', () => {
+      expect(canPerformAction(checkedOut, 'submit_return', LAB_MANAGER_PERMS).ok).toBe(false);
     });
 
-    it('can approve_return from returned', () => {
-      expect(canPerformAction(returned, 'approve_return', LAB_MANAGER_PERMS).ok).toBe(true);
+    it('cannot approve_return from returned (no approve:checkout)', () => {
+      expect(canPerformAction(returned, 'approve_return', LAB_MANAGER_PERMS).ok).toBe(false);
     });
   });
 });

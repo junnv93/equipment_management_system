@@ -13,6 +13,10 @@
  *
  * ⚠️ 장비 등록 정책: test_engineer·technical_manager·system_admin만 등록 가능
  * ⚠️ 장비 승인 정책: technical_manager만 승인 가능 (같은 팀, self-approval 불가)
+ * ⚠️ 반출 신청 정책: test_engineer·technical_manager만 신청 가능 (lab_manager 제외)
+ * ⚠️ 반출 승인 정책: technical_manager만 승인 가능
+ *    - 교정/수리: 장비 소속 팀의 기술책임자 (CHECKOUT_DATA_SCOPE 'team' 스코프로 강제)
+ *    - 대여: 빌려주는 팀(lenderTeamId)의 기술책임자 (service layer 명시적 체크)
  * ⚠️ 교정 등록 특수 정책: 시험실무자/기술책임자만 교정 기록 등록 가능 (등록/승인 완전 분리)
  *
  * 참고: 대여(Rentals)는 제거되었으며, 반출(Checkouts)이 교정/수리/시험소간 대여 모두 포함
@@ -222,16 +226,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   lab_manager: [
     // 장비 관리 (조회만 — 등록/수정/삭제/승인은 기술책임자 전담)
     Permission.VIEW_EQUIPMENT,
-    // 반출 관리
+    // 반출입 관리 (조회만 — 신청/승인/반입처리는 기술책임자 전담)
+    // UL-QP-18 직무분리: 반출 신청·승인은 장비 소속 팀 또는 대여 팀의 기술책임자만
     Permission.VIEW_CHECKOUTS,
-    Permission.CREATE_CHECKOUT,
-    Permission.UPDATE_CHECKOUT,
-    Permission.DELETE_CHECKOUT,
-    Permission.APPROVE_CHECKOUT,
-    Permission.REJECT_CHECKOUT,
-    Permission.START_CHECKOUT,
-    Permission.COMPLETE_CHECKOUT,
-    Permission.CANCEL_CHECKOUT,
     // 교정 관리 (CREATE_CALIBRATION 제외 — 시험실무자/기술책임자만 가능)
     Permission.VIEW_CALIBRATIONS,
     Permission.UPDATE_CALIBRATION,
