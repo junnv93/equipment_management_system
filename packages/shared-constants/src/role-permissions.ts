@@ -14,6 +14,9 @@
  * ⚠️ 장비 등록 정책: test_engineer·technical_manager·system_admin만 등록 가능
  * ⚠️ 장비 승인 정책: technical_manager만 승인 가능 (같은 팀, self-approval 불가)
  * ⚠️ 반출 신청 정책: test_engineer·technical_manager만 신청 가능 (lab_manager 제외)
+ * ⚠️ 반출 수정·취소 정책: test_engineer·technical_manager 모두 가능
+ *    - 수정: pending 상태만 허용 (서비스 레이어 status 체크로 강제)
+ *    - 취소: pending·approved 상태 허용 (FSM cancel 전이로 강제)
  * ⚠️ 반출 승인 정책: technical_manager만 승인 가능 (직무분리: 신청자와 승인자 분리)
  *    - 교정/수리: 장비 소속 팀의 기술책임자 (CHECKOUT_DATA_SCOPE 'team' 스코프로 강제)
  *    - 대여: 빌려주는 팀(lenderTeamId)의 기술책임자 (service layer 명시적 체크)
@@ -38,6 +41,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 반출 관리 (교정/수리/시험소간 대여 포함)
     Permission.VIEW_CHECKOUTS,
     Permission.CREATE_CHECKOUT, // 반출 신청
+    Permission.UPDATE_CHECKOUT, // 반출 수정 (pending 상태만 — 서비스 레이어 강제)
+    Permission.CANCEL_CHECKOUT, // 반출 취소 (pending/approved 상태 — FSM 강제)
     Permission.START_CHECKOUT, // 반출 시작 (장비 인도)
     Permission.COMPLETE_CHECKOUT, // 반입 처리 (장비 수령 검사)
     // 교정 관리

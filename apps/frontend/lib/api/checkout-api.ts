@@ -321,6 +321,16 @@ const checkoutApi = {
   },
 
   /**
+   * 반출 신청을 취소합니다 (신청자 본인 또는 권한 보유자).
+   * 상태: pending/approved → canceled
+   * ✅ Phase 1: Optimistic Locking - version 필수
+   */
+  async cancelCheckout(id: string, version: number): Promise<Checkout> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.CANCEL(id), { version });
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
    * 반출을 시작합니다.
    * 상태: approved → checked_out
    * 장비 상태도 checked_out으로 자동 변경됩니다.

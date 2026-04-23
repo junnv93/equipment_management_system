@@ -32,10 +32,12 @@ const TECHNICAL_MANAGER_PERMS = [
   'update:checkout',
   'delete:checkout',
 ];
-// test_engineer: 반출 신청 + 시작 + 반입 처리 가능 (UL-QP-18: 승인과 직무 분리)
+// test_engineer: 반출 신청·수정·취소·시작·반입처리 가능 (UL-QP-18: 승인과 직무 분리)
 const TEST_ENGINEER_PERMS = [
   'view:checkouts',
   'create:checkout',
+  'update:checkout', // pending 상태 수정 (서비스 레이어 강제)
+  CANCEL_CHECKOUT, // pending/approved 취소 (FSM 강제)
   START_CHECKOUT, // 반출 시작 (장비 인도)
   COMPLETE_CHECKOUT, // 반입 처리 (장비 수령 검사)
 ];
@@ -263,12 +265,24 @@ describe('canPerformAction', () => {
     expect(canPerformAction(returned, 'approve_return', TECHNICAL_MANAGER_PERMS).ok).toBe(true);
   });
 
-  // UL-QP-18 직무분리: 승인(approve)은 기술책임자 전담, 시작·반입은 실무자도 가능
-  describe('test_engineer — 시작·반입 처리 가능, 승인 불가 (UL-QP-18 직무분리)', () => {
+  // UL-QP-18 직무분리: 승인(approve)은 기술책임자 전담, 신청·수정·취소·시작·반입은 실무자도 가능
+  describe('test_engineer — 신청·수정·취소·시작·반입 가능, 승인 불가 (UL-QP-18 직무분리)', () => {
     it('cannot approve pending (승인 권한 없음)', () => {
       const result = canPerformAction(pendingCal, 'approve', TEST_ENGINEER_PERMS);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.reason).toBe('permission');
+    });
+
+    it('can cancel pending (pending 상태 취소 가능)', () => {
+      expect(canPerformAction(pendingCal, 'cancel', TEST_ENGINEER_PERMS).ok).toBe(true);
+    });
+
+    it('can cancel approved (approved 상태 취소 가능 — FSM 허용)', () => {
+      const approvedCal = {
+        status: 'approved' as CheckoutStatus,
+        purpose: 'calibration' as CheckoutPurpose,
+      };
+      expect(canPerformAction(approvedCal, 'cancel', TEST_ENGINEER_PERMS).ok).toBe(true);
     });
 
     it('can start approved calibration checkout (반출 시작 가능)', () => {
@@ -368,11 +382,12 @@ describe('getNextStep', () => {
     expect(result.totalSteps).toBe(5);
   });
 
-  it('pending + calibration + test_engineer → available=false, blockingReason=permission', () => {
+  it('pending + calibration + test_engineer → nextAction=cancel, available=true', () => {
+    // getNextStep은 user가 실행 가능한 첫 번째 전이를 우선 선택 (approve:불가, cancel:가능)
     const result = getNextStep({ status: 'pending', purpose: 'calibration' }, TEST_ENGINEER_PERMS);
-    expect(result.availableToCurrentUser).toBe(false);
-    expect(result.blockingReason).toBe('permission');
-    expect(result.nextAction).toBe('approve'); // transition exists, user just lacks permission
+    expect(result.nextAction).toBe('cancel');
+    expect(result.availableToCurrentUser).toBe(true);
+    expect(result.blockingReason).toBeNull();
   });
 
   it('approved + calibration + technical_manager → nextAction=start', () => {

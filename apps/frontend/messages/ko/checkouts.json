@@ -55,6 +55,7 @@
     "returnReject": "반입 반려",
     "create": "반출 신청",
     "cancel": "취소",
+    "cancelCheckout": "반출 취소",
     "confirm": "확인",
     "close": "닫기",
     "conditionCheck": "상태 확인",
@@ -191,7 +192,9 @@
     "rejectTitle": "반출 반려",
     "rejectDescription": "반출 요청을 반려합니다. 반려 사유를 입력해주세요.",
     "rejectReasonLabel": "반려 사유",
-    "rejectReasonPlaceholder": "반려 사유를 입력해주세요"
+    "rejectReasonPlaceholder": "반려 사유를 입력해주세요",
+    "cancelTitle": "반출 신청 취소",
+    "cancelDescription": "반출 신청을 취소하시겠습니까? 취소 후에는 복구할 수 없습니다."
   },
   "stepper": {
     "ariaLabel": "반출 진행 상태",

@@ -96,6 +96,7 @@ export default function CheckoutDetailClient({
   const canApprove = can(Permission.APPROVE_CHECKOUT);
   const canStart = can(Permission.START_CHECKOUT);
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
+  const canCancelCheckout = can(Permission.CANCEL_CHECKOUT);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -134,6 +135,7 @@ export default function CheckoutDetailClient({
     start: false,
     approveReturn: false,
     rejectReturn: false,
+    cancel: false,
   });
   const [rejectReason, setRejectReason] = useState('');
   const [handoverQrOpen, setHandoverQrOpen] = useState(false);
@@ -239,6 +241,28 @@ export default function CheckoutDetailClient({
     },
   });
 
+  // 반출 취소 mutation (test_engineer, technical_manager — pending/approved 상태)
+  const cancelMutation = useOptimisticMutation<Checkout, void, Checkout>({
+    mutationFn: () => checkoutApi.cancelCheckout(checkout.id, checkout.version),
+    queryKey: queryKeys.checkouts.detail(checkout.id),
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: CSVal.CANCELED as CheckoutStatus,
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    successMessage: t('toasts.cancelSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.cancelError')),
+    onSuccessCallback: () => {
+      setDialogState((prev) => ({ ...prev, cancel: false }));
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, cancel: false }));
+    },
+  });
+
   // 반입 반려 mutation
   const rejectReturnMutation = useOptimisticMutation<Checkout, string, Checkout>({
     mutationFn: (reason: string) =>
@@ -305,6 +329,11 @@ export default function CheckoutDetailClient({
     rejectReturnMutation.mutate(returnRejectReason);
   };
 
+  // 반출 취소 처리
+  const handleCancelCheckout = () => {
+    cancelMutation.mutate();
+  };
+
   // 액션 버튼 결정 (역할 기반)
   const renderActions = () => {
     const buttons: React.ReactNode[] = [];
@@ -329,6 +358,25 @@ export default function CheckoutDetailClient({
         >
           <XCircle className="mr-2 h-4 w-4" />
           {t('actions.reject')}
+        </Button>
+      );
+    }
+
+    // 반출 취소 — pending/approved 상태에서 CANCEL_CHECKOUT 권한 보유자 가능
+    // UL-QP-18: test_engineer(신청자), technical_manager 가능
+    if (
+      ([CSVal.PENDING, CSVal.APPROVED] as CheckoutStatus[]).includes(checkout.status) &&
+      canCancelCheckout
+    ) {
+      buttons.push(
+        <Button
+          key="cancel-checkout"
+          variant="destructive"
+          onClick={() => setDialogState((prev) => ({ ...prev, cancel: true }))}
+          disabled={cancelMutation.isPending}
+        >
+          <XCircle className="mr-2 h-4 w-4" />
+          {t('actions.cancelCheckout')}
         </Button>
       );
     }
@@ -979,6 +1027,34 @@ export default function CheckoutDetailClient({
               disabled={!rejectReason.trim() || rejectMutation.isPending}
             >
               {rejectMutation.isPending ? t('actions.processing') : t('actions.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반출 취소 확인 다이얼로그 */}
+      <Dialog
+        open={dialogState.cancel}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, cancel: open }))}
+      >
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>{t('dialogs.cancelTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.cancelDescription')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, cancel: false }))}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelCheckout}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? t('actions.processing') : t('actions.cancelCheckout')}
             </Button>
           </DialogFooter>
         </DialogContent>
