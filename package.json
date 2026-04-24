@@ -41,7 +41,8 @@
     "type-check:strict": "type-coverage --detail --at-least 90",
     "security:check": "ts-node scripts/check-security-decorators.ts && pnpm --filter backend run security:check-endpoints",
     "verify:env-sync": "tsx scripts/verify-env-sync.ts",
-    "audit:dependabot": "node ./scripts/audit-dependabot.mjs"
+    "audit:dependabot": "node ./scripts/audit-dependabot.mjs",
+    "measure:bundle": "node scripts/measure-bundle.mjs"
   },
   "workspaces": [
     "apps/*",
