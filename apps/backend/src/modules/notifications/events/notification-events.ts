@@ -145,6 +145,7 @@ export interface CheckoutNotificationEvent extends BaseNotificationEvent {
   managementNumber: string;
   requesterId: string;
   requesterTeamId: string;
+  lenderTeamId?: string;
   purpose?: string;
   reason?: string;
 }

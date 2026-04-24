@@ -503,10 +503,13 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 반출 취소 — pending/approved 상태에서 CANCEL_CHECKOUT 권한 보유자 가능
+    // 반출 취소 — pending/borrower_approved/approved 상태에서 CANCEL_CHECKOUT 권한 보유자 가능
+    // FSM SSOT: borrower_approved → canceled 전이 존재 (rental 2-step 중간 취소)
     // UL-QP-18: test_engineer(신청자), technical_manager 가능
     if (
-      ([CSVal.PENDING, CSVal.APPROVED] as CheckoutStatus[]).includes(checkout.status) &&
+      ([CSVal.PENDING, CSVal.BORROWER_APPROVED, CSVal.APPROVED] as CheckoutStatus[]).includes(
+        checkout.status
+      ) &&
       canCancelCheckout
     ) {
       buttons.push(

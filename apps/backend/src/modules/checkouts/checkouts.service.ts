@@ -1663,7 +1663,7 @@ export class CheckoutsService extends VersionedBaseService {
           managementNumber: firstEquipment?.managementNumber ?? '',
           requesterId: checkout.requesterId,
           requesterTeamId: requester.teamId ?? '',
-          lenderTeamId: checkout.lenderTeamId ?? '',
+          lenderTeamId: checkout.lenderTeamId ?? undefined,
           actorId: dto.approverId,
           actorName: '',
           nextActor: this.resolveNextActor(
