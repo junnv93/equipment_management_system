@@ -4,6 +4,18 @@ import {
   type CheckoutStatus,
   type CheckoutPurpose,
 } from '../enums/checkout';
+import { RENTAL_PHASES, getRentalPhase, getPhaseIndex, type RentalPhase } from './rental-phase';
+
+export type { RentalPhase } from './rental-phase';
+export {
+  RENTAL_PHASES,
+  RENTAL_STATUS_TO_PHASE,
+  PHASE_STEP_COUNT,
+  RENTAL_PHASE_I18N_KEY,
+  getRentalPhase,
+  getPhaseIndex,
+  getStepsInPhase,
+} from './rental-phase';
 
 // ============================================================================
 // Types
@@ -78,6 +90,14 @@ export interface NextStepDescriptor {
   readonly labelKey: string;
   readonly hintKey: string;
   readonly urgency: Urgency;
+  /** currentStepIndex + 1. terminal 상태에서는 null. */
+  readonly nextStepIndex: number | null;
+  /** rental 전용 phase. non-rental 및 terminal(rejected, canceled)은 null. */
+  readonly phase: RentalPhase | null;
+  /** phase 순서: approve=0, handover=1, return=2. non-rental은 null. */
+  readonly phaseIndex: number | null;
+  /** rental=3, non-rental=null. */
+  readonly totalPhases: 3 | null;
 }
 
 // ============================================================================
@@ -113,6 +133,10 @@ export const NextStepDescriptorSchema: z.ZodType<NextStepDescriptor> = z.object(
   labelKey: z.string(),
   hintKey: z.string(),
   urgency: z.enum(['normal', 'warning', 'critical']),
+  nextStepIndex: z.number().int().nullable(),
+  phase: z.enum(RENTAL_PHASES).nullable(),
+  phaseIndex: z.number().int().min(0).max(2).nullable(),
+  totalPhases: z.literal(3).nullable(),
 });
 
 // ============================================================================
@@ -549,6 +573,9 @@ export function getNextStep(
   const currentStepIndex = computeStepIndex(checkout.status, checkout.purpose);
   const totalSteps = computeTotalSteps(checkout.purpose);
   const urgency = computeUrgency(checkout);
+  const phase = getRentalPhase(checkout.status, checkout.purpose);
+  const phaseIndex = getPhaseIndex(checkout.status, checkout.purpose);
+  const totalPhases: 3 | null = checkout.purpose === 'rental' ? 3 : null;
 
   if (TERMINAL_STATES.includes(checkout.status)) {
     return {
@@ -563,6 +590,10 @@ export function getNextStep(
       labelKey: 'terminal',
       hintKey: 'terminal',
       urgency,
+      nextStepIndex: null,
+      phase,
+      phaseIndex,
+      totalPhases,
     };
   }
 
@@ -585,6 +616,10 @@ export function getNextStep(
       labelKey: 'terminal',
       hintKey: 'terminal',
       urgency,
+      nextStepIndex: null,
+      phase,
+      phaseIndex,
+      totalPhases,
     };
   }
 
@@ -602,5 +637,9 @@ export function getNextStep(
     labelKey: candidate.labelKey,
     hintKey: candidate.hintKey,
     urgency,
+    nextStepIndex: Math.min(currentStepIndex + 1, totalSteps),
+    phase,
+    phaseIndex,
+    totalPhases,
   };
 }

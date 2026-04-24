@@ -1,0 +1,1406 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`getNextStep behavioral regression all 280 combinations match snapshot 1`] = `
+{
+  "approved:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:calibration:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:calibration:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:calibration:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "lender_check",
+    "nextActor": "borrower",
+  },
+  "approved:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "lender_check",
+    "nextActor": "borrower",
+  },
+  "approved:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_check",
+    "nextActor": "borrower",
+  },
+  "approved:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_check",
+    "nextActor": "borrower",
+  },
+  "approved:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_check",
+    "nextActor": "borrower",
+  },
+  "approved:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:repair:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:repair:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:repair:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:return_to_vendor:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "approved:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "start",
+    "nextActor": "requester",
+  },
+  "borrower_approved:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "borrower_approved:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "borrower_approved:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "borrower_approved:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "borrower_approved:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "cancel",
+    "nextActor": "none",
+  },
+  "borrower_approved:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_approved:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "mark_in_use",
+    "nextActor": "borrower",
+  },
+  "borrower_received:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "mark_in_use",
+    "nextActor": "borrower",
+  },
+  "borrower_received:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "mark_in_use",
+    "nextActor": "borrower",
+  },
+  "borrower_received:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "mark_in_use",
+    "nextActor": "borrower",
+  },
+  "borrower_received:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "mark_in_use",
+    "nextActor": "borrower",
+  },
+  "borrower_received:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_received:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "lender_receive",
+    "nextActor": "approver",
+  },
+  "borrower_returned:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "lender_receive",
+    "nextActor": "approver",
+  },
+  "borrower_returned:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_receive",
+    "nextActor": "approver",
+  },
+  "borrower_returned:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_receive",
+    "nextActor": "approver",
+  },
+  "borrower_returned:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "lender_receive",
+    "nextActor": "approver",
+  },
+  "borrower_returned:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "borrower_returned:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "canceled:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:rental:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:rental:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:rental:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "canceled:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "checked_out:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:calibration:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:calibration:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:calibration:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "checked_out:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "checked_out:rental:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "checked_out:rental:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "checked_out:rental:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "checked_out:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:repair:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:repair:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:repair:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:return_to_vendor:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "checked_out:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "in_use:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_return",
+    "nextActor": "lender",
+  },
+  "in_use:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_return",
+    "nextActor": "lender",
+  },
+  "in_use:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_return",
+    "nextActor": "lender",
+  },
+  "in_use:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_return",
+    "nextActor": "lender",
+  },
+  "in_use:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_return",
+    "nextActor": "lender",
+  },
+  "in_use:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "in_use:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_receive",
+    "nextActor": "lender",
+  },
+  "lender_checked:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_receive",
+    "nextActor": "lender",
+  },
+  "lender_checked:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_receive",
+    "nextActor": "lender",
+  },
+  "lender_checked:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_receive",
+    "nextActor": "lender",
+  },
+  "lender_checked:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_receive",
+    "nextActor": "lender",
+  },
+  "lender_checked:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_checked:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "lender_received:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "lender_received:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "lender_received:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "lender_received:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "lender_received:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "lender_received:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
+  },
+  "overdue:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:calibration:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:calibration:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:calibration:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:repair:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:repair:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:repair:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:return_to_vendor:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "overdue:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "submit_return",
+    "nextActor": "approver",
+  },
+  "pending:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:calibration:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:calibration:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:calibration:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "cancel",
+    "nextActor": "none",
+  },
+  "pending:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_approve",
+    "nextActor": "approver",
+  },
+  "pending:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "borrower_approve",
+    "nextActor": "approver",
+  },
+  "pending:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_approve",
+    "nextActor": "approver",
+  },
+  "pending:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "borrower_approve",
+    "nextActor": "approver",
+  },
+  "pending:rental:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "cancel",
+    "nextActor": "none",
+  },
+  "pending:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:repair:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:repair:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:repair:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "cancel",
+    "nextActor": "none",
+  },
+  "pending:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:return_to_vendor:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve",
+    "nextActor": "logistics",
+  },
+  "pending:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": true,
+    "nextAction": "cancel",
+    "nextActor": "none",
+  },
+  "rejected:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:rental:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:rental:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:rental:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "rejected:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:calibration:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:calibration:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:rental:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:rental:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:rental:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:repair:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:repair:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:return_to_vendor:system_admin": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "return_approved:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "none",
+  },
+  "returned:calibration:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:calibration:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:calibration:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:calibration:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:calibration:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:rental:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:rental:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:rental:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:rental:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:rental:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:repair:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:repair:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:repair:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:repair:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:repair:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:return_to_vendor:lab_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:return_to_vendor:quality_manager": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:return_to_vendor:system_admin": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:return_to_vendor:technical_manager": {
+    "availableToCurrentUser": true,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+  "returned:return_to_vendor:test_engineer": {
+    "availableToCurrentUser": false,
+    "nextAction": "approve_return",
+    "nextActor": "none",
+  },
+}
+`;

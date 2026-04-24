@@ -179,7 +179,7 @@ describe('CheckoutsService', () => {
       });
       mockDrizzle.limit.mockResolvedValue([mockCheckout]);
 
-      const result = await service.findOne(mockCheckout.id);
+      const result = await service.findOne(mockCheckout.id, []);
 
       expect(result).toBeDefined();
       expect(result.id).toBe(mockCheckout.id);
@@ -192,7 +192,7 @@ describe('CheckoutsService', () => {
       });
       mockDrizzle.limit.mockResolvedValue([]);
 
-      await expect(service.findOne(mockCheckout.id)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(mockCheckout.id, [])).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException for invalid UUID format', async () => {
@@ -200,7 +200,7 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValue([]);
 
-      await expect(service.findOne('invalid-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('invalid-uuid', [])).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -1041,7 +1041,7 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValue([{ id: validUuid, status: 'pending' }]);
 
-      const result = await service.findOne(validUuid);
+      const result = await service.findOne(validUuid, []);
       expect(result).toBeDefined();
     });
 
@@ -1057,7 +1057,7 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValue([]);
 
       for (const invalidUuid of invalidUuids) {
-        await expect(service.findOne(invalidUuid)).rejects.toThrow(NotFoundException);
+        await expect(service.findOne(invalidUuid, [])).rejects.toThrow(NotFoundException);
       }
     });
 

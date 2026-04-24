@@ -144,7 +144,7 @@ export class CheckoutsController {
     @Request() req: AuthenticatedRequest
   ): Promise<IssueHandoverTokenResponse> {
     const userId = extractUserId(req);
-    const checkout = await this.checkoutsService.findOne(uuid);
+    const checkout = await this.checkoutsService.findOne(uuid, req.user?.permissions ?? []);
     if (!checkout) {
       throw new NotFoundException({
         code: ErrorCode.NotFound,
@@ -317,11 +317,7 @@ export class CheckoutsController {
     const userPermissions = req.user?.permissions || [];
     const userTeamId = req.user?.teamId;
 
-    return this.checkoutsService.findOne(
-      uuid,
-      userPermissions,
-      userTeamId
-    ) as Promise<CheckoutWithMeta>;
+    return this.checkoutsService.findOne(uuid, userPermissions, userTeamId);
   }
 
   @Patch(':uuid')

@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치. packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), 280 table test 존재(Step 32). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -43,6 +43,8 @@ schemas ← shared-constants ← schemas  (순환!)
 | `packages/schemas/src/fsm/index.ts` | barrel 재내보내기 |
 | `packages/schemas/src/checkout.ts` | `nextStep` 필드 포함 Checkout 응답 스키마 |
 | `packages/schemas/src/__tests__/checkout-fsm.test.ts` | FSM 불변식 + 상태 전이 단위 테스트 (55건) |
+| `packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts` | 280 조합 exhaustive table test (Sprint 1.1 신규) |
+| `packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts` | DESCRIPTOR_TABLE baseline fixture — `getNextStep()` 런타임 동적 계산 |
 | `packages/shared-constants/src/permissions.ts` | Permission enum SSOT — `CheckoutPermissionKey` 동기화 기준 |
 | `apps/backend/src/modules/checkouts/checkouts.service.ts` | FSM 소비자 — assertFsmAction, calculateAvailableActions, buildNextStep, FSM_TO_AUDIT_ACTION |
 | `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` | 프론트엔드 FSM 소비자 — handleNextStepAction dispatcher, CheckoutAction 전체 매핑 |
@@ -424,6 +426,13 @@ grep -n "BadRequestException" \
 | 23 | rejectReturn reason 검증 순서 — scope/FSM 이후 | PASS/FAIL | REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData 라인 |
 | 24 | checkout-api.ts Checkout.meta.nextStep 타입 동기화 | PASS/FAIL | meta.nextStep?: NextStepDescriptor \| null 선언 존재 |
 | 25 | borrower 액터 identity-rule 강제 (2026-04-24 상시) | PASS/FAIL | scope-먼저 순서 + lenderTeamId payload + 프론트 독립 const |
+| 26 | handleNextStepAction FRONTEND_ROUTES 완전 매핑 | PASS/FAIL | router.push/href 인라인 URL 0건 |
+| 27 | useCheckoutGroupDescriptors N+1 방지 + feature flag | PASS/FAIL | getNextStep useMemo 단독 + isNextStepPanelEnabled 2곳 |
+| 28 | findCheckoutEntity 분리 — 순수 엔티티 취득 | PASS/FAIL | private findCheckoutEntity 1건 + this.findCheckoutEntity ≥ 2건 |
+| 29 | findOne userPermissions 필수 파라미터 (no ?) | PASS/FAIL | userPermissions? 0건 |
+| 30 | FSM drift safeParse 가드 — buildNextStep 내 | PASS/FAIL | NextStepDescriptorSchema.safeParse + [FSM drift] Logger.warn |
+| 31 | findOne 반환 타입 — CheckoutWithMeta 단일 | PASS/FAIL | Promise<CheckoutWithMeta> 선언 + 유니온 타입 0건 |
+| 32 | 280 table test 존재 (Sprint 1.1 신규) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -744,3 +753,143 @@ grep -B2 -A8 "const permissions" apps/frontend/hooks/use-checkout-group-descript
 ✅ PASS: isNextStepPanelEnabled() 가드가 훅 + 컴포넌트 양쪽에 존재
 ✅ PASS: permissions를 별도 useMemo로 먼저 안정화 후 descriptor Map dep으로 사용
 ```
+
+### Step 28: findCheckoutEntity 분리 — 순수 엔티티 취득 패턴 (Sprint 1.1)
+
+Sprint 1.1에서 `findOne`의 역할을 두 레이어로 분리:
+- `findCheckoutEntity` (private): 캐시/DB 취득 전담 — 순수 `Checkout` 엔티티 반환
+- `findOne` (public): 메타 조립 전담 — `availableActions` + `nextStep`을 항상 포함한 `CheckoutWithMeta` 반환
+
+이 분리가 없으면 내부 11개 메서드가 `findOne`을 재호출하여 불필요한 meta 조립이 반복 실행된다.
+
+```bash
+# private findCheckoutEntity 존재 확인
+grep -n "private async findCheckoutEntity" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 1건 (PASS) — 0건이면 Sprint 1.1 미구현
+
+# 내부 메서드가 findCheckoutEntity를 경유하는지 확인 (최소 2건 이상)
+grep -c "this\.findCheckoutEntity" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 11 이상 (findOne 1 + 내부 10 호출, PASS)
+
+# 내부 메서드가 잘못 findOne을 재호출하는지 탐지 (FAIL 패턴)
+grep -n "await this\.findOne(" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -v "^.*findOne\b.*async\|findOne.*userPermissions"
+# 기대: findOne 정의 라인만 존재, 내부 재호출 0건
+```
+
+**PASS:** `findCheckoutEntity` 1건 + `this.findCheckoutEntity` 호출 ≥ 11건 + 내부 메서드의 `findOne` 재호출 0건.
+**FAIL:** `findCheckoutEntity` 미존재(Sprint 1.1 누락) 또는 내부 메서드가 `findOne`을 직접 호출(meta 이중 조립).
+
+### Step 29: findOne userPermissions 필수 파라미터 (Sprint 1.1)
+
+Sprint 1.1 이전에는 `findOne(uuid: string, userPermissions?: readonly string[])` — `?` 선택적 파라미터였다.
+이 경우 `if (userPermissions)` 분기가 생겨 일부 응답 경로에서 meta가 누락된다.
+Sprint 1.1에서 `userPermissions: readonly string[]` (필수)로 변경하여 meta가 항상 조립됨을 보장한다.
+
+```bash
+# findOne 시그니처 확인: userPermissions 필수 선언
+grep -n "async findOne(" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: userPermissions: readonly string[] (? 없음)
+
+# 선택적 파라미터 잔존 탐지 (금지)
+grep -n "userPermissions?" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "findOne\|async"
+# 결과: 0건 (PASS)
+
+# if (userPermissions) 조건부 분기 잔존 탐지 (금지)
+grep -n "if (userPermissions)" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS) — 조건부 meta 조립 경로 존재 금지
+```
+
+**PASS:** `userPermissions?` 선언 0건 + `if (userPermissions)` 조건 0건.
+**FAIL:** `userPermissions?` 선택적 잔존 → `?` 제거 후 컨트롤러/서비스 모든 `findOne` 호출에 `req.user?.permissions ?? []` 추가.
+
+### Step 30: FSM drift safeParse 가드 — buildNextStep 내부 (Sprint 1.1)
+
+`buildNextStep`이 `getNextStep()`을 호출한 후 결과를 `NextStepDescriptorSchema.safeParse()`로 검증하여,
+FSM 구현이 Zod 스키마와 어긋날 경우 `Logger.warn('[FSM drift]...')`으로 경보.
+런타임에서 스키마/구현 간 드리프트를 감지하기 위한 안전망이다.
+
+```bash
+# buildNextStep 내부에 NextStepDescriptorSchema.safeParse 확인
+grep -n "NextStepDescriptorSchema\|safeParse" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: safeParse 호출 1건 이상 (PASS)
+
+# FSM drift 경고 로그 확인
+grep -n "\[FSM drift\]" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 1건 이상 (PASS)
+
+# NextStepDescriptorSchema import 확인 (packages/schemas 경유)
+grep -n "NextStepDescriptorSchema" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | head -3
+# 결과: import + safeParse 호출 라인 포함 (PASS)
+```
+
+**PASS:** `NextStepDescriptorSchema.safeParse` 호출 ≥ 1건 + `[FSM drift]` Logger.warn ≥ 1건.
+**FAIL:** safeParse 없음 → FSM 드리프트가 런타임에서 무증상으로 클라이언트로 전달됨.
+
+### Step 31: findOne 반환 타입 — CheckoutWithMeta 단일 타입 (Sprint 1.1)
+
+Sprint 1.1 이후 `findOne`은 항상 `Promise<CheckoutWithMeta>`를 반환해야 한다.
+유니온 타입 `Checkout | CheckoutWithMeta`가 존재하면 소비자가 조건부 narrowing을 해야 하며,
+meta 누락 경로가 묵시적으로 허용된다.
+
+```bash
+# findOne 반환 타입 확인
+grep -n "async findOne.*Promise" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: Promise<CheckoutWithMeta> (PASS)
+
+# 유니온 타입 혼재 탐지 (금지)
+grep -n "Checkout | CheckoutWithMeta\|CheckoutWithMeta | Checkout" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS)
+
+# type cast (as Promise<CheckoutWithMeta>) 잔존 탐지 (금지 — 타입 시스템 우회)
+grep -n "as Promise<CheckoutWithMeta>" \
+  apps/backend/src/modules/checkouts/checkouts.controller.ts
+# 결과: 0건 (PASS)
+```
+
+**PASS:** `Promise<CheckoutWithMeta>` 단일 반환 + 유니온 0건 + controller type cast 0건.
+**FAIL:** 유니온 타입 잔존 → `findCheckoutEntity` + `buildNextStep` 분리 패턴으로 교체.
+
+### Step 32: 280 table test 존재 확인 (Sprint 1.1 신규)
+
+Sprint 1.1에서 신규 도입된 exhaustive table test:
+- `CHECKOUT_STATUS_VALUES` × `CHECKOUT_PURPOSE_VALUES` × `FIXTURE_ROLE_VALUES` = 14 × 4 × 5 = 280 조합
+- `NextStepDescriptorSchema.safeParse()` 모든 조합 검증
+- `toMatchSnapshot()` behavioral regression guard
+- `DESCRIPTOR_TABLE satisfies Record<TableKey, TableRow>` compile-time 완전성 검사
+
+```bash
+# table test 파일 존재 확인
+ls packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts 2>/dev/null \
+  && echo "EXISTS" || echo "MISSING"
+# 결과: EXISTS (PASS)
+
+# fixture 파일 존재 확인
+ls packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts 2>/dev/null \
+  && echo "EXISTS" || echo "MISSING"
+# 결과: EXISTS (PASS)
+
+# 조합 수 계산 상수 확인
+grep -n "EXPECTED_ENTRY_COUNT\|280" \
+  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts | head -5
+
+# satisfies 컴파일 가드 확인 (runtime + compile-time 이중 보장)
+grep -n "satisfies Record<TableKey, TableRow>" \
+  packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts
+# 결과: 1건 (PASS)
+```
+
+**PASS:** 두 파일 모두 EXISTS + `satisfies Record<TableKey, TableRow>` 컴파일 가드 존재.
+**FAIL:** 파일 없음 → Sprint 1.1 구현 누락. `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가.

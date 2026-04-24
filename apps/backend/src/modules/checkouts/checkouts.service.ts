@@ -34,6 +34,7 @@ import {
   getNextStep,
   getTransitionsFor,
   CHECKOUT_TRANSITIONS,
+  NextStepDescriptorSchema,
   type CheckoutAction,
   type NextActor,
   type NextStepDescriptor,
@@ -255,7 +256,7 @@ export class CheckoutsService extends VersionedBaseService {
     checkout: Checkout,
     userPermissions: readonly string[]
   ): NextStepDescriptor {
-    return getNextStep(
+    const descriptor = getNextStep(
       {
         status: checkout.status,
         purpose: checkout.purpose as CheckoutPurpose,
@@ -263,6 +264,16 @@ export class CheckoutsService extends VersionedBaseService {
       },
       userPermissions
     );
+    const validation = NextStepDescriptorSchema.safeParse(descriptor);
+    if (!validation.success) {
+      this.logger.warn('[FSM drift] server response rejected by schema', {
+        checkoutId: checkout.id,
+        status: checkout.status,
+        purpose: checkout.purpose,
+        issues: validation.error.issues,
+      });
+    }
+    return descriptor;
   }
 
   private async writeTransitionAudit(
@@ -947,31 +958,16 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
-   * UUID로 반출 조회
-   * ✅ 일관성: db.select()를 사용하여 다른 쿼리와 동일한 패턴 유지 (Rentals와 동일)
-   * ✅ 개선: 관계 쿼리 API 의존성 제거로 안정성 향상
+   * 내부 전용: UUID로 반출 엔티티 조회 (meta 없음)
+   * ✅ 캐싱: detail 캐시 키 적용
+   * 모든 서비스 내부 도메인 로직(approve, reject 등)은 이 메서드 경유
    */
-  /**
-   * ✅ Phase 2: Server-Driven UI
-   * Optional userPermissions로 meta.availableActions 포함 가능
-   *
-   * @param uuid 반출 UUID
-   * @param userPermissions (선택) 사용자 권한 목록 - 제공 시 meta 포함
-   * @param userTeamId (선택) 사용자 팀 ID
-   * @returns Checkout 또는 CheckoutWithMeta
-   */
-  async findOne(
-    uuid: string,
-    userPermissions?: string[],
-    userTeamId?: string
-  ): Promise<Checkout | CheckoutWithMeta> {
+  private async findCheckoutEntity(uuid: string): Promise<Checkout> {
     const cacheKey = this.buildCacheKey('detail', { uuid });
-
-    const checkout = await this.cacheService.getOrSet(
+    return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
-          // ✅ 일관성: db.query 대신 db.select() 사용 (관계 쿼리 API 의존성 제거)
           const [checkout] = await this.db
             .select()
             .from(checkouts)
@@ -985,14 +981,11 @@ export class CheckoutsService extends VersionedBaseService {
             });
           }
 
-          // ✅ 개선: checkoutItems는 별도로 조회 (필요시)
-          // 관계 데이터가 필요한 경우 별도 메서드로 분리하거나, 조인 쿼리 사용
           return checkout;
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;
           }
-
           this.logger.error(
             `반출 조회 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
           );
@@ -1001,23 +994,27 @@ export class CheckoutsService extends VersionedBaseService {
       },
       CACHE_TTL.LONG
     );
+  }
 
-    // ✅ Phase 2: userPermissions 제공 시 meta.availableActions + nextStep 포함
-    if (userPermissions) {
-      const availableActions = this.calculateAvailableActions(
-        checkout,
-        userPermissions,
-        userTeamId
-      );
-      const nextStep = this.buildNextStep(checkout, userPermissions);
-
-      return {
-        ...checkout,
-        meta: { availableActions, nextStep },
-      };
-    }
-
-    return checkout;
+  /**
+   * 공개 API: UUID로 반출 조회 + meta(availableActions + nextStep) 항상 포함
+   *
+   * ✅ Sprint 1.1: userPermissions 필수화 — 서버가 meta를 항상 채워 클라이언트
+   *    `?? canApprove` role fallback 없이 동작하도록 보장 (fail-closed 전제 조건).
+   *
+   * @param uuid 반출 UUID
+   * @param userPermissions 사용자 권한 목록 (required — getPermissions(role) 결과)
+   * @param userTeamId 사용자 팀 ID (optional — rental lender team 검증에 사용)
+   */
+  async findOne(
+    uuid: string,
+    userPermissions: readonly string[],
+    userTeamId?: string
+  ): Promise<CheckoutWithMeta> {
+    const checkout = await this.findCheckoutEntity(uuid);
+    const availableActions = this.calculateAvailableActions(checkout, userPermissions, userTeamId);
+    const nextStep = this.buildNextStep(checkout, userPermissions);
+    return { ...checkout, meta: { availableActions, nextStep } };
   }
 
   // ==========================================================================
@@ -1463,7 +1460,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.validateUuid(approveDto.approverId, 'approverId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
 
       // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크 (배치 조회)
       const items = await this.db
@@ -1591,7 +1588,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.validateUuid(dto.approverId, 'approverId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
 
       // rental 전용 fail-close (scope 이전 — purpose 체크는 상태 정보 아님)
       if (checkout.purpose !== CPVal.RENTAL) {
@@ -1711,7 +1708,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.validateUuid(dto.approverId, 'approverId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
 
       if (checkout.purpose !== CPVal.RENTAL) {
         throw new BadRequestException({
@@ -1830,7 +1827,7 @@ export class CheckoutsService extends VersionedBaseService {
         this.validateUuid(rejectDto.approverId, 'approverId');
       }
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
       const rejectPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'reject', rejectPermissions);
@@ -1921,7 +1918,7 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
       const startPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'start', startPermissions);
@@ -2037,7 +2034,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(uuid, 'checkoutId');
       this.validateUuid(returnerId, 'returnerId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
       const returnPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'submit_return', returnPermissions);
@@ -2178,7 +2175,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(uuid, 'checkoutId');
       this.validateUuid(approveReturnDto.approverId, 'approverId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
 
       // scope 먼저: items + 장비 정보를 단일 findByIds로 획득 (팀 체크 + 알림 데이터 재사용)
       const items = await this.db
@@ -2315,7 +2312,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(uuid, 'checkoutId');
       this.validateUuid(rejectReturnDto.approverId, 'approverId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
       const rejectReturnPermissions: readonly string[] = req.user?.permissions ?? [];
 
       // ✅ items + equipment 일괄 조회 (권한 체크 + 알림에서 재사용)
@@ -2442,7 +2439,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(uuid, 'checkoutId');
       this.validateUuid(checkerId, 'checkerId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
 
       // step별 액터 측(lender/borrower) 결정 후 스코프 검증 — scope-먼저 원칙
       const conditionActingSide =
@@ -2627,7 +2624,7 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
-      const checkout = await this.findOne(uuid);
+      const checkout = await this.findCheckoutEntity(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
       const cancelPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'cancel', cancelPermissions);
@@ -2693,7 +2690,7 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
-      const existingCheckout = await this.findOne(uuid);
+      const existingCheckout = await this.findCheckoutEntity(uuid);
       await this.enforceScopeFromCheckout(existingCheckout, req);
 
       // 승인된 반출은 수정 불가

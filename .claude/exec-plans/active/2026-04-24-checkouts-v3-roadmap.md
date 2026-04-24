@@ -408,6 +408,13 @@ queryKeys.checkouts.resource.summary({ direction, teamId })
 
 ## Sprint 5 — Visual Polish (V1 S4 · V2 §9)
 
+> Contract 5종 작성 완료 (2026-04-24 90차):
+> - 5.1 → `.claude/contracts/empty-state-variant-colors.md`
+> - 5.2 → `.claude/contracts/typography-6-tier.md`
+> - 5.3 → `.claude/contracts/color-semantic-5-axis.md`
+> - 5.4 → `.claude/contracts/density-rhythm.md`
+> - 5.5 → `.claude/contracts/icon-motion-policy.md`
+
 ### 5.1 · Empty state variant 3색 분리 (V1 S4)
 - `CHECKOUT_EMPTY_STATE_TOKENS.variantIconBg`:
   - `noneYet: 'bg-brand-info/10 border border-brand-info/20'` — 초대

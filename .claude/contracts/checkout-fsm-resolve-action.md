@@ -7,7 +7,7 @@ sprint: 1
 sprint_step: 1.1
 ---
 
-# Contract: Sprint 1.1 — `getNextStep` 단일 권위 보증 + 208 조합 전수 테이블 테스트
+# Contract: Sprint 1.1 — `getNextStep` 단일 권위 보증 + 280 조합 전수 테이블 테스트
 
 ## Context
 
@@ -50,9 +50,9 @@ if (userPermissions) {
 | # | Criterion | Verification |
 |---|-----------|--------------|
 | M1 | `pnpm tsc --noEmit` exit 0 | 빌드 검증 |
-| M2 | `pnpm --filter backend run test` 전체 통과 + 신규 table test 포함 | `pnpm --filter backend run test -- checkout-fsm.table` 통과 |
-| M3 | `packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts` 존재 + 208 조합 커버 | `it('covers all (status × purpose × role) combinations', ...)` 안에 208 assertion |
-| M4 | `fixtures/descriptor-table.ts` export `DESCRIPTOR_TABLE` = `Record<\`${CheckoutStatus}:${CheckoutPurpose}:${UserRole}\`, Pick<NextStepDescriptor, 'nextAction' \| 'nextActor' \| 'availableToCurrentUser'>>` | grep: `DESCRIPTOR_TABLE` export + 208 entry keys |
+| M2 | `pnpm --filter schemas run test` 전체 통과 + 신규 table test 포함 | `pnpm --filter schemas run test -- --testPathPattern=checkout-fsm.table` 통과 (테스트는 `packages/schemas/` 하위에 위치) |
+| M3 | `packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts` 존재 + 280 조합 커버 | `it('covers all (status × purpose × role) combinations', ...)` 안에 280 assertion (14 status × 4 purpose × 5 role) |
+| M4 | `fixtures/descriptor-table.ts` export `DESCRIPTOR_TABLE` = `Record<\`${CheckoutStatus}:${CheckoutPurpose}:${FixtureUserRole}\`, Pick<NextStepDescriptor, 'nextAction' \| 'nextActor' \| 'availableToCurrentUser'>>` | grep: `DESCRIPTOR_TABLE` export + 280 entry keys (FixtureUserRole = 5종) |
 | M5 | 테이블은 `satisfies`로 컴파일 타임 누락 검증 | `as const satisfies Record<...>` 표기 또는 TypeScript assertion function |
 | M6 | `checkouts.service.ts`에서 `if (userPermissions)` 조건부 meta populate 분기 제거 — 모든 `serialize*` 호출이 userPermissions **필수** 수신 | `grep -n "if (userPermissions)" apps/backend/src/modules/checkouts/checkouts.service.ts` = 0 hit |
 | M7 | 서비스 메서드 시그니처에서 `userPermissions?: readonly string[]` (optional) → `userPermissions: readonly string[]` (required) 전환 | `grep -nE "userPermissions\?:" apps/backend/src/modules/checkouts/checkouts.service.ts` = 0 hit |
@@ -62,7 +62,7 @@ if (userPermissions) {
 | M11 | `getNextStep` 호출은 schemas 패키지 바깥 **어디서도 로직 재구현 없음**. 동작이 필요한 곳은 import 경유만 | `grep -rn "function getNextStep\|const getNextStep =" apps/ packages/ \| grep -v schemas/src/fsm/` = 0 hit |
 | M12 | 프론트엔드는 이미 `@equipment-management/schemas` import 경유 중 (변경 없음) | `grep -n "from '@equipment-management/schemas'" apps/frontend/hooks/use-checkout-next-step.ts apps/frontend/hooks/use-checkout-group-descriptors.ts` = 2 hit |
 | M13 | 드리프트 감지: `NextStepDescriptorSchema.safeParse` 실패 시 백엔드 `Logger.warn('[FSM drift] server response rejected by schema', ...)` + Sentry breadcrumb | 코드 확인 (감지 지점 1곳 이상) |
-| M14 | 변경 파일이 backend 2개 + schemas 2개(test + fixture) = 총 **4개** | `git diff --name-only \| grep -v '^\.claude/'` = 4 |
+| M14 | 변경 파일이 backend 3개(service + controller + spec) + schemas 1 dir(test + fixture) = 총 **5개 이하** | `git diff --name-only \| grep -v '^\.claude/'` ≤ 5 (spec 수정은 findOne 시그니처 변경에 따른 필수 조정) |
 
 ---
 
@@ -70,7 +70,7 @@ if (userPermissions) {
 
 | # | Criterion | Tech-debt slug |
 |---|-----------|----------------|
-| S1 | 208 조합 중 `nextAction: null` (terminal) 케이스가 `REJECTED`·`CANCELED`·`RETURN_APPROVED` 3종 × 4 purpose × 4 role = 48건과 일치 | `fsm-table-terminal-count` |
+| S1 | 280 조합 중 `nextAction: null` (terminal) 케이스가 `REJECTED`·`CANCELED`·`RETURN_APPROVED` 3종 × 4 purpose × 5 role = 60건과 일치 | `fsm-table-terminal-count` |
 | S2 | fixture 생성 스크립트 `pnpm --filter schemas run gen:descriptor-table` 제공 (baseline 재생성용) | `fsm-fixture-generator-script` |
 | S3 | `calculateAvailableActions`와 `getNextStep`이 **동일 transition table**을 참조하도록 `canPerformAction` 경유로 리팩토링 | `checkouts-available-actions-refactor` |
 | S4 | 테이블 테스트 fail 시 diff 출력 (expected vs actual) | `fsm-table-diff-reporter` |
@@ -83,7 +83,7 @@ if (userPermissions) {
 # 1. 타입 + 테스트
 pnpm --filter backend exec tsc --noEmit
 pnpm --filter schemas run test
-pnpm --filter backend run test -- checkout-fsm.table
+pnpm --filter schemas run test -- --testPathPattern=checkout-fsm.table
 
 # 2. MUST grep
 grep -n "if (userPermissions)" apps/backend/src/modules/checkouts/checkouts.service.ts
@@ -100,30 +100,31 @@ grep -c "from '@equipment-management/schemas'" \
   apps/frontend/hooks/use-checkout-group-descriptors.ts
 # 기대: 1 1 (M12)
 
-# 3. 테이블 fixture entry count
-node -e "const t = require('./packages/schemas/dist/fsm/__tests__/fixtures/descriptor-table.js'); console.log(Object.keys(t.DESCRIPTOR_TABLE).length)"
-# 기대: 208
+# 3. 테이블 fixture entry count (280 = 14 status × 4 purpose × 5 role)
+pnpm --filter schemas run test -- --testPathPattern=checkout-fsm.table --verbose 2>&1 | grep "covers all"
+# 기대: ✓ covers all 280 (status × purpose × role) combinations
 
-# 4. 변경 파일 수
+# 4. 변경 파일 수 (≤5)
 git diff --name-only | grep -v '^\.claude/' | wc -l
-# 기대: 4
+# 기대: ≤5
 ```
 
 ---
 
-## 208 조합 산출 근거
+## 280 조합 산출 근거 (실측 수치)
 
-- `CheckoutStatus` 13종: `pending`, `borrower_approved`, `approved`, `lender_checked`, `borrower_received`, `checked_out`, `in_use`, `overdue`, `borrower_returned`, `lender_received`, `returned`, `return_approved`, `rejected`, `canceled` (actual enum 길이 확인 후 조정. `CHECKOUT_STATUS_VALUES.length`를 런타임 assert)
+- `CheckoutStatus` **14종**: `pending`, `borrower_approved`, `approved`, `rejected`, `checked_out`, `lender_checked`, `borrower_received`, `in_use`, `borrower_returned`, `lender_received`, `returned`, `return_approved`, `overdue`, `canceled`
 - `CheckoutPurpose` 4종: `calibration`, `repair`, `rental`, `return_to_vendor`
-- `UserRole` 4종: `test_engineer`, `lab_manager`, `technical_manager`, `admin`
+- `FixtureUserRole` **5종**: `test_engineer`, `technical_manager`, `quality_manager`, `lab_manager`, `system_admin`
+  - `UserRole` enum과 동일 5개 값. `@equipment-management/shared-constants` 순환의존 회피를 위해 fixture 내 직접 선언.
 
-**실제 count**: `CHECKOUT_STATUS_VALUES.length × CheckoutPurpose 4 × UserRole 4`. 테스트 선언부에 `expect(CHECKOUT_STATUS_VALUES.length * 4 * 4).toBe(entryCount)` assertion 포함.
+**실제 count**: `14 × 4 × 5 = 280`. 테스트 선언부에 `expect(CHECKOUT_STATUS_VALUES.length * CHECKOUT_PURPOSE_VALUES.length * FIXTURE_ROLE_VALUES.length).toBe(EXPECTED_ENTRY_COUNT)` assertion 포함.
 
 ---
 
 ## Acceptance
 
-루프 완료 조건 = 위 MUST 14개 모두 PASS + 208 table test 통과.
+루프 완료 조건 = 위 MUST 14개 모두 PASS + 280 table test 통과.
 서버 응답 `meta` 필드가 **항상** populate되어 Sprint 1.3 (fail-closed `?? false`) 구현이 안전해진다.
 SHOULD 미달 항목은 `tech-debt-tracker.md`에 등록 후 루프 종료.
 
