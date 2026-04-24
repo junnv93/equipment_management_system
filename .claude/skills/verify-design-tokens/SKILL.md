@@ -820,6 +820,35 @@ primarySolid: (v: CalloutVariant): string => PRIMARY_SOLID_CLASSES[v],
 - `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_GUIDANCE_CTA_PRIMARY_SOLID` (5 variant)
 - 모두 2026-04-24 Phase 1.1 self-audit에서 function → Record 사전 생성으로 마이그레이션됨
 
+### Step 27: NC compact dot 클래스 — `getNCWorkflowCompactDotClasses` SSOT 경유 필수 (2026-04-24 추가)
+
+**원칙:** NC 워크플로우 compact 모드의 dot 상태 클래스는 `NC_WORKFLOW_TOKENS.compactDot.*` 직접 접근 금지. `getNCWorkflowCompactDotClasses(stepIdx, currentIdx, isLongOverdue)` 유틸 함수만 허용.
+
+**이유:**
+- `compactDot`은 5 상태(completed/current/currentCritical/pending)를 가지며, `isLongOverdue + NC_OPEN_STEP_INDEX + NC_TERMINAL_STEP_INDEX` 조합 분기가 내장됨.
+- 직접 접근 시 분기 로직이 컴포넌트에 중복 → overdue/terminal 조건 누락 버그 발생 용이.
+- full 모드의 `getNCWorkflowNodeClasses` / `getNCWorkflowLabelClasses` / `getNCWorkflowConnectorClasses`와 동일 SSOT 설계 (2026-04-24 Phase 3 도입).
+
+**FAIL 조건:**
+- `apps/frontend/components/**`에서 `NC_WORKFLOW_TOKENS.compactDot.` 직접 접근.
+- `getNCWorkflowCompactDotClasses`가 `apps/frontend/lib/design-tokens/index.ts`에 미등록.
+
+**탐지 명령어:**
+```bash
+# 컴포넌트 파일에서 compactDot 직접 접근 탐지
+grep -rn "NC_WORKFLOW_TOKENS\.compactDot\." \
+  apps/frontend/components/ --include="*.tsx" --include="*.ts"
+# 기대: 0건 (PASS)
+
+# index.ts re-export 확인
+grep -n "getNCWorkflowCompactDotClasses" apps/frontend/lib/design-tokens/index.ts
+# 기대: 1건 (PASS)
+```
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_WORKFLOW_TOKENS.compactDot.*` + `getNCWorkflowCompactDotClasses` 정의
+- `apps/frontend/components/non-conformances/NCDetailClient.tsx` — 유일한 compact dot 사용처 (2026-04-24 Phase 3)
+
 ## Output Format
 
 ```markdown

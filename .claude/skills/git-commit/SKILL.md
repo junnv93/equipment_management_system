@@ -15,17 +15,25 @@ description: Analyzes git changes to generate conventional commit messages and a
 
 ## 워크플로우
 
-### Step 1: 현재 상태 파악
+### Step 1: 세션 변경 파일 파악 (필수 선행 단계)
+
+**먼저 이번 대화 컨텍스트에서 Edit/Write 도구로 실제 작업한 파일 목록을 추출합니다.**
+
+대화 이력에서 Edit·Write 도구 호출 내역을 검토하여 이번 세션에서 수정·생성한 파일 경로를 목록화합니다. 이 목록이 커밋 대상의 기준입니다.
+
+그 다음 git 상태를 확인합니다:
 
 ```bash
 git status --short
 git branch --show-current
 git diff --staged --stat
-git diff --stat
 ```
 
-- staged 변경이 없으면 unstaged 변경을 기준으로 함
-- 변경사항이 없으면 사용자에게 알리고 종료
+**중요 원칙**:
+- **세션에서 작업한 파일만 스테이징합니다** — `git status`에 보이더라도 이번 세션에서 건드리지 않은 파일은 절대 포함하지 않음
+- 사용자가 "전체 변경사항 다 커밋해줘"라고 명시하면 그에 따름
+- staged 변경이 없으면 세션 파일 중 unstaged 변경을 기준으로 함
+- 세션에서 작업한 파일이 없거나 이미 모두 커밋된 경우 사용자에게 알리고 종료
 - **현재 브랜치가 main이 아니면** → 해당 브랜치에서 커밋+푸시 (새 브랜치 생성 불필요)
 
 ### Step 2: 워크플로우 결정
@@ -94,8 +102,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 #### A. main 직접 푸시 경로
 
 ```bash
-# 1. 파일 스테이징 (구체적 파일명 — git add -A 사용 금지)
-git add <file1> <file2> ...
+# 1. 세션에서 작업한 파일만 스테이징 (구체적 파일명 — git add -A 사용 금지)
+git add <session-file1> <session-file2> ...
 
 # 2. 커밋 (HEREDOC으로 메시지 전달)
 git commit -m "$(cat <<'EOF'
@@ -116,8 +124,8 @@ git push origin main
 git checkout -b <type>/<short-description>
 # 예: feat/excel-export, fix/login-error, refactor/cache-strategy
 
-# 2. 파일 스테이징 + 커밋
-git add <files>
+# 2. 세션에서 작업한 파일만 스테이징 + 커밋
+git add <session-files>
 git commit -m "$(cat <<'EOF'
 <커밋 메시지>
 
@@ -200,6 +208,8 @@ PR 생성 후 URL을 사용자에게 알려줍니다.
 
 ## 주의사항
 
+- **이번 세션에서 작업한 파일만 커밋** — git status에 보이는 다른 파일(이전 세션·다른 프로세스 수정)은 건드리지 않음
+- 사용자가 명시적으로 "전체 다 커밋해줘"라고 하면 세션 제한 없이 git status 기준으로 처리
 - 하나의 커밋에는 하나의 논리적 변경사항만 포함
 - `git add -A`나 `git add .` 사용 금지 — 구체적 파일명 나열
 - `.env`, 시크릿 파일은 커밋하지 않음 — 발견 시 경고
