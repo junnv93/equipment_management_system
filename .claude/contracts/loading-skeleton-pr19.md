@@ -16,7 +16,7 @@ PR-19: Loading Skeleton + inline Error 컴포넌트
 | M7 | ko + en i18n 4키 추가 | `grep '"heroKpi"\|"nextStepPanel"\|"workflowTimeline"\|"retry"' apps/frontend/messages/ko/checkouts.json apps/frontend/messages/en/checkouts.json` |
 | M8 | WorkflowTimelineSkeleton 재구현 없음 (WorkflowTimeline.tsx에서 import) | `grep "WorkflowTimelineSkeleton" apps/frontend/components/checkouts/HeroKPISkeleton.tsx` → 0 hit (신규 파일에서 재정의 없음 확인) |
 | M9 | Error 컴포넌트에 `role="alert"` + `aria-live` 존재 | `grep -l 'role="alert"' apps/frontend/components/checkouts/*Error.tsx` |
-| M10 | motion-reduce:animate-none 존재 (모든 skeleton) | `grep -l "motion-reduce:animate-none" apps/frontend/components/checkouts/HeroKPISkeleton.tsx apps/frontend/components/checkouts/NextStepPanelSkeleton.tsx apps/frontend/components/checkouts/CheckoutGroupCardSkeleton.tsx` |
+| M10 | motion-reduce:animate-none 존재 (토큰 파일 또는 skeleton .tsx) | `grep -r "motion-reduce:animate-none" apps/frontend/lib/design-tokens/components/checkout-loading-skeleton.ts apps/frontend/components/checkouts/HeroKPISkeleton.tsx apps/frontend/components/checkouts/NextStepPanelSkeleton.tsx apps/frontend/components/checkouts/CheckoutGroupCardSkeleton.tsx` 참고: Tailwind v4 자동감지 — .ts 파일도 JIT 스캔 대상 |
 
 ## SHOULD Criteria
 

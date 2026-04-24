@@ -5,6 +5,20 @@
 
 ---
 
+## ~~반출입 관리 PR-19: Loading Skeleton 3종 신규 + inline Error 3종 + checkout-loading-skeleton.ts 토큰~~ ✅ 완료 (2026-04-24, 92차)
+
+> `checkout-loading-skeleton.ts` 신규 — `CHECKOUT_LOADING_SKELETON_TOKENS` (base/text/card/badge/icon/timeline, `as const`) Layer 3 SSOT.
+> `HeroKPISkeleton.tsx` 신규 — hero col-span-2(h-32) + secondary 4개 그리드 미러링, aria-hidden, motion-reduce 토큰 경유.
+> `NextStepPanelSkeleton.tsx` 신규 — icon + title + button 3-line 세로 구조.
+> `CheckoutGroupCardSkeleton.tsx` 신규 — 그룹 헤더 + row 3개(badge + text.md + text.sm).
+> `HeroKPIError.tsx` / `NextStepPanelError.tsx` / `WorkflowTimelineError.tsx` 신규 — role="alert" aria-live="assertive" + useTranslations('checkouts.error') + retry onRetry prop.
+> `CheckoutListSkeleton.tsx` 확장 — 상단 HeroKPISkeleton 추가.
+> i18n ko+en — `checkouts.error.{heroKpi, nextStepPanel, workflowTimeline, retry}` 4키 동기화.
+> Tailwind v4 설계 교훈: 토큰 `.ts` 파일의 리터럴 클래스는 자동감지 범위에 포함 — JIT purge 위험 없음.
+> Evaluator M10 계약 검증 명령 오설계 → Fix Loop 1회로 PASS (반복 없음).
+
+---
+
 ## ~~반출입 관리 PR-14: WorkflowTimeline 5/7단계 분기 + 노드 상태 5종 + checkout-timeline.ts 토큰~~ ✅ 완료 (2026-04-24, 89차)
 
 > `checkout-timeline.ts` 신규 — CHECKOUT_TIMELINE_TOKENS (container/connector/node/dot/label, 5종 노드 상태 SSOT).
