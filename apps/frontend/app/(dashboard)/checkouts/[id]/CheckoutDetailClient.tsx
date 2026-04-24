@@ -96,6 +96,7 @@ export default function CheckoutDetailClient({
   // SSOT: 백엔드 @RequirePermissions와 일치 (role-permissions.ts)
   const canApprove = can(Permission.APPROVE_CHECKOUT);
   const canBorrowerApprove = can(Permission.BORROWER_APPROVE_CHECKOUT);
+  const canBorrowerReject = can(Permission.BORROWER_REJECT_CHECKOUT);
   const canStart = can(Permission.START_CHECKOUT);
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
   const canCancelCheckout = can(Permission.CANCEL_CHECKOUT);
@@ -443,12 +444,10 @@ export default function CheckoutDetailClient({
   const LegacyActionsBlock = () => {
     const buttons: React.ReactNode[] = [];
 
-    // rental 1차 승인 — 차용팀 TM만 가능 (borrower_approved 경유 후 lender 최종 승인)
-    if (
-      checkout.status === CSVal.PENDING &&
-      checkout.purpose === CPVal.RENTAL &&
-      canBorrowerApprove
-    ) {
+    // rental 1차 승인/반려 — 차용팀 TM만 가능 (borrower_approved 경유 후 lender 최종 승인)
+    // SSOT: 승인/반려 Permission 독립 분리 (role-permissions.ts BORROWER_APPROVE/REJECT_CHECKOUT)
+    const isRentalPending = checkout.status === CSVal.PENDING && checkout.purpose === CPVal.RENTAL;
+    if (isRentalPending && canBorrowerApprove) {
       buttons.push(
         <Button
           key="borrower-approve"
@@ -458,7 +457,11 @@ export default function CheckoutDetailClient({
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
           {t('actions.borrowerApprove')}
-        </Button>,
+        </Button>
+      );
+    }
+    if (isRentalPending && canBorrowerReject) {
+      buttons.push(
         <Button
           key="borrower-reject"
           variant="destructive"
