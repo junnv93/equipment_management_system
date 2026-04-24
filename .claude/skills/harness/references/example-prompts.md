@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-24 (93차 정리: PR-19 body → archive-design.md 이동. active: PR-16·PR-17·PR-21~PR-23 + tech-debt 11건)**
+> **마지막 정리일: 2026-04-24 (94차 정리: PR-17 body → archive-design.md 이동. active: PR-16·PR-21~PR-23 + tech-debt 11건)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -251,56 +251,9 @@ SSOT 주의:
 
 ---
 
-### 🟢 LOW — PR-17: 최종 리뷰 + 번들 크기 diff + S-14 Feature Flag tech-debt 등록 + 3-Phase rollout (Mode 0)
+### 🟢 LOW — PR-17: 최종 리뷰 + 번들 크기 diff + S-14 Feature Flag tech-debt 등록 + 3-Phase rollout (Mode 0) ✅ 완료
 
-```
-문제:
-PR-3~PR-16 완료 후 전체 통합 검증 없음.
-NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 상시화 계획 미등록.
-
-조건: PR-3~PR-16 전부 완료 후 진행 (최종 단계, 병렬 불가).
-
-작업:
-
-1. 전체 통합 검증:
-   pnpm --filter frontend run tsc --noEmit && pnpm --filter backend run tsc --noEmit
-   pnpm --filter frontend run lint
-   node scripts/self-audit.mjs --all         (체크 ①~⑨ 위반 0)
-   node scripts/check-i18n-keys.mjs --all    (8 네임스페이스 누락 0)
-   pnpm --filter frontend run build
-   NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true \
-     pnpm --filter frontend run test:e2e -- --grep "@next-step|@checkout-ia|@your-turn|@empty-state"
-   (11 시나리오 전부 PASS)
-
-2. S-14 Feature Flag tech-debt 등록:
-   .claude/exec-plans/tech-debt-tracker.md 항목 추가:
-   - 제목: "Feature Flag NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 상시화"
-   - 분류: MEDIUM / 기술부채
-   - 조건: Beta 2 세션 안정 + 프로덕션 A/B 1주 관찰 후
-   - 대응: flag 코드 제거 → flag=false 분기 삭제 → .env.example 해당 줄 삭제
-   - 예상 시점: 2026-Q2
-
-3. 번들 크기 diff:
-   pnpm --filter frontend run build 2>&1 | node scripts/check-bundle-size.mjs --compare
-   /checkouts, /checkouts/[id], /dashboard 라우트 < 5% 증가 확인
-
-4. Feature Flag 3-Phase rollout 체크리스트:
-
-   | 단계 | 시점                             | NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL | 비고                       |
-   |------|----------------------------------|--------------------------------------|----------------------------|
-   | Alpha| PR-5 머지 직후                   | false (기본)                         | 내부 QA만 true 수동 토글   |
-   | Beta | E2E 11 시나리오 2 세션 안정화 후 | true (개발 환경)                     | 프로덕션은 여전히 false    |
-   | GA   | 프로덕션 A/B 1주 관찰 후         | true (전역)                          | flag 코드 제거 (S-14 후속) |
-
-SSOT 주의:
-- tech-debt-tracker 항목 형식: 기존 항목 스타일 준수
-- 번들 baseline: check-bundle-size.mjs baseline 파일 갱신 금지 (비교 기준 보존)
-
-검증:
-- 위 1번 전체 통합 검증 PASS
-- tech-debt-tracker.md에 NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 항목 존재
-- 번들 증가분 < 5% 확인
-```
+> 아카이브: [archive-design.md](./archive-design.md) — 반출입 관리 PR-17
 
 ---
 
@@ -436,7 +389,7 @@ SSOT 주의:
 >
 > **Phase 12 (독립)**: PR-2 이후 → PR-11 (Audit gate)
 >
-> **Phase 16 (최종)**: PR-3~PR-19 전부 완료 → PR-17 (최종 리뷰 + 번들 + Flag rollout)
+> **Phase 16 (완료)**: PR-3~PR-19 전부 완료 → PR-17 ✅ (최종 리뷰 + 번들 + Flag rollout)
 >
 > **Phase A (완료)**: PR-2 이후 → PR-20 (Backend 보안/SSOT) ✅
 >

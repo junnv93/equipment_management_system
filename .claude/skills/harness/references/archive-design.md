@@ -5,6 +5,19 @@
 
 ---
 
+## ~~반출입 관리 PR-17: 최종 통합 검증 + Feature Flag 3-Phase rollout + tech-debt 등록~~ ✅ 완료 (2026-04-24, 94차)
+
+> tsc(backend+frontend) PASS, lint PASS, self-audit(1850파일) 위반 0, i18n(107키) PASS, build PASS.
+> E2E 22 passed (20 skipped = flag 비활성 예정된 skip, 36 did not run = 크로스브라우저).
+> 발견된 버그 3건 수정: (1) global-setup.ts `lab_manager`→`technical_manager` (UPDATE_EQUIPMENT 권한 부재 → 403),
+> (2) `checkout-db-helpers.ts` 신규 생성 (s-toast.spec.ts 누락 모듈), (3) s-toast.spec.ts USERS import + token 파라미터 제거.
+> tech-debt-tracker.md PR-17 항목 2건 추가: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 상시화 조건(Q2) + global-setup 역할 문서화.
+> 번들 크기: Turbopack 빌드 per-route 크기 미출력 → baseline 빈 상태 유지 (compare 스킵).
+> 3-Phase rollout 상태: Alpha 완료 → Beta 1세션 완료 (22 passed) → GA 대기.
+> UL-QP-18 교훈: lab_manager(시험소장)은 직무분리상 UPDATE_EQUIPMENT 없음. 시스템 트리거 API는 technical_manager 토큰 사용.
+
+---
+
 ## ~~반출입 관리 PR-19: Loading Skeleton 3종 신규 + inline Error 3종 + checkout-loading-skeleton.ts 토큰~~ ✅ 완료 (2026-04-24, 92차)
 
 > `checkout-loading-skeleton.ts` 신규 — `CHECKOUT_LOADING_SKELETON_TOKENS` (base/text/card/badge/icon/timeline, `as const`) Layer 3 SSOT.
