@@ -5,6 +5,22 @@
 
 ---
 
+## ~~반출입 관리 PR-11: Self-Audit 게이트 강화 + 번들 크기 측정~~ ✅ 완료 (2026-04-24, 81차)
+
+> 체크 ⑧ FSM 리터럴 감지 + 체크 ⑨ hex 색상 감지 추가. measure-bundle.mjs 스크립트 완료.
+
+```
+조치:
+- scripts/self-audit.mjs: Check 8(FSM 상태 리터럴 — if(status === 'X') 패턴 canPerformAction() 사용 권고) 추가
+                          Check 9(hex 색상 직접 하드코딩 감지 — BRAND_CLASS_MATRIX 경유 권고) 추가
+- scripts/measure-bundle.mjs 신규: ANALYZE=true ANALYZE_MODE=json 빌드, gzipSize 집계
+  baseline: scripts/bundle-baseline-checkouts.json (gzip kB 전용, bundle-baseline.json과 분리)
+  8KB gzip 초과 시 경고 (--compare 플래그)
+- package.json: "measure:bundle": "node scripts/measure-bundle.mjs" 추가
+```
+
+---
+
 ## ~~37차 정리 (2026-04-09) — Dockerfile hardening 실빌드 검증~~ ✅ 완료 (2026-04-09)
 
 `docker build --target production` 실측으로 36차/30차/29차에 등재됐던 **Docker 관련 4건 전부 stale 확인 → 아카이브**. 동시에 fresh 빌드에서만 드러나는 **실제 근본 버그 2건** 발견 + root-cause 수정:

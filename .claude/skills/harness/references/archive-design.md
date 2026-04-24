@@ -5,6 +5,25 @@
 
 ---
 
+## ~~반출입 관리 PR-3: Design Token Layer 2 확장~~ ✅ 완료 (2026-04-24, 82차)
+
+> surface 5단/typography flat/CHECKOUT_ICON_MAP/NEXT_STEP_PANEL_TOKENS/brand-틴트/ring-dashed.
+> PR-4·7·9·14 블로킹 해소.
+
+```
+조치:
+- semantic.ts: ELEVATION_TOKENS.surface(flush/raised/floating/emphasis/overlay 5단) + TYPOGRAPHY_TOKENS + SPACING_RHYTHM_TOKENS export 추가
+- checkout.ts: CHECKOUT_STEPPER_TOKENS.status.next + CHECKOUT_STATS_VARIANTS.hero + CHECKOUT_ROW_TOKENS.hover 추가
+- workflow-panel.ts 신규: NEXT_STEP_PANEL_TOKENS (floating/inline/compact/labels/values/urgency/actionButton/terminal)
+- checkout-icons.ts 신규: CHECKOUT_ICON_MAP (status/action/emptyState/urgency — 컴포넌트 단위 재선언 금지)
+- brand.ts: brand-progress(진행중 블루그레이) + brand-archive(완료/취소 회색) CSS 변수 2개 추가
+- globals.css: :root + .dark 양쪽 CSS 변수 정의 (hex 하드코딩 0건 — CSS 변수 경유)
+- index.ts: workflow-panel.ts + checkout-icons.ts re-export 추가
+- globals.css @layer utilities: .ring-dashed { outline: 2px dashed; outline-offset: 2px; } 추가
+```
+
+---
+
 ## ~~NC 상세 페이지 "다음 단계 가이던스" — Phase 1~4 프롬프트 (4건)~~ ✅ 전체 완료 (2026-04-22)
 
 > **배경 (2026-04-21, /review-design 부적합관리 상세 64/100)**: AP-01~10 개선 + 4개 안내 UI(반려 배너·전제조건 블록·roleHint·waitingGuidance)를 단일 GuidanceCallout 추상화로 통합.

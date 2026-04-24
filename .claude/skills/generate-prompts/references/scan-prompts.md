@@ -1,6 +1,9 @@
 # Scan Agent Prompts
 
-Launch these 3 agents in parallel during Step 2.
+Launch all 3 agents in a **single message** (parallel). Each agent:
+- `subagent_type: "Explore"` — optimized for fast codebase traversal
+- `run_in_background: true` — runs while orchestrator reads existing prompts
+- Named (see table in SKILL.md) — enables `SendMessage` follow-up without re-scan
 
 ## Agent A: Backend Scan
 

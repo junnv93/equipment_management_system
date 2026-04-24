@@ -16,30 +16,42 @@ Scan → Verify → Generate harness prompts for `example-prompts.md`.
 
 ## Workflow
 
-### 1. Load existing prompts
+### 1 + 2. Load & Scan (simultaneously)
 
-Read `.claude/skills/harness/references/example-prompts.md`. Note completed (~~strikethrough~~), in-progress, and pending items.
+**In the same message**, do both:
 
-### 2. Parallel scan (3 Agents)
+**Step 1** — Read `.claude/skills/harness/references/example-prompts.md`. Note completed (~~strikethrough~~), in-progress, and pending items.
 
-Launch 3 Agents **in parallel** with prompts from [references/scan-prompts.md](references/scan-prompts.md):
-- **Agent A**: Backend (TODO/FIXME, security gaps, performance, dead code)
-- **Agent B**: Frontend (TODO/FIXME, hardcoded strings, a11y, missing error.tsx)
-- **Agent C**: Infra/packages (unused enums, missing indexes, CI optimization)
+**Step 2** — Launch 3 background Explore agents **in parallel** (use prompts from [references/scan-prompts.md](references/scan-prompts.md)):
 
+| Agent | name | subagent_type | domain |
+|-------|------|---------------|--------|
+| A | `scan-backend` | `Explore` | Backend: TODO/FIXME, security, perf, dead code |
+| B | `scan-frontend` | `Explore` | Frontend: TODO/FIXME, hardcoding, a11y, error.tsx |
+| C | `scan-infra` | `Explore` | Infra/packages: enums, indexes, CI, env |
+
+Set `run_in_background: true` on all 3. You will be notified when each completes.
 Each agent must report findings with `file:line`.
 
-### 3. Verify each finding (CRITICAL — never skip)
+### 3. Verify findings (CRITICAL — never skip)
 
-For every finding, use Read/Grep to confirm it exists in current code:
+Wait for all 3 scan agents. Then verify.
 
+**< 10 findings total** → verify directly with Read/Grep:
 ```
 "X is missing" → Read the file, confirm it's actually missing
 "Decorator missing" → Read the full controller
 "Index missing" → Read the schema's index section
 ```
 
-Classify each:
+**≥ 10 findings** → launch 3 parallel Explore agents to verify by domain:
+- `verify-backend` (subagent_type: Explore) — verifies Agent A findings
+- `verify-frontend` (subagent_type: Explore) — verifies Agent B findings
+- `verify-infra` (subagent_type: Explore) — verifies Agent C findings
+
+If a scan agent's findings need clarification, use `SendMessage({to: "scan-backend"})` rather than re-scanning.
+
+Classify each finding:
 - **Confirmed** → write prompt
 - **False positive** → exclude, record in archive with reason
 - **Needs user input** → ask user (domain decisions like FK policy, permission removal)
