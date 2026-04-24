@@ -288,7 +288,71 @@ export const ANIMATION_PRESETS = {
    * motion-reduce:opacity-100 — prefers-reduced-motion 환경에서 opacity-0 시작으로 사라지는 버그 방어 */
   staggerFadeInItem:
     'motion-safe:animate-stagger-fade-in motion-safe:opacity-0 motion-reduce:opacity-100',
+
+  // ── PR-15: 신규 애니메이션 프리셋 ─────────────────────────────────────────
+
+  /** fade-in + translateY(8px→0) 등장 (globals.css --animate-fade-in-up SSOT) */
+  fadeInUp: 'motion-safe:animate-fade-in-up motion-reduce:animate-none',
+
+  /** 부드러운 pulse (2s ease-in-out, opacity 1→0.7, 로딩/대기 인디케이터) */
+  pulseSoft: 'motion-safe:animate-pulse-soft motion-reduce:animate-none',
+
+  /** 강한 pulse (1s linear, critical 상태 강조) */
+  pulseHard: 'motion-safe:animate-pulse-hard motion-reduce:animate-none',
+
+  /**
+   * lift — 카드/버튼 hover 시 살짝 뜨는 효과
+   * transition-all 금지 원칙에 따라 TRANSITION_PRESETS.fastShadowTransform 사용
+   */
+  lift: `hover:-translate-y-0.5 hover:shadow-md ${TRANSITION_PRESETS.fastShadowTransform}`,
+
+  /** Radix UI accordion 펼침 (globals.css --animate-accordion-down SSOT) */
+  accordionDown: 'motion-safe:animate-accordion-down motion-reduce:animate-none',
+
+  /** 완료 micro-celebration — scale(1→1.08→1) 0.4s 1회 */
+  confettiMicro: 'motion-safe:animate-confetti-micro motion-reduce:animate-none',
 } as const;
+
+// ============================================================================
+// Reduced Motion Guard (prefers-reduced-motion 안전 래퍼)
+// ============================================================================
+
+/**
+ * REDUCED_MOTION — prefers-reduced-motion 안전 래퍼
+ *
+ * motion-reduce:animate-none 짝을 자동 추가.
+ * 이미 motion-reduce:animate-none이 포함된 클래스에는 중복 추가되지 않음.
+ *
+ * @example
+ * REDUCED_MOTION.safe(ANIMATION_PRESETS.pulseHard)
+ * // → 'motion-safe:animate-pulse-hard motion-reduce:animate-none'
+ */
+export const REDUCED_MOTION = {
+  safe: (animClass: string): string => {
+    if (animClass.includes('motion-reduce:animate-none')) return animClass;
+    return `${animClass} motion-reduce:animate-none`;
+  },
+} as const;
+
+// ============================================================================
+// Stagger Item Utility (inline style 기반 딜레이)
+// ============================================================================
+
+/**
+ * staggerItem — 리스트/그리드 아이템 순차 등장 딜레이 (60ms 간격)
+ *
+ * MOTION_TOKENS.stagger.comfortable(60ms) SSOT와 동일.
+ * ANIMATION_PRESETS.staggerFadeInItem 클래스와 함께 사용.
+ *
+ * @example
+ * <div
+ *   className={ANIMATION_PRESETS.staggerFadeInItem}
+ *   style={staggerItem(index)}
+ * >
+ */
+export function staggerItem(index: number): React.CSSProperties {
+  return { animationDelay: `${index * 60}ms` };
+}
 
 /**
  * Duration 유틸리티

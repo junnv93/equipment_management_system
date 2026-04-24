@@ -56,7 +56,9 @@ import {
   CheckoutStatus,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  computeTotalSteps,
   type CheckoutAction,
+  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
@@ -728,13 +730,15 @@ export default function CheckoutDetailClient({
           </CardHeader>
           <CardContent>
             <Suspense
-              fallback={<WorkflowTimelineSkeleton count={checkout.purpose === 'rental' ? 8 : 5} />}
+              fallback={
+                <WorkflowTimelineSkeleton
+                  count={computeTotalSteps(checkout.purpose as CheckoutPurpose)}
+                />
+              }
             >
               <WorkflowTimeline
                 status={checkout.status}
-                purpose={
-                  checkout.purpose as import('@equipment-management/schemas').CheckoutPurpose
-                }
+                purpose={checkout.purpose as CheckoutPurpose}
               />
             </Suspense>
           </CardContent>

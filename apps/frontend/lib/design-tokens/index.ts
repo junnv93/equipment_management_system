@@ -115,6 +115,8 @@ export {
   ANIMATION_PRESETS,
   TRANSITION_PRESETS,
   EASING_CLASSES,
+  REDUCED_MOTION,
+  staggerItem,
 } from './motion';
 
 // ============================================================================
@@ -737,6 +739,12 @@ export {
   type CheckoutEmptyStateIconKey,
   type CheckoutUrgencyIconKey,
 } from './components/checkout-icons';
+
+// Checkout Workflow Timeline
+export {
+  CHECKOUT_TIMELINE_TOKENS,
+  type CheckoutTimelineNodeState,
+} from './components/checkout-timeline';
 
 // ============================================================================
 // Usage Guidelines

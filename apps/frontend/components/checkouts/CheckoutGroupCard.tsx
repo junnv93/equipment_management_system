@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
   CalendarDays,
@@ -53,6 +54,8 @@ import {
   FONT,
   getManagementNumberClasses,
   MICRO_TYPO,
+  ANIMATION_PRESETS,
+  getStaggerFadeInStyle,
 } from '@/lib/design-tokens';
 
 // ============================================================================
@@ -435,7 +438,7 @@ function CheckoutGroupCard({
                   {t('groupCard.noEquipment')}
                 </div>
               ) : (
-                equipmentRows.map((row) => {
+                equipmentRows.map((row, rowIndex) => {
                   const daysRemaining = row.expectedReturnDate
                     ? calculateDaysRemaining(row.expectedReturnDate)
                     : null;
@@ -449,7 +452,8 @@ function CheckoutGroupCard({
                     // WCAG 2.1 AA: role + tabIndex + onKeyDown + aria-label 모두 충족
                     <div
                       key={`${row.checkoutId}-${row.equipmentId}`}
-                      className={rowBaseClass}
+                      className={cn(rowBaseClass, ANIMATION_PRESETS.staggerFadeInItem)}
+                      style={getStaggerFadeInStyle(rowIndex, 'grid')}
                       onClick={() => onCheckoutClick(row.checkoutId)}
                       role="button"
                       tabIndex={0}

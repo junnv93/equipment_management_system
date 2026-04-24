@@ -173,7 +173,8 @@
     "overdueWarning": "The expected return date has passed. Prompt return processing is required.",
     "appearanceStatus": "Appearance Status",
     "operationStatus": "Operation Status",
-    "accessoriesStatus": "Accessories Status"
+    "accessoriesStatus": "Accessories Status",
+    "workflowTimeline": "Workflow Steps"
   },
   "returnInspection": {
     "purposeLabel": "Checkout Purpose:",
@@ -233,7 +234,8 @@
     "borrowerReturn": "Borrower Return",
     "lenderReturn": "Lender Return",
     "rejected": "Rejected",
-    "canceled": "Canceled"
+    "canceled": "Canceled",
+    "borrowerApproved": "Borrower Approved"
   },
   "fsm": {
     "panelTitle": "Next Step",
@@ -725,6 +727,10 @@
       "lender_received": {
         "title": "Return Received",
         "description": "The lender has received the returned equipment. Please proceed with return processing."
+      },
+      "borrower_approved": {
+        "title": "Borrower Approved",
+        "description": "The borrower team's technical manager has given first approval. Awaiting final approval from the technical manager."
       }
     }
   },

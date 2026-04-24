@@ -211,6 +211,7 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
  */
 export const CHECKOUT_STEP_LABELS: Readonly<Record<string, string>> = {
   pending: 'pendingApproval',
+  borrower_approved: 'borrowerApproved',
   approved: 'approved',
   checked_out: 'checkedOut',
   returned: 'returned',

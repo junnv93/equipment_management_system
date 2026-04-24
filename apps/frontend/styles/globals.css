@@ -173,6 +173,9 @@
   --animate-approval-text-up-3: approval-text-up 0.4s ease-out 0.7s both;
   --animate-stagger-fade-in: staggerFadeIn 0.25s var(--ease-spring-smooth) both;
   --animate-pulse-glow: pulseGlow 2s ease-in-out infinite;
+  --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
+  --animate-pulse-hard: pulseHard 1s linear infinite;
+  --animate-confetti-micro: confettiMicro 0.4s var(--ease-spring-pop) 1 both;
 
   /* Keyframes */
   @keyframes accordion-down {
@@ -231,6 +234,19 @@
   @keyframes staggerFadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  @keyframes pulseHard {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.04); }
+  }
+  @keyframes confettiMicro {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.08); }
+    100% { transform: scale(1); }
   }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import type { CheckoutAction, NextStepDescriptor } from '@equipment-management/schemas';
 
-import { NEXT_STEP_PANEL_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { NEXT_STEP_PANEL_TOKENS, ANIMATION_PRESETS, REDUCED_MOTION } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -48,6 +48,7 @@ export function NextStepPanel({
   const containerClasses = cn(
     NEXT_STEP_PANEL_TOKENS.container[variant],
     NEXT_STEP_PANEL_TOKENS.urgency[urgency],
+    urgency === 'critical' && REDUCED_MOTION.safe(ANIMATION_PRESETS.pulseHard),
     ANIMATION_PRESETS.fadeIn,
     className
   );

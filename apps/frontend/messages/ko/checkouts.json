@@ -173,7 +173,8 @@
     "overdueWarning": "반입 예정일이 초과되었습니다. 빠른 반입 처리가 필요합니다.",
     "appearanceStatus": "외관 상태",
     "operationStatus": "작동 상태",
-    "accessoriesStatus": "부속품 상태"
+    "accessoriesStatus": "부속품 상태",
+    "workflowTimeline": "진행 단계"
   },
   "returnInspection": {
     "purposeLabel": "반출 목적:",
@@ -233,7 +234,8 @@
     "borrowerReturn": "반납 확인",
     "lenderReturn": "반입 확인",
     "rejected": "거절됨",
-    "canceled": "취소됨"
+    "canceled": "취소됨",
+    "borrowerApproved": "1차 승인"
   },
   "fsm": {
     "panelTitle": "다음 단계",
@@ -725,6 +727,10 @@
       "lender_received": {
         "title": "반납 수령 완료",
         "description": "반납된 장비를 대여자가 수령했습니다. 반입 처리를 진행해주세요."
+      },
+      "borrower_approved": {
+        "title": "1차 승인 완료",
+        "description": "차용팀 기술책임자가 1차 승인했습니다. 기술책임자의 최종 승인을 기다리고 있습니다."
       }
     }
   },

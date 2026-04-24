@@ -91,7 +91,7 @@ export const NEXT_STEP_PANEL_TOKENS = {
     normal: '',
     warning: 'border-l-4 border-l-brand-warning bg-brand-warning/5',
     critical:
-      'border-l-4 border-l-brand-critical bg-brand-critical/5 motion-safe:animate-pulse motion-reduce:animate-none',
+      'border-l-4 border-l-brand-critical bg-brand-critical/5 motion-safe:animate-pulse-hard motion-reduce:animate-none',
   },
 
   actionButton: {
