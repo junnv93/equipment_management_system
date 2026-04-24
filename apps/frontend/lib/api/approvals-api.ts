@@ -24,6 +24,7 @@ import {
   CheckoutStatusValues as CSVal,
   CalibrationPlanStatusValues as CPSVal,
   EquipmentImportSourceValues as EISrcVal,
+  EquipmentImportStatusValues as EIStVal,
   SITE_LABELS,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
@@ -483,9 +484,9 @@ class ApprovalsApi {
         // Equipment returning - backend filters automatically
         checkoutApi.getPendingReturnApprovals(),
         // Rental equipment arriving - backend filters by site (equipmentImports.site)
-        equipmentImportApi.getList({ status: 'pending', sourceType: 'rental' }),
+        equipmentImportApi.getList({ status: EIStVal.PENDING, sourceType: 'rental' }),
         // Shared equipment arriving - backend filters by site
-        equipmentImportApi.getList({ status: 'pending', sourceType: 'internal_shared' }),
+        equipmentImportApi.getList({ status: EIStVal.PENDING, sourceType: 'internal_shared' }),
       ]);
 
       const returnItems = (returns.data || []).map((item: Checkout) =>
@@ -647,7 +648,7 @@ class ApprovalsApi {
   private async getPendingRentalImports(): Promise<ApprovalItem[]> {
     try {
       const response = await equipmentImportApi.getList({
-        status: 'pending',
+        status: EIStVal.PENDING,
         sourceType: 'rental',
       });
       const items = response.data || [];
