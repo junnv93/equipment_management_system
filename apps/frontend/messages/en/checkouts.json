@@ -76,7 +76,8 @@
     "lenderConfirm": "Lender Confirm",
     "borrowerReceive": "Receive Confirm",
     "borrowerReturn": "Return Confirm",
-    "lenderReceive": "Inbound Inspection"
+    "lenderReceive": "Inbound Inspection",
+    "cancelCheckout": "Cancel Checkout"
   },
   "empty": {
     "noData": {
@@ -208,7 +209,9 @@
     "rejectTitle": "Reject Checkout",
     "rejectDescription": "Reject the checkout request. Please enter a reason for rejection.",
     "rejectReasonLabel": "Rejection Reason",
-    "rejectReasonPlaceholder": "Enter the reason for rejection"
+    "rejectReasonPlaceholder": "Enter the reason for rejection",
+    "cancelTitle": "Cancel Checkout Request",
+    "cancelDescription": "Are you sure you want to cancel this checkout request? This action cannot be undone."
   },
   "stepper": {
     "ariaLabel": "Checkout Progress Status",

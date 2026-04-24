@@ -272,6 +272,34 @@ grep -rn "params\.set\|params\.delete" \
 **PASS:** 필터 핸들러에서 `new URLSearchParams(searchParams.toString())` 직접 조작 0건.
 **FAIL:** 핸들러 내부에서 `new URLSearchParams`를 생성하거나 `params.set/delete`로 개별 키 조작 → `filtersToSearchParams({ ...filters, changedKey: value })` 패턴으로 교체.
 
+### Step 9: 탭 컴포넌트 `countActiveFilters` SSOT 사용 확인
+
+필터가 있는 목록 탭 컴포넌트(OutboundCheckoutsTab, InboundCheckoutsTab 등)에서
+`filterActive` 판단 시 `countActiveFilters(filters)` SSOT를 사용하는지 확인합니다.
+인라인 `statusFilter !== 'all' || !!searchTerm` 계산은 새 필터 추가 시 자동 동기화가 안 돼 EmptyState 분기 버그 발생.
+(85차: InboundCheckoutsTab에서 인라인 계산으로 destination/purpose 필터 활성 상태를 놓침)
+
+```bash
+# 탭 컴포넌트에서 countActiveFilters 사용 여부 확인
+grep -rn "filterActive" \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/ \
+  --include="*.tsx"
+```
+
+**PASS 기준:**
+- `filterActive`를 계산하는 모든 탭 컴포넌트가 `countActiveFilters(filters) > 0` 형태 사용
+- `countActiveFilters` import가 `checkout-filter-utils`에서 옴
+
+**FAIL 기준:**
+- `statusFilter !== 'all' || !!searchTerm` 등 인라인 계산 패턴 → `countActiveFilters(filters) > 0`으로 교체
+
+```bash
+# 인라인 filterActive 계산 패턴 탐지
+grep -rn "filterActive.*!==\|filterActive.*!!" \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/ \
+  --include="*.tsx"
+```
+
 ## Output Format
 
 ```markdown
@@ -285,6 +313,7 @@ grep -rn "params\.set\|params\.delete" \
 | 6   | 섹션 독립 페이지네이션    | PASS/FAIL | useState 이중관리 훅 목록 |
 | 7   | subTab SSOT 파생 (checkout) | PASS/FAIL | inProgress 하드코딩 여부 |
 | 8   | filtersToSearchParams SSOT | PASS/FAIL | new URLSearchParams 직접 조작 위치 |
+| 9   | 탭 컴포넌트 countActiveFilters SSOT | PASS/FAIL | 인라인 filterActive 계산 위치 |
 ```
 
 ## Exceptions

@@ -204,7 +204,8 @@ TypeScript 가 잡지만(필수 속성 에러), `Record<string, ...>` 로 약타
 - `AUDIT_ACTION_*`: enum `AuditAction` ↔ `AUDIT_ACTION_BADGE_TOKENS` (strict) +
   `AUDIT_TIMELINE_DOT_COLORS` (loose) + i18n `audit.actionLabels.*`
 - `EquipmentStatus` ↔ `EQUIPMENT_STATUS_BADGE_TOKENS` + i18n `equipment.statusLabels.*`
-- `CheckoutStatus`, `CalibrationStatus`, `NCStatus` 등 동일 패턴
+- `CheckoutStatus` ↔ `CHECKOUT_STATUS_BADGE_TOKENS` (loose) — TypeScript 미탐지, grep 필수 (85차 차입: borrower_approved 누락으로 배지 미렌더링 발생)
+- `CalibrationStatus`, `NCStatus` 등 동일 패턴
 - `SOFTWARE_AVAILABILITY_VALUES` ↔ `SOFTWARE_AVAILABILITY_BADGE_TOKENS` (loose `Record<string, string>`) — 신규 상태 추가 시 TypeScript 미탐지
 - `SoftwareValidationRequired`(boolean flag, `true/false` 키) ↔ `SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS` (loose) — `yes`/`no` 2개 키만 허용
 
@@ -218,6 +219,21 @@ rg -oP "^\s+([a-z_]+):" apps/frontend/lib/design-tokens/components/audit.ts \
   | sed 's/[: ]//g' | sort -u > /tmp/tokens.txt
 diff /tmp/enum.txt /tmp/tokens.txt
 ```
+
+**탐지 — CHECKOUT_STATUS_BADGE_TOKENS 완전성 (15개 상태, `as const` 배열이므로 node require 불가):**
+```bash
+# CHECKOUT_STATUS_VALUES 배열 추출
+grep -oP "'[a-z_]+'" packages/schemas/src/enums/checkout.ts \
+  | head -15 | tr -d "'" | sort > /tmp/checkout_enum.txt
+
+# CHECKOUT_STATUS_BADGE_TOKENS 키 추출
+awk '/^export const CHECKOUT_STATUS_BADGE_TOKENS/,/^} as const/' \
+  apps/frontend/lib/design-tokens/components/checkout.ts \
+  | grep -oP '^\s+([a-z_]+):' | tr -d ': ' | sort > /tmp/checkout_tokens.txt
+
+diff /tmp/checkout_enum.txt /tmp/checkout_tokens.txt
+```
+**PASS:** diff 출력 없음. **FAIL:** 누락된 상태 키 → `CHECKOUT_STATUS_BADGE_TOKENS`에 적절한 brand 색상 클래스로 추가.
 
 **PASS:** enum 값 ⊆ 모든 N개 record 키. **FAIL:** 누락된 키를 모든 loose record
 + i18n 양 언어에 동시 추가. 단순 키 추가 후 의미상 색상/라벨 대응 검토 필수

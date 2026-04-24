@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-24 (86차 정리: PR-4·PR-6·PR-8·PR-20(전체)·PR-24(86차) 완료 → archive 이동. active: PR-5·PR-9~PR-10·PR-12~PR-19·PR-23 + tech-debt low 1건 + UltraReview 3종)**
+> **마지막 정리일: 2026-04-24 (87차 정리: PR-7·PR-22 완료(85차)·PR-4·PR-6·PR-8·PR-20·PR-24(86차) archive 이동. active: PR-5·PR-9~PR-10·PR-12~PR-19·PR-23 + tech-debt low 1건 + UltraReview 3종)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
