@@ -305,7 +305,7 @@ SSOT 주의:
 
 ---
 
-### 🟠 HIGH — PR-14: WorkflowTimeline — 5/7단계 분기 + 노드 상태 5종 + checkout-timeline.ts 토큰 [P1,P3] (Mode 1)
+### 🟠 HIGH — PR-14: WorkflowTimeline — 5/8단계 분기 + 노드 상태 5종 + checkout-timeline.ts 토큰 [P1,P3] (Mode 1) ✅ 완료
 
 ```
 문제:
@@ -329,30 +329,38 @@ SSOT 주의:
        future:  'bg-muted border border-border text-muted-foreground',
        skipped: 'bg-muted border border-border opacity-50',
      },
-     label: { past: 'text-muted-foreground text-sm', current: 'font-medium text-sm', next: 'text-brand-info text-sm' },
+     label: {
+       past: 'text-muted-foreground text-sm',
+       current: 'font-medium text-sm text-foreground',
+       next: 'text-brand-info text-sm',
+       future: 'text-muted-foreground text-sm',
+       skipped: 'text-muted-foreground text-sm opacity-50',
+     },
    } as const;
 
 2. WorkflowTimeline.tsx (신규):
    apps/frontend/components/checkouts/WorkflowTimeline.tsx
-   - computeStepIndex: packages/schemas/src/fsm/checkout-fsm.ts에서 import
-   - purpose prop으로 5단계(non-rental) / 7단계(rental) 분기
+   - computeStepIndex + computeTotalSteps: @equipment-management/schemas에서 import (재구현 금지)
+   - purpose prop으로 5단계(non-rental) / 8단계(rental) 분기
+     rental 8단계: pending→borrower_approved→approved→lender_checked→borrower_received→in_use→borrower_returned→return_approved
    - 노드 상태 5종: past / current / next / future / skipped
    - Radix Tooltip: t('checkouts.help.status.{status}.description') — i18n 공유 소스
    - 모바일: @media max-width: 768px compact 세로 모드
    - data-testid="workflow-timeline" 부착
+   - WorkflowTimeline export: 내부 Suspense + WorkflowTimelineSkeleton fallback 포함
 
 3. CheckoutDetailClient.tsx 증분:
    - statusGroup 섹션에 WorkflowTimeline 추가
-   - Suspense + WorkflowTimelineSkeleton fallback
+   - WorkflowTimeline 자체에 Suspense 내장되므로 별도 Suspense 래핑 불필요
 
 SSOT 주의:
-- computeStepIndex: checkout-fsm.ts에서 import (재구현 금지)
+- computeStepIndex + computeTotalSteps: @equipment-management/schemas에서 import (재구현 금지)
 - tooltip i18n: checkouts.help.status.* 공유 소스 (중복 번역 금지)
 - hex 하드코딩 금지
 
 검증:
 - pnpm --filter frontend run tsc --noEmit
-- non-rental 반출 → 5개 노드, rental → 7개 노드 렌더 확인
+- non-rental 반출 → 5개 노드, rental → 8개 노드 렌더 확인
 - current 노드 ring + data-step-state="current" 확인
 ```
 

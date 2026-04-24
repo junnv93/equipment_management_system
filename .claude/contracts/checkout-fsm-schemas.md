@@ -25,7 +25,7 @@
 | S1 | 단위 테스트 케이스 10개 이상 | test count |
 | S2 | getNextStep matrix 테스트 (최소 5개 snapshot) | test |
 | S3 | canPerformAction 권한 매트릭스 (5 role × 주요 action) | test |
-| S4 | computeStepIndex: calibration=5, rental=7 total steps | test |
+| S4 | computeStepIndex: calibration=5, rental=8 total steps (computeTotalSteps SSOT) | test |
 
 ## Files Expected
 - `packages/schemas/src/fsm/checkout-fsm.ts` (신규)
