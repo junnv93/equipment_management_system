@@ -13,6 +13,7 @@ describe('Type Guards', () => {
         name: 'Test User',
         role: 'test_engineer' as const,
         isActive: true,
+        lastLogin: null,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -40,8 +41,10 @@ describe('Type Guards', () => {
   describe('isTeam', () => {
     it('should return true for valid team object', () => {
       const validTeam = {
-        id: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // UUID 형식
+        id: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
         name: 'RF Team',
+        classification: 'fcc_emc_rf' as const,
+        site: 'suwon' as const,
         description: 'Radio Frequency Testing Team',
         equipmentCount: 10,
         memberCount: 5,

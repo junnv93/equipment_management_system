@@ -22,6 +22,7 @@ const BASE_DESCRIPTOR: NextStepDescriptor = {
   currentStatus: 'pending',
   currentStepIndex: 1,
   totalSteps: 5,
+  nextStepIndex: 2,
   nextAction: 'approve',
   nextActor: 'approver',
   nextStatus: 'approved',
@@ -30,12 +31,16 @@ const BASE_DESCRIPTOR: NextStepDescriptor = {
   labelKey: 'approve',
   hintKey: 'pendingApprove',
   urgency: 'normal',
+  phase: null,
+  phaseIndex: null,
+  totalPhases: null,
 };
 
 const TERMINAL_DESCRIPTOR: NextStepDescriptor = {
   currentStatus: 'return_approved',
   currentStepIndex: 5,
   totalSteps: 5,
+  nextStepIndex: null,
   nextAction: null,
   nextActor: 'none',
   nextStatus: null,
@@ -44,6 +49,9 @@ const TERMINAL_DESCRIPTOR: NextStepDescriptor = {
   labelKey: 'terminal',
   hintKey: 'terminal',
   urgency: 'normal',
+  phase: null,
+  phaseIndex: null,
+  totalPhases: null,
 };
 
 const BLOCKED_DESCRIPTOR: NextStepDescriptor = {

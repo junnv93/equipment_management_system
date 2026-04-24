@@ -10,7 +10,7 @@ describe('Equipment Type Guards and Schemas', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'Test Equipment',
         managementNumber: 'SUW-E0001',
-        status: EquipmentStatusEnum.enum.available,
+        site: 'suwon' as const,
         managementMethod: ManagementMethodEnum.enum.external_calibration,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

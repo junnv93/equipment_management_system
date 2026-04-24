@@ -94,7 +94,22 @@
     "csvElapsedDays": "{days}일",
     "paginationPrev": "이전 페이지",
     "paginationNext": "다음 페이지",
-    "paginationPage": "{page}페이지로 이동"
+    "paginationPage": "{page}페이지로 이동",
+    "action": {
+      "act": "조치",
+      "approve": "승인",
+      "blocked": "선행 필요",
+      "blockedTooltip": {
+        "repair": "수리 이력 등록 필요",
+        "recalibration": "재교정 필요"
+      },
+      "done": "완료"
+    }
+  },
+  "banner": {
+    "compactTitle": "부적합 {count}건 미조치",
+    "compactOverdue": "최장 {days}일 경과",
+    "compactCta": "상세 보기"
   },
   "ncStatus": {
     "open": "등록됨",
@@ -230,14 +245,33 @@
     "editDialog": {
       "title": "부적합 정보 수정",
       "description": "부적합의 원인 및 조치 계획을 수정합니다.",
-      "actionPlanPlaceholder": "조치 계획을 입력하세요 (선택)",
+      "causePlaceholder": "부적합의 원인을 구체적으로 기재해 주세요",
+      "actionPlanPlaceholder": "예: 렌즈 교체 후 재교정 예정",
+      "required": "필수",
+      "optional": "선택",
+      "changeSummary": {
+        "title": "변경 요약",
+        "modified": "수정됨",
+        "unchanged": "변경 없음"
+      },
       "cancel": "취소",
-      "save": "저장",
+      "save": {
+        "default": "저장",
+        "withCount": "저장 (변경 {count}건)"
+      },
       "saving": "저장 중..."
     },
     "repairDialog": {
       "title": "수리 이력 등록",
       "description": "수리 이력을 등록하고 이 부적합 건에 자동으로 연결합니다.",
+      "stepLabel": "STEP {current}/{total}",
+      "next": "다음",
+      "edit": "수정",
+      "confirm": {
+        "title": "수리 등록 확인",
+        "subtitle": "아래 내용으로 수리 이력을 등록합니다. 이 작업은 되돌릴 수 없습니다.",
+        "hint": "등록 즉시 이 부적합에 연결되어 종결이 가능해집니다. 이전 단계로 돌아가 수정할 수 있습니다."
+      },
       "repairDate": "수리 일자",
       "repairDescription": "수리 내용",
       "repairDescriptionPlaceholder": "수리 내용을 상세히 입력하세요 (최소 10자)",
@@ -264,6 +298,13 @@
         "three": "STEP 3 / 3"
       },
       "scrollToAction": "하단으로 이동",
+      "roleChip": {
+        "my-turn": "처리자 작업",
+        "waiting": "처리자 대기",
+        "approval": "관리자 승인 필요",
+        "blocked": "선행 작업 필요",
+        "done": "완료"
+      },
       "open_operator": {
         "title": "시정 조치 내용을 입력하세요",
         "body": "원인을 해결한 방법을 아래 조치 섹션에 기록한 뒤, 하단 '조치 완료' 버튼을 눌러 기술책임자에게 검토를 요청하세요.",
@@ -312,6 +353,12 @@
       "closed_all": {
         "title": "부적합 처리가 완료되었습니다",
         "body": "이 부적합은 종결되었습니다. 편집과 상태 변경은 감사 추적 보호를 위해 잠깁니다."
+      }
+    },
+    "documents": {
+      "view": {
+        "grid": "그리드",
+        "list": "리스트"
       }
     },
     "dialog": {

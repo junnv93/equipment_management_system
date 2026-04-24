@@ -94,7 +94,22 @@
     "csvElapsedDays": "{days}d",
     "paginationPrev": "Previous page",
     "paginationNext": "Next page",
-    "paginationPage": "Go to page {page}"
+    "paginationPage": "Go to page {page}",
+    "action": {
+      "act": "Act",
+      "approve": "Approve",
+      "blocked": "Blocked",
+      "blockedTooltip": {
+        "repair": "Repair history required",
+        "recalibration": "Recalibration required"
+      },
+      "done": "Done"
+    }
+  },
+  "banner": {
+    "compactTitle": "{count} NC pending",
+    "compactOverdue": "Longest {days}d overdue",
+    "compactCta": "View details"
   },
   "ncStatus": {
     "open": "Open",
@@ -230,14 +245,33 @@
     "editDialog": {
       "title": "Edit Non-Conformance",
       "description": "Edit the cause and action plan of this non-conformance.",
-      "actionPlanPlaceholder": "Enter action plan (optional)",
+      "causePlaceholder": "Describe the non-conformance cause in detail",
+      "actionPlanPlaceholder": "e.g., Replace lens and recalibrate",
+      "required": "required",
+      "optional": "optional",
+      "changeSummary": {
+        "title": "Change summary",
+        "modified": "Modified",
+        "unchanged": "Unchanged"
+      },
       "cancel": "Cancel",
-      "save": "Save",
+      "save": {
+        "default": "Save",
+        "withCount": "Save ({count} changes)"
+      },
       "saving": "Saving..."
     },
     "repairDialog": {
       "title": "Register Repair Record",
       "description": "Register a repair record and automatically link it to this non-conformance.",
+      "stepLabel": "STEP {current}/{total}",
+      "next": "Next",
+      "edit": "Edit",
+      "confirm": {
+        "title": "Confirm repair registration",
+        "subtitle": "Registering repair history with the content below. This action cannot be undone.",
+        "hint": "Once registered, this NC will be linked and eligible for closure. Go back to edit."
+      },
       "repairDate": "Repair Date",
       "repairDescription": "Repair Description",
       "repairDescriptionPlaceholder": "Enter repair details (minimum 10 characters)",
@@ -264,6 +298,13 @@
         "three": "STEP 3 / 3"
       },
       "scrollToAction": "Scroll to action",
+      "roleChip": {
+        "my-turn": "Your action",
+        "waiting": "Awaiting operator",
+        "approval": "Approval needed",
+        "blocked": "Prerequisite required",
+        "done": "Done"
+      },
       "open_operator": {
         "title": "Enter your corrective action",
         "body": "Record how you resolved the root cause in the correction section below, then click 'Mark as Corrected' to request review from the technical manager.",
@@ -312,6 +353,12 @@
       "closed_all": {
         "title": "Non-conformance processing complete",
         "body": "This non-conformance has been closed. Editing and status changes are locked to protect the audit trail."
+      }
+    },
+    "documents": {
+      "view": {
+        "grid": "Grid",
+        "list": "List"
       }
     },
     "dialog": {
