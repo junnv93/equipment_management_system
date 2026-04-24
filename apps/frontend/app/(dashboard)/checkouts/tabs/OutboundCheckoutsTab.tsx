@@ -355,14 +355,13 @@ export default function OutboundCheckoutsTab({
   // 서브탭별 빈 상태 렌더링 함수
   const renderEmptyState = () => {
     // overdue 필터 + summary.overdue === 0 → celebration variant (기한 초과 없음 축하)
-    // TODO(PR-8): i18n 키로 교체 예정
     if (filters.status === CSVal.OVERDUE && summary.overdue === 0) {
       return (
         <EmptyState
           variant="celebration"
           icon={CheckCircle2}
-          title="기한 초과 없음"
-          description="현재 기한이 초과된 반출 건이 없습니다."
+          title={t('emptyState.overdueClear.title')}
+          description={t('emptyState.overdueClear.description')}
           testId="empty-state-overdue-clear"
         />
       );

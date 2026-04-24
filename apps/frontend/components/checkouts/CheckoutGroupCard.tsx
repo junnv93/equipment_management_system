@@ -35,6 +35,7 @@ import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   type CheckoutStatus,
+  type CheckoutPurpose,
   type NextStepDescriptor,
 } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
@@ -49,6 +50,8 @@ import {
   CHECKOUT_INTERACTION_TOKENS,
   RENTAL_FLOW_INLINE_TOKENS,
   CHECKOUT_STEP_LABELS,
+  CHECKOUT_YOUR_TURN_BADGE_TOKENS,
+  getPurposeBarClass,
   getDdayClasses,
   formatDday,
   FONT,
@@ -302,18 +305,6 @@ function CheckoutGroupCard({
   );
 
   // ──────────────────────────────────────────────
-  // 목적별 색상 바 클래스
-  // ──────────────────────────────────────────────
-  const getPurposeBarClass = (purpose: string): string => {
-    const map: Record<string, string> = {
-      calibration: CHECKOUT_ITEM_ROW_TOKENS.purposeBar.calibration,
-      repair: CHECKOUT_ITEM_ROW_TOKENS.purposeBar.repair,
-      rental: CHECKOUT_ITEM_ROW_TOKENS.purposeBar.rental,
-    };
-    return map[purpose] ?? CHECKOUT_ITEM_ROW_TOKENS.purposeBar.default;
-  };
-
-  // ──────────────────────────────────────────────
   // Group card 스타일 (기한 초과 여부)
   // ──────────────────────────────────────────────
   const cardClass = isOverdueGroup
@@ -407,7 +398,7 @@ function CheckoutGroupCard({
             {yourTurnCount > 0 && (
               <span
                 data-testid="your-turn-summary"
-                className="text-xs text-brand-info font-medium shrink-0"
+                className={CHECKOUT_YOUR_TURN_BADGE_TOKENS.summary.container}
                 aria-label={t('yourTurn.summaryAria', { count: yourTurnCount })}
               >
                 {t('yourTurn.count', { count: yourTurnCount })}
@@ -487,7 +478,7 @@ function CheckoutGroupCard({
                     >
                       {/* 목적 색상 바 */}
                       <div
-                        className={`${CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base} ${getPurposeBarClass(row.purpose)}`}
+                        className={`${CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base} ${getPurposeBarClass(row.purpose as CheckoutPurpose)}`}
                         aria-hidden="true"
                       />
 

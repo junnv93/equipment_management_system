@@ -647,6 +647,10 @@
       "title": "No results found",
       "description": "Try changing your filters or search term",
       "cta": "Reset Filters"
+    },
+    "overdueClear": {
+      "title": "No Overdue Checkouts",
+      "description": "All checkouts are within their return dates."
     }
   },
   "yourTurn": {

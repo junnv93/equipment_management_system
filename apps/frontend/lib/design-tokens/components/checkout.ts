@@ -920,8 +920,9 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
     calibration: 'bg-brand-info',
     repair: 'bg-brand-repair',
     rental: 'bg-brand-purple',
+    return_to_vendor: 'bg-brand-neutral',
     default: 'bg-brand-neutral/50',
-  },
+  } satisfies { base: string; default: string } & Record<CheckoutPurpose, string>,
 
   /** 장비 정보 블록 */
   infoBlock: 'flex-1 min-w-0',
@@ -970,6 +971,11 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   /** 장비 수 배지 */
   countBadge: 'text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md',
 } as const;
+
+/** CheckoutPurpose → purposeBar 색상 클래스 SSOT 헬퍼. 타입 강제로 default fallback 미사용. */
+export function getPurposeBarClass(purpose: CheckoutPurpose): string {
+  return CHECKOUT_ITEM_ROW_TOKENS.purposeBar[purpose];
+}
 
 // ============================================================================
 // 19. Checkout Pagination Tokens (반출 목록 페이지네이션)
