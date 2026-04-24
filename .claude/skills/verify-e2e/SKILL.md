@@ -502,6 +502,80 @@ grep -rn "page\.route(" \
 
 **현재 사용처:** `suite-list-ia/s-empty-states.spec.ts` — completed/inProgress 탭 빈 상태 결정론적 검증.
 
+### Step 19: suite-ux 패턴 — localStorage 조작·emulateMedia·모바일 viewport (2026-04-24 추가)
+
+`tests/e2e/features/checkouts/suite-ux/` 디렉토리는 UX 레이어 전용 테스트 묶음이다.
+아래 세 가지 패턴이 이 suite에서 사용되며 일관성 검사가 필요하다.
+
+**19a: localStorage 조작 패턴**
+
+온보딩 힌트 테스트는 `localStorage.removeItem`으로 힌트 상태를 초기화하고, 클릭 후 `localStorage.getItem`으로 결과를 검증한다.
+`page.evaluate()` 내부에서만 localStorage에 접근해야 한다 (직접 Playwright API 없음).
+
+```bash
+# suite-ux에서 localStorage 직접 조작 확인
+grep -rn "localStorage\|evaluate" \
+  apps/frontend/tests/e2e/features/checkouts/suite-ux \
+  --include="*.spec.ts"
+```
+
+**✅ 올바른 패턴:**
+```typescript
+// 초기화
+await page.evaluate(() =>
+  localStorage.removeItem('onboarding-dismissed:checkout-next-step')
+);
+// 검증
+const stored = await page.evaluate(() =>
+  localStorage.getItem('onboarding-dismissed:checkout-next-step')
+);
+expect(stored).toBe('true');
+```
+
+**❌ 금지:**
+```typescript
+// page.localstorage_delete() 같은 존재하지 않는 API 사용
+// localStorage 키 하드코딩 시 'onboarding-dismissed:' prefix 빠뜨리기
+```
+
+**19b: prefers-reduced-motion 검증 패턴**
+
+`page.emulateMedia({ reducedMotion: 'reduce' })` → pulse 클래스 미적용 확인.
+
+```bash
+# emulateMedia 사용 확인
+grep -rn "emulateMedia\|reducedMotion\|prefers-reduced-motion" \
+  apps/frontend/tests/e2e/features/checkouts/suite-ux \
+  --include="*.spec.ts"
+```
+
+**19c: 모바일 viewport 패턴**
+
+모바일 테스트는 `test.use({ viewport: { width: 375, height: 812 } })` 또는 `page.setViewportSize()` 사용.
+`md:hidden` 클래스로 숨겨진 요소는 `toBeHidden()`으로 검증 (DOM에 존재하지만 CSS로 숨김).
+
+```bash
+# 모바일 viewport 설정 확인
+grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
+  apps/frontend/tests/e2e/features/checkouts/suite-ux \
+  --include="*.spec.ts"
+```
+
+**PASS 기준:**
+- `suite-ux/*.spec.ts` 존재 (s-onboarding, s-toast, s-mobile-bottom-sheet 3파일)
+- localStorage 접근이 모두 `page.evaluate()` 경유
+- 모바일 peek 버튼 높이 56px~72px 범위 검증 포함
+- `aria-modal="true"` Drawer 검증 포함
+
+**FAIL 기준:**
+- `waitForTimeout` 사용 (Step 4 위반) — `waitForSelector` 또는 `expect(...).toBeVisible()` 대체
+- `[data-radix-toast-viewport]`가 아닌 `[data-sonner-toast]` — 현재 구현이 shadcn toast이므로 Radix selector 사용
+
+**관련 파일:**
+- `tests/e2e/features/checkouts/suite-ux/s-onboarding.spec.ts`
+- `tests/e2e/features/checkouts/suite-ux/s-toast.spec.ts`
+- `tests/e2e/features/checkouts/suite-ux/s-mobile-bottom-sheet.spec.ts`
+
 ## Output Format
 
 ```markdown
@@ -535,6 +609,9 @@ grep -rn "page\.route(" \
 | 18a | page.route() 응답 스키마 SSOT  | PASS/FAIL | pagination `page:` 금지, `currentPage:` 필수 |
 | 18b | page.unroute() 정리             | PASS/FAIL | route 후 unroute 누락 → 이후 테스트 오염 |
 | 18c | route 후 networkidle 금지       | PASS/FAIL | page.route() 파일에 networkidle 잔존 |
+| 19a | suite-ux localStorage 조작 패턴 | PASS/FAIL | page.evaluate() 외부 localStorage 직접 접근 또는 키 prefix 누락 위치 |
+| 19b | emulateMedia reducedMotion 패턴 | PASS/INFO | pulse 클래스 검증 테스트에서 reduced-motion 시나리오 누락 |
+| 19c | 모바일 viewport + aria-modal 검증 | PASS/FAIL | Drawer toBeVisible 후 aria-modal="true" 검증 누락 |
 ```
 
 ## Exceptions

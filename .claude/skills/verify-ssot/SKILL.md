@@ -426,6 +426,49 @@ grep -rn "StatusValues" \
 
 > **연계:** verify-design-tokens Step 18의 `*StatusValues satisfies` 검사와 상호 보완. design-token 파일에서 StatusValues가 올바르게 import·사용되는지를 이 Step이 담당.
 
+### Step 26: notifyCheckoutAction SSOT 경유 검증 (2026-04-24 추가)
+
+checkout 관련 토스트 알림은 반드시 `lib/checkouts/toast-templates.ts`의 `notifyCheckoutAction`을 경유해야 한다.
+컴포넌트에서 직접 `toast({...})` 호출로 반출 액션 결과를 알리는 인라인 패턴은 SSOT 위반이다.
+
+**탐지 — mutation onSuccess에서 직접 toast 호출:**
+```bash
+# CheckoutGroupCard, CheckoutDetailClient 등에서 approval/반출 onSuccess 직접 toast 호출 탐지
+grep -n "onSuccess.*toast\|toast.*onSuccess" \
+  apps/frontend/components/checkouts/CheckoutGroupCard.tsx \
+  "apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx" 2>/dev/null
+
+# approve/reject/start/return 액션 onSuccess에서 notifyCheckoutAction 미사용 탐지
+grep -n "toast({" \
+  apps/frontend/components/checkouts/CheckoutGroupCard.tsx \
+  "apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx" 2>/dev/null \
+  | grep -v "notifyCheckoutAction\|#"
+```
+
+**✅ 올바른 패턴:**
+```typescript
+// CheckoutGroupCard.tsx
+onSuccess: (_data, variables) =>
+  notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName ?? '' }, t),
+```
+
+**❌ 금지 — 인라인 토스트 직접 호출:**
+```typescript
+onSuccess: () => toast({ title: '승인 완료' }), // SSOT 우회
+```
+
+**PASS:** 반출 액션 onSuccess에서 `notifyCheckoutAction` 경유 확인.
+**FAIL:** `toast({ title: '...' })` 직접 호출 → `notifyCheckoutAction(toast, action, ctx, t)` 패턴으로 전환.
+
+**예외:**
+- 에러 핸들링 시 `toast({ variant: 'destructive', ... })` 직접 호출 — 에러 toast는 현재 SSOT 미포함
+- 비-반출 도메인 컴포넌트에서 toast 직접 호출 — 이 Step은 checkouts 도메인만 대상
+
+**관련 파일:**
+- `apps/frontend/lib/checkouts/toast-templates.ts` — SSOT 함수
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — approve onSuccess 소비처
+- `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` — detail 액션 소비처
+
 ## Output Format
 
 ```markdown
@@ -461,6 +504,7 @@ grep -rn "StatusValues" \
 | 23  | DocxTemplate 레거시 barrel 경로 | PASS/FAIL | `reports/docx-template.util` 경유 import 위치 (canonical: `common/docx/`) |
 | 24  | UASVal SSOT — approvals-api.ts | PASS/FAIL | UnifiedApprovalStatus raw 리터럴 직접 할당 위치 |
 | 25  | design-token 헬퍼 내 status literal 직접 비교 금지 | PASS/FAIL | `=== 'overdue'` 등 raw 리터럴 비교 위치 (`*StatusValues` 경유 필요) |
+| 26  | notifyCheckoutAction SSOT 경유 — 반출 onSuccess 직접 toast 금지 | PASS/FAIL | checkout 액션 onSuccess에서 `toast({...})` 직접 호출 위치 |
 ```
 
 ## Exceptions

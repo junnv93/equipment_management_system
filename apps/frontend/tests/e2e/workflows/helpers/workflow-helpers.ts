@@ -1204,4 +1204,52 @@ export async function resetSelfInspections(equipmentId: string): Promise<void> {
   await clearBackendCache();
 }
 
+// ============================================================================
+// Rental 2-Step Borrower API (차용팀 TM 1차 승인/반려)
+// ============================================================================
+
+/**
+ * rental 차용팀 TM 1차 승인 — CAS-Aware, token 직접 주입
+ *
+ * 반환값: APIResponse — 호출자가 status 검증 (negative test에서 403/400 기대 시에도 사용 가능).
+ * `expect(resp.ok())` 내부 강제 없음.
+ *
+ * @param page - Playwright Page (page.request 경유)
+ * @param checkoutId - 대상 반출 ID
+ * @param token - 차용팀 TM의 Bearer token (getBackendTokenByEmail로 취득)
+ */
+export async function borrowerApproveCheckout(page: Page, checkoutId: string, token: string) {
+  const detailResp = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/borrower-approve`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version },
+  });
+}
+
+/**
+ * rental 차용팀 TM 1차 반려 — CAS-Aware, token 직접 주입
+ *
+ * @param reason - 반려 사유 (필수)
+ */
+export async function borrowerRejectCheckout(
+  page: Page,
+  checkoutId: string,
+  reason: string,
+  token: string
+) {
+  const detailResp = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/borrower-reject`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version, reason },
+  });
+}
+
 export { clearBackendCache, cleanupSharedPool, getSharedPool };

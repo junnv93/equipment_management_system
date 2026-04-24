@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 
 import type { CheckoutAction, NextStepDescriptor } from '@equipment-management/schemas';
 
-import { NEXT_STEP_PANEL_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { NEXT_STEP_PANEL_TOKENS, ANIMATION_PRESETS, REDUCED_MOTION } from '@/lib/design-tokens';
+import { useOnboardingHint } from '@/hooks/use-onboarding-hint';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -44,6 +45,8 @@ export function NextStepPanel({
 }: NextStepPanelProps) {
   const t = useTranslations('checkouts.fsm');
   const urgency = descriptor.urgency;
+  const { isVisible: shouldPulse, dismiss: markDone } = useOnboardingHint('checkout-next-step');
+  const pulseClass = shouldPulse ? REDUCED_MOTION.safe(ANIMATION_PRESETS.pulseHard) : '';
 
   const containerClasses = cn(
     NEXT_STEP_PANEL_TOKENS.container[variant],
@@ -104,11 +107,14 @@ export function NextStepPanel({
       {canAct ? (
         <button
           type="button"
-          className={cn(NEXT_STEP_PANEL_TOKENS.actionButton.primary, 'mt-2')}
+          className={cn(NEXT_STEP_PANEL_TOKENS.actionButton.primary, 'mt-2', pulseClass)}
           aria-label={stepLabel}
           disabled={isPending}
           aria-disabled={isPending}
-          onClick={() => onActionClick?.(descriptor.nextAction!)}
+          onClick={() => {
+            markDone();
+            onActionClick?.(descriptor.nextAction!);
+          }}
           data-testid={testId ? `${testId}-action` : undefined}
         >
           {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}

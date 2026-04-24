@@ -654,6 +654,46 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 
 **PASS:** 모든 `rAF` 내 focus 호출에 null guard 존재. **FAIL:** `el.focus()` bare 호출 → `el?.focus()` 또는 `if (el) el.focus()` 교체.
 
+### Step 23: checkout-toast.ts / checkout-your-turn.ts 신규 컴포넌트 토큰 커버리지 (2026-04-24 추가)
+
+PR-18/PR-13에서 추가된 두 컴포넌트 토큰 파일이 design-tokens Layer 3 구조 및 index re-export 규칙을 준수하는지 검증.
+
+**탐지 — checkout-toast.ts 컴포넌트 토큰:**
+```bash
+# CHECKOUT_TOAST_TOKENS index 경유 re-export 확인
+grep -n "checkout-toast\|CHECKOUT_TOAST_TOKENS\|CheckoutToastSeverity" \
+  apps/frontend/lib/design-tokens/index.ts
+
+# duration 값 인라인 하드코딩 탐지 (CHECKOUT_TOAST_TOKENS 미경유)
+grep -rn "duration: 4000\|duration: 6000\|duration: 8000" \
+  apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts"
+```
+
+**탐지 — checkout-your-turn.ts 컴포넌트 토큰:**
+```bash
+# CHECKOUT_YOUR_TURN_BADGE_TOKENS index 경유 re-export 확인
+grep -n "checkout-your-turn\|CHECKOUT_YOUR_TURN_BADGE_TOKENS\|YourTurnBadgeUrgency" \
+  apps/frontend/lib/design-tokens/index.ts
+
+# YourTurnBadge에서 design-tokens index 경유 import 확인
+grep -n "design-tokens" apps/frontend/components/checkouts/YourTurnBadge.tsx
+```
+
+**PASS 기준:**
+- `lib/design-tokens/index.ts`에서 두 토큰 파일 모두 re-export 확인
+- `notifyCheckoutAction` 호출처에서 duration 숫자 인라인 하드코딩 0건
+- `YourTurnBadge.tsx`에서 `@/lib/design-tokens` index 경유 import 확인
+
+**FAIL 기준:**
+- index.ts re-export 누락 → 추가 필요
+- `duration: 4000` 등 숫자 인라인 → `CHECKOUT_TOAST_TOKENS.duration.success` 경유로 전환
+- 컴포넌트에서 토큰 파일 직접 경로 import → index 경유로 수정
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/checkout-toast.ts` — toast duration SSOT
+- `apps/frontend/lib/design-tokens/components/checkout-your-turn.ts` — badge urgency tokens
+- `apps/frontend/lib/checkouts/toast-templates.ts` — CHECKOUT_TOAST_TOKENS 소비처
+
 ## Output Format
 
 ```markdown
@@ -690,6 +730,7 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 20  | BRAND_CLASS_MATRIX 신규 색상 3곳 동시 갱신 | PASS/FAIL | `satisfies` 미존재 또는 globals.css CSS 변수 누락 위치 |
 | 21  | design-token 파일 내 `dark:bg-brand-*` / `dark:text-brand-*` 금지 | PASS/FAIL | brand CSS 변수 대상 dark: prefix 사용 위치 (허용 예외 제외) |
 | 22  | CALLOUT `text-brand-${}` 동적 보간 금지 | PASS/FAIL | `text-brand-${key}` 동적 보간 발견 위치 |
+| 23  | checkout-toast/your-turn 토큰 index re-export + 소비처 SSOT 경유 | PASS/FAIL | index.ts 누락 또는 duration 인라인 숫자 위치 |
 ```
 
 ## Exceptions

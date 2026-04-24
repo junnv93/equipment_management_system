@@ -43,6 +43,13 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import checkoutApi, { Checkout, ConditionCheck } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_DETAIL_TOKENS,
@@ -1321,6 +1328,39 @@ export default function CheckoutDetailClient({
         open={handoverQrOpen}
         onOpenChange={setHandoverQrOpen}
       />
+
+      {/* 모바일 Bottom Sheet — NextStep primary CTA. md 이상에서는 숨김 */}
+      {isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null && (
+        <div
+          className="md:hidden fixed inset-x-0 bottom-0 z-40"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <Drawer>
+            <DrawerTrigger asChild>
+              <button
+                type="button"
+                className="h-16 w-full bg-background border-t border-border flex items-center justify-center gap-2 font-medium text-sm text-foreground"
+                data-testid="checkout-mobile-peek"
+              >
+                {t(`fsm.action.${nextStepDescriptor.labelKey}`)}
+              </button>
+            </DrawerTrigger>
+            <DrawerContent data-testid="checkout-mobile-drawer">
+              <DrawerHeader>
+                <DrawerTitle>{t('fsm.panelTitle')}</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-6">
+                <NextStepPanel
+                  variant="floating"
+                  descriptor={nextStepDescriptor}
+                  onActionClick={handleNextStepAction}
+                  isPending={isAnyNextStepMutationPending}
+                />
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </div>
+      )}
     </div>
   );
 }

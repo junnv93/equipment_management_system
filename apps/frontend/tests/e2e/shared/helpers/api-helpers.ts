@@ -166,6 +166,42 @@ export async function getBackendToken(page: Page, role: string): Promise<string>
 }
 
 /**
+ * Backend JWT 토큰 획득 — 이메일 기반 (특정 팀 유저 지정 시 사용)
+ *
+ * test-login ?email= 파라미터를 활용하여 ALL_TEST_EMAILS에 속하는 임의 테스트 유저 토큰 취득.
+ * role 기반 `getBackendToken`과 동일 tokenCache를 사용하되, 키 충돌 방지를 위해
+ * `email:` 접두사로 네임스페이스를 분리한다.
+ *
+ * @param page - Playwright Page
+ * @param email - ALL_TEST_EMAILS에 포함된 테스트 사용자 이메일
+ *
+ * @example
+ * const uiwangTmToken = await getBackendTokenByEmail(page, 'manager2@example.com');
+ */
+export async function getBackendTokenByEmail(page: Page, email: string): Promise<string> {
+  const cacheKey = `email:${email}`;
+  const now = Date.now();
+  const cached = tokenCache[cacheKey];
+  if (cached && cached.expiresAt > now) {
+    return cached.token;
+  }
+
+  const response = await page.request.get(
+    `${BACKEND_URL}${TEST_LOGIN_PATH}?email=${encodeURIComponent(email)}`
+  );
+  expect(response.ok()).toBeTruthy();
+  const data = await response.json();
+  const token = extractToken(data);
+
+  if (!token) {
+    throw new Error(`Failed to get token for email ${email}: ${JSON.stringify(data)}`);
+  }
+
+  tokenCache[cacheKey] = { token, expiresAt: now + TOKEN_CACHE_TTL_MS };
+  return token;
+}
+
+/**
  * Backend 인메모리 캐시 클리어
  *
  * DB 직접 SQL 리셋 후 반드시 호출해야 한다.

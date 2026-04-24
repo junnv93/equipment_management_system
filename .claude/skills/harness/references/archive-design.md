@@ -391,3 +391,50 @@ Phase 4: 워크플로우 연결
 ```
 
 ---
+
+## 반출입 관리 PR-13 (91차 완료 2026-04-24)
+
+### PR-13: YourTurnBadge + checkout-your-turn.ts 토큰 + use-checkout-group-descriptors (Mode 1) ✅
+
+```
+완료 결과:
+- lib/design-tokens/components/checkout-your-turn.ts 신규 (CHECKOUT_YOUR_TURN_BADGE_TOKENS 3변형)
+- YourTurnBadge.tsx 신규 (urgency별 Bell/AlertTriangle/AlertCircle 아이콘, data-testid="your-turn-badge")
+- hooks/use-checkout-group-descriptors.ts 신규 (useMemo 기반 Map<checkoutId, NextStepDescriptor>)
+- CheckoutGroupCard.tsx 인라인 뱃지 → YourTurnBadge 교체, 인라인 getNextStep → 훅으로 교체
+- design-tokens/index.ts re-export 추가
+- ko/en yourTurn.count i18n 추가
+- tsc --noEmit 에러 없음
+
+아키텍처 결정:
+- getNextStep SSOT: @equipment-management/schemas에서 import (재구현 금지)
+- CHECKOUT_YOUR_TURN_BADGE_TOKENS: design-tokens SSOT
+```
+
+---
+
+## 반출입 관리 PR-18 (91차 완료 2026-04-24)
+
+### PR-18: UX Polish — CheckoutStatusBadge tooltip + NextStep 온보딩 pulse + Toast SSOT + Mobile Drawer (Mode 2) ✅
+
+```
+완료 결과:
+- vaul drawer.tsx 설치 (shadcn CLI, vaul ^1.1.2)
+- lib/design-tokens/components/checkout-toast.ts 신규 (CHECKOUT_TOAST_TOKENS duration 3키)
+- lib/checkouts/toast-templates.ts 신규 (notifyCheckoutAction, toastFn 외부 주입 패턴)
+- CheckoutStatusBadge.tsx 증분: id? prop + Radix Tooltip + HelpCircle + help.status 재사용, rental 조건부 skip
+- NextStepPanel.tsx 증분: useOnboardingHint + REDUCED_MOTION.safe(ANIMATION_PRESETS.pulseHard) + markDone()
+- CheckoutDetailClient.tsx: md:hidden Drawer peek(h-16) + DrawerContent, env(safe-area-inset-bottom)
+- CheckoutGroupCard.tsx: approveMutation variables에 equipmentName 추가 → notifyCheckoutAction 호출
+- ko/en checkouts.json: toast.{approve|reject|start|return|approveReturn}.success 5키 추가
+- E2E 3 시나리오: suite-ux/s-onboarding, s-toast, s-mobile-bottom-sheet
+- tsc --noEmit 에러 없음 (M1~M10 PASS)
+
+아키텍처 결정:
+- sonner 금지 → shadcn useToast() 패턴 (toastFn 외부 주입으로 훅 규칙 준수)
+- ACTION_KEY_MAP에 미매핑 액션 → silent no-op (PR-19+ 확장 포인트)
+- 기존 toast.transition.* 키 보존, toast.{action}.* 별도 추가 (충돌 방지)
+- Drawer는 nextStepDescriptor.nextAction !== null 조건부 렌더 (terminal 상태 미렌더)
+```
+
+---

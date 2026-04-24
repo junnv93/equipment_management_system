@@ -507,6 +507,12 @@
     "internalShared": "Loading internal shared equipment list",
     "internalSharedSr": "Loading internal shared equipment list."
   },
+  "error": {
+    "heroKpi": "Failed to load statistics",
+    "nextStepPanel": "Failed to determine next step",
+    "workflowTimeline": "Failed to display workflow",
+    "retry": "Try again"
+  },
   "legend": {
     "label": "Legend",
     "calibration": "Calibration",
@@ -645,7 +651,10 @@
   },
   "yourTurn": {
     "label": "Your Turn",
-    "tooltip": "{action} required"
+    "tooltip": "{action} required",
+    "count": "{count} to review",
+    "summary": "Your turn: {count} items",
+    "summaryAria": "Your turn pending: {count} items"
   },
   "toast": {
     "transition": {
@@ -664,7 +673,12 @@
       "overdue": {
         "warning": "{equipmentName} is overdue. Please return immediately."
       }
-    }
+    },
+    "approve": { "success": "{equipmentName} approved" },
+    "reject": { "success": "Request rejected" },
+    "start": { "success": "Checkout started" },
+    "return": { "success": "Return completed" },
+    "approveReturn": { "success": "Return approved" }
   },
   "help": {
     "status": {

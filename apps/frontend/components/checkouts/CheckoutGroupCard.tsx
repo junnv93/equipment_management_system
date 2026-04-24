@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
+import { notifyCheckoutAction } from '@/lib/checkouts/toast-templates';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -24,29 +25,28 @@ import {
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
+import { YourTurnBadge } from '@/components/checkouts/YourTurnBadge';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
-import { FRONTEND_ROUTES, getPermissions } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
-  getNextStep,
   type CheckoutStatus,
-  type CheckoutPurpose,
   type NextStepDescriptor,
 } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@equipment-management/schemas';
 import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
+import { useCheckoutGroupDescriptors } from '@/hooks/use-checkout-group-descriptors';
 import {
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
   CHECKOUT_OVERDUE_GROUP_TOKENS,
   CHECKOUT_ITEM_ROW_TOKENS,
   CHECKOUT_INTERACTION_TOKENS,
-  CHECKOUT_TAB_BADGE_TOKENS,
   RENTAL_FLOW_INLINE_TOKENS,
   CHECKOUT_STEP_LABELS,
   getDdayClasses,
@@ -179,10 +179,15 @@ function CheckoutGroupCard({
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup); // 기한 초과 그룹은 기본 펼침
 
-  // FSM descriptor 계산용 permissions (feature flag on일 때만 사용)
+  // FSM descriptor 계산용 role/permissions
   const { data: session } = useSession();
   const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
-  const userPermissions = useMemo(() => getPermissions(role) as readonly string[], [role]);
+
+  // useCheckoutGroupDescriptors: useMemo로 그룹 내 모든 checkout descriptor 일괄 계산
+  const descriptorMap = useCheckoutGroupDescriptors(
+    isNextStepPanelEnabled() ? group.checkouts : [],
+    role
+  );
 
   // ──────────────────────────────────────────────
   // 장비 행 데이터 (checkout > equipment[] 평탄화)
@@ -190,16 +195,8 @@ function CheckoutGroupCard({
   const equipmentRows = useMemo(
     () =>
       group.checkouts.flatMap((checkout) => {
-        // N+1 훅 방지: useMemo 내부에서 getNextStep 직접 호출
         const descriptor: NextStepDescriptor | undefined = isNextStepPanelEnabled()
-          ? getNextStep(
-              {
-                status: checkout.status,
-                purpose: checkout.purpose as CheckoutPurpose,
-                dueAt: checkout.expectedReturnDate ?? null,
-              },
-              userPermissions
-            )
+          ? descriptorMap.get(checkout.id)
           : undefined;
 
         return (checkout.equipment || []).map((equip) => ({
@@ -219,7 +216,7 @@ function CheckoutGroupCard({
           descriptor,
         }));
       }),
-    [group.checkouts, t, canApprove, userPermissions]
+    [group.checkouts, t, canApprove, descriptorMap]
   );
 
   // 그룹 내 pending 건수 + 일괄 승인 가능 여부
@@ -227,6 +224,16 @@ function CheckoutGroupCard({
     () => group.checkouts.filter((co) => co.status === CSVal.PENDING).length,
     [group.checkouts]
   );
+
+  // "내 차례" 카운트 — availableToCurrentUser인 checkout 수
+  const yourTurnCount = useMemo(() => {
+    if (!isNextStepPanelEnabled()) return 0;
+    let count = 0;
+    for (const co of group.checkouts) {
+      if (descriptorMap.get(co.id)?.availableToCurrentUser === true) count++;
+    }
+    return count;
+  }, [group.checkouts, descriptorMap]);
 
   // 일괄 승인: pending 중 하나라도 canApprove가 true면 버튼 표시
   const canApproveBulk = useMemo(
@@ -248,24 +255,17 @@ function CheckoutGroupCard({
     if (!isNextStepPanelEnabled()) return undefined;
     const rentalCheckout = group.checkouts.find((co) => co.purpose === CPVal.RENTAL);
     if (!rentalCheckout) return undefined;
-    return getNextStep(
-      {
-        status: rentalCheckout.status,
-        purpose: rentalCheckout.purpose as CheckoutPurpose,
-        dueAt: rentalCheckout.expectedReturnDate ?? null,
-      },
-      userPermissions
-    );
-  }, [group.checkouts, userPermissions]);
+    return descriptorMap.get(rentalCheckout.id);
+  }, [group.checkouts, descriptorMap]);
 
   // ──────────────────────────────────────────────
   // 인라인 승인 mutation (CAS 포함)
   // ──────────────────────────────────────────────
   const approveMutation = useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
+    mutationFn: ({ id, version }: { id: string; version: number; equipmentName?: string }) =>
       checkoutApi.approveCheckout(id, version),
-    onSuccess: () => {
-      toast({ title: t('toasts.approveSuccess') });
+    onSuccess: (_data, variables) => {
+      notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName ?? '' }, t);
     },
     onError: (error: unknown) => {
       if (isConflictError(error)) {
@@ -284,9 +284,9 @@ function CheckoutGroupCard({
   });
 
   const handleApprove = useCallback(
-    (checkoutId: string, version: number, e: React.MouseEvent) => {
+    (checkoutId: string, version: number, e: React.MouseEvent, equipmentName?: string) => {
       e.stopPropagation();
-      approveMutation.mutate({ id: checkoutId, version });
+      approveMutation.mutate({ id: checkoutId, version, equipmentName });
     },
     [approveMutation]
   );
@@ -394,6 +394,16 @@ function CheckoutGroupCard({
             </CollapsibleTrigger>
 
             {/* 오른쪽: 일괄 승인 + 장비 수 배지 + 화살표 (siblings — button 중첩 없음) */}
+            {yourTurnCount > 0 && (
+              <span
+                data-testid="your-turn-summary"
+                className="text-xs text-brand-info font-medium shrink-0"
+                aria-label={t('yourTurn.summaryAria', { count: yourTurnCount })}
+              >
+                {t('yourTurn.count', { count: yourTurnCount })}
+              </span>
+            )}
+
             {canApproveBulk && pendingCount > 0 && (
               <Button
                 size="sm"
@@ -525,12 +535,7 @@ function CheckoutGroupCard({
 
                         {isNextStepPanelEnabled() &&
                           row.descriptor?.availableToCurrentUser === true && (
-                            <span
-                              data-testid="your-turn-badge"
-                              className={`${CHECKOUT_TAB_BADGE_TOKENS.base} ${CHECKOUT_TAB_BADGE_TOKENS.active}`}
-                            >
-                              {t('yourTurn.label')}
-                            </span>
+                            <YourTurnBadge urgency={row.descriptor.urgency} />
                           )}
 
                         {/* 인라인 액션 버튼 */}
@@ -539,7 +544,9 @@ function CheckoutGroupCard({
                             <Button
                               size="sm"
                               className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.compact}
-                              onClick={(e) => handleApprove(row.checkoutId, row.version, e)}
+                              onClick={(e) =>
+                                handleApprove(row.checkoutId, row.version, e, row.equipmentName)
+                              }
                               disabled={approveMutation.isPending}
                             >
                               <Check className="h-3 w-3" />

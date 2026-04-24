@@ -506,6 +506,71 @@ const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 
 **근거:** 2026-04-21 78차 반출 세션 — `EmptyState.tsx` 내부 `useAuth` 제거 + `canAct?: boolean` prop 전환. 동일 패턴 재도입 방지.
 
+### Step 21: toast-templates toastFn 외부 주입 + useOnboardingHint 패턴 (2026-04-24 추가)
+
+**toast 유틸 레이어는 React Hook을 직접 호출할 수 없다.** `lib/checkouts/toast-templates.ts`처럼
+순수 유틸 레이어에서 토스트를 발송하려면 `toastFn`을 외부에서 주입받아야 한다.
+
+**탐지 — 유틸 레이어에서 React Hook 직접 호출:**
+```bash
+# lib/ 하위에서 use-toast, useToast import 탐지
+grep -rn "use-toast\|useToast\|useSonner" apps/frontend/lib --include="*.ts"
+```
+
+**✅ 올바른 패턴 — toastFn 외부 주입:**
+```typescript
+// toast-templates.ts (유틸 레이어)
+export function notifyCheckoutAction(
+  toastFn: CheckoutToastFn,  // ← 외부 주입
+  action: CheckoutAction,
+  ctx: CheckoutToastContext,
+  t: CheckoutToastTranslate,
+): void {
+  toastFn({ title: t(`toast.${actionKey}.success`, ctx) });
+}
+
+// CheckoutGroupCard.tsx (React 컴포넌트 레이어)
+const { toast } = useToast();
+approveMutation.mutate({ ... }, {
+  onSuccess: (_data, variables) =>
+    notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName }, t)
+});
+```
+
+**❌ 금지 — 유틸 레이어에서 훅 직접 호출:**
+```typescript
+// lib/checkouts/toast-templates.ts
+import { useToast } from '@/hooks/use-toast'; // ← lib 레이어에서 훅 호출 금지
+export function notifyCheckoutAction(...) {
+  const { toast } = useToast(); // React 규칙 위반
+}
+```
+
+**PASS:** `lib/` 하위 `.ts` 파일에서 `useToast`/`useSonner` import 0건.
+**FAIL:** 유틸 레이어에서 훅 직접 호출 → `toastFn` 파라미터 패턴으로 변환.
+
+---
+
+**useOnboardingHint: SSR-safe localStorage 힌트 훅 패턴**
+
+`hooks/use-onboarding-hint.ts`가 SSOT. 동일 기능의 새 훅 생성 금지.
+`useOnboardingHint(id)` — `isVisible`(표시 여부) + `dismiss()`(영구 해제).
+
+**탐지 — STORAGE_KEY_PREFIX 직접 하드코딩 또는 훅 복제:**
+```bash
+# 'onboarding-dismissed:' 문자열 직접 사용 탐지
+grep -rn "onboarding-dismissed" apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "use-onboarding-hint.ts"
+```
+
+**PASS:** `use-onboarding-hint.ts` 외부에서 `onboarding-dismissed:` 문자열 0건.
+**FAIL:** 컴포넌트 내 직접 localStorage.getItem('onboarding-dismissed:...') → 훅 경유로 전환.
+
+**관련 파일:**
+- `apps/frontend/hooks/use-onboarding-hint.ts` — SSOT 훅
+- `apps/frontend/lib/checkouts/toast-templates.ts` — toastFn 외부 주입 패턴 참고 구현
+- `apps/frontend/components/shared/NextStepPanel.tsx` — useOnboardingHint('checkout-next-step') 사용 예
+
 ## Output Format
 
 ```markdown
@@ -536,6 +601,7 @@ const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 | 18  | *-api.ts React Hook 금지   | PASS/FAIL | lib/api/*-api.ts에 @tanstack/react-query import 위치 |
 | 19  | shared/ui 컴포넌트 useAuth 금지 | PASS/FAIL | components/shared·ui에서 useAuth import 위치 |
 | 20  | isMounted ref skip-first-render | PASS/FAIL | 상태 의존 포커스 effect에 isMounted guard 누락 위치 |
+| 21  | toast toastFn 외부 주입 + useOnboardingHint SSOT | PASS/FAIL | lib/ 레이어에서 useToast 직접 호출 위치 / onboarding-dismissed 하드코딩 위치 |
 ```
 
 ## Exceptions

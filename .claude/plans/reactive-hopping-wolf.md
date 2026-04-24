@@ -75,10 +75,11 @@ root-cause: "rental = lender 단일 주체" 잘못된 도메인 가정
 
 ---
 
-## ✅ 완료된 Phase (Phase 5~8)
+## ✅ 완료된 Phase (Phase 5~9)
 
 Phase 5~8은 87차 세션(커밋 09529105, 151779fb)과 88차 세션(커밋 d5c30c6f)에서 완전 구현.
-이슈 7 (알림 라우팅)까지 모두 해결. 잔여: Phase 9 (유닛테스트), Phase 10 (E2E).
+Phase 9는 89차 세션(커밋 0e686e45)에서 완료: borrowerApprove(4케이스) + borrowerReject(3케이스) = 7 유닛 테스트.
+이슈 7 (알림 라우팅)까지 모두 해결. 잔여: Phase 10 (E2E).
 
 ---
 

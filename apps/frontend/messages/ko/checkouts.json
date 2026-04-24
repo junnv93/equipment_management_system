@@ -507,6 +507,12 @@
     "internalShared": "내부 공용장비 목록 로딩 중",
     "internalSharedSr": "내부 공용 장비 목록을 불러오는 중입니다."
   },
+  "error": {
+    "heroKpi": "통계를 불러오지 못했습니다",
+    "nextStepPanel": "다음 단계를 계산하지 못했습니다",
+    "workflowTimeline": "진행 단계를 표시할 수 없습니다",
+    "retry": "다시 시도"
+  },
   "legend": {
     "label": "색상 범례",
     "calibration": "교정",
@@ -645,7 +651,10 @@
   },
   "yourTurn": {
     "tooltip": "{action} 필요",
-    "label": "내 차례"
+    "label": "내 차례",
+    "count": "내 차례 {count}건",
+    "summary": "내 차례 {count}건",
+    "summaryAria": "내 차례 대기 {count}건"
   },
   "toast": {
     "transition": {
@@ -664,7 +673,12 @@
       "overdue": {
         "warning": "{equipmentName} 기한 초과. 즉시 반납해주세요."
       }
-    }
+    },
+    "approve": { "success": "{equipmentName} 승인 완료" },
+    "reject": { "success": "반출 요청이 반려되었습니다" },
+    "start": { "success": "반출이 시작되었습니다" },
+    "return": { "success": "반납이 완료되었습니다" },
+    "approveReturn": { "success": "반납이 최종 승인되었습니다" }
   },
   "help": {
     "status": {
