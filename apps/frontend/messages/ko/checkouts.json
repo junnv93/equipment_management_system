@@ -428,7 +428,8 @@
     "usagePeriod": "사용 기간",
     "status": "상태",
     "requestDate": "신청일",
-    "receiveRequired": "수령확인 필요"
+    "receiveRequired": "수령확인 필요",
+    "sectionFetchError": "목록을 불러오지 못했습니다."
   },
   "outbound": {
     "searchPlaceholder": "장비 또는 사용자 검색",
@@ -446,7 +447,8 @@
     "returnedSub": "이번 달 완료",
     "overdueGroupLabel": "기한 초과",
     "activeFilter": "▼ 필터 적용됨",
-    "paginationInfo": "{total}건 중 {from}–{to}"
+    "paginationInfo": "{total}건 중 {from}–{to}",
+    "fetchError": "반출 목록을 불러오지 못했습니다."
   },
   "rentalFlow": {
     "title": "렌탈 단계 진행 현황",

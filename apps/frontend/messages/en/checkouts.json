@@ -425,7 +425,8 @@
     "usagePeriod": "Usage Period",
     "status": "Status",
     "requestDate": "Request Date",
-    "receiveRequired": "Receipt Required"
+    "receiveRequired": "Receipt Required",
+    "sectionFetchError": "Failed to load list."
   },
   "outbound": {
     "searchPlaceholder": "Search equipment or user",
@@ -443,7 +444,8 @@
     "returnedSub": "This month completed",
     "overdueGroupLabel": "Overdue",
     "activeFilter": "▼ Filter active",
-    "paginationInfo": "{from}–{to} of {total}"
+    "paginationInfo": "{from}–{to} of {total}",
+    "fetchError": "Failed to load outbound list."
   },
   "rentalFlow": {
     "title": "Rental flow progress",

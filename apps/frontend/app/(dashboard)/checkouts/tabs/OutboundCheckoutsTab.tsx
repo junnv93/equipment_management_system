@@ -14,6 +14,7 @@ import {
   FilterX,
 } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
@@ -153,7 +154,12 @@ export default function OutboundCheckoutsTab({
   // 반출 목록 조회
   // ──────────────────────────────────────────────
   const apiParams = convertFiltersToApiParams(filters);
-  const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
+  const {
+    data: checkoutsData,
+    isLoading: checkoutsLoading,
+    isError: checkoutsError,
+    refetch: refetchCheckouts,
+  } = useQuery({
     queryKey: queryKeys.checkouts.list({
       direction: 'outbound',
       ...apiParams,
@@ -354,6 +360,13 @@ export default function OutboundCheckoutsTab({
         <div className="space-y-3">
           {checkoutsLoading ? (
             <CheckoutListSkeleton label={t('loading.outbound')} srOnly={t('loading.outboundSr')} />
+          ) : checkoutsError ? (
+            <div className="p-6">
+              <ErrorState
+                title={t('outbound.fetchError')}
+                onRetry={() => void refetchCheckouts()}
+              />
+            </div>
           ) : allGroups.length === 0 ? (
             <EmptyState
               variant={emptyStateParams.variant}

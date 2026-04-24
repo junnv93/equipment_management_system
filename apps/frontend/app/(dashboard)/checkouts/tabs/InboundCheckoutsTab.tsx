@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { ClipboardList, FilterX } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { InboundSectionHeader } from '@/components/checkouts/InboundSectionHeader';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -72,7 +73,12 @@ export default function InboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // 반입: 타팀 장비 대여 건 (독립 페이지네이션 — ?inboundPage=N)
   // ──────────────────────────────────────────────
-  const { data: inboundCheckoutsData, isLoading: inboundCheckoutsLoading } = useQuery({
+  const {
+    data: inboundCheckoutsData,
+    isLoading: inboundCheckoutsLoading,
+    isError: inboundCheckoutsError,
+    refetch: refetchInbound,
+  } = useQuery({
     queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: inboundPage }),
     queryFn: async () => {
       const query: CheckoutQuery = {
@@ -91,7 +97,12 @@ export default function InboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // 반입: 외부 업체 렌탈 (독립 페이지네이션)
   // ──────────────────────────────────────────────
-  const { data: rentalImportsData, isLoading: rentalImportsLoading } = useQuery({
+  const {
+    data: rentalImportsData,
+    isLoading: rentalImportsLoading,
+    isError: rentalImportsError,
+    refetch: refetchRental,
+  } = useQuery({
     queryKey: queryKeys.equipmentImports.bySourceType('rental', {
       statusFilter,
       searchTerm,
@@ -111,7 +122,12 @@ export default function InboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // 반입: 내부 공용장비 (독립 페이지네이션)
   // ──────────────────────────────────────────────
-  const { data: internalSharedImportsData, isLoading: internalSharedImportsLoading } = useQuery({
+  const {
+    data: internalSharedImportsData,
+    isLoading: internalSharedImportsLoading,
+    isError: internalSharedImportsError,
+    refetch: refetchInternal,
+  } = useQuery({
     queryKey: queryKeys.equipmentImports.bySourceType('internal_shared', {
       statusFilter,
       searchTerm,
@@ -144,6 +160,7 @@ export default function InboundCheckoutsTab({
   const hasInternalSharedImports = (internalSharedImportsData?.data?.length ?? 0) > 0;
   const isAnyLoading =
     inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
+  const isAnyError = inboundCheckoutsError || rentalImportsError || internalSharedImportsError;
 
   const rentalTotal =
     rentalImportsData?.meta?.pagination?.total ?? rentalImportsData?.data?.length ?? 0;
@@ -188,8 +205,15 @@ export default function InboundCheckoutsTab({
     );
   };
 
-  // 전체 빈 상태: 모든 섹션 로딩 완료 + 3섹션 모두 비었을 때만
-  if (!isAnyLoading && !hasInboundCheckouts && !hasRentalImports && !hasInternalSharedImports) {
+  // 전체 빈 상태: 모든 섹션 로딩 완료 + 에러 없음 + 3섹션 모두 비었을 때만
+  // isAnyError 시 섹션별 ErrorState로 처리하므로 여기서 제외
+  if (
+    !isAnyLoading &&
+    !isAnyError &&
+    !hasInboundCheckouts &&
+    !hasRentalImports &&
+    !hasInternalSharedImports
+  ) {
     return (
       <EmptyState
         variant={filterActive ? 'filtered' : 'no-data'}
@@ -225,6 +249,13 @@ export default function InboundCheckoutsTab({
 
         {inboundCheckoutsLoading ? (
           <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
+        ) : inboundCheckoutsError ? (
+          <div className="p-6">
+            <ErrorState
+              title={t('inbound.sectionFetchError')}
+              onRetry={() => void refetchInbound()}
+            />
+          </div>
         ) : !hasInboundCheckouts ? (
           <EmptyState
             variant="no-data"
@@ -270,6 +301,13 @@ export default function InboundCheckoutsTab({
             label={t('loading.externalRental')}
             srOnly={t('loading.externalRentalSr')}
           />
+        ) : rentalImportsError ? (
+          <div className="p-6">
+            <ErrorState
+              title={t('inbound.sectionFetchError')}
+              onRetry={() => void refetchRental()}
+            />
+          </div>
         ) : !hasRentalImports ? (
           <EmptyState
             variant="no-data"
@@ -376,6 +414,13 @@ export default function InboundCheckoutsTab({
             label={t('loading.internalShared')}
             srOnly={t('loading.internalSharedSr')}
           />
+        ) : internalSharedImportsError ? (
+          <div className="p-6">
+            <ErrorState
+              title={t('inbound.sectionFetchError')}
+              onRetry={() => void refetchInternal()}
+            />
+          </div>
         ) : !hasInternalSharedImports ? (
           <EmptyState
             variant="no-data"

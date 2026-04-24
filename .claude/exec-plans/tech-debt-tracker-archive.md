@@ -353,3 +353,10 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 - [x] **[2026-04-22 review-arch] 🟢 LOW approveReturn checkTeamPermission 미적용** — ✅ 2026-04-22 PR-20 세션에서 `approveReturn`에 `checkTeamPermission` 루프 추가 완료 (ClassificationEnum.enum SSOT 참조). CROSS_TEAM_FORBIDDEN 테스트도 추가. approve/rejectReturn 패리티 달성.
 - [x] **[2026-04-22 p1p3] 🟢 LOW approve 테스트 mockDrizzle.where.then 오버라이드 패턴 비작동** — ✅ 2026-04-22 PR-20 세션에서 `describe('approve')` success/LENDER_TEAM_ONLY 테스트의 `mockDrizzle.where.then` → `mockChain.then` 오버라이드 패턴으로 완전 교체 완료. approveReturn 테스트 패턴과 통일.
+
+### 2026-04-24 harness: tech-debt-4items-0424
+
+- [x] **[2026-04-22 p1p3] 🟡 MEDIUM rejectReturn 스코프 체크 순서 역전 (보안)** — ✅ 2026-04-24 확인: PR-24 fsm-literal-audit 세션에서 이미 수정 완료. `checkouts.service.ts` L2044 `enforceScopeFromData` → L2046 `assertFsmAction` 순서로 확정. 주석("스코프 검증 이후 FSM 검사 — 스코프 외 사용자가 FSM 오류로 상태 역추론하는 정보 노출 방지")도 추가됨. tracker와 실제 코드 불일치 아카이브 처리.
+- [x] **[2026-04-22 p1p3] 🟡 MEDIUM submitConditionCheck step 리터럴 SSOT 위반** — ✅ 2026-04-24 확인: PR-24 fsm-literal-audit 세션에서 이미 수정 완료. `checkouts.service.ts` L2158/L2170/L2193/L2229/L2237 전부 `CCSVal.LENDER_CHECKOUT`/`CCSVal.LENDER_RETURN` SSOT 경유. raw 리터럴 0건.
+- [x] **[2026-04-22 pr22] 🟡 MEDIUM approvals-api.ts UASVal 하드코딩 3건** — ✅ 2026-04-24 완료. `mapSoftwareToApprovalItem`(L1142): `UASVal.PENDING_REVIEW`, `mapNonConformanceToApprovalItem`(L1165): `UASVal.PENDING`, `mapInspectionToApprovalItem`(L1192): `UASVal.PENDING` 교체 완료.
+- [x] **[2026-04-22 subtab-ia] 🟡 MEDIUM useQuery isError 분기 누락 — OutboundCheckoutsTab + InboundCheckoutsTab** — ✅ 2026-04-24 완료. OutboundCheckoutsTab: `checkoutsError`/`refetchCheckouts` 구조분해 + `<ErrorState>` 추가. InboundCheckoutsTab: 3개 쿼리 모두 `isError`/`refetch` 구조분해 + 섹션별 `<ErrorState>` 추가 + `isAnyError` 조기반환 가드. ko/en i18n 키(`outbound.fetchError`, `inbound.sectionFetchError`) 동기화.

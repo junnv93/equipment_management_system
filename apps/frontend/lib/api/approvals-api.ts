@@ -1139,7 +1139,7 @@ class ApprovalsApi {
     return {
       id: item.id,
       category: 'software_validation',
-      status: 'pending_review',
+      status: UASVal.PENDING_REVIEW,
       requesterId: item.changedBy ?? '',
       requesterName: item.changerName ?? 'Unknown',
       requesterTeam: item.teamName ?? '',
@@ -1162,7 +1162,7 @@ class ApprovalsApi {
     return {
       id: nc.id,
       category: 'nonconformity',
-      status: 'pending', // corrected 상태 = 승인 대기
+      status: UASVal.PENDING,
       requesterId: nc.correctedBy || nc.discoveredBy || '',
       requesterName: user?.name ?? 'Unknown',
       requesterTeam: team?.name ?? '',
@@ -1189,7 +1189,7 @@ class ApprovalsApi {
     return {
       id: item.calibrationId ?? item.id ?? '',
       category: 'inspection',
-      status: 'pending',
+      status: UASVal.PENDING,
       requesterId: '',
       requesterName: 'Auto Alert',
       requesterTeam: item.teamName ?? item.team ?? '',
