@@ -17,7 +17,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 const EMPTY_CHECKOUTS_RESPONSE = {
   data: [],
   meta: {
-    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    pagination: { currentPage: 1, pageSize: 20, total: 0, totalPages: 0 },
     summary: { total: 0, overdue: 0 },
   },
 };
@@ -31,14 +31,13 @@ test.describe('Suite List-IA S11: 빈 상태 3종', () => {
 
   test('필터 결과 없음 → empty-state-filtered 표시', async ({ page }) => {
     await page.goto('/checkouts?search=XXXXXXXXXXX_NO_MATCH');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const filtered = page.getByTestId('empty-state-filtered');
     await expect(filtered).toBeVisible({ timeout: 10000 });
   });
 
   test('completed 탭 빈 상태 → empty-state-completed 표시 (API 모킹)', async ({ page }) => {
-    // API 응답을 비워 empty-state-completed를 강제 렌더
     await page.route('**/api/checkouts**', (route) => {
       route.fulfill({
         status: 200,
@@ -48,7 +47,7 @@ test.describe('Suite List-IA S11: 빈 상태 3종', () => {
     });
 
     await page.goto('/checkouts?subTab=completed');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const completedEmpty = page.getByTestId('empty-state-completed');
     await expect(completedEmpty).toBeVisible({ timeout: 10000 });
@@ -57,7 +56,6 @@ test.describe('Suite List-IA S11: 빈 상태 3종', () => {
   });
 
   test('inProgress 탭 빈 상태 → empty-state-in-progress 표시 (API 모킹)', async ({ page }) => {
-    // API 응답을 비워 empty-state-in-progress를 강제 렌더
     await page.route('**/api/checkouts**', (route) => {
       route.fulfill({
         status: 200,
@@ -67,9 +65,8 @@ test.describe('Suite List-IA S11: 빈 상태 3종', () => {
     });
 
     await page.goto('/checkouts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    // inProgress 탭이 기본 활성
     const inProgressTab = page.getByRole('tab', { name: /진행 중/ });
     await expect(inProgressTab).toHaveAttribute('aria-selected', 'true');
 

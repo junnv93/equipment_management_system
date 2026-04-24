@@ -42,7 +42,7 @@ test.describe('Suite List-IA S10: YourTurnBadge', () => {
     }
 
     await page.goto('/checkouts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // APPROVED 반출 그룹이 화면에 보일 때까지 대기
     const badge = page.locator('[data-testid="your-turn-badge"]').first();
@@ -62,7 +62,7 @@ test.describe('Suite List-IA S10: YourTurnBadge', () => {
     });
     const page = await context.newPage();
     await page.goto('/checkouts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // test_engineer는 badge 미표시
     const badge = page.locator('[data-testid="your-turn-badge"]');

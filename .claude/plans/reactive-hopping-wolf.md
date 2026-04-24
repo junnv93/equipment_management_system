@@ -75,9 +75,16 @@ root-cause: "rental = lender 단일 주체" 잘못된 도메인 가정
 
 ---
 
+## ✅ 완료된 Phase (Phase 5~8)
+
+Phase 5~8은 87차 세션(커밋 09529105, 151779fb)과 88차 세션(커밋 d5c30c6f)에서 완전 구현.
+이슈 7 (알림 라우팅)까지 모두 해결. 잔여: Phase 9 (유닛테스트), Phase 10 (E2E).
+
+---
+
 ## 🔲 남은 Phase
 
-### Phase 5 — 알림 라우팅 (이슈 7 해결)
+### Phase 5 — 알림 라우팅 (이슈 7 해결) ✅ 완료
 
 **파일**: `apps/backend/src/modules/notifications/config/notification-registry.ts`
 
@@ -123,7 +130,7 @@ root-cause: "rental = lender 단일 주체" 잘못된 도메인 가정
 
 `approval-sse.listener.ts`에 SSE 핸들러 2개 추가 (CHECKOUT_APPROVED 패턴 복제).
 
-### Phase 6 — 프론트엔드 Detail UI
+### Phase 6 — 프론트엔드 Detail UI ✅ 완료
 
 **파일**: `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`
 
@@ -135,7 +142,7 @@ root-cause: "rental = lender 단일 주체" 잘못된 도메인 가정
 4. Dialog state: `borrowerApprove`, `borrowerReject` boolean 추가
 5. i18n: `toasts.borrowerApproveSuccess/Error`, `dialogs.borrowerApproveTitle` 등
 
-### Phase 7 — NextStepPanel borrower_approved 메시지
+### Phase 7 — NextStepPanel borrower_approved 메시지 ✅ 완료
 
 **파일**: `apps/frontend/hooks/useCheckoutNextStep.ts` (또는 유사 hook)
 
@@ -145,7 +152,7 @@ root-cause: "rental = lender 단일 주체" 잘못된 도메인 가정
 
 `NextStepPanel` 렌더에서 `borrower_approved` 상태가 정상 표시되는지 확인.
 
-### Phase 8 — PR-5 연계: handleNextStepAction에 borrower 액션 배선
+### Phase 8 — PR-5 연계: handleNextStepAction에 borrower 액션 배선 ✅ 완료
 
 **파일**: `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`
 

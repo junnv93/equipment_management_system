@@ -411,6 +411,56 @@ grep -rn "browser\.newContext(" \
 - `process.env.NEXT_PUBLIC_API_URL` — API 엔드포인트 URL(feature flag 아님), `BASE_URLS` 폴백 경유 허용
 - `shared-test-data.ts` 내 `BASE_URLS.BACKEND/FRONTEND` 정의 — SSOT 상수 정의이므로 허용
 
+### Step 18: page.route() API 모킹 패턴 (2026-04-24 추가)
+
+seed 데이터로 자연 유도 불가능한 빈 상태(empty state) 등 결정론적 조건이 필요할 때
+`page.route()`로 API 응답을 모킹한다.
+
+**필수 요건:**
+
+**18a: 모킹 응답 스키마 — FrontendPaginatedResponse SSOT 준수**
+
+```bash
+# page.route() 내부 pagination 키 검사 — 'page:' 금지, 'currentPage:' 필수
+grep -rn "page\.route(" \
+  apps/frontend/tests/e2e --include="*.spec.ts" -A 20 \
+  | grep -E "^\s+(page|currentPage):"
+# 'page:' 이 나오면 FAIL — FrontendPaginatedResponse는 currentPage 필드 사용
+```
+
+**PASS:** 모킹 응답의 pagination 객체가 `{ currentPage, pageSize, total, totalPages }` 형태.
+**FAIL:** `page:` 필드 사용 → 컴포넌트의 `meta.pagination.currentPage` 참조가 `undefined` → UI 오동작.
+
+**18b: page.unroute() 정리 필수**
+
+```bash
+# page.route() 사용 후 page.unroute() 없는 spec 탐지
+grep -rn "page\.route(" \
+  apps/frontend/tests/e2e --include="*.spec.ts" -l \
+  | while read f; do
+      routes=$(grep -c "page\.route(" "$f")
+      unroutes=$(grep -c "page\.unroute(" "$f")
+      [ "$routes" -gt "$unroutes" ] && echo "UNROUTE 누락: $f (route=$routes unroute=$unroutes)"
+    done
+# → 0건
+```
+
+**PASS:** `page.route()` 호출 수 ≤ `page.unroute()` 호출 수. **FAIL:** unroute 누락 → 이후 테스트에 모킹 오염.
+
+**18c: goto 후 networkidle 금지**
+
+```bash
+# page.route()를 사용하는 파일에서 networkidle 탐지
+grep -rn "page\.route(" \
+  apps/frontend/tests/e2e --include="*.spec.ts" -l \
+  | xargs grep -l "networkidle" 2>/dev/null
+# → 0건
+```
+
+**PASS:** 0건. **FAIL:** networkidle → Next.js HMR/SSE 커넥션이 유지되어 타임아웃.
+
+**현재 사용처:** `suite-list-ia/s-empty-states.spec.ts` — completed/inProgress 탭 빈 상태 결정론적 검증.
+
 ## Output Format
 
 ```markdown
@@ -440,6 +490,9 @@ grep -rn "browser\.newContext(" \
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 | 16c | `toHaveAttribute` 기반 상태 검증 | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부 |
 | 17  | 브라우저 기반 feature flag 감지 | PASS/FAIL | `process.env.NEXT_PUBLIC_*` 직접 분기 또는 `browser.newContext` baseURL 누락 |
+| 18a | page.route() 응답 스키마 SSOT  | PASS/FAIL | pagination `page:` 금지, `currentPage:` 필수 |
+| 18b | page.unroute() 정리             | PASS/FAIL | route 후 unroute 누락 → 이후 테스트 오염 |
+| 18c | route 후 networkidle 금지       | PASS/FAIL | page.route() 파일에 networkidle 잔존 |
 ```
 
 ## Exceptions

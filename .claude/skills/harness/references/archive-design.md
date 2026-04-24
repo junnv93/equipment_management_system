@@ -5,6 +5,17 @@
 
 ---
 
+## ~~반출입 관리 PR-9: checkouts E2E 11 시나리오 — FSM 8 + 서브탭 + YourTurn + 빈 상태~~ ✅ 완료 (2026-04-24, 88차)
+
+> S9~S11(suite-list-ia) 신규 3개 spec 생성 완료.
+> EmptyState `testId?: string` prop 추가 → OutboundCheckoutsTab 4분기 testId 배선(empty-state-filtered/completed/in-progress/overdue-clear).
+> YourTurnBadge: `isNextStepPanelEnabled() && descriptor?.availableToCurrentUser` + `CHECKOUT_TAB_BADGE_TOKENS` 경유 (design token SSOT).
+> s-empty-states: `page.route('**/api/checkouts**', ...)` API 모킹 → FrontendPaginatedResponse SSOT(`currentPage`) + `page.unroute()` 정리.
+> 수정 사항: networkidle → domcontentloaded 5건, overdue-clear testId 충돌 해소, pagination `page` → `currentPage` SSOT 교정.
+> verify-e2e Step 18 추가 — page.route() 응답 스키마·unroute 정리·networkidle 금지 3종 탐지.
+
+---
+
 ## ~~반출입 관리 PR-5: CheckoutGroupCard + CheckoutDetailClient FSM 통합 + Feature Flag~~ ✅ 완료 (2026-04-24, 87차)
 
 > CheckoutGroupCard — RentalFlowInline 보존 + isNextStepPanelEnabled() 분기 + rentalDescriptor useMemo + `<NextStepPanel variant="compact">`.

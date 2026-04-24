@@ -358,7 +358,7 @@ export default function OutboundCheckoutsTab({
         primaryAction: undefined,
         canAct: undefined,
         secondaryAction: undefined,
-        testId: 'empty-state-filtered' as const,
+        testId: 'empty-state-overdue-clear' as const,
       };
     }
     if (filterActive) {
