@@ -43,6 +43,7 @@ import checkoutApi, { type CheckoutSummary } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_STATUS_FILTER_OPTIONS,
   EQUIPMENT_IMPORT_STATUS_VALUES,
+  USER_SELECTABLE_CHECKOUT_PURPOSES,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -79,8 +80,6 @@ const InboundCheckoutsTab = dynamic(() => import('./tabs/InboundCheckoutsTab'), 
   loading: () => <CheckoutListSkeleton />,
 });
 
-// 반출 목적 필터 옵션
-const PURPOSE_OPTIONS = ['calibration', 'repair', 'rental'] as const;
 // 기간 프리셋 옵션
 const PERIOD_OPTIONS: CheckoutPeriod[] = ['this_week', 'this_month', 'last_month'];
 
@@ -395,7 +394,7 @@ export default function CheckoutsContent({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('filters.all')}</SelectItem>
-                {PURPOSE_OPTIONS.map((p) => (
+                {USER_SELECTABLE_CHECKOUT_PURPOSES.map((p) => (
                   <SelectItem key={p} value={p}>
                     {t(`purpose.${p}`)}
                   </SelectItem>

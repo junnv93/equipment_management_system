@@ -57,6 +57,8 @@ export const CHECKOUT_STATUS_BADGE_TOKENS = {
   pending: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
   // 승인 (info)
   approved: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+  // 렌탈 1차 승인 — 차용팀 TM 승인 완료, 대여팀 TM 승인 대기 (warning)
+  borrower_approved: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
   // 반출중 (purple)
   checked_out: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
   // 렌탈 4단계 (purple 계열)
@@ -500,7 +502,7 @@ export const CHECKOUT_STATS_VARIANTS = {
    */
   hero: {
     container: 'col-span-2 sm:col-span-3 lg:col-span-2 row-span-1',
-    surface: ELEVATION_TOKENS.surface.floating,
+    surface: `bg-card ${ELEVATION_TOKENS.surface.floating}`,
     kpi: `${TYPOGRAPHY_TOKENS.kpi} text-5xl`,
     label: TYPOGRAPHY_TOKENS.kpiLabel,
     hoverBorder: 'hover:border-brand-critical/30',

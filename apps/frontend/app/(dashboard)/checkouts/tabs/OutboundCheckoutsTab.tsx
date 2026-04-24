@@ -98,7 +98,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
       subKey: 'outbound.overdueSub',
       value: summary.overdue,
       icon: AlertTriangle,
-      filterStatus: 'overdue',
+      filterStatus: CSVal.OVERDUE,
       dotColor: 'bg-brand-critical',
     },
     {

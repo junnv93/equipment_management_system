@@ -1583,9 +1583,13 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       this.validateUuid(uuid, 'checkoutId');
-      if (dto.approverId) {
-        this.validateUuid(dto.approverId, 'approverId');
+      if (!dto.approverId) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.APPROVER_REQUIRED,
+          message: 'Approver information is required',
+        });
       }
+      this.validateUuid(dto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
 
@@ -1698,9 +1702,13 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       this.validateUuid(uuid, 'checkoutId');
-      if (dto.approverId) {
-        this.validateUuid(dto.approverId, 'approverId');
+      if (!dto.approverId) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.APPROVER_REQUIRED,
+          message: 'Approver information is required',
+        });
       }
+      this.validateUuid(dto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
 

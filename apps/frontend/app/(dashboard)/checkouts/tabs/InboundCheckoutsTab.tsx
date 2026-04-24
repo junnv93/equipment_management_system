@@ -40,7 +40,7 @@ import {
   PREMIUM_TABLE_TOKENS,
   getSemanticBadgeClasses,
 } from '@/lib/design-tokens';
-import type { UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
+import { countActiveFilters, type UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
 
 interface InboundCheckoutsTabProps {
   teamId?: string;
@@ -69,7 +69,7 @@ export default function InboundCheckoutsTab({
     useInboundSectionPagination();
 
   const { status: statusFilter, search: searchTerm } = filters;
-  const filterActive = statusFilter !== 'all' || !!searchTerm;
+  const filterActive = countActiveFilters(filters) > 0;
 
   // ──────────────────────────────────────────────
   // 반입: 타팀 장비 대여 건 (독립 페이지네이션 — ?inboundPage=N)
@@ -356,7 +356,7 @@ export default function InboundCheckoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rentalImportsData!.data.map((item) => (
+                  {(rentalImportsData?.data ?? []).map((item) => (
                     <TableRow
                       key={item.id}
                       className={[
@@ -474,7 +474,7 @@ export default function InboundCheckoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {internalSharedImportsData!.data.map((item) => (
+                  {(internalSharedImportsData?.data ?? []).map((item) => (
                     <TableRow
                       key={item.id}
                       className={[
