@@ -58,7 +58,7 @@ import {
   CheckoutPurposeValues as CPVal,
   type CheckoutAction,
 } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { useAuth } from '@/hooks/use-auth';
@@ -407,10 +407,10 @@ export default function CheckoutDetailClient({
       case 'mark_in_use':
       case 'borrower_return':
       case 'lender_receive':
-        router.push(`/checkouts/${checkout.id}/check`);
+        router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK(checkout.id));
         break;
       case 'submit_return':
-        router.push(`/checkouts/${checkout.id}/return`);
+        router.push(FRONTEND_ROUTES.CHECKOUTS.RETURN(checkout.id));
         break;
       case 'approve_return':
         setDialogState((prev) => ({ ...prev, approveReturn: true }));
@@ -534,7 +534,7 @@ export default function CheckoutDetailClient({
     if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== CPVal.RENTAL && canComplete) {
       buttons.push(
         <Button key="return" asChild>
-          <Link href={`/checkouts/${checkout.id}/return`}>
+          <Link href={FRONTEND_ROUTES.CHECKOUTS.RETURN(checkout.id)}>
             <CheckCheck className="mr-2 h-4 w-4" />
             {t('actions.processReturn')}
           </Link>
@@ -560,7 +560,7 @@ export default function CheckoutDetailClient({
     ) {
       buttons.push(
         <Button key="check" variant="outline" asChild>
-          <Link href={`/checkouts/${checkout.id}/check`}>
+          <Link href={FRONTEND_ROUTES.CHECKOUTS.CHECK(checkout.id)}>
             <FileText className="mr-2 h-4 w-4" />
             {t('actions.conditionCheck')}
           </Link>
@@ -599,7 +599,7 @@ export default function CheckoutDetailClient({
     ) {
       buttons.push(
         <Button key="return" asChild>
-          <Link href={`/checkouts/${checkout.id}/return`}>
+          <Link href={FRONTEND_ROUTES.CHECKOUTS.RETURN(checkout.id)}>
             <CheckCheck className="mr-2 h-4 w-4" />
             {t('actions.processReturn')}
           </Link>
