@@ -471,8 +471,12 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 승인 대기 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
-    if (checkout.status === CSVal.PENDING && canApprove) {
+    // 승인 대기/1차 승인 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
+    // BORROWER_APPROVED: rental 2-step에서 차용팀 1차 승인 후 lender TM 최종 승인 단계
+    if (
+      ([CSVal.PENDING, CSVal.BORROWER_APPROVED] as CheckoutStatus[]).includes(checkout.status) &&
+      canApprove
+    ) {
       buttons.push(
         <Button
           key="approve"
