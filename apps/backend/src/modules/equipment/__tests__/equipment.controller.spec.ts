@@ -93,6 +93,8 @@ describe('EquipmentController', () => {
           provide: EquipmentApprovalService,
           useValue: {
             createEquipmentRequest: jest.fn(),
+            updateEquipmentRequest: jest.fn(),
+            deleteEquipmentRequest: jest.fn(),
             findPendingRequests: jest.fn(),
             findRequestByUuid: jest.fn(),
             approveRequest: jest.fn(),
@@ -166,7 +168,7 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'create').mockResolvedValue(mockEquipment);
 
       // Act - admin user로 직접 승인
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const mockReq = { user: { roles: ['system_admin'], userId: 'admin-uuid' } } as MockRequest;
       const result = await controller.create(
         createEquipmentDto,
         undefined,
@@ -240,7 +242,7 @@ describe('EquipmentController', () => {
         );
 
       // Act & Assert - admin user
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const mockReq = { user: { roles: ['system_admin'], userId: 'admin-uuid' } } as MockRequest;
       await expect(
         controller.create(createEquipmentDto, undefined, mockReq as AuthenticatedRequest)
       ).rejects.toThrow(BadRequestException);
@@ -350,7 +352,7 @@ describe('EquipmentController', () => {
 
       // Act - admin user로 직접 승인 (site 필수: enforceSiteAccess 검증)
       const mockReq = {
-        user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
+        user: { roles: ['system_admin'], userId: 'admin-uuid', site: 'suwon' },
       } as MockRequest;
       const result = await controller.update(
         uuid,
@@ -380,7 +382,7 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const mockReq = { user: { roles: ['system_admin'], userId: 'admin-uuid' } } as MockRequest;
       await expect(
         controller.update(uuid, updateEquipmentDto, undefined, mockReq as AuthenticatedRequest)
       ).rejects.toThrow(NotFoundException);
@@ -399,7 +401,7 @@ describe('EquipmentController', () => {
 
       // Act - admin user로 직접 삭제 (site 필수: enforceSiteAccess 검증)
       const mockReq = {
-        user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
+        user: { roles: ['system_admin'], userId: 'admin-uuid', site: 'suwon' },
       } as MockRequest;
       const result = await controller.remove(uuid, undefined, mockReq as AuthenticatedRequest);
 
@@ -419,7 +421,7 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const mockReq = { user: { roles: ['system_admin'], userId: 'admin-uuid' } } as MockRequest;
       await expect(
         controller.remove(uuid, undefined, mockReq as AuthenticatedRequest)
       ).rejects.toThrow(NotFoundException);

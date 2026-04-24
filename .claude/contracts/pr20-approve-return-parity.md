@@ -1,4 +1,4 @@
-# Contract: PR-20 approveReturn 팀 권한 패리티 + approve 테스트 mock 수정
+# Contract: PR-20 (잔여) approveReturn enforceScopeFromData 교체 + spec mock 정리
 
 ## Scope
 

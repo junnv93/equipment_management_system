@@ -175,10 +175,12 @@ describe('NotificationRecipientResolver', () => {
       }).compile();
       const r = module.get<NotificationRecipientResolver>(NotificationRecipientResolver);
 
+      // APPROVE_CALIBRATION: technical_manager·lab_manager·system_admin 3개 역할 보유
+      // roleScopes 오버라이드: lab_manager→site, system_admin→all, technical_manager→team(기본)
       const result = await r.resolve(
         {
           type: 'permission',
-          permission: Permission.APPROVE_CHECKOUT,
+          permission: Permission.APPROVE_CALIBRATION,
           scope: 'team',
           roleScopes: { lab_manager: 'site', system_admin: 'all' },
         },
