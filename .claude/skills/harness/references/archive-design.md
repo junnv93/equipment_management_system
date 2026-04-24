@@ -5,6 +5,36 @@
 
 ---
 
+## ~~반출입 관리 PR-24: FSM 리터럴 7건 외과적 교체~~ ✅ 완료 (2026-04-24, 86차)
+
+> 대상 7개 파일 grep 실측 — 실제 CheckoutStatus 리터럴 0건 확인. 잔여 status==='rejected' hits는 전부 Promise.allSettled 결과(self-audit-exception 승인됨). self-audit --all 위반 0.
+
+---
+
+## ~~반출입 관리 PR-20: Backend SSOT/패리티 — approve/rejectReturn scope-먼저 패턴 + approveReturn 패리티 + 테스트 mock 개선~~ ✅ 완료 (2026-04-24, 86차)
+
+> items 1·2(approve/rejectReturn scope-먼저 패턴) 선행 완료. item 3: approveReturn이미 checkTeamPermission 포함 확인. item 4: spec mock chain 패턴 검증, 37/37 PASS.
+
+---
+
+## ~~반출입 관리 PR-8: i18n 8 네임스페이스 전체 + 검증 게이트~~ ✅ 완료 (2026-04-24, 86차)
+
+> ko/en checkouts.fsm(13액션+13힌트+7행위자) + guidance/list/timeline/emptyState/yourTurn/toast/help 107개 키 전체. check-i18n-keys.mjs --all exit 0.
+
+---
+
+## ~~반출입 관리 PR-6: CheckoutStatusStepper next 상태 + CheckoutMiniProgress 확장~~ ✅ 완료 (2026-04-24, 86차)
+
+> CheckoutStatusStepper dueAt prop + useCheckoutNextStep 내부 호출 + ELEVATION_TOKENS.surface.raised. CheckoutMiniProgress overdue aria-label i18n 처리. borrower_approved 단계 시각화.
+
+---
+
+## ~~반출입 관리 PR-4: NextStepPanel 컴포넌트 + useCheckoutNextStep 훅 + Storybook 스토리~~ ✅ 완료 (2026-04-24, 86차)
+
+> shared/NextStepPanel 신규(124줄) + useCheckoutNextStep 훅 서버 nextStep Zod검증 + 단위테스트 5종 + Storybook 11스토리. NEXT_STEP_PANEL_TOKENS 기반 floating/inline/compact variant.
+
+---
+
 ## ~~반출입 관리 PR-22: Checkout API 정리~~ ✅ 완료 (2026-04-24, 85차)
 
 > getCheckoutSummary() 이미 제거됨 확인. CheckoutQuery.userId·startDate 레거시 필드 제거 (grep 실측 기반).
