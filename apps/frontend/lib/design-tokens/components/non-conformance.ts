@@ -109,6 +109,8 @@ export const NC_BANNER_TOKENS = {
   iconCompact: 'h-4 w-4 text-brand-critical shrink-0',
   /** 컴팩트 제목 (인라인) */
   titleCompact: 'text-sm font-semibold text-brand-critical',
+  /** 컴팩트 경과일 텍스트 (제목 우측 · opacity 80%) */
+  compactOverdue: 'text-brand-critical/80 ml-2',
   /** 컴팩트 CTA 링크 (우측) */
   compactCta: 'text-sm font-semibold text-brand-critical underline underline-offset-[3px]',
 } as const;
@@ -326,6 +328,21 @@ export const NC_LIST_TOKENS = {
     TRANSITION_PRESETS.fastBgColor,
   ].join(' '),
 } as const;
+
+/**
+ * 리스트 행 액션 chip 변형 (role-aware: my-turn/approval=warning, blocked=critical, done=neutral)
+ * 하드코딩 방지 — 호출처는 getActionChipClasses(chip.variant) 경유
+ */
+type ActionChipVariant = 'warning' | 'critical' | 'neutral';
+const ACTION_CHIP_VARIANT_CLASSES = {
+  warning: 'bg-brand-warning/10 text-brand-warning',
+  critical: 'bg-brand-critical/10 text-brand-critical',
+  neutral: 'bg-muted text-muted-foreground',
+} as const satisfies Record<ActionChipVariant, string>;
+
+export function getActionChipClasses(variant: ActionChipVariant): string {
+  return ACTION_CHIP_VARIANT_CLASSES[variant];
+}
 
 /**
  * 모바일 카드 레이아웃 토큰 (lg 미만)

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,19 +19,52 @@ interface NonConformance {
 interface NonConformanceBannerProps {
   equipmentId: string;
   nonConformances: NonConformance[];
+  variant?: 'full' | 'compact';
   showDetails?: boolean;
 }
 
-export function NonConformanceBanner({
+function daysSince(date: string | Date): number {
+  const ms = Date.now() - new Date(date).getTime();
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+function CompactBanner({ nonConformances }: { nonConformances: NonConformance[] }) {
+  const t = useTranslations('non-conformances');
+  const longestOverdueDays = useMemo(
+    () => Math.max(0, ...nonConformances.map((nc) => daysSince(nc.discoveryDate))),
+    [nonConformances]
+  );
+
+  return (
+    <Alert variant="destructive" className={NC_BANNER_TOKENS.alertCompact}>
+      <AlertTriangle className={NC_BANNER_TOKENS.iconCompact} aria-hidden="true" />
+      <div className="text-sm flex-1">
+        <strong className={NC_BANNER_TOKENS.titleCompact}>
+          {t('banner.compactTitle', { count: nonConformances.length })}
+        </strong>
+        {longestOverdueDays > 0 && (
+          <span className={NC_BANNER_TOKENS.compactOverdue}>
+            · {t('banner.compactOverdue', { days: longestOverdueDays })}
+          </span>
+        )}
+      </div>
+      <Link href="#non-conformances" className={NC_BANNER_TOKENS.compactCta}>
+        {t('banner.compactCta')} →
+      </Link>
+    </Alert>
+  );
+}
+
+function FullBanner({
   equipmentId,
   nonConformances,
-  showDetails = false,
-}: NonConformanceBannerProps) {
+  showDetails,
+}: {
+  equipmentId: string;
+  nonConformances: NonConformance[];
+  showDetails: boolean;
+}) {
   const t = useTranslations('equipment.nonConformanceBanner');
-
-  if (!nonConformances || nonConformances.length === 0) {
-    return null;
-  }
 
   return (
     <Alert variant="destructive" className={NC_BANNER_TOKENS.alert}>
@@ -65,5 +99,26 @@ export function NonConformanceBanner({
         </div>
       </AlertDescription>
     </Alert>
+  );
+}
+
+export function NonConformanceBanner({
+  equipmentId,
+  nonConformances,
+  variant = 'full',
+  showDetails = false,
+}: NonConformanceBannerProps) {
+  if (!nonConformances || nonConformances.length === 0) return null;
+
+  if (variant === 'compact') {
+    return <CompactBanner nonConformances={nonConformances} />;
+  }
+
+  return (
+    <FullBanner
+      equipmentId={equipmentId}
+      nonConformances={nonConformances}
+      showDetails={showDetails}
+    />
   );
 }

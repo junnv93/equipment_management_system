@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -22,8 +23,10 @@ import {
   NonConformanceTypeValues,
   SITE_VALUES,
 } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { useAuth } from '@/hooks/use-auth';
 import { useNCFilters } from '@/hooks/use-nc-filters';
 import type { UINonConformancesFilters } from '@/lib/utils/non-conformances-filter-utils';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -48,12 +51,15 @@ import {
   NC_EMPTY_STATE_TOKENS,
   NC_PAGINATION_TOKENS,
   NC_REJECTION_BADGE_TOKENS,
+  NC_WORKFLOW_GUIDANCE_TOKENS,
+  getActionChipClasses,
   getStaggerDelay,
   ANIMATION_PRESETS,
   NC_SPACING_TOKENS,
   type NCKpiVariant,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { deriveGuidance } from '@/lib/non-conformances/guidance';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -95,6 +101,8 @@ export default function NonConformancesContent({
   initialFilters: _initialFilters,
 }: NonConformancesContentProps) {
   const t = useTranslations('non-conformances');
+  const { can } = useAuth();
+  const canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE);
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
   const {
@@ -359,7 +367,7 @@ export default function NonConformancesContent({
 
           {/* 데이터 행 */}
           {ncList.map((nc, index) => (
-            <NCListRow key={nc.id} nc={nc} index={index} />
+            <NCListRow key={nc.id} nc={nc} index={index} canCloseNC={canCloseNC} />
           ))}
         </div>
       )}
@@ -422,13 +430,45 @@ export default function NonConformancesContent({
 /**
  * 리스트 행 컴포넌트
  */
-function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
+function NCListRow({
+  nc,
+  index,
+  canCloseNC,
+}: {
+  nc: NonConformance;
+  index: number;
+  canCloseNC: boolean;
+}) {
   const t = useTranslations('non-conformances');
   const { fmtDate } = useDateFormatter();
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
   const hasRejection = !!nc.rejectionReason && nc.status === NCStatusVal.OPEN;
+
+  // N행 × 매 렌더 함수 호출 방지 — deriveGuidance + NC_WORKFLOW_GUIDANCE_TOKENS 룩업 캐싱 (AP-7)
+  const chip = useMemo(() => {
+    const { key } = deriveGuidance(nc, canCloseNC);
+    const entry = NC_WORKFLOW_GUIDANCE_TOKENS[key];
+    switch (entry.roleChip) {
+      case 'my-turn':
+        return { label: t('list.action.act'), variant: 'warning' as const, tooltip: undefined };
+      case 'approval':
+        return { label: t('list.action.approve'), variant: 'warning' as const, tooltip: undefined };
+      case 'blocked':
+        return {
+          label: t('list.action.blocked'),
+          variant: 'critical' as const,
+          tooltip: key.startsWith('openBlockedRepair')
+            ? t('list.action.blockedTooltip.repair')
+            : t('list.action.blockedTooltip.recalibration'),
+        };
+      case 'done':
+        return { label: t('list.action.done'), variant: 'neutral' as const, tooltip: undefined };
+      case 'waiting':
+        return null;
+    }
+  }, [nc, canCloseNC, t]);
 
   const elapsedNode =
     nc.status !== NCStatusVal.CLOSED ? (
@@ -484,9 +524,21 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
         {/* 경과일 */}
         <div>{elapsedNode}</div>
         {/* 액션 */}
-        <div>
+        <div className="flex justify-end gap-1 items-center" aria-label={t('list.action.label')}>
+          {chip && (
+            <span
+              className={cn(
+                'text-[10px] font-semibold px-1.5 py-0 rounded-full',
+                getActionChipClasses(chip.variant)
+              )}
+              title={chip.tooltip}
+              aria-label={chip.tooltip ?? chip.label}
+            >
+              {chip.label} →
+            </span>
+          )}
           <span className={NC_LIST_TOKENS.actionButton}>
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </div>
       </div>

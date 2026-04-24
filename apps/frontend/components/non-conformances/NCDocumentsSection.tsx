@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { FileIcon, Paperclip, Trash2, Upload } from 'lucide-react';
+import { FileIcon, LayoutGrid, List, Paperclip, Trash2, Upload } from 'lucide-react';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { TRANSITION_PRESETS, NC_DOCUMENTS_SECTION_TOKENS } from '@/lib/design-tokens';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -28,6 +30,12 @@ interface NCDocumentsSectionProps {
   nonConformanceId: string;
 }
 
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+}
+
 /**
  * NC 첨부(사진/문서) 섹션 — NCDetailClient 하단에 임베드.
  *
@@ -37,12 +45,14 @@ interface NCDocumentsSectionProps {
  * - **접근성**: 파일 업로드 input은 aria-live 상태 공지, 삭제는 AlertDialog confirm.
  * - **성능**: 이미지 mime은 download API(presigned URL/proxy)로 프리뷰 생성 → 10MB 한도 내 직렬 fetch.
  *            ObjectURL은 unmount 시 revoke하여 메모리 누수 방지.
+ * - **view 선택**: lazy init(docs >= 5 → list), 이후 사용자 선택 유지 (useEffect 덮어쓰기 금지).
  */
 export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps) {
   const t = useTranslations('non-conformances.detail.attachments');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { can } = useAuth();
+  const { fmtDateTime } = useDateFormatter();
   // SSOT: NC 전용 permission 경계 — backend REST (UPLOAD/DELETE_NON_CONFORMANCE_ATTACHMENT)와 1:1 대응.
   // UI에서 사전 차단 → 403 응답 전 UX 명확화 (버튼 숨김/비활성화).
   const canUpload = can(Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT);
@@ -58,6 +68,17 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
     ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
   const isDocumentsError = documentsQuery.isError;
+
+  const docs = documentsQuery.data ?? [];
+
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const viewInitialized = useRef(false);
+  useEffect(() => {
+    if (!viewInitialized.current && docs.length > 0) {
+      viewInitialized.current = true;
+      if (docs.length >= 5) setView('list');
+    }
+  }, [docs.length]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -113,8 +134,6 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
     }
   };
 
-  const docs = documentsQuery.data ?? [];
-
   return (
     <section className={NC_DOCUMENTS_SECTION_TOKENS.container}>
       <div className={NC_DOCUMENTS_SECTION_TOKENS.header}>
@@ -123,6 +142,41 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
           {t('title')}
           <span className={NC_DOCUMENTS_SECTION_TOKENS.countBadge}>({docs.length})</span>
         </h3>
+
+        {/* 보기 방식 토글 */}
+        {docs.length > 0 && (
+          <div
+            className="inline-flex border rounded-md overflow-hidden text-xs"
+            role="group"
+            aria-label={t('view.label')}
+          >
+            <button
+              type="button"
+              aria-pressed={view === 'grid'}
+              onClick={() => setView('grid')}
+              className={cn(
+                'px-2 py-1 inline-flex items-center gap-1 transition-colors',
+                view === 'grid' && 'bg-muted font-semibold'
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('view.grid')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+              className={cn(
+                'px-2 py-1 inline-flex items-center gap-1 border-l transition-colors',
+                view === 'list' && 'bg-muted font-semibold'
+              )}
+            >
+              <List className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('view.list')}
+            </button>
+          </div>
+        )}
+
         {canUpload && (
           <Button
             variant="outline"
@@ -160,6 +214,41 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
         </p>
       ) : docs.length === 0 ? (
         <p className={NC_DOCUMENTS_SECTION_TOKENS.emptyText}>{t('empty')}</p>
+      ) : view === 'list' ? (
+        <ul className="rounded-lg border divide-y divide-border/60 overflow-hidden">
+          {docs.map((doc) => (
+            <li
+              key={doc.id}
+              className="grid grid-cols-[40px_1fr_90px_110px_32px] gap-3 items-center px-3 py-2.5 hover:bg-muted/30"
+            >
+              <AttachmentThumbnail
+                doc={doc}
+                size="xs"
+                downloadLabel={t('downloadLabel', { name: doc.originalFileName })}
+              />
+              <div className="min-w-0">
+                <div className="text-sm truncate">{doc.originalFileName}</div>
+                <div className="text-[11.5px] text-muted-foreground font-mono">{doc.mimeType}</div>
+              </div>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {formatSize(doc.fileSize)}
+              </span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {fmtDateTime(doc.createdAt)}
+              </span>
+              {canDelete && (
+                <button
+                  type="button"
+                  aria-label={t('deleteLabel', { name: doc.originalFileName })}
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={() => setPendingDelete(doc)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       ) : (
         <ul className={NC_DOCUMENTS_SECTION_TOKENS.grid}>
           {docs.map((doc) => (
@@ -216,14 +305,17 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
 function AttachmentThumbnail({
   doc,
   downloadLabel,
+  size = 'default',
 }: {
   doc: DocumentRecord;
   downloadLabel: string;
+  size?: 'xs' | 'default';
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLButtonElement>(null);
   const isImage = (doc.mimeType ?? '').startsWith('image/');
+  const sizeClass = size === 'xs' ? 'w-10 h-10 rounded-md' : 'w-full aspect-square rounded-md';
 
   // IntersectionObserver — 뷰포트 진입 시에만 fetch 시작 (N+1 → lazy load)
   useEffect(() => {
@@ -274,7 +366,11 @@ function AttachmentThumbnail({
       ref={containerRef}
       type="button"
       onClick={() => documentApi.downloadDocument(doc.id, doc.originalFileName)}
-      className="w-full aspect-square rounded-md border bg-muted overflow-hidden flex items-center justify-center hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className={cn(
+        sizeClass,
+        'border bg-muted overflow-hidden flex items-center justify-center',
+        'hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+      )}
       aria-label={downloadLabel}
     >
       {isImage && previewUrl ? (
@@ -284,7 +380,10 @@ function AttachmentThumbnail({
           className="h-full w-full bg-cover bg-center"
         />
       ) : (
-        <FileIcon className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        <FileIcon
+          className={cn('text-muted-foreground', size === 'xs' ? 'h-5 w-5' : 'h-8 w-8')}
+          aria-hidden="true"
+        />
       )}
     </button>
   );

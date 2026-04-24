@@ -12,7 +12,7 @@
 | **1.1 · 자체 감사 후 follow-up** | ✅ **완료** | (pending commit) | CSS 충돌 / SSOT / 성능 / 타입 4건 수정 |
 | **2 · i18n Parity** | ✅ **완료** | `f7ed87a2` | ko/en 312키 일치, tsc+test 통과 |
 | **3 · Callout hero + Timeline compact** | ✅ **완료** | `3a41918c` | compact dot/connector 토큰, WorkflowTimeline compact, isClosed 분기 |
-| 4 · Banner/Docs/Dialog CAS/List | 🔄 **다음 세션** | — | Phase 3 완료 — Phase 4 진입 가능 |
+| **4 · Banner/Docs/Dialog CAS/List** | ✅ **완료** | (pending commit) | compact banner, 2-step repair, CAS guards, row memoization, E2E 2-step |
 
 ### Phase 1.1 follow-up 상세 (자체 감사 결과)
 

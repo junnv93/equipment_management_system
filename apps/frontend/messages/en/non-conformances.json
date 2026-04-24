@@ -37,7 +37,9 @@
     "closureError": "Failed to close.",
     "rejectionSuccess": "Corrective action has been rejected.",
     "rejectionError": "Failed to reject.",
-    "rejectionReasonRequired": "Please enter a rejection reason."
+    "rejectionReasonRequired": "Please enter a rejection reason.",
+    "versionMismatch": "Someone else modified this record. Please try again.",
+    "fetchFailed": "Failed to load the latest information."
   },
   "fields": {
     "type": "Non-Conformance Type",
@@ -96,6 +98,7 @@
     "paginationNext": "Next page",
     "paginationPage": "Go to page {page}",
     "action": {
+      "label": "Status and Action",
       "act": "Act",
       "approve": "Approve",
       "blocked": "Blocked",
@@ -197,6 +200,11 @@
       "empty": "No closure notes have been recorded."
     },
     "attachments": {
+      "view": {
+        "label": "View mode",
+        "grid": "Grid",
+        "list": "List"
+      },
       "title": "Attachments",
       "loadError": "Failed to load attachments.",
       "hint": "Upload site photos or supporting evidence.",

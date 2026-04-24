@@ -106,8 +106,8 @@ test.describe('Suite 36: NC 편집 모달 + 수리이력 등록 모달', () => {
       await causeField.clear();
       await causeField.fill('E2E 테스트 — 수정된 원인');
 
-      // 저장
-      await dialog.getByRole('button', { name: '저장' }).click();
+      // 저장 (변경 건수 포함 텍스트 — "저장" 또는 "저장 (변경 N건)")
+      await dialog.getByRole('button', { name: /저장/ }).click();
 
       // 모달 닫힘
       await expect(dialog).not.toBeVisible({ timeout: 10000 });
@@ -165,34 +165,39 @@ test.describe('Suite 36: NC 편집 모달 + 수리이력 등록 모달', () => {
   // 36-06: 정보카드 "수리이력등록" → 수리 등록 모달
   // ============================================================================
 
-  test('36-06: 정보카드의 수리이력등록 클릭 시 수리 모달이 열린다', async ({
+  test('36-06: 정보카드의 수리이력등록 클릭 시 수리 모달이 열린다 (2-step)', async ({
     techManagerPage: page,
   }) => {
     await gotoNcDetail(page, NC_IDS.NC_001_MALFUNCTION_OPEN);
 
     // 정보카드 내 "수리 이력 등록" 링크 (전제조건 링크와 다른 위치)
-    // 정보카드의 "⚠ 수리 연결 필요" 카드 내 링크
     const repairCard = page.getByText(/수리 연결 필요/).first();
     await expect(repairCard).toBeVisible();
 
-    // 정보카드 영역의 수리 이력 등록 버튼 (exact: false — "수리 이력 등록" 텍스트 포함)
     const infoCardRepairLink = page.getByText('수리 이력 등록', { exact: true });
     await expect(infoCardRepairLink).toBeVisible();
     await infoCardRepairLink.click();
 
-    // 수리 등록 모달 열림
+    // Step 1 (input): 수리 모달 열림 + 필드 확인
     const dialog = page.getByRole('dialog', { name: '수리 이력 등록' });
     await expect(dialog).toBeVisible();
 
-    // 수리 모달 필드 확인
     await expect(dialog.getByLabel('수리 일자')).toBeVisible();
     await expect(dialog.getByLabel('수리 내용')).toBeVisible();
     await expect(dialog.getByLabel('수리 결과')).toBeVisible();
     await expect(dialog.getByLabel('비고')).toBeVisible();
 
-    // 등록/취소 버튼
-    await expect(dialog.getByRole('button', { name: '등록' })).toBeVisible();
+    // Step 1: "다음 →" 버튼 존재 (2-step 플로우), "등록"은 Step 2에서만
+    await expect(dialog.getByRole('button', { name: /다음/ })).toBeVisible();
     await expect(dialog.getByRole('button', { name: '취소' })).toBeVisible();
+
+    // Step 1 → Step 2: 필수 필드 입력 후 다음으로 진행
+    await dialog.getByLabel('수리 내용').fill('E2E 테스트 — 수리 내용 (최소 10자 이상)');
+    await dialog.getByRole('button', { name: /다음/ }).click();
+
+    // Step 2 (confirm): 등록 + 수정 버튼 확인
+    await expect(dialog.getByRole('button', { name: '등록' })).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByRole('button', { name: /수정/ })).toBeVisible();
 
     // 취소
     await dialog.getByRole('button', { name: '취소' }).click();

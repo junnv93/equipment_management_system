@@ -37,7 +37,9 @@
     "closureError": "종결에 실패했습니다.",
     "rejectionSuccess": "조치가 반려되었습니다.",
     "rejectionError": "반려에 실패했습니다.",
-    "rejectionReasonRequired": "반려 사유를 입력하세요."
+    "rejectionReasonRequired": "반려 사유를 입력하세요.",
+    "versionMismatch": "다른 탭에서 수정이 있었습니다. 다시 시도해 주세요.",
+    "fetchFailed": "최신 정보를 불러오지 못했습니다."
   },
   "fields": {
     "type": "부적합 유형",
@@ -96,6 +98,7 @@
     "paginationNext": "다음 페이지",
     "paginationPage": "{page}페이지로 이동",
     "action": {
+      "label": "상태 및 액션",
       "act": "조치",
       "approve": "승인",
       "blocked": "선행 필요",
@@ -197,6 +200,11 @@
       "empty": "종결 의견이 없습니다."
     },
     "attachments": {
+      "view": {
+        "label": "보기 방식",
+        "grid": "그리드",
+        "list": "리스트"
+      },
       "title": "첨부 파일",
       "loadError": "첨부파일을 불러오지 못했습니다.",
       "hint": "현장 사진 등 증빙을 업로드합니다.",

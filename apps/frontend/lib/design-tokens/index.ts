@@ -286,6 +286,7 @@ export {
   NC_FILTER_TOKENS,
   NC_LIST_GRID_COLS,
   NC_LIST_TOKENS,
+  getActionChipClasses,
   NC_TYPE_CHIP_TOKENS,
   NC_MINI_WORKFLOW_TOKENS,
   getNCMiniDotClasses,

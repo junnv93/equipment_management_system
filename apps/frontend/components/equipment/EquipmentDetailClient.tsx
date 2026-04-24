@@ -197,7 +197,7 @@ export function EquipmentDetailClient({
             <NonConformanceBanner
               equipmentId={equipmentId}
               nonConformances={openNonConformances}
-              showDetails={true}
+              variant="compact"
             />
           </div>
         ) : (
