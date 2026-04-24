@@ -11,3 +11,5 @@ export * from './start-checkout.dto';
 export * from './create-condition-check.dto';
 export * from './checkout-response.dto';
 export * from './pending-checks-query.dto';
+export * from './borrower-approve-checkout.dto';
+export * from './borrower-reject-checkout.dto';

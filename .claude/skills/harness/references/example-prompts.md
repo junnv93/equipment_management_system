@@ -963,48 +963,48 @@ SSOT 주의:
 
 ---
 
-> **PR 실행 순서 (의존성 그래프, 23 PR — PR-1·2 완료 ✅)**
+> **PR 실행 순서 (의존성 그래프 — PR-1~PR-4·PR-6~PR-8·PR-20·PR-24 완료 ✅)**
 >
 > **Phase 1 (완료)**: PR-1 (FSM schemas) ✅ → PR-2 (backend) ✅
 >
-> **Phase 2&3 (PR-3·PR-8 병렬)**:
-> - PR-3 (tokens) → PR-4 (NextStepPanel) → PR-5 (통합+flag) → PR-9 (E2E 11)
-> - PR-8 (i18n 8NS) ──────────────────────────────────────→ PR-9, PR-12
+> **Phase 2&3 (완료)**:
+> - PR-3 (tokens) ✅ → PR-4 (NextStepPanel) ✅ → PR-5 (통합+flag) → PR-9 (E2E 11)
+> - PR-8 (i18n 8NS) ✅ ───────────────────────────────────→ PR-9, PR-12
 >
-> **Phase 4 (PR-3 이후, 병렬)**:
-> - PR-6 (Stepper/MiniProgress) | PR-7 (HeroKPI/Stat) | PR-14 (WorkflowTimeline)
+> **Phase 4 (완료)**:
+> - PR-6 (Stepper/MiniProgress) ✅ | PR-7 (HeroKPI/Stat) ✅ | PR-14 (WorkflowTimeline)
 >
-> **Phase 5**: PR-5 + PR-8 완료 → PR-12 (목록 IA + 서브탭)
+> **Phase 5**: PR-5 + PR-8 ✅ 완료 → PR-12 (목록 IA + 서브탭) ← **다음 블로킹 PR**
 >
 > **Phase 6**: PR-12 완료 → PR-13 (YourTurnBadge + 그룹 카드)
 >
-> **Phase 7**: PR-4 완료 → PR-15 (모션 7종)
+> **Phase 7**: PR-4 ✅ 완료 → PR-15 (모션 7종)
 >
 > **Phase 8**: PR-12 + PR-14 완료 → PR-16 (접근성)
 >
-> **Phase 9**: PR-5 + PR-7 + PR-14 완료 → PR-19 (Loading skeleton + Error)
+> **Phase 9**: PR-5 + PR-7 ✅ + PR-14 완료 → PR-19 (Loading skeleton + Error)
 >
-> **Phase 10**: PR-5 + PR-8 완료 → PR-18 (Tooltip + Onboarding + Toast + Mobile)
+> **Phase 10**: PR-5 + PR-8 ✅ 완료 → PR-18 (Tooltip + Onboarding + Toast + Mobile)
 >
-> **Phase 11 (독립)**: PR-3 + NC e2e PASS → PR-10 (NC elevation 승격)
+> **Phase 11 (독립)**: PR-3 ✅ + NC e2e PASS → PR-10 (NC elevation 승격)
 >
 > **Phase 12 (독립)**: PR-2 이후 → PR-11 (Audit gate)
 >
 > **Phase 16 (최종)**: PR-3~PR-19 전부 완료 → PR-17 (최종 리뷰 + 번들 + Flag rollout)
 >
-> **Phase A (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-20 (Backend 보안/SSOT)
+> **Phase A (완료)**: PR-2 이후 → PR-20 (Backend 보안/SSOT) ✅
 >
 > **Phase B (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-22 (API 정리 + Zod)
 >
-> **Phase C (독립 — 즉시 진행 가능)**: PR-2 이후 → PR-24 (FSM 리터럴 7건)
+> **Phase C (완료)**: PR-2 이후 → PR-24 (FSM 리터럴 7건) ✅
 >
 > **Phase D**: PR-12(서브탭) 완료 후 → PR-21 (WCAG + QUERY_CONFIG + URL SSOT)
 >
 > **Phase E (조건부)**: PR-5 + E2E 2세션 안정 후 → PR-23 (플래그 상시화 + 마무리)
 >
-> ※ PR-3과 PR-8은 병렬 가능. PR-5·6·7·14는 PR-3 이후 병렬 가능.
-> ※ PR-10은 별도 분리 PR (NC e2e PASS 선행). PR-11은 PR-2 이후 독립.
-> ※ PR-20·PR-22·PR-24는 frontend PR과 완전 독립 → 즉시 실행 가능.
+> ※ **현재 블로킹**: PR-5 (CheckoutGroupCard + CheckoutDetailClient FSM 통합 + Feature Flag) 진행 가능.
+> ※ PR-5 완료 후: PR-9·PR-12·PR-18·PR-19 순차 또는 병렬 진행.
+> ※ PR-22는 즉시 진행 가능 (frontend와 독립).
 > ※ PR-23은 트리거 조건(E2E 2세션 안정) 충족 전 대기 필수.
 
 ---

@@ -13,6 +13,8 @@ import { UpdateCheckoutDto } from './dto/update-checkout.dto';
 import { CheckoutQueryDto } from './dto/checkout-query.dto';
 import { ApproveCheckoutDto } from './dto/approve-checkout.dto';
 import { RejectCheckoutDto } from './dto/reject-checkout.dto';
+import { BorrowerApproveCheckoutDto } from './dto/borrower-approve-checkout.dto';
+import { BorrowerRejectCheckoutDto } from './dto/borrower-reject-checkout.dto';
 import { ReturnCheckoutDto } from './dto/return-checkout.dto';
 import { ApproveReturnDto } from './dto/approve-return.dto';
 import { RejectReturnDto } from './dto/reject-return.dto';
@@ -195,6 +197,16 @@ export class CheckoutsService extends VersionedBaseService {
     reject_return: 'reject',
     borrower_approve: 'approve',
     borrower_reject: 'reject',
+  };
+
+  // condition check step → 액터 측 매핑 SSOT (lender/borrower 스코프 분기용)
+  private static readonly CONDITION_STEP_ACTING_SIDE: Readonly<
+    Record<ConditionCheckStep, 'lender' | 'borrower'>
+  > = {
+    [CCSVal.LENDER_CHECKOUT]: 'lender',
+    [CCSVal.BORROWER_RECEIVE]: 'borrower',
+    [CCSVal.BORROWER_RETURN]: 'borrower',
+    [CCSVal.LENDER_RETURN]: 'lender',
   };
 
   private assertFsmAction(
@@ -1038,14 +1050,55 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
+   * 차용 팀(borrower) 스코프 검증 — rental 전용.
+   * requester의 site/teamId 기준으로 검증한다 (lender 기준 금지).
+   * scope-먼저 원칙: 이 메서드 호출 후 FSM/domain 검증 수행.
+   */
+  private enforceScopeForBorrower(
+    checkout: Pick<Checkout, 'purpose'>,
+    requesterSite: string,
+    requesterTeamId: string | null,
+    req: AuthenticatedRequest
+  ): void {
+    if (checkout.purpose !== CPVal.RENTAL) {
+      throw new BadRequestException({
+        code: CheckoutErrorCode.BORROWER_APPROVE_RENTAL_ONLY,
+        message: 'Borrower scope is only available for rental purpose checkouts',
+      });
+    }
+    enforceSiteAccess(req, requesterSite, CHECKOUT_DATA_SCOPE, requesterTeamId);
+  }
+
+  /**
    * checkout 레코드만으로 스코프 검증
-   * rental: lenderSiteId/lenderTeamId 사용 (0 추가 쿼리)
+   * rental lender: lenderSiteId/lenderTeamId 사용 (0 추가 쿼리)
+   * rental borrower: requesterId → users 조회 (1 쿼리)
    * calibration/repair: 첫 번째 장비의 사이트/팀 조회 (1 쿼리)
    */
   private async enforceScopeFromCheckout(
     checkout: Checkout,
-    req: AuthenticatedRequest
+    req: AuthenticatedRequest,
+    actingSide: 'lender' | 'borrower' = 'lender'
   ): Promise<void> {
+    if (actingSide === 'borrower') {
+      if (checkout.purpose !== CPVal.RENTAL) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.BORROWER_APPROVE_RENTAL_ONLY,
+          message: 'Borrower scope is only available for rental purpose checkouts',
+        });
+      }
+      const [requester] = await this.db
+        .select({ site: schema.users.site, teamId: schema.users.teamId })
+        .from(schema.users)
+        .where(eq(schema.users.id, checkout.requesterId))
+        .limit(1);
+      if (requester) {
+        enforceSiteAccess(req, requester.site ?? '', CHECKOUT_DATA_SCOPE, requester.teamId);
+      }
+      return;
+    }
+
+    // actingSide === 'lender' (default)
     if (checkout.purpose === CPVal.RENTAL && checkout.lenderSiteId) {
       enforceSiteAccess(req, checkout.lenderSiteId, CHECKOUT_DATA_SCOPE, checkout.lenderTeamId);
       return;
@@ -1513,6 +1566,239 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.logger.error(
         `반출 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 대여 반출 1차 승인 (차용 팀 TM)
+   * rental 전용. pending → borrower_approved.
+   * 보안 실행 순서: scope → FSM → identity rule → CAS
+   */
+  async borrowerApprove(
+    uuid: string,
+    dto: BorrowerApproveCheckoutDto & { approverId: string },
+    req: AuthenticatedRequest
+  ): Promise<Checkout> {
+    try {
+      this.validateUuid(uuid, 'checkoutId');
+      if (dto.approverId) {
+        this.validateUuid(dto.approverId, 'approverId');
+      }
+
+      const checkout = await this.findOne(uuid);
+
+      // rental 전용 fail-close (scope 이전 — purpose 체크는 상태 정보 아님)
+      if (checkout.purpose !== CPVal.RENTAL) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.BORROWER_APPROVE_RENTAL_ONLY,
+          message: 'Borrower approval is only available for rental purpose checkouts',
+        });
+      }
+
+      // requester 사이트/팀 조회 (scope + identity 양쪽에 사용)
+      const [requester] = await this.db
+        .select({ site: schema.users.site, teamId: schema.users.teamId })
+        .from(schema.users)
+        .where(eq(schema.users.id, checkout.requesterId))
+        .limit(1);
+
+      if (!requester) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.NOT_FOUND,
+          message: 'Checkout requester not found',
+        });
+      }
+
+      // ✅ Scope 먼저 — borrower(차용 팀) 기준으로 검증
+      this.enforceScopeForBorrower(checkout, requester.site ?? '', requester.teamId, req);
+
+      // ✅ FSM — borrower_approve 전이 가능 여부
+      const userPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'borrower_approve', userPermissions);
+
+      // ✅ Identity rule — 차용 팀 TM만 승인 가능
+      // req.user.teamId 미존재 또는 신청자 팀과 불일치 시 거부
+      if (!req.user?.teamId || req.user.teamId !== requester.teamId) {
+        throw new ForbiddenException({
+          code: CheckoutErrorCode.BORROWER_TEAM_ONLY,
+          message: 'Only the technical manager of the borrowing team can approve',
+        });
+      }
+
+      // ✅ CAS: pending → borrower_approved
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        { ...checkout, version: dto.version },
+        CSVal.BORROWER_APPROVED as CheckoutStatus,
+        {
+          borrowerApproverId: dto.approverId,
+          borrowerApprovedAt: new Date(),
+        }
+      );
+
+      await this.writeTransitionAudit(
+        checkout,
+        'borrower_approve', // FSM_TO_AUDIT_ACTION['borrower_approve'] === 'approve' (c59d51c1)
+        uuid,
+        CSVal.BORROWER_APPROVED as CheckoutStatus,
+        req
+      );
+
+      const affectedTeams = await this.getAffectedTeamIds(checkout);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
+
+      // 📢 알림: borrower TM → lender TM (다음 승인 대기 알림)
+      const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
+      if (items.length > 0) {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED, {
+          checkoutId: uuid,
+          equipmentId: items[0].equipmentId,
+          equipmentName: firstEquipment?.name ?? '',
+          managementNumber: firstEquipment?.managementNumber ?? '',
+          requesterId: checkout.requesterId,
+          requesterTeamId: requester.teamId ?? '',
+          actorId: dto.approverId,
+          actorName: '',
+          nextActor: this.resolveNextActor(
+            checkout.purpose,
+            CSVal.BORROWER_APPROVED as CheckoutStatus
+          ),
+          timestamp: new Date(),
+        });
+      }
+
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `대여 1차 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 대여 반출 1차 반려 (차용 팀 TM)
+   * rental 전용. pending → rejected (borrowerRejectionReason 기록).
+   * 보안 실행 순서: scope → FSM → identity rule → domain(reason) → CAS
+   */
+  async borrowerReject(
+    uuid: string,
+    dto: BorrowerRejectCheckoutDto & { approverId: string },
+    req: AuthenticatedRequest
+  ): Promise<Checkout> {
+    try {
+      this.validateUuid(uuid, 'checkoutId');
+      if (dto.approverId) {
+        this.validateUuid(dto.approverId, 'approverId');
+      }
+
+      const checkout = await this.findOne(uuid);
+
+      if (checkout.purpose !== CPVal.RENTAL) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.BORROWER_APPROVE_RENTAL_ONLY,
+          message: 'Borrower rejection is only available for rental purpose checkouts',
+        });
+      }
+
+      const [requester] = await this.db
+        .select({ site: schema.users.site, teamId: schema.users.teamId })
+        .from(schema.users)
+        .where(eq(schema.users.id, checkout.requesterId))
+        .limit(1);
+
+      if (!requester) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.NOT_FOUND,
+          message: 'Checkout requester not found',
+        });
+      }
+
+      // ✅ Scope 먼저
+      this.enforceScopeForBorrower(checkout, requester.site ?? '', requester.teamId, req);
+
+      // ✅ FSM
+      const userPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'borrower_reject', userPermissions);
+
+      // ✅ Identity rule
+      if (!req.user?.teamId || req.user.teamId !== requester.teamId) {
+        throw new ForbiddenException({
+          code: CheckoutErrorCode.BORROWER_TEAM_ONLY,
+          message: 'Only the technical manager of the borrowing team can reject',
+        });
+      }
+
+      // ✅ Domain: reason 검증 — scope/FSM/identity 이후 (보안 fail-close 순서 준수)
+      if (!dto.reason || dto.reason.trim().length === 0) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
+          message: 'Rejection reason is required',
+        });
+      }
+
+      // ✅ CAS: pending → rejected (borrowerRejectionReason 컬럼에 기록)
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        { ...checkout, version: dto.version },
+        CSVal.REJECTED as CheckoutStatus,
+        {
+          borrowerApproverId: dto.approverId,
+          borrowerRejectionReason: dto.reason.trim(),
+        }
+      );
+
+      await this.writeTransitionAudit(
+        checkout,
+        'borrower_reject', // FSM_TO_AUDIT_ACTION['borrower_reject'] === 'reject' (c59d51c1)
+        uuid,
+        CSVal.REJECTED as CheckoutStatus,
+        req
+      );
+
+      const affectedTeams = await this.getAffectedTeamIds(checkout);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
+
+      // 📢 알림: borrower TM → 신청자 (반려 통보)
+      const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
+      if (items.length > 0) {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED, {
+          checkoutId: uuid,
+          equipmentId: items[0].equipmentId,
+          equipmentName: firstEquipment?.name ?? '',
+          managementNumber: firstEquipment?.managementNumber ?? '',
+          requesterId: checkout.requesterId,
+          requesterTeamId: requester.teamId ?? '',
+          actorId: dto.approverId,
+          actorName: '',
+          reason: dto.reason.trim(),
+          nextActor: 'none' as NextActor,
+          timestamp: new Date(),
+        });
+      }
+
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `대여 1차 반려 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
@@ -2148,7 +2434,11 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(checkerId, 'checkerId');
 
       const checkout = await this.findOne(uuid);
-      await this.enforceScopeFromCheckout(checkout, req);
+
+      // step별 액터 측(lender/borrower) 결정 후 스코프 검증 — scope-먼저 원칙
+      const conditionActingSide =
+        CheckoutsService.CONDITION_STEP_ACTING_SIDE[dto.step as ConditionCheckStep] ?? 'lender';
+      await this.enforceScopeFromCheckout(checkout, req, conditionActingSide);
 
       // 대여 목적만 상태 확인 가능
       if (checkout.purpose !== CPVal.RENTAL) {

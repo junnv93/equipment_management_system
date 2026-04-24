@@ -51,6 +51,10 @@ export const CheckoutErrorCode = {
   INVALID_STATUS_FOR_STEP: 'CHECKOUT_INVALID_STATUS_FOR_STEP',
   /** 대기(PENDING) 상태만 수정 가능 */
   ONLY_PENDING_CAN_UPDATE: 'CHECKOUT_ONLY_PENDING_CAN_UPDATE',
+  /** 차용 팀 1차 승인/반려는 rental 목적만 가능 */
+  BORROWER_APPROVE_RENTAL_ONLY: 'CHECKOUT_BORROWER_APPROVE_RENTAL_ONLY',
+  /** 차용 팀 기술책임자만 1차 승인/반려 가능 */
+  BORROWER_TEAM_ONLY: 'CHECKOUT_BORROWER_TEAM_ONLY',
 } as const;
 
 export type CheckoutErrorCode = (typeof CheckoutErrorCode)[keyof typeof CheckoutErrorCode];

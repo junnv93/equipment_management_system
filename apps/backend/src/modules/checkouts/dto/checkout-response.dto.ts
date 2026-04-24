@@ -222,6 +222,23 @@ export class CheckoutResponseDto {
   returnApprover?: UserInfoDto;
 
   // ============================================================================
+  // 대여 1차 승인 정보 (rental 전용)
+  // ============================================================================
+
+  @ApiProperty({
+    description: '대여 1차 승인자 UUID (차용 팀 TM)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    required: false,
+  })
+  borrowerApproverId?: string | null;
+
+  @ApiProperty({ description: '대여 1차 승인 일시', required: false })
+  borrowerApprovedAt?: Date | null;
+
+  @ApiProperty({ description: '대여 1차 반려 사유', required: false })
+  borrowerRejectionReason?: string | null;
+
+  // ============================================================================
   // 대여 확인 정보
   // ============================================================================
 

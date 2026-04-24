@@ -16,6 +16,8 @@ export const NOTIFICATION_EVENTS = {
   CHECKOUT_CREATED: 'checkout.created',
   CHECKOUT_APPROVED: 'checkout.approved',
   CHECKOUT_REJECTED: 'checkout.rejected',
+  CHECKOUT_BORROWER_APPROVED: 'checkout.borrowerApproved',
+  CHECKOUT_BORROWER_REJECTED: 'checkout.borrowerRejected',
   CHECKOUT_STARTED: 'checkout.started',
   CHECKOUT_RETURNED: 'checkout.returned',
   CHECKOUT_RETURN_APPROVED: 'checkout.returnApproved',

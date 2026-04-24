@@ -228,16 +228,26 @@ grep -c "it\|test\b" packages/schemas/src/__tests__/checkout-fsm.test.ts 2>/dev/
 
 **PASS:** 테스트 파일 존재 + 테스트 30건 이상. **FAIL:** 파일 없거나 테스트 수 부족.
 
-### Step 7: nextStep 필드 — 응답 스키마 포함 확인
+### Step 7: nextStep 필드 — 응답 스키마 + 프론트엔드 API 타입 동기화 확인
 
-`packages/schemas/src/checkout.ts`의 Checkout 응답 스키마에 `nextStep` 필드가 포함되어 있는지 확인.
+`packages/schemas/src/checkout.ts`의 Checkout 응답 스키마에 `nextStep` 필드가 포함되어 있는지, AND 프론트엔드 API 타입(`checkout-api.ts:Checkout.meta`)에도 동기화되어 있는지 확인.
 
 ```bash
+# backend schema 확인
 grep -n "nextStep" packages/schemas/src/checkout.ts
 # 결과: nextStep 필드 정의 라인 (선택적 필드)
+
+# frontend API 타입 동기화 확인 (Server-Driven UI 파이프라인 완결)
+grep -n "nextStep" apps/frontend/lib/api/checkout-api.ts
+# 결과: Checkout.meta에 nextStep?: NextStepDescriptor | null 포함
 ```
 
-**PASS:** `nextStep` 필드가 `NextStepDescriptorSchema` 타입으로 포함. **FAIL:** 필드 누락.
+**PASS:**
+- backend: `nextStep` 필드가 `NextStepDescriptorSchema` 타입으로 포함
+- frontend: `Checkout.meta.nextStep?: NextStepDescriptor | null` 선언
+  (이 필드가 없으면 `useCheckoutNextStep`이 서버 응답을 무시하고 항상 client fallback으로 동작)
+
+**FAIL:** 둘 중 하나라도 누락.
 
 ### Step 12: assertFsmAction HTTP 의미론 — 403/400 분리 (세션 이후)
 
@@ -411,6 +421,8 @@ grep -n "BadRequestException" \
 | 21 | checkTeamPermission ClassificationEnum SSOT | PASS/FAIL | 하드코딩 'general_emc'/'general_rf' 0건 + ClassificationEnum.enum.* 참조 |
 | 22 | firstEquip 취득 패턴 — items[0] 기준        | PASS/FAIL | values().next().value 0건 + get(items[0].equipmentId) ≥ 3건 |
 | 23 | rejectReturn reason 검증 순서 — scope/FSM 이후 | PASS/FAIL | REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData 라인 |
+| 24 | checkout-api.ts Checkout.meta.nextStep 타입 동기화 | PASS/FAIL | meta.nextStep?: NextStepDescriptor \| null 선언 존재 |
+| 25 | borrower 액터 identity-rule 강제 (Phase 3+4 이후) | PASS/SKIP | borrowerApprove: req.user.teamId === requester.teamId 강제 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -585,6 +597,47 @@ EOF
 
 **PASS:** `REJECTION_REASON_REQUIRED` 라인 번호 > `enforceScopeFromData` 라인 번호 (rejectReturn 메서드 내).
 **FAIL:** reason 검증이 scope 검증보다 앞에 위치 → reason 검증 블록을 `assertFsmAction` 이후로 이동.
+
+### Step 24: checkout-api.ts Checkout.meta.nextStep 타입 동기화 (2026-04-24 이후)
+
+Server-Driven UI 파이프라인: `서버 응답 → Checkout.meta.nextStep → useCheckoutNextStep(nextStep) → Zod parse → client fallback`.
+프론트엔드 API 타입에 `nextStep` 필드가 없으면 서버 응답이 타입 레벨에서 버려져 항상 client fallback 동작.
+
+```bash
+# Checkout.meta에 nextStep 필드 존재 확인
+grep -n "nextStep" apps/frontend/lib/api/checkout-api.ts
+# 기대: meta?: { availableActions: ...; nextStep?: NextStepDescriptor | null; }
+```
+
+**PASS:** `meta.nextStep?: NextStepDescriptor | null` 선언 존재.
+**FAIL:** meta 객체에 nextStep 누락 → `useCheckoutNextStep`이 항상 client fallback으로 동작 (설계 의도 역전).
+
+### Step 25: borrower 액터 identity-rule 강제 (Phase 3+4 구현 이후 활성화)
+
+rental 2-step 승인 워크플로우에서 `borrowerApprove`/`borrowerReject` 메서드가 구현되면:
+- `req.user.teamId === checkout.requester.teamId` 강제 (차용 팀 TM만 승인 가능)
+- `enforceScopeForBorrower` 호출이 `assertFsmAction`보다 먼저 실행
+- Security Invariant: scope-먼저 원칙 준수
+
+```bash
+# borrowerApprove 메서드 존재 확인 (Phase 3+4 완료 여부 판단)
+grep -n "async borrowerApprove\|borrowerApprove(" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건이면 SKIP (Phase 3+4 미구현)
+# 결과: 1건 이상이면 하위 검사 실행
+```
+
+```bash
+# (Phase 3+4 구현 후) borrowerApprove identity-rule 강제 확인
+grep -A10 "async borrowerApprove" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "enforceScopeForBorrower\|req\.user\.teamId.*requester\.teamId"
+# 결과: 1건 이상 (PASS) — scope 가드 존재
+```
+
+**PASS (미구현):** `borrowerApprove` 메서드 0건 → SKIP.
+**PASS (구현됨):** `enforceScopeForBorrower` 또는 동등 팀 ID 검증이 `assertFsmAction` 이전에 실행.
+**FAIL (구현됨):** scope 가드 없이 `assertFsmAction`만 호출 → 스코프 외 차용자 바이패스 가능.
 
 ## Exceptions
 
