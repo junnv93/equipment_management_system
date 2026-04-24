@@ -5,6 +5,22 @@
 
 ---
 
+## ~~반출입 관리 PR-5: CheckoutGroupCard + CheckoutDetailClient FSM 통합 + Feature Flag~~ ✅ 완료 (2026-04-24, 87차)
+
+> CheckoutGroupCard — RentalFlowInline 보존 + isNextStepPanelEnabled() 분기 + rentalDescriptor useMemo + `<NextStepPanel variant="compact">`.
+> CheckoutDetailClient — legacy import → shared, renderActions → LegacyActionsBlock 추출, handleNextStepAction 14종 switch 디스패처, variant="floating" + onActionClick + isPending 연결, ExportFormButton FSM 범위 밖 분리.
+> MUST 20개 PASS, SHOULD 5건 tech-debt-tracker 등록. tsc exit 0, self-audit 위반 0.
+
+---
+
+## ~~NC PR-10: NC elevation 리팩토링 — NC_ELEVATION → ELEVATION_TOKENS.surface re-export~~ ✅ 완료 (2026-04-24, 87차)
+
+> non-conformance.ts에서 NC_ELEVATION 자체 리터럴을 제거하고 `ELEVATION_TOKENS.surface`로 re-export.
+> NC 컴포넌트에서 import 경로 변경 없이 SSOT 일원화 달성.
+> 검증: tsc 0 errors, NC 컴포넌트 NC_ELEVATION 직접 사용 0건.
+
+---
+
 ## ~~반출입 관리 PR-24: FSM 리터럴 7건 외과적 교체~~ ✅ 완료 (2026-04-24, 86차)
 
 > 대상 7개 파일 grep 실측 — 실제 CheckoutStatus 리터럴 0건 확인. 잔여 status==='rejected' hits는 전부 Promise.allSettled 결과(self-audit-exception 승인됨). self-audit --all 위반 0.
