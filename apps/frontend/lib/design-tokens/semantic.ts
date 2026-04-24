@@ -235,11 +235,15 @@ export const ELEVATION_TOKENS = {
    * flush:    배경과 동일 (인라인 정보, 테이블 행)
    * raised:   카드 계층 (정보 카드, KPI, 통계)
    * floating: 액션 영역 (NextStepPanel, ActionBar, 드롭다운 대안)
+   * emphasis: 강조 패널 — NC_ELEVATION.emphasis 1:1 승계 예정 (PR-10)
+   * overlay:  Sticky ActionBar / Mobile Drawer — backdrop-blur 적용
    */
   surface: {
     flush: '',
     raised: 'shadow-sm',
     floating: 'shadow-md ring-1 ring-border/10',
+    emphasis: 'bg-card border-2 border-brand-info/40 shadow-md',
+    overlay: 'bg-card/95 backdrop-blur-md border border-border shadow-xl',
   },
 } as const;
 
@@ -403,9 +407,20 @@ export const TYPOGRAPHY_TOKENS = {
     base: 'text-xs text-muted-foreground',
     meta: 'text-xs-tight text-muted-foreground tabular-nums',
   },
+
+  /** Hero 제목 — 페이지/섹션 최상위 타이틀 (checkout 제목 등) */
+  hero: 'text-3xl font-bold tracking-tight',
+  /** 섹션 서브 헤딩 — heading.h3~h4와 body 사이 의도적 계층 */
+  subheading: 'text-base font-medium',
+  /** KPI 숫자 값 — 통계 카드 큰 숫자, tabular-nums 포함 */
+  kpi: 'text-4xl font-bold tabular-nums leading-none',
+  /** KPI 레이블 — 숫자 아래 설명 텍스트 */
+  kpiLabel: 'text-xs font-medium uppercase tracking-wider text-muted-foreground',
 } as const;
 
 export type TypographyScale = keyof typeof TYPOGRAPHY_TOKENS;
+/** flat 토큰 키 (hero/subheading/kpi/kpiLabel) — nested 구조(heading.h1 등)와 구분 */
+export type TypographyVariant = 'hero' | 'subheading' | 'kpi' | 'kpiLabel';
 
 /**
  * Micro Typography Tokens (마이크로 타이포그래피)
@@ -446,6 +461,10 @@ export const DIMENSION_TOKENS = {
   paginationBtn: 'w-pagination h-pagination',
   /** 상태 흐름 도트 원 정사각 (--spacing-step-dot = 18px) */
   stepDot: 'w-step-dot h-step-dot',
+  /** 그룹 헤더 row hover 좌측 강조 바 (w-1 = 4px) — purposeBar(3px)보다 넓음 */
+  accentBar: 'w-1',
+  /** Sticky 그룹 헤더 상단 오프셋 — ResizeObserver가 업데이트하는 CSS 변수 기반 */
+  stickyHeaderOffset: 'top-[var(--sticky-header-height,0px)]',
 } as const;
 
 // ============================================================================

@@ -39,6 +39,10 @@ export const BRAND_COLORS_HEX = {
   purple: '#8B5CF6',
   repair: '#F97316',
   temporary: '#22B8CF',
+  /** checked_out 이후 "진행 중" 상태 (in_use, lender_checked 등) */
+  progress: '#1d6fb8',
+  /** completed/canceled 아카이브 상태 */
+  archive: '#919aaa',
 } as const;
 
 export type SemanticColorKey = keyof typeof BRAND_COLORS_HEX;
@@ -223,6 +227,26 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-temporary',
     solid: 'bg-brand-temporary text-white',
     dot: 'bg-brand-temporary rounded-full',
+  },
+  progress: {
+    text: 'text-brand-progress',
+    bgLight: 'bg-brand-progress/10',
+    status: 'bg-brand-progress/10 text-brand-progress',
+    badge: 'text-brand-progress bg-brand-progress/10 border-brand-progress/20',
+    container: 'bg-brand-progress/10 border-brand-progress/20',
+    leftBorder: 'border-l-brand-progress',
+    solid: 'bg-brand-progress text-white',
+    dot: 'bg-brand-progress rounded-full',
+  },
+  archive: {
+    text: 'text-brand-archive',
+    bgLight: 'bg-brand-archive/10',
+    status: 'bg-brand-archive/10 text-brand-archive',
+    badge: 'text-brand-archive bg-brand-archive/10 border-brand-archive/20',
+    container: 'bg-brand-archive/10 border-brand-archive/20',
+    leftBorder: 'border-l-brand-archive',
+    solid: 'bg-brand-archive text-white',
+    dot: 'bg-brand-archive rounded-full',
   },
 } as const satisfies Record<SemanticColorKey, BrandClassSet>;
 

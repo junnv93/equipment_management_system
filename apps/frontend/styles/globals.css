@@ -84,6 +84,8 @@
   --color-brand-purple: hsl(var(--brand-color-purple));
   --color-brand-repair: hsl(var(--brand-color-repair));
   --color-brand-temporary: hsl(var(--brand-color-temporary));
+  --color-brand-progress: hsl(var(--brand-color-progress));
+  --color-brand-archive: hsl(var(--brand-color-archive));
 
   --color-brand-site-suw: hsl(var(--brand-color-site-suw));
   --color-brand-site-uiw: hsl(var(--brand-color-site-uiw));
@@ -407,6 +409,8 @@
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
     --brand-color-temporary: 187 72% 51%;  /* #22B8CF — 임시 장비 상태 */
+    --brand-color-progress: 213 79% 48%;   /* #1d6fb8 — 진행중 블루그레이 (in_use, lender_checked) */
+    --brand-color-archive: 220 9% 60%;     /* #919aaa — 완료/취소 아카이브 회색 */
 
     /* Site Identity Colors */
     --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
@@ -482,6 +486,8 @@
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
     --brand-color-temporary: 187 72% 51%;  /* 임시 — 다크모드 동일 */
+    --brand-color-progress: 213 79% 58%;   /* 다크모드 밝기 보정 */
+    --brand-color-archive: 220 9% 55%;     /* 다크모드 밝기 보정 */
 
     /* Site Identity Colors — Dark Mode (밝기 보정) */
     --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */
@@ -527,6 +533,13 @@
   .safe-area-y {
     padding-top: var(--safe-area-inset-top);
     padding-bottom: var(--safe-area-inset-bottom);
+  }
+
+  /* ring-dashed — FSM "next" 상태 스테퍼 노드용 점선 링 */
+  .ring-dashed {
+    --tw-ring-style: dashed;
+    outline: calc(var(--tw-ring-width, 2px)) dashed var(--tw-ring-color, currentColor);
+    outline-offset: calc(var(--tw-ring-offset-width, 0px) + 1px);
   }
 }
 

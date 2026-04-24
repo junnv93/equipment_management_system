@@ -99,6 +99,7 @@ export {
   type CalloutVariant,
   type CalloutEmphasis,
   type CalloutSize,
+  type TypographyVariant,
 } from './semantic';
 
 // ============================================================================
@@ -720,7 +721,22 @@ export {
 } from './components/page-layout';
 
 // Workflow Panel
-export { WORKFLOW_PANEL_TOKENS, type WorkflowPanelUrgency } from './components/workflow-panel';
+export {
+  WORKFLOW_PANEL_TOKENS,
+  NEXT_STEP_PANEL_TOKENS,
+  type WorkflowPanelUrgency,
+  type NextStepPanelUrgency,
+  type NextStepPanelContainer,
+} from './components/workflow-panel';
+
+// Checkout Icons
+export {
+  CHECKOUT_ICON_MAP,
+  type CheckoutStatusIconKey,
+  type CheckoutActionIconKey,
+  type CheckoutEmptyStateIconKey,
+  type CheckoutUrgencyIconKey,
+} from './components/checkout-icons';
 
 // ============================================================================
 // Usage Guidelines

@@ -158,6 +158,10 @@ export const CHECKOUT_ROW_TOKENS = {
     background: 'bg-brand-critical/8',
     border: 'border border-brand-critical/30',
   },
+  hover: {
+    normal: 'hover:bg-muted/30 transition-colors motion-safe:duration-150',
+    pending: 'hover:bg-brand-warning/5 transition-colors motion-safe:duration-150',
+  },
 } as const;
 
 /**
@@ -181,7 +185,13 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
     ].join(' ');
   }
 
-  return `${CHECKOUT_ROW_TOKENS.colorBar.base} ${colorBar}`;
+  if (status === 'pending') {
+    return [CHECKOUT_ROW_TOKENS.colorBar.base, colorBar, CHECKOUT_ROW_TOKENS.hover.pending].join(
+      ' '
+    );
+  }
+
+  return [CHECKOUT_ROW_TOKENS.colorBar.base, colorBar, CHECKOUT_ROW_TOKENS.hover.normal].join(' ');
 }
 
 // ============================================================================
@@ -358,9 +368,9 @@ export const CHECKOUT_STEPPER_TOKENS = {
     },
     /** 다음 단계 미리보기 — FSM descriptor.currentStepIndex+1 */
     next: {
-      node: 'bg-brand-info/5 ring-2 ring-brand-info/40',
-      icon: 'text-brand-info',
-      label: 'text-brand-info font-medium',
+      node: 'bg-brand-info/5 ring-1 ring-dashed ring-brand-info/50',
+      icon: 'text-brand-info/70',
+      label: 'text-brand-info/90 font-medium',
     },
   },
 
@@ -480,6 +490,23 @@ export const CHECKOUT_STATS_VARIANTS = {
     valueTypography: `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
     headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
     contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
+  },
+  /**
+   * Hero KPI 카드 — 페이지당 1개, overdue>0 시 동적 선택 (PR-7 grid 레이아웃에서 col-span-2 적용)
+   *
+   * container: PR-7 grid-cols-6 레이아웃에서 col-span-2 적용 — 현재는 구조 토큰만 정의
+   * surface: floating(raised보다 한 층 위) — 시각적 계층 강조
+   */
+  hero: {
+    container: 'col-span-2 sm:col-span-3 lg:col-span-2 row-span-1',
+    surface: ELEVATION_TOKENS.surface.floating,
+    kpi: `${TYPOGRAPHY_TOKENS.kpi} text-5xl`,
+    label: TYPOGRAPHY_TOKENS.kpiLabel,
+    hoverBorder: 'hover:border-brand-critical/30',
+    activeBorder: 'border-brand-critical',
+    activeBg: 'bg-brand-critical/10',
+    iconColor: 'text-brand-critical',
+    alertRing: 'ring-1 ring-brand-critical/20',
   },
 } as const;
 
