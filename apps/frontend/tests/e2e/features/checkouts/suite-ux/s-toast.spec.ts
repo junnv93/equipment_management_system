@@ -9,14 +9,14 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { CHECKOUT_001_ID } from '../../../shared/constants/test-checkout-ids';
-import { BASE_URLS, USERS } from '../../../shared/constants/shared-test-data';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 import { resetCheckoutToPending } from '../helpers/checkout-db-helpers';
 
 const CHECKOUTS_LIST_URL = `${BASE_URLS.FRONTEND}/checkouts`;
 
 test.describe('UX: Mutation Toast 알림', () => {
   test.beforeEach(async () => {
-    await resetCheckoutToPending(CHECKOUT_001_ID, USERS.TECH_MANAGER.token);
+    await resetCheckoutToPending(CHECKOUT_001_ID);
   });
 
   test('인라인 승인 후 Radix Toast에 "승인 완료" 텍스트가 노출된다', async ({

@@ -119,7 +119,8 @@ async function globalSetup(config: FullConfig) {
   //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
   console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
   try {
-    const token = await fetchBackendToken('lab_manager');
+    // UPDATE_EQUIPMENT 권한 필요 — lab_manager는 직무분리로 해당 권한 없음 (UL-QP-18)
+    const token = await fetchBackendToken('technical_manager');
     const overdueRes = await fetchWithRetry(
       `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
       {
