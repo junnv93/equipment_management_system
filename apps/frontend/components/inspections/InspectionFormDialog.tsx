@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
-import { Plus, Trash2, Info, ClipboardList, Wrench } from 'lucide-react';
+import { Plus, Trash2, Info, ClipboardList, Wrench, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -119,7 +120,11 @@ export default function InspectionFormDialog({
   const [previousInspectionApplied, setPreviousInspectionApplied] = useState(false);
 
   // Fetch equipment data for prefill
-  const { data: equipment, isLoading: isEquipmentLoading } = useQuery({
+  const {
+    data: equipment,
+    isLoading: isEquipmentLoading,
+    isError: isEquipmentError,
+  } = useQuery({
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     enabled: open,
@@ -182,7 +187,7 @@ export default function InspectionFormDialog({
     }
 
     setPrefilled((prev) => ({ ...prev, ...newPrefilled }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: open/equipment 변경 시만 prefill 재실행
   }, [open, equipment]);
 
   /**
@@ -221,7 +226,7 @@ export default function InspectionFormDialog({
     });
     setPrefilled((prev) => ({ ...prev, previousInspection: true }));
     setPreviousInspectionApplied(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·latestInspection 변경 시만 실행
   }, [open, usePreviousInspection, latestInspection, previousInspectionApplied]);
 
   /**
@@ -453,6 +458,12 @@ export default function InspectionFormDialog({
         </DialogHeader>
 
         <div className={INSPECTION_SPACING.section}>
+          {isEquipmentError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{t('intermediateInspection.equipmentLoadError')}</AlertDescription>
+            </Alert>
+          )}
           {/* 점검일 + 종합 판정 */}
           <div className="grid grid-cols-2 gap-4">
             <div className={INSPECTION_SPACING.field}>
@@ -772,7 +783,9 @@ export default function InspectionFormDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!inspectionDate || hasInvalidItems || createMutation.isPending}
+            disabled={
+              !inspectionDate || hasInvalidItems || createMutation.isPending || isEquipmentError
+            }
           >
             {createMutation.isPending
               ? t('intermediateInspection.saving')

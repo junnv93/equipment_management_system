@@ -310,9 +310,11 @@ function checkIconButtonA11y(file, lines) {
     const line = lines[i];
     // <Button ... size="icon"> 또는 <Button ... size='icon'> 이 aria-label 없이 단독 존재하는 경우
     if (/size=['"`]icon['"`]/.test(line) && !/<.*aria-label/.test(line)) {
-      // 다음 줄에 aria-label이 있는지도 확인 (multi-line JSX)
-      const nextLine = lines[i + 1] ?? '';
-      if (!/aria-label/.test(nextLine)) {
+      // 멀티라인 JSX: size="icon" 이후 최대 10줄 lookahead로 aria-label 검색
+      const lookahead = lines.slice(i + 1, i + 11).join('\n');
+      // 닫는 > 이전까지만 확인 (다음 Button으로 넘어가지 않도록)
+      const untilClose = lookahead.split(/>/).slice(0, 2).join('>');
+      if (!/aria-label/.test(untilClose)) {
         fail(
           '⑦ a11y icon button',
           file,
