@@ -2,7 +2,8 @@ import { getSemanticContainerTextClasses, type SemanticColorKey } from '@/lib/de
 
 interface SparklineMiniProps {
   values: number[];
-  trend: 'up' | 'down' | 'flat';
+  /** 향후 선 색상/스타일 변형에 사용. 현재는 variant 색상만 적용. */
+  trend?: 'up' | 'down' | 'flat';
   variant: SemanticColorKey;
   width?: number;
   height?: number;
