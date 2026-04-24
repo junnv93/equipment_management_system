@@ -149,7 +149,10 @@ function calculateDaysRemaining(expectedReturnDate: string): number {
 interface CheckoutGroupCardProps {
   group: CheckoutGroup;
   onCheckoutClick: (checkoutId: string) => void;
-  /** 인라인 승인 권한 여부 (technical_manager, lab_manager) */
+  /**
+   * UX hint 전용 — 로딩 전 낙관적 UI에만 사용.
+   * 실제 승인/반려 결정은 server meta.availableActions 사용 (fail-closed).
+   */
   canApprove?: boolean;
   /** 기한 초과 그룹 최상단 고정을 위한 id */
   isOverdueGroup?: boolean;
@@ -171,13 +174,16 @@ interface CheckoutGroupCardProps {
 function CheckoutGroupCard({
   group,
   onCheckoutClick,
-  canApprove = false,
+  canApprove: _canApproveHint = false,
   isOverdueGroup = false,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
   const locale = useLocale();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup); // 기한 초과 그룹은 기본 펼침
+
+  // UX hint 전용 — 서버 meta 로드 전 낙관적 UI에만 사용. 승인/반려 결정에는 meta.availableActions가 SSOT.
+  const canApprove = _canApproveHint;
 
   // FSM descriptor 계산용 role/permissions
   const { data: session } = useSession();
@@ -211,12 +217,13 @@ function CheckoutGroupCard({
           expectedReturnDate: checkout.expectedReturnDate,
           version: checkout.version,
           destination: checkout.destination,
-          // 서버가 계산한 가능한 액션 우선, 없으면 역할 기반 폴백
-          canApproveItem: checkout.meta?.availableActions?.canApprove ?? canApprove,
+          // 서버가 계산한 가능한 액션 사용. meta 누락 시 fail-closed (false)
+          canApproveItem: checkout.meta?.availableActions?.canApprove ?? false,
+          canReturnItem: checkout.meta?.availableActions?.canReturn ?? false,
           descriptor,
         }));
       }),
-    [group.checkouts, t, canApprove, descriptorMap]
+    [group.checkouts, t, descriptorMap]
   );
 
   // 그룹 내 pending 건수 + 일괄 승인 가능 여부
@@ -227,21 +234,24 @@ function CheckoutGroupCard({
 
   // "내 차례" 카운트 — availableToCurrentUser인 checkout 수
   const yourTurnCount = useMemo(() => {
-    if (!isNextStepPanelEnabled()) return 0;
+    if (!isNextStepPanelEnabled()) {
+      // Legacy path: canApprove hint으로 대기 건수 표시 (descriptor 없으므로 role 기반 추정)
+      return canApprove ? group.checkouts.filter((co) => co.status === CSVal.PENDING).length : 0;
+    }
     let count = 0;
     for (const co of group.checkouts) {
       if (descriptorMap.get(co.id)?.availableToCurrentUser === true) count++;
     }
     return count;
-  }, [group.checkouts, descriptorMap]);
+  }, [group.checkouts, descriptorMap, canApprove]);
 
-  // 일괄 승인: pending 중 하나라도 canApprove가 true면 버튼 표시
+  // 일괄 승인: pending 중 하나라도 canApprove가 true면 버튼 표시 (meta 누락 시 fail-closed)
   const canApproveBulk = useMemo(
     () =>
       group.checkouts
         .filter((co) => co.status === CSVal.PENDING)
-        .some((co) => co.meta?.availableActions?.canApprove ?? canApprove),
-    [group.checkouts, canApprove]
+        .some((co) => co.meta?.availableActions?.canApprove ?? false),
+    [group.checkouts]
   );
 
   // 렌탈 그룹 감지 + 현재 렌탈 상태
@@ -567,8 +577,8 @@ function CheckoutGroupCard({
                           </>
                         )}
 
-                        {(row.status === CSVal.CHECKED_OUT || row.status === CSVal.OVERDUE) && (
-                          <>
+                        {row.canReturnItem &&
+                          (row.status === CSVal.CHECKED_OUT || row.status === CSVal.OVERDUE) && (
                             <Link
                               href={FRONTEND_ROUTES.CHECKOUTS.RETURN(row.checkoutId)}
                               onClick={(e) => e.stopPropagation()}
@@ -577,8 +587,7 @@ function CheckoutGroupCard({
                               {t('actions.processReturn')}
                               <ArrowRight className="h-3 w-3" />
                             </Link>
-                          </>
-                        )}
+                          )}
                       </div>
                     </div>
                   );

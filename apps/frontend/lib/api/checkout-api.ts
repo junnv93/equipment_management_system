@@ -229,6 +229,15 @@ export interface CheckoutSummary {
   returnedToday: number;
 }
 
+/** Sprint 1.1 보장: 서버는 항상 meta를 populate해야 함. 누락 시 FSM drift 감지 로그. */
+function warnMetaDrift(checkout: Checkout): void {
+  if (checkout.meta === undefined) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[FSM drift] meta missing', checkout.id);
+    }
+  }
+}
+
 const checkoutApi = {
   /**
    * 반출 목록을 조회합니다.
@@ -247,8 +256,9 @@ const checkoutApi = {
 
     const url = `${API_ENDPOINTS.CHECKOUTS.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
-    // ✅ 공통 유틸리티 사용: 백엔드 응답을 프론트엔드 형식으로 변환
-    return transformPaginatedResponse<Checkout, CheckoutSummary>(response);
+    const result = transformPaginatedResponse<Checkout, CheckoutSummary>(response);
+    result.data.forEach(warnMetaDrift);
+    return result;
   },
 
   /**
@@ -257,7 +267,9 @@ const checkoutApi = {
    */
   async getCheckout(id: string): Promise<Checkout> {
     const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.GET(id));
-    return transformSingleResponse<Checkout>(response);
+    const checkout = transformSingleResponse<Checkout>(response);
+    warnMetaDrift(checkout);
+    return checkout;
   },
 
   /**
