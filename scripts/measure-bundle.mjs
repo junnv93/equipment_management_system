@@ -1,28 +1,34 @@
 #!/usr/bin/env node
 /**
- * measure-bundle.mjs — checkouts 라우트 번들 크기 독립 측정 + 증가분 경고
+ * measure-bundle.mjs — checkouts 라우트 번들 크기 정밀 측정 + baseline 비교
  *
- * check-bundle-size.mjs(stdin 기반, 전체 라우트 예산)의 보완 스크립트.
- * checkouts 라우트에 집중하여 8 kB 증가분 기준으로 경고를 출력한다.
- * bundle-baseline.json 형식을 check-bundle-size.mjs와 공유한다.
+ * webpack-bundle-analyzer의 JSON 리포트(.next/analyze/client.json)를 파싱하여
+ * checkouts 청크의 실제 gzip 크기를 측정한다. stdout 정규식 파싱 대신 구조화된
+ * JSON을 사용하므로 Next.js 버전 업그레이드에 영향받지 않는다.
+ *
+ * check-bundle-size.mjs(stdin 파이프, 전체 250 kB 예산)의 보완 스크립트.
+ * 같은 bundle-baseline.json을 공유하며, checkouts 특화 gzip 크기에 집중한다.
  *
  * 사용법:
- *   node scripts/measure-bundle.mjs           # 빌드 실행 → 측정 → baseline 저장
- *   node scripts/measure-bundle.mjs --no-build  # 기존 빌드 결과 재파싱 (빌드 스킵)
- *   node scripts/measure-bundle.mjs --compare   # baseline 대비 증가분 비교
- *   node scripts/measure-bundle.mjs --help      # 도움말
+ *   node scripts/measure-bundle.mjs            # 빌드 실행 → 측정 → baseline 저장
+ *   node scripts/measure-bundle.mjs --no-build # 기존 client.json 재파싱 (빌드 스킵)
+ *   node scripts/measure-bundle.mjs --compare  # baseline 대비 증가분 비교 (빌드 포함)
+ *   node scripts/measure-bundle.mjs --help     # 도움말
+ *
+ * 출력 파일:
+ *   .next/analyze/client.json    — webpack-bundle-analyzer chartData (gzipSize 포함)
+ *   scripts/bundle-baseline.json — baseline 데이터 (check-bundle-size.mjs와 공유)
  */
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
-import { resolve, join } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
-const NEXT_DIR = resolve(ROOT, 'apps/frontend/.next');
+const CLIENT_JSON = resolve(ROOT, 'apps/frontend/.next/analyze/client.json');
 const BASELINE_PATH = resolve(ROOT, 'scripts/bundle-baseline.json');
 
-// checkouts 라우트 First Load JS 증가분 임계값
+// checkouts gzip 증가분 임계값 (동일 라우트 기준)
 const INCREASE_THRESHOLD_KB = 8;
 
 const isHelp = process.argv.includes('--help') || process.argv.includes('-h');
@@ -33,141 +39,166 @@ const isCompare = process.argv.includes('--compare');
 
 if (isHelp) {
   console.log(`
-measure-bundle.mjs — checkouts 라우트 번들 크기 측정 + baseline 비교
+measure-bundle.mjs — checkouts 라우트 gzip 크기 측정 + baseline 비교
 
-사용법:
-  node scripts/measure-bundle.mjs             빌드 실행 → checkouts 측정 → baseline 저장
-  node scripts/measure-bundle.mjs --no-build  기존 .next/ 서버 파일 직접 측정 (빌드 스킵)
-  node scripts/measure-bundle.mjs --compare   baseline 대비 증가분 비교 (빌드 포함)
-  node scripts/measure-bundle.mjs --help      이 도움말
+  측정 방식: webpack-bundle-analyzer JSON 리포트(.next/analyze/client.json)의
+             gzipSize 필드 직접 파싱 — stdout 정규식 파싱 없음
 
-측정값:
-  빌드 모드  — Next.js 빌드 stdout의 "First Load JS" (kB)
-  --no-build — .next/server/app/checkouts/**/*.js gzip 크기 (kB)
+  사용법:
+    node scripts/measure-bundle.mjs            빌드 + 측정 + baseline 저장
+    node scripts/measure-bundle.mjs --no-build 기존 client.json 재파싱 (빌드 스킵)
+    node scripts/measure-bundle.mjs --compare  측정 후 baseline 대비 비교
+    node scripts/measure-bundle.mjs --help     이 도움말
 
-경고 임계값: ${INCREASE_THRESHOLD_KB} kB 증가 시 ⚠️ 출력 후 exit 1
-baseline 파일: scripts/bundle-baseline.json (check-bundle-size.mjs와 공유)
+  빌드 환경 변수:
+    ANALYZE=true          webpack-bundle-analyzer 활성화
+    ANALYZE_MODE=json     JSON 리포트 생성 (HTML 뷰어 없음)
+    ANALYZE_OPEN=false    브라우저 자동 열기 비활성
 
-관련:
-  pnpm --filter frontend run build 2>&1 | node scripts/check-bundle-size.mjs --baseline
-  → 전체 라우트 예산(250 kB) 검사 + baseline 저장
-`);
+  경고 임계값: ${INCREASE_THRESHOLD_KB} kB gzip 증가
+  baseline 파일: scripts/bundle-baseline.json (check-bundle-size.mjs와 공유)
+  `);
   process.exit(0);
 }
 
-// ─── 빌드 실행 + stdout 파싱 ──────────────────────────────────────────────
+// ─── 빌드 + JSON 리포트 생성 ───────────────────────────────────────────────
 
-function buildAndParse() {
-  console.log('📦 pnpm --filter frontend run build 실행 중 (checkouts 크기 측정)...\n');
-  let stdout = '';
+function buildWithAnalyze() {
+  console.log('📦 ANALYZE=true ANALYZE_MODE=json 빌드 실행 중...\n');
+  console.log(
+    '   (webpack-bundle-analyzer JSON 리포트 → .next/analyze/client.json)\n'
+  );
+
   try {
-    stdout = execSync('pnpm --filter frontend run build', {
+    execSync('pnpm --filter frontend run build', {
       cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 20 * 1024 * 1024,
+      stdio: 'inherit',
       timeout: 360_000,
+      env: {
+        ...process.env,
+        ANALYZE: 'true',
+        ANALYZE_MODE: 'json',
+        ANALYZE_OPEN: 'false',
+      },
     });
   } catch (err) {
-    const msg = String(err.stderr ?? err.stdout ?? err.message);
-    console.error('❌ 빌드 실패:\n' + msg.slice(-1000));
+    console.error('\n❌ 빌드 실패 — 위 빌드 로그를 확인하세요');
     process.exit(1);
   }
-  return parseStdout(stdout);
 }
 
-// ─── Next.js 빌드 stdout 파싱 ─────────────────────────────────────────────
-// check-bundle-size.mjs와 동일한 정규식 — 형식 변경 시 양쪽 동기화 필요
+// ─── client.json 파싱 (chartData 형식) ─────────────────────────────────────
+// webpack-bundle-analyzer chartData:
+// [{ label, statSize, parsedSize, gzipSize, groups: [...재귀] }]
 
-function parseStdout(stdout) {
-  // 형식: "│ ○ /checkouts   1.85 kB   108 kB"  (Size, First Load JS)
-  const ROUTE_RE = /[│├└]\s+[○●λ⊕ƒ◐]\s+(\S+)\s+([\d.]+)\s+(?:kB|B)\s+([\d.]+)\s+kB/;
-
-  const routes = [];
-  for (const line of stdout.split('\n')) {
-    if (!line.toLowerCase().includes('checkout')) continue;
-    const m = line.match(ROUTE_RE);
-    if (!m) continue;
-    routes.push({ route: m[1], firstLoadKb: parseFloat(m[3]) });
-  }
-  return routes;
-}
-
-// ─── .next/ 서버 파일 직접 측정 (--no-build) ──────────────────────────────
-
-function walkJs(dir) {
-  if (!existsSync(dir)) return [];
+/**
+ * chartData 노드에서 label이 matcher를 만족하는 항목을 재귀 탐색하여
+ * { label, gzipSize, parsedSize } 배열로 반환한다.
+ */
+function findChunks(nodes, matcher) {
   const results = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) results.push(...walkJs(full));
-    else if (entry.name.endsWith('.js')) results.push(full);
+  for (const node of nodes ?? []) {
+    if (matcher(node.label ?? '')) {
+      results.push({
+        label: node.label,
+        gzipSize: node.gzipSize ?? 0,
+        parsedSize: node.parsedSize ?? 0,
+      });
+    }
+    // groups는 재귀 탐색 (모듈 트리)
+    results.push(...findChunks(node.groups, matcher));
   }
   return results;
 }
 
-function measureFromDisk() {
-  const manifestPath = resolve(NEXT_DIR, 'app-path-routes-manifest.json');
-  if (!existsSync(manifestPath)) {
-    console.error('❌ .next/app-path-routes-manifest.json 없음 — 빌드를 먼저 실행하세요');
-    console.error('   pnpm --filter frontend run build');
+function parseClientJson() {
+  if (!existsSync(CLIENT_JSON)) {
+    console.error('❌ .next/analyze/client.json 없음');
+    if (isNoBuild) {
+      console.error(
+        '   ANALYZE=true ANALYZE_MODE=json 빌드를 먼저 실행하세요:\n' +
+          '   node scripts/measure-bundle.mjs  (--no-build 없이)'
+      );
+    }
     process.exit(1);
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const serverAppDir = resolve(NEXT_DIR, 'server', 'app');
-
-  // 같은 route URL로 중복 집계 방지 (page/layout 등 여러 세그먼트)
-  const routeBytes = {};
-  for (const [segment, route] of Object.entries(manifest)) {
-    if (!route.toLowerCase().includes('checkout')) continue;
-    const jsFile = resolve(serverAppDir, segment.slice(1) + '.js');
-    if (!existsSync(jsFile)) continue;
-    const bytes = gzipSync(readFileSync(jsFile)).length;
-    routeBytes[route] = (routeBytes[route] ?? 0) + bytes;
+  let chartData;
+  try {
+    chartData = JSON.parse(readFileSync(CLIENT_JSON, 'utf8'));
+  } catch (e) {
+    console.error('❌ client.json 파싱 실패:', e.message);
+    process.exit(1);
   }
 
-  return Object.entries(routeBytes).map(([route, bytes]) => ({
-    route,
-    firstLoadKb: bytes / 1024,
+  if (!Array.isArray(chartData)) {
+    console.error('❌ client.json 형식 오류: 배열이 아님 (webpack-bundle-analyzer 버전 확인 필요)');
+    process.exit(1);
+  }
+
+  // checkouts 관련 청크: label에 'checkout' 포함 (대소문자 무관)
+  // Next.js App Router chunk 예: "app/(dashboard)/checkouts/page"
+  // 최상위 청크만 집계 (groups 내부 모듈은 제외 — 중복 집계 방지)
+  const isCheckout = (label) => label.toLowerCase().includes('checkout');
+  const topLevelCheckouts = (chartData).filter((node) => isCheckout(node.label ?? ''));
+
+  return topLevelCheckouts.map((node) => ({
+    label: node.label,
+    gzipKb: (node.gzipSize ?? 0) / 1024,
+    parsedKb: (node.parsedSize ?? 0) / 1024,
   }));
 }
 
-// ─── 출력 ─────────────────────────────────────────────────────────────────
+// ─── 결과 출력 ─────────────────────────────────────────────────────────────
 
-function printRoutes(routes, mode) {
-  if (routes.length === 0) {
-    console.log('ℹ️  checkouts 라우트를 찾지 못했습니다');
+function printResults(chunks) {
+  if (chunks.length === 0) {
+    console.log('\nℹ️  checkouts 청크를 찾지 못했습니다.');
+    console.log('   label 패턴: "checkout" 포함 (대소문자 무관)');
+    console.log('   .next/analyze/client.json에서 실제 label을 확인하세요.');
     return;
   }
-  console.log(`\n📦 checkouts 번들 크기 (${mode}):\n`);
-  for (const { route, firstLoadKb } of routes) {
-    console.log(`  ${route.padEnd(48)} ${firstLoadKb.toFixed(2).padStart(8)} kB`);
+
+  const totalGzipKb = chunks.reduce((s, c) => s + c.gzipKb, 0);
+
+  console.log('\n📦 checkouts 청크 gzip 크기 (.next/analyze/client.json 기준):\n');
+  for (const { label, gzipKb, parsedKb } of chunks) {
+    const short = label.replace(/^app\/\(dashboard\)\//, '');
+    console.log(
+      `  ${short.padEnd(52)} gzip: ${gzipKb.toFixed(2).padStart(7)} kB  parsed: ${parsedKb.toFixed(2).padStart(7)} kB`
+    );
   }
+  console.log(`\n  ${'합계 (checkouts 청크)'.padEnd(52)} gzip: ${totalGzipKb.toFixed(2).padStart(7)} kB`);
+
+  return totalGzipKb;
 }
 
 // ─── baseline 저장 ──────────────────────────────────────────────────────────
-// check-bundle-size.mjs와 동일한 { routes: { [route]: firstLoadKb } } 형식 유지
+// check-bundle-size.mjs 호환 형식: { generatedAt, tolerancePct, routes: { [route]: kB } }
 
-function saveBaseline(routes) {
+function saveBaseline(chunks) {
   let baseline = { generatedAt: '', tolerancePct: 5, routes: {} };
   if (existsSync(BASELINE_PATH)) {
     try { baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')); } catch { /* 초기화 */ }
   }
-  // checkouts 라우트만 갱신 (다른 라우트는 보존)
-  for (const { route, firstLoadKb } of routes) {
-    baseline.routes[route] = firstLoadKb;
+
+  // checkouts 청크를 단축 경로로 저장 (check-bundle-size.mjs의 /checkouts, /checkouts/[id] 형식 일치)
+  for (const { label, gzipKb } of chunks) {
+    const route = '/' + label.replace(/^app\/\(dashboard\)\//, '').replace(/\/page$/, '');
+    baseline.routes[route] = gzipKb;
   }
   baseline.generatedAt = new Date().toISOString().slice(0, 10);
+
   writeFileSync(BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n');
-  console.log(`\n💾 baseline 저장 (checkouts 라우트 갱신): scripts/bundle-baseline.json`);
+  console.log('\n💾 baseline 저장 (checkouts gzip 크기): scripts/bundle-baseline.json');
 }
 
 // ─── baseline 비교 ──────────────────────────────────────────────────────────
 
-function compareWithBaseline(routes) {
+function compareWithBaseline(chunks) {
   if (!existsSync(BASELINE_PATH)) {
     console.log('\nℹ️  baseline 없음 → 현재 측정값을 baseline으로 저장합니다');
-    saveBaseline(routes);
+    saveBaseline(chunks);
     return false;
   }
 
@@ -180,32 +211,34 @@ function compareWithBaseline(routes) {
   const baseMap = baseline.routes ?? {};
   let hasWarning = false;
 
-  console.log('\n📊 baseline 대비 checkouts 번들 증가분:\n');
+  console.log('\n📊 baseline 대비 checkouts 번들 gzip 증가분:\n');
   console.log(
-    `  ${'라우트'.padEnd(46)} ${'현재(kB)'.padStart(10)} ${'baseline'.padStart(10)} ${'증가분'.padStart(10)}`
+    `  ${'청크'.padEnd(50)} ${'현재(kB)'.padStart(10)} ${'baseline'.padStart(10)} ${'증가분'.padStart(10)}`
   );
-  console.log('  ' + '-'.repeat(80));
+  console.log('  ' + '-'.repeat(84));
 
-  for (const { route, firstLoadKb } of routes) {
+  for (const { label, gzipKb } of chunks) {
+    const route = '/' + label.replace(/^app\/\(dashboard\)\//, '').replace(/\/page$/, '');
     const prev = baseMap[route];
-    const diffKb = prev !== undefined ? firstLoadKb - prev : 0;
     const isNew = prev === undefined;
+    const diffKb = isNew ? 0 : gzipKb - prev;
     const warn = !isNew && diffKb > INCREASE_THRESHOLD_KB ? ' ⚠️' : '';
     if (!isNew && diffKb > INCREASE_THRESHOLD_KB) hasWarning = true;
 
-    const prevStr = prev !== undefined ? prev.toFixed(2) : '(신규)';
+    const prevStr = isNew ? '(신규)' : prev.toFixed(2);
     const diffStr = isNew ? '—' : (diffKb >= 0 ? '+' : '') + diffKb.toFixed(2);
+    const short = label.replace(/^app\/\(dashboard\)\//, '');
     console.log(
-      `  ${route.padEnd(46)} ${firstLoadKb.toFixed(2).padStart(10)} ${prevStr.padStart(10)} ${diffStr.padStart(10)}${warn}`
+      `  ${short.padEnd(50)} ${gzipKb.toFixed(2).padStart(10)} ${prevStr.padStart(10)} ${diffStr.padStart(10)}${warn}`
     );
   }
 
   console.log('');
   if (hasWarning) {
-    console.warn(`⚠️  경고: ${INCREASE_THRESHOLD_KB} kB 이상 증가한 checkouts 라우트가 있습니다.`);
+    console.warn(`⚠️  경고: ${INCREASE_THRESHOLD_KB} kB 이상 gzip 증가한 checkouts 청크가 있습니다.`);
     console.warn('   코드 스플리팅 확인 또는 불필요한 import 제거를 검토하세요.');
   } else {
-    console.log(`✅ 모든 checkouts 라우트 증가분 < ${INCREASE_THRESHOLD_KB} kB — 이상 없음`);
+    console.log(`✅ 모든 checkouts 청크 gzip 증가분 < ${INCREASE_THRESHOLD_KB} kB`);
   }
 
   return hasWarning;
@@ -213,27 +246,24 @@ function compareWithBaseline(routes) {
 
 // ─── 메인 ──────────────────────────────────────────────────────────────────
 
-const routes = isNoBuild ? measureFromDisk() : buildAndParse();
-const mode = isNoBuild ? 'server bundle gzip, --no-build' : 'First Load JS, 빌드 출력';
-
-if (isNoBuild) {
-  // --no-build 모드: 서버 번들 gzip 크기 (클라이언트 First Load JS와 단위 다름)
-  console.warn('⚠️  --no-build 모드: 서버 번들 gzip 크기 측정 (클라이언트 First Load JS 아님)');
-  console.warn('   빌드 모드 baseline과 직접 비교 불가. 참고용으로만 사용하세요.\n');
+if (!isNoBuild) {
+  buildWithAnalyze();
 }
 
-printRoutes(routes, mode);
+const chunks = parseClientJson();
+const totalGzipKb = printResults(chunks);
 
 let exitCode = 0;
-if (isNoBuild) {
-  // --no-build 모드: 출력만, baseline 저장/비교 없음 (단위 혼용 방지)
-  console.log('\nℹ️  --no-build 모드는 baseline 저장/비교를 지원하지 않습니다.');
-  console.log('   정확한 baseline 갱신은 빌드 모드(--no-build 없이)를 사용하세요.');
+
+if (chunks.length === 0) {
+  // 청크를 찾지 못했어도 실패 처리하지 않음 (첫 실행 또는 라우트 구조 변경)
+  console.log('\n⚠️  checkouts 청크 미발견 — baseline을 업데이트하지 않습니다.');
 } else if (isCompare) {
-  const warned = compareWithBaseline(routes);
+  const warned = compareWithBaseline(chunks);
   if (warned) exitCode = 1;
 } else {
-  saveBaseline(routes);
+  saveBaseline(chunks);
+  console.log(`\n📋 총 gzip 크기: ${totalGzipKb?.toFixed(2) ?? '?'} kB (checkouts 청크 합계)`);
 }
 
 console.log('\n✅ measure-bundle 완료\n');

@@ -1,6 +1,11 @@
 const path = require('path');
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  // ANALYZE_MODE=json → .next/analyze/client.json 생성 (measure-bundle.mjs 전용)
+  // ANALYZE_MODE=static (기본) → HTML 뷰어 생성 (수동 분석용)
+  analyzerMode: process.env.ANALYZE_MODE ?? 'static',
+  // ANALYZE_OPEN=false → 브라우저 자동 열기 비활성 (CI/스크립트 환경)
+  openAnalyzer: process.env.ANALYZE_OPEN !== 'false',
 });
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
