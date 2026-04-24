@@ -34,7 +34,8 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/semantic.ts` | Layer 2 의미론적 토큰 |
 | `apps/frontend/lib/design-tokens/motion.ts` | Motion 유틸리티 (getTransitionClasses, TRANSITION_PRESETS) |
 | `apps/frontend/lib/design-tokens/visual-feedback.ts` | Visual Feedback System (Architecture v3) |
-| `apps/frontend/lib/design-tokens/components/*.ts` | Layer 3 컴포넌트 토큰 (20+개 파일) |
+| `apps/frontend/lib/design-tokens/components/*.ts` | Layer 3 컴포넌트 토큰 (28개 파일) |
+| `apps/frontend/lib/design-tokens/components/checkout-icons.ts` | Lucide 아이콘 SSOT — CHECKOUT_ICON_MAP (status/action/emptyState/urgency/locked) |
 | `apps/frontend/styles/globals.css` | Brand CSS 변수 + easing CSS 변수 + Tailwind v4 `@theme`/`@theme inline` 토큰 |
 | `apps/frontend/postcss.config.js` | Tailwind v4 PostCSS 플러그인 (`@tailwindcss/postcss` 단일) |
 | `apps/frontend/package.json` | Tailwind v4 의존성 (`tailwindcss`, `@tailwindcss/postcss`, `tw-animate-css`) |
@@ -486,6 +487,144 @@ grep -oP "export const \K\w+StatusValues" \
 **주의:** DB 저장 enum의 Values 객체 (`CheckoutStatusValues`, `EquipmentStatusValues` 등)는
 `packages/schemas/`에서 관리하며 이 Step의 검사 대상이 아님. Design-tokens layer 전용 Step.
 
+### Step 19: ring-dashed + ring-1 조합 안티패턴 (2026-04-24 추가)
+
+Tailwind의 `ring-1`은 `box-shadow` 기반이라 `border-style: dashed`를 지원하지 않는다.
+`ring-dashed` 커스텀 유틸리티와 `ring-1`을 같이 쓸 때 solid `box-shadow`가 outline 위에 겹쳐
+점선 링이 무효화된다. 이 무효화(`--tw-ring-shadow: 0 0 #0000`)는 반드시 `globals.css`의
+`@layer utilities > .ring-dashed` 정의 내에서만 처리하고, 컴포넌트 인라인 스타일로 처리 금지.
+
+**올바른 패턴:**
+```css
+/* globals.css @layer utilities */
+.ring-dashed {
+  --tw-ring-shadow: 0 0 #0000;  /* solid ring 무효화 */
+  outline: calc(var(--tw-ring-width, 1px)) dashed var(--tw-ring-color, currentColor);
+  outline-offset: calc(var(--tw-ring-offset-width, 0px) + 1px);
+}
+```
+
+```bash
+# 컴포넌트에서 --tw-ring-shadow 인라인 override 탐지 (globals.css 외)
+grep -rn "\-\-tw-ring-shadow" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" --include="*.css"
+# → 0건 (globals.css @layer utilities 전용)
+
+# ring-dashed가 globals.css @layer utilities 내에서만 정의되는지 확인
+grep -n "ring-dashed" apps/frontend/styles/globals.css
+# → @layer utilities 블록 내 1건만 존재
+```
+
+**PASS:** 컴포넌트에서 `--tw-ring-shadow` 인라인 재정의 0건. **FAIL:** 컴포넌트/page에서 `--tw-ring-shadow` 직접 override → `globals.css @layer utilities .ring-dashed` 정의로 이전.
+
+**상세:** [references/step-details.md](references/step-details.md) Step 19
+
+### Step 20: BRAND_CLASS_MATRIX 신규 색상 추가 — 3곳 동시 갱신 (2026-04-24 추가)
+
+`BRAND_COLORS_HEX`에 새 색상 키를 추가할 때 아래 3곳이 반드시 **동시에** 갱신되어야 한다.
+하나라도 누락되면 Tailwind 클래스 미존재(`text-brand-xxx is not a valid Tailwind class`) 또는
+타입 에러(`satisfies` 위반)가 발생한다.
+
+| 위치 | 추가 내용 | 위반 유형 |
+|---|---|---|
+| `brand.ts` `BRAND_COLORS_HEX` | `key: '#hexvalue'` | 기준점(SSOT 원본) |
+| `brand.ts` `BRAND_CLASS_MATRIX` | 8개 변형 `BrandClassSet` 전체 | TypeScript `satisfies` 에러 |
+| `globals.css` `:root` / `.dark` | `--brand-color-<key>` HSL 채널값 (2곳) | Tailwind 클래스 런타임 오작동 |
+
+**탐지:**
+```bash
+# BRAND_COLORS_HEX 키 목록 추출
+node -e "
+  const { BRAND_COLORS_HEX } = require('./apps/frontend/lib/design-tokens/brand.ts');
+" 2>/dev/null || \
+grep -oP "^\s+\K\w+(?=: '#)" apps/frontend/lib/design-tokens/brand.ts | head -20
+
+# BRAND_CLASS_MATRIX 키와 BRAND_COLORS_HEX 키 일치 여부
+# (satisfies Record<SemanticColorKey, BrandClassSet>이 있으면 tsc가 자동 검증)
+grep -c "satisfies Record<SemanticColorKey, BrandClassSet>" \
+  apps/frontend/lib/design-tokens/brand.ts
+# → 1건 (satisfies 제약 존재)
+
+# globals.css :root와 .dark 양쪽에 --brand-color-<key> 존재 확인
+# 현재 BRAND_COLORS_HEX 키: ok/warning/critical/info/neutral/purple/repair/temporary/progress/archive
+for key in ok warning critical info neutral purple repair temporary progress archive; do
+  count=$(grep -c "\-\-brand-color-${key}" apps/frontend/styles/globals.css)
+  [ "$count" -lt 2 ] && echo "MISSING or single-occurrence: --brand-color-${key} (found: ${count})"
+done
+```
+
+**PASS:** `BRAND_CLASS_MATRIX`에 `satisfies Record<SemanticColorKey, BrandClassSet>` 존재 + 모든 `BRAND_COLORS_HEX` 키가 `globals.css` `:root`/`.dark` 양쪽에 정의됨. **FAIL:** `satisfies` 미존재 또는 CSS 변수 누락 → 3곳 동시 갱신.
+
+**예외:** `BRAND_COLORS_HEX` 자체가 hex 참조값이므로 CSS 변수와 hex 값이 동일 색상을 표현해야 함. 다크모드 밝기 보정은 `.dark` 블록에서만 허용.
+
+**상세:** [references/step-details.md](references/step-details.md) Step 20
+
+### Step 21: design-token 파일 내 dark: prefix in brand token 금지 (2026-04-24 추가)
+
+`apps/frontend/lib/design-tokens/components/*.ts` 파일 내 brand 토큰 정의에서
+`dark:bg-brand-*`, `dark:text-brand-*`, `dark:border-brand-*` 패턴 사용 금지.
+
+**근거:** brand CSS 변수(예: `--color-brand-ok`)는 `globals.css`의 `:root`와 `.dark` 블록에서
+각각 다른 HSL 값으로 정의된다. Tailwind `bg-brand-ok` 클래스는 이 CSS 변수를 참조하므로
+다크모드에서 자동으로 전환된다. `dark:bg-brand-ok`를 중복 선언하면 의도치 않게 고정 색상이
+적용되어 정상 전환이 방해된다.
+
+```bash
+# design-token components 파일 내 dark:bg-brand-*, dark:text-brand-*, dark:border-brand-* 탐지
+grep -rn "dark:bg-brand-\|dark:text-brand-\|dark:border-brand-" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts"
+# → 0건 (단, 예외 파일 제외)
+```
+
+**PASS:** 0건. **FAIL:** `dark:bg-brand-*` 등 발견 → `dark:` prefix 제거 (CSS 변수가 자동 전환).
+
+**예외 (허용):**
+- `dark:text-ul-midnight`, `dark:text-ul-fog` 등 CSS 변수가 아닌 **Tailwind 커스텀 색상**과 brand 색상의 조합 (예: `equipment.ts`의 `'text-ul-midnight dark:text-brand-info'`)
+- `dark:border-brand-*` — CSS 변수 기반이지만 투명도(opacity modifier) 없이 고정값으로 필요한 경우
+
+**상세:** [references/step-details.md](references/step-details.md) Step 21
+
+### Step 22: CALLOUT_TOKENS text-brand-${} 동적 보간 금지 (2026-04-24 추가)
+
+`design-tokens/components/*.ts` 파일 내에서 템플릿 리터럴로 brand 클래스를 동적 보간하는 패턴
+(`text-brand-${key}`, `bg-brand-${key}`) 은 Tailwind의 JIT 퍼지(purge) 단계에서 클래스가
+정적으로 감지되지 않아 빌드에서 제거될 수 있다. 반드시 `getSemanticContainerTextClasses(key)`
+같은 헬퍼 함수를 경유해야 한다.
+
+```typescript
+// ❌ 금지 — 동적 보간 (Tailwind purge에서 삭제될 수 있음)
+const textClass = `text-brand-${colorKey}`;
+
+// ✅ 허용 — 헬퍼 경유 (brand.ts 함수가 static 클래스 반환)
+const textClass = getSemanticContainerTextClasses(colorKey);
+```
+
+```bash
+# design-token 파일 내 text-brand-${} / bg-brand-${} 동적 보간 탐지
+grep -rn "text-brand-\${\|bg-brand-\${\|border-brand-\${" \
+  apps/frontend/lib/design-tokens/ \
+  --include="*.ts"
+# → 0건
+
+# 컴포넌트/훅 파일에서도 동일 패턴 탐지
+grep -rn "text-brand-\${\|bg-brand-\${\|border-brand-\${" \
+  apps/frontend/components apps/frontend/app apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts"
+# → 0건
+```
+
+**PASS:** 동적 보간 0건. **FAIL:** 발견 시 `getSemanticContainerTextClasses(key)` 또는 정적 토큰 맵으로 교체.
+
+**예외:** `globals.css`나 CSS 모듈 내 CSS 변수 참조 (`var(--brand-color-${...})`)는 CSS 빌드 단계에서 처리되므로 해당 없음.
+
+**Related Files:**
+- `apps/frontend/lib/design-tokens/brand.ts` — `getSemanticContainerTextClasses`, `getSemanticBadgeClasses` 등 헬퍼
+- `apps/frontend/lib/design-tokens/components/checkout-icons.ts` — Lucide 아이콘 SSOT (이 파일은 아이콘만 포함, brand 클래스 없음)
+
+**상세:** [references/step-details.md](references/step-details.md) Step 22
+
 ### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
 
 배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
@@ -531,6 +670,10 @@ grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/
 | 16b | NCGuidanceKeyReachable narrowing (Record 타입 좁힘) | PASS/FAIL | `Record<NCGuidanceKey,...>` 잔재 또는 dead entry 존재 |
 | 17  | hex 색상 하드코딩 감지 (checkouts/**) | PASS/FAIL | `[⑨ hex 색상]` 위반 위치 목록 |
 | 18  | UI 파생 `*StatusValues` `satisfies` 제약 + barrel export | PASS/FAIL | satisfies 미사용 또는 index.ts 누락 위치 |
+| 19  | ring-dashed `--tw-ring-shadow` 인라인 override 금지 | PASS/FAIL | 컴포넌트에서 `--tw-ring-shadow` 직접 재정의 위치 |
+| 20  | BRAND_CLASS_MATRIX 신규 색상 3곳 동시 갱신 | PASS/FAIL | `satisfies` 미존재 또는 globals.css CSS 변수 누락 위치 |
+| 21  | design-token 파일 내 `dark:bg-brand-*` / `dark:text-brand-*` 금지 | PASS/FAIL | brand CSS 변수 대상 dark: prefix 사용 위치 (허용 예외 제외) |
+| 22  | CALLOUT `text-brand-${}` 동적 보간 금지 | PASS/FAIL | `text-brand-${key}` 동적 보간 발견 위치 |
 ```
 
 ## Exceptions

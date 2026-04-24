@@ -377,6 +377,55 @@ grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals-ap
 
 > **배경:** 2026-04-22 verify-implementation에서 `status: 'pending_review'`(L1142), `status: 'pending'`(L1165, L1192) 3건 발견. 현재 값이 SSOT 값과 우연히 일치하여 런타임 버그는 없으나, 향후 SSOT 값 변경 시 approvals-api.ts가 무결성 보장을 받지 못함.
 
+### Step 25: design-token 헬퍼 함수 내 status literal 직접 비교 금지 (2026-04-24 추가)
+
+`apps/frontend/lib/design-tokens/components/*.ts` 파일 내 헬퍼 함수(예: `getCheckoutRowClasses`,
+`getEquipmentRowClasses` 등)에서 도메인 상태값을 raw 문자열 리터럴(`'overdue'`, `'pending'` 등)로
+직접 비교하는 패턴 탐지. 반드시 `CheckoutStatusValues.OVERDUE`, `EquipmentStatusValues.ACTIVE` 등
+SSOT `*Values` 상수를 경유해야 한다.
+
+**규칙 근거:** design-token 파일은 `@equipment-management/schemas`를 직접 import할 수 있는 위치이므로,
+`status === 'overdue'` 같은 raw 리터럴 비교는 SSOT 우회다. SSOT 경유 시 enum 값 변경이 설계 의도대로
+자동 전파된다.
+
+**올바른 패턴 (checkout.ts 기준):**
+```typescript
+// ✅ SSOT — CheckoutStatusValues 경유
+import { CheckoutStatusValues } from '@equipment-management/schemas';
+
+if (status === CheckoutStatusValues.OVERDUE) { ... }
+if (status === CheckoutStatusValues.PENDING) { ... }
+
+// ❌ 금지 — raw 리터럴 직접 비교
+if (status === 'overdue') { ... }
+if (status === 'pending') { ... }
+```
+
+**탐지:**
+```bash
+# design-token 헬퍼 함수 내 status raw 리터럴 비교 탐지 (일반적인 도메인 상태값)
+grep -rn "=== 'overdue'\|=== 'pending'\|=== 'approved'\|=== 'rejected'\|=== 'returned'\|=== 'in_use'\|=== 'checked_out'\|=== 'canceled'" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts"
+# → 0건 (*StatusValues 상수 경유)
+
+# *StatusValues import 확인 (design-token 파일에 사용한 경우)
+grep -rn "StatusValues" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts" | grep "from '@equipment-management/schemas'"
+# → import 라인 존재 확인
+```
+
+**PASS:** design-token 헬퍼 내 도메인 status raw 리터럴 0건. **FAIL:** `=== 'overdue'` 등 발견 →
+`CheckoutStatusValues.OVERDUE` 등 `*StatusValues` 상수 경유로 교체.
+
+**예외:**
+- CSS 클래스 문자열 내 `bg-brand-ok/10` 같은 Tailwind 클래스 값 — status 비교 아님
+- 배지 맵(`CHECKOUT_STATUS_BADGE_TOKENS`) Record 키 선언 (`overdue: '...'`) — 키 선언은 비교가 아니므로 허용
+- i18n 키 문자열 (`'checkouts.stepper.overdue'`) — 네임스페이스 경로 문자열이므로 허용
+
+> **연계:** verify-design-tokens Step 18의 `*StatusValues satisfies` 검사와 상호 보완. design-token 파일에서 StatusValues가 올바르게 import·사용되는지를 이 Step이 담당.
+
 ## Output Format
 
 ```markdown
@@ -411,6 +460,7 @@ grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals-ap
 | 22  | ESLint 3-layer selector 완전성 | PASS/FAIL | BinaryExpression/Property/CallExpression selector 누락 또는 lint 에러 위치 |
 | 23  | DocxTemplate 레거시 barrel 경로 | PASS/FAIL | `reports/docx-template.util` 경유 import 위치 (canonical: `common/docx/`) |
 | 24  | UASVal SSOT — approvals-api.ts | PASS/FAIL | UnifiedApprovalStatus raw 리터럴 직접 할당 위치 |
+| 25  | design-token 헬퍼 내 status literal 직접 비교 금지 | PASS/FAIL | `=== 'overdue'` 등 raw 리터럴 비교 위치 (`*StatusValues` 경유 필요) |
 ```
 
 ## Exceptions
