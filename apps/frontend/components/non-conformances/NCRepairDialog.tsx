@@ -20,6 +20,7 @@ import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useToast } from '@/components/ui/use-toast';
 import { CONFIRM_PREVIEW_TOKENS } from '@/lib/design-tokens/semantic';
+import { NC_DIALOG_TOKENS } from '@/lib/design-tokens';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -311,7 +312,7 @@ export default function NCRepairDialog({ nc, open, onOpenChange }: NCRepairDialo
                     })
                   }
                   disabled={createRepairMutation.isPending}
-                  className="bg-brand-ok text-white hover:brightness-110"
+                  className={NC_DIALOG_TOKENS.repairSubmit}
                 >
                   {createRepairMutation.isPending
                     ? t('detail.repairDialog.registering')

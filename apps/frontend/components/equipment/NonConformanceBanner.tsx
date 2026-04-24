@@ -78,9 +78,7 @@ function FullBanner({
           <div className="space-y-2">
             {nonConformances.map((nc) => (
               <Link key={nc.id} href={`/non-conformances/${nc.id}`}>
-                <div
-                  className={`${NC_BANNER_TOKENS.detailCard} hover:border-brand-critical/40 cursor-pointer`}
-                >
+                <div className={NC_BANNER_TOKENS.detailCardLink}>
                   <p className={NC_BANNER_TOKENS.detailText}>{nc.cause}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {t('discoveryDate', { date: new Date(nc.discoveryDate).toLocaleDateString() })}

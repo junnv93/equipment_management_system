@@ -23,6 +23,7 @@
 import type { SemanticColorKey } from '../brand';
 import {
   getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
   getSemanticLeftBorderClasses,
   getSemanticSolidBgClasses,
 } from '../brand';
@@ -97,6 +98,9 @@ export const NC_BANNER_TOKENS = {
   title: 'text-brand-critical font-semibold text-lg',
   desc: 'text-brand-critical/80',
   detailCard: 'bg-card p-3 rounded-lg border border-brand-critical/20',
+  /** detailCard의 링크 래퍼 — hover 포함 (Link 내부 div에 사용) */
+  detailCardLink:
+    'bg-card p-3 rounded-lg border border-brand-critical/20 hover:border-brand-critical/40 cursor-pointer',
   detailText: 'text-sm text-foreground',
   /** 상태 기반 경고 Alert — NC 기록 없이 non_conforming/calibration_overdue일 때 사용 */
   statusAlert:
@@ -1166,4 +1170,18 @@ export const NC_DOCUMENTS_SECTION_TOKENS = {
   countBadge: 'text-xs text-muted-foreground font-normal',
   emptyText: 'text-sm text-muted-foreground',
   grid: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3',
+} as const;
+
+// ============================================================================
+// NC_DIALOG_TOKENS — NCEditDialog / NCRepairDialog 공용 토큰
+// ============================================================================
+
+/**
+ * NC 다이얼로그 공용 토큰 (Edit + Repair)
+ * - changeSummaryModified: 변경 요약 카드 "수정됨" 강조 텍스트
+ * - repairSubmit: 수리 등록 확인 단계 "등록" 버튼 색상 오버라이드
+ */
+export const NC_DIALOG_TOKENS = {
+  changeSummaryModified: `${getSemanticContainerTextClasses('ok')} font-semibold`,
+  repairSubmit: `${getSemanticSolidBgClasses('ok')} text-white hover:brightness-110`,
 } as const;

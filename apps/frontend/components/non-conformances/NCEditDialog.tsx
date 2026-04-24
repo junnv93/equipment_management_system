@@ -9,6 +9,7 @@ import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { isConflictError } from '@/lib/api/error';
 import { REQUIRED_FIELD_TOKENS, REQUIRED_FIELD_A11Y } from '@/lib/design-tokens/form-field-tokens';
 import { CONFIRM_PREVIEW_TOKENS } from '@/lib/design-tokens/semantic';
+import { NC_DIALOG_TOKENS } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -132,7 +133,7 @@ export default function NCEditDialog({ nc, open, onOpenChange }: NCEditDialogPro
               <span className={previewTokens.rowLabel}>{t('fields.cause')}</span>
               <span>
                 {changed.cause ? (
-                  <strong className="text-brand-ok">
+                  <strong className={NC_DIALOG_TOKENS.changeSummaryModified}>
                     {t('detail.editDialog.changeSummary.modified')}
                   </strong>
                 ) : (
@@ -144,7 +145,7 @@ export default function NCEditDialog({ nc, open, onOpenChange }: NCEditDialogPro
               <span className={previewTokens.rowLabel}>{t('fields.actionPlan')}</span>
               <span>
                 {changed.actionPlan ? (
-                  <strong className="text-brand-ok">
+                  <strong className={NC_DIALOG_TOKENS.changeSummaryModified}>
                     {t('detail.editDialog.changeSummary.modified')}
                   </strong>
                 ) : (
