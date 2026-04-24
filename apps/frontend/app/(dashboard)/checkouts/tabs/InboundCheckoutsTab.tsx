@@ -227,6 +227,7 @@ export default function InboundCheckoutsTab({
         secondaryAction={
           filterActive ? { label: t('actions.resetFilters'), onClick: onResetFilters } : undefined
         }
+        testId={filterActive ? 'inbound-empty-state-filtered' : 'inbound-empty-state-no-data'}
       />
     );
   }

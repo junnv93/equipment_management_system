@@ -38,6 +38,8 @@ export interface EmptyStateProps {
    * false이면 권한 없음으로 판단해 primaryAction을 숨깁니다.
    */
   canAct?: boolean;
+  /** E2E 테스트용 testid. 전달 시 root div에 data-testid 바인딩. */
+  testId?: string;
 }
 
 export function EmptyState({
@@ -49,6 +51,7 @@ export function EmptyState({
   secondaryAction,
   className,
   canAct,
+  testId,
 }: EmptyStateProps) {
   const showPrimary = canAct !== false;
 
@@ -60,6 +63,7 @@ export function EmptyState({
       className={[EMPTY_STATE_TOKENS.container, className].filter(Boolean).join(' ')}
       role="status"
       aria-live="polite"
+      data-testid={testId}
     >
       <div className={[EMPTY_STATE_TOKENS.iconContainer, iconBgClass].filter(Boolean).join(' ')}>
         <Icon className={[EMPTY_STATE_TOKENS.icon, iconColorClass].join(' ')} aria-hidden="true" />

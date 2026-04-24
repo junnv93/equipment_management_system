@@ -358,6 +358,7 @@ export default function OutboundCheckoutsTab({
         primaryAction: undefined,
         canAct: undefined,
         secondaryAction: undefined,
+        testId: 'empty-state-filtered' as const,
       };
     }
     if (filterActive) {
@@ -369,6 +370,7 @@ export default function OutboundCheckoutsTab({
         primaryAction: undefined,
         canAct: undefined,
         secondaryAction: { label: t('actions.resetFilters'), onClick: onResetFilters },
+        testId: 'empty-state-filtered' as const,
       };
     }
     if (filters.subTab === 'completed') {
@@ -380,6 +382,7 @@ export default function OutboundCheckoutsTab({
         primaryAction: undefined,
         canAct: undefined,
         secondaryAction: undefined,
+        testId: 'empty-state-completed' as const,
       };
     }
     return {
@@ -394,6 +397,7 @@ export default function OutboundCheckoutsTab({
       },
       canAct: canCreateCheckout,
       secondaryAction: undefined,
+      testId: 'empty-state-in-progress' as const,
     };
   })();
 
@@ -435,6 +439,7 @@ export default function OutboundCheckoutsTab({
               primaryAction={emptyStateParams.primaryAction}
               canAct={emptyStateParams.canAct}
               secondaryAction={emptyStateParams.secondaryAction}
+              testId={emptyStateParams.testId}
             />
           ) : (
             allGroups.map((group) => (

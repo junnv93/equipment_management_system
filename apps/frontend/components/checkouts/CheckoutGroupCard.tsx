@@ -45,6 +45,7 @@ import {
   CHECKOUT_OVERDUE_GROUP_TOKENS,
   CHECKOUT_ITEM_ROW_TOKENS,
   CHECKOUT_INTERACTION_TOKENS,
+  CHECKOUT_TAB_BADGE_TOKENS,
   RENTAL_FLOW_INLINE_TOKENS,
   CHECKOUT_STEP_LABELS,
   getDdayClasses,
@@ -522,7 +523,7 @@ function CheckoutGroupCard({
                           row.descriptor?.availableToCurrentUser === true && (
                             <span
                               data-testid="your-turn-badge"
-                              className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full"
+                              className={`${CHECKOUT_TAB_BADGE_TOKENS.base} ${CHECKOUT_TAB_BADGE_TOKENS.active}`}
                             >
                               {t('yourTurn.label')}
                             </span>
