@@ -36,6 +36,13 @@ export const CHECKOUT_DISPLAY_STEPS: { nonRental: CheckoutStatus[]; rental: Chec
   ],
 };
 
+// FSM 불변식 검증 — 스텝 배열 길이 변경 시 즉시 crash로 발견
+if (CHECKOUT_DISPLAY_STEPS.nonRental.length !== 5 || CHECKOUT_DISPLAY_STEPS.rental.length !== 8) {
+  throw new Error(
+    `[FSM invariant] CHECKOUT_DISPLAY_STEPS 길이 불일치 — nonRental=${CHECKOUT_DISPLAY_STEPS.nonRental.length}(expected 5), rental=${CHECKOUT_DISPLAY_STEPS.rental.length}(expected 8)`
+  );
+}
+
 export const CHECKOUT_TIMELINE_TOKENS = {
   container: 'relative flex flex-col gap-0',
 

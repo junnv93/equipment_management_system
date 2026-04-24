@@ -26,7 +26,11 @@ import {
   getSemanticContainerTextClasses,
 } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
-import { CheckoutStatusValues } from '@equipment-management/schemas';
+import {
+  CheckoutStatusValues,
+  type CheckoutStatus,
+  type CheckoutPurpose,
+} from '@equipment-management/schemas';
 
 // ============================================================================
 // 0. Checkout Header Tokens (페이지 헤더 SSOT)
@@ -78,7 +82,7 @@ export const CHECKOUT_STATUS_BADGE_TOKENS = {
   overdue: 'bg-brand-critical/15 text-brand-critical border-brand-critical/30',
   // 취소 (neutral)
   canceled: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
-} as const;
+} as const satisfies Record<CheckoutStatus, string>;
 
 /**
  * Rental import 상태 → 스타일 매핑 (brand CSS 변수 기반)
@@ -265,23 +269,28 @@ export const CHECKOUT_MINI_PROGRESS = {
    */
   statusToStepIndex: {
     pending: 1,
+    borrower_approved: 1, // 2-step 승인 진행 중 — approved 전 단계
     approved: 1,
     checked_out: 2,
     overdue: 2, // checked_out 위치 + late(빨강) 스타일
     in_use: 2,
     returned: 3,
+    return_approved: 4, // returned 다음 단계 — 최종 승인 완료
+    rejected: 1, // 초기 단계에서 종료
+    canceled: 1, // 초기 단계에서 종료
     // rental 4-step flow
     lender_checked: 1,
     borrower_received: 2,
     borrower_returned: 3,
     lender_received: 4,
-  } as Partial<Record<string, number>>,
+  } as const satisfies Record<CheckoutStatus, number>,
   /** 반출 유형별 원 개수 */
   stepCount: {
     calibration: 4,
     repair: 4,
     rental: 5,
-  } as Record<string, number>,
+    return_to_vendor: 4,
+  } as const satisfies Record<CheckoutPurpose, number>,
 } as const;
 
 // ============================================================================
@@ -309,16 +318,28 @@ export const RENTAL_FLOW_INLINE_TOKENS = {
   tooltipStepCurrent: 'text-brand-purple font-semibold',
   tooltipStepFuture: 'text-muted-foreground',
   /**
-   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (5단계 기준)
+   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (4단계: 0~3)
+   * non-rental 또는 flow 외 상태는 null (컴포넌트에서 숨김 처리)
    * SSOT: CheckoutGroupCard에서 직접 매핑 상수 정의 금지
    */
   statusToStep: {
-    approved: 0,
-    lender_checked: 0,
-    borrower_received: 1,
-    borrower_returned: 2,
-    lender_received: 3,
-  } as Partial<Record<string, number>>,
+    // 인라인 흐름 상태
+    approved: 0, // 대출 준비 완료
+    lender_checked: 0, // 대출 측 확인
+    borrower_received: 1, // 차용 측 수령
+    in_use: 1, // 사용 중 (borrower_received와 동일 단계)
+    overdue: 1, // 기한 초과 (사용 중 단계)
+    borrower_returned: 2, // 차용 측 반납
+    lender_received: 3, // 대출 측 수령 (완료)
+    returned: 3, // 반납 완료
+    return_approved: 3, // 최종 승인 (완료)
+    // 아직 rental 흐름 진입 전 / 흐름 외 상태 → null
+    pending: null,
+    borrower_approved: null, // 2-step 승인 대기 — dispatch 전
+    rejected: null,
+    canceled: null,
+    checked_out: null, // non-rental 전용 상태
+  } as const satisfies Record<CheckoutStatus, number | null>,
 } as const;
 
 /**

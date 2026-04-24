@@ -486,10 +486,12 @@ export function computeTotalSteps(purpose: CheckoutPurpose): number {
 
 export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpose): number {
   if (purpose === 'rental') {
-    const map: Partial<Record<CheckoutStatus, number>> = {
+    const map = {
       pending: 1,
       borrower_approved: 2,
       approved: 3,
+      // non-rental checkout stage — rental context에서는 발생하지 않으나 exhaustive 요구
+      checked_out: 3,
       lender_checked: 4,
       borrower_received: 5,
       in_use: 6,
@@ -500,10 +502,10 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
       return_approved: 8,
       rejected: 1,
       canceled: 1,
-    };
-    return map[status] ?? 1;
+    } as const satisfies Record<CheckoutStatus, number>;
+    return map[status];
   }
-  const map: Partial<Record<CheckoutStatus, number>> = {
+  const map = {
     pending: 1,
     approved: 2,
     checked_out: 3,
@@ -512,8 +514,15 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
     return_approved: 5,
     rejected: 1,
     canceled: 1,
-  };
-  return map[status] ?? 1;
+    // rental-specific stages — non-rental context에서는 발생하지 않으나 exhaustive 요구
+    borrower_approved: 1,
+    lender_checked: 3,
+    borrower_received: 3,
+    in_use: 3,
+    borrower_returned: 4,
+    lender_received: 4,
+  } as const satisfies Record<CheckoutStatus, number>;
+  return map[status];
 }
 
 export function computeUrgency(
