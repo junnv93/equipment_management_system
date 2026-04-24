@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getStaggerDelay } from '@/lib/design-tokens/motion';
+import { getStaggerDelay } from '@/lib/design-tokens';
 
 /**
  * 반출 목록 로딩 스켈레톤 (CheckoutsContent + OutboundCheckoutsTab + InboundCheckoutsTab 공유)

@@ -13,6 +13,7 @@ import type {
   ConditionCheckStep,
   ConditionStatus,
   AccessoriesStatus,
+  NextStepDescriptor,
 } from '@equipment-management/schemas';
 
 // ✅ Handover 토큰 타입 (QR Phase 3) — DTO shape은 백엔드와 동일 SSOT 재사용 대상.
@@ -95,11 +96,16 @@ export interface Checkout {
     email: string;
   };
   rejectionReason?: string; // ✅ 백엔드 필드명
+  // 대여 1차 승인 정보 (rental 전용)
+  borrowerApproverId?: string;
+  borrowerApprovedAt?: string;
+  borrowerRejectionReason?: string;
   // 상태 확인 기록 (대여 목적)
   conditionChecks?: ConditionCheck[];
-  // ✅ Phase 2: Server-Driven UI - 서버가 계산한 가능한 액션
+  // ✅ Phase 2: Server-Driven UI - 서버가 계산한 가능한 액션 + 다음 단계
   meta?: {
     availableActions: CheckoutAvailableActions;
+    nextStep?: NextStepDescriptor | null;
   };
   createdAt: string;
   updatedAt: string;
@@ -312,6 +318,32 @@ const checkoutApi = {
    */
   async rejectCheckout(id: string, version: number, reason: string): Promise<Checkout> {
     const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECT(id), {
+      version,
+      reason,
+    });
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 대여 반출 1차 승인 (차용 팀 TM)
+   * rental 전용. pending → borrower_approved.
+   * ✅ Rule 2: approverId는 서버에서 추출
+   */
+  async borrowerApproveCheckout(id: string, version: number, notes?: string): Promise<Checkout> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.BORROWER_APPROVE(id), {
+      version,
+      notes,
+    });
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 대여 반출 1차 반려 (차용 팀 TM)
+   * rental 전용. pending → rejected (borrowerRejectionReason 기록).
+   * ✅ Rule 2: approverId는 서버에서 추출
+   */
+  async borrowerRejectCheckout(id: string, version: number, reason: string): Promise<Checkout> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.BORROWER_REJECT(id), {
       version,
       reason,
     });

@@ -70,8 +70,14 @@ import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 
 // ✅ 코드 분할 (Next.js dynamic import)
-const OutboundCheckoutsTab = dynamic(() => import('./tabs/OutboundCheckoutsTab'), { ssr: false });
-const InboundCheckoutsTab = dynamic(() => import('./tabs/InboundCheckoutsTab'), { ssr: false });
+const OutboundCheckoutsTab = dynamic(() => import('./tabs/OutboundCheckoutsTab'), {
+  ssr: false,
+  loading: () => <CheckoutListSkeleton />,
+});
+const InboundCheckoutsTab = dynamic(() => import('./tabs/InboundCheckoutsTab'), {
+  ssr: false,
+  loading: () => <CheckoutListSkeleton />,
+});
 
 // 반출 목적 필터 옵션
 const PURPOSE_OPTIONS = ['calibration', 'repair', 'rental'] as const;

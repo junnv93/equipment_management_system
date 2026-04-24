@@ -440,14 +440,14 @@ export default function OutboundCheckoutsTab({
             allGroups.map((group) => (
               <div
                 key={group.key}
-                id={group.statuses.includes('overdue') ? 'overdue-group-section' : undefined}
-                tabIndex={group.statuses.includes('overdue') ? -1 : undefined}
+                id={group.statuses.includes(CSVal.OVERDUE) ? 'overdue-group-section' : undefined}
+                tabIndex={group.statuses.includes(CSVal.OVERDUE) ? -1 : undefined}
               >
                 <CheckoutGroupCard
                   group={group}
                   onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
                   canApprove={canApprove}
-                  isOverdueGroup={group.statuses.includes('overdue')}
+                  isOverdueGroup={group.statuses.includes(CSVal.OVERDUE)}
                 />
               </div>
             ))

@@ -1,3 +1,5 @@
+'use client';
+
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
   CHECKOUT_STATS_VARIANTS,
