@@ -56,6 +56,7 @@ import {
   CheckoutStatus,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type CheckoutAction,
 } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
@@ -63,7 +64,7 @@ import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
-import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
+import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { HandoverQRDisplay } from '@/components/checkouts/HandoverQRDisplay';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
@@ -334,8 +335,52 @@ export default function CheckoutDetailClient({
     cancelMutation.mutate();
   };
 
-  // 액션 버튼 결정 (역할 기반)
-  const renderActions = () => {
+  // FSM NextStepPanel action 디스패처 (handleNextStepAction)
+  const handleNextStepAction = (action: CheckoutAction) => {
+    switch (action) {
+      case 'approve':
+        approveMutation.mutate();
+        break;
+      case 'reject':
+        setDialogState((prev) => ({ ...prev, reject: true }));
+        break;
+      case 'cancel':
+        setDialogState((prev) => ({ ...prev, cancel: true }));
+        break;
+      case 'start':
+        setDialogState((prev) => ({ ...prev, start: true }));
+        break;
+      case 'lender_check':
+      case 'borrower_receive':
+      case 'mark_in_use':
+      case 'borrower_return':
+      case 'lender_receive':
+        router.push(`/checkouts/${checkout.id}/check`);
+        break;
+      case 'submit_return':
+        router.push(`/checkouts/${checkout.id}/return`);
+        break;
+      case 'approve_return':
+        setDialogState((prev) => ({ ...prev, approveReturn: true }));
+        break;
+      case 'reject_return':
+        setDialogState((prev) => ({ ...prev, rejectReturn: true }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  const isAnyNextStepMutationPending =
+    approveMutation.isPending ||
+    rejectMutation.isPending ||
+    startMutation.isPending ||
+    approveReturnMutation.isPending ||
+    rejectReturnMutation.isPending ||
+    cancelMutation.isPending;
+
+  // LegacyActionsBlock — Feature Flag off 경로 폴백. 로직 1:1 유지, 수정 금지.
+  const LegacyActionsBlock = () => {
     const buttons: React.ReactNode[] = [];
 
     // 승인 대기 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
@@ -498,19 +543,6 @@ export default function CheckoutDetailClient({
       );
     }
 
-    if (isCheckoutExportable(checkout.status)) {
-      buttons.push(
-        <ExportFormButton
-          key="export-form"
-          formNumber="UL-QP-18-06"
-          params={{ checkoutId: checkout.id }}
-          label={t('actions.exportForm')}
-          errorToastDescription={t('toasts.exportFormError')}
-          size="default"
-        />
-      );
-    }
-
     return buttons;
   };
 
@@ -532,7 +564,18 @@ export default function CheckoutDetailClient({
           </div>
           <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>
-        <div className="flex gap-2">{renderActions()}</div>
+        <div className="flex gap-2">
+          {!isNextStepPanelEnabled() && LegacyActionsBlock()}
+          {isCheckoutExportable(checkout.status) && (
+            <ExportFormButton
+              formNumber="UL-QP-18-06"
+              params={{ checkoutId: checkout.id }}
+              label={t('actions.exportForm')}
+              errorToastDescription={t('toasts.exportFormError')}
+              size="default"
+            />
+          )}
+        </div>
       </div>
 
       {/* 기한 초과 경고 */}
@@ -545,7 +588,12 @@ export default function CheckoutDetailClient({
 
       {/* 다음 단계 안내 패널 (Feature Flag: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL) */}
       {isNextStepPanelEnabled() && (
-        <NextStepPanel descriptor={nextStepDescriptor} checkoutId={checkout.id} />
+        <NextStepPanel
+          variant="floating"
+          descriptor={nextStepDescriptor}
+          onActionClick={handleNextStepAction}
+          isPending={isAnyNextStepMutationPending}
+        />
       )}
 
       {/* 상태 진행 표시 */}

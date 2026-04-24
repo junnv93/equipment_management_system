@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
+import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
@@ -238,6 +239,21 @@ function CheckoutGroupCard({
     ? (group.checkouts.find((co) => co.purpose === CPVal.RENTAL)?.status ?? '')
     : '';
 
+  // Feature Flag on일 때 렌탈 헤더 compact panel용 descriptor
+  const rentalDescriptor = useMemo(() => {
+    if (!isNextStepPanelEnabled()) return undefined;
+    const rentalCheckout = group.checkouts.find((co) => co.purpose === CPVal.RENTAL);
+    if (!rentalCheckout) return undefined;
+    return getNextStep(
+      {
+        status: rentalCheckout.status,
+        purpose: rentalCheckout.purpose as CheckoutPurpose,
+        dueAt: rentalCheckout.expectedReturnDate ?? null,
+      },
+      userPermissions
+    );
+  }, [group.checkouts, userPermissions]);
+
   // ──────────────────────────────────────────────
   // 인라인 승인 mutation (CAS 포함)
   // ──────────────────────────────────────────────
@@ -363,7 +379,13 @@ function CheckoutGroupCard({
                 </div>
 
                 {/* [개선 8] 렌탈 그룹 — 4단계 진행 현황 인라인 */}
-                {isRentalGroup && rentalStatus && <RentalFlowInline status={rentalStatus} />}
+                {isRentalGroup &&
+                  rentalStatus &&
+                  (isNextStepPanelEnabled() && rentalDescriptor ? (
+                    <NextStepPanel variant="compact" descriptor={rentalDescriptor} />
+                  ) : (
+                    <RentalFlowInline status={rentalStatus} />
+                  ))}
               </button>
             </CollapsibleTrigger>
 
@@ -495,6 +517,16 @@ function CheckoutGroupCard({
                           status={row.status}
                           className={`${MICRO_TYPO.badge} py-0`}
                         />
+
+                        {isNextStepPanelEnabled() &&
+                          row.descriptor?.availableToCurrentUser === true && (
+                            <span
+                              data-testid="your-turn-badge"
+                              className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full"
+                            >
+                              {t('yourTurn.label')}
+                            </span>
+                          )}
 
                         {/* 인라인 액션 버튼 */}
                         {row.canApproveItem && row.status === CSVal.PENDING && (
