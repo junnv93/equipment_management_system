@@ -178,6 +178,49 @@ await this.eventEmitter.emitAsync(EVENT, {
 
 **예외:** `actorName: ''` — NotificationDispatcher가 actorId로 DB에서 actorName을 조회하므로 의도된 빈 문자열. 이 검사에서 제외.
 
+### Step 5b: composite recipientStrategy ↔ payload 필드 존재 일관성 (Warning)
+
+`notification-registry.ts`에서 `{ type: 'composite', strategies }` 안에 `{ type: 'team', field: 'X' }` 전략이 선언되면,
+해당 이벤트의 `emitAsync` payload에 `X` 필드가 반드시 존재해야 한다.
+`NotificationDispatcher`가 `payload[field]` 로 teamId를 취득하므로 필드 누락 시 `undefined` 수신자 → 알림 silent drop.
+
+```bash
+# composite 전략에서 사용된 team field 이름 추출
+node -e "
+const fs = require('fs');
+const src = fs.readFileSync(
+  'apps/backend/src/modules/notifications/config/notification-registry.ts', 'utf8'
+);
+
+// 이벤트별 composite team field 추출
+const eventBlocks = src.matchAll(/\[NOTIFICATION_EVENTS\.(\w+)\][\s\S]*?recipientStrategy:\s*\{[\s\S]*?\}/g);
+for (const match of eventBlocks) {
+  const block = match[0];
+  if (!block.includes(\"type: 'composite'\")) continue;
+  const fields = [...block.matchAll(/type:\\s*'team'[^}]*field:\\s*'([^']+)'/g)].map(m => m[1]);
+  if (fields.length > 0) console.log(match[1] + ' → composite team fields: ' + fields.join(', '));
+}
+" 2>/dev/null
+
+# 해당 이벤트의 emitAsync payload에서 위 필드 존재 확인 (수동 대조)
+# 예: CHECKOUT_BORROWER_APPROVED → lenderTeamId 필드가 payload에 있어야 함
+grep -A20 "emitAsync(NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "lenderTeamId"
+# 결과: lenderTeamId 포함 라인 1건 (PASS)
+```
+
+**PASS 기준**: composite 전략의 `team.field` 값이 `emitAsync` payload 객체에 키로 존재함.
+**FAIL 기준**: payload에 해당 필드 없음 → `NotificationDispatcher`가 `undefined` teamId로 수신자 조회 → 알림 silent drop.
+
+**적용 대상 이벤트 (2026-04-24 기준):**
+| 이벤트 | composite team field | payload 필드 |
+|---|---|---|
+| `CHECKOUT_BORROWER_APPROVED` | `lenderTeamId` | `lenderTeamId?: string` |
+| `CHECKOUT_RETURN_APPROVED` | (permission 전략) | — |
+
+**규칙**: 신규 이벤트에 `composite + team field` 전략 추가 시, `CheckoutNotificationEvent`(또는 해당 이벤트 인터페이스)에 동명 필드를 선택적(`?:`)으로 추가하고 `emitAsync` 호출부에서 값을 채워야 함.
+
 ### Step 5: CacheInvalidationAction method enum 일치 (Info)
 
 `CACHE_INVALIDATION_REGISTRY`의 `method` 필드가 `CacheInvalidationHelper`에 실제 존재하는 메서드인지 확인.
@@ -216,6 +259,7 @@ comm -23 /tmp/methods.txt /tmp/helper_methods.txt
 | Step 2 리스너 sync 콜백 | **Critical** | emitAsync가 fire-and-forget 회귀 |
 | Step 3 인라인 정규식 | **Warning** | 키 필드 추가 시 매칭 실패 회귀 위험 |
 | Step 4 emit vs emitAsync | **Info** | 개별 케이스 판단, 주석 필요 |
+| Step 5b composite ↔ payload 일관성 | **Warning** | payload 필드 누락 시 알림 silent drop |
 | Step 5 method 불일치 | **Info** | 런타임 에러 (타입 체크로 사전 방어됨) |
 
 ## Learning Reference

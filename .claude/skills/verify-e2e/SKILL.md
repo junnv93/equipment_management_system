@@ -411,6 +411,47 @@ grep -rn "browser\.newContext(" \
 - `process.env.NEXT_PUBLIC_API_URL` — API 엔드포인트 URL(feature flag 아님), `BASE_URLS` 폴백 경유 허용
 - `shared-test-data.ts` 내 `BASE_URLS.BACKEND/FRONTEND` 정의 — SSOT 상수 정의이므로 허용
 
+**17b: browser.newContext() try/finally 보장 (2026-04-24 추가)**
+
+`beforeAll` 내에서 `browser.newContext()`로 임시 컨텍스트를 생성한 뒤 `context.close()`를
+`try/finally` 없이 호출하면, probe 네비게이션 타임아웃 등 예외 발생 시 컨텍스트가 누수된다.
+
+```typescript
+// ✅ 올바른 패턴 — try/finally로 context 누수 방지
+test.beforeAll(async ({ browser }) => {
+  const context = await browser.newContext({ baseURL, storageState });
+  try {
+    const probe = await context.newPage();
+    await probe.goto('/some-page');
+    await probe.waitForLoadState('domcontentloaded');
+    flagEnabled = await probe.locator('[data-feature]').isVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+// ❌ 잘못된 패턴 — 예외 시 context 누수
+test.beforeAll(async ({ browser }) => {
+  const context = await browser.newContext({ baseURL, storageState });
+  const probe = await context.newPage();
+  await probe.goto('/some-page');
+  flagEnabled = await probe.locator('[data-feature]').isVisible();
+  await context.close();  // 예외 발생 시 도달 불가
+});
+```
+
+**탐지:**
+```bash
+# beforeAll 내 browser.newContext() 가 try/finally 없이 사용되는지 확인
+grep -rn "browser\.newContext(" \
+  apps/frontend/tests/e2e --include="*.spec.ts" -B5 \
+  | grep "beforeAll" | grep -v "try {"
+# 상세 확인 필요 시 해당 파일에서 context 생성 전후 try/finally 수동 확인
+```
+
+**PASS:** `browser.newContext()` + `context.close()` 가 `try/finally` 블록 내에 존재.
+**FAIL:** `context.close()` 가 `finally` 없이 직접 호출 → 예외 시 컨텍스트 누수.
+
 ### Step 18: page.route() API 모킹 패턴 (2026-04-24 추가)
 
 seed 데이터로 자연 유도 불가능한 빈 상태(empty state) 등 결정론적 조건이 필요할 때
@@ -490,6 +531,7 @@ grep -rn "page\.route(" \
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 | 16c | `toHaveAttribute` 기반 상태 검증 | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부 |
 | 17  | 브라우저 기반 feature flag 감지 | PASS/FAIL | `process.env.NEXT_PUBLIC_*` 직접 분기 또는 `browser.newContext` baseURL 누락 |
+| 17b | beforeAll newContext try/finally | PASS/FAIL | `browser.newContext()` 후 `finally` 없는 `context.close()` — 예외 시 context 누수 |
 | 18a | page.route() 응답 스키마 SSOT  | PASS/FAIL | pagination `page:` 금지, `currentPage:` 필수 |
 | 18b | page.unroute() 정리             | PASS/FAIL | route 후 unroute 누락 → 이후 테스트 오염 |
 | 18c | route 후 networkidle 금지       | PASS/FAIL | page.route() 파일에 networkidle 잔존 |

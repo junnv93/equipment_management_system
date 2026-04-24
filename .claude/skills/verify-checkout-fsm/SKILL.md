@@ -45,6 +45,7 @@ schemas ← shared-constants ← schemas  (순환!)
 | `packages/schemas/src/__tests__/checkout-fsm.test.ts` | FSM 불변식 + 상태 전이 단위 테스트 (55건) |
 | `packages/shared-constants/src/permissions.ts` | Permission enum SSOT — `CheckoutPermissionKey` 동기화 기준 |
 | `apps/backend/src/modules/checkouts/checkouts.service.ts` | FSM 소비자 — assertFsmAction, calculateAvailableActions, buildNextStep, FSM_TO_AUDIT_ACTION |
+| `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` | 프론트엔드 FSM 소비자 — handleNextStepAction dispatcher, CheckoutAction 전체 매핑 |
 
 ## Workflow
 
@@ -422,7 +423,7 @@ grep -n "BadRequestException" \
 | 22 | firstEquip 취득 패턴 — items[0] 기준        | PASS/FAIL | values().next().value 0건 + get(items[0].equipmentId) ≥ 3건 |
 | 23 | rejectReturn reason 검증 순서 — scope/FSM 이후 | PASS/FAIL | REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData 라인 |
 | 24 | checkout-api.ts Checkout.meta.nextStep 타입 동기화 | PASS/FAIL | meta.nextStep?: NextStepDescriptor \| null 선언 존재 |
-| 25 | borrower 액터 identity-rule 강제 (Phase 3+4 이후) | PASS/SKIP | borrowerApprove: req.user.teamId === requester.teamId 강제 |
+| 25 | borrower 액터 identity-rule 강제 (2026-04-24 상시) | PASS/FAIL | scope-먼저 순서 + lenderTeamId payload + 프론트 독립 const |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -612,32 +613,101 @@ grep -n "nextStep" apps/frontend/lib/api/checkout-api.ts
 **PASS:** `meta.nextStep?: NextStepDescriptor | null` 선언 존재.
 **FAIL:** meta 객체에 nextStep 누락 → `useCheckoutNextStep`이 항상 client fallback으로 동작 (설계 의도 역전).
 
-### Step 25: borrower 액터 identity-rule 강제 (Phase 3+4 구현 이후 활성화)
+### Step 25: borrower 액터 identity-rule 강제 (2026-04-24 구현 완료, 상시 검사)
 
-rental 2-step 승인 워크플로우에서 `borrowerApprove`/`borrowerReject` 메서드가 구현되면:
+rental 2-step 승인 워크플로우의 `borrowerApprove`/`borrowerReject` 메서드:
+
 - `req.user.teamId === checkout.requester.teamId` 강제 (차용 팀 TM만 승인 가능)
-- `enforceScopeForBorrower` 호출이 `assertFsmAction`보다 먼저 실행
-- Security Invariant: scope-먼저 원칙 준수
+- scope 검증 호출이 `assertFsmAction`보다 먼저 실행 — scope-먼저 원칙 준수
+- emitAsync payload에 `lenderTeamId` 포함 — composite 알림 전략(`CHECKOUT_BORROWER_APPROVED`) 전제 조건
+- 프론트엔드에서 `canBorrowerApprove`/`canBorrowerReject`를 독립 const로 선언 — 인라인 조건 중복 금지
 
 ```bash
-# borrowerApprove 메서드 존재 확인 (Phase 3+4 완료 여부 판단)
-grep -n "async borrowerApprove\|borrowerApprove(" \
+# borrowerApprove 메서드 구현 확인
+grep -c "async borrowerApprove" \
   apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건이면 SKIP (Phase 3+4 미구현)
-# 결과: 1건 이상이면 하위 검사 실행
+# 결과: 1 이상 (PASS) — 0이면 Phase 구현 누락
 ```
 
 ```bash
-# (Phase 3+4 구현 후) borrowerApprove identity-rule 강제 확인
-grep -A10 "async borrowerApprove" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "enforceScopeForBorrower\|req\.user\.teamId.*requester\.teamId"
-# 결과: 1건 이상 (PASS) — scope 가드 존재
+# scope-먼저 원칙: scope 검증이 assertFsmAction보다 앞에 위치하는지 확인
+python3 - <<'EOF'
+content = open('apps/backend/src/modules/checkouts/checkouts.service.ts').read()
+lines = content.split('\n')
+ba_start = next((i for i, l in enumerate(lines) if 'async borrowerApprove(' in l), None)
+if ba_start is None:
+    print("FAIL: borrowerApprove 미구현")
+else:
+    fsm_line = next((i for i, l in enumerate(lines[ba_start:], ba_start) if 'assertFsmAction' in l), None)
+    scope_line = next((i for i, l in enumerate(lines[ba_start:], ba_start)
+                       if 'enforceScopeFromData' in l or 'enforceScopeForBorrower' in l), None)
+    if scope_line and fsm_line and scope_line < fsm_line:
+        print(f"PASS: scope 검증(L{scope_line+1}) -> assertFsmAction(L{fsm_line+1}) 순서 정상")
+    elif scope_line and fsm_line:
+        print(f"FAIL: scope 검증(L{scope_line+1})이 assertFsmAction(L{fsm_line+1}) 이후 -- 순서 위반")
+    else:
+        print(f"WARN: scope_line={scope_line}, fsm_line={fsm_line} -- 수동 확인 필요")
+EOF
 ```
 
-**PASS (미구현):** `borrowerApprove` 메서드 0건 → SKIP.
-**PASS (구현됨):** `enforceScopeForBorrower` 또는 동등 팀 ID 검증이 `assertFsmAction` 이전에 실행.
-**FAIL (구현됨):** scope 가드 없이 `assertFsmAction`만 호출 → 스코프 외 차용자 바이패스 가능.
+```bash
+# borrowerApprove emitAsync payload에 lenderTeamId 포함 확인 (composite 알림 전략 전제 조건)
+grep -A20 "emitAsync(NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "lenderTeamId"
+# 결과: lenderTeamId 포함 라인 1건 (PASS)
+```
+
+```bash
+# 프론트엔드 canBorrowerApprove / canBorrowerReject 독립 const 선언 확인
+grep -n "canBorrowerApprove\|canBorrowerReject" \
+  "apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx"
+# 결과: const 선언 각 1건 이상 (PASS) — 인라인 조건 중복 금지
+```
+
+**PASS:**
+
+1. `borrowerApprove` 메서드 ≥ 1건 (구현됨)
+2. scope 검증 라인 번호 < `assertFsmAction` 라인 번호 (scope-먼저)
+3. `emitAsync` payload에 `lenderTeamId` 포함
+4. 프론트엔드 `canBorrowerApprove`/`canBorrowerReject` 독립 const 선언 존재
+
+**FAIL:**
+
+- borrowerApprove 미구현 → Phase 3+4 구현 체크
+- scope 검증이 assertFsmAction 이후 → 순서 교정 (보안 fail-close 규칙)
+- payload에 `lenderTeamId` 누락 → composite 알림 전략 silent drop
+- 프론트엔드에서 `can(Permission.BORROWER_APPROVE_CHECKOUT)` 인라인 중복 → 독립 const 추출
+
+### Step 26: 프론트엔드 handleNextStepAction — CheckoutAction 완전 매핑 (2026-04-24 추가)
+
+`CheckoutDetailClient.tsx`의 `handleNextStepAction`은 FSM `CheckoutAction` 타입의 모든 값을 처리해야 한다.
+라우팅 액션(`lender_check`, `borrower_receive` 등)이 `FRONTEND_ROUTES` SSOT를 경유하는지 확인.
+
+```bash
+# handleNextStepAction의 case 분기 목록 추출
+grep -A60 "handleNextStepAction" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
+  | grep "case '"
+```
+
+```bash
+# FRONTEND_ROUTES 경유 라우팅 확인 — 하드코딩 URL 금지
+grep -n "router\.push\|href=" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
+  | grep -v "FRONTEND_ROUTES"
+# 결과: 0건 (PASS) — 모든 router.push/href가 FRONTEND_ROUTES 경유
+```
+
+```bash
+# CheckoutAction 타입에서 정의된 액션 값 목록
+grep -A5 "CheckoutAction\s*=" \
+  packages/schemas/src/fsm/checkout-fsm.ts \
+  | grep "'"
+```
+
+**PASS:** `handleNextStepAction`의 모든 `router.push` / `href`가 `FRONTEND_ROUTES` 상수 경유.
+**FAIL:** 하드코딩된 URL 리터럴 (`/checkouts/${id}/check`, `/checkouts/${id}/return` 등) 잔존.
 
 ## Exceptions
 

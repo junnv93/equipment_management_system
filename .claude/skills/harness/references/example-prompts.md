@@ -717,18 +717,18 @@ SSOT 주의:
 
 ---
 
-> **PR 실행 순서 (의존성 그래프 — PR-1~PR-4·PR-6~PR-8·PR-20·PR-24 완료 ✅)**
+> **PR 실행 순서 (의존성 그래프 — PR-1~PR-9·PR-20·PR-24 완료 ✅)**
 >
 > **Phase 1 (완료)**: PR-1 (FSM schemas) ✅ → PR-2 (backend) ✅
 >
 > **Phase 2&3 (완료)**:
-> - PR-3 (tokens) ✅ → PR-4 (NextStepPanel) ✅ → PR-5 (통합+flag) ✅ → PR-9 (E2E 11)
-> - PR-8 (i18n 8NS) ✅ ───────────────────────────────────→ PR-9, PR-12
+> - PR-3 (tokens) ✅ → PR-4 (NextStepPanel) ✅ → PR-5 (통합+flag) ✅ → PR-9 (E2E 11) ✅
+> - PR-8 (i18n 8NS) ✅ ───────────────────────────────────→ PR-9 ✅, PR-12
 >
 > **Phase 4 (완료)**:
 > - PR-6 (Stepper/MiniProgress) ✅ | PR-7 (HeroKPI/Stat) ✅ | PR-14 (WorkflowTimeline)
 >
-> **Phase 5**: PR-5 ✅ + PR-8 ✅ 완료 → PR-12 (목록 IA + 서브탭) ← **다음 블로킹 PR**
+> **Phase 5**: PR-5 ✅ + PR-8 ✅ + PR-9 ✅ 완료 → PR-12 (목록 IA + 서브탭) ← **다음 블로킹 PR**
 >
 > **Phase 6**: PR-12 완료 → PR-13 (YourTurnBadge + 그룹 카드)
 >
@@ -756,8 +756,8 @@ SSOT 주의:
 >
 > **Phase E (조건부)**: PR-5 + E2E 2세션 안정 후 → PR-23 (플래그 상시화 + 마무리)
 >
-> ※ **현재 블로킹**: PR-5 (CheckoutGroupCard + CheckoutDetailClient FSM 통합 + Feature Flag) 진행 가능.
-> ※ PR-5 완료 후: PR-9·PR-12·PR-18·PR-19 순차 또는 병렬 진행.
+> ※ **현재 블로킹**: PR-12 (목록 IA + 서브탭 + 이중 카운트 헤더 + 빈 상태 3종 + backend status[] 복수 필터). PR-5·PR-9 완료로 진행 가능.
+> ※ PR-12 완료 후: PR-13·PR-18·PR-19 순차 또는 병렬 진행.
 > ※ PR-22는 즉시 진행 가능 (frontend와 독립).
 > ※ PR-23은 트리거 조건(E2E 2세션 안정) 충족 전 대기 필수.
 
