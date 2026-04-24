@@ -694,6 +694,58 @@ grep -n "design-tokens" apps/frontend/components/checkouts/YourTurnBadge.tsx
 - `apps/frontend/lib/design-tokens/components/checkout-your-turn.ts` — badge urgency tokens
 - `apps/frontend/lib/checkouts/toast-templates.ts` — CHECKOUT_TOAST_TOKENS 소비처
 
+### Step 24: checkout-loading-skeleton.ts 로딩 스켈레톤 토큰 커버리지 (2026-04-24 추가)
+
+PR-19에서 추가된 `checkout-loading-skeleton.ts` 토큰 파일과 스켈레톤 컴포넌트들이 SSOT 패턴을 준수하는지 검증.
+
+**탐지 — CHECKOUT_LOADING_SKELETON_TOKENS index re-export:**
+```bash
+# index.ts에서 checkout-loading-skeleton 재export 확인
+grep -n "checkout-loading-skeleton\|CHECKOUT_LOADING_SKELETON_TOKENS" \
+  apps/frontend/lib/design-tokens/index.ts
+```
+
+**탐지 — 스켈레톤 컴포넌트의 SSOT 경유 여부:**
+```bash
+# HeroKPISkeleton, NextStepPanelSkeleton, CheckoutGroupCardSkeleton 등이
+# @/lib/design-tokens에서 CHECKOUT_LOADING_SKELETON_TOKENS import 확인
+grep -rn "CHECKOUT_LOADING_SKELETON_TOKENS" \
+  apps/frontend/components/checkouts/ apps/frontend/app/ --include="*.tsx"
+
+# 스켈레톤 컴포넌트에서 직접 bg-muted/bg-primary 하드코딩 탐지 (토큰 미경유)
+grep -rn "animate-pulse" apps/frontend/components/checkouts/ --include="*.tsx" \
+  | grep -v "CHECKOUT_LOADING_SKELETON_TOKENS"
+```
+
+**탐지 — motion-reduce:animate-none 접근성 패턴 + spinner 금지:**
+```bash
+# CHECKOUT_LOADING_SKELETON_TOKENS.base 정의에 motion-reduce:animate-none 포함 확인
+grep -n "motion-reduce" apps/frontend/lib/design-tokens/components/checkout-loading-skeleton.ts
+
+# Spinner(animate-spin) 직접 사용 탐지 — 스켈레톤 컴포넌트에서 금지
+grep -rn "animate-spin" apps/frontend/components/checkouts/ --include="*.tsx"
+```
+
+**PASS 기준:**
+- `lib/design-tokens/index.ts`에서 `CHECKOUT_LOADING_SKELETON_TOKENS` re-export 확인
+- `HeroKPISkeleton`, `NextStepPanelSkeleton`, `CheckoutGroupCardSkeleton` 3개 컴포넌트 모두 토큰 SSOT 경유
+- `CHECKOUT_LOADING_SKELETON_TOKENS.base`에 `motion-reduce:animate-none` 접근성 클래스 포함
+- 스켈레톤 컴포넌트에서 `animate-spin` (spinner) 미사용
+
+**FAIL 기준:**
+- index.ts re-export 누락
+- 스켈레톤 컴포넌트에서 `animate-pulse` 직접 인라인 → `CHECKOUT_LOADING_SKELETON_TOKENS.base` 경유로 전환
+- `animate-spin` 사용 → 스켈레톤 패턴(`animate-pulse`)으로 교체
+
+**INFO 기준 (FAIL 아님):**
+- `CheckoutListSkeleton`이 shadcn `<Skeleton>` 직접 사용하는 것 — 기존 컴포넌트이며 tech-debt으로 관리 중 (pr-19)
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/checkout-loading-skeleton.ts` — 로딩 스켈레톤 SSOT
+- `apps/frontend/components/checkouts/HeroKPISkeleton.tsx` — hasHero prop 분기
+- `apps/frontend/components/checkouts/NextStepPanelSkeleton.tsx`
+- `apps/frontend/components/checkouts/CheckoutGroupCardSkeleton.tsx`
+
 ## Output Format
 
 ```markdown
@@ -731,6 +783,7 @@ grep -n "design-tokens" apps/frontend/components/checkouts/YourTurnBadge.tsx
 | 21  | design-token 파일 내 `dark:bg-brand-*` / `dark:text-brand-*` 금지 | PASS/FAIL | brand CSS 변수 대상 dark: prefix 사용 위치 (허용 예외 제외) |
 | 22  | CALLOUT `text-brand-${}` 동적 보간 금지 | PASS/FAIL | `text-brand-${key}` 동적 보간 발견 위치 |
 | 23  | checkout-toast/your-turn 토큰 index re-export + 소비처 SSOT 경유 | PASS/FAIL | index.ts 누락 또는 duration 인라인 숫자 위치 |
+| 24  | checkout-loading-skeleton 토큰 SSOT + motion-reduce 접근성 + spinner 금지 | PASS/FAIL/INFO | index.ts 누락, animate-pulse 인라인, animate-spin 발견 위치 |
 ```
 
 ## Exceptions

@@ -372,3 +372,7 @@
 | 2026-04-20 | 새 패턴 | `actualCalibrationId` FK 참조 시드 정합성 + bulk-confirm 2건 시나리오 보장 | verify-seed-integrity Step 8 추가 |
 | 2026-04-21 | 재발 (3차) | QUERY_CONFIG 인라인 오버라이드 — CheckoutsContent pendingCount/destinations/liveSummary 3개 쿼리에 `staleTime: CACHE_TIMES.SHORT` 인라인 (SSOT 밖 분산) | CheckoutsContent.tsx |
 | 2026-04-21 | 안티패턴 | URL 파라미터 오염 — InboundCheckoutsTab이 공용 `?page=` 파라미터를 수정하여 반출 탭 페이지네이션 오염. 해결: 섹션별 독립 파라미터 `?inboundPage=N` 분리 (useInboundSectionPagination) | InboundCheckoutsTab.tsx, use-inbound-section-pagination.ts |
+| 2026-04-24 | 재발 (5차) | Stale CAS 버전 사용 — CheckoutDetailClient 8개 mutation (checkout.version 렌더 캡처). pr14-15 tech-debt 기존 등재 확인. | review-learnings.md |
+| 2026-04-24 | 재발 (4차) | QUERY_CONFIG 인라인 오버라이드 — CheckoutDetailClient staleTime+refetchOnMount 인라인. tech-debt pr-19에 추가. | review-learnings.md |
+| 2026-04-24 | 관찰 중 (1회) | router.refresh() + invalidateKeys 이중 동기화 — 성공 콜백에서 서버 revalidation + TanStack 캐시 무효화 중복. 브레드크럼 Server Component 상태 목적이면 허용. | tech-debt pr-19 추가 |
+| 2026-04-24 | 관찰 중 (1회) | 이중 레이어 Suspense 무력화 — 내부 컴포넌트가 자체 Suspense 보유 시 외부 fallback이 트리거되지 않음 (WorkflowTimeline). pr14-15 tech-debt 기존 등재 확인. | review-learnings.md |
