@@ -26,11 +26,14 @@ test.describe('Suite List-IA S10: YourTurnBadge', () => {
       baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
       storageState: path.join(__dirname, '../../../.auth/technical-manager.json'),
     });
-    const probe = await context.newPage();
-    await probe.goto(`/checkouts/${CHECKOUT_009_ID}`);
-    await probe.waitForLoadState('domcontentloaded');
-    flagEnabled = await probe.locator('section[data-checkout-id]').isVisible();
-    await context.close();
+    try {
+      const probe = await context.newPage();
+      await probe.goto(`/checkouts/${CHECKOUT_009_ID}`);
+      await probe.waitForLoadState('domcontentloaded');
+      flagEnabled = await probe.locator('section[data-checkout-id]').isVisible();
+    } finally {
+      await context.close();
+    }
   });
 
   test('technical_manager: APPROVED 반출 row에 your-turn-badge 표시', async ({

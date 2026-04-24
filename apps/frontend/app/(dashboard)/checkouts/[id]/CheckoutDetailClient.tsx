@@ -90,6 +90,7 @@ export default function CheckoutDetailClient({
 }: CheckoutDetailClientProps) {
   const t = useTranslations('checkouts');
   const tQr = useTranslations('qr.handover');
+  const tEquipment = useTranslations('equipment');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const { can } = useAuth();
@@ -647,7 +648,7 @@ export default function CheckoutDetailClient({
       <div className="flex justify-between items-start">
         <div>
           <Button variant="ghost" size="sm" className="mb-2" asChild>
-            <Link href="/checkouts">
+            <Link href={FRONTEND_ROUTES.CHECKOUTS.LIST}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {t('actions.backToList')}
             </Link>
@@ -869,7 +870,7 @@ export default function CheckoutDetailClient({
                       <p className="text-sm text-muted-foreground">{equip.managementNumber}</p>
                     </div>
                   </div>
-                  <Badge variant="outline">{equip.status}</Badge>
+                  <Badge variant="outline">{tEquipment(`status.${equip.status}`)}</Badge>
                 </div>
               ))}
             </div>
