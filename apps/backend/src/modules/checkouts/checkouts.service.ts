@@ -1409,8 +1409,6 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(approveDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
-      const userPermissions: readonly string[] = req.user?.permissions ?? [];
-      this.assertFsmAction(checkout, 'approve', userPermissions);
 
       // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크 (배치 조회)
       const items = await this.db
@@ -1429,7 +1427,10 @@ export class CheckoutsService extends VersionedBaseService {
           message: 'No equipment found for this checkout',
         });
       }
+      // scope 먼저 → FSM 나중: 스코프 외 사용자에게 도메인 상태 노출 방지 (보안 fail-close)
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      const userPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'approve', userPermissions);
 
       // 사용자 팀 classification 조회 (1회)
       const approverTeamId = req.user?.teamId;
@@ -1880,10 +1881,8 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(approveReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
-      const approveReturnPermissions: readonly string[] = req.user?.permissions ?? [];
-      this.assertFsmAction(checkout, 'approve_return', approveReturnPermissions);
 
-      // approve 패턴 통일: items + 장비 정보를 단일 findByIds로 획득 (팀 체크 + 알림 데이터 재사용)
+      // scope 먼저: items + 장비 정보를 단일 findByIds로 획득 (팀 체크 + 알림 데이터 재사용)
       const items = await this.db
         .select()
         .from(checkoutItems)
@@ -1900,8 +1899,10 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0, approve 패턴 통일)
+      // ✅ 스코프 접근 제어 → FSM: 스코프 외 사용자에게 도메인 상태 노출 방지 (보안 fail-close, rejectReturn 패턴 통일)
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      const approveReturnPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'approve_return', approveReturnPermissions);
 
       // 팀별 권한 체크: approve/rejectReturn과 동일한 EMC↔RF 교차 금지 (트랜잭션 이전)
       const approverTeamId = req.user?.teamId;

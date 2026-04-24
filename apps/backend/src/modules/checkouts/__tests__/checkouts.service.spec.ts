@@ -342,13 +342,25 @@ describe('CheckoutsService', () => {
 
     it('should throw BadRequestException when checkout is not pending', async () => {
       const nonPendingCheckout = { ...mockPendingCheckout, status: 'approved' };
+      const eqId = '550e8400-e29b-41d4-a716-446655440001';
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([nonPendingCheckout]);
+      // scope-먼저 패턴: items + equipment 로드 후 scope 통과, assertFsmAction에서 INVALID_TRANSITION
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([{ equipmentId: eqId }]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([[eqId, { id: eqId, site: 'suwon', teamId: null }]])
+      );
 
       await expect(service.approve(checkoutId, mockApproveDto, mockReq)).rejects.toThrow(
         BadRequestException
       );
+
+      mockChain.then = originalThen;
     });
 
     it('should throw BadRequestException (NO_EQUIPMENT) when checkout has no items', async () => {
@@ -648,13 +660,25 @@ describe('CheckoutsService', () => {
 
     it('should throw BadRequestException when checkout is not in returned status', async () => {
       const notReturnedCheckout = { ...mockReturnedCheckout, status: 'checked_out' };
+      const eqId = '550e8400-e29b-41d4-a716-446655440001';
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([notReturnedCheckout]); // findOne
+      // scope-먼저 패턴: items + equipment 로드 후 scope 통과, assertFsmAction에서 INVALID_TRANSITION
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([{ equipmentId: eqId }]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([[eqId, { id: eqId, site: 'suwon', teamId: null }]])
+      );
 
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)
       ).rejects.toThrow(BadRequestException);
+
+      mockChain.then = originalThen;
     });
   });
 
