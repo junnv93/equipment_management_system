@@ -30,6 +30,7 @@ describe('CheckoutsService', () => {
   let mockEquipmentService: Record<string, jest.Mock>;
   let mockTeamsService: Record<string, jest.Mock>;
   let mockImportsService: Record<string, jest.Mock>;
+  let mockEventEmitter: { emit: jest.Mock; emitAsync: jest.Mock; on: jest.Mock };
 
   beforeEach(async () => {
     // 매 테스트마다 새로운 mock 객체 생성
@@ -137,11 +138,11 @@ describe('CheckoutsService', () => {
         },
         {
           provide: EventEmitter2,
-          useValue: {
+          useValue: (mockEventEmitter = {
             emit: jest.fn(),
             emitAsync: jest.fn().mockResolvedValue([]),
             on: jest.fn(),
-          },
+          }),
         },
         {
           provide: AuditService,
@@ -747,6 +748,198 @@ describe('CheckoutsService', () => {
       );
 
       mockChain.then = originalThen;
+    });
+  });
+
+  describe('borrowerApprove', () => {
+    const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
+    const approverId = mockReq.user.userId;
+    const borrowerTeamId = mockReq.user.teamId;
+    const mockDto = { version: 1, approverId };
+
+    const rentalPendingCheckout = {
+      id: checkoutId,
+      requesterId: '550e8400-e29b-41d4-a716-446655440002',
+      status: 'pending',
+      purpose: 'rental',
+      lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+      version: 1,
+    };
+
+    it('(a) 정상 1차 승인: BORROWER_APPROVED 전이 + emitAsync 발행', async () => {
+      const borrowerApprovedCheckout = {
+        ...rentalPendingCheckout,
+        status: 'borrower_approved',
+        version: 2,
+        borrowerApproverId: approverId,
+        borrowerApprovedAt: new Date(),
+      };
+
+      // findOne
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      // requester 조회 (site + teamId)
+      mockDrizzle.limit.mockResolvedValueOnce([{ site: 'suwon', teamId: borrowerTeamId }]);
+      // CAS update (returning)
+      mockDrizzle.returning.mockResolvedValueOnce([borrowerApprovedCheckout]);
+      // getAffectedTeamIds: requester user 조회
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: borrowerTeamId }]);
+      // getCheckoutItemsWithFirstEquipment: select().from().leftJoin().where() → thenable
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([
+            {
+              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+              equipmentName: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+            },
+          ])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+
+      const result = await service.borrowerApprove(checkoutId, mockDto, mockReq);
+
+      mockChain.then = originalThen;
+
+      expect(result.status).toBe('borrower_approved');
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        'checkout.borrowerApproved',
+        expect.objectContaining({ checkoutId })
+      );
+    });
+
+    it('(b) 비-rental purpose → BadRequestException(BORROWER_APPROVE_RENTAL_ONLY)', async () => {
+      mockCacheService.getOrSet.mockResolvedValue({
+        ...rentalPendingCheckout,
+        purpose: 'calibration',
+      });
+
+      await expect(service.borrowerApprove(checkoutId, mockDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('(c) 스코프 외 사용자 (다른 사이트) → ForbiddenException', async () => {
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      // requester가 daejeon 사이트 → enforceScopeForBorrower(enforceSiteAccess)에서 차단
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'daejeon', teamId: 'cc001234-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+
+      await expect(service.borrowerApprove(checkoutId, mockDto, mockReq)).rejects.toThrow(
+        ForbiddenException
+      );
+    });
+
+    it('(d) req.user.teamId 없음 → ForbiddenException(BORROWER_TEAM_ONLY)', async () => {
+      // teamId 미소속 TM: enforceScopeForBorrower는 site fallback으로 통과하나
+      // identity rule(!req.user.teamId)에서 BORROWER_TEAM_ONLY로 차단
+      const mockReqNoTeam = {
+        user: {
+          userId: mockReq.user.userId,
+          roles: ['technical_manager'],
+          permissions: mockReq.user.permissions,
+          site: 'suwon',
+          teamId: undefined,
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      // requester는 동일 사이트 + 팀 있음
+      mockDrizzle.limit.mockResolvedValueOnce([{ site: 'suwon', teamId: borrowerTeamId }]);
+
+      await expect(service.borrowerApprove(checkoutId, mockDto, mockReqNoTeam)).rejects.toThrow(
+        ForbiddenException
+      );
+    });
+  });
+
+  describe('borrowerReject', () => {
+    const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
+    const approverId = mockReq.user.userId;
+    const borrowerTeamId = mockReq.user.teamId;
+    const mockRejectDto = {
+      version: 1,
+      approverId,
+      reason: '팀 장비 운용 일정 충돌로 반려합니다.',
+    };
+
+    const rentalPendingCheckout = {
+      id: checkoutId,
+      requesterId: '550e8400-e29b-41d4-a716-446655440002',
+      status: 'pending',
+      purpose: 'rental',
+      lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+      version: 1,
+    };
+
+    it('(a) 정상 1차 반려: REJECTED 전이 + borrowerRejectionReason 기록 + emitAsync 발행', async () => {
+      const rejectedCheckout = {
+        ...rentalPendingCheckout,
+        status: 'rejected',
+        version: 2,
+        borrowerApproverId: approverId,
+        borrowerRejectionReason: mockRejectDto.reason,
+      };
+
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      mockDrizzle.limit.mockResolvedValueOnce([{ site: 'suwon', teamId: borrowerTeamId }]);
+      mockDrizzle.returning.mockResolvedValueOnce([rejectedCheckout]);
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: borrowerTeamId }]);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([
+            {
+              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+              equipmentName: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+            },
+          ])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+
+      const result = await service.borrowerReject(checkoutId, mockRejectDto, mockReq);
+
+      mockChain.then = originalThen;
+
+      expect(result.status).toBe('rejected');
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        'checkout.borrowerRejected',
+        expect.objectContaining({ checkoutId })
+      );
+    });
+
+    it('(b) 비-rental purpose → BadRequestException(BORROWER_APPROVE_RENTAL_ONLY)', async () => {
+      mockCacheService.getOrSet.mockResolvedValue({
+        ...rentalPendingCheckout,
+        purpose: 'repair',
+      });
+
+      await expect(service.borrowerReject(checkoutId, mockRejectDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('(c) req.user.teamId 없음 → ForbiddenException(BORROWER_TEAM_ONLY)', async () => {
+      const mockReqNoTeam = {
+        user: {
+          userId: mockReq.user.userId,
+          roles: ['technical_manager'],
+          permissions: mockReq.user.permissions,
+          site: 'suwon',
+          teamId: undefined,
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      mockDrizzle.limit.mockResolvedValueOnce([{ site: 'suwon', teamId: borrowerTeamId }]);
+
+      await expect(
+        service.borrowerReject(checkoutId, mockRejectDto, mockReqNoTeam)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
