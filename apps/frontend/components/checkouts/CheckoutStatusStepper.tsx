@@ -9,6 +9,7 @@ import {
   type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import {
+  CHECKOUT_DISPLAY_STEPS,
   CHECKOUT_STEPPER_TOKENS,
   CHECKOUT_STEP_LABELS,
   ELEVATION_TOKENS,
@@ -23,39 +24,6 @@ interface CheckoutStatusStepperProps {
   /** 반납 기한 (ISO string). overdue 판단에 사용. */
   dueAt?: string | null;
 }
-
-/**
- * 반출 유형별 상태 단계 정의
- *
- * 교정/수리: 5단계
- * - pending → approved → checked_out → returned → return_approved
- *
- * 대여: 7단계 (양측 4단계 확인)
- * - pending → approved → lender_checked → borrower_received
- * → borrower_returned → lender_received → return_approved
- */
-const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
-  calibration: [
-    CSVal.PENDING,
-    CSVal.APPROVED,
-    CSVal.CHECKED_OUT,
-    CSVal.RETURNED,
-    CSVal.RETURN_APPROVED,
-  ],
-  repair: [CSVal.PENDING, CSVal.APPROVED, CSVal.CHECKED_OUT, CSVal.RETURNED, CSVal.RETURN_APPROVED],
-  // rental 2-step: pending(1)→borrower_approved(2)→approved(3)→…→return_approved(8)
-  // computeStepIndex 1-based 순서와 동기화 필수 (checkout-fsm.ts SSOT)
-  rental: [
-    CSVal.PENDING,
-    CSVal.BORROWER_APPROVED,
-    CSVal.APPROVED,
-    CSVal.LENDER_CHECKED,
-    CSVal.BORROWER_RECEIVED,
-    CSVal.IN_USE,
-    CSVal.BORROWER_RETURNED,
-    CSVal.RETURN_APPROVED,
-  ],
-};
 
 /** status → stepper i18n key mapping (SSOT: CHECKOUT_STEP_LABELS) */
 
@@ -92,7 +60,8 @@ export default function CheckoutStatusStepper({
   // FSM descriptor 우선 (SSOT). 외부 prop은 descriptor 미결정 시 fallback (하위 호환)
   const resolvedNextStepIndex = descriptor.currentStepIndex ?? nextStepIndex;
 
-  const steps = STEP_STATUSES[checkoutType] || STEP_STATUSES.calibration;
+  const steps =
+    checkoutType === 'rental' ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
   const currentIndex = steps.indexOf(currentStatus);
   const isSpecialStatus = SPECIAL_STATUSES.includes(currentStatus);
 

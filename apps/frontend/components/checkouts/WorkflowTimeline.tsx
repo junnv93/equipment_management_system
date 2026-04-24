@@ -5,7 +5,12 @@ import { Check, Dot } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { CHECKOUT_TIMELINE_TOKENS, type CheckoutTimelineNodeState } from '@/lib/design-tokens';
+import {
+  CHECKOUT_DISPLAY_STEPS,
+  CHECKOUT_TIMELINE_TOKENS,
+  CHECKOUT_STEP_LABELS,
+  type CheckoutTimelineNodeState,
+} from '@/lib/design-tokens';
 import {
   computeStepIndex,
   computeTotalSteps,
@@ -13,30 +18,6 @@ import {
   type CheckoutStatus,
   type CheckoutPurpose,
 } from '@equipment-management/schemas';
-import { CHECKOUT_STEP_LABELS } from '@/lib/design-tokens';
-
-// ============================================================================
-// Display step sequences (UI 관심사 — FSM 경로와 일치, SSOT: computeStepIndex)
-// ============================================================================
-
-const NON_RENTAL_STEPS: CheckoutStatus[] = [
-  CSVal.PENDING,
-  CSVal.APPROVED,
-  CSVal.CHECKED_OUT,
-  CSVal.RETURNED,
-  CSVal.RETURN_APPROVED,
-];
-
-const RENTAL_STEPS: CheckoutStatus[] = [
-  CSVal.PENDING,
-  CSVal.BORROWER_APPROVED,
-  CSVal.APPROVED,
-  CSVal.LENDER_CHECKED,
-  CSVal.BORROWER_RECEIVED,
-  CSVal.IN_USE,
-  CSVal.BORROWER_RETURNED,
-  CSVal.RETURN_APPROVED,
-];
 
 const TERMINAL_NEGATIVE: readonly CheckoutStatus[] = [CSVal.REJECTED, CSVal.CANCELED];
 
@@ -98,7 +79,8 @@ interface WorkflowTimelineProps {
 function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineProps) {
   const t = useTranslations('checkouts');
 
-  const steps = purpose === 'rental' ? RENTAL_STEPS : NON_RENTAL_STEPS;
+  const steps =
+    purpose === 'rental' ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
   const currentStepIdx = computeStepIndex(status, purpose);
   const isTerminalNegative = (TERMINAL_NEGATIVE as CheckoutStatus[]).includes(status);
   const isTerminalPositive = status === CSVal.RETURN_APPROVED;
@@ -121,7 +103,6 @@ function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineP
           );
           const isLast = index === steps.length - 1;
           const labelKey = CHECKOUT_STEP_LABELS[stepStatus];
-          const hasHelpStatus = stepStatus !== CSVal.OVERDUE;
 
           return (
             <div
@@ -157,7 +138,6 @@ function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineP
                     )}
                     data-step-state={nodeState}
                     aria-current={nodeState === 'current' ? 'step' : undefined}
-                    role="img"
                     aria-label={labelKey ? t(`stepper.${labelKey}`) : stepStatus}
                   >
                     {nodeState === 'past' ? (
@@ -167,14 +147,12 @@ function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineP
                     )}
                   </div>
                 </TooltipTrigger>
-                {hasHelpStatus && (
-                  <TooltipContent side="right" className="max-w-[200px]">
-                    <p className="font-medium text-xs">{t(`help.status.${stepStatus}.title`)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {t(`help.status.${stepStatus}.description`)}
-                    </p>
-                  </TooltipContent>
-                )}
+                <TooltipContent side="right" className="max-w-[200px]">
+                  <p className="font-medium text-xs">{t(`help.status.${stepStatus}.title`)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t(`help.status.${stepStatus}.description`)}
+                  </p>
+                </TooltipContent>
               </Tooltip>
 
               {/* 스텝 라벨 */}

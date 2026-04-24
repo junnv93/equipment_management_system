@@ -4,11 +4,37 @@
  * WorkflowTimeline.tsx 전용 — 반출 워크플로우 세로 타임라인 스타일 SSOT.
  * 5종 노드 상태: past / current / next / future / skipped
  *
- * 소비처: WorkflowTimeline.tsx
+ * 소비처: WorkflowTimeline.tsx, CheckoutStatusStepper.tsx
  * 의존: PR-3 design tokens (TRANSITION_PRESETS)
  */
 
+import { CheckoutStatusValues as CSVal, type CheckoutStatus } from '@equipment-management/schemas';
 import { TRANSITION_PRESETS } from '../motion';
+
+// ============================================================================
+// Display step sequences — UI 관심사 SSOT (FSM 경로와 일치, SSOT: computeStepIndex)
+// CheckoutStatusStepper + WorkflowTimeline 공용. 여기서만 정의.
+// ============================================================================
+
+export const CHECKOUT_DISPLAY_STEPS: { nonRental: CheckoutStatus[]; rental: CheckoutStatus[] } = {
+  nonRental: [
+    CSVal.PENDING,
+    CSVal.APPROVED,
+    CSVal.CHECKED_OUT,
+    CSVal.RETURNED,
+    CSVal.RETURN_APPROVED,
+  ],
+  rental: [
+    CSVal.PENDING,
+    CSVal.BORROWER_APPROVED,
+    CSVal.APPROVED,
+    CSVal.LENDER_CHECKED,
+    CSVal.BORROWER_RECEIVED,
+    CSVal.IN_USE,
+    CSVal.BORROWER_RETURNED,
+    CSVal.RETURN_APPROVED,
+  ],
+};
 
 export const CHECKOUT_TIMELINE_TOKENS = {
   container: 'relative flex flex-col gap-0',
