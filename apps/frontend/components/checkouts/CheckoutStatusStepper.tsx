@@ -43,13 +43,16 @@ const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
     CSVal.RETURN_APPROVED,
   ],
   repair: [CSVal.PENDING, CSVal.APPROVED, CSVal.CHECKED_OUT, CSVal.RETURNED, CSVal.RETURN_APPROVED],
+  // rental 2-step: pending(1)→borrower_approved(2)→approved(3)→…→return_approved(8)
+  // computeStepIndex 1-based 순서와 동기화 필수 (checkout-fsm.ts SSOT)
   rental: [
     CSVal.PENDING,
+    CSVal.BORROWER_APPROVED,
     CSVal.APPROVED,
     CSVal.LENDER_CHECKED,
     CSVal.BORROWER_RECEIVED,
+    CSVal.IN_USE,
     CSVal.BORROWER_RETURNED,
-    CSVal.LENDER_RECEIVED,
     CSVal.RETURN_APPROVED,
   ],
 };
@@ -86,8 +89,8 @@ export default function CheckoutStatusStepper({
     purpose: checkoutType as CheckoutPurpose,
     dueAt,
   });
-  // 외부 prop이 명시적으로 제공되면 우선, 없으면 hook 계산값 사용
-  const resolvedNextStepIndex = nextStepIndex ?? descriptor.currentStepIndex;
+  // FSM descriptor 우선 (SSOT). 외부 prop은 descriptor 미결정 시 fallback (하위 호환)
+  const resolvedNextStepIndex = descriptor.currentStepIndex ?? nextStepIndex;
 
   const steps = STEP_STATUSES[checkoutType] || STEP_STATUSES.calibration;
   const currentIndex = steps.indexOf(currentStatus);
