@@ -100,6 +100,9 @@ export {
   type CalloutEmphasis,
   type CalloutSize,
   type TypographyVariant,
+  ROLE_CHIP_TOKENS,
+  getRoleChipClasses,
+  type RoleChipKey,
 } from './semantic';
 
 // ============================================================================
@@ -293,6 +296,7 @@ export {
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
   getNCWorkflowConnectorClasses,
+  getNCWorkflowCompactDotClasses,
   NC_INFO_CARD_TOKENS,
   NC_COLLAPSIBLE_TOKENS,
   NC_ACTION_BAR_TOKENS,
@@ -321,6 +325,7 @@ export {
   NC_WORKFLOW_GUIDANCE_TOKENS,
   resolveNCGuidanceKey,
   NC_GUIDANCE_STEP_BADGE_TOKENS,
+  NC_GUIDANCE_CTA_TOKENS,
   type NCKpiVariant,
   type NCGuidanceStatusKey,
   type NCGuidanceRole,

@@ -166,6 +166,9 @@
       "corrected": "조치",
       "closed": "종결"
     },
+    "timeline": {
+      "label": "부적합 처리 단계"
+    },
     "prerequisite": {
       "repairNeeded": "시정 조치 전 수리 이력을 등록해야 합니다.",
       "recalibrationNeeded": "시정 조치 전 교정을 새로 받아야 합니다.",

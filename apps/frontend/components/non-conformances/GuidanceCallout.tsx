@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   AlertTriangle,
@@ -15,9 +16,11 @@ import {
 import {
   NC_WORKFLOW_GUIDANCE_TOKENS,
   NC_GUIDANCE_STEP_BADGE_TOKENS,
+  NC_GUIDANCE_CTA_TOKENS,
   CALLOUT_TOKENS,
   getCalloutClasses,
   FOCUS_TOKENS,
+  getRoleChipClasses,
   type NCGuidanceKeyReachable,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -48,14 +51,25 @@ export const GuidanceCallout = memo(function GuidanceCallout({
   const entry = NC_WORKFLOW_GUIDANCE_TOKENS[guidanceKey];
   const Icon = ICON_MAP[entry.icon];
 
+  const isHero = entry.ctaKind !== 'none';
+  const size = isHero ? ('hero' as const) : ('default' as const);
+  const heroShadowStyle: CSSProperties | undefined = isHero
+    ? ({
+        ['--callout-hero-shadow' as string]: `color-mix(in oklch, var(--brand-${entry.variant}) 30%, transparent)`,
+      } as CSSProperties)
+    : undefined;
+
+  const roleChipClasses = getRoleChipClasses(entry.roleChip);
+
   return (
     <aside
-      role="status"
-      aria-live="polite"
+      role={isHero ? 'alert' : 'status'}
+      aria-live={isHero ? 'polite' : undefined}
       aria-labelledby={`nc-guidance-title-${guidanceKey}`}
       data-testid="nc-guidance-callout"
       data-guidance-key={guidanceKey}
-      className={getCalloutClasses(entry.variant, entry.emphasis, 'default')}
+      className={getCalloutClasses(entry.variant, entry.emphasis, size)}
+      style={heroShadowStyle}
     >
       <Icon
         className={cn(
@@ -66,7 +80,7 @@ export const GuidanceCallout = memo(function GuidanceCallout({
         aria-hidden="true"
       />
       <div className={CALLOUT_TOKENS.body}>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className={NC_GUIDANCE_STEP_BADGE_TOKENS.chipRow}>
           <span
             className={cn(
               NC_GUIDANCE_STEP_BADGE_TOKENS.base,
@@ -75,15 +89,21 @@ export const GuidanceCallout = memo(function GuidanceCallout({
           >
             {t(`detail.guidance.stepBadge.${entry.stepBadgeKey}` as Parameters<typeof t>[0])}
           </span>
-          <h2
-            id={`nc-guidance-title-${guidanceKey}`}
-            // tabIndex={-1} — 상태 전환 후 포커스 복귀 대상 (NCDetailClient useEffect)
-            tabIndex={-1}
-            className={CALLOUT_TOKENS.title(entry.variant)}
+          <span
+            className={roleChipClasses.chip}
+            aria-label={t(`detail.guidance.roleChip.${entry.roleChip}` as Parameters<typeof t>[0])}
           >
-            {t(`detail.guidance.${guidanceKey}.title` as Parameters<typeof t>[0])}
-          </h2>
+            <span aria-hidden="true" className={roleChipClasses.dot} />
+            {t(`detail.guidance.roleChip.${entry.roleChip}` as Parameters<typeof t>[0])}
+          </span>
         </div>
+        <h2
+          id={`nc-guidance-title-${guidanceKey}`}
+          tabIndex={-1}
+          className={CALLOUT_TOKENS.title(entry.variant)}
+        >
+          {t(`detail.guidance.${guidanceKey}.title` as Parameters<typeof t>[0])}
+        </h2>
         <p className={CALLOUT_TOKENS.description}>
           {t(`detail.guidance.${guidanceKey}.body` as Parameters<typeof t>[0])}
         </p>
@@ -94,7 +114,7 @@ export const GuidanceCallout = memo(function GuidanceCallout({
               onClick={onScrollToAction}
               aria-label={t('detail.guidance.scrollToAction')}
               className={cn(
-                'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
+                NC_GUIDANCE_CTA_TOKENS.primarySolid(entry.variant),
                 FOCUS_TOKENS.classes.default
               )}
             >
@@ -108,10 +128,7 @@ export const GuidanceCallout = memo(function GuidanceCallout({
             <button
               type="button"
               onClick={onRepairRegister}
-              className={cn(
-                'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
-                FOCUS_TOKENS.classes.default
-              )}
+              className={cn(NC_GUIDANCE_CTA_TOKENS.secondaryOutlined, FOCUS_TOKENS.classes.default)}
             >
               <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
               {t('detail.prerequisite.repairLink')}
@@ -123,10 +140,7 @@ export const GuidanceCallout = memo(function GuidanceCallout({
             <button
               type="button"
               onClick={onCalibrationNav}
-              className={cn(
-                'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
-                FOCUS_TOKENS.classes.default
-              )}
+              className={cn(NC_GUIDANCE_CTA_TOKENS.secondaryOutlined, FOCUS_TOKENS.classes.default)}
             >
               <CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />
               {t(`detail.guidance.${guidanceKey}.ctaHint` as Parameters<typeof t>[0])}

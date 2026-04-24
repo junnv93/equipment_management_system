@@ -166,6 +166,9 @@
       "corrected": "Corrected",
       "closed": "Closed"
     },
+    "timeline": {
+      "label": "NC resolution steps"
+    },
     "prerequisite": {
       "repairNeeded": "requires a repair record before corrective action.",
       "recalibrationNeeded": "requires a new calibration before corrective action.",

@@ -476,6 +476,25 @@ export const NC_WORKFLOW_TOKENS = {
     done: 'bg-brand-ok',
     pending: 'bg-border/60',
   },
+  /** Compact 모드 — GuidanceCallout hero 시 mini dot strip */
+  compactDot: {
+    base: 'w-3 h-3 rounded-full border-2 shrink-0',
+    completed: 'bg-brand-ok border-brand-ok',
+    current: 'bg-brand-warning/20 border-brand-warning shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
+    currentCritical:
+      'bg-brand-critical/20 border-brand-critical shadow-[0_0_0_3px_rgba(239,68,68,0.12)]',
+    pending: 'bg-muted border-border',
+  },
+  /** Compact 커넥터 */
+  compactConnector: {
+    base: 'flex-1 h-[1.5px]',
+    done: 'bg-brand-ok',
+    pending: 'bg-border/60',
+  },
+  /** Compact 현재 단계 라벨 */
+  compactCurrentLabel: 'text-[11px] font-semibold text-foreground/80 shrink-0',
+  /** Compact 현재 단계 날짜 */
+  compactCurrentDate: 'text-[11px] tabular-nums text-muted-foreground shrink-0',
 } as const;
 
 /**
@@ -552,6 +571,26 @@ export function getNCWorkflowConnectorClasses(
   const { connector } = NC_WORKFLOW_TOKENS;
   if (connectorIndex < currentStepIndex) return [connector.base, connector.done].join(' ');
   return [connector.base, connector.pending].join(' ');
+}
+
+/**
+ * Utility: compact 모드 dot 클래스 (hero Callout 시 mini progress dots)
+ */
+export function getNCWorkflowCompactDotClasses(
+  stepIndex: number,
+  currentStepIndex: number,
+  isLongOverdue: boolean
+): string {
+  const { compactDot } = NC_WORKFLOW_TOKENS;
+  if (stepIndex < currentStepIndex) return `${compactDot.base} ${compactDot.completed}`;
+  if (stepIndex === currentStepIndex) {
+    if (currentStepIndex === NC_TERMINAL_STEP_INDEX)
+      return `${compactDot.base} ${compactDot.completed}`;
+    if (isLongOverdue && currentStepIndex === NC_OPEN_STEP_INDEX)
+      return `${compactDot.base} ${compactDot.currentCritical}`;
+    return `${compactDot.base} ${compactDot.current}`;
+  }
+  return `${compactDot.base} ${compactDot.pending}`;
 }
 
 // ============================================================================
@@ -759,8 +798,10 @@ export const NC_SPACING_TOKENS = {
     contextGroup: getSectionRhythm('comfortable'),
     /** 그룹 2 → 3 경계 (액션 직전) */
     contextToActionGap: 'mt-6',
-    /** GuidanceCallout이 Timeline과 긴밀 */
+    /** @deprecated use calloutTimelineGap — statusGroup space-y-3가 간격 담당 */
     calloutAfterTimeline: 'mt-3',
+    /** GuidanceCallout과 compact Timeline 사이 간격 (statusGroup space-y-3로 처리) */
+    calloutTimelineGap: 'mt-3',
   },
 } as const;
 
@@ -1019,6 +1060,8 @@ export const NC_GUIDANCE_STEP_BADGE_TOKENS = {
     ok: 'bg-brand-ok/10 text-brand-ok',
     neutral: 'bg-muted text-muted-foreground',
   } satisfies Record<CalloutVariant, string>,
+  /** step badge + role chip 행 레이아웃 */
+  chipRow: 'flex items-center gap-2 mb-1 flex-wrap',
 } as const;
 
 // ============================================================================

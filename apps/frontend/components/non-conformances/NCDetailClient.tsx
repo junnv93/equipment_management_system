@@ -50,6 +50,7 @@ import {
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
   getNCWorkflowConnectorClasses,
+  getNCWorkflowCompactDotClasses,
   NC_INFO_CARD_TOKENS,
   NC_REPAIR_LINKED_TOKENS,
   NC_COLLAPSIBLE_TOKENS,
@@ -393,26 +394,29 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </div>
         )}
 
-        {/* 워크플로우 타임라인 */}
-        <WorkflowTimeline
-          nc={nc}
-          currentStepIndex={currentStepIndex}
-          isLongOverdue={longOverdue && !isClosed}
-        />
-
-        {/* 다음 단계 가이던스 콜아웃 */}
-        <div className={NC_SPACING_TOKENS.detail.calloutAfterTimeline}>
-          <GuidanceCallout
-            guidanceKey={guidance!.key}
-            onScrollToAction={scrollToActionBar}
-            onRepairRegister={() => setShowRepairDialog(true)}
-            onCalibrationNav={
-              canCreateCalibration
-                ? () => router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
-                : undefined
-            }
-          />
-        </div>
+        {/* 워크플로우 + 가이던스: closed면 Timeline full, open이면 Callout hero → Timeline compact */}
+        {isClosed ? (
+          <WorkflowTimeline nc={nc} currentStepIndex={currentStepIndex} isLongOverdue={false} />
+        ) : (
+          <>
+            <GuidanceCallout
+              guidanceKey={guidance!.key}
+              onScrollToAction={scrollToActionBar}
+              onRepairRegister={() => setShowRepairDialog(true)}
+              onCalibrationNav={
+                canCreateCalibration
+                  ? () => router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+                  : undefined
+              }
+            />
+            <WorkflowTimeline
+              nc={nc}
+              currentStepIndex={currentStepIndex}
+              isLongOverdue={longOverdue}
+              compact
+            />
+          </>
+        )}
       </section>
 
       {/* ── 컨텍스트 그룹: 정보카드·조치·종결·문서 ── */}
@@ -661,16 +665,18 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 // ============================================================================
 
 /**
- * 4단계 수평 워크플로우 타임라인
+ * 수평 워크플로우 타임라인 — compact=false(기본): 전체 노드+날짜, compact=true: mini dot strip
  */
 function WorkflowTimeline({
   nc,
   currentStepIndex,
   isLongOverdue,
+  compact = false,
 }: {
   nc: NonConformance;
   currentStepIndex: number;
   isLongOverdue: boolean;
+  compact?: boolean;
 }) {
   const t = useTranslations('non-conformances');
   const workflowLabels: Record<(typeof NC_WORKFLOW_STEPS)[number], string> = {
@@ -678,6 +684,48 @@ function WorkflowTimeline({
     corrected: t('detail.workflow.corrected'),
     closed: t('detail.workflow.closed'),
   };
+
+  if (compact) {
+    const currentStepKey = NC_WORKFLOW_STEPS[currentStepIndex];
+    return (
+      <div
+        className={cn(
+          NC_WORKFLOW_TOKENS.containerCompact,
+          isLongOverdue && NC_WORKFLOW_TOKENS.containerUrgent
+        )}
+        role="group"
+        aria-label={t('detail.timeline.label')}
+      >
+        {/* Mini dots strip */}
+        <div className="flex items-center flex-1" aria-hidden="true">
+          {NC_WORKFLOW_STEPS.map((stepKey: NonConformanceStatus, idx: number) => (
+            <Fragment key={stepKey}>
+              {idx > 0 && (
+                <div
+                  className={cn(
+                    NC_WORKFLOW_TOKENS.compactConnector.base,
+                    idx <= currentStepIndex
+                      ? NC_WORKFLOW_TOKENS.compactConnector.done
+                      : NC_WORKFLOW_TOKENS.compactConnector.pending
+                  )}
+                />
+              )}
+              <div
+                className={getNCWorkflowCompactDotClasses(idx, currentStepIndex, isLongOverdue)}
+              />
+            </Fragment>
+          ))}
+        </div>
+        {/* 현재 단계 라벨 + 날짜 */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={NC_WORKFLOW_TOKENS.compactCurrentLabel}>
+            {workflowLabels[currentStepKey]}
+          </span>
+          <CompactStepDate nc={nc} stepKey={currentStepKey} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -750,6 +798,25 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
       {actor && <span className={NC_WORKFLOW_TOKENS.actor}>{actor}</span>}
     </>
   );
+}
+
+/** compact 모드 전용 날짜 표시 — 날짜만 */
+function CompactStepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformanceStatus }) {
+  const { fmtDate } = useDateFormatter();
+  let dateStr: string | null = null;
+  switch (stepKey) {
+    case NCVal.OPEN:
+      dateStr = nc.discoveryDate;
+      break;
+    case NCVal.CORRECTED:
+      dateStr = nc.correctionDate;
+      break;
+    case NCVal.CLOSED:
+      dateStr = nc.closedAt;
+      break;
+  }
+  if (!dateStr) return null;
+  return <span className={NC_WORKFLOW_TOKENS.compactCurrentDate}>{fmtDate(dateStr)}</span>;
 }
 
 /**
