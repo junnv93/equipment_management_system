@@ -979,18 +979,26 @@ export function resolveNCGuidanceKey(args: {
  *   repair/calibrationLink → outlined — 전제조건 이동 (파괴적 아님, 주목도 낮춤)
  *
  * 동적 보간(`bg-brand-${variant}`) 금지 원칙에 따라 `getSemanticSolidBgClasses` 경유.
+ *
+ * Performance: primarySolid는 모듈 초기화 시 사전 생성 (5 variant) — 매 렌더 string concat 없음.
  */
+const NC_GUIDANCE_CTA_BASE = [
+  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold',
+  'hover:brightness-110',
+  TRANSITION_PRESETS.fastBg,
+].join(' ');
+
+const NC_GUIDANCE_CTA_PRIMARY_SOLID = {
+  info: `${NC_GUIDANCE_CTA_BASE} ${getSemanticSolidBgClasses('info')}`,
+  warning: `${NC_GUIDANCE_CTA_BASE} ${getSemanticSolidBgClasses('warning')}`,
+  critical: `${NC_GUIDANCE_CTA_BASE} ${getSemanticSolidBgClasses('critical')}`,
+  ok: `${NC_GUIDANCE_CTA_BASE} ${getSemanticSolidBgClasses('ok')}`,
+  neutral: `${NC_GUIDANCE_CTA_BASE} ${getSemanticSolidBgClasses('neutral')}`,
+} as const satisfies Record<CalloutVariant, string>;
+
 export const NC_GUIDANCE_CTA_TOKENS = {
-  /** ctaKind='primary' — variant별 solid button */
-  primarySolid: (v: CalloutVariant): string => {
-    const semanticKey: SemanticColorKey = v === 'neutral' ? 'neutral' : v;
-    return [
-      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold',
-      getSemanticSolidBgClasses(semanticKey),
-      'hover:brightness-110',
-      TRANSITION_PRESETS.fastBg,
-    ].join(' ');
-  },
+  /** ctaKind='primary' — variant별 solid button (사전 생성 O(1) 룩업) */
+  primarySolid: (v: CalloutVariant): string => NC_GUIDANCE_CTA_PRIMARY_SOLID[v],
   /** ctaKind='repairLink' | 'calibrationLink' — outlined secondary */
   secondaryOutlined: [
     'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm',

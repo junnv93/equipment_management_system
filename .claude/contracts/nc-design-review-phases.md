@@ -9,9 +9,23 @@
 | Phase | 상태 | Commit | 비고 |
 |-------|------|--------|------|
 | **1 · Foundation Tokens** | ✅ **완료** | `7a851f78` | UI 무영향, tsc 통과 |
+| **1.1 · 자체 감사 후 follow-up** | ✅ **완료** | (pending commit) | CSS 충돌 / SSOT / 성능 / 타입 4건 수정 |
 | 2 · i18n Parity | ⏸ 대기 | — | **다음 세션 재개점** |
 | 3 · Callout hero + Timeline compact | ⏸ 대기 | — | Phase 2 후 진행 |
 | 4 · Banner/Docs/Dialog CAS/List | ⏸ 대기 | — | Phase 3 후 진행 |
+
+### Phase 1.1 follow-up 상세 (자체 감사 결과)
+
+Phase 1 완료 후 사용자 "누락·타협 없이 아키텍처 수준인가?" 재검토 요청 → 다음 4건 수정:
+
+1. **CSS 충돌**: `CONFIRM_PREVIEW_TOKENS.card`가 `getSemanticContainerClasses`를 썼는데 `rounded-md border p-4`가 앞의 `p-3.5`를 덮어씀. → `getSemanticContainerColorClasses`(색상만)로 교체 + 3 tone 사전 생성(`CONFIRM_PREVIEW_CARD_CLASSES`).
+2. **SSOT**: `REQUIRED_FIELD_TOKENS.asterisk` / `inputBorder`에 `text-brand-critical` / `border-l-brand-critical` 리터럴 직접 사용 → `getSemanticContainerTextClasses('critical')` / `getSemanticLeftBorderClasses('critical')` brand.ts 헬퍼 경유로 교체.
+3. **성능**: `NC_GUIDANCE_CTA_TOKENS.primarySolid`와 `getRoleChipClasses`가 함수 호출마다 string concat. → 5 × n 조합 사전 생성 (`NC_GUIDANCE_CTA_PRIMARY_SOLID`, `ROLE_CHIP_CLASSES`) + O(1) 룩업으로 변환.
+4. **타입**: `CALLOUT_TOKENS.emphasis`의 leftBorder만 size-aware였고 `getCalloutClasses`에서 `as typeof ...` 캐스팅 escape hatch 사용. → 모든 emphasis 함수를 `(v: CalloutVariant, size: CalloutSize) => string` 통일 시그니처 + 개별 `satisfies CalloutEmphasisFn` 가드.
+
+### 기록만 된 tech-debt (Phase 1 범위 밖)
+
+- [`tech-debt-nc-banner-dark-prefix-0424.md`](./tech-debt-nc-banner-dark-prefix-0424.md) — `NC_BANNER_TOKENS.statusAlert`에 `dark:` prefix 사용 (memory `Brand Color Migration` 위반). 별도 세션에서 전체 `dark:.*-brand-*` 스캔 + 수정.
 
 ### Phase 1 완료 시 추가된 토큰 (다음 Phase가 참조할 SSOT)
 

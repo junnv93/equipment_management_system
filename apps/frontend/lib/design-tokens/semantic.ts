@@ -18,7 +18,6 @@ import {
 } from './primitives';
 import {
   getSemanticBorderOpacity30Classes,
-  getSemanticContainerClasses,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
   getSemanticLeftBorderClasses,
@@ -537,7 +536,12 @@ const CALLOUT_VARIANT_TO_SEMANTIC: Record<CalloutVariant, SemanticColorKey> = {
  *   - shadow 색상은 `--callout-hero-shadow` CSS 변수로 주입 (도메인 중립)
  *   - 호출부에서 style={{ '--callout-hero-shadow': 'color-mix(in oklch, var(--brand-*) 30%, transparent)' }} 설정
  *   - "지금 할 일"을 최상위로 끌어올리는 용도 (NC 상세 GuidanceCallout 등)
+ *
+ * 모든 emphasis 함수는 (v, size) 통일 시그니처 — size는 현재 leftBorder만 활용하지만
+ * 미래 확장 (hero size의 filled variant 등)을 위한 여지.
  */
+type CalloutEmphasisFn = (v: CalloutVariant, size: CalloutSize) => string;
+
 export const CALLOUT_TOKENS = {
   base: 'flex items-start gap-3 rounded-md',
   size: {
@@ -547,14 +551,14 @@ export const CALLOUT_TOKENS = {
     hero: 'px-5 py-4 gap-3.5 min-h-[5rem] rounded-lg shadow-[0_4px_14px_-6px_var(--callout-hero-shadow,transparent)]',
   },
   emphasis: {
-    leftBorder: (v: CalloutVariant, size: CalloutSize = 'default') => {
+    leftBorder: ((v, size) => {
       const borderWidth = size === 'hero' ? 'border-l-[6px]' : 'border-l-4';
       return `${borderWidth} ${getSemanticLeftBorderClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`;
-    },
-    outlined: (v: CalloutVariant) =>
-      `border ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
-    filled: (v: CalloutVariant) =>
-      `${getSemanticSolidBgClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} text-white`,
+    }) satisfies CalloutEmphasisFn,
+    outlined: ((v) =>
+      `border ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`) satisfies CalloutEmphasisFn,
+    filled: ((v) =>
+      `${getSemanticSolidBgClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} text-white`) satisfies CalloutEmphasisFn,
   },
   icon: {
     wrap: 'flex-shrink-0 mt-0.5',
@@ -573,12 +577,8 @@ export function getCalloutClasses(
   emphasis: CalloutEmphasis = 'leftBorder',
   size: CalloutSize = 'default'
 ): string {
-  const emphasisFn = CALLOUT_TOKENS.emphasis[emphasis];
-  // leftBorder는 size-aware (border 두께 분기), 나머지는 size 인자 무시
-  const emphasisClass =
-    emphasis === 'leftBorder'
-      ? (emphasisFn as typeof CALLOUT_TOKENS.emphasis.leftBorder)(variant, size)
-      : (emphasisFn as (v: CalloutVariant) => string)(variant);
+  // 모든 emphasis 함수가 (v, size) 통일 시그니처 — 분기 캐스팅 불필요
+  const emphasisClass = CALLOUT_TOKENS.emphasis[emphasis](variant, size);
   return [CALLOUT_TOKENS.base, CALLOUT_TOKENS.size[size], emphasisClass].join(' ');
 }
 
@@ -606,10 +606,13 @@ export const URGENT_BADGE_TOKENS = {
  * 색과 독립적으로 전달하기 위한 범용 토큰. 반출입/교정 등 다른 도메인에서도 opt-in 가능.
  *
  * 색상 단독 정보 전달 금지 (WCAG 2.2 SC 1.4.1) — chip은 항상 텍스트 라벨과 함께 사용.
+ *
+ * Performance: `ROLE_CHIP_CLASSES`는 모듈 초기화 시 사전 생성된 5 × 2 = 10개 문자열.
+ * `getRoleChipClasses(key)`는 O(1) 룩업 — 매 렌더 string concat 비용 없음.
  */
 export type RoleChipKey = 'my-turn' | 'waiting' | 'approval' | 'blocked' | 'done';
 
-const ROLE_CHIP_COLOR_MAP: Record<RoleChipKey, SemanticColorKey> = {
+const ROLE_CHIP_COLOR_MAP = {
   'my-turn': 'warning',
   waiting: 'info',
   approval: 'warning',
@@ -618,23 +621,42 @@ const ROLE_CHIP_COLOR_MAP: Record<RoleChipKey, SemanticColorKey> = {
 } as const satisfies Record<RoleChipKey, SemanticColorKey>;
 
 export const ROLE_CHIP_TOKENS = {
-  base: 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold bg-card border',
+  base: `inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-semibold bg-card border`,
   dot: 'w-2 h-2 rounded-full shrink-0',
 } as const;
 
+const ROLE_CHIP_CLASSES = {
+  'my-turn': {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(ROLE_CHIP_COLOR_MAP['my-turn'])}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(ROLE_CHIP_COLOR_MAP['my-turn'])}`,
+  },
+  waiting: {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(ROLE_CHIP_COLOR_MAP.waiting)}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(ROLE_CHIP_COLOR_MAP.waiting)}`,
+  },
+  approval: {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(ROLE_CHIP_COLOR_MAP.approval)}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(ROLE_CHIP_COLOR_MAP.approval)}`,
+  },
+  blocked: {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(ROLE_CHIP_COLOR_MAP.blocked)}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(ROLE_CHIP_COLOR_MAP.blocked)}`,
+  },
+  done: {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(ROLE_CHIP_COLOR_MAP.done)}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(ROLE_CHIP_COLOR_MAP.done)}`,
+  },
+} as const satisfies Record<RoleChipKey, { chip: string; dot: string }>;
+
 /**
- * Role chip 클래스 생성
+ * Role chip 클래스 조회 (사전 생성 O(1) 룩업)
  *
  * @example
  * const { chip, dot } = getRoleChipClasses('my-turn');
  * <span className={chip}><span className={dot} aria-hidden="true" />{label}</span>
  */
 export function getRoleChipClasses(key: RoleChipKey): { chip: string; dot: string } {
-  const color = ROLE_CHIP_COLOR_MAP[key];
-  return {
-    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(color)}`,
-    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(color)}`,
-  };
+  return ROLE_CHIP_CLASSES[key];
 }
 
 /**
@@ -647,16 +669,40 @@ export function getRoleChipClasses(key: RoleChipKey): { chip: string; dot: strin
  *   - 'ok'       : 성공 직전 (수리 등록 → 종결 가능)
  *   - 'info'     : 중립 정보 (일반 2-step)
  *   - 'neutral'  : 변경 요약 (NCEditDialog 변경 전/후 비교)
+ *
+ * Performance: `CONFIRM_PREVIEW_CARD_CLASSES`는 모듈 초기화 시 사전 생성 (3 tone).
+ * 색상 클래스는 `getSemanticContainerColorClasses` (색상만, padding/border 중복 없음).
  */
 export type ConfirmPreviewTone = 'ok' | 'info' | 'neutral';
 
-export const CONFIRM_PREVIEW_TOKENS = {
-  /** tone별 container 클래스 — rounded-md border p-3.5 + semantic bg/border */
-  card: (tone: ConfirmPreviewTone = 'ok') => ({
-    container: `rounded-md border p-3.5 text-sm space-y-2 ${getSemanticContainerClasses(tone)}`,
+/**
+ * tone별 container 클래스 — `rounded-md border p-3.5` + semantic color만 (padding 중복 제거).
+ * `getSemanticContainerColorClasses`는 색상 클래스(10% bg + 20% border)만 반환 — padding/rounded 미포함.
+ */
+const CONFIRM_PREVIEW_CARD_CLASSES = {
+  ok: {
+    container: `rounded-md border p-3.5 text-sm space-y-2 ${getSemanticContainerColorClasses('ok')}`,
     row: 'grid grid-cols-[90px_1fr] gap-2',
     rowLabel: 'text-muted-foreground text-xs',
-  }),
+  },
+  info: {
+    container: `rounded-md border p-3.5 text-sm space-y-2 ${getSemanticContainerColorClasses('info')}`,
+    row: 'grid grid-cols-[90px_1fr] gap-2',
+    rowLabel: 'text-muted-foreground text-xs',
+  },
+  neutral: {
+    container: `rounded-md border p-3.5 text-sm space-y-2 ${getSemanticContainerColorClasses('neutral')}`,
+    row: 'grid grid-cols-[90px_1fr] gap-2',
+    rowLabel: 'text-muted-foreground text-xs',
+  },
+} as const satisfies Record<
+  ConfirmPreviewTone,
+  { container: string; row: string; rowLabel: string }
+>;
+
+export const CONFIRM_PREVIEW_TOKENS = {
+  /** tone별 container 클래스 조회 (사전 생성 O(1) 룩업) */
+  card: (tone: ConfirmPreviewTone = 'ok') => CONFIRM_PREVIEW_CARD_CLASSES[tone],
   /** 힌트 텍스트 (카드 하단 — "이전 단계로 돌아가 수정 가능" 등) */
   hint: 'mt-4 flex items-start gap-2 text-xs text-muted-foreground rounded-md border px-3 py-2',
 } as const;
