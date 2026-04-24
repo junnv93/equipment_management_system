@@ -11,12 +11,13 @@ import {
   AlertTriangle,
   PackageCheck,
   PackageOpen,
-  FilterX,
   CheckCircle2,
 } from 'lucide-react';
+
 import { HeroKPI } from '@/components/checkouts/HeroKPI';
 import { SparklineMini } from '@/components/checkouts/SparklineMini';
 import { EmptyState } from '@/components/shared/EmptyState';
+import CheckoutEmptyState from '@/components/checkouts/CheckoutEmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -208,6 +209,12 @@ export default function OutboundCheckoutsTab({
 
   const allGroups = [...overdueGroups, ...normalGroups];
 
+  // 장비 총 대수 파생 — 반출별 equipment 배열 합산 (백엔드 스키마 변경 없이 클라이언트 계산)
+  const currentEquipmentCount = useMemo(
+    () => checkoutsData?.data?.reduce((sum, c) => sum + (c.equipment?.length ?? 0), 0) ?? 0,
+    [checkoutsData?.data]
+  );
+
   // ──────────────────────────────────────────────
   // 활성 필터 판단 — countActiveFilters SSOT (새 필터 추가 시 자동 동기화)
   // ──────────────────────────────────────────────
@@ -345,61 +352,53 @@ export default function OutboundCheckoutsTab({
     </div>
   );
 
-  // 서브탭별 빈 상태 파라미터 계산
-  const emptyStateParams = (() => {
+  // 서브탭별 빈 상태 렌더링 함수
+  const renderEmptyState = () => {
     // overdue 필터 + summary.overdue === 0 → celebration variant (기한 초과 없음 축하)
     // TODO(PR-8): i18n 키로 교체 예정
     if (filters.status === CSVal.OVERDUE && summary.overdue === 0) {
-      return {
-        variant: 'celebration' as const,
-        icon: CheckCircle2,
-        title: '기한 초과 없음',
-        description: '현재 기한이 초과된 반출 건이 없습니다.',
-        primaryAction: undefined,
-        canAct: undefined,
-        secondaryAction: undefined,
-        testId: 'empty-state-overdue-clear' as const,
-      };
+      return (
+        <EmptyState
+          variant="celebration"
+          icon={CheckCircle2}
+          title="기한 초과 없음"
+          description="현재 기한이 초과된 반출 건이 없습니다."
+          testId="empty-state-overdue-clear"
+        />
+      );
     }
     if (filterActive) {
-      return {
-        variant: 'filtered' as const,
-        icon: FilterX,
-        title: t('emptyState.filtered.title'),
-        description: t('emptyState.filtered.description'),
-        primaryAction: undefined,
-        canAct: undefined,
-        secondaryAction: { label: t('actions.resetFilters'), onClick: onResetFilters },
-        testId: 'empty-state-filtered' as const,
-      };
+      return (
+        <CheckoutEmptyState
+          variant="filtered"
+          title={t('emptyState.filtered.title')}
+          description={t('emptyState.filtered.description')}
+          secondaryAction={{ label: t('emptyState.filtered.cta'), onClick: onResetFilters }}
+        />
+      );
     }
     if (filters.subTab === 'completed') {
-      return {
-        variant: 'no-data' as const,
-        icon: ClipboardList,
-        title: t('emptyState.completed.title'),
-        description: t('emptyState.completed.description'),
-        primaryAction: undefined,
-        canAct: undefined,
-        secondaryAction: undefined,
-        testId: 'empty-state-completed' as const,
-      };
+      return (
+        <CheckoutEmptyState
+          variant="completed"
+          title={t('emptyState.completed.title')}
+          description={t('emptyState.completed.description')}
+        />
+      );
     }
-    return {
-      variant: 'no-data' as const,
-      icon: ClipboardList,
-      title: t('emptyState.inProgress.title'),
-      description: t('emptyState.inProgress.description'),
-      primaryAction: {
-        label: t('emptyState.inProgress.cta'),
-        href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
-        permission: Permission.CREATE_CHECKOUT,
-      },
-      canAct: canCreateCheckout,
-      secondaryAction: undefined,
-      testId: 'empty-state-in-progress' as const,
-    };
-  })();
+    return (
+      <CheckoutEmptyState
+        variant="in-progress"
+        title={t('emptyState.inProgress.title')}
+        description={t('emptyState.inProgress.description')}
+        primaryAction={{
+          label: t('emptyState.inProgress.cta'),
+          href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
+        }}
+        canAct={canCreateCheckout}
+      />
+    );
+  };
 
   // ──────────────────────────────────────────────
   // Main render
@@ -413,6 +412,7 @@ export default function OutboundCheckoutsTab({
         currentSubTab={filters.subTab}
         onSubTabChange={handleSubTabChange}
         currentCount={checkoutsData?.meta.pagination.total}
+        currentEquipmentCount={currentEquipmentCount}
       />
 
       <div
@@ -431,16 +431,7 @@ export default function OutboundCheckoutsTab({
               />
             </div>
           ) : allGroups.length === 0 ? (
-            <EmptyState
-              variant={emptyStateParams.variant}
-              icon={emptyStateParams.icon}
-              title={emptyStateParams.title}
-              description={emptyStateParams.description}
-              primaryAction={emptyStateParams.primaryAction}
-              canAct={emptyStateParams.canAct}
-              secondaryAction={emptyStateParams.secondaryAction}
-              testId={emptyStateParams.testId}
-            />
+            renderEmptyState()
           ) : (
             allGroups.map((group) => (
               <div
