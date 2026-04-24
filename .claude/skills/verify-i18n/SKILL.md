@@ -161,8 +161,13 @@ const en = require('./apps/frontend/messages/en/non-conformances.json');
 const ko = require('./apps/frontend/messages/ko/non-conformances.json');
 
 // NC_WORKFLOW_GUIDANCE_TOKENS의 키 집합 (하드코딩 없이 i18n 키로 검증)
-const enKeys = Object.keys(en.detail?.guidance ?? {}).filter(k => k !== 'stepBadge' && k !== 'scrollToAction');
-const koKeys = Object.keys(ko.detail?.guidance ?? {}).filter(k => k !== 'stepBadge' && k !== 'scrollToAction');
+// 제외 목록: NCGuidanceKey가 아닌 detail.guidance 하위 네임스페이스
+//   stepBadge   — STEP N/3 배지 텍스트 서브 네임스페이스
+//   scrollToAction — 스크롤 CTA 단일 키
+//   roleChip    — 역할 chip 레이블 서브 네임스페이스 (2026-04-24 Phase 2 추가)
+const GUIDANCE_NON_KEY_NS = new Set(['stepBadge', 'scrollToAction', 'roleChip']);
+const enKeys = Object.keys(en.detail?.guidance ?? {}).filter(k => !GUIDANCE_NON_KEY_NS.has(k));
+const koKeys = Object.keys(ko.detail?.guidance ?? {}).filter(k => !GUIDANCE_NON_KEY_NS.has(k));
 
 const missing_en = koKeys.filter(k => !enKeys.includes(k));
 const missing_ko = enKeys.filter(k => !koKeys.includes(k));
