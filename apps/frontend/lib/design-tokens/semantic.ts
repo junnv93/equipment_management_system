@@ -17,6 +17,8 @@ import {
   TYPOGRAPHY_PRIMITIVES,
 } from './primitives';
 import {
+  getSemanticBorderOpacity30Classes,
+  getSemanticContainerClasses,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
   getSemanticLeftBorderClasses,
@@ -513,7 +515,7 @@ export const EMPTY_STATE_TOKENS = {
 
 export type CalloutVariant = 'info' | 'warning' | 'critical' | 'ok' | 'neutral';
 export type CalloutEmphasis = 'leftBorder' | 'filled' | 'outlined';
-export type CalloutSize = 'compact' | 'default' | 'spacious';
+export type CalloutSize = 'compact' | 'default' | 'spacious' | 'hero';
 
 const CALLOUT_VARIANT_TO_SEMANTIC: Record<CalloutVariant, SemanticColorKey> = {
   info: 'info',
@@ -526,9 +528,15 @@ const CALLOUT_VARIANT_TO_SEMANTIC: Record<CalloutVariant, SemanticColorKey> = {
 /**
  * Callout Tokens (콜아웃 블록)
  *
- * leftBorder / filled / outlined 3가지 emphasis × 5 variant × 3 size.
+ * leftBorder / filled / outlined 3가지 emphasis × 5 variant × 4 size.
  * emphasis 함수는 brand.ts 헬퍼를 통해 CSS 변수 기반 색상 클래스를 생성.
  * EMPTY_STATE_TOKENS와 함께 알림/안내 블록의 시각 언어 SSOT.
+ *
+ * size 'hero':
+ *   - rounded-lg + 두꺼운 leftBorder (6px) + shadow
+ *   - shadow 색상은 `--callout-hero-shadow` CSS 변수로 주입 (도메인 중립)
+ *   - 호출부에서 style={{ '--callout-hero-shadow': 'color-mix(in oklch, var(--brand-*) 30%, transparent)' }} 설정
+ *   - "지금 할 일"을 최상위로 끌어올리는 용도 (NC 상세 GuidanceCallout 등)
  */
 export const CALLOUT_TOKENS = {
   base: 'flex items-start gap-3 rounded-md',
@@ -536,10 +544,13 @@ export const CALLOUT_TOKENS = {
     compact: 'px-3 py-2.5 min-h-[3rem]',
     default: 'px-4 py-3.5 min-h-[3.5rem]',
     spacious: 'px-5 py-4 min-h-[4rem]',
+    hero: 'px-5 py-4 gap-3.5 min-h-[5rem] rounded-lg shadow-[0_4px_14px_-6px_var(--callout-hero-shadow,transparent)]',
   },
   emphasis: {
-    leftBorder: (v: CalloutVariant) =>
-      `border-l-4 ${getSemanticLeftBorderClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
+    leftBorder: (v: CalloutVariant, size: CalloutSize = 'default') => {
+      const borderWidth = size === 'hero' ? 'border-l-[6px]' : 'border-l-4';
+      return `${borderWidth} ${getSemanticLeftBorderClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`;
+    },
     outlined: (v: CalloutVariant) =>
       `border ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
     filled: (v: CalloutVariant) =>
@@ -562,11 +573,13 @@ export function getCalloutClasses(
   emphasis: CalloutEmphasis = 'leftBorder',
   size: CalloutSize = 'default'
 ): string {
-  return [
-    CALLOUT_TOKENS.base,
-    CALLOUT_TOKENS.size[size],
-    CALLOUT_TOKENS.emphasis[emphasis](variant),
-  ].join(' ');
+  const emphasisFn = CALLOUT_TOKENS.emphasis[emphasis];
+  // leftBorder는 size-aware (border 두께 분기), 나머지는 size 인자 무시
+  const emphasisClass =
+    emphasis === 'leftBorder'
+      ? (emphasisFn as typeof CALLOUT_TOKENS.emphasis.leftBorder)(variant, size)
+      : (emphasisFn as (v: CalloutVariant) => string)(variant);
+  return [CALLOUT_TOKENS.base, CALLOUT_TOKENS.size[size], emphasisClass].join(' ');
 }
 
 /**
@@ -584,6 +597,68 @@ export const URGENT_BADGE_TOKENS = {
     `inline-flex items-center px-2 py-0.5 rounded ${MICRO_TYPO.badge} font-semibold`,
     'border border-brand-critical text-brand-critical',
   ].join(' '),
+} as const;
+
+/**
+ * Role Chip Tokens (역할 칩 — "누구의 차례인가")
+ *
+ * 상태 variant(색상) 외에 "내 작업 / 대기 / 승인 / 선행 필요 / 완료"를
+ * 색과 독립적으로 전달하기 위한 범용 토큰. 반출입/교정 등 다른 도메인에서도 opt-in 가능.
+ *
+ * 색상 단독 정보 전달 금지 (WCAG 2.2 SC 1.4.1) — chip은 항상 텍스트 라벨과 함께 사용.
+ */
+export type RoleChipKey = 'my-turn' | 'waiting' | 'approval' | 'blocked' | 'done';
+
+const ROLE_CHIP_COLOR_MAP: Record<RoleChipKey, SemanticColorKey> = {
+  'my-turn': 'warning',
+  waiting: 'info',
+  approval: 'warning',
+  blocked: 'critical',
+  done: 'ok',
+} as const satisfies Record<RoleChipKey, SemanticColorKey>;
+
+export const ROLE_CHIP_TOKENS = {
+  base: 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold bg-card border',
+  dot: 'w-2 h-2 rounded-full shrink-0',
+} as const;
+
+/**
+ * Role chip 클래스 생성
+ *
+ * @example
+ * const { chip, dot } = getRoleChipClasses('my-turn');
+ * <span className={chip}><span className={dot} aria-hidden="true" />{label}</span>
+ */
+export function getRoleChipClasses(key: RoleChipKey): { chip: string; dot: string } {
+  const color = ROLE_CHIP_COLOR_MAP[key];
+  return {
+    chip: `${ROLE_CHIP_TOKENS.base} ${getSemanticBorderOpacity30Classes(color)}`,
+    dot: `${ROLE_CHIP_TOKENS.dot} ${getSemanticSolidBgClasses(color)}`,
+  };
+}
+
+/**
+ * Confirm Preview Tokens (2-step Dialog 요약 프리뷰)
+ *
+ * input → confirm 2-step dialog에서 "이 내용으로 등록합니다" 요약 카드 공통 토큰.
+ * NC 수리 등록, 반출 신청 confirm 등에서 재사용.
+ *
+ * tone은 상태에 따라 선택:
+ *   - 'ok'       : 성공 직전 (수리 등록 → 종결 가능)
+ *   - 'info'     : 중립 정보 (일반 2-step)
+ *   - 'neutral'  : 변경 요약 (NCEditDialog 변경 전/후 비교)
+ */
+export type ConfirmPreviewTone = 'ok' | 'info' | 'neutral';
+
+export const CONFIRM_PREVIEW_TOKENS = {
+  /** tone별 container 클래스 — rounded-md border p-3.5 + semantic bg/border */
+  card: (tone: ConfirmPreviewTone = 'ok') => ({
+    container: `rounded-md border p-3.5 text-sm space-y-2 ${getSemanticContainerClasses(tone)}`,
+    row: 'grid grid-cols-[90px_1fr] gap-2',
+    rowLabel: 'text-muted-foreground text-xs',
+  }),
+  /** 힌트 텍스트 (카드 하단 — "이전 단계로 돌아가 수정 가능" 등) */
+  hint: 'mt-4 flex items-start gap-2 text-xs text-muted-foreground rounded-md border px-3 py-2',
 } as const;
 
 /**

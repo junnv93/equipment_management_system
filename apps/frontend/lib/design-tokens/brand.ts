@@ -145,6 +145,8 @@ interface BrandClassSet {
   solid: string;
   /** 도트 — bg-brand-{key} rounded-full */
   dot: string;
+  /** 보더 30% — border-brand-{key}/30 (role chip 등 중간 강도 테두리) */
+  borderOpacity30: string;
 }
 
 const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
@@ -157,6 +159,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-ok',
     solid: 'bg-brand-ok text-white',
     dot: 'bg-brand-ok rounded-full',
+    borderOpacity30: 'border-brand-ok/30',
   },
   warning: {
     text: 'text-brand-warning',
@@ -167,6 +170,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-warning',
     solid: 'bg-brand-warning text-white',
     dot: 'bg-brand-warning rounded-full',
+    borderOpacity30: 'border-brand-warning/30',
   },
   critical: {
     text: 'text-brand-critical',
@@ -177,6 +181,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-critical',
     solid: 'bg-brand-critical text-white',
     dot: 'bg-brand-critical rounded-full',
+    borderOpacity30: 'border-brand-critical/30',
   },
   info: {
     text: 'text-brand-info',
@@ -187,6 +192,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-info',
     solid: 'bg-brand-info text-white',
     dot: 'bg-brand-info rounded-full',
+    borderOpacity30: 'border-brand-info/30',
   },
   neutral: {
     text: 'text-brand-neutral',
@@ -197,6 +203,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-neutral',
     solid: 'bg-brand-neutral text-white',
     dot: 'bg-brand-neutral rounded-full',
+    borderOpacity30: 'border-brand-neutral/30',
   },
   purple: {
     text: 'text-brand-purple',
@@ -207,6 +214,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-purple',
     solid: 'bg-brand-purple text-white',
     dot: 'bg-brand-purple rounded-full',
+    borderOpacity30: 'border-brand-purple/30',
   },
   repair: {
     text: 'text-brand-repair',
@@ -217,6 +225,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-repair',
     solid: 'bg-brand-repair text-white',
     dot: 'bg-brand-repair rounded-full',
+    borderOpacity30: 'border-brand-repair/30',
   },
   temporary: {
     text: 'text-brand-temporary',
@@ -227,6 +236,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-temporary',
     solid: 'bg-brand-temporary text-white',
     dot: 'bg-brand-temporary rounded-full',
+    borderOpacity30: 'border-brand-temporary/30',
   },
   progress: {
     text: 'text-brand-progress',
@@ -237,6 +247,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-progress',
     solid: 'bg-brand-progress text-white',
     dot: 'bg-brand-progress rounded-full',
+    borderOpacity30: 'border-brand-progress/30',
   },
   archive: {
     text: 'text-brand-archive',
@@ -247,6 +258,7 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     leftBorder: 'border-l-brand-archive',
     solid: 'bg-brand-archive text-white',
     dot: 'bg-brand-archive rounded-full',
+    borderOpacity30: 'border-brand-archive/30',
   },
 } as const satisfies Record<SemanticColorKey, BrandClassSet>;
 
@@ -436,6 +448,19 @@ export function getSemanticDotClasses(color: SemanticColorKey): string {
  */
 export function getSemanticBgLightClasses(color: SemanticColorKey): string {
   return BRAND_CLASS_MATRIX[color].bgLight;
+}
+
+/**
+ * 시멘틱 보더 30% 클래스 — border-brand-{color}/30
+ *
+ * role chip, 중간 강도 테두리 등 `container`(20%)보다 조금 더 진한 테두리가 필요한 곳에 사용.
+ * `border-*` 너비 유틸리티(border, border-2 등)는 호출부에서 추가하세요.
+ *
+ * @example
+ * getSemanticBorderOpacity30Classes('warning') // 'border-brand-warning/30'
+ */
+export function getSemanticBorderOpacity30Classes(color: SemanticColorKey): string {
+  return BRAND_CLASS_MATRIX[color].borderOpacity30;
 }
 
 // ============================================================================

@@ -742,6 +742,10 @@ export function formatDday(daysRemaining: number): string {
  * 기한 초과 / 반입 검사 대기 알림 배너 토큰
  *
  * Alert-First: 중요 상태는 페이지 최상단에 배너로 표시
+ *
+ * @deprecated 향후 semantic.ts `CALLOUT_TOKENS` + `getCalloutClasses()`로 통합 예정.
+ *             신규 반출입 알림 UI는 getCalloutClasses(variant, 'leftBorder', size) 사용 권장.
+ *             마이그레이션 가이드: 별도 세션에서 문서화 (NC 리뷰 rev-2 플랜 Deferred 섹션 참조).
  */
 export const CHECKOUT_ALERT_TOKENS = {
   overdue: {

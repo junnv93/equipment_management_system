@@ -21,7 +21,11 @@
  */
 
 import type { SemanticColorKey } from '../brand';
-import { getSemanticContainerColorClasses, getSemanticLeftBorderClasses } from '../brand';
+import {
+  getSemanticContainerColorClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticSolidBgClasses,
+} from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   ELEVATION_TOKENS,
@@ -31,6 +35,7 @@ import {
   getSectionRhythm,
   type CalloutVariant,
   type CalloutEmphasis,
+  type RoleChipKey,
 } from '../semantic';
 import {
   type NonConformanceStatus,
@@ -80,6 +85,11 @@ export const NC_ELEVATION = ELEVATION_TOKENS.surface;
 /**
  * 부적합 배너 (NonConformanceBanner)
  * 모든 색상이 brand-critical CSS 변수를 참조 → 다크 모드 자동 대응
+ *
+ * variant:
+ *   - full (기존): lg title + desc + detailCard + Button. 장비 리스트/대시보드 등 주목도 필요.
+ *   - compact: 한 줄 inline strip (count + 최장 경과일 + 링크). 장비 상세 페이지 전용.
+ *     → 이유: journey상 NC 상세로 drill-down할 때 시각 무게는 Callout(hero)에 남김.
  */
 export const NC_BANNER_TOKENS = {
   alert: 'border-brand-critical bg-brand-critical/5',
@@ -92,6 +102,15 @@ export const NC_BANNER_TOKENS = {
   statusAlert:
     'border-brand-critical/20 bg-brand-critical/5 dark:border-brand-critical/30 dark:bg-brand-critical/10',
   statusAlertIcon: 'h-4 w-4 text-brand-critical',
+  // -- compact variant (inline-strip) --
+  /** 컴팩트 Alert 컨테이너 — 한 줄 inline strip */
+  alertCompact: 'border-brand-critical bg-brand-critical/5 flex items-center gap-3 py-2.5 px-3.5',
+  /** 컴팩트 아이콘 */
+  iconCompact: 'h-4 w-4 text-brand-critical shrink-0',
+  /** 컴팩트 제목 (인라인) */
+  titleCompact: 'text-sm font-semibold text-brand-critical',
+  /** 컴팩트 CTA 링크 (우측) */
+  compactCta: 'text-sm font-semibold text-brand-critical underline underline-offset-[3px]',
 } as const;
 
 // ============================================================================
@@ -408,6 +427,13 @@ export const NC_WORKFLOW_TOKENS = {
   /** 전체 컨테이너 — ELEVATION_TOKENS.surface.raised (raised 계층: 워크플로우는 카드보다 상위 정보) */
   container: [
     `bg-card border border-border/60 rounded-lg p-6 sm:p-7 ${ELEVATION_TOKENS.surface.raised}`,
+  ].join(' '),
+  /**
+   * 컴팩트 컨테이너 — Callout hero 승격 시 Timeline을 horizontal strip으로 축소.
+   * GuidanceCallout이 hero로 렌더되어 "지금 할 일"이 주인공일 때, Timeline(기록)의 시각 무게를 낮춤.
+   */
+  containerCompact: [
+    `bg-card border border-border/60 rounded-lg px-3.5 py-3 flex items-center gap-3 ${ELEVATION_TOKENS.surface.raised}`,
   ].join(' '),
   /** 컨테이너 — 긴급 (장기 미조치) */
   containerUrgent: 'border-brand-critical/30',
@@ -826,9 +852,14 @@ export interface NCGuidanceEntry {
   stepBadgeKey: 'one' | 'two' | 'three';
   ctaKind: 'primary' | 'repairLink' | 'calibrationLink' | 'none';
   scrollTarget?: 'actionBar' | 'infoRepairCard';
+  /**
+   * Role chip — "누구의 차례인가"를 variant 색과 독립적으로 전달.
+   * GuidanceCallout에서 step badge 옆에 렌더. i18n 키: detail.guidance.roleChip.{key}
+   */
+  roleChip: RoleChipKey;
 }
 
-export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuidanceEntry> = {
+export const NC_WORKFLOW_GUIDANCE_TOKENS = {
   open_operator: {
     variant: 'warning',
     emphasis: 'leftBorder',
@@ -836,6 +867,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     stepBadgeKey: 'one',
     ctaKind: 'primary',
     scrollTarget: 'actionBar',
+    roleChip: 'my-turn',
   },
   open_manager: {
     variant: 'info',
@@ -843,6 +875,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Clock',
     stepBadgeKey: 'one',
     ctaKind: 'none',
+    roleChip: 'waiting',
   },
   openRejected_operator: {
     variant: 'warning',
@@ -851,6 +884,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     stepBadgeKey: 'one',
     ctaKind: 'primary',
     scrollTarget: 'actionBar',
+    roleChip: 'my-turn',
   },
   openRejected_manager: {
     variant: 'info',
@@ -858,6 +892,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Clock',
     stepBadgeKey: 'one',
     ctaKind: 'none',
+    roleChip: 'waiting',
   },
   openBlockedRepair_operator: {
     variant: 'critical',
@@ -866,6 +901,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     stepBadgeKey: 'one',
     ctaKind: 'repairLink',
     scrollTarget: 'infoRepairCard',
+    roleChip: 'blocked',
   },
   openBlockedRepair_manager: {
     variant: 'critical',
@@ -873,6 +909,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Wrench',
     stepBadgeKey: 'one',
     ctaKind: 'none',
+    roleChip: 'blocked',
   },
   openBlockedRecalibration_operator: {
     variant: 'critical',
@@ -880,6 +917,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Wrench',
     stepBadgeKey: 'one',
     ctaKind: 'calibrationLink',
+    roleChip: 'blocked',
   },
   openBlockedRecalibration_manager: {
     variant: 'critical',
@@ -887,6 +925,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Wrench',
     stepBadgeKey: 'one',
     ctaKind: 'none',
+    roleChip: 'blocked',
   },
   corrected_operator: {
     variant: 'info',
@@ -894,6 +933,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Clock',
     stepBadgeKey: 'two',
     ctaKind: 'none',
+    roleChip: 'waiting',
   },
   corrected_manager: {
     variant: 'warning',
@@ -902,6 +942,7 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     stepBadgeKey: 'two',
     ctaKind: 'primary',
     scrollTarget: 'actionBar',
+    roleChip: 'approval',
   },
   closed_all: {
     variant: 'ok',
@@ -909,8 +950,9 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS: Record<NCGuidanceKeyReachable, NCGuida
     icon: 'Lock',
     stepBadgeKey: 'three',
     ctaKind: 'none',
+    roleChip: 'done',
   },
-} as const;
+} as const satisfies Record<NCGuidanceKeyReachable, NCGuidanceEntry>;
 
 export function resolveNCGuidanceKey(args: {
   status: NonConformanceStatus;
@@ -928,6 +970,34 @@ export function resolveNCGuidanceKey(args: {
   if (hasRejection) return `openRejected_${role}`;
   return `open_${role}`;
 }
+
+/**
+ * NC Guidance CTA 버튼 토큰
+ *
+ * GuidanceCallout의 CTA 버튼 스타일 — ctaKind에 따라 분기.
+ *   primary       → solid button (variant별 배경색 + 흰 텍스트) — "지금 할 일" 강조
+ *   repair/calibrationLink → outlined — 전제조건 이동 (파괴적 아님, 주목도 낮춤)
+ *
+ * 동적 보간(`bg-brand-${variant}`) 금지 원칙에 따라 `getSemanticSolidBgClasses` 경유.
+ */
+export const NC_GUIDANCE_CTA_TOKENS = {
+  /** ctaKind='primary' — variant별 solid button */
+  primarySolid: (v: CalloutVariant): string => {
+    const semanticKey: SemanticColorKey = v === 'neutral' ? 'neutral' : v;
+    return [
+      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold',
+      getSemanticSolidBgClasses(semanticKey),
+      'hover:brightness-110',
+      TRANSITION_PRESETS.fastBg,
+    ].join(' ');
+  },
+  /** ctaKind='repairLink' | 'calibrationLink' — outlined secondary */
+  secondaryOutlined: [
+    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm',
+    'border border-border hover:bg-muted/50',
+    TRANSITION_PRESETS.fastBg,
+  ].join(' '),
+} as const;
 
 export const NC_GUIDANCE_STEP_BADGE_TOKENS = {
   base: [
