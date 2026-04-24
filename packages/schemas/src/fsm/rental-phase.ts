@@ -81,3 +81,9 @@ export function getPhaseIndex(status: CheckoutStatus, purpose: CheckoutPurpose):
 export function getStepsInPhase(phase: RentalPhase): number {
   return PHASE_STEP_COUNT[phase];
 }
+
+// Compile-time exhaustiveness guard — negative test.
+// 누락된 CheckoutStatus 키가 있으면 satisfies 제약이 컴파일 에러를 발생시킴을 증명.
+// 새 CheckoutStatus 추가 후 RENTAL_STATUS_TO_PHASE 미갱신 시 동일 에러 발생.
+// @ts-expect-error — { pending: 'approve' } 는 나머지 13개 CheckoutStatus 키가 없어 타입 에러
+void ({ pending: 'approve' } as const satisfies Record<CheckoutStatus, RentalPhase | null>);
