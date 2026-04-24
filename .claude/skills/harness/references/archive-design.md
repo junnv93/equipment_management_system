@@ -5,6 +5,40 @@
 
 ---
 
+## ~~반출입 관리 PR-22: Checkout API 정리~~ ✅ 완료 (2026-04-24, 85차)
+
+> getCheckoutSummary() 이미 제거됨 확인. CheckoutQuery.userId·startDate 레거시 필드 제거 (grep 실측 기반).
+> verifyHandoverToken @UseInterceptors 이미 완료됨 확인.
+
+```
+조치:
+- checkout-api.ts: CheckoutQuery.userId (line 153), startDate (line 158) 제거 — codebase grep 실측 결과 사용처 0
+- checkouts.controller.ts: verifyHandoverToken @UseInterceptors(ZodSerializerInterceptor) line 195 이미 존재 → 스킵
+- getCheckoutSummary(): 이전 세션에 이미 제거됨 → 스킵
+- frontend tsc + backend tsc 모두 통과
+```
+
+---
+
+## ~~반출입 관리 PR-7: HeroKPI·SparklineMini 컴포넌트 분리 + celebration EmptyState~~ ✅ 완료 (2026-04-24, 85차)
+
+> AP-01·02·03·06·09 완료. g.statuses.includes('overdue') → CSVal.OVERDUE SSOT 교정 포함.
+
+```
+조치:
+- HeroKPI.tsx 신규: ELEVATION_TOKENS.surface.floating + TYPOGRAPHY_TOKENS.kpi + trend 아이콘(TrendingUp/TrendingDown/Minus)
+- SparklineMini.tsx 신규: 인라인 SVG polyline + min-max 정규화 + stroke=currentColor + aria-hidden
+- OutboundCheckoutsTab: hero 카드 → HeroKPI 교체(col-span-2 유지), SparklineMini 슬롯, celebration EmptyState 분기
+- InboundCheckoutsTab: SparklineMini 슬롯 추가
+- CheckoutListSkeleton: getStaggerDelay stagger 적용 (두 탭 DRY)
+- CheckoutsContent: SECTION_RHYTHM_TOKENS.spacious 적용
+- semantic.ts: EMPTY_STATE_TOKENS celebration (text-brand-ok/bg-brand-ok/5) 추가
+- g.statuses.includes('overdue') → g.statuses.includes(CSVal.OVERDUE) SSOT 교정
+- 커밋: 84b9393d (병렬 세션)
+```
+
+---
+
 ## ~~반출입 관리 PR-3: Design Token Layer 2 확장~~ ✅ 완료 (2026-04-24, 82차)
 
 > surface 5단/typography flat/CHECKOUT_ICON_MAP/NEXT_STEP_PANEL_TOKENS/brand-틴트/ring-dashed.
