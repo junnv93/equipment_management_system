@@ -360,3 +360,10 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-22 p1p3] 🟡 MEDIUM submitConditionCheck step 리터럴 SSOT 위반** — ✅ 2026-04-24 확인: PR-24 fsm-literal-audit 세션에서 이미 수정 완료. `checkouts.service.ts` L2158/L2170/L2193/L2229/L2237 전부 `CCSVal.LENDER_CHECKOUT`/`CCSVal.LENDER_RETURN` SSOT 경유. raw 리터럴 0건.
 - [x] **[2026-04-22 pr22] 🟡 MEDIUM approvals-api.ts UASVal 하드코딩 3건** — ✅ 2026-04-24 완료. `mapSoftwareToApprovalItem`(L1142): `UASVal.PENDING_REVIEW`, `mapNonConformanceToApprovalItem`(L1165): `UASVal.PENDING`, `mapInspectionToApprovalItem`(L1192): `UASVal.PENDING` 교체 완료.
 - [x] **[2026-04-22 subtab-ia] 🟡 MEDIUM useQuery isError 분기 누락 — OutboundCheckoutsTab + InboundCheckoutsTab** — ✅ 2026-04-24 완료. OutboundCheckoutsTab: `checkoutsError`/`refetchCheckouts` 구조분해 + `<ErrorState>` 추가. InboundCheckoutsTab: 3개 쿼리 모두 `isError`/`refetch` 구조분해 + 섹션별 `<ErrorState>` 추가 + `isAnyError` 조기반환 가드. ko/en i18n 키(`outbound.fetchError`, `inbound.sectionFetchError`) 동기화.
+
+### 2026-04-24 세션 B — Backend Surgical Cleanups (PR-20 잔여 + review-architecture 후속)
+
+- [x] **[2026-04-22 p1p3] 🟢 LOW approveReturn scope 체크 비대칭** — ✅ 2026-04-24 PR-20 잔여 완료: `enforceScopeFromCheckout` → `enforceScopeFromData`로 교체, firstEquip.site/teamId 재활용 (커밋 c0b5fb19)
+- [x] **[2026-04-24 PR-20] 🟢 LOW assertFsmAction 순서 비대칭 — approve/approveReturn vs rejectReturn** — ✅ 2026-04-24 완료: approve·approveReturn 모두 scope-먼저 패턴으로 통일 (커밋 1b573f5a)
+- [x] **[2026-04-24 review-arch] 🔶 WARNING approve·rejectReturn Map 삽입 순서 비결정성** — ✅ 2026-04-24 완료: `equipmentMap.values().next().value` → `equipmentMap.get(items[0].equipmentId)` 교체 (approve + rejectReturn). approveReturn은 이미 올바른 패턴 사용 중이었음 (커밋 e6d485b1).
+- [x] **[2026-04-24 review-arch] 🔶 WARNING rejectReturn reason 검증 순서 — scope/FSM 이전 정보 노출** — ✅ 2026-04-24 완료: reason 빈값 검증 블록을 `enforceScopeFromData` + `assertFsmAction` 이후로 이동. 스코프 외 사용자 checkout 상태 역추론 방지 (커밋 e6d485b1).

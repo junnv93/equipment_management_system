@@ -409,6 +409,8 @@ grep -n "BadRequestException" \
 | 19 | NO_EQUIPMENT 가드 배치              | PASS/FAIL | ≥ 4건 + if (firstEquip) 0건 |
 | 20 | rejectReturn checkTeamPermission unconditional | PASS/FAIL | rejectReturnDto.approverTeamId 0건 + req.user?.teamId 직접 참조 |
 | 21 | checkTeamPermission ClassificationEnum SSOT | PASS/FAIL | 하드코딩 'general_emc'/'general_rf' 0건 + ClassificationEnum.enum.* 참조 |
+| 22 | firstEquip 취득 패턴 — items[0] 기준        | PASS/FAIL | values().next().value 0건 + get(items[0].equipmentId) ≥ 3건 |
+| 23 | rejectReturn reason 검증 순서 — scope/FSM 이후 | PASS/FAIL | REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData 라인 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -520,6 +522,69 @@ grep -n "'general_emc'\|'general_rf'\|\"general_emc\"\|\"general_rf\"" \
 
 **PASS:** `ClassificationEnum` import 존재 + `ClassificationEnum.enum.general_emc/general_rf` 참조 + 하드코딩 0건.
 **FAIL:** `'general_emc'` / `'general_rf'` 문자열 리터럴 잔존 → `ClassificationEnum.enum.*` SSOT 참조로 교체.
+
+### Step 22: firstEquip 취득 패턴 — items 배열 순서 기준 (2026-04-24 이후)
+
+`approve`, `approveReturn`, `rejectReturn` 세 메서드에서 `firstEquip`을 취득할 때
+`equipmentMap.values().next().value` 패턴은 캐시 혼합 시 `items[0]`과 다른 장비를 반환할 수 있다.
+`findByIds`는 캐시 히트 항목을 먼저 Map에 삽입하므로 `values()` 순서가 비결정적이다.
+반드시 `equipmentMap.get(items[0].equipmentId)` 패턴을 사용해야 한다.
+
+```bash
+# 금지 패턴: values().next().value 취득 (캐시 혼합 시 Map 삽입 순서 비결정성)
+grep -n "equipmentMap\.values()\.next()\.value" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 0건 (PASS)
+
+# 올바른 패턴 확인: items 배열 순서 기준 취득 (3건 이상)
+grep -c "equipmentMap\.get(items\[0\]\.equipmentId)" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 결과: 3 이상 (approve + approveReturn + rejectReturn, PASS)
+```
+
+**PASS:** `values().next().value` 패턴 0건 + `get(items[0].equipmentId)` 패턴 ≥ 3건.
+**FAIL:** `values().next().value` 잔존 → `items.length > 0 ? equipmentMap.get(items[0].equipmentId) : undefined` 패턴으로 교체.
+
+### Step 23: rejectReturn reason 검증 순서 — scope/FSM 이후 위치 (2026-04-24 이후)
+
+`rejectReturn`에서 `reason` 빈값 검증이 `enforceScopeFromData` + `assertFsmAction` 이전에 위치하면,
+스코프 외 사용자가 `REJECTION_REASON_REQUIRED` 오류를 수신하여 checkout 상태를 역추론할 수 있다.
+`reason` 검증은 scope/FSM 검증 이후에 위치해야 한다.
+
+```bash
+# REJECTION_REASON_REQUIRED가 enforceScopeFromData보다 이전에 위치하는지 탐지
+# (라인 번호 비교: REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData rejectReturn 라인)
+python3 - <<'EOF'
+import subprocess, re
+
+content = open('apps/backend/src/modules/checkouts/checkouts.service.ts').read()
+lines = content.split('\n')
+
+reject_return_start = next(
+  i for i, l in enumerate(lines) if 'async rejectReturn(' in l
+)
+scope_line = next(
+  (i for i, l in enumerate(lines[reject_return_start:], reject_return_start)
+   if 'enforceScopeFromData(' in l), None
+)
+reason_line = next(
+  (i for i, l in enumerate(lines[reject_return_start:], reject_return_start)
+   if 'REJECTION_REASON_REQUIRED' in l), None
+)
+
+if scope_line and reason_line:
+  if reason_line > scope_line:
+    print(f"PASS: reason check (L{reason_line+1}) after scope check (L{scope_line+1})")
+  else:
+    print(f"FAIL: reason check (L{reason_line+1}) BEFORE scope check (L{scope_line+1})")
+else:
+  print("WARN: could not locate both lines")
+EOF
+# 기대: PASS: reason check (L...) after scope check (L...)
+```
+
+**PASS:** `REJECTION_REASON_REQUIRED` 라인 번호 > `enforceScopeFromData` 라인 번호 (rejectReturn 메서드 내).
+**FAIL:** reason 검증이 scope 검증보다 앞에 위치 → reason 검증 블록을 `assertFsmAction` 이후로 이동.
 
 ## Exceptions
 
