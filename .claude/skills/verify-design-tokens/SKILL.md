@@ -849,6 +849,47 @@ grep -n "getNCWorkflowCompactDotClasses" apps/frontend/lib/design-tokens/index.t
 - `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_WORKFLOW_TOKENS.compactDot.*` + `getNCWorkflowCompactDotClasses` 정의
 - `apps/frontend/components/non-conformances/NCDetailClient.tsx` — 유일한 compact dot 사용처 (2026-04-24 Phase 3)
 
+### Step 28: 컴포넌트 JSX 인라인 brand 리터럴 탐지 (2026-04-24 추가)
+
+**원칙:** NC Phase 4 verify-implementation에서 발견 — 컴포넌트 JSX `className`에서 `bg-brand-*`/`text-brand-*`/`border-brand-*` 색상 클래스를 design-token 경유 없이 직접 문자열 리터럴로 사용 금지.
+
+**허용 패턴:**
+- design-token 파일(`lib/design-tokens/**`) 내부에서 사용 — Layer 3 정의 레이어
+- `cn(tokenClass, ...)` 조합으로 token 기반 동적 결합
+- `getSemanticSolidBgClasses()` / `getSemanticContainerTextClasses()` 등 semantic 헬퍼 경유 후 token에 저장
+
+**금지 패턴:**
+```tsx
+// ❌ WRONG — JSX className에 brand 리터럴 직접 사용
+<div className="bg-brand-ok text-white hover:brightness-110">
+<strong className="text-brand-ok">
+
+// ✅ CORRECT — token 경유
+<div className={NC_DIALOG_TOKENS.repairSubmit}>
+<strong className={NC_DIALOG_TOKENS.changeSummaryModified}>
+```
+
+**탐지 명령어:**
+```bash
+# 컴포넌트 파일에서 className 내 brand 색상 직접 사용 탐지
+grep -rn 'className="[^"]*\(bg-brand-\|text-brand-\|border-brand-\)' \
+  apps/frontend/components/ --include="*.tsx" | \
+  grep -v "design-tokens\|// " | head -20
+# 기대: 0건 (PASS) — 모든 brand 리터럴은 design-token 경유
+
+# 템플릿 리터럴 형식도 탐지
+grep -rn 'className={`[^`]*\(bg-brand-\|text-brand-\|border-brand-\)' \
+  apps/frontend/components/ --include="*.tsx" | \
+  grep -v "design-tokens\|// " | head -20
+```
+
+**PASS:** 0건 (설계 의도에 따라 CN 조합에서 token 미등록 항목이 없어야 함).
+**FAIL:** 직접 리터럴 발견 → 해당 token을 `non-conformance.ts` 또는 적절한 Layer 3 파일에 추가 후 경유.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_DIALOG_TOKENS` (Phase 4 추가)
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_BANNER_TOKENS.detailCardLink` (hover variant)
+
 ## Output Format
 
 ```markdown
@@ -889,6 +930,8 @@ grep -n "getNCWorkflowCompactDotClasses" apps/frontend/lib/design-tokens/index.t
 | 24  | checkout-loading-skeleton 토큰 SSOT + motion-reduce 접근성 + spinner 금지 | PASS/FAIL/INFO | index.ts 누락, animate-pulse 인라인, animate-spin 발견 위치 |
 | 25  | CSS 변수 주입 토큰 fallback 필수 | PASS/FAIL | `var(--name)` fallback 누락 위치 (design-tokens 내부) |
 | 26  | 사전 생성 룩업 토큰 + satisfies 가드 | PASS/FAIL | variant 함수 concat 패턴 또는 `Record<K>` satisfies 누락 위치 |
+| 27  | NC compact dot SSOT (`getNCWorkflowCompactDotClasses`) | PASS/FAIL | compactDot 직접 접근 또는 index.ts 누락 위치 |
+| 28  | 컴포넌트 JSX 인라인 brand 리터럴 금지 | PASS/FAIL | className에 bg-brand-*/text-brand-* 직접 사용 위치 |
 ```
 
 ## Exceptions

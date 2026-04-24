@@ -111,6 +111,7 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 | 10 | 승인 프로세스의 CAS version 교체 (stale requestData) |
 | 11 | updateWithVersion의 version 인자 출처 (DB 조회값 금지) |
 | 12 | useCasGuardedMutation 사용 — 3단계 승인 워크플로우 casVersion 패턴 |
+| 13 | 2-step Dialog AP-4 — confirm 진입 전 version 재조회 + stale 감지 |
 
 상세: [references/cas-checks.md](references/cas-checks.md) Step 5~11
 
@@ -131,6 +132,7 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 | 10  | 승인 CAS version 교체     | PASS/FAIL | stale version 사용 위치  |
 | 11  | version 인자 출처         | PASS/FAIL | DB 조회 version 사용     |
 | 12  | useCasGuardedMutation 패턴 | PASS/INFO | casVersion 수동 조합 위치 (훅 전환 권장) |
+| 13  | 2-step Dialog pre-confirm version 재조회 | PASS/FAIL | handleNext 내 version 비교 누락 위치 |
 ```
 
 ## Exceptions
