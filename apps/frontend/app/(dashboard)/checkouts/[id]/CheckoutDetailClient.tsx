@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -67,6 +67,10 @@ import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper'
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { HandoverQRDisplay } from '@/components/checkouts/HandoverQRDisplay';
+import {
+  WorkflowTimeline,
+  WorkflowTimelineSkeleton,
+} from '@/components/checkouts/WorkflowTimeline';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
 
@@ -315,6 +319,7 @@ export default function CheckoutDetailClient({
     },
     onErrorCallback: () => {
       setDialogState((prev) => ({ ...prev, borrowerReject: false }));
+      setBorrowerRejectReason('');
     },
   });
 
@@ -696,22 +701,45 @@ export default function CheckoutDetailClient({
       )}
 
       {/* 상태 진행 표시 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CheckoutStatusStepper
-            currentStatus={checkout.status}
-            checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
-            nextStepIndex={
-              isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null
-                ? nextStepDescriptor.currentStepIndex + 1
-                : undefined
-            }
-          />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CheckoutStatusStepper
+              currentStatus={checkout.status}
+              checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
+              nextStepIndex={
+                isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null
+                  ? nextStepDescriptor.currentStepIndex + 1
+                  : undefined
+              }
+            />
+          </CardContent>
+        </Card>
+
+        {/* 워크플로우 타임라인 — 세로 단계 흐름 상세 */}
+        <Card className="md:w-48">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t('detail.workflowTimeline')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Suspense
+              fallback={<WorkflowTimelineSkeleton count={checkout.purpose === 'rental' ? 8 : 5} />}
+            >
+              <WorkflowTimeline
+                status={checkout.status}
+                purpose={
+                  checkout.purpose as import('@equipment-management/schemas').CheckoutPurpose
+                }
+              />
+            </Suspense>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 기본 정보 */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -996,19 +1024,20 @@ export default function CheckoutDetailClient({
         </Card>
       )}
 
-      {/* 반려 사유 */}
-      {checkout.status === CSVal.REJECTED && checkout.rejectionReason && (
-        <Card className={CHECKOUT_DETAIL_TOKENS.rejectionCard}>
-          <CardHeader>
-            <CardTitle className={`text-lg ${CHECKOUT_DETAIL_TOKENS.rejectionTitle}`}>
-              {t('detail.rejectionReason')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{checkout.rejectionReason}</p>
-          </CardContent>
-        </Card>
-      )}
+      {/* 반려 사유 — rental 1차 반려(borrowerRejectionReason) 또는 일반 반려(rejectionReason) */}
+      {checkout.status === CSVal.REJECTED &&
+        (checkout.borrowerRejectionReason || checkout.rejectionReason) && (
+          <Card className={CHECKOUT_DETAIL_TOKENS.rejectionCard}>
+            <CardHeader>
+              <CardTitle className={`text-lg ${CHECKOUT_DETAIL_TOKENS.rejectionTitle}`}>
+                {t('detail.rejectionReason')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>{checkout.borrowerRejectionReason ?? checkout.rejectionReason}</p>
+            </CardContent>
+          </Card>
+        )}
 
       {/* 반출 시작 확인 다이얼로그 (장비별 상태 기록 포함) */}
       <Dialog
