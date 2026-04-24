@@ -8,9 +8,9 @@
 /**
  * NextStepPanel 표시 여부.
  *
- * 활성화: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true
- * 기본값: false (점진 롤아웃)
+ * Sprint 1.4(2026-04-24)에서 상시화 완료. LegacyActionsBlock 제거됨.
+ * @deprecated 호출부 정리 후 이 함수도 제거 예정.
  */
 export function isNextStepPanelEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL === 'true';
+  return true;
 }

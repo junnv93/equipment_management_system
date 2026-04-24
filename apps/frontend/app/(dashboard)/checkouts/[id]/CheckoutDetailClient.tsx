@@ -19,13 +19,10 @@ import {
   Clock,
   MapPin,
   Phone,
-  FileText,
   User,
   Package,
   AlertTriangle,
-  CheckCheck,
   XCircle,
-  QrCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,15 +64,13 @@ import {
   type CheckoutAction,
   type CheckoutPurpose,
 } from '@equipment-management/schemas';
-import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
-import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
-import { HandoverQRDisplay } from '@/components/checkouts/HandoverQRDisplay';
 import {
   WorkflowTimeline,
   WorkflowTimelineSkeleton,
@@ -84,7 +79,6 @@ import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineEr
 import { NextStepPanelError } from '@/components/checkouts/NextStepPanelError';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
-import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -105,18 +99,9 @@ export default function CheckoutDetailClient({
   conditionChecks,
 }: CheckoutDetailClientProps) {
   const t = useTranslations('checkouts');
-  const tQr = useTranslations('qr.handover');
   const tEquipment = useTranslations('equipment');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
-  const { can } = useAuth();
-  // SSOT: 백엔드 @RequirePermissions와 일치 (role-permissions.ts)
-  const canApprove = can(Permission.APPROVE_CHECKOUT);
-  const canBorrowerApprove = can(Permission.BORROWER_APPROVE_CHECKOUT);
-  const canBorrowerReject = can(Permission.BORROWER_REJECT_CHECKOUT);
-  const canStart = can(Permission.START_CHECKOUT);
-  const canComplete = can(Permission.COMPLETE_CHECKOUT);
-  const canCancelCheckout = can(Permission.CANCEL_CHECKOUT);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -160,7 +145,6 @@ export default function CheckoutDetailClient({
     borrowerReject: false,
   });
   const [rejectReason, setRejectReason] = useState('');
-  const [handoverQrOpen, setHandoverQrOpen] = useState(false);
   const [returnRejectReason, setReturnRejectReason] = useState('');
   const [borrowerRejectReason, setBorrowerRejectReason] = useState('');
 
@@ -373,11 +357,6 @@ export default function CheckoutDetailClient({
     );
   };
 
-  // 승인 처리 (approverId는 백엔드에서 세션으로부터 자동 추출)
-  const handleApprove = () => {
-    approveMutation.mutate();
-  };
-
   // 반려 처리
   const handleReject = () => {
     if (!rejectReason.trim()) return;
@@ -458,210 +437,6 @@ export default function CheckoutDetailClient({
     borrowerApproveMutation.isPending ||
     borrowerRejectMutation.isPending;
 
-  // LegacyActionsBlock — Feature Flag off 경로 폴백. 로직 1:1 유지, 수정 금지.
-  const LegacyActionsBlock = () => {
-    const buttons: React.ReactNode[] = [];
-
-    // rental 1차 승인/반려 — 차용팀 TM만 가능 (borrower_approved 경유 후 lender 최종 승인)
-    // SSOT: 승인/반려 Permission 독립 분리 (role-permissions.ts BORROWER_APPROVE/REJECT_CHECKOUT)
-    const isRentalPending = checkout.status === CSVal.PENDING && checkout.purpose === CPVal.RENTAL;
-    if (isRentalPending && canBorrowerApprove) {
-      buttons.push(
-        <Button
-          key="borrower-approve"
-          onClick={() => setDialogState((prev) => ({ ...prev, borrowerApprove: true }))}
-          disabled={borrowerApproveMutation.isPending}
-          className={CHECKOUT_DETAIL_TOKENS.approveButton}
-        >
-          <CheckCircle2 className="mr-2 h-4 w-4" />
-          {t('actions.borrowerApprove')}
-        </Button>
-      );
-    }
-    if (isRentalPending && canBorrowerReject) {
-      buttons.push(
-        <Button
-          key="borrower-reject"
-          variant="destructive"
-          onClick={() => setDialogState((prev) => ({ ...prev, borrowerReject: true }))}
-          disabled={borrowerRejectMutation.isPending}
-        >
-          <XCircle className="mr-2 h-4 w-4" />
-          {t('actions.borrowerReject')}
-        </Button>
-      );
-    }
-
-    // 승인 대기/1차 승인 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
-    // BORROWER_APPROVED: rental 2-step에서 차용팀 1차 승인 후 lender TM 최종 승인 단계
-    if (
-      ([CSVal.PENDING, CSVal.BORROWER_APPROVED] as CheckoutStatus[]).includes(checkout.status) &&
-      canApprove
-    ) {
-      buttons.push(
-        <Button
-          key="approve"
-          onClick={handleApprove}
-          disabled={approveMutation.isPending}
-          className={CHECKOUT_DETAIL_TOKENS.approveButton}
-        >
-          <CheckCircle2 className="mr-2 h-4 w-4" />
-          {t('actions.approve')}
-        </Button>,
-        <Button
-          key="reject"
-          variant="destructive"
-          onClick={() => setDialogState((prev) => ({ ...prev, reject: true }))}
-          disabled={rejectMutation.isPending}
-        >
-          <XCircle className="mr-2 h-4 w-4" />
-          {t('actions.reject')}
-        </Button>
-      );
-    }
-
-    // 반출 취소 — pending/borrower_approved/approved 상태에서 CANCEL_CHECKOUT 권한 보유자 가능
-    // FSM SSOT: borrower_approved → canceled 전이 존재 (rental 2-step 중간 취소)
-    // UL-QP-18: test_engineer(신청자), technical_manager 가능
-    if (
-      ([CSVal.PENDING, CSVal.BORROWER_APPROVED, CSVal.APPROVED] as CheckoutStatus[]).includes(
-        checkout.status
-      ) &&
-      canCancelCheckout
-    ) {
-      buttons.push(
-        <Button
-          key="cancel-checkout"
-          variant="destructive"
-          onClick={() => setDialogState((prev) => ({ ...prev, cancel: true }))}
-          disabled={cancelMutation.isPending}
-        >
-          <XCircle className="mr-2 h-4 w-4" />
-          {t('actions.cancelCheckout')}
-        </Button>
-      );
-    }
-
-    // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
-    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능 (승인과 직무 분리)
-    if (checkout.status === CSVal.APPROVED && checkout.purpose !== CPVal.RENTAL && canStart) {
-      buttons.push(
-        <Button
-          key="start"
-          onClick={() => setDialogState((prev) => ({ ...prev, start: true }))}
-          disabled={startMutation.isPending}
-        >
-          <Package className="mr-2 h-4 w-4" />
-          {t('actions.startCheckout')}
-        </Button>
-      );
-    }
-
-    // 반출 중 상태 - 교정/수리만 반입 처리 가능 (대여는 4단계 상태 확인으로 진행)
-    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
-    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== CPVal.RENTAL && canComplete) {
-      buttons.push(
-        <Button key="return" asChild>
-          <Link href={FRONTEND_ROUTES.CHECKOUTS.RETURN(checkout.id)}>
-            <CheckCheck className="mr-2 h-4 w-4" />
-            {t('actions.processReturn')}
-          </Link>
-        </Button>
-      );
-    }
-
-    // 대여 목적 특수 상태 - 상태 확인 필요
-    // FSM: APPROVED→lender_check = start:checkout, 이후 단계 = complete:checkout
-    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
-    const canDoConditionCheck = checkout.status === CSVal.APPROVED ? canStart : canComplete;
-    if (
-      canDoConditionCheck &&
-      checkout.purpose === CPVal.RENTAL &&
-      (
-        [
-          CSVal.APPROVED,
-          CSVal.LENDER_CHECKED,
-          CSVal.BORROWER_RECEIVED,
-          CSVal.BORROWER_RETURNED,
-        ] as CheckoutStatus[]
-      ).includes(checkout.status)
-    ) {
-      buttons.push(
-        <Button key="check" variant="outline" asChild>
-          <Link href={FRONTEND_ROUTES.CHECKOUTS.CHECK(checkout.id)}>
-            <FileText className="mr-2 h-4 w-4" />
-            {t('actions.conditionCheck')}
-          </Link>
-        </Button>
-      );
-    }
-
-    // Handover QR — 대여 목적에서 인수인계가 필요한 상태일 때 QR 발급 버튼 노출.
-    // 원칙: QR은 경로. 버튼이 열어주는 다이얼로그는 토큰+QR만 렌더하고,
-    //        condition-check 워크플로우는 기존 `/checkouts/{id}/check` 페이지가 담당.
-    if (
-      checkout.purpose === CPVal.RENTAL &&
-      (
-        [CSVal.LENDER_CHECKED, CSVal.CHECKED_OUT, CSVal.BORROWER_RETURNED] as CheckoutStatus[]
-      ).includes(checkout.status)
-    ) {
-      buttons.push(
-        <Button
-          key="handover-qr"
-          variant="outline"
-          onClick={() => setHandoverQrOpen(true)}
-          aria-label={tQr('buttonAriaLabel')}
-        >
-          <QrCode className="mr-2 h-4 w-4" aria-hidden="true" />
-          {tQr('buttonLabel')}
-        </Button>
-      );
-    }
-
-    // 대여 목적 최종 단계 - lender_received 상태에서 반입 처리
-    // UL-QP-18: 같은 팀 test_engineer, technical_manager 가능
-    if (
-      checkout.status === CSVal.LENDER_RECEIVED &&
-      checkout.purpose === CPVal.RENTAL &&
-      canComplete
-    ) {
-      buttons.push(
-        <Button key="return" asChild>
-          <Link href={FRONTEND_ROUTES.CHECKOUTS.RETURN(checkout.id)}>
-            <CheckCheck className="mr-2 h-4 w-4" />
-            {t('actions.processReturn')}
-          </Link>
-        </Button>
-      );
-    }
-
-    // 반입 완료 상태 - 최종 승인/반려 가능 (UL-QP-18 직무분리: technical_manager만)
-    if (checkout.status === CSVal.RETURNED && canApprove) {
-      buttons.push(
-        <Button
-          key="approve-return"
-          onClick={() => setDialogState((prev) => ({ ...prev, approveReturn: true }))}
-          disabled={approveReturnMutation.isPending}
-          className={CHECKOUT_DETAIL_TOKENS.approveButton}
-        >
-          <CheckCircle2 className="mr-2 h-4 w-4" />
-          {t('actions.returnApprove')}
-        </Button>,
-        <Button
-          key="reject-return"
-          variant="destructive"
-          onClick={() => setDialogState((prev) => ({ ...prev, rejectReturn: true }))}
-          disabled={rejectReturnMutation.isPending}
-        >
-          <XCircle className="mr-2 h-4 w-4" />
-          {t('actions.returnReject')}
-        </Button>
-      );
-    }
-
-    return buttons;
-  };
-
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
@@ -681,7 +456,6 @@ export default function CheckoutDetailClient({
           <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>
         <div className="flex gap-2">
-          {!isNextStepPanelEnabled() && LegacyActionsBlock()}
           {isCheckoutExportable(checkout.status) && (
             <ExportFormButton
               formNumber="UL-QP-18-06"
@@ -702,17 +476,15 @@ export default function CheckoutDetailClient({
         </Alert>
       )}
 
-      {/* 다음 단계 안내 패널 (Feature Flag: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL) */}
-      {isNextStepPanelEnabled() && (
-        <ErrorBoundary fallback={(_, reset) => <NextStepPanelError onRetry={reset} />}>
-          <NextStepPanel
-            variant="floating"
-            descriptor={nextStepDescriptor}
-            onActionClick={handleNextStepAction}
-            isPending={isAnyNextStepMutationPending}
-          />
-        </ErrorBoundary>
-      )}
+      {/* 다음 단계 안내 패널 */}
+      <ErrorBoundary fallback={(_, reset) => <NextStepPanelError onRetry={reset} />}>
+        <NextStepPanel
+          variant="floating"
+          descriptor={nextStepDescriptor}
+          onActionClick={handleNextStepAction}
+          isPending={isAnyNextStepMutationPending}
+        />
+      </ErrorBoundary>
 
       {/* 상태 진행 표시 */}
       <div className="grid gap-4 md:grid-cols-[1fr_auto]">
@@ -725,7 +497,7 @@ export default function CheckoutDetailClient({
               currentStatus={checkout.status}
               checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
               nextStepIndex={
-                isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null
+                nextStepDescriptor.nextAction !== null
                   ? nextStepDescriptor.currentStepIndex + 1
                   : undefined
               }
@@ -1328,16 +1100,8 @@ export default function CheckoutDetailClient({
         </DialogContent>
       </Dialog>
 
-      {/* Handover QR 다이얼로그 — 버튼 클릭 시 토큰 발급 + QR 표시.
-          condition-check UI는 렌더하지 않음 (QR은 경로 원칙). */}
-      <HandoverQRDisplay
-        checkoutId={checkout.id}
-        open={handoverQrOpen}
-        onOpenChange={setHandoverQrOpen}
-      />
-
       {/* 모바일 Bottom Sheet — NextStep primary CTA. md 이상에서는 숨김 */}
-      {isNextStepPanelEnabled() && nextStepDescriptor.nextAction !== null && (
+      {nextStepDescriptor.nextAction !== null && (
         <div
           className="md:hidden fixed inset-x-0 bottom-0 z-40"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
