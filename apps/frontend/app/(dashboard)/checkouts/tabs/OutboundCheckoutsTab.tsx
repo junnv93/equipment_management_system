@@ -202,12 +202,16 @@ export default function OutboundCheckoutsTab({
   // ──────────────────────────────────────────────
   const filterActive = countActiveFilters(filters) > 0;
   const isAllActive = !filterActive;
+  // overdue>0이면 해당 카드를 hero variant(col-span-2)로 강조
+  const heroVariantKey: CheckoutStatsVariant | null = summary.overdue > 0 ? 'overdue' : null;
 
   // ──────────────────────────────────────────────
   // 5개 통계 카드
   // ──────────────────────────────────────────────
   const renderStats = () => (
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-5">
+    <div
+      className={`grid gap-3 ${heroVariantKey ? 'grid-cols-4 sm:grid-cols-6 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'} mb-5`}
+    >
       {statCards.map((card) => {
         const isActive =
           card.filterStatus === 'all' ? isAllActive : filters.status === card.filterStatus;
@@ -216,12 +220,18 @@ export default function OutboundCheckoutsTab({
           (card.variantKey === 'overdue' && summary.overdue > 0) ||
           (card.variantKey === 'pending' &&
             summary.pending > CHECKOUT_STATS_ALERT_THRESHOLD.pending);
+        const isHero = card.variantKey === heroVariantKey;
 
         const variantTokens = CHECKOUT_STATS_VARIANTS[card.variantKey];
         const finalCardClasses = [
           getCheckoutStatsClasses(card.variantKey, isActive, isAlert),
           CHECKOUT_MOTION.statsCard,
-          'elevation' in variantTokens ? variantTokens.elevation : '',
+          isHero
+            ? CHECKOUT_STATS_VARIANTS.hero.surface
+            : 'elevation' in variantTokens
+              ? variantTokens.elevation
+              : '',
+          isHero ? CHECKOUT_STATS_VARIANTS.hero.container : '',
         ]
           .filter(Boolean)
           .join(' ');
@@ -273,11 +283,13 @@ export default function OutboundCheckoutsTab({
               className={'contentPadding' in variantTokens ? variantTokens.contentPadding : 'p-3'}
             >
               <div
-                aria-label={`${'labelKey' in card ? String(card.labelKey) : ''} ${'value' in card ? String(card.value) : ''}건`}
+                aria-label={`${t(card.labelKey)} ${card.value}건`}
                 className={[
-                  'valueTypography' in variantTokens
-                    ? variantTokens.valueTypography
-                    : `text-xl font-bold ${CONTENT_TOKENS.numeric.tabular}`,
+                  isHero
+                    ? CHECKOUT_STATS_VARIANTS.hero.kpi
+                    : 'valueTypography' in variantTokens
+                      ? variantTokens.valueTypography
+                      : `text-xl font-bold ${CONTENT_TOKENS.numeric.tabular}`,
                   card.variantKey === 'overdue' && card.value > 0 ? 'text-brand-critical' : '',
                   card.variantKey === 'pending' && card.value > 0 ? 'text-brand-warning' : '',
                 ]
@@ -286,7 +298,11 @@ export default function OutboundCheckoutsTab({
               >
                 {card.value}
               </div>
-              <p className={`${MICRO_TYPO.label} text-muted-foreground mt-0.5`}>{t(card.subKey)}</p>
+              <p
+                className={`${isHero ? CHECKOUT_STATS_VARIANTS.hero.label : MICRO_TYPO.label} text-muted-foreground mt-0.5`}
+              >
+                {t(card.subKey)}
+              </p>
               {isActive && (
                 <p className={`${MICRO_TYPO.badge} text-primary font-semibold mt-1`}>
                   {t('outbound.activeFilter')}

@@ -55,3 +55,15 @@
 ## Summary
 
 M3 기준 1개 FAIL. 계약 verify 명령 `grep -n "status: 'pending'" approvals-api.ts`가 3건을 반환하며, 계약이 명시한 "→ 0건" 조건을 충족하지 못함. 해당 3건은 `equipmentImportApi`(다른 도메인)에 대한 호출이므로 UAS 하드코딩 제거 의도 자체는 달성됐으나, M3 criterion의 grep 범위가 더 넓어 false-positive를 포함한다. 나머지 M1·M2·M4~M9는 모두 PASS, SHOULD S1·S2도 구현 완료.
+
+---
+
+## Iteration 2 (M3 Fix Re-verification)
+
+| Criterion | Result | Verdict |
+|-----------|--------|---------|
+| M1 tsc | `pnpm --filter frontend exec tsc --noEmit` → 0 errors (no output) | PASS |
+| M3 no raw pending | `grep -n "status: 'pending'" approvals-api.ts` → **0건** | PASS |
+| EIStVal import | L27: `EquipmentImportStatusValues as EIStVal,` 확인. L487/L489/L651에서 `EIStVal.PENDING` 사용 | confirmed |
+
+**Overall Verdict: PASS** (M1~M9 전체 통과, S1·S2 구현 완료)
