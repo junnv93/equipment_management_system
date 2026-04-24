@@ -7,6 +7,45 @@
 
 ---
 
+## 🆕 88차 (2026-04-24) — Checkouts V3 통합 로드맵 (5-Sprint)
+
+> **플랜 본문**: `.claude/exec-plans/active/2026-04-24-checkouts-v3-roadmap.md` (44.8KB · 637줄)
+> **메모리**: `project_88_checkouts_v3_roadmap_20260424.md`
+> **배경**: 외부 아키텍처 리뷰 V2(18 findings) 전수 대응. 사용자 결정: 5-Sprint 전체·BFF 포함·Phase-based '1/3 phase'·편의성 U-01~U-12 전량.
+
+### Sprint 1 · Authority 수술 (Contract 5종 작성 완료 — 실행 대기)
+1. `.claude/contracts/checkout-fsm-resolve-action.md` (P0 F-1·F-2 · 208 조합 table test)
+2. `.claude/contracts/checkout-descriptor-phase-fields.md` (P1 F-3 · RentalPhase + nextStepIndex 필드)
+3. `.claude/contracts/checkout-meta-fail-closed.md` (P0 F-2 · `?? false` 전환 + E2E 12)
+4. `.claude/contracts/legacy-actions-block-removal.md` (P0 F-1·C-1 · LegacyActionsBlock 완전 삭제)
+5. `.claude/contracts/checkout-fsm-exhaustive-satisfies.md` (§5 · satisfies 전수 전환)
+
+### Sprint 2 · Tokens 봉합 (Contract 4종 작성 완료 — 실행 대기)
+6. `.claude/contracts/checkout-row-token-consolidation.md` (L-1·L-2)
+7. `.claude/contracts/checkout-i18n-tab-badge-tokens.md` (L-3·L-4)
+8. `.claude/contracts/checkout-rhythm-focus-inbound-tokens.md` (L-5·L-6·L-7)
+9. `.claude/contracts/checkout-deprecated-token-removal.md` (L-8 · eslint-plugin-deprecation)
+
+### Sprint 3 · Perf & Cache (Contract 3종 작성 완료 — 실행 대기)
+10. `.claude/contracts/checkout-inbound-bff-overview.md` (P-1 · BFF 신설 + canary)
+11. `.claude/contracts/checkout-query-keys-view-resource-refactor.md` (§3 · view.*/resource.*)
+12. `.claude/contracts/checkout-memo-boundary-optimization.md` (P-2·P-3·P-4)
+
+### 🔶 다음 세션 작업 — Sprint 4·5 Contract 작성 (미착수)
+- **Sprint 4 (UX Flow)** — 15개 내외 contract 예상:
+  - 4.1 NextStepPanel 단일 렌더(compact+hero+actor variant)
+  - 4.2 Row 3-zone grid (`grid-cols-[3px_72px_1fr_auto]`)
+  - 4.3 상세 D-day 배지 (C-3)
+  - 4.4 Rental Phase-based UI (`CheckoutPhaseIndicator` 신규 + WorkflowTimeline 접힘)
+  - 4.5.1 ~ 4.5.12 편의성 **U-01 ~ U-12 전체 12건**
+- **Sprint 5 (Visual Polish)** — 5~7개 contract:
+  - 5.1 Empty state 3색 / 5.2 Typography 6단계 / 5.3 Color semantic 5축 / 5.4 Density & rhythm / 5.5 Icon & motion
+
+### 실행 순서 (Contract 작성 이후)
+Sprint 1.1 `resolveNextAction` → 1.2 → 1.3 → 1.4 → 1.5 → 2.1~2.8 (병행 가능) → 3.1+3.2(같은 PR) → 3.3 → 4.x → 5.x. 각 contract는 harness 오케스트레이터(Planner→Generator→Evaluator) 루프로 순차 구현. FE analytics instrumentation은 §10 metrics 수집 기반으로 선행.
+
+---
+
 ## UltraReview 통합 — Layer 6 머지 관문 프롬프트 (3종)
 
 > **배경 (2026-04-21)**: CAS stale 4차 재발, 트랜잭션 경계 3차 재발 등 verify-*/review-architecture 단일 패스로 못 잡는
