@@ -149,6 +149,7 @@
   "filters": {
     "title": "필터",
     "reset": "초기화",
+    "teamLoadError": "팀 목록을 불러오지 못했습니다.",
     "appliedFilters": "적용된 필터",
     "removeFilter": "{label} 필터 제거",
     "filterOptions": "장비 필터 옵션",
@@ -414,6 +415,7 @@
     "basicInfo": {
       "title": "기본 정보",
       "description": "장비의 기본 정보를 입력하세요",
+      "teamLoadError": "팀 목록을 불러오지 못했습니다.",
       "namePlaceholder": "예: Receiver",
       "nameDescription": "장비의 이름을 입력하세요",
       "managementNumberPlaceholder": "예: SUW-E0001",
@@ -476,6 +478,7 @@
     "statusLocation": {
       "title": "상태 및 위치",
       "description": "장비의 현재 상태와 위치 정보를 입력하세요",
+      "managerLoadError": "담당자 목록을 불러오지 못했습니다.",
       "statusPlaceholder": "상태를 선택하세요",
       "locationPlaceholder": "예: RF1 Room",
       "locationDescription": "장비가 현재 위치한 장소를 입력하세요",
@@ -727,6 +730,8 @@
   },
   "attachmentsTab": {
     "title": "첨부파일",
+    "error": "첨부파일을 불러오지 못했습니다.",
+    "revisionError": "개정 이력을 불러오지 못했습니다.",
     "empty": "등록된 첨부파일이 없습니다.",
     "download": "다운로드",
     "delete": "삭제",
@@ -785,6 +790,7 @@
   },
   "calibrationHistoryTab": {
     "title": "교정 이력",
+    "error": "교정 이력을 불러오지 못했습니다.",
     "register": "교정 등록",
     "empty": "등록된 교정 이력이 없습니다.",
     "dialog": {
@@ -847,6 +853,7 @@
   },
   "incidentHistoryTab": {
     "title": "사고 이력",
+    "error": "사고 이력을 불러오지 못했습니다.",
     "register": "사고 등록",
     "empty": "등록된 사고 이력이 없습니다.",
     "latest": "최신",
@@ -947,6 +954,7 @@
   },
   "locationHistoryTab": {
     "title": "위치 변동 이력",
+    "error": "위치 변동 이력을 불러오지 못했습니다.",
     "register": "위치 변경 등록",
     "empty": "등록된 위치 변동 이력이 없습니다.",
     "latest": "최신",
@@ -990,6 +998,7 @@
   },
   "maintenanceHistoryTab": {
     "title": "유지보수 이력",
+    "error": "유지보수 이력을 불러오지 못했습니다.",
     "register": "유지보수 등록",
     "empty": "등록된 유지보수 이력이 없습니다.",
     "latest": "최신",
@@ -1156,6 +1165,7 @@
   "equipmentImport": {
     "loading": "로딩 중...",
     "notFound": "반입 정보를 찾을 수 없습니다.",
+    "loadError": "반입 정보를 불러오지 못했습니다.",
     "detailSubtitle": "{source} 반입 신청 상세",
     "equipmentInfo": "장비 정보",
     "equipmentInfoDesc": "반입할 장비의 기본 정보를 입력하세요.",
@@ -1339,8 +1349,12 @@
     "delete": "삭제",
     "deleting": "삭제 중..."
   },
+  "repairHistoryClient": {
+    "loadError": "수리 이력을 불러오지 못했습니다."
+  },
   "calibrationFactorsClient": {
     "title": "보정계수 관리",
+    "loadError": "보정계수 정보를 불러오지 못했습니다.",
     "equipmentId": "장비 ID: {id}",
     "backAriaLabel": "장비 상세로 돌아가기",
     "requestButton": "보정계수 변경 요청",
@@ -1525,5 +1539,7 @@
     "managementNumber": "관리번호: {number}",
     "location": "위치: {location}",
     "noLocationInfo": "정보 없음"
-  }
+  },
+  "equipmentImportLoadError": "반입 요청 정보를 불러오지 못했습니다.",
+  "receiveEquipmentImportLoadError": "반입 요청을 불러오지 못했습니다."
 }

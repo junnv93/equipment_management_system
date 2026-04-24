@@ -352,6 +352,9 @@
     "overdueCheckouts": "{count} checkout overdue",
     "nonConforming": "{count} non-conforming"
   },
+  "aggregate": {
+    "error": "Some dashboard data could not be loaded."
+  },
   "systemHealth": {
     "title": "System Health",
     "ariaLabel": "System status summary",

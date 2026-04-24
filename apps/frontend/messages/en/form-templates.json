@@ -65,6 +65,7 @@
   },
   "historyDialog": {
     "title": "Revision History",
+    "error": "Failed to load revision history.",
     "formNumber": "Form Number",
     "filename": "Filename",
     "uploadDate": "Registered",

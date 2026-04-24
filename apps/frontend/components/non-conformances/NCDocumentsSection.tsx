@@ -57,6 +57,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
     queryFn: () => documentApi.getNonConformanceDocuments(nonConformanceId),
     ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
+  const isDocumentsError = documentsQuery.isError;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -149,7 +150,11 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
         {t('hint')}
       </p>
 
-      {documentsQuery.isLoading ? (
+      {isDocumentsError ? (
+        <p className="text-sm text-destructive" aria-live="polite">
+          {t('loadError')}
+        </p>
+      ) : documentsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {t('loading')}
         </p>

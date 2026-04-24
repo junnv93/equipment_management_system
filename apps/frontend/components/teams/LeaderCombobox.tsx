@@ -47,7 +47,11 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
   // 쿼리 활성화 조건: Edit 모드는 팝오버 열면 즉시, Create 모드는 검색어 필요
   const isQueryEnabled = open && (!!teamId || debouncedSearch.length >= 1);
 
-  const { data: users, isLoading } = useQuery({
+  const {
+    data: users,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.users.search(searchParams),
     queryFn: () => teamsApi.searchUsers(searchParams),
     enabled: isQueryEnabled,
@@ -144,6 +148,10 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
             </div>
+          ) : isError ? (
+            <p className="py-6 text-center text-sm text-destructive" role="alert">
+              {t('leaderCombobox.error')}
+            </p>
           ) : !isQueryEnabled ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               {t('leaderCombobox.typeToSearch')}

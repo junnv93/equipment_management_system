@@ -398,7 +398,8 @@
     "expectedReturnNote": "반출일은 반출 시작 시점에 자동으로 설정됩니다.",
     "approvalRequired": "신청 후 관리자 승인이 필요합니다",
     "removeEquipment": "{name} 제거",
-    "notSelectable": "선택할 수 없는 장비입니다"
+    "notSelectable": "선택할 수 없는 장비입니다",
+    "loadError": "장비 목록을 불러오지 못했습니다."
   },
   "inbound": {
     "searchPlaceholder": "장비명 또는 업체명 검색",
@@ -566,7 +567,9 @@
       "description": "현재 확인이 필요한 대여 건이 없습니다."
     },
     "alertDescription": "이 항목에 대해 {label}이 필요합니다.",
-    "actionButton": "{label} 진행"
+    "actionButton": "{label} 진행",
+    "error": "확인 필요 목록을 불러오지 못했습니다.",
+    "errorDesc": "네트워크를 확인한 후 다시 시도해주세요."
   },
   "guidance": {
     "nextStep": "다음 단계",

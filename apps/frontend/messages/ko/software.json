@@ -42,6 +42,8 @@
     },
     "requiresValidationYes": "O",
     "requiresValidationNo": "X",
+    "loadError": "소프트웨어 목록을 불러오지 못했습니다.",
+    "loadErrorDesc": "네트워크를 확인한 후 다시 시도해주세요.",
     "filters": {
       "testField": "시험분야",
       "availability": "가용여부",
@@ -76,7 +78,9 @@
     },
     "requiresValidationYes": "예",
     "requiresValidationNo": "아니오",
-    "notSpecified": "미지정"
+    "notSpecified": "미지정",
+    "loadError": "소프트웨어 정보를 불러올 수 없습니다.",
+    "loadErrorDesc": "네트워크를 확인한 후 다시 시도해주세요."
   },
   "create": {
     "title": "시험용 소프트웨어 등록",
@@ -137,6 +141,7 @@
     "createButton": "유효성 확인 생성",
     "empty": "유효성 확인 기록이 없습니다",
     "loadError": "유효성 확인 기록을 불러오지 못했습니다",
+    "loadErrorDesc": "네트워크를 확인한 후 다시 시도해주세요.",
     "backToDetail": "소프트웨어 상세로 돌아가기",
     "selfApprovalForbidden": "본인이 제출한 유효성 확인은 본인이 승인할 수 없습니다",
     "dualApprovalForbidden": "기술 승인자와 품질 승인자는 서로 다른 사람이어야 합니다",

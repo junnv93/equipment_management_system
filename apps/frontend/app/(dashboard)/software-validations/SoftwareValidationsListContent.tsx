@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { FileCheck, Clock, CheckCircle2, XCircle, FileEdit } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -43,7 +44,7 @@ export default function SoftwareValidationsListContent() {
   const t = useTranslations('software');
   const { fmtDate } = useDateFormatter();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.softwareValidations.lists(),
     queryFn: () => softwareValidationApi.listAll(),
     ...QUERY_CONFIG.SOFTWARE_VALIDATION_LIST,
@@ -63,6 +64,10 @@ export default function SoftwareValidationsListContent() {
           {[...Array(5)].map((_, i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="py-16 flex justify-center">
+          <ErrorState title={t('validation.loadError')} onRetry={() => void refetch()} />
         </div>
       ) : validations.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

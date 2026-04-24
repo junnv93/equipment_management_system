@@ -131,7 +131,8 @@
     "countDescription": "총 {count}개의 승인 대기 요청이 있습니다",
     "empty": "현재 카테고리에 대기 중인 승인이 없습니다",
     "allClear": "모든 승인을 완료했습니다",
-    "countUnit": "건"
+    "countUnit": "건",
+    "error": "승인 대기 목록을 불러오지 못했습니다."
   },
   "item": {
     "requester": "요청자",

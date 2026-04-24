@@ -382,6 +382,9 @@
         "title": "Self-Inspection Coming Soon",
         "description": "Self-inspection feature is currently under development. Please check back later."
       }
+    },
+    "list": {
+      "error": "Failed to load calibration history."
     }
   },
   "register": {
@@ -571,7 +574,8 @@
         "nextCalibrationDate": "Next Calibration",
         "calibrationAgency": "Agency"
       },
-      "cycleMonths": "{count} months"
+      "cycleMonths": "{count} months",
+      "error": "Failed to load equipment list."
     },
     "actions": {
       "cancel": "Cancel",
@@ -623,7 +627,8 @@
       "effectiveDate": "Effective Date",
       "expiryDate": "Expiry Date",
       "approvedAt": "Approved At"
-    }
+    },
+    "loadError": "Failed to load calibration factors registry."
   },
   "intermediateInspection": {
     "createButton": "Create Inspection Record",
@@ -712,6 +717,7 @@
     "records": "Inspection Records",
     "noRecords": "No inspection records yet",
     "loadError": "Failed to load inspection records",
+    "equipmentLoadError": "Failed to load equipment data.",
     "toasts": {
       "createSuccess": "Inspection record created.",
       "createError": "Failed to create inspection record.",
@@ -741,6 +747,7 @@
   },
   "resultSections": {
     "title": "Measurement Data",
+    "error": "Failed to load result sections.",
     "addSection": "Add Section",
     "editSection": "Edit Section",
     "deleteSection": "Delete Section",

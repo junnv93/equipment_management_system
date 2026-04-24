@@ -38,6 +38,7 @@ import cablesApi, { type UpdateCableDto, type CableMeasurement } from '@/lib/api
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { isConflictError } from '@/lib/api/error';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
@@ -68,7 +69,12 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isMeasurementOpen, setIsMeasurementOpen] = useState(false);
 
-  const { data: cable, isLoading } = useQuery({
+  const {
+    data: cable,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.cables.detail(id),
     queryFn: () => cablesApi.get(id),
     ...QUERY_CONFIG.CABLES_DETAIL,
@@ -155,6 +161,14 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
       <div className={getPageContainerClasses('detail')}>
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <ErrorState title={t('detail.loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

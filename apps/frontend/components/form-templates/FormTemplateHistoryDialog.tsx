@@ -25,6 +25,7 @@ import {
   downloadFormTemplateById,
 } from '@/lib/api/form-templates-api';
 import { FORM_TEMPLATES_HISTORY_TOKENS, FORM_TEMPLATES_MOTION } from '@/lib/design-tokens';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 interface FormTemplateHistoryDialogProps {
   formName: string;
@@ -41,7 +42,12 @@ export default function FormTemplateHistoryDialog({
   const { can } = useAuth();
   const canDownloadHistory = can(Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY);
 
-  const { data: history, isLoading } = useQuery({
+  const {
+    data: history,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.formTemplates.historyByName(formName),
     queryFn: () => listFormTemplateHistoryByName(formName),
     enabled: open,
@@ -76,11 +82,17 @@ export default function FormTemplateHistoryDialog({
           </div>
         )}
 
-        {!isLoading && (!history || history.length === 0) && (
+        {isError && (
+          <div className="py-8">
+            <ErrorState title={t('historyDialog.error')} onRetry={() => void refetch()} />
+          </div>
+        )}
+
+        {!isLoading && !isError && (!history || history.length === 0) && (
           <p className={FORM_TEMPLATES_HISTORY_TOKENS.empty}>{t('historyDialog.empty')}</p>
         )}
 
-        {!isLoading && history && history.length > 0 && (
+        {!isLoading && !isError && history && history.length > 0 && (
           <div
             className={`${FORM_TEMPLATES_HISTORY_TOKENS.tableContainer} ${FORM_TEMPLATES_MOTION.contentEntrance}`}
           >

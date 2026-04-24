@@ -43,6 +43,7 @@ import { queryKeys } from '@/lib/api/query-config';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
 import { Plus, Calculator, Clock } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import {
@@ -87,7 +88,12 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   });
 
   // 장비별 보정계수 조회
-  const { data: equipmentFactors, isLoading } = useQuery({
+  const {
+    data: equipmentFactors,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.calibrationFactors.byEquipment(equipmentId),
     queryFn: () => calibrationFactorsApi.getEquipmentFactors(equipmentId),
     enabled: !!equipmentId,
@@ -184,6 +190,17 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
 
   if (isLoading) {
     return null; // loading.tsx에서 처리
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <ErrorState
+          title={t('calibrationFactorsClient.loadError')}
+          onRetry={() => void refetch()}
+        />
+      </div>
+    );
   }
 
   return (

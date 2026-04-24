@@ -85,7 +85,11 @@ export function StatusLocationSection({
   }, [currentSite, currentTeamId]);
 
   // 운영책임자 목록 로드 (사이트/팀 기준 필터링) — useQuery SSOT 패턴
-  const { data: eligibleManagers = [], isLoading: isLoadingManagers } = useQuery<UserOption[]>({
+  const {
+    data: eligibleManagers = [],
+    isLoading: isLoadingManagers,
+    isError: managersError,
+  } = useQuery<UserOption[]>({
     queryKey: queryKeys.users.search(managerQueryParams),
     queryFn: () => usersApi.listForSelect(managerQueryParams),
     enabled: !!currentSite,
@@ -261,6 +265,11 @@ export function StatusLocationSection({
                     ? t('form.statusLocation.techManagerDescriptionWithTeam')
                     : t('form.statusLocation.techManagerDescription')}
                 </FormDescription>
+                {managersError && (
+                  <p className="text-xs text-destructive mt-1">
+                    {t('form.statusLocation.managersLoadError')}
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}

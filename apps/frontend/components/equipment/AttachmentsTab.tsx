@@ -26,11 +26,12 @@ import {
   History,
   ShieldCheck,
   MoreHorizontal,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
+import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE, TIMELINE_TOKENS } from '@/lib/design-tokens';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,7 +78,11 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
   const canDelete = can(Permission.DELETE_EQUIPMENT);
   const [revisionDocId, setRevisionDocId] = useState<string | null>(null);
 
-  const { data: docs = [], isLoading } = useQuery({
+  const {
+    data: docs = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.documents.byEquipment(equipmentId),
     queryFn: () => documentApi.getEquipmentDocuments(equipmentId),
     enabled: !!equipmentId,
@@ -109,6 +114,25 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Paperclip className="h-5 w-5" />
+            {t('attachmentsTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('attachmentsTab.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );

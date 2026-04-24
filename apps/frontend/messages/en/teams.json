@@ -57,7 +57,8 @@
     "listAriaLabel": "User list",
     "typeToSearch": "Type a name to search",
     "noResults": "No results found",
-    "noTeamMembers": "No active members in this team. Try a different search term."
+    "noTeamMembers": "No active members in this team. Try a different search term.",
+    "error": "Failed to search users."
   },
   "deleteModal": {
     "title": "Delete Team",

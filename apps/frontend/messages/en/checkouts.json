@@ -395,7 +395,8 @@
     "expectedReturnNote": "Checkout date is automatically set when checkout starts.",
     "approvalRequired": "Manager approval is required after submission",
     "removeEquipment": "Remove {name}",
-    "notSelectable": "This equipment cannot be selected"
+    "notSelectable": "This equipment cannot be selected",
+    "loadError": "Failed to load equipment list."
   },
   "inbound": {
     "searchPlaceholder": "Search equipment or vendor",
@@ -563,7 +564,9 @@
       "description": "There are no rental items requiring confirmation."
     },
     "alertDescription": "{label} is required for this item.",
-    "actionButton": "Proceed with {label}"
+    "actionButton": "Proceed with {label}",
+    "error": "Failed to load pending checks.",
+    "errorDesc": "Please check your network and try again."
   },
   "guidance": {
     "nextStep": "Next Step",

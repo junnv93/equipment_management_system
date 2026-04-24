@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, ShieldCheck } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { DocumentStatusValues } from '@equipment-management/schemas';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -36,7 +37,12 @@ export function DocumentRevisionDialog({
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
 
-  const { data: revisions = [], isLoading } = useQuery({
+  const {
+    data: revisions = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.documents.revisions(documentId),
     queryFn: () => documentApi.getRevisionHistory(documentId),
     enabled: open && !!documentId,
@@ -56,6 +62,10 @@ export function DocumentRevisionDialog({
 
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
+        ) : isError ? (
+          <div className="py-8">
+            <ErrorState title={t('attachmentsTab.revision.error')} onRetry={() => void refetch()} />
+          </div>
         ) : revisions.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">{t('attachmentsTab.revision.empty')}</p>
         ) : (

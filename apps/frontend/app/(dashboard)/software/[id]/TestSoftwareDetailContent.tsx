@@ -48,6 +48,7 @@ import { UserCombobox } from '@/components/ui/user-combobox';
 import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
 import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -73,7 +74,12 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | undefined>();
   const [linkNotes, setLinkNotes] = useState('');
 
-  const { data: software, isLoading } = useQuery({
+  const {
+    data: software,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.testSoftware.detail(id),
     queryFn: () => testSoftwareApi.get(id),
     ...QUERY_CONFIG.TEST_SOFTWARE_DETAIL,
@@ -215,6 +221,14 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
       <div className={getPageContainerClasses('detail')}>
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <ErrorState title={t('detail.loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

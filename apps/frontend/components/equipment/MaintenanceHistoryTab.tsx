@@ -29,7 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Plus, Wrench, Calendar, User } from 'lucide-react';
+import { Plus, Wrench, Calendar, User, AlertTriangle } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
@@ -86,7 +86,11 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const equipmentId = String(equipment.id);
 
   // 유지보수 이력 조회
-  const { data: history = [], isLoading } = useQuery({
+  const {
+    data: history = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.equipment.maintenanceHistory(equipmentId),
     queryFn: () => equipmentApi.getMaintenanceHistory(equipmentId),
     enabled: !!equipmentId,
@@ -247,6 +251,25 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            {t('maintenanceHistoryTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('maintenanceHistoryTab.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );

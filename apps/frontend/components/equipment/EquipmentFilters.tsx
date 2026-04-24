@@ -204,7 +204,11 @@ function EquipmentFiltersComponent({
 
   const teamQuerySite = filters.site || user?.site;
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
+  const {
+    data: teamsData,
+    isLoading: isLoadingTeams,
+    isError: teamsError,
+  } = useQuery({
     queryKey: queryKeys.teams.filterOptions(teamQuerySite),
     queryFn: () =>
       teamsApi.getTeams({
@@ -406,28 +410,36 @@ function EquipmentFiltersComponent({
             </Select>
 
             {/* 팀 필터 */}
-            <Select {...teamFilterSelect} disabled={isLoadingTeams}>
-              <SelectTrigger className="h-9 w-[150px] text-sm" aria-label={t('filters.teamFilter')}>
-                {isLoadingTeams ? (
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
-                    {t('filters.loading')}
-                  </span>
-                ) : (
-                  <SelectValue placeholder={t('filters.allTeams')} />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
-                {teamOptions
-                  .filter((opt) => opt.value)
-                  .map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-0.5">
+              <Select {...teamFilterSelect} disabled={isLoadingTeams}>
+                <SelectTrigger
+                  className="h-9 w-[150px] text-sm"
+                  aria-label={t('filters.teamFilter')}
+                >
+                  {isLoadingTeams ? (
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
+                      {t('filters.loading')}
+                    </span>
+                  ) : (
+                    <SelectValue placeholder={t('filters.allTeams')} />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
+                  {teamOptions
+                    .filter((opt) => opt.value)
+                    .map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {teamsError && (
+                <p className="text-xs text-destructive mt-1">{t('filters.teamLoadError')}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

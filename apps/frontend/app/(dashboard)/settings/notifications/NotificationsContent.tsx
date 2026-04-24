@@ -16,6 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Mail, Clock, Info } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useToast } from '@/components/ui/use-toast';
 import {
   useNotificationPreferences,
@@ -101,10 +102,21 @@ function LoadingSkeleton() {
  * useEffect + isDirty guard 패턴 제거
  */
 export default function NotificationsContent() {
-  const { data: preferences, isLoading } = useNotificationPreferences();
+  const t = useTranslations('settings');
+  const { data: preferences, isLoading, isError, refetch } = useNotificationPreferences();
 
   if (isLoading) {
     return <LoadingSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <Card className={getSettingsCardClasses()}>
+        <CardContent className="pt-12 pb-8">
+          <ErrorState title={t('notifications.loadError')} onRetry={() => void refetch()} />
+        </CardContent>
+      </Card>
+    );
   }
 
   // 서버 데이터와 기본값 병합

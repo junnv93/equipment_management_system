@@ -382,6 +382,9 @@
         "title": "자체점검 기능 준비 중",
         "description": "자체점검 기능은 현재 개발 중입니다. 조금만 기다려주세요."
       }
+    },
+    "list": {
+      "error": "교정 이력을 불러오지 못했습니다."
     }
   },
   "register": {
@@ -571,7 +574,8 @@
         "nextCalibrationDate": "차기교정일",
         "calibrationAgency": "교정기관"
       },
-      "cycleMonths": "{count}개월"
+      "cycleMonths": "{count}개월",
+      "error": "장비 목록을 불러오지 못했습니다."
     },
     "actions": {
       "cancel": "취소",
@@ -623,7 +627,8 @@
       "effectiveDate": "적용 시작일",
       "expiryDate": "만료일",
       "approvedAt": "승인일"
-    }
+    },
+    "loadError": "보정계수 대장을 불러오지 못했습니다."
   },
   "intermediateInspection": {
     "createButton": "점검 기록 작성",
@@ -712,6 +717,7 @@
     "records": "점검 기록",
     "noRecords": "점검 기록이 없습니다",
     "loadError": "점검 기록을 불러오는 중 오류가 발생했습니다",
+    "equipmentLoadError": "장비 정보를 불러오지 못했습니다.",
     "toasts": {
       "createSuccess": "점검 기록이 생성되었습니다.",
       "createError": "점검 기록 생성에 실패했습니다.",
@@ -741,6 +747,7 @@
   },
   "resultSections": {
     "title": "측정 결과 데이터",
+    "error": "결과 섹션을 불러오지 못했습니다.",
     "addSection": "섹션 추가",
     "editSection": "섹션 수정",
     "deleteSection": "섹션 삭제",

@@ -18,6 +18,7 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { TRANSITION_PRESETS, getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 type PendingCheckRole = 'all' | 'lender' | 'borrower';
 
@@ -100,7 +101,12 @@ export default function PendingChecksClient({
   // placeholderData는 서버가 fetch한 role(initialRole)과 현재 탭(activeRole)이 일치할 때만 사용.
   // 서버는 URL role에 맞는 데이터를 fetch하므로 initialData는 initialRole 전용 데이터다.
   // role 불일치 시 undefined → 올바른 데이터가 아닌 것이 잠깐 보이는 버그를 차단한다.
-  const { data: checksData, isLoading } = useQuery({
+  const {
+    data: checksData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.checkouts.pending(apiRole),
     queryFn: async () => {
       return checkoutApi.getPendingChecks(apiRole ? { role: apiRole } : {});
@@ -242,6 +248,10 @@ export default function PendingChecksClient({
       {/* 목록 */}
       {isLoading ? (
         <div className="text-center py-12">{t('pendingChecks.loading')}</div>
+      ) : isError ? (
+        <div className="py-16 flex justify-center">
+          <ErrorState title={t('pendingChecks.error')} onRetry={() => void refetch()} />
+        </div>
       ) : checksData?.data?.length === 0 ? (
         renderEmptyState()
       ) : (

@@ -76,6 +76,7 @@
   },
   "display": {
     "title": "표시 설정",
+    "loadError": "표시 설정을 불러오지 못했습니다.",
     "description": "목록 페이지의 기본 표시 옵션을 사용자화할 수 있습니다.",
     "language": "언어",
     "languageDescription": "시스템 표시 언어를 선택합니다. 변경 후 즉시 적용됩니다.",
@@ -104,6 +105,7 @@
   },
   "notifications": {
     "channelTitle": "알림 채널",
+    "loadError": "알림 설정을 불러오지 못했습니다.",
     "channelDescription": "알림을 수신하는 방법과 빈도를 설정합니다.",
     "typeTitle": "알림 유형",
     "typeDescription": "수신할 알림 카테고리를 선택하세요.",
@@ -117,6 +119,7 @@
   },
   "system": {
     "title": "시스템 설정",
+    "loadError": "시스템 설정을 불러오지 못했습니다.",
     "description": "시스템 전반에 적용되는 관리 설정을 변경합니다.",
     "warning": "시스템 설정은 전체 시스템에 영향을 미칩니다. 변경 시 신중하게 검토하세요.",
     "warningPrefix": "주의:",
@@ -135,6 +138,7 @@
   },
   "calibration": {
     "title": "교정 알림 설정",
+    "loadError": "교정 설정을 불러오지 못했습니다.",
     "description": "교정 및 중간점검 기한 임박 시 알림을 발송할 시점을 설정합니다. 선택한 D-day에 해당하는 날짜에 알림이 발송됩니다.",
     "alertTiming": "알림 발송 시점",
     "today": "당일 (D-day)",

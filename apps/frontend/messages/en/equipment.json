@@ -149,6 +149,7 @@
   "filters": {
     "title": "Filters",
     "reset": "Reset",
+    "teamLoadError": "Failed to load team list.",
     "appliedFilters": "Applied Filters",
     "removeFilter": "Remove {label} filter",
     "filterOptions": "Equipment filter options",
@@ -414,6 +415,7 @@
     "basicInfo": {
       "title": "Basic Information",
       "description": "Enter basic equipment information",
+      "teamLoadError": "Failed to load team list.",
       "namePlaceholder": "e.g. Receiver",
       "nameDescription": "Enter the equipment name",
       "managementNumberPlaceholder": "e.g. SUW-E0001",
@@ -476,6 +478,7 @@
     "statusLocation": {
       "title": "Status & Location",
       "description": "Enter current status and location information",
+      "managerLoadError": "Failed to load manager list.",
       "statusPlaceholder": "Select status",
       "locationPlaceholder": "e.g. RF1 Room",
       "locationDescription": "Enter the current location of the equipment",
@@ -727,6 +730,8 @@
   },
   "attachmentsTab": {
     "title": "Attachments",
+    "error": "Failed to load attachments.",
+    "revisionError": "Failed to load revision history.",
     "empty": "No attachments registered.",
     "download": "Download",
     "delete": "Delete",
@@ -785,6 +790,7 @@
   },
   "calibrationHistoryTab": {
     "title": "Calibration History",
+    "error": "Failed to load calibration history.",
     "register": "Register Calibration",
     "empty": "No calibration history registered.",
     "dialog": {
@@ -847,6 +853,7 @@
   },
   "incidentHistoryTab": {
     "title": "Incident History",
+    "error": "Failed to load incident history.",
     "register": "Register Incident",
     "empty": "No incident history registered.",
     "latest": "Latest",
@@ -947,6 +954,7 @@
   },
   "locationHistoryTab": {
     "title": "Location History",
+    "error": "Failed to load location history.",
     "register": "Register Location Change",
     "empty": "No location history registered.",
     "latest": "Latest",
@@ -990,6 +998,7 @@
   },
   "maintenanceHistoryTab": {
     "title": "Maintenance History",
+    "error": "Failed to load maintenance history.",
     "register": "Register Maintenance",
     "empty": "No maintenance history registered.",
     "latest": "Latest",
@@ -1156,6 +1165,7 @@
   "equipmentImport": {
     "loading": "Loading...",
     "notFound": "Import information not found.",
+    "loadError": "Failed to load import information.",
     "detailSubtitle": "{source} Import Request Details",
     "equipmentInfo": "Equipment Information",
     "equipmentInfoDesc": "Enter basic information about the equipment to import.",
@@ -1339,8 +1349,12 @@
     "delete": "Delete",
     "deleting": "Deleting..."
   },
+  "repairHistoryClient": {
+    "loadError": "Failed to load repair history."
+  },
   "calibrationFactorsClient": {
     "title": "Calibration Factor Management",
+    "loadError": "Failed to load calibration factors.",
     "equipmentId": "Equipment ID: {id}",
     "backAriaLabel": "Back to equipment details",
     "requestButton": "Request Factor Change",
@@ -1525,5 +1539,7 @@
     "managementNumber": "Mgmt #: {number}",
     "location": "Location: {location}",
     "noLocationInfo": "N/A"
-  }
+  },
+  "equipmentImportLoadError": "Failed to load equipment import details.",
+  "receiveEquipmentImportLoadError": "Failed to load equipment import."
 }

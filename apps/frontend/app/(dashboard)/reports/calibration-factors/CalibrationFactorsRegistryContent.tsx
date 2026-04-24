@@ -23,6 +23,7 @@ import calibrationFactorsApi, {
 } from '@/lib/api/calibration-factors-api';
 import { format } from 'date-fns';
 import { Calculator, ChevronDown, ChevronRight, FileDown, Search, Building2 } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import Link from 'next/link';
 import {
   CAL_FACTORS_HEADER_TOKENS,
@@ -57,7 +58,12 @@ export default function CalibrationFactorsRegistryContent({
   const [expandedEquipment, setExpandedEquipment] = useState<Set<string>>(new Set());
 
   // 보정계수 대장 조회 (초기 데이터 활용)
-  const { data: registry, isLoading } = useQuery({
+  const {
+    data: registry,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.calibrationFactors.registry(),
     queryFn: () => calibrationFactorsApi.getCalibrationFactorRegistry(),
     placeholderData: initialData ?? undefined,
@@ -154,6 +160,18 @@ export default function CalibrationFactorsRegistryContent({
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-16 w-full" />
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <Card>
+          <CardContent className="pt-12 pb-8">
+            <ErrorState title={t('factorsRegistry.loadError')} onRetry={() => void refetch()} />
           </CardContent>
         </Card>
       </div>

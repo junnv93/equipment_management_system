@@ -23,7 +23,8 @@
     "empty": "등록된 케이블이 없습니다",
     "exportButton": "양식 내보내기",
     "exporting": "내보내기 중...",
-    "exportError": "양식 내보내기에 실패했습니다."
+    "exportError": "양식 내보내기에 실패했습니다.",
+    "error": "케이블 목록을 불러오지 못했습니다."
   },
   "detail": {
     "title": "케이블 정보",
@@ -51,7 +52,8 @@
     },
     "noMeasurements": "기록된 측정 데이터가 없습니다.",
     "latestDataTitle": "최근 측정 데이터",
-    "noDataPoints": "데이터 포인트가 없습니다."
+    "noDataPoints": "데이터 포인트가 없습니다.",
+    "loadError": "케이블 정보를 불러올 수 없습니다."
   },
   "measurement": {
     "addButton": "측정 데이터 추가",

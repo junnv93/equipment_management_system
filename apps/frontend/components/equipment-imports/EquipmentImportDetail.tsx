@@ -21,6 +21,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Check, X, Package, Undo2, Ban } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import {
   getPageContainerClasses,
   getSemanticContainerColorClasses,
@@ -66,7 +67,12 @@ export default function EquipmentImportDetail({ id }: Props) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
-  const { data: equipmentImport, isLoading } = useQuery({
+  const {
+    data: equipmentImport,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.equipmentImports.detail(id),
     queryFn: () => equipmentImportApi.getOne(id),
     ...QUERY_CONFIG.EQUIPMENT_DETAIL,
@@ -155,6 +161,14 @@ export default function EquipmentImportDetail({ id }: Props) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
         {t('equipmentImport.loading')}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <ErrorState title={t('equipmentImport.loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

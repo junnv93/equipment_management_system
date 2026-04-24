@@ -31,6 +31,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, ShieldAlert } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { useTranslations } from 'next-intl';
@@ -67,7 +68,8 @@ type SystemSettingsForm = z.infer<typeof systemSettingsFormSchema>;
  * → Radix Select 포털 렌더링 충돌 방지
  */
 export default function SystemSettingsContent() {
-  const { data, isLoading } = useQuery<SystemSettings>({
+  const t = useTranslations('settings');
+  const { data, isLoading, isError, refetch } = useQuery<SystemSettings>({
     queryKey: queryKeys.settings.system(),
     queryFn: async () => {
       const res = await apiClient.get<SystemSettings>(API_ENDPOINTS.SETTINGS.SYSTEM);
@@ -89,6 +91,16 @@ export default function SystemSettingsContent() {
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className={getSettingsCardClasses()}>
+        <CardContent className="pt-12 pb-8">
+          <ErrorState title={t('system.loadError')} onRetry={() => void refetch()} />
         </CardContent>
       </Card>
     );

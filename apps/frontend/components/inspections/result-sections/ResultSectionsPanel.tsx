@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, LayoutList } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  LayoutList,
+  AlertTriangle,
+} from 'lucide-react';
 import type { InspectionType } from '@equipment-management/schemas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,7 +71,11 @@ export default function ResultSectionsPanel({
       ? queryKeys.intermediateInspections.resultSections(inspectionId)
       : queryKeys.selfInspections.resultSections(inspectionId);
 
-  const { data: sections = [], isLoading } = useQuery({
+  const {
+    data: sections = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey,
     queryFn: () => api.list(inspectionId),
     ...QUERY_CONFIG.RESULT_SECTIONS,
@@ -163,6 +175,17 @@ export default function ResultSectionsPanel({
       <div className={`${INSPECTION_SPACING.field} p-4`}>
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={`${INSPECTION_SPACING.field} p-4`}>
+        <div className={INSPECTION_EMPTY_STATE.container}>
+          <AlertTriangle className="h-8 w-8 text-brand-warning" />
+          <p className={INSPECTION_EMPTY_STATE.description}>{t('error')}</p>
+        </div>
       </div>
     );
   }

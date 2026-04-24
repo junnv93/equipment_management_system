@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import QRCode from 'qrcode';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { QR_CONFIG, buildEquipmentQRUrl } from '@equipment-management/shared-constants';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,11 @@ export function EquipmentQRCode({
   const appUrl = React.useMemo(getAppUrl, []);
   const [isGenerating, setIsGenerating] = React.useState(false);
 
-  const { data: svgMarkup, isLoading } = useQuery({
+  const {
+    data: svgMarkup,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.qr.svg(managementNumber, appUrl),
     queryFn: async () => {
       const url = buildEquipmentQRUrl(managementNumber, appUrl);
@@ -105,7 +109,15 @@ export function EquipmentQRCode({
         role="img"
         aria-label={t('altText', { managementNumber, name: displayName ?? '' })}
       >
-        {isLoading || !svgMarkup ? (
+        {isError ? (
+          <div
+            className="flex flex-col items-center justify-center gap-2"
+            style={{ width: sizePx, height: sizePx }}
+          >
+            <AlertCircle className="h-6 w-6 text-destructive" />
+            <p className="text-xs text-destructive text-center">{t('error')}</p>
+          </div>
+        ) : isLoading || !svgMarkup ? (
           <div
             className="animate-pulse rounded bg-muted"
             style={{ width: sizePx, height: sizePx }}

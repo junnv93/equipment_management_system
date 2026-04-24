@@ -60,6 +60,7 @@ import {
 import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Plus, Wrench, Hash, Info } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
 import {
   NonConformanceStatusValues as NCStatusVal,
@@ -141,7 +142,12 @@ export function RepairHistoryClient({
   });
 
   // 수리 이력 조회
-  const { data: repairData, isLoading } = useQuery({
+  const {
+    data: repairData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.equipment.repairHistory(equipmentId),
     queryFn: () => getRepairHistoryByEquipment(equipmentId, { sort: 'repairDate.desc' }),
     enabled: !!equipmentId,
@@ -327,6 +333,14 @@ export function RepairHistoryClient({
 
   if (isLoading) {
     return null; // loading.tsx에서 처리
+  }
+
+  if (isError) {
+    return (
+      <div className={getPageContainerClasses()}>
+        <ErrorState title={t('repairHistoryClient.loadError')} onRetry={() => void refetch()} />
+      </div>
+    );
   }
 
   return (

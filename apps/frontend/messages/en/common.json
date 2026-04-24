@@ -267,14 +267,16 @@
     "searchPlaceholder": "Search by name...",
     "typeToSearch": "Type a name to search",
     "noResults": "No results found",
-    "clearAriaLabel": "Clear selection"
+    "clearAriaLabel": "Clear selection",
+    "error": "Search failed."
   },
   "equipmentCombobox": {
     "placeholder": "Search and select equipment...",
     "searchPlaceholder": "Search by name or management number...",
     "typeToSearch": "Type to search equipment",
     "noResults": "No results found",
-    "clearAriaLabel": "Clear selection"
+    "clearAriaLabel": "Clear selection",
+    "error": "Search failed."
   },
   "bulk": {
     "selectAll": "Select All",

@@ -19,6 +19,8 @@ import { useMemo, memo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
 import { PendingApprovalCard } from '@/components/dashboard/PendingApprovalCard';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
@@ -146,7 +148,11 @@ function DashboardClientComponent({
   );
 
   // 단일 aggregate 쿼리 — SSR placeholderData로 hydration
-  const { data: aggregate, isLoading } = useQuery<DashboardAggregate>({
+  const {
+    data: aggregate,
+    isLoading,
+    isError,
+  } = useQuery<DashboardAggregate>({
     queryKey: queryKeys.dashboard.aggregate(userRole, scope.teamId),
     queryFn: () => dashboardApi.getAggregate(scope.teamId),
     placeholderData: {
@@ -178,6 +184,14 @@ function DashboardClientComponent({
 
   return (
     <div className={getPageContainerClasses('list')}>
+      {isError && (
+        <div className="mb-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t('aggregate.error')}</AlertDescription>
+          </Alert>
+        </div>
+      )}
       {/* Row 0: Welcome + QuickActionBar — 입장 애니메이션 */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 motion-safe:animate-fade-in-up">
         <header className="flex-1 min-w-0">

@@ -42,6 +42,7 @@ import {
 } from '@equipment-management/schemas';
 import { addMonths, format as formatDate } from 'date-fns';
 import { Upload, X, FileText } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { validateFile } from '@/lib/utils/file-validation';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
@@ -104,7 +105,12 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     calibrationInfo.managementMethod,
   ]);
 
-  const { data: equipmentImport, isLoading } = useQuery({
+  const {
+    data: equipmentImport,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.equipmentImports.detail(id),
     queryFn: () => equipmentImportApi.getOne(id),
   });
@@ -168,6 +174,14 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
         {tCommon('status.loading')}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="py-8">
+        <ErrorState title={t('receiveEquipmentImport.loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

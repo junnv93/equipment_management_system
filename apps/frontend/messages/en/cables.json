@@ -23,7 +23,8 @@
     "empty": "No cables registered",
     "exportButton": "Export Form",
     "exporting": "Exporting...",
-    "exportError": "Failed to export form."
+    "exportError": "Failed to export form.",
+    "error": "Failed to load cable list."
   },
   "detail": {
     "title": "Cable Information",
@@ -51,7 +52,8 @@
     },
     "noMeasurements": "No measurements recorded.",
     "latestDataTitle": "Latest Measurement Data",
-    "noDataPoints": "No data points."
+    "noDataPoints": "No data points.",
+    "loadError": "Failed to load cable details."
   },
   "measurement": {
     "addButton": "Add Measurement",

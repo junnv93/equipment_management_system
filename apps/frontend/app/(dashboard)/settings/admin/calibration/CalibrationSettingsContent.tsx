@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, X, Plus } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/api-client';
@@ -55,7 +56,8 @@ type CalibrationSettingsForm = z.infer<typeof calibrationSettingsFormSchema>;
  * useEffect + isDirty guard 패턴 제거 → defaultValues만 사용
  */
 export default function CalibrationSettingsContent() {
-  const { data, isLoading } = useQuery<CalibrationAlertSettingsResponse>({
+  const t = useTranslations('settings');
+  const { data, isLoading, isError, refetch } = useQuery<CalibrationAlertSettingsResponse>({
     queryKey: queryKeys.settings.calibration(),
     queryFn: async () => {
       const res = await apiClient.get<CalibrationAlertSettingsResponse>(
@@ -78,6 +80,16 @@ export default function CalibrationSettingsContent() {
         <CardContent className="space-y-4 pt-6">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className={getSettingsCardClasses()}>
+        <CardContent className="pt-12 pb-8">
+          <ErrorState title={t('calibration.loadError')} onRetry={() => void refetch()} />
         </CardContent>
       </Card>
     );

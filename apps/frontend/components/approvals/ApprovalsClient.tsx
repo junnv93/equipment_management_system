@@ -39,6 +39,7 @@ import ApprovalDetailModal from './ApprovalDetailModal';
 import RejectModal from './RejectModal';
 import { useApprovalKpi } from '@/hooks/use-approval-kpi';
 import { APPROVAL_MOTION, getApprovalActionButtonClasses } from '@/lib/design-tokens';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 interface ApprovalsClientProps {
   userRole: UserRole;
@@ -98,7 +99,12 @@ export function ApprovalsClient({
   );
 
   // 승인 대기 목록 조회
-  const { data: pendingItems = [], isLoading } = useQuery({
+  const {
+    data: pendingItems = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
     staleTime: CACHE_TIMES.SHORT,
@@ -494,6 +500,11 @@ export function ApprovalsClient({
 
           {/* Content Area */}
           <div className="flex-1 min-w-0 space-y-3">
+            {isError && (
+              <div className="py-16 flex justify-center">
+                <ErrorState title={t('list.error')} onRetry={() => void refetch()} />
+              </div>
+            )}
             {/* Bulk Action Bar */}
             <BulkActionBar
               selectedCount={selectedItems.length}

@@ -23,6 +23,7 @@ import {
   CALIBRATION_TABLE,
   CALIBRATION_EMPTY_STATE,
   getCalibrationRowClasses,
+  TIMELINE_TOKENS,
 } from '@/lib/design-tokens';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
@@ -53,7 +54,11 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
 
   const equipmentId = String(equipment.id);
 
-  const { data: calibrations = [], isLoading } = useQuery({
+  const {
+    data: calibrations = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
     enabled: !!equipmentId,
@@ -96,6 +101,25 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            {t('calibrationHistoryTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('calibrationHistoryTab.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );

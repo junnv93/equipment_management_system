@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Search, Package } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,7 +102,7 @@ export default function TestSoftwareListContent() {
     [searchParams, router]
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.testSoftware.list(apiFilters as Record<string, unknown>),
     queryFn: () => testSoftwareApi.list(apiFilters),
     ...QUERY_CONFIG.TEST_SOFTWARE_LIST,
@@ -208,6 +209,10 @@ export default function TestSoftwareListContent() {
           {[...Array(5)].map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="py-16 flex justify-center">
+          <ErrorState title={t('list.loadError')} onRetry={() => void refetch()} />
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

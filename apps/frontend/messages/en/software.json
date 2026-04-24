@@ -42,6 +42,8 @@
     },
     "requiresValidationYes": "O",
     "requiresValidationNo": "X",
+    "loadError": "Failed to load software list.",
+    "loadErrorDesc": "Please check your network and try again.",
     "filters": {
       "testField": "Test Field",
       "availability": "Availability",
@@ -76,7 +78,9 @@
     },
     "requiresValidationYes": "Yes",
     "requiresValidationNo": "No",
-    "notSpecified": "Not specified"
+    "notSpecified": "Not specified",
+    "loadError": "Failed to load software details.",
+    "loadErrorDesc": "Please check your network and try again."
   },
   "create": {
     "title": "Register Test Software",
@@ -137,6 +141,7 @@
     "createButton": "New Validation",
     "empty": "No validation records",
     "loadError": "Failed to load validation records",
+    "loadErrorDesc": "Please check your network and try again.",
     "backToDetail": "Back to Software Detail",
     "selfApprovalForbidden": "You cannot approve a validation you submitted",
     "dualApprovalForbidden": "Technical and quality approvals must be by different people",

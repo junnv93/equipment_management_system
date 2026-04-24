@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/api-client';
@@ -54,7 +55,13 @@ import {
 } from '@/lib/design-tokens';
 
 export default function DisplayPreferencesContent() {
-  const { data: preferences, isLoading } = useQuery<DisplayPreferences>({
+  const t = useTranslations('settings');
+  const {
+    data: preferences,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<DisplayPreferences>({
     queryKey: queryKeys.settings.preferences(),
     queryFn: async () => {
       const res = await apiClient.get<DisplayPreferences>(API_ENDPOINTS.USERS.PREFERENCES);
@@ -76,6 +83,16 @@ export default function DisplayPreferencesContent() {
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className={getSettingsCardClasses()}>
+        <CardContent className="pt-12 pb-8">
+          <ErrorState title={t('display.loadError')} onRetry={() => void refetch()} />
         </CardContent>
       </Card>
     );

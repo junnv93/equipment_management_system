@@ -131,7 +131,8 @@
     "countDescription": "{count} pending approval requests",
     "empty": "No pending approval requests in this category",
     "allClear": "All approvals completed",
-    "countUnit": "items"
+    "countUnit": "items",
+    "error": "Failed to load pending approvals."
   },
   "item": {
     "requester": "Requester",

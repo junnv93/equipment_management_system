@@ -352,6 +352,9 @@
     "overdueCheckouts": "반출 초과 {count}건",
     "nonConforming": "부적합 {count}건"
   },
+  "aggregate": {
+    "error": "대시보드 데이터 일부를 불러오지 못했습니다."
+  },
   "systemHealth": {
     "title": "시스템 상태",
     "ariaLabel": "시스템 상태 요약",

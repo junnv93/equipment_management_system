@@ -180,6 +180,7 @@
     },
     "attachments": {
       "title": "Attachments",
+      "loadError": "Failed to load attachments.",
       "hint": "Upload site photos or supporting evidence.",
       "upload": "Upload",
       "uploading": "Uploading...",

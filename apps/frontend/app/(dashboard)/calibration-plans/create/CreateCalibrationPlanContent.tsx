@@ -93,7 +93,11 @@ export default function CreateCalibrationPlanContent() {
   const teams = teamsData?.data || [];
 
   // 외부교정 대상 장비 조회 (teamId 필터 추가)
-  const { data: equipment, isLoading: isLoadingEquipment } = useQuery({
+  const {
+    data: equipment,
+    isLoading: isLoadingEquipment,
+    isError: isEquipmentError,
+  } = useQuery({
     queryKey: queryKeys.calibrationPlans.externalEquipment(
       selectedYear,
       selectedSite,
@@ -281,7 +285,9 @@ export default function CreateCalibrationPlanContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoadingEquipment ? (
+            {isEquipmentError ? (
+              <p className="text-sm text-destructive py-2">{t('planCreate.preview.error')}</p>
+            ) : isLoadingEquipment ? (
               <div className="space-y-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />

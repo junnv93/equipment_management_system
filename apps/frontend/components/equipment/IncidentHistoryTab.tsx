@@ -180,7 +180,11 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const equipmentId = String(equipment.id);
 
   // 사고 이력 조회
-  const { data: history = [], isLoading } = useQuery({
+  const {
+    data: history = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.equipment.incidentHistory(equipmentId), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getIncidentHistory(equipmentId),
     enabled: !!equipmentId,
@@ -761,6 +765,25 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            {t('incidentHistoryTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('incidentHistoryTab.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );

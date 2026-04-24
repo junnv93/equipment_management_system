@@ -65,6 +65,7 @@
   },
   "historyDialog": {
     "title": "개정 이력",
+    "error": "개정 이력을 불러오지 못했습니다.",
     "formNumber": "양식 번호",
     "filename": "파일명",
     "uploadDate": "등록일",

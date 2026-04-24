@@ -180,6 +180,7 @@
     },
     "attachments": {
       "title": "첨부 파일",
+      "loadError": "첨부파일을 불러오지 못했습니다.",
       "hint": "현장 사진 등 증빙을 업로드합니다.",
       "upload": "업로드",
       "uploading": "업로드 중...",

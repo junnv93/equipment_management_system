@@ -29,7 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Plus, MapPin, Calendar, User, FileText, ArrowRight } from 'lucide-react';
+import { Plus, MapPin, Calendar, User, FileText, ArrowRight, AlertTriangle } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
@@ -95,7 +95,11 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const equipmentId = String(equipment.id);
 
   // 위치 변동 이력 조회
-  const { data: history = [], isLoading } = useQuery({
+  const {
+    data: history = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.equipment.locationHistory(equipmentId),
     queryFn: () => equipmentApi.getLocationHistory(equipmentId),
     enabled: !!equipmentId,
@@ -291,6 +295,25 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            {t('locationHistoryTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('locationHistoryTab.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );

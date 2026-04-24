@@ -125,7 +125,11 @@ export default function CreateCheckoutContent() {
 
   // 장비 목록 조회 - 상태 필터 없이 전체 조회 (목적별 선택 가능 여부는 클라이언트에서 판단)
   const equipmentTeamId = purpose === CPVal.RENTAL ? selectedTeamId : userTeamId;
-  const { data: equipmentsData, isLoading: equipmentsLoading } = useQuery({
+  const {
+    data: equipmentsData,
+    isLoading: equipmentsLoading,
+    isError: equipmentsError,
+  } = useQuery({
     queryKey: queryKeys.equipment.checkoutSearch(searchTerm, purpose, equipmentTeamId),
     queryFn: async () => {
       const response = await equipmentApi.getEquipmentList({
@@ -367,7 +371,16 @@ export default function CreateCheckoutContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {equipmentsLoading ? (
+                      {equipmentsError ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={2}
+                            className="text-center text-sm text-destructive py-4"
+                          >
+                            {t('create.loadError')}
+                          </TableCell>
+                        </TableRow>
+                      ) : equipmentsLoading ? (
                         <TableRow>
                           <TableCell colSpan={2} className="h-32 text-center text-muted-foreground">
                             <div className="flex flex-col items-center justify-center gap-2">
@@ -832,7 +845,11 @@ export default function CreateCheckoutContent() {
                 <Button
                   type="submit"
                   form="checkout-form"
-                  disabled={createCheckoutMutation.isPending || selectedEquipments.length === 0}
+                  disabled={
+                    createCheckoutMutation.isPending ||
+                    selectedEquipments.length === 0 ||
+                    equipmentsError
+                  }
                   className="flex-1 sm:flex-none min-w-[120px]"
                 >
                   {createCheckoutMutation.isPending ? (

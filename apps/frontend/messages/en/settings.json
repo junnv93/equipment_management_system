@@ -76,6 +76,7 @@
   },
   "display": {
     "title": "Display Settings",
+    "loadError": "Failed to load display preferences.",
     "description": "Customize the default display options for list pages.",
     "language": "Language",
     "languageDescription": "Select the system display language. Changes take effect immediately.",
@@ -104,6 +105,7 @@
   },
   "notifications": {
     "channelTitle": "Notification Channels",
+    "loadError": "Failed to load notification settings.",
     "channelDescription": "Configure how and when you receive notifications.",
     "typeTitle": "Notification Types",
     "typeDescription": "Select which notification categories to receive.",
@@ -117,6 +119,7 @@
   },
   "system": {
     "title": "System Settings",
+    "loadError": "Failed to load system settings.",
     "description": "Change management settings that apply across the entire system.",
     "warning": "System settings affect the entire system. Please review carefully before making changes.",
     "warningPrefix": "Warning:",
@@ -135,6 +138,7 @@
   },
   "calibration": {
     "title": "Calibration Alert Settings",
+    "loadError": "Failed to load calibration settings.",
     "description": "Configure when to send alerts for upcoming calibration and intermediate check deadlines. Alerts are sent on the selected D-day dates.",
     "alertTiming": "Alert Timing",
     "today": "Same Day (D-day)",

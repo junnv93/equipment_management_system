@@ -42,7 +42,11 @@ export function UserCombobox({
 
   const isQueryEnabled = open && debouncedSearch.length >= 1;
 
-  const { data: users, isLoading } = useQuery({
+  const {
+    data: users,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.users.search({ search: debouncedSearch }),
     queryFn: () => usersApi.search({ search: debouncedSearch }),
     enabled: isQueryEnabled,
@@ -124,6 +128,10 @@ export function UserCombobox({
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
             </div>
+          ) : isError ? (
+            <p className="py-6 text-center text-sm text-destructive" role="alert">
+              {t('error')}
+            </p>
           ) : !isQueryEnabled ? (
             <p className="text-sm text-muted-foreground text-center py-6">{t('typeToSearch')}</p>
           ) : users && users.length > 0 ? (

@@ -176,7 +176,11 @@ export function BasicInfoSection({
   const teamRestricted = userRole ? isTeamRestricted(userRole as UserRole) : false;
 
   // 팀 목록 로드 — useQuery SSOT 패턴
-  const { data: teams = [], isLoading: isLoadingTeams } = useQuery({
+  const {
+    data: teams = [],
+    isLoading: isLoadingTeams,
+    isError: teamsError,
+  } = useQuery({
     queryKey: queryKeys.teams.lists(),
     queryFn: async () => {
       const response = await apiClient.get(API_ENDPOINTS.TEAMS.LIST);
@@ -636,6 +640,11 @@ export function BasicInfoSection({
                     </span>
                   )}
                 </FormDescription>
+                {teamsError && (
+                  <p className="text-xs text-destructive mt-1">
+                    {t('form.basicInfo.teamLoadError')}
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
