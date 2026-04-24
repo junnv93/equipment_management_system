@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-24 (92차 정리: PR-19 Loading Skeleton + inline Error 완료 → archive 이동. active: PR-16·PR-17·PR-21~PR-23 + tech-debt 11건)**
+> **마지막 정리일: 2026-04-24 (93차 정리: PR-19 body → archive-design.md 이동. active: PR-16·PR-17·PR-21~PR-23 + tech-debt 11건)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -312,57 +312,7 @@ SSOT 주의:
 
 ### 🟡 MEDIUM — PR-19: Loading Skeleton 6종 + inline Error 3 위치 + checkout-loading-skeleton.ts 토큰 [P1] (Mode 1) ✅ 완료
 
-```
-문제:
-데이터 로딩 중 spinner 표시 또는 빈 화면 — 레이아웃 시프트. 부분 에러 표시 불가.
-
-조건: PR-5(통합) + PR-7(HeroKPI) + PR-14(Timeline) 완료 후 진행.
-
-작업:
-
-1. lib/design-tokens/components/checkout-loading-skeleton.ts (신규):
-   export const CHECKOUT_LOADING_SKELETON_TOKENS = {
-     base:     'animate-pulse rounded-md bg-muted motion-reduce:animate-none',
-     text:     { sm: 'h-3 w-24', md: 'h-4 w-40', lg: 'h-5 w-56' },
-     card:     'h-24 w-full rounded-lg',
-     badge:    'h-6 w-16 rounded-full',
-     icon:     'h-8 w-8 rounded-full',
-     timeline: 'h-64 w-full',
-   } as const;
-
-2. Loading Skeleton 6종 (신규 4 + 기존 2 확장):
-   신규:
-   - HeroKPISkeleton.tsx:        Hero floating card + 4 secondary raised 그리드
-   - WorkflowTimelineSkeleton.tsx: 5/7 노드 dot + connector line
-   - NextStepPanelSkeleton.tsx:  icon + title + button 3-line
-   - CheckoutGroupCardSkeleton.tsx: 그룹 헤더 + row 3개
-   기존 확장:
-   - CheckoutListSkeleton.tsx:   HeroKPI skeleton 섹션 추가
-   - CheckoutDetailSkeleton.tsx: WorkflowTimeline skeleton 섹션 추가
-   모든 skeleton: animate-pulse + motion-reduce:animate-none, spinner 사용 금지
-
-3. inline Error 3 위치:
-   - HeroKPIError:         목록 페이지 KPI 영역, role="alert" + retry 버튼 (목록 정상 유지)
-   - NextStepPanelError:   상세 페이지, "다음 단계를 계산하지 못했습니다" + retry
-   - WorkflowTimelineError:접힌 상태, "진행 단계를 표시할 수 없습니다" + retry
-   모든 Error 컴포넌트: role="alert" + aria-live="assertive"
-
-4. Suspense 경계 세분화:
-   CheckoutDetailClient.tsx: statusGroup / contextGroup / actionBar 각각 Suspense
-   각 fallback: 해당 skeleton 컴포넌트
-
-SSOT 주의:
-- spinner 금지: animate-pulse + CHECKOUT_LOADING_SKELETON_TOKENS만 사용
-- hex 하드코딩 금지
-
-검증:
-- pnpm --filter frontend run tsc --noEmit
-- 네트워크 throttle → 각 Suspense 영역 skeleton 렌더 확인
-- HeroKPI API 에러 → HeroKPIError inline (목록 하단은 정상) 확인
-- grep 'spinner\|Spinner' apps/frontend/components/checkouts/ → 0 hit
-```
-
----
+> 아카이브: [archive-design.md](./archive-design.md) — 반출입 관리 PR-19
 
 ---
 
@@ -478,7 +428,7 @@ SSOT 주의:
 >
 > **Phase 8**: PR-12 ✅ + PR-14 ✅ 완료 → PR-16 (접근성)
 >
-> **Phase 9**: PR-5 ✅ + PR-7 ✅ + PR-14 ✅ 완료 → PR-19 (Loading skeleton + Error)
+> **Phase 9 (완료)**: PR-5 ✅ + PR-7 ✅ + PR-14 ✅ 완료 → PR-19 ✅ (Loading skeleton + Error)
 >
 > **Phase 10 (완료)**: PR-5 + PR-8 ✅ 완료 → PR-18 ✅ (Tooltip + Onboarding + Toast + Mobile)
 >
@@ -498,8 +448,8 @@ SSOT 주의:
 >
 > **Phase E (조건부)**: PR-5 + E2E 2세션 안정 후 → PR-23 (플래그 상시화 + 마무리)
 >
-> ※ **현재 완료**: PR-12 ✅ (목록 IA), PR-14 ✅ (WorkflowTimeline), PR-15 ✅ (모션 7종)
-> ※ **다음 블로킹 해소**: PR-13 (YourTurnBadge + 그룹 카드) — PR-12 완료로 진행 가능.
+> ※ **현재 완료**: PR-12 ✅ (목록 IA), PR-13 ✅ (YourTurnBadge), PR-14 ✅ (WorkflowTimeline), PR-15 ✅ (모션 7종), PR-18 ✅ (Toast/Mobile), PR-19 ✅ (Loading Skeleton + Error)
+> ※ **다음**: PR-16 (접근성) — PR-12 ✅ + PR-14 ✅ 완료로 진행 가능.
 > ※ PR-21 Phase D 조건 충족 (PR-12 완료).
 > ※ PR-22는 즉시 진행 가능 (frontend와 독립).
 > ※ PR-23은 트리거 조건(E2E 2세션 안정) 충족 전 대기 필수.
