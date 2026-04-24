@@ -1880,7 +1880,6 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(approveReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
-      await this.enforceScopeFromCheckout(checkout, req);
       const approveReturnPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'approve_return', approveReturnPermissions);
 
@@ -1900,6 +1899,9 @@ export class CheckoutsService extends VersionedBaseService {
           message: 'No equipment found for this checkout',
         });
       }
+
+      // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0, approve 패턴 통일)
+      this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
 
       // 팀별 권한 체크: approve/rejectReturn과 동일한 EMC↔RF 교차 금지 (트랜잭션 이전)
       const approverTeamId = req.user?.teamId;

@@ -554,10 +554,6 @@ describe('CheckoutsService', () => {
 
       // findOne: getOrSet가 직접 반환
       mockCacheService.getOrSet.mockResolvedValue({ ...mockReturnedCheckout, version: 1 });
-      // enforceScopeFromCheckout: 장비 사이트/팀 조회
-      mockDrizzle.limit.mockResolvedValueOnce([
-        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
-      ]);
       // db.select().from(checkoutItems).where(): approve 패턴 — equipmentId만 반환
       const originalThen = mockChain.then;
       mockChain.then = jest
@@ -575,6 +571,8 @@ describe('CheckoutsService', () => {
               id: '550e8400-e29b-41d4-a716-446655440001',
               name: 'Test Equipment',
               managementNumber: 'SUW-E0001',
+              site: 'suwon',
+              teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
               team: { classification: 'general_rf' },
             },
           ],
@@ -612,10 +610,6 @@ describe('CheckoutsService', () => {
       } as unknown as AuthenticatedRequest;
 
       mockCacheService.getOrSet.mockResolvedValue({ ...mockReturnedCheckout, version: 1 });
-      // enforceScopeFromCheckout
-      mockDrizzle.limit.mockResolvedValueOnce([
-        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
-      ]);
       const originalThen = mockChain.then;
       mockChain.then = jest
         .fn()
@@ -623,7 +617,7 @@ describe('CheckoutsService', () => {
           resolve([{ equipmentId: rfEquipmentId }])
         )
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
-      // equipmentService.findByIds → RF팀 장비 (NO_EQUIPMENT 통과 후 팀 체크에서 차단)
+      // equipmentService.findByIds → RF팀 장비 (enforceScopeFromData site 통과 후 팀 체크에서 차단)
       mockEquipmentService.findByIds.mockResolvedValueOnce(
         new Map([
           [
@@ -632,6 +626,8 @@ describe('CheckoutsService', () => {
               id: rfEquipmentId,
               name: 'RF Equipment',
               managementNumber: 'SUW-R0001',
+              site: 'suwon',
+              teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
               team: { classification: 'general_rf' },
             },
           ],
@@ -655,10 +651,6 @@ describe('CheckoutsService', () => {
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([notReturnedCheckout]); // findOne
-      // enforceScopeFromCheckout: 장비 사이트/팀 조회
-      mockDrizzle.limit.mockResolvedValueOnce([
-        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
-      ]);
 
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)
@@ -765,10 +757,6 @@ describe('CheckoutsService', () => {
 
       // findOne via getOrSet
       mockCacheService.getOrSet.mockResolvedValue({ ...returnedCheckout });
-      // enforceScopeFromCheckout: 장비 사이트/팀 조회
-      mockDrizzle.limit.mockResolvedValueOnce([
-        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
-      ]);
       // db.select().from(checkoutItems).where(): approve 패턴 — equipmentId만 반환
       mockChain.then = jest
         .fn()
@@ -785,6 +773,8 @@ describe('CheckoutsService', () => {
               id: '550e8400-e29b-41d4-a716-446655440001',
               name: 'Test Equipment',
               managementNumber: 'SUW-E0001',
+              site: 'suwon',
+              teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
               team: { classification: 'general_rf' },
             },
           ],
