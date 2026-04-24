@@ -10,6 +10,7 @@ import {
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type CheckoutStatus,
   type NextStepDescriptor,
 } from '@equipment-management/schemas';
 
@@ -59,7 +60,9 @@ export function CheckoutMiniProgress({
   const isLate = currentStatus === CSVal.OVERDUE || descriptor?.urgency === 'critical';
   const currentStepIndex =
     descriptor?.currentStepIndex ??
-    (isFullyComplete ? stepCount : (CHECKOUT_MINI_PROGRESS.statusToStepIndex[currentStatus] ?? 0));
+    (isFullyComplete
+      ? stepCount
+      : (CHECKOUT_MINI_PROGRESS.statusToStepIndex[currentStatus as CheckoutStatus] ?? 0));
 
   const currentStepNumber = isFullyComplete ? stepCount : currentStepIndex + 1;
   const stepLabelKey = CHECKOUT_STEP_LABELS[currentStatus];
