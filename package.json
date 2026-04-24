@@ -57,9 +57,9 @@
     "lint-staged": "^16.4.0",
     "npm-check-updates": "^20.0.0",
     "only-allow": "^1.2.2",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "semver": "^7.7.4",
-    "turbo": "^2.9.4",
+    "turbo": "^2.9.6",
     "type-coverage": "^2.28.0"
   },
   "pnpm": {
