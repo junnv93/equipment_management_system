@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), 280 table test 존재(Step 32). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), 280 table test 존재(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -40,6 +40,7 @@ schemas ← shared-constants ← schemas  (순환!)
 | File | Purpose |
 |---|---|
 | `packages/schemas/src/fsm/checkout-fsm.ts` | FSM SSOT — TransitionRule, 상태 전이 테이블, 공개 API |
+| `packages/schemas/src/fsm/rental-phase.ts` | RentalPhase SSOT — RENTAL_STATUS_TO_PHASE, getRentalPhase, getPhaseIndex, @ts-expect-error negative test (Sprint 1.2 신규) |
 | `packages/schemas/src/fsm/index.ts` | barrel 재내보내기 |
 | `packages/schemas/src/checkout.ts` | `nextStep` 필드 포함 Checkout 응답 스키마 |
 | `packages/schemas/src/__tests__/checkout-fsm.test.ts` | FSM 불변식 + 상태 전이 단위 테스트 (55건) |
@@ -893,3 +894,39 @@ grep -n "satisfies Record<TableKey, TableRow>" \
 
 **PASS:** 두 파일 모두 EXISTS + `satisfies Record<TableKey, TableRow>` 컴파일 가드 존재.
 **FAIL:** 파일 없음 → Sprint 1.1 구현 누락. `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가.
+
+### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
+
+Sprint 1.2에서 신규 도입된 `rental-phase.ts`의 두 가지 컴파일 타임 안전장치 확인:
+1. `RENTAL_STATUS_TO_PHASE satisfies Record<CheckoutStatus, RentalPhase | null>` — 새 CheckoutStatus 추가 시 자동 컴파일 에러
+2. `@ts-expect-error` 네거티브 테스트 — 불완전 매핑이 실제로 타입 에러를 발생시킴을 증명
+
+```bash
+# 파일 존재 확인
+ls packages/schemas/src/fsm/rental-phase.ts 2>/dev/null \
+  && echo "EXISTS" || echo "MISSING"
+# 결과: EXISTS (PASS)
+
+# satisfies Record<CheckoutStatus, RentalPhase | null> 컴파일 가드 확인
+grep -n "satisfies Record<CheckoutStatus, RentalPhase | null>" \
+  packages/schemas/src/fsm/rental-phase.ts
+# 결과: 1건 (PASS)
+
+# @ts-expect-error 네거티브 테스트 존재 확인
+grep -n "ts-expect-error" \
+  packages/schemas/src/fsm/rental-phase.ts
+# 결과: 1건 이상 (PASS)
+
+# circular dep 방지 — shared-constants import 없어야 함
+grep -n "from '@equipment-management/shared-constants'" \
+  packages/schemas/src/fsm/rental-phase.ts
+# 결과: 0건 (PASS)
+
+# rental-phase.ts가 checkout-fsm.ts에서 re-export되는지 확인
+grep -n "rental-phase" \
+  packages/schemas/src/fsm/checkout-fsm.ts | head -5
+# 결과: import + re-export 라인 포함 (PASS)
+```
+
+**PASS:** rental-phase.ts 존재 + satisfies 가드 1건 + @ts-expect-error 1건 이상 + shared-constants import 0건 + checkout-fsm.ts re-export 존재.
+**FAIL:** 파일 없음 → Sprint 1.2 구현 누락. satisfies/ts-expect-error 없음 → CheckoutStatus 추가 시 RENTAL_STATUS_TO_PHASE 누락 컴파일 에러 미발생. circular dep 발견 → packages/schemas 빌드 실패.
