@@ -90,6 +90,15 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
+  // rental 2-step 승인: 장비 상태 미변경 → invalidateEquipmentDetail 불필요
+  [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+  },
+  [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+  },
   [NOTIFICATION_EVENTS.CHECKOUT_STARTED]: {
     actions: [
       {
