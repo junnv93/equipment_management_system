@@ -69,6 +69,7 @@ import {
 import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
+import { HeroKPIError } from '@/components/checkouts/HeroKPIError';
 
 // ✅ 코드 분할 (Next.js dynamic import)
 const OutboundCheckoutsTab = dynamic(() => import('./tabs/OutboundCheckoutsTab'), {
@@ -156,7 +157,11 @@ export default function CheckoutsContent({
   });
 
   // 통계 요약
-  const { data: liveSummary } = useQuery({
+  const {
+    data: liveSummary,
+    isError: isSummaryError,
+    refetch: refetchSummary,
+  } = useQuery({
     queryKey: queryKeys.checkouts.summary({ direction: 'outbound', teamId }),
     queryFn: async (): Promise<CheckoutSummary> => {
       const result = await checkoutApi.getCheckouts({
@@ -545,6 +550,8 @@ export default function CheckoutsContent({
 
         {/* ── 탭 패널 (WCAG: role="tabpanel" + aria-labelledby) ── */}
         <TabsContent value="outbound" className="mt-0">
+          {/* summary 쿼리 에러 시 KPI 영역 독립 에러 — 목록은 탭 내부에서 별도 처리 */}
+          {isSummaryError && <HeroKPIError onRetry={() => void refetchSummary()} />}
           <Suspense fallback={<CheckoutListSkeleton />}>
             <OutboundCheckoutsTab
               teamId={teamId}

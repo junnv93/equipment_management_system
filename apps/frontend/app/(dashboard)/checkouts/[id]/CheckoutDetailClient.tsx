@@ -80,6 +80,9 @@ import {
   WorkflowTimeline,
   WorkflowTimelineSkeleton,
 } from '@/components/checkouts/WorkflowTimeline';
+import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineError';
+import { NextStepPanelError } from '@/components/checkouts/NextStepPanelError';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import { isNextStepPanelEnabled } from '@/lib/features/checkout-flags';
 
@@ -701,12 +704,14 @@ export default function CheckoutDetailClient({
 
       {/* 다음 단계 안내 패널 (Feature Flag: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL) */}
       {isNextStepPanelEnabled() && (
-        <NextStepPanel
-          variant="floating"
-          descriptor={nextStepDescriptor}
-          onActionClick={handleNextStepAction}
-          isPending={isAnyNextStepMutationPending}
-        />
+        <ErrorBoundary fallback={(_, reset) => <NextStepPanelError onRetry={reset} />}>
+          <NextStepPanel
+            variant="floating"
+            descriptor={nextStepDescriptor}
+            onActionClick={handleNextStepAction}
+            isPending={isAnyNextStepMutationPending}
+          />
+        </ErrorBoundary>
       )}
 
       {/* 상태 진행 표시 */}
@@ -736,18 +741,20 @@ export default function CheckoutDetailClient({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Suspense
-              fallback={
-                <WorkflowTimelineSkeleton
-                  count={computeTotalSteps(checkout.purpose as CheckoutPurpose)}
+            <ErrorBoundary fallback={(_, reset) => <WorkflowTimelineError onRetry={reset} />}>
+              <Suspense
+                fallback={
+                  <WorkflowTimelineSkeleton
+                    count={computeTotalSteps(checkout.purpose as CheckoutPurpose)}
+                  />
+                }
+              >
+                <WorkflowTimeline
+                  status={checkout.status}
+                  purpose={checkout.purpose as CheckoutPurpose}
                 />
-              }
-            >
-              <WorkflowTimeline
-                status={checkout.status}
-                purpose={checkout.purpose as CheckoutPurpose}
-              />
-            </Suspense>
+              </Suspense>
+            </ErrorBoundary>
           </CardContent>
         </Card>
       </div>
