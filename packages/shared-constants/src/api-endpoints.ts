@@ -117,6 +117,10 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/checkouts/${id}`,
     APPROVE: (id: string) => `/api/checkouts/${id}/approve`,
     REJECT: (id: string) => `/api/checkouts/${id}/reject`,
+    /** 대여 1차 승인 (차용 팀 TM) */
+    BORROWER_APPROVE: (id: string) => `/api/checkouts/${id}/borrower-approve`,
+    /** 대여 1차 반려 (차용 팀 TM) */
+    BORROWER_REJECT: (id: string) => `/api/checkouts/${id}/borrower-reject`,
     START: (id: string) => `/api/checkouts/${id}/start`,
     COMPLETE: (id: string) => `/api/checkouts/${id}/complete`,
     CANCEL: (id: string) => `/api/checkouts/${id}/cancel`,

@@ -57,6 +57,8 @@ export const AUDIT_ACTION_VALUES = [
   'resubmit', // 재제출
   'review', // 검토 (워크플로우 전이)
   'read', // 민감 조회 (QR 모바일 랜딩, 단일 리소스 조회 등 책임 추적 필요 시)
+  'borrower_approve', // 대여 1차 승인 (차용 팀 TM)
+  'borrower_reject', // 대여 1차 반려 (차용 팀 TM)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);

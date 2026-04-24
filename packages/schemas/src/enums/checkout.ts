@@ -16,6 +16,7 @@ import { z } from 'zod';
 // 반출 상태값 배열 (Zod enum과 동기화)
 export const CHECKOUT_STATUS_VALUES = [
   'pending', // 반출 신청 (승인 대기)
+  'borrower_approved', // 대여 1차 승인됨 (차용 팀 TM 승인 완료, lender TM 승인 대기) — rental 전용
   'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
   'checked_out', // 반출 중 (교정/수리)
@@ -78,3 +79,16 @@ export type CheckoutType = z.infer<typeof CheckoutTypeEnum>;
 export const CHECKOUT_DIRECTION_VALUES = ['outbound', 'inbound'] as const;
 export const CheckoutDirectionEnum = z.enum(CHECKOUT_DIRECTION_VALUES);
 export type CheckoutDirection = z.infer<typeof CheckoutDirectionEnum>;
+
+// ============================================================================
+// 양식 출력 관점 (UL-QP-18-06) — rental 전용 2장 분리 출력
+// ============================================================================
+
+/**
+ * 반출입 확인서 출력 관점
+ * - lender: 빌려주는 팀 관점 (반출→반입 순서)
+ * - borrower: 빌리는 팀 관점 (반입→반출 순서)
+ */
+export const CHECKOUT_FORM_PERSPECTIVE_VALUES = ['lender', 'borrower'] as const;
+export const CheckoutFormPerspectiveEnum = z.enum(CHECKOUT_FORM_PERSPECTIVE_VALUES);
+export type CheckoutFormPerspective = z.infer<typeof CheckoutFormPerspectiveEnum>;

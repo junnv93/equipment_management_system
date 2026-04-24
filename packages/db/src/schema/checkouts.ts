@@ -82,6 +82,13 @@ export const checkouts = pgTable(
     lenderConfirmedAt: timestamp('lender_confirmed_at'), // 빌려준 측 확인 일시
     lenderConfirmNotes: text('lender_confirm_notes'), // 빌려준 측 확인 메모
 
+    // 대여 1차 승인 정보 (rental 전용, cal/repair는 NULL 유지)
+    borrowerApproverId: uuid('borrower_approver_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }), // 차용 팀 기술책임자 (1차 승인자)
+    borrowerApprovedAt: timestamp('borrower_approved_at'), // 1차 승인 일시
+    borrowerRejectionReason: text('borrower_rejection_reason'), // 1차 반려 사유
+
     // Optimistic locking version
     version: integer('version').notNull().default(1),
 
@@ -113,6 +120,8 @@ export const checkouts = pgTable(
     returnApprovedByIdx: index('checkouts_return_approved_by_idx').on(table.returnApprovedBy),
     // FK 인덱스: 시험소간 대여 빌려준 측 확인자별 조회
     lenderConfirmedByIdx: index('checkouts_lender_confirmed_by_idx').on(table.lenderConfirmedBy),
+    // FK 인덱스: 대여 1차 승인자별 조회 (rental borrower TM)
+    borrowerApproverIdx: index('checkouts_borrower_approver_id_idx').on(table.borrowerApproverId),
   })
 );
 
@@ -175,6 +184,11 @@ export const checkoutsRelations = relations(checkouts, ({ one, many }) => ({
     fields: [checkouts.lenderConfirmedBy],
     references: [users.id],
     relationName: 'checkout_lender_confirmer',
+  }),
+  borrowerApprover: one(users, {
+    fields: [checkouts.borrowerApproverId],
+    references: [users.id],
+    relationName: 'checkout_borrower_approver',
   }),
   items: many(checkoutItems),
 }));

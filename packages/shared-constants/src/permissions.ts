@@ -58,6 +58,10 @@ export enum Permission {
   DELETE_CHECKOUT = 'delete:checkout',
   APPROVE_CHECKOUT = 'approve:checkout',
   REJECT_CHECKOUT = 'reject:checkout',
+  /** 대여(rental) 1차 승인 — 차용 팀 기술책임자 전용 */
+  BORROWER_APPROVE_CHECKOUT = 'borrower_approve:checkout',
+  /** 대여(rental) 1차 반려 — 차용 팀 기술책임자 전용 */
+  BORROWER_REJECT_CHECKOUT = 'borrower_reject:checkout',
   START_CHECKOUT = 'start:checkout',
   COMPLETE_CHECKOUT = 'complete:checkout',
   CANCEL_CHECKOUT = 'cancel:checkout',
@@ -237,6 +241,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.DELETE_CHECKOUT]: '반출 삭제',
   [Permission.APPROVE_CHECKOUT]: '반출 승인',
   [Permission.REJECT_CHECKOUT]: '반출 반려',
+  [Permission.BORROWER_APPROVE_CHECKOUT]: '대여 1차 승인 (차용 팀)',
+  [Permission.BORROWER_REJECT_CHECKOUT]: '대여 1차 반려 (차용 팀)',
   [Permission.START_CHECKOUT]: '반출 시작',
   [Permission.COMPLETE_CHECKOUT]: '반입 완료',
   [Permission.CANCEL_CHECKOUT]: '반출 취소',
@@ -354,6 +360,8 @@ export const PERMISSION_LABELS_EN: Record<Permission, string> = {
   [Permission.DELETE_CHECKOUT]: 'Delete Checkout',
   [Permission.APPROVE_CHECKOUT]: 'Approve Checkout',
   [Permission.REJECT_CHECKOUT]: 'Reject Checkout',
+  [Permission.BORROWER_APPROVE_CHECKOUT]: 'Borrower Approve Checkout (Rental 1st)',
+  [Permission.BORROWER_REJECT_CHECKOUT]: 'Borrower Reject Checkout (Rental 1st)',
   [Permission.START_CHECKOUT]: 'Start Checkout',
   [Permission.COMPLETE_CHECKOUT]: 'Complete Return',
   [Permission.CANCEL_CHECKOUT]: 'Cancel Checkout',

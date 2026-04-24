@@ -103,6 +103,7 @@ export const ResolutionTypeValues = {
  */
 export const CheckoutStatusValues = {
   PENDING: 'pending',
+  BORROWER_APPROVED: 'borrower_approved',
   APPROVED: 'approved',
   REJECTED: 'rejected',
   CHECKED_OUT: 'checked_out',
@@ -287,6 +288,13 @@ export const NotificationTypeValues = {
   CHECKOUT_RETURNED: 'checkout_returned',
   CHECKOUT_RETURN_APPROVED: 'checkout_return_approved',
   CHECKOUT_OVERDUE: 'checkout_overdue',
+  // 대여 단계별 알림
+  CHECKOUT_BORROWER_APPROVED: 'checkout_borrower_approved',
+  CHECKOUT_BORROWER_REJECTED: 'checkout_borrower_rejected',
+  CHECKOUT_LENDER_CHECKOUT: 'checkout_lender_checkout',
+  CHECKOUT_BORROWER_RECEIVED: 'checkout_borrower_received',
+  CHECKOUT_BORROWER_RETURNED: 'checkout_borrower_returned',
+  CHECKOUT_LENDER_RECEIVED: 'checkout_lender_received',
   CALIBRATION_CREATED: 'calibration_created',
   CALIBRATION_APPROVED: 'calibration_approved',
   CALIBRATION_REJECTED: 'calibration_rejected',

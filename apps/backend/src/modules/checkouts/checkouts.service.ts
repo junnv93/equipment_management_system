@@ -193,6 +193,8 @@ export class CheckoutsService extends VersionedBaseService {
     submit_return: 'return',
     approve_return: 'approve',
     reject_return: 'reject',
+    borrower_approve: 'approve',
+    borrower_reject: 'reject',
   };
 
   private assertFsmAction(

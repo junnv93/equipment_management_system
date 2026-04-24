@@ -21,7 +21,9 @@ export type CheckoutAction =
   | 'lender_receive'
   | 'submit_return'
   | 'approve_return'
-  | 'reject_return';
+  | 'reject_return'
+  | 'borrower_approve'
+  | 'borrower_reject';
 
 export type NextActor =
   | 'requester'
@@ -44,7 +46,9 @@ export type CheckoutPermissionKey =
   | 'reject:checkout'
   | 'start:checkout'
   | 'complete:checkout'
-  | 'cancel:checkout';
+  | 'cancel:checkout'
+  | 'borrower_approve:checkout'
+  | 'borrower_reject:checkout';
 
 export interface TransitionRule {
   readonly from: CheckoutStatus;
@@ -98,6 +102,8 @@ export const NextStepDescriptorSchema: z.ZodType<NextStepDescriptor> = z.object(
       'submit_return',
       'approve_return',
       'reject_return',
+      'borrower_approve',
+      'borrower_reject',
     ])
     .nullable(),
   nextActor: z.enum(['requester', 'approver', 'logistics', 'lender', 'borrower', 'system', 'none']),
@@ -121,9 +127,31 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
   // ── pending ──────────────────────────────────────────────────────────────
   {
     from: 'pending',
+    action: 'borrower_approve',
+    to: 'borrower_approved',
+    purposes: RENTAL,
+    requires: 'borrower_approve:checkout',
+    nextActor: 'approver',
+    labelKey: 'borrower_approve',
+    hintKey: 'pendingBorrowerApprove',
+    auditEventSuffix: 'borrower_approved',
+  },
+  {
+    from: 'pending',
+    action: 'borrower_reject',
+    to: 'rejected',
+    purposes: RENTAL,
+    requires: 'borrower_reject:checkout',
+    nextActor: 'none',
+    labelKey: 'borrower_reject',
+    hintKey: 'waitingApprover',
+    auditEventSuffix: 'borrower_rejected',
+  },
+  {
+    from: 'pending',
     action: 'approve',
     to: 'approved',
-    purposes: ALL,
+    purposes: CAL_REPAIR,
     requires: 'approve:checkout',
     nextActor: 'logistics',
     labelKey: 'approve',
@@ -134,7 +162,7 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     from: 'pending',
     action: 'reject',
     to: 'rejected',
-    purposes: ALL,
+    purposes: CAL_REPAIR,
     requires: 'reject:checkout',
     nextActor: 'none',
     labelKey: 'reject',
@@ -146,6 +174,40 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     action: 'cancel',
     to: 'canceled',
     purposes: ALL,
+    requires: 'cancel:checkout',
+    nextActor: 'none',
+    labelKey: 'cancel',
+    hintKey: 'pendingCancel',
+    auditEventSuffix: 'canceled',
+  },
+  // ── borrower_approved ─────────────────────────────────────────────────────
+  {
+    from: 'borrower_approved',
+    action: 'approve',
+    to: 'approved',
+    purposes: RENTAL,
+    requires: 'approve:checkout',
+    nextActor: 'logistics',
+    labelKey: 'approve',
+    hintKey: 'pendingApprove',
+    auditEventSuffix: 'approved',
+  },
+  {
+    from: 'borrower_approved',
+    action: 'reject',
+    to: 'rejected',
+    purposes: RENTAL,
+    requires: 'reject:checkout',
+    nextActor: 'none',
+    labelKey: 'reject',
+    hintKey: 'waitingApprover',
+    auditEventSuffix: 'rejected',
+  },
+  {
+    from: 'borrower_approved',
+    action: 'cancel',
+    to: 'canceled',
+    purposes: RENTAL,
     requires: 'cancel:checkout',
     nextActor: 'none',
     labelKey: 'cancel',
@@ -321,9 +383,10 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
     }
   }
 
-  // Rental path traversability
+  // Rental path traversability (2-step approval: pending → borrower_approved → approved)
   const rentalPath: CheckoutStatus[] = [
     'pending',
+    'borrower_approved',
     'approved',
     'lender_checked',
     'borrower_received',
@@ -393,7 +456,7 @@ export function getTransitionsFor(
 }
 
 export function computeTotalSteps(purpose: CheckoutPurpose): number {
-  if (purpose === 'rental') return 7;
+  if (purpose === 'rental') return 8;
   return 5;
 }
 
@@ -401,15 +464,16 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
   if (purpose === 'rental') {
     const map: Partial<Record<CheckoutStatus, number>> = {
       pending: 1,
-      approved: 2,
-      lender_checked: 3,
-      borrower_received: 4,
-      in_use: 5,
-      overdue: 5,
-      borrower_returned: 6,
-      lender_received: 7,
-      returned: 7,
-      return_approved: 7,
+      borrower_approved: 2,
+      approved: 3,
+      lender_checked: 4,
+      borrower_received: 5,
+      in_use: 6,
+      overdue: 6,
+      borrower_returned: 7,
+      lender_received: 8,
+      returned: 8,
+      return_approved: 8,
       rejected: 1,
       canceled: 1,
     };

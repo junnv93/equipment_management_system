@@ -316,6 +316,13 @@
       "when": 1745798400000,
       "tag": "0044_drop_technical_manager_column",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1745884800000,
+      "tag": "0045_add_borrower_approval",
+      "breakpoints": true
     }
   ]
 }

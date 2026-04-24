@@ -19,6 +19,7 @@
   },
   "status": {
     "pending": "대기 중",
+    "borrower_approved": "1차 승인됨",
     "approved": "승인됨",
     "rejected": "반려됨",
     "checked_out": "반출 중",
@@ -68,7 +69,15 @@
     "processing": "처리 중...",
     "bulkApprove": "전체 승인",
     "viewDetail": "상세 보기",
-    "exportForm": "양식 내보내기"
+    "exportForm": "양식 내보내기",
+    "exportFormLender": "대여측 양식",
+    "exportFormBorrower": "차용측 양식",
+    "borrowerApprove": "1차 승인",
+    "borrowerReject": "1차 반려",
+    "lenderConfirm": "대여자 확인",
+    "borrowerReceive": "수령 확인",
+    "borrowerReturn": "반납 확인",
+    "lenderReceive": "반입 검수"
   },
   "empty": {
     "noData": {
@@ -78,12 +87,20 @@
     "filtered": {
       "title": "검색 조건에 맞는 반출이 없습니다",
       "description": "필터를 변경하거나 초기화하여 다시 조회해보세요."
+    },
+    "celebration": {
+      "title": "기한 초과 건 없음",
+      "description": "모든 반출 건이 기한 내 반입 완료되었습니다."
     }
   },
   "toasts": {
     "exportFormError": "반·출입 확인서 내보내기에 실패했습니다.",
     "approveSuccess": "반출 요청이 승인되었습니다.",
     "approveError": "승인 처리 중 오류가 발생했습니다.",
+    "borrowerApproveSuccess": "1차 승인이 완료되었습니다. 대여측 기술책임자 승인 대기 중입니다.",
+    "borrowerApproveError": "1차 승인 처리 중 오류가 발생했습니다.",
+    "borrowerRejectSuccess": "대여 요청이 1차 반려되었습니다.",
+    "borrowerRejectError": "1차 반려 처리 중 오류가 발생했습니다.",
     "versionConflict": "다른 사용자가 이미 처리했습니다",
     "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요.",
     "rejectSuccess": "반출 요청이 반려되었습니다.",
@@ -335,6 +352,7 @@
     "requestDateLabel": "신청일",
     "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료",
     "progressLabelWithStep": "{stepName}, {total}단계 중 {current}단계",
+    "progressLabelOverdue": "기한 초과 — {stepName} ({current}/{total})",
     "overdueGroupLabel": "기한 초과",
     "expectedReturn": "반입 예정",
     "overdueBy": "{days}일 초과",
@@ -727,5 +745,30 @@
       "borrower_return": "장비를 반납하기 전에 현재 상태를 확인하고 기록해주세요. 인수 시 상태와 비교됩니다.",
       "lender_return": "반납받은 장비의 상태를 확인해주세요. 반출 전 상태와 비교하여 변경 사항이 있다면 기록해주세요."
     }
+  },
+  "handoverQR": {
+    "purposeTitle": "인수인계 QR 사용 안내",
+    "purposeDescription": "대여 인계는 양측이 같은 자리에서 대면으로 진행되어야 합니다. 차용자가 이 QR을 스캔하면 자동으로 수령 확인 화면으로 이동합니다.",
+    "ttlNotice": "이 QR은 {minutes}분 이내 1회만 사용 가능합니다.",
+    "scanInstruction": "QR 스캔 전 차용자가 시스템에 로그인되어 있어야 합니다.",
+    "expired": "QR 코드가 만료되었습니다. 새로 발급해주세요.",
+    "expiresIn": "{seconds}초 후 만료",
+    "regenerate": "QR 재발급"
+  },
+  "borrowerApproval": {
+    "sectionTitle": "1차 승인 (차용 팀)",
+    "approver": "1차 승인자",
+    "approvedAt": "1차 승인일",
+    "rejectionReason": "반려 사유",
+    "rejectDialogTitle": "대여 요청 1차 반려",
+    "rejectDialogDescription": "반려 사유를 입력해주세요. 신청자에게 반려 사유가 전달됩니다.",
+    "rejectReasonPlaceholder": "반려 사유를 입력하세요..."
+  },
+  "formPerspective": {
+    "lender": "대여측 양식",
+    "borrower": "차용측 양식",
+    "downloadBoth": "양식 모두 다운로드",
+    "lenderDescription": "빌려주는 팀 작성용 (반출→반입 순서)",
+    "borrowerDescription": "빌리는 팀 작성용 (반입→반출 순서)"
   }
 }

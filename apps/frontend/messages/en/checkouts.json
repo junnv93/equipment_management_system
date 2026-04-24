@@ -19,6 +19,7 @@
   },
   "status": {
     "pending": "Pending",
+    "borrower_approved": "Borrower Approved",
     "approved": "Approved",
     "rejected": "Rejected",
     "checked_out": "Checked Out",
@@ -67,7 +68,15 @@
     "processing": "Processing...",
     "bulkApprove": "Approve All",
     "viewDetail": "View Detail",
-    "exportForm": "Export Form"
+    "exportForm": "Export Form",
+    "exportFormLender": "Lender Form",
+    "exportFormBorrower": "Borrower Form",
+    "borrowerApprove": "1st Approve",
+    "borrowerReject": "1st Reject",
+    "lenderConfirm": "Lender Confirm",
+    "borrowerReceive": "Receive Confirm",
+    "borrowerReturn": "Return Confirm",
+    "lenderReceive": "Inbound Inspection"
   },
   "empty": {
     "noData": {
@@ -77,9 +86,17 @@
     "filtered": {
       "title": "No results match your filters",
       "description": "Try changing your filters or resetting them to see all records."
+    },
+    "celebration": {
+      "title": "No overdue checkouts",
+      "description": "All checkouts have been returned within their due dates."
     }
   },
   "toasts": {
+    "borrowerApproveSuccess": "1st approval completed. Awaiting lender team approval.",
+    "borrowerApproveError": "Failed to process 1st approval.",
+    "borrowerRejectSuccess": "Rental request has been rejected (1st).",
+    "borrowerRejectError": "Failed to process 1st rejection.",
     "exportFormError": "Failed to export checkout in/out confirmation form.",
     "approveSuccess": "Checkout request approved.",
     "approveError": "An error occurred during approval.",
@@ -332,6 +349,7 @@
     "requestDateLabel": "Request Date",
     "progressLabel": "Checkout progress: {current} of {total} steps completed",
     "progressLabelWithStep": "{stepName}, step {current} of {total}",
+    "progressLabelOverdue": "Overdue — {stepName} ({current}/{total})",
     "overdueGroupLabel": "Overdue",
     "expectedReturn": "Expected return",
     "overdueBy": "{days}d overdue",
@@ -724,5 +742,30 @@
       "borrower_return": "Check and record the current equipment condition before return. It will be compared with the condition at receipt.",
       "lender_return": "Check the condition of the returned equipment. Record any changes compared to the pre-checkout condition."
     }
+  },
+  "handoverQR": {
+    "purposeTitle": "Handover QR Usage Guide",
+    "purposeDescription": "Rental handover must be conducted in-person. When the borrower scans this QR code, they will be automatically directed to the receipt confirmation screen.",
+    "ttlNotice": "This QR code can only be used once within {minutes} minutes.",
+    "scanInstruction": "The borrower must be logged into the system before scanning the QR code.",
+    "expired": "QR code has expired. Please generate a new one.",
+    "expiresIn": "Expires in {seconds}s",
+    "regenerate": "Regenerate QR"
+  },
+  "borrowerApproval": {
+    "sectionTitle": "1st Approval (Borrower Team)",
+    "approver": "1st Approver",
+    "approvedAt": "1st Approval Date",
+    "rejectionReason": "Rejection Reason",
+    "rejectDialogTitle": "Reject Rental Request (1st)",
+    "rejectDialogDescription": "Please enter the rejection reason. The applicant will be notified.",
+    "rejectReasonPlaceholder": "Enter rejection reason..."
+  },
+  "formPerspective": {
+    "lender": "Lender Form",
+    "borrower": "Borrower Form",
+    "downloadBoth": "Download Both Forms",
+    "lenderDescription": "For lending team (Checkout → Return order)",
+    "borrowerDescription": "For borrowing team (Receipt → Return order)"
   }
 }

@@ -78,6 +78,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   resubmit: '재제출',
   review: '검토',
   read: '조회',
+  borrower_approve: '대여 1차 승인',
+  borrower_reject: '대여 1차 반려',
 };
 
 /**
@@ -113,6 +115,8 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   resubmit: 'bg-blue-100 text-blue-800',
   review: 'bg-green-100 text-green-800',
   read: 'bg-gray-100 text-gray-800',
+  borrower_approve: 'bg-green-100 text-green-800',
+  borrower_reject: 'bg-orange-100 text-orange-800',
 };
 
 // ============================================================================

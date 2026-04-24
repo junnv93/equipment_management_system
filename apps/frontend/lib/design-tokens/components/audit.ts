@@ -59,6 +59,8 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   resubmit: getSemanticBadgeClasses('info'),
   review: getSemanticBadgeClasses('ok'),
   read: getSemanticBadgeClasses('neutral'),
+  borrower_approve: getSemanticBadgeClasses('purple'),
+  borrower_reject: getSemanticBadgeClasses('warning'),
 };
 
 /**

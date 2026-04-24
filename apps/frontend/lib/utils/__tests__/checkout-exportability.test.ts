@@ -23,19 +23,24 @@ describe('isCheckoutExportable()', () => {
     expect(isCheckoutExportable(status)).toBe(true);
   });
 
-  it('전체 상태 매트릭스: pending/rejected/canceled만 false', () => {
+  it('전체 상태 매트릭스: pending/borrower_approved/rejected/canceled만 false', () => {
     const results = CHECKOUT_STATUS_VALUES.map((s) => ({
       status: s,
       exportable: isCheckoutExportable(s as CheckoutStatus),
     }));
     const nonExportable = results.filter((r) => !r.exportable).map((r) => r.status);
-    expect(nonExportable).toEqual(['pending', 'rejected', 'canceled']);
+    expect(nonExportable).toEqual(['pending', 'borrower_approved', 'rejected', 'canceled']);
   });
 });
 
 describe('NON_EXPORTABLE_CHECKOUT_STATUSES', () => {
-  it('pending, rejected, canceled 포함', () => {
-    expect(NON_EXPORTABLE_CHECKOUT_STATUSES).toEqual(['pending', 'rejected', 'canceled']);
+  it('pending, borrower_approved, rejected, canceled 포함', () => {
+    expect(NON_EXPORTABLE_CHECKOUT_STATUSES).toEqual([
+      'pending',
+      'borrower_approved',
+      'rejected',
+      'canceled',
+    ]);
   });
 
   it('CheckoutStatus 중 10개는 제외되지 않음', () => {

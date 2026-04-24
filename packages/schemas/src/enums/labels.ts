@@ -81,6 +81,7 @@ export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
  */
 export const CHECKOUT_STATUS_FILTER_OPTIONS: CheckoutStatus[] = [
   'pending',
+  'borrower_approved',
   'approved',
   'checked_out',
   'returned',
@@ -105,6 +106,7 @@ export const CHECKOUT_STATUS_FILTER_OPTIONS: CheckoutStatus[] = [
 export const CHECKOUT_STATUS_GROUPS = {
   /** 진행 중 (반출~반입 전 모든 단계) */
   in_progress: [
+    'borrower_approved',
     'checked_out',
     'lender_checked',
     'borrower_received',
@@ -166,6 +168,7 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
  */
 export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
   pending: '승인 대기',
+  borrower_approved: '1차 승인됨 (lender 승인 대기)',
   approved: '승인됨',
   rejected: '거절됨',
   checked_out: '반출 중',

@@ -107,8 +107,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_CHECKOUT,
     Permission.UPDATE_CHECKOUT, // 반출 수정
     Permission.DELETE_CHECKOUT, // 반출 삭제
-    Permission.APPROVE_CHECKOUT, // 반출 승인
+    Permission.APPROVE_CHECKOUT, // 반출 승인 (lender TM 2차)
     Permission.REJECT_CHECKOUT, // 반출 반려
+    Permission.BORROWER_APPROVE_CHECKOUT, // 대여 1차 승인 (borrower TM)
+    Permission.BORROWER_REJECT_CHECKOUT, // 대여 1차 반려 (borrower TM)
     Permission.START_CHECKOUT, // 반출 시작
     Permission.COMPLETE_CHECKOUT, // 반입 처리
     Permission.CANCEL_CHECKOUT, // 반출 취소

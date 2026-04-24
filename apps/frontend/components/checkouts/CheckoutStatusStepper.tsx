@@ -3,14 +3,25 @@
 import { CheckCircle2, Circle, Clock, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { CheckoutStatus, CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
-import { CHECKOUT_STEPPER_TOKENS, CHECKOUT_STEP_LABELS } from '@/lib/design-tokens';
+import {
+  CheckoutStatus,
+  CheckoutStatusValues as CSVal,
+  type CheckoutPurpose,
+} from '@equipment-management/schemas';
+import {
+  CHECKOUT_STEPPER_TOKENS,
+  CHECKOUT_STEP_LABELS,
+  ELEVATION_TOKENS,
+} from '@/lib/design-tokens';
+import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 
 interface CheckoutStatusStepperProps {
   currentStatus: CheckoutStatus;
   checkoutType: 'calibration' | 'repair' | 'rental';
-  /** FSM descriptor 기반 다음 단계 인덱스 (0-based). 제공 시 next 노드 하이라이트. */
+  /** FSM descriptor 기반 다음 단계 인덱스 (0-based). 제공 시 next 노드 하이라이트. 하위 호환 유지. */
   nextStepIndex?: number;
+  /** 반납 기한 (ISO string). overdue 판단에 사용. */
+  dueAt?: string | null;
 }
 
 /**
@@ -65,8 +76,19 @@ export default function CheckoutStatusStepper({
   currentStatus,
   checkoutType,
   nextStepIndex,
+  dueAt,
 }: CheckoutStatusStepperProps) {
   const t = useTranslations('checkouts');
+
+  // hook은 조건부 호출 금지 — 컴포넌트 최상위에서 항상 호출
+  const descriptor = useCheckoutNextStep({
+    status: currentStatus,
+    purpose: checkoutType as CheckoutPurpose,
+    dueAt,
+  });
+  // 외부 prop이 명시적으로 제공되면 우선, 없으면 hook 계산값 사용
+  const resolvedNextStepIndex = nextStepIndex ?? descriptor.currentStepIndex;
+
   const steps = STEP_STATUSES[checkoutType] || STEP_STATUSES.calibration;
   const currentIndex = steps.indexOf(currentStatus);
   const isSpecialStatus = SPECIAL_STATUSES.includes(currentStatus);
@@ -105,14 +127,21 @@ export default function CheckoutStatusStepper({
   }
 
   return (
-    <div className="w-full" role="group" aria-label={t('stepper.ariaLabel')}>
+    <div
+      className={cn('w-full', ELEVATION_TOKENS.surface.raised)}
+      role="group"
+      aria-label={t('stepper.ariaLabel')}
+    >
       {/* 모바일: 세로 레이아웃 */}
       <div className="md:hidden space-y-4">
         {steps.map((status, index) => {
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
           const isNext =
-            nextStepIndex !== undefined && index === nextStepIndex && !isCurrent && !isCompleted;
+            resolvedNextStepIndex !== undefined &&
+            index === resolvedNextStepIndex &&
+            !isCurrent &&
+            !isCompleted;
           const isPending = !isCompleted && !isCurrent && !isNext;
 
           return (
@@ -120,6 +149,7 @@ export default function CheckoutStatusStepper({
               key={status}
               className="flex items-center gap-3"
               aria-current={isCurrent ? 'step' : undefined}
+              aria-label={isNext ? `다음 단계: ${getStepLabel(status)}` : undefined}
               data-step-state={isNext ? 'next' : undefined}
             >
               {/* 아이콘 */}
@@ -184,7 +214,10 @@ export default function CheckoutStatusStepper({
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
           const isNext =
-            nextStepIndex !== undefined && index === nextStepIndex && !isCurrent && !isCompleted;
+            resolvedNextStepIndex !== undefined &&
+            index === resolvedNextStepIndex &&
+            !isCurrent &&
+            !isCompleted;
           const isPending = !isCompleted && !isCurrent && !isNext;
           const isLast = index === steps.length - 1;
 
@@ -193,6 +226,7 @@ export default function CheckoutStatusStepper({
               key={status}
               className="flex items-center flex-1"
               aria-current={isCurrent ? 'step' : undefined}
+              aria-label={isNext ? `다음 단계: ${getStepLabel(status)}` : undefined}
               data-step-state={isNext ? 'next' : undefined}
             >
               {/* 단계 */}

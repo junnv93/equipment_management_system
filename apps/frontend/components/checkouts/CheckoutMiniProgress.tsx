@@ -65,11 +65,10 @@ export function CheckoutMiniProgress({
   const stepLabelKey = CHECKOUT_STEP_LABELS[currentStatus];
   const stepName = stepLabelKey ? t(`stepper.${stepLabelKey}`) : currentStatus;
 
-  const ariaLabel = t('groupCard.progressLabelWithStep', {
-    stepName,
-    current: currentStepNumber,
-    total: stepCount,
-  });
+  const ariaLabel = t(
+    isLate ? 'groupCard.progressLabelOverdue' : 'groupCard.progressLabelWithStep',
+    { stepName, current: currentStepNumber, total: stepCount }
+  );
 
   return (
     <div role="img" aria-label={ariaLabel} className="flex items-center gap-0.5">

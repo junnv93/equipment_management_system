@@ -19,6 +19,13 @@ export const NOTIFICATION_TYPE_VALUES = [
   'checkout_return_approved', // 반입 승인됨
   'checkout_return_rejected', // 반입 반려됨
   'checkout_overdue', // 반출 기한 초과
+  // ─── 대여 단계별 알림 (Rental step notifications) ───
+  'checkout_borrower_approved', // 대여 1차 승인 (borrower TM → lender TM 알림)
+  'checkout_borrower_rejected', // 대여 1차 반려 (borrower TM → 신청자 알림)
+  'checkout_lender_checkout', // 반출 확인 완료 (lender 실무자 → borrower 실무자 알림)
+  'checkout_borrower_received', // 수령 확인 완료 (borrower 실무자 → 사용 시작)
+  'checkout_borrower_returned', // 반납 확인 완료 (borrower 실무자 → lender 실무자 알림)
+  'checkout_lender_received', // 반입 검수 완료 (lender 실무자 → lender TM 알림)
 
   // ─── 교정 (Calibration) ───
   'calibration_created', // 교정 등록 (승인 요청)
