@@ -5,6 +5,30 @@
 
 ---
 
+## ~~반출입 관리 PR-14: WorkflowTimeline 5/7단계 분기 + 노드 상태 5종 + checkout-timeline.ts 토큰~~ ✅ 완료 (2026-04-24, 89차)
+
+> `checkout-timeline.ts` 신규 — CHECKOUT_TIMELINE_TOKENS (container/connector/node/dot/label, 5종 노드 상태 SSOT).
+> `WorkflowTimeline.tsx` 신규 — computeStepIndex/computeTotalSteps FSM SSOT 경유, Radix Tooltip + help.status i18n,
+> Suspense + WorkflowTimelineSkeleton, data-testid="workflow-timeline", data-step-state 속성.
+> `CheckoutDetailClient.tsx` — 상태 진행 Card를 grid로 감싸고 WorkflowTimeline 추가.
+> i18n(ko+en) — borrower_approved help.status.title/description + stepper.borrowerApproved 추가.
+> CHECKOUT_STEP_LABELS — borrower_approved: 'borrowerApproved' 추가.
+> Evaluator FAIL 1건 수정: computeTotalSteps 하드코딩(8/5) → computeTotalSteps(purpose) SSOT 경유.
+
+---
+
+## ~~반출입 관리 PR-15: 모션 디자인 7종 + prefers-reduced-motion~~ ✅ 완료 (2026-04-24, 89차)
+
+> `motion.ts` — fadeInUp/pulseSoft/pulseHard/lift/accordionDown/confettiMicro ANIMATION_PRESETS 추가.
+> `staggerItem(index)` 함수 (60ms 인터벌, getStaggerFadeInStyle 'grid' 동일 값), `REDUCED_MOTION.safe()` export.
+> `globals.css @theme` — --animate-pulse-soft/hard/confetti-micro 변수 + @keyframes pulseSoft/pulseHard/confettiMicro.
+> `CheckoutGroupCard.tsx` — equipmentRows stagger (ANIMATION_PRESETS.staggerFadeInItem + getStaggerFadeInStyle(index, 'grid')).
+> `workflow-panel.ts` — NEXT_STEP_PANEL_TOKENS.urgency.critical: animate-pulse → animate-pulse-hard.
+> `shared/NextStepPanel.tsx` — urgency === 'critical' 에서 REDUCED_MOTION.safe() 패턴 적용.
+> transition-all 사용 없음, 모든 animate-* 클래스에 motion-reduce:animate-none 짝 확인.
+
+---
+
 ## ~~반출입 관리 PR-9: checkouts E2E 11 시나리오 — FSM 8 + 서브탭 + YourTurn + 빈 상태~~ ✅ 완료 (2026-04-24, 88차)
 
 > S9~S11(suite-list-ia) 신규 3개 spec 생성 완료.
