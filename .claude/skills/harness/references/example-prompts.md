@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-24 (95차 정리: PR-19 verify+review-arch+manage-skills 완료. verify-design-tokens Step 24 추가(checkout-loading-skeleton.ts). active: PR-16·PR-21~PR-23 + tech-debt 15건)**
+> **마지막 정리일: 2026-04-24 (96차 정리: Sprint 1.1 resolveNextAction 완료 [findCheckoutEntity 분리·findOne always-meta·280 table test·FSM drift safeParse]. Sprint 1.2 스키마 필드 선착수 [phase/nextStepIndex 4필드 checkout-fsm.ts 추가]. active: Sprint 1.2 rental-phase.ts SSOT 완성·1.3~1.5·2.x·3.x·PR-16·PR-21~PR-23)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -13,9 +13,9 @@
 > **메모리**: `project_88_checkouts_v3_roadmap_20260424.md`
 > **배경**: 외부 아키텍처 리뷰 V2(18 findings) 전수 대응. 사용자 결정: 5-Sprint 전체·BFF 포함·Phase-based '1/3 phase'·편의성 U-01~U-12 전량.
 
-### Sprint 1 · Authority 수술 (Contract 5종 작성 완료 — 실행 대기)
-1. `.claude/contracts/checkout-fsm-resolve-action.md` (P0 F-1·F-2 · 208 조합 table test)
-2. `.claude/contracts/checkout-descriptor-phase-fields.md` (P1 F-3 · RentalPhase + nextStepIndex 필드)
+### Sprint 1 · Authority 수술 (Contract 5종 작성 완료 — 1.1 완료·1.2 스키마 선착수)
+1. ~~`.claude/contracts/checkout-fsm-resolve-action.md` (P0 F-1·F-2 · 280 조합 table test)~~ ✅ [96차 완료: findCheckoutEntity 분리, findOne always-meta, FSM drift safeParse, descriptor-table 동적 fixture]
+2. `.claude/contracts/checkout-descriptor-phase-fields.md` (P1 F-3 · RentalPhase + nextStepIndex 필드) — ⚠️ 스키마 4필드 선착수 (phase/nextStepIndex/phaseIndex/totalPhases checkout-fsm.ts 추가). rental-phase.ts SSOT (getRentalPhase·RENTAL_STATUS_TO_PHASE satisfies) M3·M4 미완 → 96차 Sprint 1.2 잔여분
 3. `.claude/contracts/checkout-meta-fail-closed.md` (P0 F-2 · `?? false` 전환 + E2E 12)
 4. `.claude/contracts/legacy-actions-block-removal.md` (P0 F-1·C-1 · LegacyActionsBlock 완전 삭제)
 5. `.claude/contracts/checkout-fsm-exhaustive-satisfies.md` (§5 · satisfies 전수 전환)
