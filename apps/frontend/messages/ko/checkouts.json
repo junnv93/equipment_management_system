@@ -211,7 +211,13 @@
     "rejectReasonLabel": "반려 사유",
     "rejectReasonPlaceholder": "반려 사유를 입력해주세요",
     "cancelTitle": "반출 신청 취소",
-    "cancelDescription": "반출 신청을 취소하시겠습니까? 취소 후에는 복구할 수 없습니다."
+    "cancelDescription": "반출 신청을 취소하시겠습니까? 취소 후에는 복구할 수 없습니다.",
+    "borrowerApproveTitle": "대여 1차 승인",
+    "borrowerApproveDescription": "대여 신청을 1차 승인하시겠습니까? 차용팀 승인 후 반출팀 기술책임자의 최종 승인이 필요합니다.",
+    "borrowerRejectTitle": "대여 1차 반려",
+    "borrowerRejectDescription": "대여 신청을 반려합니다. 반려 사유를 입력해주세요.",
+    "borrowerRejectReasonLabel": "반려 사유",
+    "borrowerRejectReasonPlaceholder": "차용팀 반려 사유를 입력해주세요"
   },
   "stepper": {
     "ariaLabel": "반출 진행 상태",
@@ -234,7 +240,9 @@
     "action": {
       "approve": "승인",
       "approve_return": "반입 승인",
+      "borrower_approve": "1차 승인",
       "borrower_receive": "수령 확인",
+      "borrower_reject": "1차 반려",
       "borrower_return": "반납",
       "cancel": "취소",
       "lender_check": "대여자 확인",
@@ -248,6 +256,7 @@
     },
     "hint": {
       "pendingApprove": "승인자의 검토를 기다리고 있습니다.",
+      "pendingBorrowerApprove": "차용팀 기술책임자의 1차 승인을 기다리고 있습니다.",
       "waitingApprover": "승인자가 확인한 후 반려됩니다.",
       "pendingCancel": "요청자가 직접 취소할 수 있습니다.",
       "approvedStart": "승인되었습니다. 반출을 시작하세요.",

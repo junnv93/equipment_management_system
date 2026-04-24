@@ -211,7 +211,13 @@
     "rejectReasonLabel": "Rejection Reason",
     "rejectReasonPlaceholder": "Enter the reason for rejection",
     "cancelTitle": "Cancel Checkout Request",
-    "cancelDescription": "Are you sure you want to cancel this checkout request? This action cannot be undone."
+    "cancelDescription": "Are you sure you want to cancel this checkout request? This action cannot be undone.",
+    "borrowerApproveTitle": "Rental 1st Approval",
+    "borrowerApproveDescription": "Approve this rental request (1st step)? Lender team manager's final approval will be required after this.",
+    "borrowerRejectTitle": "Rental 1st Rejection",
+    "borrowerRejectDescription": "Reject this rental request. Please enter a reason for rejection.",
+    "borrowerRejectReasonLabel": "Rejection Reason",
+    "borrowerRejectReasonPlaceholder": "Enter the reason for borrower team rejection"
   },
   "stepper": {
     "ariaLabel": "Checkout Progress Status",
@@ -234,7 +240,9 @@
     "action": {
       "approve": "Approve",
       "approve_return": "Approve Return",
+      "borrower_approve": "1st Approve",
       "borrower_receive": "Confirm Receipt",
+      "borrower_reject": "1st Reject",
       "borrower_return": "Return",
       "cancel": "Cancel",
       "lender_check": "Lender Check",
@@ -248,6 +256,7 @@
     },
     "hint": {
       "pendingApprove": "Waiting for approver review.",
+      "pendingBorrowerApprove": "Waiting for borrower team manager's 1st approval.",
       "waitingApprover": "Will be rejected after approver review.",
       "pendingCancel": "The requester can cancel directly.",
       "approvedStart": "Approved. Please start the checkout.",

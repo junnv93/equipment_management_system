@@ -95,6 +95,7 @@ export default function CheckoutDetailClient({
   const { can } = useAuth();
   // SSOT: 백엔드 @RequirePermissions와 일치 (role-permissions.ts)
   const canApprove = can(Permission.APPROVE_CHECKOUT);
+  const canBorrowerApprove = can(Permission.BORROWER_APPROVE_CHECKOUT);
   const canStart = can(Permission.START_CHECKOUT);
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
   const canCancelCheckout = can(Permission.CANCEL_CHECKOUT);
@@ -137,10 +138,13 @@ export default function CheckoutDetailClient({
     approveReturn: false,
     rejectReturn: false,
     cancel: false,
+    borrowerApprove: false,
+    borrowerReject: false,
   });
   const [rejectReason, setRejectReason] = useState('');
   const [handoverQrOpen, setHandoverQrOpen] = useState(false);
   const [returnRejectReason, setReturnRejectReason] = useState('');
+  const [borrowerRejectReason, setBorrowerRejectReason] = useState('');
 
   // 장비별 반출 전 상태 기록 (Phase 3)
   const [itemConditionsBefore, setItemConditionsBefore] = useState<Record<string, string>>({});
@@ -264,6 +268,54 @@ export default function CheckoutDetailClient({
     },
   });
 
+  // 대여 1차 승인 mutation (rental pending → borrower_approved)
+  const borrowerApproveMutation = useOptimisticMutation<Checkout, void, Checkout>({
+    mutationFn: () => checkoutApi.borrowerApproveCheckout(checkout.id, checkout.version),
+    queryKey: queryKeys.checkouts.detail(checkout.id),
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: CSVal.BORROWER_APPROVED as CheckoutStatus,
+        borrowerApprovedAt: new Date().toISOString(),
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    successMessage: t('toasts.borrowerApproveSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.borrowerApproveError')),
+    onSuccessCallback: () => {
+      setDialogState((prev) => ({ ...prev, borrowerApprove: false }));
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, borrowerApprove: false }));
+    },
+  });
+
+  // 대여 1차 반려 mutation (rental pending → rejected, borrowerRejectionReason 기록)
+  const borrowerRejectMutation = useOptimisticMutation<Checkout, string, Checkout>({
+    mutationFn: (reason: string) =>
+      checkoutApi.borrowerRejectCheckout(checkout.id, checkout.version, reason),
+    queryKey: queryKeys.checkouts.detail(checkout.id),
+    optimisticUpdate: (old, reason): Checkout =>
+      ({
+        ...old,
+        status: CSVal.REJECTED as CheckoutStatus,
+        borrowerRejectionReason: reason,
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    successMessage: t('toasts.borrowerRejectSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.borrowerRejectError')),
+    onSuccessCallback: () => {
+      setDialogState((prev) => ({ ...prev, borrowerReject: false }));
+      setBorrowerRejectReason('');
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, borrowerReject: false }));
+    },
+  });
+
   // 반입 반려 mutation
   const rejectReturnMutation = useOptimisticMutation<Checkout, string, Checkout>({
     mutationFn: (reason: string) =>
@@ -366,6 +418,12 @@ export default function CheckoutDetailClient({
       case 'reject_return':
         setDialogState((prev) => ({ ...prev, rejectReturn: true }));
         break;
+      case 'borrower_approve':
+        setDialogState((prev) => ({ ...prev, borrowerApprove: true }));
+        break;
+      case 'borrower_reject':
+        setDialogState((prev) => ({ ...prev, borrowerReject: true }));
+        break;
       default:
         break;
     }
@@ -377,11 +435,41 @@ export default function CheckoutDetailClient({
     startMutation.isPending ||
     approveReturnMutation.isPending ||
     rejectReturnMutation.isPending ||
-    cancelMutation.isPending;
+    cancelMutation.isPending ||
+    borrowerApproveMutation.isPending ||
+    borrowerRejectMutation.isPending;
 
   // LegacyActionsBlock — Feature Flag off 경로 폴백. 로직 1:1 유지, 수정 금지.
   const LegacyActionsBlock = () => {
     const buttons: React.ReactNode[] = [];
+
+    // rental 1차 승인 — 차용팀 TM만 가능 (borrower_approved 경유 후 lender 최종 승인)
+    if (
+      checkout.status === CSVal.PENDING &&
+      checkout.purpose === CPVal.RENTAL &&
+      canBorrowerApprove
+    ) {
+      buttons.push(
+        <Button
+          key="borrower-approve"
+          onClick={() => setDialogState((prev) => ({ ...prev, borrowerApprove: true }))}
+          disabled={borrowerApproveMutation.isPending}
+          className={CHECKOUT_DETAIL_TOKENS.approveButton}
+        >
+          <CheckCircle2 className="mr-2 h-4 w-4" />
+          {t('actions.borrowerApprove')}
+        </Button>,
+        <Button
+          key="borrower-reject"
+          variant="destructive"
+          onClick={() => setDialogState((prev) => ({ ...prev, borrowerReject: true }))}
+          disabled={borrowerRejectMutation.isPending}
+        >
+          <XCircle className="mr-2 h-4 w-4" />
+          {t('actions.borrowerReject')}
+        </Button>
+      );
+    }
 
     // 승인 대기 상태 — technical_manager만 승인/반려 가능 (UL-QP-18 직무분리)
     if (checkout.status === CSVal.PENDING && canApprove) {
@@ -1103,6 +1191,80 @@ export default function CheckoutDetailClient({
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending ? t('actions.processing') : t('actions.cancelCheckout')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* rental 1차 승인 확인 다이얼로그 */}
+      <Dialog
+        open={dialogState.borrowerApprove}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, borrowerApprove: open }))}
+      >
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>{t('dialogs.borrowerApproveTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.borrowerApproveDescription')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, borrowerApprove: false }))}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              className={CHECKOUT_DETAIL_TOKENS.approveButton}
+              onClick={() => borrowerApproveMutation.mutate()}
+              disabled={borrowerApproveMutation.isPending}
+            >
+              {borrowerApproveMutation.isPending
+                ? t('actions.processing')
+                : t('actions.borrowerApprove')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* rental 1차 반려 다이얼로그 */}
+      <Dialog
+        open={dialogState.borrowerReject}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, borrowerReject: open }))}
+      >
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>{t('dialogs.borrowerRejectTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.borrowerRejectDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="borrowerRejectReason">{t('dialogs.borrowerRejectReasonLabel')}</Label>
+              <Textarea
+                id="borrowerRejectReason"
+                placeholder={t('dialogs.borrowerRejectReasonPlaceholder')}
+                value={borrowerRejectReason}
+                onChange={(e) => setBorrowerRejectReason(e.target.value)}
+                rows={4}
+                aria-required="true"
+                aria-invalid={!borrowerRejectReason.trim()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, borrowerReject: false }))}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => borrowerRejectMutation.mutate(borrowerRejectReason)}
+              disabled={!borrowerRejectReason.trim() || borrowerRejectMutation.isPending}
+            >
+              {borrowerRejectMutation.isPending
+                ? t('actions.processing')
+                : t('actions.borrowerReject')}
             </Button>
           </DialogFooter>
         </DialogContent>
