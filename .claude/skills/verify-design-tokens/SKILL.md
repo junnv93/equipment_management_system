@@ -746,6 +746,80 @@ grep -rn "animate-spin" apps/frontend/components/checkouts/ --include="*.tsx"
 - `apps/frontend/components/checkouts/NextStepPanelSkeleton.tsx`
 - `apps/frontend/components/checkouts/CheckoutGroupCardSkeleton.tsx`
 
+### Step 25: CSS 변수 주입 토큰 fallback 필수 (2026-04-24 추가)
+
+**원칙:** 디자인 토큰이 `shadow-[...var(--custom-var)]` / `bg-[var(--custom-bg)]` 같이 컴포넌트-런타임에서 주입받는 CSS 변수를 포함할 때, **fallback 값 필수** (`,transparent` / `,initial` 등).
+
+**이유:**
+- 호출부에서 `style={{'--custom-var': '...'}}` 주입을 잊으면 브라우저가 CSS 변수를 `initial`로 해석 → 원치 않는 시각 효과.
+- 예: `shadow-[0_4px_14px_-6px_var(--callout-hero-shadow)]` → 변수 미주입 시 shadow가 `0 4px 14px -6px initial` → **invalid** → shadow 렌더링 안 됨.
+- 원칙: CSS 변수 주입 토큰은 반드시 fallback을 명시해 "주입 누락 시 보이지 않음"보다 "주입 누락 시 안전한 기본값" 제공.
+
+**FAIL 조건:**
+- `lib/design-tokens/**`에서 `var(--[a-z-]+)` 패턴이 있지만 `var(--name, <fallback>)` 형태가 아닌 경우.
+- 단, `background: var(--bg)` 처럼 CSS 속성 전체가 변수에 의존할 때 (일반적으로 이미 선언된 semantic 변수)는 예외.
+
+**탐지 명령어:**
+```bash
+# CSS 변수 주입 중 fallback 없는 것 탐지
+grep -rn 'var(--[a-z-]\+\s*)' apps/frontend/lib/design-tokens/ | grep -v 'var(--[a-z-]\+\s*,'
+```
+결과가 0건이어야 PASS. 단, `:root` / `.dark` / `@theme` 등 변수 **선언** 위치는 예외 (declared에는 fallback 없음이 정상).
+
+**Exceptions:**
+- `--tw-*` 유틸리티 변수 (Tailwind 내부 변수, fallback 금지 이유 있음)
+- `:root`, `.dark`, `@theme` 블록 내 **선언** 위치
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `CALLOUT_TOKENS.size.hero`의 `--callout-hero-shadow` 패턴이 원형
+
+### Step 26: 사전 생성 룩업 토큰 + `satisfies Record<K, string>` 가드 (2026-04-24 추가)
+
+**원칙:** variant별 클래스 문자열이 유한 집합(CalloutVariant / NCGuidanceKey 등)이면 **모듈 초기화 시 사전 생성**된 `Record<K, string>`으로 선언. 함수 호출마다 `string concat`하는 패턴 금지.
+
+**이유:**
+- React reconciliation에서 동일 className이 매 렌더마다 새 문자열 참조를 가지면 child memoization 깨짐 가능.
+- 매 호출 concat은 CPU + 메모리 할당 낭비 (수백~수천 행 리스트에서 뚜렷).
+- `satisfies Record<K, string>` 가드가 key 누락을 컴파일 에러로 잡아줌 (예: 새 variant 추가 시 누락 방지).
+
+**FAIL 조건:**
+- `lib/design-tokens/**/*.ts`에서 variant 인자를 받는 함수가 `[... ${getSemanticX(key)} ...].join(' ')` 또는 `template literal` 형태로 매 호출 생성하면서 인자가 유한 closed-set (CalloutVariant 등)일 때.
+- 사전 생성 Record에 `as const satisfies Record<Key, Value>` 가드 누락.
+
+**탐지 명령어:**
+```bash
+# variant 인자를 받는 함수가 유한 집합일 때 사전 생성 없는지 확인
+grep -rn 'Variant\|CalloutVariant\|RoleChipKey\|ConfirmPreviewTone' apps/frontend/lib/design-tokens/ | \
+  grep -v 'satisfies Record\|type\|interface\|import\|export type' | head -20
+
+# satisfies 가드 누락 확인 — Record<...>만 있고 satisfies 없는 정의
+grep -rn 'Record<.*>\s*=' apps/frontend/lib/design-tokens/ | grep -v 'satisfies\|interface\|type '
+```
+
+**권장 패턴:**
+```ts
+// ❌ 매 호출 concat
+primarySolid: (v: CalloutVariant): string =>
+  [`base-classes`, getSemanticSolidBgClasses(v)].join(' '),
+
+// ✅ 사전 생성 O(1) 룩업
+const PRIMARY_SOLID_CLASSES = {
+  info: `base-classes ${getSemanticSolidBgClasses('info')}`,
+  warning: `base-classes ${getSemanticSolidBgClasses('warning')}`,
+  // ... 5 variant 전부
+} as const satisfies Record<CalloutVariant, string>;
+
+primarySolid: (v: CalloutVariant): string => PRIMARY_SOLID_CLASSES[v],
+```
+
+**Exceptions:**
+- 매핑이 `string → semantic key → classes` 같은 2단계 함수 합성이고 실제 유한 집합이 10+ 이상으로 커서 사전 생성이 파일을 비대하게 할 때는 예외적으로 function 허용. 이 경우 `useMemo` 등으로 호출부 캐싱 권장.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `ROLE_CHIP_CLASSES` (5 variant), `CONFIRM_PREVIEW_CARD_CLASSES` (3 tone)
+- `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_GUIDANCE_CTA_PRIMARY_SOLID` (5 variant)
+- 모두 2026-04-24 Phase 1.1 self-audit에서 function → Record 사전 생성으로 마이그레이션됨
+
 ## Output Format
 
 ```markdown
@@ -784,6 +858,8 @@ grep -rn "animate-spin" apps/frontend/components/checkouts/ --include="*.tsx"
 | 22  | CALLOUT `text-brand-${}` 동적 보간 금지 | PASS/FAIL | `text-brand-${key}` 동적 보간 발견 위치 |
 | 23  | checkout-toast/your-turn 토큰 index re-export + 소비처 SSOT 경유 | PASS/FAIL | index.ts 누락 또는 duration 인라인 숫자 위치 |
 | 24  | checkout-loading-skeleton 토큰 SSOT + motion-reduce 접근성 + spinner 금지 | PASS/FAIL/INFO | index.ts 누락, animate-pulse 인라인, animate-spin 발견 위치 |
+| 25  | CSS 변수 주입 토큰 fallback 필수 | PASS/FAIL | `var(--name)` fallback 누락 위치 (design-tokens 내부) |
+| 26  | 사전 생성 룩업 토큰 + satisfies 가드 | PASS/FAIL | variant 함수 concat 패턴 또는 `Record<K>` satisfies 누락 위치 |
 ```
 
 ## Exceptions
