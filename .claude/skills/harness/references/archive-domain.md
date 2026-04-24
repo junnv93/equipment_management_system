@@ -1499,3 +1499,10 @@ BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequentia
 ### ~~🟡 MEDIUM — PR-21: 프론트엔드 구조 수정 — WCAG tablist 위치 + Radix Select 가드 + QUERY_CONFIG SSOT + URL 일원화 (Mode 1)~~ ✅
 
 > 완료(2026-04-22): OutboundCheckoutsTab tablist → tabpanel sibling으로 이동(WCAG 4.1.2), CheckoutsContent.tsx 4개 Select 핸들러 spurious 가드 추가, QUERY_CONFIG.checkout 프리셋 신규 + staleTime 3곳 교체, handlePageChange/handleSubTabChange → filtersToSearchParams 경유 일원화.
+
+### ~~🟠 HIGH — PR-12: 목록 IA 서브탭 + 이중 카운트 헤더 + 빈 상태 3종 (Mode 2)~~ ✅
+
+> 완료(2026-04-24, 89차): backend statuses 복수 필터 이미 지원(0·1번 생략), SUBTAB_STATUS_GROUPS/CheckoutListTabs/서브탭 URL SSOT 이미 구현(3번 생략).
+> 신규: CheckoutEmptyState.tsx(variant→아이콘/testid 자동 결정, CHECKOUT_ICON_MAP.emptyState 경유, role=status+aria-live), CHECKOUT_EMPTY_STATE_TOKENS(checkout-empty-state.ts), design-tokens barrel export 추가.
+> OutboundCheckoutsTab: emptyStateParams → renderEmptyState() 직접 분기 교체(overdue-clear celebration 분기 제외).
+> CheckoutListTabs: currentEquipmentCount prop 추가 + 이중 카운트 배지 "반출 N건 · 장비 M대"(클라이언트 reduce 파생, 백엔드 스키마 변경 없음).
