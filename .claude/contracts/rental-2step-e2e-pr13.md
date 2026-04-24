@@ -184,7 +184,8 @@ grep "TEST_EQUIPMENT_IDS" \
 
 - [ ] M-1 ~ M-10 중 하나라도 실패
 - [ ] spec에 `waitForTimeout(N)` 을 신뢰성 목적으로 삽입 (SSE 대기 등 정당 사유 제외)
-- [ ] CheckoutGroupCard.tsx 외 다른 checkout 컴포넌트 무단 수정 (CheckoutMiniProgress, CheckoutStatusBadge 등)
+- [ ] CheckoutGroupCard.tsx 외 다른 checkout 컴포넌트 무단 수정 (CheckoutMiniProgress 등)
+  - CheckoutStatusBadge.tsx는 별도 세션 진행 중 변경 — 해당 파일은 이 계약 판정에서 제외
 - [ ] 테스트를 `test.skip()` 으로 통과시킴
 - [ ] backend 파일 수정 (Phase A/B 모두 frontend + e2e 전용)
 - [ ] 신규 auth fixture (storageState) 추가 (기존 fixture + email 토큰 조합으로 충분)

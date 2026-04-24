@@ -38,7 +38,7 @@ argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
 **검사:**
 ```bash
 # workflows/ 디렉토리에서 WF 번호별 파일 존재 확인
-for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 25 33 35; do
+for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 25 33 34 35; do
   ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
 done
 ```

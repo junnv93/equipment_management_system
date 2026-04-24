@@ -633,3 +633,42 @@ grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
 15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — "클릭 후 아무 일도 일어나지 않음"을 증명하려면 일정 시간 대기가 불가피. `≤ 1000ms` 이내의 `waitForTimeout` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당. 예: early-return handler의 no-op 회귀 보호
 16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리 소속(CSS 셀렉터 아님). shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 `getByLabel`이 불안정할 때 허용. `getByRole('textbox', { name })`이 가능하면 그 쪽을 우선
 17. **`tests/e2e/a11y/*.a11y.spec.ts`** — 공개 라우트 접근성 게이트. 인증 불필요 페이지만 대상이므로 `auth.fixture` 대신 `@playwright/test` 직접 import 정당. `playwright.a11y.config.ts` 전용 설정 사용.
+
+### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion (2026-04-24 추가)
+
+`getBackendTokenByEmail`을 사용하는 E2E spec은 다음 패턴을 준수해야 한다.
+
+**20a: tokenCache 네임스페이스 격리**
+
+`tokenCache` 키가 `'email:' + email` 형태여야 role 기반 키(`'technical_manager'` 등)와 충돌하지 않는다.
+
+```bash
+# 'email:' 프리픽스 네임스페이스 확인
+grep -A5 "const cacheKey" \
+  apps/frontend/tests/e2e/shared/helpers/api-helpers.ts \
+  | grep "email:"
+# 결과: `email:${email}` 패턴 존재 → PASS
+```
+
+**20b: negative 시나리오 assertion 수준**
+
+403(scope/identity 실패) 또는 400(purpose/FSM 불일치) 케이스에서 HTTP 상태 코드 + 에러 코드 문자열을 함께 검증해야 한다.
+단순 `expect(resp.ok()).toBeFalsy()`는 실패 — 상태 코드와 에러 코드 `toBe()`가 필수.
+
+```bash
+# negative 테스트에서 status + errorCode 모두 검증하는지 확인
+grep -A5 "expect(resp.status()).toBe(403\|400)" \
+  apps/frontend/tests/e2e/workflows/wf-34-rental-2step-approval.spec.ts
+# 403/400 단독 status 체크 → 경고
+# status + errorCode toBe() 쌍 → PASS
+```
+
+**20c: storageState 신규 생성 없이 token 주입으로 충분한지**
+
+`getBackendTokenByEmail` 사용 시 새 `.auth/*.json` 파일이 추가되지 않아야 한다.
+
+```bash
+# storageState 파일 수가 6개 유지되는지
+ls apps/frontend/tests/e2e/.auth/*.json | wc -l
+# 6 → PASS, 7 이상 → FAIL (신규 storageState 추가 확인 필요)
+```

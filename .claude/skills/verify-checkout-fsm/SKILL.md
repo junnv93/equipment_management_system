@@ -717,3 +717,30 @@ grep -A5 "CheckoutAction\s*=" \
 4. **`NextStepDescriptorSchema`의 `z.enum` 인라인 값** — CheckoutAction/NextActor enum 값이 인라인으로 나열되어 있는 것은 Zod 스키마 특성상 허용 (SSOT는 TypeScript type `CheckoutAction`)
 5. **RENTAL purpose의 `reject_return` FSM 미지원** — FSM `reject_return` 전이는 `purposes: CAL_REPAIR`만 허용. RENTAL 반출의 `rejectReturn` 호출 시 `assertFsmAction`에서 INVALID_TRANSITION으로 차단되므로, `rejectReturn` 내부의 `LENDER_TEAM_ONLY` 체크는 RENTAL에 대해 dead code. Step 20은 CAL_REPAIR 목적 흐름만 검증 대상.
 6. **`mockChain.then` 테스트 패턴** — `chain.where.then` 오버라이드가 불가한 jest mock 제약으로 `mockChain.then`을 직접 오버라이드하는 패턴은 테스트 전용 관용구. 서비스 코드 검증 대상 아님.
+
+### Step 27: 프론트엔드 useCheckoutGroupDescriptors — N+1 방지 + feature flag 게이팅 (2026-04-24 추가)
+
+`use-checkout-group-descriptors.ts` 훅은 `getNextStep`을 루프 내부에서 호출하는 대신 단일 `useMemo`로 Map을 일괄 계산해야 한다 (N+1 재계산 방지).
+`isNextStepPanelEnabled()` feature flag가 훅 내부와 소비 컴포넌트(`CheckoutGroupCard.tsx`) 양쪽에 적용되어야 한다.
+
+```bash
+# getNextStep이 useMemo 외부(render 함수 직접)에서 호출되는지 확인 — PASS = 없어야 함
+grep -n "getNextStep" apps/frontend/hooks/use-checkout-group-descriptors.ts
+# useMemo 내부에서만 호출 → OK
+
+# feature flag 게이팅 확인
+grep -n "isNextStepPanelEnabled" \
+  apps/frontend/hooks/use-checkout-group-descriptors.ts \
+  apps/frontend/components/checkouts/CheckoutGroupCard.tsx
+# 최소 2곳 이상 존재 (훅 + 컴포넌트)
+
+# permissions 안정화 — permissions를 먼저 useMemo로 memoize 후 descriptor Map의 dep으로 사용하는지
+grep -B2 -A8 "const permissions" apps/frontend/hooks/use-checkout-group-descriptors.ts
+# useMemo([userRole]) 패턴 확인
+```
+
+```
+✅ PASS: getNextStep이 단일 useMemo 내부에서만 호출됨
+✅ PASS: isNextStepPanelEnabled() 가드가 훅 + 컴포넌트 양쪽에 존재
+✅ PASS: permissions를 별도 useMemo로 먼저 안정화 후 descriptor Map dep으로 사용
+```
