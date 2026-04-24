@@ -63,6 +63,7 @@ import {
   CHECKOUT_TAB_BADGE_TOKENS,
   getPageContainerClasses,
   MICRO_TYPO,
+  SECTION_RHYTHM_TOKENS,
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
@@ -246,7 +247,7 @@ export default function CheckoutsContent({
   };
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('list', SECTION_RHYTHM_TOKENS.spacious)}>
       {/* ── 헤더 ── */}
       <PageHeader
         title={t('title')}

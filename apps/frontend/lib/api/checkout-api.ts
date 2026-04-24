@@ -150,12 +150,10 @@ export interface CheckoutQuery {
   page?: number;
   pageSize?: number;
   statuses?: string;
-  userId?: string;
   equipmentId?: string;
   teamId?: string;
   direction?: 'outbound' | 'inbound';
   purpose?: string; // ✅ 반출 목적 필터 (calibration, repair, rental, return_to_vendor)
-  startDate?: string;
   endDate?: string;
   checkoutFrom?: string; // ✅ 반출일 시작 (YYYY-MM-DD)
   checkoutTo?: string; // ✅ 반출일 종료 (YYYY-MM-DD)

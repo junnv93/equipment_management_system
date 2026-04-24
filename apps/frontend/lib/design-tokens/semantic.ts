@@ -500,12 +500,14 @@ export const EMPTY_STATE_TOKENS = {
     'no-data': 'text-brand-info',
     filtered: 'text-muted-foreground',
     'status-filtered': 'text-brand-warning',
+    celebration: 'text-brand-ok',
   } as const,
   /** variant별 아이콘 배경 (iconContainer 결합용) */
   variantIconBg: {
     'no-data': 'bg-brand-info/5 rounded-full p-3',
     filtered: '',
     'status-filtered': 'bg-brand-warning/5 rounded-full p-3',
+    celebration: 'bg-brand-ok/5 rounded-full p-3',
   } as const,
 } as const;
 

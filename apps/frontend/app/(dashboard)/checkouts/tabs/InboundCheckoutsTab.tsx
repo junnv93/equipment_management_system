@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ClipboardList, FilterX } from 'lucide-react';
+import { SparklineMini } from '@/components/checkouts/SparklineMini';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { InboundSectionHeader } from '@/components/checkouts/InboundSectionHeader';
@@ -170,6 +171,9 @@ export default function InboundCheckoutsTab({
     0;
   const inboundTotal = inboundCheckoutsData?.meta?.pagination?.total ?? inboundGroups.length;
 
+  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 PR-x에서 연결 예정
+  const sparklineValues: number[] = [];
+
   // ──────────────────────────────────────────────
   // Render helpers
   // ──────────────────────────────────────────────
@@ -247,6 +251,11 @@ export default function InboundCheckoutsTab({
           isLoading={inboundCheckoutsLoading}
         />
 
+        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
+        {sparklineValues.length > 1 && (
+          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        )}
+
         {inboundCheckoutsLoading ? (
           <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
         ) : inboundCheckoutsError ? (
@@ -295,6 +304,11 @@ export default function InboundCheckoutsTab({
           count={rentalTotal}
           isLoading={rentalImportsLoading}
         />
+
+        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
+        {sparklineValues.length > 1 && (
+          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        )}
 
         {rentalImportsLoading ? (
           <CheckoutListSkeleton
@@ -408,6 +422,11 @@ export default function InboundCheckoutsTab({
           count={internalTotal}
           isLoading={internalSharedImportsLoading}
         />
+
+        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
+        {sparklineValues.length > 1 && (
+          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        )}
 
         {internalSharedImportsLoading ? (
           <CheckoutListSkeleton

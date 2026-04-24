@@ -12,7 +12,10 @@ import {
   PackageCheck,
   PackageOpen,
   FilterX,
+  CheckCircle2,
 } from 'lucide-react';
+import { HeroKPI } from '@/components/checkouts/HeroKPI';
+import { SparklineMini } from '@/components/checkouts/SparklineMini';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
@@ -24,11 +27,11 @@ import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-u
 import {
   getCheckoutStatsClasses,
   CHECKOUT_MOTION,
-  CONTENT_TOKENS,
   CHECKOUT_STATS_VARIANTS,
   CHECKOUT_STATS_ALERT_THRESHOLD,
   CHECKOUT_PAGINATION_TOKENS,
   MICRO_TYPO,
+  TYPOGRAPHY_TOKENS,
   type CheckoutStatsVariant,
 } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
@@ -40,7 +43,10 @@ import {
   type CheckoutSubTab,
 } from '@/lib/utils/checkout-filter-utils';
 import CheckoutListTabs from '@/components/checkouts/CheckoutListTabs';
-import { getCheckoutStatusGroupFilterValue } from '@equipment-management/schemas';
+import {
+  getCheckoutStatusGroupFilterValue,
+  CheckoutStatusValues as CSVal,
+} from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
@@ -114,6 +120,11 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
  * - 5개 통계 카드 (전체/승인대기/반출중/기한초과/반입완료)
  * - 기한 초과 그룹 최상단 고정 (overdue 그룹 id 부여)
  * - 인라인 승인 권한 (canApprove) 전달
+ *
+ * PR-7 Batch 2:
+ * - overdue hero 카드 → HeroKPI 컴포넌트 연결 (col-span-2 구조 유지)
+ * - secondary 카드에 SparklineMini 슬롯 추가 (현재 빈 배열 플레이스홀더 — 실제 데이터는 PR-x에서 연결)
+ * - overdue===0 + status=CSVal.OVERDUE 필터 시 EmptyState celebration 분기
  */
 export default function OutboundCheckoutsTab({
   teamId,
@@ -190,8 +201,8 @@ export default function OutboundCheckoutsTab({
   const { overdueGroups, normalGroups } = useMemo(() => {
     if (!checkoutsData?.data) return { overdueGroups: [], normalGroups: [] };
     const all = groupCheckoutsByDateAndDestination(checkoutsData.data);
-    const overdue = all.filter((g) => g.statuses.includes('overdue'));
-    const normal = all.filter((g) => !g.statuses.includes('overdue'));
+    const overdue = all.filter((g) => g.statuses.includes(CSVal.OVERDUE));
+    const normal = all.filter((g) => !g.statuses.includes(CSVal.OVERDUE));
     return { overdueGroups: overdue, normalGroups: normal };
   }, [checkoutsData?.data]);
 
@@ -204,6 +215,9 @@ export default function OutboundCheckoutsTab({
   const isAllActive = !filterActive;
   // overdue>0이면 해당 카드를 hero variant(col-span-2)로 강조
   const heroVariantKey: CheckoutStatsVariant | null = summary.overdue > 0 ? 'overdue' : null;
+
+  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 PR-x에서 연결 예정
+  const sparklineValues: number[] = [];
 
   // ──────────────────────────────────────────────
   // 5개 통계 카드
@@ -223,15 +237,37 @@ export default function OutboundCheckoutsTab({
         const isHero = card.variantKey === heroVariantKey;
 
         const variantTokens = CHECKOUT_STATS_VARIANTS[card.variantKey];
+
+        const handleStatActivate = () =>
+          card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus);
+
+        // overdue hero 카드: HeroKPI 컴포넌트로 렌더 (col-span-2 그리드 셀 유지)
+        if (isHero) {
+          return (
+            <div
+              key={card.variantKey}
+              className="col-span-2"
+              role="button"
+              tabIndex={0}
+              aria-pressed={isActive}
+              aria-label={t(card.labelKey)}
+              onClick={handleStatActivate}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleStatActivate();
+                }
+              }}
+            >
+              <HeroKPI label={t(card.labelKey)} value={card.value} variant="critical" trend="up" />
+            </div>
+          );
+        }
+
         const finalCardClasses = [
           getCheckoutStatsClasses(card.variantKey, isActive, isAlert),
           CHECKOUT_MOTION.statsCard,
-          isHero
-            ? CHECKOUT_STATS_VARIANTS.hero.surface
-            : 'elevation' in variantTokens
-              ? variantTokens.elevation
-              : '',
-          isHero ? CHECKOUT_STATS_VARIANTS.hero.container : '',
+          'elevation' in variantTokens ? variantTokens.elevation : '',
         ]
           .filter(Boolean)
           .join(' ');
@@ -240,9 +276,6 @@ export default function OutboundCheckoutsTab({
         const iconColorClass = isActive
           ? CHECKOUT_STATS_VARIANTS[card.variantKey].iconColor
           : 'text-muted-foreground';
-
-        const handleStatActivate = () =>
-          card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus);
 
         return (
           <Card
@@ -285,12 +318,9 @@ export default function OutboundCheckoutsTab({
               <div
                 aria-label={`${t(card.labelKey)} ${card.value}건`}
                 className={[
-                  isHero
-                    ? CHECKOUT_STATS_VARIANTS.hero.kpi
-                    : 'valueTypography' in variantTokens
-                      ? variantTokens.valueTypography
-                      : `text-xl font-bold ${CONTENT_TOKENS.numeric.tabular}`,
-                  card.variantKey === 'overdue' && card.value > 0 ? 'text-brand-critical' : '',
+                  'valueTypography' in variantTokens
+                    ? variantTokens.valueTypography
+                    : `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
                   card.variantKey === 'pending' && card.value > 0 ? 'text-brand-warning' : '',
                 ]
                   .filter(Boolean)
@@ -298,15 +328,15 @@ export default function OutboundCheckoutsTab({
               >
                 {card.value}
               </div>
-              <p
-                className={`${isHero ? CHECKOUT_STATS_VARIANTS.hero.label : MICRO_TYPO.label} text-muted-foreground mt-0.5`}
-              >
-                {t(card.subKey)}
-              </p>
+              <p className={`${MICRO_TYPO.label} text-muted-foreground mt-0.5`}>{t(card.subKey)}</p>
               {isActive && (
                 <p className={`${MICRO_TYPO.badge} text-primary font-semibold mt-1`}>
                   {t('outbound.activeFilter')}
                 </p>
+              )}
+              {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
+              {sparklineValues.length > 1 && (
+                <SparklineMini values={sparklineValues} trend="flat" variant="info" />
               )}
             </CardContent>
           </Card>
@@ -317,6 +347,19 @@ export default function OutboundCheckoutsTab({
 
   // 서브탭별 빈 상태 파라미터 계산
   const emptyStateParams = (() => {
+    // overdue 필터 + summary.overdue === 0 → celebration variant (기한 초과 없음 축하)
+    // TODO(PR-8): i18n 키로 교체 예정
+    if (filters.status === CSVal.OVERDUE && summary.overdue === 0) {
+      return {
+        variant: 'celebration' as const,
+        icon: CheckCircle2,
+        title: '기한 초과 없음',
+        description: '현재 기한이 초과된 반출 건이 없습니다.',
+        primaryAction: undefined,
+        canAct: undefined,
+        secondaryAction: undefined,
+      };
+    }
     if (filterActive) {
       return {
         variant: 'filtered' as const,
