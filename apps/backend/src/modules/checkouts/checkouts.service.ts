@@ -1420,7 +1420,8 @@ export class CheckoutsService extends VersionedBaseService {
       const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
 
       // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
-      const firstEquip = equipmentMap.values().next().value;
+      // items 배열 순서 기준으로 첫 번째 장비 선택 (캐시 혼합 시 Map 삽입 순서 비결정성 방지)
+      const firstEquip = items.length > 0 ? equipmentMap.get(items[0].equipmentId) : undefined;
       if (!firstEquip) {
         throw new BadRequestException({
           code: CheckoutErrorCode.NO_EQUIPMENT,
@@ -2020,13 +2021,6 @@ export class CheckoutsService extends VersionedBaseService {
       const checkout = await this.findOne(uuid);
       const rejectReturnPermissions: readonly string[] = req.user?.permissions ?? [];
 
-      if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
-        throw new BadRequestException({
-          code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
-          message: 'Rejection reason is required',
-        });
-      }
-
       // ✅ items + equipment 일괄 조회 (권한 체크 + 알림에서 재사용)
       const items = await this.db
         .select()
@@ -2037,16 +2031,25 @@ export class CheckoutsService extends VersionedBaseService {
       const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
 
       // ✅ 스코프 접근 제어 — approverTeamId 유무와 무관하게 항상 실행 (방어선 일관성)
-      const firstEquip = equipmentMap.values().next().value;
+      // items 배열 순서 기준으로 첫 번째 장비 선택 (캐시 혼합 시 Map 삽입 순서 비결정성 방지)
+      const firstEquip = items.length > 0 ? equipmentMap.get(items[0].equipmentId) : undefined;
       if (!firstEquip) {
         throw new BadRequestException({
           code: CheckoutErrorCode.NO_EQUIPMENT,
           message: 'No equipment found for this checkout',
         });
       }
+      // scope 먼저 → FSM 나중 → reason 검증 순서:
+      // 스코프 외 사용자에게 REJECTION_REASON_REQUIRED로 checkout 상태를 역추론하지 못하도록 방지
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
-      // 스코프 검증 이후 FSM 검사 — 스코프 외 사용자가 FSM 오류로 상태 역추론하는 정보 노출 방지
       this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
+
+      if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
+        throw new BadRequestException({
+          code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
+          message: 'Rejection reason is required',
+        });
+      }
 
       const approverTeamId = req.user?.teamId;
       let approverClassification: string | null | undefined;

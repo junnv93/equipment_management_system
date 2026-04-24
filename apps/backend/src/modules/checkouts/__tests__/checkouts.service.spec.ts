@@ -713,6 +713,7 @@ describe('CheckoutsService', () => {
       // RENTAL 반출의 rejectReturn은 assertFsmAction에서 INVALID_TRANSITION으로 차단됨.
       // 결과적으로 rejectReturn 내부의 LENDER_TEAM_ONLY 체크는 RENTAL에 대해 dead code가 됨.
       // TODO: FSM에 RENTAL reject_return 추가 또는 dead code 제거 검토 필요
+      const eqId = '550e8400-e29b-41d4-a716-446655440001';
       const rentalReturnedCheckout = {
         id: checkoutId,
         requesterId: '550e8400-e29b-41d4-a716-446655440002',
@@ -720,6 +721,8 @@ describe('CheckoutsService', () => {
         purpose: 'rental',
         lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
         version: 1,
+        site: 'suwon',
+        teamId: null,
       };
       const dtoNoTeam = {
         version: 1,
@@ -728,12 +731,22 @@ describe('CheckoutsService', () => {
         approverTeamId: undefined as string | undefined,
       };
 
-      // FSM이 즉시 차단 — items 조회 미진입
+      // scope-먼저 패턴: items + equipment 로드 후 scope 통과 → assertFsmAction에서 INVALID_TRANSITION
       mockCacheService.getOrSet.mockResolvedValue(rentalReturnedCheckout);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([{ equipmentId: eqId }]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([[eqId, { id: eqId, site: 'suwon', teamId: null }]])
+      );
 
       await expect(service.rejectReturn(checkoutId, dtoNoTeam, mockReq)).rejects.toThrow(
         BadRequestException
       );
+
+      mockChain.then = originalThen;
     });
   });
 
