@@ -535,10 +535,12 @@
     padding-bottom: var(--safe-area-inset-bottom);
   }
 
-  /* ring-dashed — FSM "next" 상태 스테퍼 노드용 점선 링 */
+  /* ring-dashed — FSM "next" 상태 스테퍼 노드용 점선 링
+   * CSS box-shadow는 border-style(dashed) 미지원 → outline 기반 구현.
+   * ring-1과 조합 시 solid box-shadow가 겹치지 않도록 --tw-ring-shadow 무효화. */
   .ring-dashed {
-    --tw-ring-style: dashed;
-    outline: calc(var(--tw-ring-width, 2px)) dashed var(--tw-ring-color, currentColor);
+    --tw-ring-shadow: 0 0 #0000;
+    outline: calc(var(--tw-ring-width, 1px)) dashed var(--tw-ring-color, currentColor);
     outline-offset: calc(var(--tw-ring-offset-width, 0px) + 1px);
   }
 }

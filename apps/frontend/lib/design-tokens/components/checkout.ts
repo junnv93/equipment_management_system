@@ -26,6 +26,7 @@ import {
   getSemanticContainerTextClasses,
 } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
+import { CheckoutStatusValues } from '@equipment-management/schemas';
 
 // ============================================================================
 // 0. Checkout Header Tokens (페이지 헤더 SSOT)
@@ -159,8 +160,8 @@ export const CHECKOUT_ROW_TOKENS = {
     border: 'border border-brand-critical/30',
   },
   hover: {
-    normal: 'hover:bg-muted/30 transition-colors motion-safe:duration-150',
-    pending: 'hover:bg-brand-warning/5 transition-colors motion-safe:duration-150',
+    normal: `hover:bg-muted/30 ${TRANSITION_PRESETS.instantBg}`,
+    pending: `hover:bg-brand-warning/5 ${TRANSITION_PRESETS.instantBg}`,
   },
 } as const;
 
@@ -176,7 +177,7 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
   const colorBar =
     CHECKOUT_ROW_TOKENS.colorBar[colorBarKey] ?? CHECKOUT_ROW_TOKENS.colorBar.calibration;
 
-  if (status === 'overdue') {
+  if (status === CheckoutStatusValues.OVERDUE) {
     return [
       CHECKOUT_ROW_TOKENS.colorBar.base,
       colorBar,
@@ -185,7 +186,7 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
     ].join(' ');
   }
 
-  if (status === 'pending') {
+  if (status === CheckoutStatusValues.PENDING) {
     return [CHECKOUT_ROW_TOKENS.colorBar.base, colorBar, CHECKOUT_ROW_TOKENS.hover.pending].join(
       ' '
     );
@@ -601,10 +602,10 @@ export const CHECKOUT_INTERACTION_TOKENS = {
  */
 export const CHECKOUT_DETAIL_TOKENS = {
   /** 담당자 카드 */
-  personCard: 'bg-muted/50 dark:bg-muted/30',
+  personCard: 'bg-muted/50',
 
   /** 담당자 아이콘 컨테이너 */
-  personIconContainer: 'bg-ul-midnight/10 dark:bg-brand-info/20',
+  personIconContainer: 'bg-brand-info/10',
 
   /** 이상 내용 영역 */
   abnormalContent: 'bg-brand-critical/5',

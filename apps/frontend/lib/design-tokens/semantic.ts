@@ -18,6 +18,7 @@ import {
 } from './primitives';
 import {
   getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
   getSemanticLeftBorderClasses,
   getSemanticSolidBgClasses,
   type SemanticColorKey,
@@ -545,11 +546,11 @@ export const CALLOUT_TOKENS = {
   icon: {
     wrap: 'flex-shrink-0 mt-0.5',
     size: 'h-5 w-5',
-    color: (v: CalloutVariant) => `text-brand-${CALLOUT_VARIANT_TO_SEMANTIC[v]}`,
+    color: (v: CalloutVariant) => getSemanticContainerTextClasses(CALLOUT_VARIANT_TO_SEMANTIC[v]),
   },
   body: 'flex-1 min-w-0 space-y-1',
   title: (v: CalloutVariant) =>
-    `text-sm font-semibold text-brand-${CALLOUT_VARIANT_TO_SEMANTIC[v]}`,
+    `text-sm font-semibold ${getSemanticContainerTextClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
   description: 'text-sm text-muted-foreground leading-relaxed',
   action: 'mt-2 flex items-center gap-2',
 } as const;
