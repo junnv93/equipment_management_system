@@ -991,6 +991,32 @@ grep -rn "ring-2.*ring-brand-info\|ring-brand-info.*ring-2" \
 - `apps/frontend/lib/design-tokens/semantic.ts` — `FOCUS_TOKENS.ringCurrent` 정의 (최상위, `classes` 블록 외부)
 - `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_STEPPER_TOKENS` 소비처
 
+### Step 31: callout/aside 요소 `role="alert"` 금지 — `role="status"` 강제 (2026-04-26 추가)
+
+**원칙:** `role="alert"`는 스크린리더가 포커스 위치를 무시하고 즉시 읽음 (assertive). 상태 변경 안내용 callout에 이를 사용하면 페이지 포커스 이동 + 라이브 리전 이중 읽기가 발생한다. (실측: NC R1a GuidanceCallout 개선, 2026-04-26)
+
+**규칙:**
+- 상태 안내 callout/banner(`<aside>`, 안내 패널): `role="status"` + `aria-live="polite"` 필수
+- `role="alert"`: AlertDialog 파괴적 작업 확인(삭제 confirm) 전용
+
+```bash
+# callout/aside 컴포넌트에 role="alert" 직접 사용 탐지
+grep -rn 'role="alert"' \
+  apps/frontend/components/non-conformances \
+  apps/frontend/components/checkouts \
+  apps/frontend/components/approvals \
+  --include="*.tsx" \
+  | grep -v "AlertDialog\|AlertDialogContent\|// \|node_modules"
+```
+
+**PASS:** 0건 (callout은 모두 `role="status"` 사용). **FAIL:** callout/안내 패널에서 `role="alert"` 발견 시 `role="status"` + `aria-live="polite"` 로 교체.
+
+**예외:**
+- `<AlertDialog>`, `<AlertDialogContent>` 컴포넌트 내부 — Radix UI 구조상 허용
+- 즉각적 에러 알림(form 제출 실패, 네트워크 오류 등) — `role="alert"` 허용 (`aria-live="assertive"` 포함)
+
+**배경:** `GuidanceCallout`이 조건부 `role="alert"/"status"` → 항상 `role="status"` 로 통일. 페이지 진입 시 h2 포커스 + aria-live 이중 읽기 제거.
+
 ## Output Format
 
 ```markdown

@@ -366,6 +366,40 @@ acquisitionFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
 
 **예외:** `.max(1)` (단일 레코드 제약)은 레이아웃 행 구조와 무관한 비즈니스 규칙이므로 매직 넘버 허용.
 
+### Step 12: required string 필드 `.trim()` whitespace bypass 방지 (2026-04-26 추가)
+
+`z.string().min(1)` 만으로는 공백 문자만 있는 문자열(`'   '`)을 통과시킨다.
+사용자가 공백만 입력해도 Zod 검증을 통과하여 빈 값이 DB에 저장되는 버그가 발생한다.
+(실측: NC R5 — `rejectionReason` 공백 우회 버그, 2026-04-26)
+
+**규칙:** 필수 문자열 필드(`min(1)` 또는 `min(N)` 사용)에는 반드시 `.trim()` 선행 적용.
+
+```bash
+# required string 필드에 .trim() 없이 .min(1)만 사용하는 패턴 탐지
+grep -rn "z\.string()\." \
+  apps/backend/src/modules/*/dto --include="*.dto.ts" \
+  | grep "\.min([1-9]" \
+  | grep -v "\.trim()" \
+  | grep -v "//\|email()\|url()\|uuid()"
+```
+
+**PASS 기준:** 0건 (모든 `min(N≥1)` 필드에 `.trim()` 선행).
+
+**FAIL 기준:** `.trim()` 없는 `.min(1)` 발견 시 → `.string().trim().min(1, VM....)` 으로 수정.
+
+```typescript
+// ❌ WRONG — 공백만 입력해도 통과 ('   '.length === 3 > 1)
+rejectionReason: z.string().min(1, VM.approval.rejectReason.required)
+
+// ✅ CORRECT — trim 후 length 검사 ('   '.trim() === '' → min(1) 실패)
+rejectionReason: z.string().trim().min(1, VM.approval.rejectReason.required)
+```
+
+**예외:**
+- `.email()`, `.url()`, `.uuid()` — 포맷 검증기 자체가 공백 처리
+- 선택 필드 (`.optional()`) — min(1)이 없으므로 해당 없음
+- `z.string().min(0)` — 빈 문자열을 허용하는 의도적 선택
+
 ## Output Format
 
 ```markdown
@@ -382,6 +416,7 @@ acquisitionFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
 | 9   | type-only DTO runtime 위치 사용 | PASS/FAIL | TS2693 위험 DTO 목록       |
 | 10  | ZodResponse pairing + 2xx only | PASS/FAIL | interceptor 누락 / 4xx 사용 |
 | 11  | 배열 .max() 매직 넘버          | PASS/FAIL | 레이아웃 상수 미경유 숫자 리터럴 위치 |
+| 12  | required string .trim() 여부   | PASS/FAIL | .min(1) 앞 .trim() 누락 DTO 위치 |
 ```
 
 ## Exceptions
