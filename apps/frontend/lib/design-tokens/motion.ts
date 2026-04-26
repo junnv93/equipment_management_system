@@ -351,7 +351,7 @@ export const REDUCED_MOTION = {
  * >
  */
 export function staggerItem(index: number): React.CSSProperties {
-  return { animationDelay: `${index * 60}ms` };
+  return { animationDelay: `${index * MOTION_TOKENS.stagger.comfortable}ms` };
 }
 
 /**

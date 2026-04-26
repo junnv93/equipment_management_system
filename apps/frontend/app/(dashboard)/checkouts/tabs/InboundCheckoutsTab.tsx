@@ -243,7 +243,6 @@ export default function InboundCheckoutsTab({
         className={[
           CHECKOUT_INBOUND_SECTION_TOKENS.container,
           CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.teamLoan,
-          'pl-4',
         ].join(' ')}
       >
         <InboundSectionHeader
@@ -297,7 +296,6 @@ export default function InboundCheckoutsTab({
         className={[
           CHECKOUT_INBOUND_SECTION_TOKENS.container,
           CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.externalRental,
-          'pl-4',
         ].join(' ')}
       >
         <InboundSectionHeader
@@ -415,7 +413,6 @@ export default function InboundCheckoutsTab({
         className={[
           CHECKOUT_INBOUND_SECTION_TOKENS.container,
           CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.internalShared,
-          'pl-4',
         ].join(' ')}
       >
         <InboundSectionHeader

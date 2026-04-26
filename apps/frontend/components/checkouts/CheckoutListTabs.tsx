@@ -50,7 +50,7 @@ export default function CheckoutListTabs({
     <div
       role="tablist"
       aria-label={t('list.subtab.ariaLabel')}
-      className="flex gap-1 border-b border-border mb-4"
+      className="flex gap-1 border-b border-border"
     >
       {SUB_TABS.map((tab, index) => {
         const isActive = currentSubTab === tab;

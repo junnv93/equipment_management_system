@@ -480,15 +480,6 @@
     "paginationInfo": "{total}건 중 {from}–{to}",
     "fetchError": "반출 목록을 불러오지 못했습니다."
   },
-  "rentalFlow": {
-    "title": "렌탈 단계 진행 현황",
-    "currentStep": "{stepName} · {current}/{total}",
-    "step_0": "대여처 확인",
-    "step_1": "인수확인",
-    "step_2": "반납예정",
-    "step_3": "반입완료",
-    "step_4": "완료"
-  },
   "alerts": {
     "overdueTitle": "기한 초과 {count}건이 즉각 조치를 기다리고 있습니다",
     "overdueAction": "바로 이동 →",
@@ -550,6 +541,7 @@
       "ariaLabel": "반출 상태 분류"
     },
     "count": {
+      "unit": "{value}건",
       "checkouts": "반출 {count}건",
       "equipment": "장비 {count}대",
       "separator": " · "

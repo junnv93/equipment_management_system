@@ -480,15 +480,6 @@
     "paginationInfo": "{from}–{to} of {total}",
     "fetchError": "Failed to load outbound list."
   },
-  "rentalFlow": {
-    "title": "Rental flow progress",
-    "currentStep": "{stepName} · {current}/{total}",
-    "step_0": "Lender confirmed",
-    "step_1": "Borrower received",
-    "step_2": "Return scheduled",
-    "step_3": "Return confirmed",
-    "step_4": "Completed"
-  },
   "alerts": {
     "overdueTitle": "{count} overdue items need immediate attention",
     "overdueAction": "Jump to overdue →",
@@ -550,6 +541,7 @@
       "ariaLabel": "Checkout status category"
     },
     "count": {
+      "unit": "{value} items",
       "checkouts": "{count} checkouts",
       "equipment": "{count} equipment",
       "separator": " · "

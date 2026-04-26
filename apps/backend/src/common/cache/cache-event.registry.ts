@@ -326,15 +326,70 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   //     → dashboard:* + approvals:* (via invalidateAllDashboard)
   [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
   },
   [CACHE_EVENTS.SW_VALIDATION_APPROVED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
   },
   [CACHE_EVENTS.SW_VALIDATION_QUALITY_APPROVED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
   },
   [CACHE_EVENTS.SW_VALIDATION_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
+  },
+
+  // ─── 소프트웨어 유효성 확인 (알림 이벤트 채널) ───
+  // NOTIFICATION_EVENTS.*를 통해 발행되는 이벤트: 크로스 도메인 캐시 비동기 무효화
+  // 대시보드 + sw-validations + test-software 캐시 갱신 (30-120s stale 방지)
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+    ],
   },
 
   // ─── 교정 캐시 전용 (Calibration — cache-only channel) ───

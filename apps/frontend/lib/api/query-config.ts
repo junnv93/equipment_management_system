@@ -343,6 +343,14 @@ export const QUERY_CONFIG = {
     retry: 2,
   },
 
+  /** 반출 상세 - SHORT (mutation 후 무효화, SSR placeholderData 사용으로 초기 refetch 생략) */
+  CHECKOUT_DETAIL: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnMount: false,
+    retry: 2,
+  },
+
   /** 반출지 목록 - DAY (CACHE_TTL.DAY 주석에 "반출 목적지 목록"이 명시된 티어, mutation invalidation으로만 갱신) */
   CHECKOUT_DESTINATIONS: {
     staleTime: CACHE_TIMES.DAY,

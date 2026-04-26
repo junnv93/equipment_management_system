@@ -4,9 +4,9 @@
  * 반출입 관리 컴포넌트의 모든 디자인 값을 정의하는 SSOT
  * - 13개 checkout 상태 + 7개 rental import 상태 스타일 (brand 시멘틱 토큰)
  * - 반출 유형별 색상 바 + 행 강조 토큰
- * - 미니 프로그레스 토큰 (상태 흐름 시각화)
+ * - 미니 프로그레스 토큰 (CHECKOUT_MINI_PROGRESS — statusToStepIndex 기반)
  * - Stepper node/connector/label 스타일 (모바일/데스크톱)
- * - Stats card variants (total/pending/overdue/inProgress)
+ * - Stats card variants (total/pending/overdue/checkedOut/returned/hero)
  *
  * CRITICAL: CheckoutStatusBadge.tsx 상수 통합, 하드코딩 제거
  */
@@ -120,8 +120,7 @@ export const DEFAULT_CHECKOUT_BADGE =
 /**
  * 반출 목적(purpose)별 배지 스타일 + 색상 바 클래스
  *
- * SSOT: CHECKOUT_PURPOSE_STYLES(shared-constants) 대체
- * CHECKOUT_PURPOSE_STYLES는 @deprecated → 이 토큰 사용
+ * SSOT: shared-constants의 구 CHECKOUT_PURPOSE_STYLES를 대체한 현행 토큰.
  */
 export const CHECKOUT_PURPOSE_TOKENS = {
   calibration: {
@@ -209,7 +208,7 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
 /**
  * 반출 상태 → stepper i18n 키 매핑 (SSOT)
  *
- * CheckoutStatusStepper / CheckoutMiniProgress / RentalFlowInline 3곳에서 공용 참조.
+ * CheckoutStatusStepper / CheckoutMiniProgress 2곳에서 공용 참조.
  * 값은 `checkouts.stepper.<value>` 네임스페이스에서 useTranslations으로 해석.
  *
  * 로컬 STEPPER_LABEL_MAP 재정의 금지 — 이 상수가 유일한 진실의 소스.
@@ -294,65 +293,6 @@ export const CHECKOUT_MINI_PROGRESS = {
   } as const satisfies Record<CheckoutPurpose, number>,
 } as const;
 
-// ============================================================================
-// 3-B. Rental Flow Inline Tokens (그룹 헤더 내 렌탈 단계 표시)
-// ============================================================================
-
-/**
- * 렌탈 그룹 카드 헤더의 인라인 4단계 흐름 표시
- *
- * @deprecated 78-3에서 칩+tooltip 패턴으로 전체 교체 예정.
- *   circle/arrow/stepLabel 프로퍼티도 개별 deprecated.
- *   소비처: CheckoutGroupCard.tsx RentalFlowInline 컴포넌트.
- *
- * 와이어프레임 [개선 8]: 렌탈 그룹 헤더에 대여 4단계 현황 인라인 표시
- * 5개 원: lender_checked→borrower_received→borrower_returned→lender_received→완료
- */
-export const RENTAL_FLOW_INLINE_TOKENS = {
-  /** 칩 외부 컨테이너 — 모바일 표시 허용 (hidden sm:flex 제거) */
-  chip: 'inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-purple/5 border border-brand-purple/20 rounded-md text-xs text-brand-purple font-medium',
-  /** 칩 내 구분자 */
-  chipSeparator: 'text-brand-purple/30',
-  /** Tooltip 목록 항목 */
-  tooltipStep: 'flex items-center gap-1.5 text-xs',
-  tooltipStepDone: 'text-brand-ok',
-  tooltipStepCurrent: 'text-brand-purple font-semibold',
-  tooltipStepFuture: 'text-muted-foreground',
-  /**
-   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (4단계: 0~3)
-   * non-rental 또는 flow 외 상태는 null (컴포넌트에서 숨김 처리)
-   * SSOT: CheckoutGroupCard에서 직접 매핑 상수 정의 금지
-   */
-  statusToStep: {
-    // 인라인 흐름 상태
-    approved: 0, // 대출 준비 완료
-    lender_checked: 0, // 대출 측 확인
-    borrower_received: 1, // 차용 측 수령
-    in_use: 1, // 사용 중 (borrower_received와 동일 단계)
-    overdue: 1, // 기한 초과 (사용 중 단계)
-    borrower_returned: 2, // 차용 측 반납
-    lender_received: 3, // 대출 측 수령 (완료)
-    returned: 3, // 반납 완료
-    return_approved: 3, // 최종 승인 (완료)
-    // 아직 rental 흐름 진입 전 / 흐름 외 상태 → null
-    pending: null,
-    borrower_approved: null, // 2-step 승인 대기 — dispatch 전
-    rejected: null,
-    canceled: null,
-    checked_out: null, // non-rental 전용 상태
-  } as const satisfies Record<CheckoutStatus, number | null>,
-} as const;
-
-/**
- * @deprecated CHECKOUT_MINI_PROGRESS.statusToStepIndex + .stepCount 사용
- * CheckoutMiniProgress가 statusToStepIndex 기반으로 전환됨 (v2 리디자인)
- */
-export const MINI_PROGRESS_STEPS = {
-  calibration: ['pending', 'approved', 'checked_out', 'returned'] as const,
-  repair: ['pending', 'approved', 'checked_out', 'returned'] as const,
-  rental: ['pending', 'approved', 'checked_out', 'returned'] as const,
-} as const;
-
 /**
  * 미니 프로그레스에서 진행 바 대신 아이콘만 표시하는 상태
  * overdue는 checked_out 위치에 late(빨강 !) 스타일로 표시됨
@@ -383,7 +323,7 @@ export const CHECKOUT_STEPPER_TOKENS = {
       label: 'text-brand-ok',
     },
     current: {
-      node: 'bg-brand-info/15 ring-2 ring-brand-info ring-offset-2',
+      node: ['bg-brand-info/15', FOCUS_TOKENS.ringCurrent].join(' '),
       icon: 'text-brand-info fill-brand-info',
       label: 'font-medium text-brand-info',
     },
@@ -478,18 +418,6 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-critical/10',
     iconColor: 'text-brand-critical',
     alertRing: `ring-2 ring-brand-critical/30 ${ELEVATION_TOKENS.shadow.medium}`,
-    elevation: ELEVATION_TOKENS.surface.raised,
-    valueTypography: TYPOGRAPHY_TOKENS.kpi,
-    headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
-    contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
-  },
-  /** @deprecated checkedOut과 동일 — checkedOut 사용 권장 */
-  inProgress: {
-    hoverBorder: 'hover:border-brand-purple/30',
-    activeBorder: 'border-brand-purple',
-    activeBg: 'bg-brand-purple/10',
-    iconColor: 'text-brand-purple',
-    alertRing: '',
     elevation: ELEVATION_TOKENS.surface.raised,
     valueTypography: TYPOGRAPHY_TOKENS.kpi,
     headerPadding: `flex flex-row items-center justify-between pb-1.5 pt-3 ${SPACING_RHYTHM_TOKENS.tight.paddingX}`,
@@ -705,16 +633,6 @@ export const CHECKOUT_FORM_TOKENS = {
 // 12. Checkout Stats (5-card variant 확장)
 // ============================================================================
 
-/**
- * @deprecated CHECKOUT_STATS_VARIANTS.checkedOut 사용. 하위 호환용.
- */
-export const CHECKOUT_STATS_CHECKED_OUT = CHECKOUT_STATS_VARIANTS.checkedOut;
-
-/**
- * @deprecated CHECKOUT_STATS_VARIANTS.returned 사용. 하위 호환용.
- */
-export const CHECKOUT_STATS_RETURNED = CHECKOUT_STATS_VARIANTS.returned;
-
 // ============================================================================
 // 13. D-day Badge Tokens
 // ============================================================================
@@ -803,7 +721,7 @@ export const CHECKOUT_ALERT_TOKENS = {
  *   internalShared  → brand-ok (내부 공용)
  */
 export const CHECKOUT_INBOUND_SECTION_TOKENS = {
-  container: 'space-y-3',
+  container: 'space-y-3 pl-4',
   header: {
     wrapper: 'flex items-start gap-3 pb-2',
     iconContainer: {

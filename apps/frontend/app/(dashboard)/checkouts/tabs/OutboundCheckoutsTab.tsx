@@ -5,14 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  ClipboardList,
-  Clock,
-  AlertTriangle,
-  PackageCheck,
-  PackageOpen,
-  CheckCircle2,
-} from 'lucide-react';
+import { ClipboardList, Clock, AlertTriangle, PackageCheck, PackageOpen } from 'lucide-react';
 
 import { HeroKPI } from '@/components/checkouts/HeroKPI';
 import { SparklineMini } from '@/components/checkouts/SparklineMini';
@@ -21,7 +14,11 @@ import CheckoutEmptyState from '@/components/checkouts/CheckoutEmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  Permission,
+  DEFAULT_PAGE_SIZE,
+} from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
@@ -32,7 +29,9 @@ import {
   CHECKOUT_STATS_ALERT_THRESHOLD,
   CHECKOUT_PAGINATION_TOKENS,
   MICRO_TYPO,
+  SECTION_RHYTHM_TOKENS,
   TYPOGRAPHY_TOKENS,
+  CHECKOUT_ICON_MAP,
   type CheckoutStatsVariant,
 } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
@@ -120,7 +119,6 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
  * v2 변경:
  * - 5개 통계 카드 (전체/승인대기/반출중/기한초과/반입완료)
  * - 기한 초과 그룹 최상단 고정 (overdue 그룹 id 부여)
- * - 인라인 승인 권한 (canApprove) 전달
  *
  * PR-7 Batch 2:
  * - overdue hero 카드 → HeroKPI 컴포넌트 연결 (col-span-2 구조 유지)
@@ -137,7 +135,6 @@ export default function OutboundCheckoutsTab({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const { can } = useAuth();
-  const canApprove = can(Permission.APPROVE_CHECKOUT);
   const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 
   const statCards = useStatCards(summary);
@@ -231,7 +228,7 @@ export default function OutboundCheckoutsTab({
   // ──────────────────────────────────────────────
   const renderStats = () => (
     <div
-      className={`grid gap-3 ${heroVariantKey ? 'grid-cols-4 sm:grid-cols-6 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'} mb-5`}
+      className={`grid gap-3 ${heroVariantKey ? 'grid-cols-4 sm:grid-cols-6 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'}`}
     >
       {statCards.map((card) => {
         const isActive =
@@ -323,7 +320,7 @@ export default function OutboundCheckoutsTab({
               className={'contentPadding' in variantTokens ? variantTokens.contentPadding : 'p-3'}
             >
               <div
-                aria-label={`${t(card.labelKey)} ${card.value}건`}
+                aria-label={`${t(card.labelKey)} ${t('list.count.unit', { value: card.value })}`}
                 className={[
                   'valueTypography' in variantTokens
                     ? variantTokens.valueTypography
@@ -359,7 +356,7 @@ export default function OutboundCheckoutsTab({
       return (
         <EmptyState
           variant="celebration"
-          icon={CheckCircle2}
+          icon={CHECKOUT_ICON_MAP.emptyState.overdueClear}
           title={t('emptyState.overdueClear.title')}
           description={t('emptyState.overdueClear.description')}
           testId="empty-state-overdue-clear"
@@ -403,7 +400,7 @@ export default function OutboundCheckoutsTab({
   // Main render
   // ──────────────────────────────────────────────
   return (
-    <>
+    <div className={SECTION_RHYTHM_TOKENS.tight}>
       {renderStats()}
 
       {/* 서브탭 (진행 중 / 완료) — tablist는 tabpanel의 sibling으로 배치 (WCAG 4.1.2) */}
@@ -441,7 +438,6 @@ export default function OutboundCheckoutsTab({
                 <CheckoutGroupCard
                   group={group}
                   onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
-                  canApprove={canApprove}
                   isOverdueGroup={group.statuses.includes(CSVal.OVERDUE)}
                 />
               </div>
@@ -468,9 +464,12 @@ export default function OutboundCheckoutsTab({
                 <p className={CHECKOUT_PAGINATION_TOKENS.info}>
                   {t('outbound.paginationInfo', {
                     total: checkoutsData.meta.pagination.total,
-                    from: (current - 1) * (checkoutsData.meta.pagination.pageSize ?? 10) + 1,
+                    from:
+                      (current - 1) *
+                        (checkoutsData.meta.pagination.pageSize ?? DEFAULT_PAGE_SIZE) +
+                      1,
                     to: Math.min(
-                      current * (checkoutsData.meta.pagination.pageSize ?? 10),
+                      current * (checkoutsData.meta.pagination.pageSize ?? DEFAULT_PAGE_SIZE),
                       checkoutsData.meta.pagination.total
                     ),
                   })}
@@ -557,6 +556,6 @@ export default function OutboundCheckoutsTab({
             );
           })()}
       </div>
-    </>
+    </div>
   );
 }

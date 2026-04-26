@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import { Check, Dot } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -13,7 +13,6 @@ import {
 } from '@/lib/design-tokens';
 import {
   computeStepIndex,
-  computeTotalSteps,
   CheckoutStatusValues as CSVal,
   type CheckoutStatus,
   type CheckoutPurpose,
@@ -131,6 +130,7 @@ function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineP
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
+                    tabIndex={0}
                     className={cn(
                       'absolute left-0 top-0',
                       CHECKOUT_TIMELINE_TOKENS.dot.base,
@@ -168,10 +168,5 @@ function WorkflowTimelineInner({ status, purpose, className }: WorkflowTimelineP
 }
 
 export function WorkflowTimeline(props: WorkflowTimelineProps) {
-  const stepCount = computeTotalSteps(props.purpose);
-  return (
-    <Suspense fallback={<WorkflowTimelineSkeleton count={stepCount} />}>
-      <WorkflowTimelineInner {...props} />
-    </Suspense>
-  );
+  return <WorkflowTimelineInner {...props} />;
 }

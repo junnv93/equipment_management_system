@@ -197,6 +197,9 @@ export const MOTION_TOKENS = {
     /** 카드 그리드 */
     grid: MOTION_PRIMITIVES.stagger.comfortable,
 
+    /** 표준 연속 딜레이 (60ms) — staggerItem() SSOT */
+    comfortable: MOTION_PRIMITIVES.stagger.comfortable,
+
     /** 섹션 */
     section: MOTION_PRIMITIVES.stagger.relaxed,
   },
@@ -324,6 +327,13 @@ export const FOCUS_TOKENS = {
     width: 2,
     offset: 2,
   },
+
+  /**
+   * 현재 단계(current step) 강조 링 — 키보드 포커스와 무관.
+   * Stepper의 active node, HeroKPI 강조 등 "지금 이 단계" 시각 표시용.
+   * focus-visible: prefix 없음 — classes.* 와 오남용 주의.
+   */
+  ringCurrent: 'ring-2 ring-brand-info ring-offset-2',
 
   /**
    * Ready-to-use Tailwind 포커스 클래스

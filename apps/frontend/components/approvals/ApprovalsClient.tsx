@@ -50,7 +50,7 @@ interface ApprovalsClientProps {
 
 export function ApprovalsClient({
   userRole,
-  userId,
+  userId: _userId,
   userTeamId,
   initialTab,
 }: ApprovalsClientProps) {
@@ -138,7 +138,6 @@ export function ApprovalsClient({
       await approvalsApi.approve(
         item.category,
         item.id,
-        userId,
         comment || t('defaults.approveComment'),
         equipmentId,
         item.originalData
@@ -213,14 +212,7 @@ export function ApprovalsClient({
   >({
     mutationFn: async ({ item, reason }) => {
       const equipmentId = item.details?.equipmentId as string | undefined;
-      await approvalsApi.reject(
-        item.category,
-        item.id,
-        userId,
-        reason,
-        equipmentId,
-        item.originalData
-      );
+      await approvalsApi.reject(item.category, item.id, reason, equipmentId, item.originalData);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
@@ -271,7 +263,7 @@ export function ApprovalsClient({
     ApprovalItem[]
   >({
     mutationFn: async ({ ids, comment }) => {
-      return await approvalsApi.bulkApprove(activeTab, ids, userId, comment);
+      return await approvalsApi.bulkApprove(activeTab, ids, comment);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
@@ -368,7 +360,7 @@ export function ApprovalsClient({
     ApprovalItem[]
   >({
     mutationFn: async ({ ids, reason }) => {
-      return await approvalsApi.bulkReject(activeTab, ids, userId, reason);
+      return await approvalsApi.bulkReject(activeTab, ids, reason);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],

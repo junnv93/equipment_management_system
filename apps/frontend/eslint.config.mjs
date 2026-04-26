@@ -97,6 +97,25 @@ const eslintConfig = [
       },
     },
   },
+  // @deprecated 토큰 회귀 방지 가드 — design-tokens 스코프로 한정 (typed linting 비용 최소화)
+  // index.ts 제외: 배럴 파일은 하위호환 유지를 위해 의도적으로 deprecated 심볼을 re-export
+  {
+    files: ['lib/design-tokens/**/*.ts'],
+    ignores: ['lib/design-tokens/index.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
+    rules: {
+      '@typescript-eslint/no-deprecated': 'error',
+    },
+  },
 ];
 
 export default eslintConfig;

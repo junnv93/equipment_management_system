@@ -64,7 +64,7 @@ export interface Checkout {
     id: string;
     name: string;
     email: string;
-    department: string;
+    department?: string;
     team?: { name: string };
   };
   destination: string; // ✅ 백엔드 필드명

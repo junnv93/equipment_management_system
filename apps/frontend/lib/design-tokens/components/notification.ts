@@ -53,6 +53,7 @@ export const NOTIFICATION_BADGE_VARIANTS = {
  */
 export function getNotificationBadgeVariant(
   count: number
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated 함수 내 자기 참조(순환 참조 불가피)
 ): keyof typeof NOTIFICATION_BADGE_VARIANTS {
   if (count >= 10) return 'urgent';
   if (count >= 6) return 'attention';
