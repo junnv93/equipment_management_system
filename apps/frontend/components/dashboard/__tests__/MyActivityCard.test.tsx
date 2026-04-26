@@ -5,12 +5,6 @@ import type { RecentActivity } from '@/lib/api/dashboard-api';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-jest.mock('next/link', () => {
-  return function MockLink({ href, children }: { href: string; children: React.ReactNode }) {
-    return <a href={href}>{children}</a>;
-  };
-});
-
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     if (params && 'name' in params) return `${key}:${params.name}`;

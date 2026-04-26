@@ -366,8 +366,7 @@
   "myActivity": {
     "title": "My Recent Activity",
     "ariaLabel": "{name}'s recent activity",
-    "empty": "No recent activity",
-    "viewAll": "View all activity"
+    "empty": "No recent activity"
   },
   "aggregate": {
     "error": "Some dashboard data could not be loaded."

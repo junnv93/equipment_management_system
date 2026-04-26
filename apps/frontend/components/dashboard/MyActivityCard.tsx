@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ClipboardList, Truck, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,14 +33,8 @@ export function MyActivityCard({ userId, recentActivities }: MyActivityCardProps
       className="bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm"
       aria-label={t('ariaLabel', { name: '' })}
     >
-      <header className="flex items-center justify-between">
+      <header>
         <span className="text-sm font-semibold text-foreground">{t('title')}</span>
-        <Link
-          href="#"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {t('viewAll')}
-        </Link>
       </header>
 
       {myActivities.length === 0 ? (

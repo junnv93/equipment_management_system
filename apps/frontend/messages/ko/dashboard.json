@@ -366,8 +366,7 @@
   "myActivity": {
     "title": "내 최근 활동",
     "ariaLabel": "{name}님의 최근 활동",
-    "empty": "최근 활동이 없습니다",
-    "viewAll": "전체 활동 보기"
+    "empty": "최근 활동이 없습니다"
   },
   "aggregate": {
     "error": "대시보드 데이터 일부를 불러오지 못했습니다."
