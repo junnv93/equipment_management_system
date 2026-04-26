@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { format } from 'date-fns';
@@ -110,8 +110,7 @@ export default function CheckoutDetailClient({
     queryKey: queryKeys.checkouts.detail(initialCheckout.id),
     queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
     placeholderData: initialCheckout,
-    staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
-    refetchOnMount: false, // Server Component이 이미 최신 데이터 제공
+    ...QUERY_CONFIG.CHECKOUT_DETAIL,
   });
 
   // FSM 다음 단계 descriptor (feature flag on일 때만 실질적으로 사용)
@@ -153,7 +152,10 @@ export default function CheckoutDetailClient({
 
   // 승인 mutation (approverId는 백엔드에서 세션으로부터 자동 추출)
   const approveMutation = useOptimisticMutation<Checkout, void, Checkout>({
-    mutationFn: () => checkoutApi.approveCheckout(checkout.id, checkout.version),
+    mutationFn: async () => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.approveCheckout(checkout.id, version);
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
@@ -172,8 +174,10 @@ export default function CheckoutDetailClient({
 
   // 반려 mutation
   const rejectMutation = useOptimisticMutation<Checkout, string, Checkout>({
-    mutationFn: (reason: string) =>
-      checkoutApi.rejectCheckout(checkout.id, checkout.version, reason),
+    mutationFn: async (reason: string) => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.rejectCheckout(checkout.id, version, reason);
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old, reason): Checkout =>
       ({
@@ -196,13 +200,14 @@ export default function CheckoutDetailClient({
 
   // 반출 시작 mutation (장비별 상태 기록 포함)
   const startMutation = useOptimisticMutation<Checkout, void, Checkout>({
-    mutationFn: () => {
+    mutationFn: async () => {
       const conditions = Object.entries(itemConditionsBefore)
         .filter(([, value]) => value.trim())
         .map(([equipmentId, conditionBefore]) => ({ equipmentId, conditionBefore }));
+      const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.startCheckout(
         checkout.id,
-        checkout.version,
+        version,
         conditions.length > 0 ? { itemConditions: conditions } : undefined
       );
     },
@@ -227,7 +232,10 @@ export default function CheckoutDetailClient({
 
   // 반입 승인 mutation
   const approveReturnMutation = useOptimisticMutation<Checkout, void, Checkout>({
-    mutationFn: () => checkoutApi.approveReturn(checkout.id, { version: checkout.version }),
+    mutationFn: async () => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.approveReturn(checkout.id, { version });
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
@@ -250,7 +258,10 @@ export default function CheckoutDetailClient({
 
   // 반출 취소 mutation (test_engineer, technical_manager — pending/approved 상태)
   const cancelMutation = useOptimisticMutation<Checkout, void, Checkout>({
-    mutationFn: () => checkoutApi.cancelCheckout(checkout.id, checkout.version),
+    mutationFn: async () => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.cancelCheckout(checkout.id, version);
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
@@ -272,7 +283,10 @@ export default function CheckoutDetailClient({
 
   // 대여 1차 승인 mutation (rental pending → borrower_approved)
   const borrowerApproveMutation = useOptimisticMutation<Checkout, void, Checkout>({
-    mutationFn: () => checkoutApi.borrowerApproveCheckout(checkout.id, checkout.version),
+    mutationFn: async () => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.borrowerApproveCheckout(checkout.id, version);
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
@@ -295,8 +309,10 @@ export default function CheckoutDetailClient({
 
   // 대여 1차 반려 mutation (rental pending → rejected, borrowerRejectionReason 기록)
   const borrowerRejectMutation = useOptimisticMutation<Checkout, string, Checkout>({
-    mutationFn: (reason: string) =>
-      checkoutApi.borrowerRejectCheckout(checkout.id, checkout.version, reason),
+    mutationFn: async (reason: string) => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.borrowerRejectCheckout(checkout.id, version, reason);
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old, reason): Checkout =>
       ({
@@ -321,8 +337,10 @@ export default function CheckoutDetailClient({
 
   // 반입 반려 mutation
   const rejectReturnMutation = useOptimisticMutation<Checkout, string, Checkout>({
-    mutationFn: (reason: string) =>
-      checkoutApi.rejectReturn(checkout.id, { version: checkout.version, reason }),
+    mutationFn: async (reason: string) => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      return checkoutApi.rejectReturn(checkout.id, { version, reason });
+    },
     queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old, _reason): Checkout =>
       ({
@@ -340,6 +358,7 @@ export default function CheckoutDetailClient({
     },
     onErrorCallback: () => {
       setDialogState((prev) => ({ ...prev, rejectReturn: false }));
+      setReturnRejectReason('');
     },
   });
 
@@ -498,7 +517,7 @@ export default function CheckoutDetailClient({
               checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
               nextStepIndex={
                 nextStepDescriptor.nextAction !== null
-                  ? nextStepDescriptor.currentStepIndex + 1
+                  ? nextStepDescriptor.currentStepIndex
                   : undefined
               }
             />
@@ -685,7 +704,10 @@ export default function CheckoutDetailClient({
                       <Package className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <Link href={`/equipment/${equip.id}`} className="font-medium hover:underline">
+                      <Link
+                        href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(equip.id)}
+                        className="font-medium hover:underline"
+                      >
                         {equip.name}
                       </Link>
                       <p className="text-sm text-muted-foreground">{equip.managementNumber}</p>
