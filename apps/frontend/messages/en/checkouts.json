@@ -650,7 +650,7 @@
     },
     "overdueClear": {
       "title": "No Overdue Checkouts",
-      "description": "All checkouts are within their return dates."
+      "description": "All checkouts are within their return dates"
     }
   },
   "yourTurn": {

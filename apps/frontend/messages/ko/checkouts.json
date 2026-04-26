@@ -650,7 +650,7 @@
     },
     "overdueClear": {
       "title": "기한 초과 없음",
-      "description": "현재 기한이 초과된 반출 건이 없습니다."
+      "description": "현재 기한이 초과된 반출 건이 없습니다"
     }
   },
   "yourTurn": {
