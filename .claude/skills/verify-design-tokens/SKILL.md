@@ -890,6 +890,82 @@ grep -rn 'className={`[^`]*\(bg-brand-\|text-brand-\|border-brand-\)' \
 - `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_DIALOG_TOKENS` (Phase 4 추가)
 - `apps/frontend/lib/design-tokens/components/non-conformance.ts` — `NC_BANNER_TOKENS.detailCardLink` (hover variant)
 
+### Step 29: 크로스 도메인 공유 색상 SSOT + tabBadge alert 토큰 + `satisfies` 강제 (2026-04-26 추가, Sprint 2.4)
+
+**원칙 1 — 크로스 도메인 공유 색상은 `semantic.ts` 배치 필수:**
+`checkout.ts` ↔ `notification.ts` 등 서로 다른 도메인 컴포넌트 토큰 파일 간 직접 import 금지.
+공유 색상 값은 반드시 `semantic.ts`에 이름 있는 상수(`ALERT_TAB_BADGE_COLOR` 등)로 정의 후 각 도메인 파일에서 참조한다.
+
+**원칙 2 — `tabBadge` alert 상태는 `ALERT_TAB_BADGE_COLOR` SSOT 경유:**
+`bg-destructive text-destructive-foreground` raw 리터럴을 컴포넌트 파일 또는 Layer 3 토큰 파일에 직접 인라인 금지.
+`CHECKOUT_TAB_BADGE_TOKENS.alert` 및 `NOTIFICATION_LIST_FILTER_TOKENS.tabBadge` 모두 `ALERT_TAB_BADGE_COLOR`를 경유해야 한다.
+
+**원칙 3 — `CHECKOUT_TAB_BADGE_TOKENS`의 `as const satisfies` 강제:**
+`CHECKOUT_TAB_BADGE_TOKENS`는 `as const satisfies { base: string; active: string; inactive: string; alert: string }` 제약이 필수.
+새 variant(`alert` 등) 추가 시 TypeScript가 컴파일 타임에 누락을 탐지한다.
+
+**탐지 — 원칙 1: 도메인 간 직접 import 금지:**
+```bash
+# checkout.ts → notification.ts 직접 import (또는 역방향) 탐지
+grep -n "from.*notification\|from.*checkout" \
+  apps/frontend/lib/design-tokens/components/checkout.ts \
+  apps/frontend/lib/design-tokens/components/notification.ts
+# → 0건 (도메인 파일은 semantic.ts만 참조)
+```
+
+**탐지 — 원칙 2: raw `bg-destructive text-destructive-foreground` 인라인 금지:**
+
+검사 대상은 **온전한 `bg-destructive text-destructive-foreground` 문자열 조합** (tabBadge 경보 패턴)에 한정된다.
+`bg-destructive/5`, `bg-destructive/10` 등 투명도 변형은 에러 상태 배경으로 허용.
+
+```bash
+# Layer 3 컴포넌트 토큰 파일에서 raw bg-destructive text-destructive-foreground 조합 탐지
+grep -rn "bg-destructive text-destructive-foreground\|bg-destructive.*text-destructive-foreground" \
+  apps/frontend/lib/design-tokens/components/ --include="*.ts" \
+  | grep -v "ALERT_TAB_BADGE_COLOR"
+# → 0건 (ALERT_TAB_BADGE_COLOR 경유)
+
+# 컴포넌트/페이지에서 rounded-full + bg-destructive text-destructive-foreground 조합 탐지
+# (탭 배지 패턴에 특화 — shadcn/ui button/badge/toast, 일반 에러 배경 제외)
+grep -rn "rounded-full.*bg-destructive text-destructive-foreground\|bg-destructive text-destructive-foreground.*rounded-full\|rounded-full.*bg-destructive.*text-destructive-foreground" \
+  apps/frontend/components/ apps/frontend/app/ --include="*.tsx" --include="*.ts" \
+  | grep -v "CHECKOUT_TAB_BADGE_TOKENS\|ALERT_TAB_BADGE_COLOR\|components/ui/\|// "
+# → 0건 (CHECKOUT_TAB_BADGE_TOKENS.alert 경유)
+```
+
+**예외 (허용):**
+- `components/ui/` (shadcn/ui) 내 destructive variant — button, badge, toast 등 shadcn 자체 컴포넌트
+- `bg-destructive/5`, `bg-destructive/10`, `border-destructive` 등 투명도 변형 및 단독 사용 — 에러/경고 배경
+- `VisualTableEditor.tsx:242` — 점검 결과 편집기의 고정 위치(`absolute -top-1 -right-1`) 에러 indicator. tabBadge 패턴이 아닌 독립 badge로 기존 허용 (`inspections/` 도메인, ALERT_TAB_BADGE_COLOR 적용 시 레이아웃 깨짐)
+- 탭 배지가 아닌 고정 위치 소형 badge 인라인 (`absolute`/`fixed` 조합) — 단, 신규 추가 시 `ALERT_TAB_BADGE_COLOR` 경유 권장
+
+**탐지 — 원칙 3: `as const satisfies` 제약 존재 확인:**
+```bash
+# CHECKOUT_TAB_BADGE_TOKENS에 satisfies 제약 존재 확인
+grep -A 6 "^export const CHECKOUT_TAB_BADGE_TOKENS" \
+  apps/frontend/lib/design-tokens/components/checkout.ts
+# → 마지막 줄: } as const satisfies { base: string; active: string; inactive: string; alert: string };
+
+# ALERT_TAB_BADGE_COLOR가 semantic.ts에 정의되고 index.ts에서 re-export되는지 확인
+grep -n "ALERT_TAB_BADGE_COLOR" \
+  apps/frontend/lib/design-tokens/semantic.ts \
+  apps/frontend/lib/design-tokens/index.ts
+# → semantic.ts: 1건 (정의), index.ts: 1건 (re-export)
+```
+
+**PASS:** 도메인 간 직접 import 0건, raw `bg-destructive` 인라인 0건, `satisfies` 제약 존재, `ALERT_TAB_BADGE_COLOR` 두 곳 모두 정의.
+**FAIL:**
+- 도메인 간 직접 import 발견 → `semantic.ts`에 공유 상수로 승격 후 각 도메인 파일에서 참조
+- raw `bg-destructive text-destructive-foreground` 인라인 → `ALERT_TAB_BADGE_COLOR` 경유로 교체
+- `satisfies` 미존재 → `as const satisfies { base: string; active: string; inactive: string; alert: string }` 추가
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `ALERT_TAB_BADGE_COLOR` 정의 위치 (크로스 도메인 공유 SSOT)
+- `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_TAB_BADGE_TOKENS` (satisfies 제약)
+- `apps/frontend/lib/design-tokens/components/notification.ts` — `NOTIFICATION_LIST_FILTER_TOKENS.tabBadge` (`ALERT_TAB_BADGE_COLOR` 경유)
+- `apps/frontend/lib/design-tokens/index.ts` — `ALERT_TAB_BADGE_COLOR` barrel re-export
+- `apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx` — `CHECKOUT_TAB_BADGE_TOKENS.alert` 소비처
+
 ## Output Format
 
 ```markdown
@@ -932,6 +1008,9 @@ grep -rn 'className={`[^`]*\(bg-brand-\|text-brand-\|border-brand-\)' \
 | 26  | 사전 생성 룩업 토큰 + satisfies 가드 | PASS/FAIL | variant 함수 concat 패턴 또는 `Record<K>` satisfies 누락 위치 |
 | 27  | NC compact dot SSOT (`getNCWorkflowCompactDotClasses`) | PASS/FAIL | compactDot 직접 접근 또는 index.ts 누락 위치 |
 | 28  | 컴포넌트 JSX 인라인 brand 리터럴 금지 | PASS/FAIL | className에 bg-brand-*/text-brand-* 직접 사용 위치 |
+| 29a | 크로스 도메인 공유 색상 semantic.ts 배치 (도메인 간 직접 import 금지) | PASS/FAIL | checkout.ts↔notification.ts 직접 import 위치 |
+| 29b | tabBadge alert 상태 `ALERT_TAB_BADGE_COLOR` SSOT 경유 (raw bg-destructive 인라인 금지) | PASS/FAIL | raw 리터럴 또는 컴포넌트 직접 사용 위치 |
+| 29c | `CHECKOUT_TAB_BADGE_TOKENS` `as const satisfies` 제약 + `ALERT_TAB_BADGE_COLOR` index re-export | PASS/FAIL | satisfies 미존재 또는 index.ts 누락 위치 |
 ```
 
 ## Exceptions
