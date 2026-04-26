@@ -8,9 +8,11 @@
  */
 
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
   Ban,
+  Bell,
   CheckCircle2,
   Clock,
   Lock,
@@ -55,6 +57,7 @@ export const CHECKOUT_ICON_MAP = {
     'in-progress': Clock,
     completed: CheckCircle2,
     filtered: AlertTriangle,
+    overdueClear: CheckCircle2,
   },
 
   /** 긴급도별 아이콘 — WorkflowPanel urgency dot 옆 */
@@ -62,6 +65,13 @@ export const CHECKOUT_ICON_MAP = {
     normal: ArrowRight,
     warning: AlertTriangle,
     critical: Timer,
+  },
+
+  /** 긴급도별 배지 아이콘 — YourTurnBadge urgency 표시용 */
+  urgencyBadge: {
+    normal: Bell,
+    warning: AlertTriangle,
+    critical: AlertCircle,
   },
 
   /** 잠금 상태 (권한 없는 액션) */
@@ -72,3 +82,4 @@ export type CheckoutStatusIconKey = keyof typeof CHECKOUT_ICON_MAP.status;
 export type CheckoutActionIconKey = keyof typeof CHECKOUT_ICON_MAP.action;
 export type CheckoutEmptyStateIconKey = keyof typeof CHECKOUT_ICON_MAP.emptyState;
 export type CheckoutUrgencyIconKey = keyof typeof CHECKOUT_ICON_MAP.urgency;
+export type CheckoutUrgencyBadgeIconKey = keyof typeof CHECKOUT_ICON_MAP.urgencyBadge;

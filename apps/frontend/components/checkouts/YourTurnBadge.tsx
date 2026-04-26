@@ -1,9 +1,8 @@
 'use client';
 
 import { memo } from 'react';
-import { Bell, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { CHECKOUT_YOUR_TURN_BADGE_TOKENS } from '@/lib/design-tokens';
+import { CHECKOUT_YOUR_TURN_BADGE_TOKENS, CHECKOUT_ICON_MAP } from '@/lib/design-tokens';
 
 // ============================================================================
 // Types
@@ -17,16 +16,6 @@ export interface YourTurnBadgeProps {
 }
 
 // ============================================================================
-// Icon map
-// ============================================================================
-
-const URGENCY_ICON = {
-  normal: Bell,
-  warning: AlertTriangle,
-  critical: AlertCircle,
-} as const;
-
-// ============================================================================
 // YourTurnBadge
 // ============================================================================
 
@@ -38,7 +27,7 @@ const URGENCY_ICON = {
  */
 function YourTurnBadgeInner({ urgency, label, action }: YourTurnBadgeProps) {
   const t = useTranslations('checkouts');
-  const Icon = URGENCY_ICON[urgency];
+  const Icon = CHECKOUT_ICON_MAP.urgencyBadge[urgency];
   const resolvedLabel = label ?? t('yourTurn.label');
   const ariaLabel = action ? t('yourTurn.tooltip', { action }) : resolvedLabel;
 
