@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
+import { useState, useRef, useCallback, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { differenceInDays } from 'date-fns';
 import {
   ArrowLeft,
@@ -50,7 +50,6 @@ import {
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
   getNCWorkflowConnectorClasses,
-  getNCWorkflowCompactDotClasses,
   NC_INFO_CARD_TOKENS,
   NC_REPAIR_LINKED_TOKENS,
   NC_COLLAPSIBLE_TOKENS,
@@ -67,6 +66,7 @@ import {
   getStaggerFadeInStyle,
 } from '@/lib/design-tokens';
 import { deriveGuidance } from '@/lib/non-conformances/guidance';
+import { getNCMessageKey } from '@/lib/i18n/get-nc-message-key';
 import { cn } from '@/lib/utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { Button } from '@/components/ui/button';
@@ -152,151 +152,115 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // Mutations (must be called unconditionally before early returns)
   // ============================================================================
 
+  const fetchNcVersion = () => nonConformancesApi.getNonConformance(ncId).then((r) => r.version);
+  // VERSION_CONFLICT(409)는 useCasGuardedMutation 내부에서 isConflictError로 처리됨.
+  // onError는 비-충돌 에러만 수신하므로 중복 처리 불필요.
+
   // 상태 변경 (open→corrected)
-  const updateMutation = useOptimisticMutation<
+  const updateMutation = useCasGuardedMutation<
     NonConformance,
-    { status: Exclude<NonConformanceStatus, 'closed'>; correctionContent?: string },
-    NonConformance
+    { status: Exclude<NonConformanceStatus, 'closed'>; correctionContent?: string }
   >({
-    mutationFn: (vars) =>
+    fetchCasVersion: fetchNcVersion,
+    mutationFn: (vars, casVersion) =>
       nonConformancesApi.updateNonConformance(ncId, {
-        version: nc!.version,
+        version: casVersion,
         status: vars.status,
         correctionContent: vars.correctionContent,
         correctionDate:
           vars.status === NCVal.CORRECTED ? new Date().toISOString().split('T')[0] : undefined,
         // correctedBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
       }),
-    queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old, vars) => ({
-      ...old!,
-      status: vars.status,
-      version: (old?.version ?? 0) + 1,
-      // open→corrected 전환 시 날짜를 즉시 채워 StepDate 깜빡임 방지 (서버는 correctedBy를 JWT로 설정)
-      ...(vars.status === NCVal.CORRECTED && {
-        correctionDate: new Date().toISOString().split('T')[0],
-      }),
-    }),
-    // invalidateKeys 비움 — onSuccessCallback의 invalidateAfterStatusChange가 NC lists 포함 교차 무효화 단일 처리
-    invalidateKeys: [],
-    successMessage: t('toasts.statusChangeSuccess'),
-    errorMessage: t('toasts.statusChangeError'),
-    onSuccessCallback: () => {
+    onSuccess: (data) => {
+      toast({ title: t('toasts.statusChangeSuccess') });
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc!.equipmentId
+        data.equipmentId
       );
+    },
+    onError: () => {
+      toast({ title: t('toasts.statusChangeError'), variant: 'destructive' });
     },
   });
 
   // 내용 저장 (조치 — 상태 변경 없이)
-  const saveMutation = useOptimisticMutation<
-    NonConformance,
-    { correctionContent?: string },
-    NonConformance
-  >({
-    mutationFn: (vars) =>
-      nonConformancesApi.updateNonConformance(ncId, {
-        version: nc!.version,
-        ...vars,
-      }),
-    queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old, vars) => ({
-      ...old!,
-      ...vars,
-      version: (old?.version ?? 0) + 1,
-    }),
-    invalidateKeys: [queryKeys.nonConformances.lists()],
-    successMessage: t('toasts.saveSuccess'),
-    errorMessage: t('toasts.saveError'),
-    onSuccessCallback: () => {
+  const saveMutation = useCasGuardedMutation<NonConformance, { correctionContent?: string }>({
+    fetchCasVersion: fetchNcVersion,
+    mutationFn: (vars, casVersion) =>
+      nonConformancesApi.updateNonConformance(ncId, { version: casVersion, ...vars }),
+    onSuccess: () => {
+      toast({ title: t('toasts.saveSuccess') });
       setEditingCorrection(false);
+      queryClient.invalidateQueries({ queryKey: queryKeys.nonConformances.lists() });
+    },
+    onError: () => {
+      toast({ title: t('toasts.saveError'), variant: 'destructive' });
     },
   });
 
   // 종결
-  const closeMutation = useOptimisticMutation<
-    NonConformance,
-    { closureNotes?: string },
-    NonConformance
-  >({
-    mutationFn: (vars) =>
+  const closeMutation = useCasGuardedMutation<NonConformance, { closureNotes?: string }>({
+    fetchCasVersion: fetchNcVersion,
+    mutationFn: (vars, casVersion) =>
       nonConformancesApi.closeNonConformance(ncId, {
-        version: nc!.version,
+        version: casVersion,
         closureNotes: vars.closureNotes,
       }),
-    queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({
-      ...old!,
-      status: NCVal.CLOSED as NonConformanceStatus,
-      version: (old?.version ?? 0) + 1,
-    }),
-    invalidateKeys: [],
-    successMessage: t('toasts.closureSuccess'),
-    errorMessage: t('toasts.closureError'),
-    onSuccessCallback: () => {
+    onSuccess: (data) => {
+      toast({ title: t('toasts.closureSuccess') });
       setShowCloseDialog(false);
       setClosureNotes('');
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc!.equipmentId
+        data.equipmentId
       );
+    },
+    onError: () => {
+      toast({ title: t('toasts.closureError'), variant: 'destructive' });
     },
   });
 
   // 반려
-  const rejectMutation = useOptimisticMutation<
-    NonConformance,
-    { rejectionReason: string },
-    NonConformance
-  >({
-    mutationFn: (vars) =>
+  const rejectMutation = useCasGuardedMutation<NonConformance, { rejectionReason: string }>({
+    fetchCasVersion: fetchNcVersion,
+    mutationFn: (vars, casVersion) =>
       nonConformancesApi.rejectCorrection(ncId, {
-        version: nc!.version,
+        version: casVersion,
         rejectionReason: vars.rejectionReason,
       }),
-    queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({
-      ...old!,
-      status: NCVal.OPEN as NonConformanceStatus,
-      version: (old?.version ?? 0) + 1,
-    }),
-    invalidateKeys: [],
-    successMessage: t('toasts.rejectionSuccess'),
-    errorMessage: t('toasts.rejectionError'),
-    onSuccessCallback: () => {
+    onSuccess: (data) => {
+      toast({ title: t('toasts.rejectionSuccess') });
       setShowRejectDialog(false);
       setRejectionReason('');
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc!.equipmentId
+        data.equipmentId
       );
+    },
+    onError: () => {
+      toast({ title: t('toasts.rejectionError'), variant: 'destructive' });
     },
   });
 
   // ── 훅: early return 이전에 선언 (Rules of Hooks) ──
   const actionBarRef = useRef<HTMLDivElement>(null);
-  const isMounted = useRef(false);
 
   const scrollToActionBar = useCallback(() => {
-    actionBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (!actionBarRef.current) return;
+    const rect = actionBarRef.current.getBoundingClientRect();
+    const stickyHeaderHeight = parseFloat(
+      document.documentElement.style.getPropertyValue('--sticky-header-height') || '0'
+    );
+    window.scrollBy({ top: rect.top - stickyHeaderHeight - 12, behavior: 'smooth' });
   }, []);
 
-  const guidance = useMemo(() => (nc ? deriveGuidance(nc, canCloseNC) : null), [nc, canCloseNC]);
-
-  // 상태 전환 후 가이던스 제목으로 포커스 복귀 — 초기 마운트는 제외
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-    if (!guidance?.key) return;
-    const title = document.getElementById(`nc-guidance-title-${guidance.key}`);
-    title?.focus();
-  }, [guidance?.key]);
+  const guidance = useMemo(
+    () => (nc ? deriveGuidance(nc, canCloseNC, canCreateCalibration) : null),
+    [nc, canCloseNC, canCreateCalibration]
+  );
 
   if (!nc) return null;
 
@@ -308,6 +272,24 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const isClosed = nc.status === NCVal.CLOSED;
   const { needsRepair, needsRecalibration } = guidance!;
   const hasUnmetPrerequisite = needsRepair || needsRecalibration;
+
+  const workflowLabels: Record<(typeof NC_WORKFLOW_STEPS)[number], string> = {
+    open: t('detail.workflow.open'),
+    corrected: t('detail.workflow.corrected'),
+    closed: t('detail.workflow.closed'),
+  };
+
+  const workflowStepDates: Record<(typeof NC_WORKFLOW_STEPS)[number], string | null> = {
+    open: nc.discoveryDate ? fmtDate(nc.discoveryDate) : null,
+    corrected: nc.correctionDate ? fmtDate(nc.correctionDate) : null,
+    closed: nc.closedAt ? fmtDate(nc.closedAt) : null,
+  };
+
+  const workflowSteps = NC_WORKFLOW_STEPS.map((stepKey, idx) => ({
+    label: workflowLabels[stepKey],
+    isCurrent: idx === currentStepIndex,
+    date: workflowStepDates[stepKey] ?? undefined,
+  }));
 
   /** 조치 편집 시작 */
   const startEditCorrection = () => {
@@ -394,28 +376,22 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </div>
         )}
 
-        {/* 워크플로우 + 가이던스: closed면 Timeline full, open이면 Callout hero → Timeline compact */}
+        {/* 워크플로우 + 가이던스: closed면 Timeline full, 미완료면 Callout(mini progress 통합) */}
         {isClosed ? (
           <WorkflowTimeline nc={nc} currentStepIndex={currentStepIndex} isLongOverdue={false} />
         ) : (
-          <>
-            <GuidanceCallout
-              guidanceKey={guidance!.key}
-              onScrollToAction={scrollToActionBar}
-              onRepairRegister={() => setShowRepairDialog(true)}
-              onCalibrationNav={
-                canCreateCalibration
-                  ? () => router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
-                  : undefined
-              }
-            />
-            <WorkflowTimeline
-              nc={nc}
-              currentStepIndex={currentStepIndex}
-              isLongOverdue={longOverdue}
-              compact
-            />
-          </>
+          <GuidanceCallout
+            guidanceKey={guidance!.key}
+            workflowSteps={workflowSteps}
+            isLongOverdue={longOverdue}
+            onScrollToAction={scrollToActionBar}
+            onRepairRegister={() => setShowRepairDialog(true)}
+            onCalibrationNav={
+              canCreateCalibration
+                ? () => router.push(`/calibration/register?equipmentId=${nc.equipmentId}`)
+                : undefined
+            }
+          />
         )}
       </section>
 
@@ -665,18 +641,16 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 // ============================================================================
 
 /**
- * 수평 워크플로우 타임라인 — compact=false(기본): 전체 노드+날짜, compact=true: mini dot strip
+ * 수평 워크플로우 타임라인 — 전체 노드+날짜 (closed 상태 전용)
  */
 function WorkflowTimeline({
   nc,
   currentStepIndex,
   isLongOverdue,
-  compact = false,
 }: {
   nc: NonConformance;
   currentStepIndex: number;
   isLongOverdue: boolean;
-  compact?: boolean;
 }) {
   const t = useTranslations('non-conformances');
   const workflowLabels: Record<(typeof NC_WORKFLOW_STEPS)[number], string> = {
@@ -684,48 +658,6 @@ function WorkflowTimeline({
     corrected: t('detail.workflow.corrected'),
     closed: t('detail.workflow.closed'),
   };
-
-  if (compact) {
-    const currentStepKey = NC_WORKFLOW_STEPS[currentStepIndex];
-    return (
-      <div
-        className={cn(
-          NC_WORKFLOW_TOKENS.containerCompact,
-          isLongOverdue && NC_WORKFLOW_TOKENS.containerUrgent
-        )}
-        role="group"
-        aria-label={t('detail.timeline.label')}
-      >
-        {/* Mini dots strip */}
-        <div className="flex items-center flex-1" aria-hidden="true">
-          {NC_WORKFLOW_STEPS.map((stepKey: NonConformanceStatus, idx: number) => (
-            <Fragment key={stepKey}>
-              {idx > 0 && (
-                <div
-                  className={cn(
-                    NC_WORKFLOW_TOKENS.compactConnector.base,
-                    idx <= currentStepIndex
-                      ? NC_WORKFLOW_TOKENS.compactConnector.done
-                      : NC_WORKFLOW_TOKENS.compactConnector.pending
-                  )}
-                />
-              )}
-              <div
-                className={getNCWorkflowCompactDotClasses(idx, currentStepIndex, isLongOverdue)}
-              />
-            </Fragment>
-          ))}
-        </div>
-        {/* 현재 단계 라벨 + 날짜 */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={NC_WORKFLOW_TOKENS.compactCurrentLabel}>
-            {workflowLabels[currentStepKey]}
-          </span>
-          <CompactStepDate nc={nc} stepKey={currentStepKey} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -798,25 +730,6 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
       {actor && <span className={NC_WORKFLOW_TOKENS.actor}>{actor}</span>}
     </>
   );
-}
-
-/** compact 모드 전용 날짜 표시 — 날짜만 */
-function CompactStepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformanceStatus }) {
-  const { fmtDate } = useDateFormatter();
-  let dateStr: string | null = null;
-  switch (stepKey) {
-    case NCVal.OPEN:
-      dateStr = nc.discoveryDate;
-      break;
-    case NCVal.CORRECTED:
-      dateStr = nc.correctionDate;
-      break;
-    case NCVal.CLOSED:
-      dateStr = nc.closedAt;
-      break;
-  }
-  if (!dateStr) return null;
-  return <span className={NC_WORKFLOW_TOKENS.compactCurrentDate}>{fmtDate(dateStr)}</span>;
 }
 
 /**
@@ -926,12 +839,12 @@ function RepairCard({
         <div className="space-y-2 py-2">
           <p className="text-sm text-muted-foreground leading-relaxed">
             {t('detail.infoCard.repairNeededDescription', {
-              type: t(`ncType.${nc.ncType}` as Parameters<typeof t>[0]),
+              type: t(getNCMessageKey(`ncType.${nc.ncType}`)),
             })}
           </p>
           <button
             type="button"
-            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
+            className={NC_INFO_CARD_TOKENS.registerLink}
             onClick={onRepairRegister}
           >
             <Wrench className="h-3.5 w-3.5" />
@@ -975,7 +888,7 @@ function CalibrationCard({
       ? t('detail.infoCard.calibrationCard.overdueTitle')
       : t('detail.infoCard.calibrationCard.failureTitle');
 
-  const typeLabel = t(`ncType.${nc.ncType}` as Parameters<typeof t>[0]);
+  const typeLabel = t(getNCMessageKey(`ncType.${nc.ncType}`));
 
   return (
     <div className={cn(NC_INFO_CARD_TOKENS.card, cardClass)}>
@@ -988,7 +901,7 @@ function CalibrationCard({
           </span>
           <button
             type="button"
-            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1 ml-auto"
+            className={cn(NC_INFO_CARD_TOKENS.registerLink, 'ml-auto')}
             onClick={onCalibrationView}
           >
             {t('detail.infoCard.calibrationCard.viewLink')}
@@ -1006,7 +919,7 @@ function CalibrationCard({
           </p>
           <button
             type="button"
-            className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
+            className={NC_INFO_CARD_TOKENS.registerLink}
             onClick={onCalibrationRegister}
           >
             <CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1050,7 +963,7 @@ function RepairDetail({ nc }: { nc: NonConformance }) {
         <div className={NC_REPAIR_DETAIL_TOKENS.row}>
           <span className={NC_REPAIR_DETAIL_TOKENS.label}>{t('detail.infoCard.repairResult')}</span>
           <span className={resultBadgeClass}>
-            {t(`detail.infoCard.repairResults.${rh.repairResult}` as Parameters<typeof t>[0])}
+            {t(getNCMessageKey(`detail.infoCard.repairResults.${rh.repairResult}`))}
           </span>
         </div>
       )}

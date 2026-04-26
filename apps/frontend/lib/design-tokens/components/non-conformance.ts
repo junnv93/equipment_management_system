@@ -24,7 +24,6 @@ import type { SemanticColorKey } from '../brand';
 import {
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
-  getSemanticLeftBorderClasses,
   getSemanticSolidBgClasses,
 } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
@@ -32,7 +31,6 @@ import {
   ELEVATION_TOKENS,
   FOCUS_TOKENS,
   MICRO_TYPO,
-  URGENT_BADGE_TOKENS,
   getSectionRhythm,
   type CalloutVariant,
   type CalloutEmphasis,
@@ -69,15 +67,6 @@ export function ncStatusToSemantic(status: string): SemanticColorKey {
 // ============================================================================
 // 0.5. NC_ELEVATION — 3단계 elevation 체계 (SSOT)
 // ============================================================================
-
-/**
- * NC 페이지 elevation 체계
- *
- * ELEVATION_TOKENS.surface re-export — 글로벌 SSOT로 통합됨.
- * @deprecated 신규 코드에서는 ELEVATION_TOKENS.surface 직접 사용.
- *             하위 호환 유지 (3주 후 제거 예정).
- */
-export const NC_ELEVATION = ELEVATION_TOKENS.surface;
 
 // ============================================================================
 // 1. NC_BANNER_TOKENS — 부적합 배너 (장비 상세 페이지)
@@ -285,7 +274,7 @@ export const NC_FILTER_TOKENS = {
  * 컬럼: 상태+워크플로우 | 유형 | 장비 | 원인 | 발견일 | 경과일 | 액션
  */
 export const NC_LIST_GRID_COLS =
-  'lg:grid lg:grid-cols-[130px_100px_1fr_1.2fr_90px_70px_50px] lg:gap-3 lg:items-center';
+  'lg:grid lg:grid-cols-[130px_100px_1fr_1.2fr_90px_70px_90px] lg:gap-3 lg:items-center';
 
 /**
  * 리스트 행 스타일
@@ -324,8 +313,8 @@ export const NC_LIST_TOKENS = {
   causeDetail: 'text-xs text-muted-foreground mt-0.5',
   /** 날짜 */
   date: 'text-sm text-muted-foreground tabular-nums',
-  /** 액션 버튼 */
-  actionButton: [
+  /** 액션 영역 장식 Eye 인디케이터 (Link 내부 span — 클릭 동작 없음) */
+  actionIndicator: [
     'w-8 h-8 flex items-center justify-center rounded-md',
     'border border-border/60 text-muted-foreground',
     'hover:bg-muted hover:text-foreground',
@@ -334,7 +323,14 @@ export const NC_LIST_TOKENS = {
 } as const;
 
 /**
- * 리스트 행 액션 chip 변형 (role-aware: my-turn/approval=warning, blocked=critical, done=neutral)
+ * 리스트 행 액션 chip — 기본 형태 클래스 (크기·타이포·모양·줄바꿈 방지)
+ * variant 색상은 getActionChipClasses(variant) 조합
+ */
+export const ACTION_CHIP_BASE =
+  'text-[10px] font-semibold px-1.5 py-0 rounded-full whitespace-nowrap';
+
+/**
+ * 리스트 행 액션 chip 변형 (role-aware: my-turn/approval=warning, blocked=warning, done=neutral)
  * 하드코딩 방지 — 호출처는 getActionChipClasses(chip.variant) 경유
  */
 type ActionChipVariant = 'warning' | 'critical' | 'neutral';
@@ -646,8 +642,10 @@ export const NC_INFO_CARD_TOKENS = {
   repairNeededCard: 'border-brand-warning/30 bg-brand-warning/[0.03]',
   /** 수리 필요 제목 */
   repairNeededTitle: 'text-brand-warning',
-  /** 수리 연결 시 그리드 비율 조정 (수리카드가 더 중요한 컨텍스트) */
-  gridRepairLinked: 'grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-4',
+  /** 수리 연결 시 그리드 비율 조정 — 기본정보(5필드) 카드가 더 넓어야 함 */
+  gridRepairLinked: 'grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4',
+  /** 수리/교정 등록·보기 링크 버튼 공통 스타일 */
+  registerLink: 'text-sm text-brand-info hover:underline inline-flex items-center gap-1',
 } as const;
 
 // ============================================================================
@@ -787,6 +785,8 @@ export function isNCLongOverdue(elapsedDays: number): boolean {
 
 export const NC_EMPTY_STATE_TOKENS = {
   container: 'text-center py-16',
+  /** collapsible 섹션 내부용 — 과도한 공백 방지 */
+  collapsible: 'text-center py-6',
   icon: 'h-12 w-12 text-muted-foreground',
   title: 'text-base font-medium tracking-tight text-foreground mt-4',
   description: 'text-sm text-muted-foreground mt-1 leading-relaxed',
@@ -819,8 +819,6 @@ export const NC_SPACING_TOKENS = {
     contextGroup: getSectionRhythm('comfortable'),
     /** 그룹 2 → 3 경계 (액션 직전) */
     contextToActionGap: 'mt-6',
-    /** @deprecated use calloutTimelineGap — statusGroup space-y-3가 간격 담당 */
-    calloutAfterTimeline: 'mt-3',
     /** GuidanceCallout과 compact Timeline 사이 간격 (statusGroup space-y-3로 처리) */
     calloutTimelineGap: 'mt-3',
   },
@@ -844,13 +842,6 @@ export const NC_MOTION = {
 } as const;
 
 // ============================================================================
-// 17b. NC_FOCUS — 포커스 재export
-// ============================================================================
-
-/** @deprecated FOCUS_TOKENS.classes.default를 직접 import 권장 */
-export const NC_FOCUS = FOCUS_TOKENS.classes;
-
-// ============================================================================
 // 18. NC_PAGINATION_TOKENS — 페이지네이션
 // ============================================================================
 
@@ -868,21 +859,6 @@ export const NC_PAGINATION_TOKENS = {
 } as const;
 
 // ============================================================================
-// 19. NC_LEFT_BORDER_INFO — 안내 배너 (info border-l-4)
-// ============================================================================
-
-/** @deprecated Phase 4 이후 getCalloutClasses('info', 'leftBorder')로 교체 권장 */
-export const NC_INFO_NOTICE_TOKENS = {
-  container: [
-    'border-l-4 p-4 rounded-r-md',
-    getSemanticLeftBorderClasses('info'),
-    getSemanticContainerColorClasses('info'),
-  ].join(' '),
-  icon: 'h-4 w-4 text-brand-info flex-shrink-0 mt-0.5',
-  text: 'text-sm text-muted-foreground leading-relaxed',
-} as const;
-
-// ============================================================================
 // 20. NC_WORKFLOW_GUIDANCE_TOKENS — 상태×역할 다음 단계 가이던스 매트릭스
 // ============================================================================
 
@@ -894,17 +870,18 @@ export type NCGuidanceStatusKey =
   | 'corrected'
   | 'closed';
 
-export type NCGuidanceRole = 'operator' | 'manager' | 'all';
+export type NCGuidanceRole = 'operator' | 'manager' | 'quality_manager' | 'all';
 
-/** 모든 가능한 조합 (6 × 3 = 18). 실제 도달 가능한 키는 NCGuidanceKeyReachable 사용. */
+/** 모든 가능한 조합. 실제 도달 가능한 키는 NCGuidanceKeyReachable 사용. */
 export type NCGuidanceKey = `${NCGuidanceStatusKey}_${NCGuidanceRole}`;
 
 /**
- * resolveNCGuidanceKey가 실제로 반환하는 11개 키.
+ * resolveNCGuidanceKey가 실제로 반환하는 12개 키.
  * NC_WORKFLOW_GUIDANCE_TOKENS 인덱싱 및 컴포넌트 prop에 이 타입을 사용한다.
  */
 export type NCGuidanceKeyReachable =
   | `${'open' | 'openRejected' | 'openBlockedRepair' | 'openBlockedRecalibration' | 'corrected'}_${'operator' | 'manager'}`
+  | 'openBlockedRecalibration_quality_manager'
   | 'closed_all';
 
 export interface NCGuidanceEntry {
@@ -989,6 +966,14 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS = {
     ctaKind: 'none',
     roleChip: 'blocked',
   },
+  openBlockedRecalibration_quality_manager: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+    roleChip: 'blocked',
+  },
   corrected_operator: {
     variant: 'info',
     emphasis: 'leftBorder',
@@ -1022,13 +1007,25 @@ export function resolveNCGuidanceKey(args: {
   needsRepair: boolean;
   needsRecalibration: boolean;
   hasRejection: boolean;
+  canCreateCalibration?: boolean;
 }): NCGuidanceKeyReachable {
-  const { status, canCloseNC, needsRepair, needsRecalibration, hasRejection } = args;
+  const {
+    status,
+    canCloseNC,
+    needsRepair,
+    needsRecalibration,
+    hasRejection,
+    canCreateCalibration,
+  } = args;
   const role: NCGuidanceRole = canCloseNC ? 'manager' : 'operator';
   if (status === 'closed') return 'closed_all';
   if (status === 'corrected') return `corrected_${role}`;
   if (needsRepair) return `openBlockedRepair_${role}`;
-  if (needsRecalibration) return `openBlockedRecalibration_${role}`;
+  if (needsRecalibration) {
+    if (!canCloseNC && canCreateCalibration === false)
+      return 'openBlockedRecalibration_quality_manager';
+    return `openBlockedRecalibration_${role}`;
+  }
   if (hasRejection) return `openRejected_${role}`;
   return `open_${role}`;
 }
@@ -1083,15 +1080,6 @@ export const NC_GUIDANCE_STEP_BADGE_TOKENS = {
   } satisfies Record<CalloutVariant, string>,
   /** step badge + role chip 행 레이아웃 */
   chipRow: 'flex items-center gap-2 mb-1 flex-wrap',
-} as const;
-
-// ============================================================================
-// 21. NC_URGENT_BADGE_TOKENS — 긴급 배지
-// ============================================================================
-
-/** @deprecated Phase 4부터 URGENT_BADGE_TOKENS.solid 직접 사용 권장 */
-export const NC_URGENT_BADGE_TOKENS = {
-  badge: URGENT_BADGE_TOKENS.solid,
 } as const;
 
 // ============================================================================
@@ -1170,6 +1158,22 @@ export const NC_DOCUMENTS_SECTION_TOKENS = {
   countBadge: 'text-xs text-muted-foreground font-normal',
   emptyText: 'text-sm text-muted-foreground',
   grid: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3',
+  toggleGroup: 'inline-flex border rounded-md overflow-hidden text-xs',
+  /** 뷰 전환 버튼 기본 (첫 번째/두 번째 공용) */
+  toggleButtonBase: [
+    'px-2 py-1 inline-flex items-center gap-1',
+    TRANSITION_PRESETS.fastBgColor,
+  ].join(' '),
+  /** 뷰 전환 버튼 활성 상태 */
+  toggleButtonActive: 'bg-muted font-semibold',
+  listRow:
+    'grid grid-cols-[40px_1fr_90px_110px_32px] gap-3 items-center px-3 py-2.5 hover:bg-muted/30',
+  deleteButton: [
+    'w-8 h-8 flex items-center justify-center rounded-md',
+    'text-muted-foreground hover:text-destructive hover:bg-destructive/10',
+    TRANSITION_PRESETS.fastBgColor,
+  ].join(' '),
+  gridItem: 'group relative space-y-1',
 } as const;
 
 // ============================================================================

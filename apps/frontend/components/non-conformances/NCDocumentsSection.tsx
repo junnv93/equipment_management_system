@@ -146,7 +146,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
         {/* 보기 방식 토글 */}
         {docs.length > 0 && (
           <div
-            className="inline-flex border rounded-md overflow-hidden text-xs"
+            className={NC_DOCUMENTS_SECTION_TOKENS.toggleGroup}
             role="group"
             aria-label={t('view.label')}
           >
@@ -155,8 +155,8 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
               aria-pressed={view === 'grid'}
               onClick={() => setView('grid')}
               className={cn(
-                'px-2 py-1 inline-flex items-center gap-1 transition-colors',
-                view === 'grid' && 'bg-muted font-semibold'
+                NC_DOCUMENTS_SECTION_TOKENS.toggleButtonBase,
+                view === 'grid' && NC_DOCUMENTS_SECTION_TOKENS.toggleButtonActive
               )}
             >
               <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
@@ -167,8 +167,9 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
               aria-pressed={view === 'list'}
               onClick={() => setView('list')}
               className={cn(
-                'px-2 py-1 inline-flex items-center gap-1 border-l transition-colors',
-                view === 'list' && 'bg-muted font-semibold'
+                NC_DOCUMENTS_SECTION_TOKENS.toggleButtonBase,
+                'border-l',
+                view === 'list' && NC_DOCUMENTS_SECTION_TOKENS.toggleButtonActive
               )}
             >
               <List className="h-3.5 w-3.5" aria-hidden="true" />
@@ -217,10 +218,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
       ) : view === 'list' ? (
         <ul className="rounded-lg border divide-y divide-border/60 overflow-hidden">
           {docs.map((doc) => (
-            <li
-              key={doc.id}
-              className="grid grid-cols-[40px_1fr_90px_110px_32px] gap-3 items-center px-3 py-2.5 hover:bg-muted/30"
-            >
+            <li key={doc.id} className={NC_DOCUMENTS_SECTION_TOKENS.listRow}>
               <AttachmentThumbnail
                 doc={doc}
                 size="xs"
@@ -240,7 +238,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
                 <button
                   type="button"
                   aria-label={t('deleteLabel', { name: doc.originalFileName })}
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  className={NC_DOCUMENTS_SECTION_TOKENS.deleteButton}
                   onClick={() => setPendingDelete(doc)}
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -252,7 +250,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
       ) : (
         <ul className={NC_DOCUMENTS_SECTION_TOKENS.grid}>
           {docs.map((doc) => (
-            <li key={doc.id} className="group relative space-y-1">
+            <li key={doc.id} className={NC_DOCUMENTS_SECTION_TOKENS.gridItem}>
               <AttachmentThumbnail
                 doc={doc}
                 downloadLabel={t('downloadLabel', { name: doc.originalFileName })}

@@ -19,8 +19,7 @@ import { queryKeys } from '@/lib/api/query-config';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useToast } from '@/components/ui/use-toast';
-import { CONFIRM_PREVIEW_TOKENS } from '@/lib/design-tokens/semantic';
-import { NC_DIALOG_TOKENS } from '@/lib/design-tokens';
+import { CONFIRM_PREVIEW_TOKENS, NC_DIALOG_TOKENS } from '@/lib/design-tokens';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -128,22 +127,8 @@ export default function NCRepairDialog({ nc, open, onOpenChange }: NCRepairDialo
     },
   });
 
-  // confirm 진입 직전 최신 NC version 확인 — stale 감지 (AP-4)
-  const handleNext = form.handleSubmit(async () => {
-    try {
-      const latest = await nonConformancesApi.getNonConformance(nc.id);
-      if (latest.version !== nc.version) {
-        toast({ title: t('toasts.versionMismatch'), variant: 'destructive' });
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.nonConformances.detail(nc.id),
-        });
-        onOpenChange(false);
-        return;
-      }
-      setStep('confirm');
-    } catch {
-      toast({ title: t('toasts.fetchFailed'), variant: 'destructive' });
-    }
+  const handleNext = form.handleSubmit(() => {
+    setStep('confirm');
   });
 
   const values = form.getValues();

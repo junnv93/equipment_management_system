@@ -12,7 +12,7 @@ import { VM } from '@equipment-management/schemas';
  */
 export const rejectCorrectionSchema = z.object({
   ...versionedSchema,
-  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
+  rejectionReason: z.string().trim().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectCorrectionInput = z.infer<typeof rejectCorrectionSchema>;

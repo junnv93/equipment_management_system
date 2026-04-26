@@ -39,7 +39,8 @@
     "rejectionError": "Failed to reject.",
     "rejectionReasonRequired": "Please enter a rejection reason.",
     "versionMismatch": "Someone else modified this record. Please try again.",
-    "fetchFailed": "Failed to load the latest information."
+    "fetchFailed": "Failed to load the latest information.",
+    "versionConflict": "Someone else modified this first. Please refresh and try again."
   },
   "fields": {
     "type": "Non-Conformance Type",
@@ -170,7 +171,8 @@
       "closed": "Closed"
     },
     "timeline": {
-      "label": "NC resolution steps"
+      "label": "NC resolution steps",
+      "currentStep": "Current step: {step}"
     },
     "prerequisite": {
       "repairNeeded": "requires a repair record before corrective action.",
@@ -351,6 +353,10 @@
       "openBlockedRecalibration_manager": {
         "title": "Recalibration required first",
         "body": "Correction and closure approval are available only after a new calibration record is registered."
+      },
+      "openBlockedRecalibration_quality_manager": {
+        "title": "Recalibration required",
+        "body": "Corrective action is available after recalibration is completed. Please request recalibration from the calibration team."
       },
       "corrected_operator": {
         "title": "Waiting for technical manager's closure approval",

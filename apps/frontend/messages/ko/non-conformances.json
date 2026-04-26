@@ -39,7 +39,8 @@
     "rejectionError": "반려에 실패했습니다.",
     "rejectionReasonRequired": "반려 사유를 입력하세요.",
     "versionMismatch": "다른 탭에서 수정이 있었습니다. 다시 시도해 주세요.",
-    "fetchFailed": "최신 정보를 불러오지 못했습니다."
+    "fetchFailed": "최신 정보를 불러오지 못했습니다.",
+    "versionConflict": "다른 사람이 먼저 수정했습니다. 새로고침 후 재시도해 주세요."
   },
   "fields": {
     "type": "부적합 유형",
@@ -170,7 +171,8 @@
       "closed": "종결"
     },
     "timeline": {
-      "label": "부적합 처리 단계"
+      "label": "부적합 처리 단계",
+      "currentStep": "현재 단계: {step}"
     },
     "prerequisite": {
       "repairNeeded": "시정 조치 전 수리 이력을 등록해야 합니다.",
@@ -351,6 +353,10 @@
       "openBlockedRecalibration_manager": {
         "title": "재교정 선행 확인",
         "body": "조치 완료와 종결 승인은 재교정 기록 등록 이후 가능합니다."
+      },
+      "openBlockedRecalibration_quality_manager": {
+        "title": "재교정 선행 필요",
+        "body": "재교정 완료 후 조치가 가능합니다. 교정 담당자에게 재교정을 요청하세요."
       },
       "corrected_operator": {
         "title": "기술책임자의 종결 승인 대기",

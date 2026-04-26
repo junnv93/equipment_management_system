@@ -52,6 +52,7 @@ import {
   NC_PAGINATION_TOKENS,
   NC_REJECTION_BADGE_TOKENS,
   NC_WORKFLOW_GUIDANCE_TOKENS,
+  ACTION_CHIP_BASE,
   getActionChipClasses,
   getStaggerDelay,
   ANIMATION_PRESETS,
@@ -60,6 +61,7 @@ import {
   getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { deriveGuidance } from '@/lib/non-conformances/guidance';
+import { sanitizeCsvCell } from '@/lib/utils/csv-utils';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -172,7 +174,7 @@ export default function NonConformancesContent({
         nc.status !== NCStatusVal.CLOSED ? t('list.csvElapsedDays', { days: elapsed }) : '',
       ];
     });
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.map(sanitizeCsvCell).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -446,29 +448,50 @@ function NCListRow({
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
   const hasRejection = !!nc.rejectionReason && nc.status === NCStatusVal.OPEN;
 
-  // N행 × 매 렌더 함수 호출 방지 — deriveGuidance + NC_WORKFLOW_GUIDANCE_TOKENS 룩업 캐싱 (AP-7)
-  const chip = useMemo(() => {
+  // N행 × 매 렌더 함수 호출 방지 — i18n-free 계산만 memo (AP-7)
+  // t 함수는 deps에서 제외 — t 참조 변경은 로케일 전환 시에만 발생하며 컴포넌트 리마운트가 동반됨
+  const chipMeta = useMemo(() => {
     const { key } = deriveGuidance(nc, canCloseNC);
-    const entry = NC_WORKFLOW_GUIDANCE_TOKENS[key];
-    switch (entry.roleChip) {
-      case 'my-turn':
-        return { label: t('list.action.act'), variant: 'warning' as const, tooltip: undefined };
-      case 'approval':
-        return { label: t('list.action.approve'), variant: 'warning' as const, tooltip: undefined };
-      case 'blocked':
-        return {
-          label: t('list.action.blocked'),
-          variant: 'critical' as const,
-          tooltip: key.startsWith('openBlockedRepair')
-            ? t('list.action.blockedTooltip.repair')
-            : t('list.action.blockedTooltip.recalibration'),
-        };
-      case 'done':
-        return { label: t('list.action.done'), variant: 'neutral' as const, tooltip: undefined };
-      case 'waiting':
-        return null;
-    }
-  }, [nc, canCloseNC, t]);
+    const { roleChip } = NC_WORKFLOW_GUIDANCE_TOKENS[key];
+    return roleChip === 'waiting' ? null : { roleChip, key };
+  }, [nc, canCloseNC]);
+
+  const chip = chipMeta
+    ? (() => {
+        switch (chipMeta.roleChip) {
+          case 'my-turn':
+            return {
+              label: t('list.action.act'),
+              variant: 'warning' as const,
+              tooltip: undefined,
+              showArrow: true,
+            };
+          case 'approval':
+            return {
+              label: t('list.action.approve'),
+              variant: 'warning' as const,
+              tooltip: undefined,
+              showArrow: true,
+            };
+          case 'blocked':
+            return {
+              label: t('list.action.blocked'),
+              variant: 'warning' as const,
+              tooltip: chipMeta.key.startsWith('openBlockedRepair')
+                ? t('list.action.blockedTooltip.repair')
+                : t('list.action.blockedTooltip.recalibration'),
+              showArrow: true,
+            };
+          case 'done':
+            return {
+              label: t('list.action.done'),
+              variant: 'neutral' as const,
+              tooltip: undefined,
+              showArrow: false,
+            };
+        }
+      })()
+    : null;
 
   const elapsedNode =
     nc.status !== NCStatusVal.CLOSED ? (
@@ -527,17 +550,15 @@ function NCListRow({
         <div className="flex justify-end gap-1 items-center" aria-label={t('list.action.label')}>
           {chip && (
             <span
-              className={cn(
-                'text-[10px] font-semibold px-1.5 py-0 rounded-full',
-                getActionChipClasses(chip.variant)
-              )}
+              className={cn(ACTION_CHIP_BASE, getActionChipClasses(chip.variant))}
               title={chip.tooltip}
               aria-label={chip.tooltip ?? chip.label}
             >
-              {chip.label} →
+              {chip.label}
+              {chip.showArrow && <span aria-hidden="true"> →</span>}
             </span>
           )}
-          <span className={NC_LIST_TOKENS.actionButton}>
+          <span className={NC_LIST_TOKENS.actionIndicator}>
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </div>
@@ -565,7 +586,7 @@ function NCListRow({
         {/* 하단: 원인 + Eye 버튼 */}
         <div className={NC_LIST_MOBILE_TOKENS.bottomRow}>
           <p className={NC_LIST_MOBILE_TOKENS.causeText}>{nc.cause}</p>
-          <span className={NC_LIST_TOKENS.actionButton}>
+          <span className={NC_LIST_TOKENS.actionIndicator}>
             <Eye className="h-3.5 w-3.5" />
           </span>
         </div>

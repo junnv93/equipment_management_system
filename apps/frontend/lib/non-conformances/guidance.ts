@@ -7,7 +7,8 @@ import type { NonConformance } from '@/lib/api/non-conformances-api';
 
 export function deriveGuidance(
   nc: NonConformance,
-  canCloseNC: boolean
+  canCloseNC: boolean,
+  canCreateCalibration?: boolean
 ): {
   key: NCGuidanceKeyReachable;
   needsRepair: boolean;
@@ -22,6 +23,7 @@ export function deriveGuidance(
     needsRepair,
     needsRecalibration,
     hasRejection: nc.status === NCVal.OPEN && !!nc.rejectionReason,
+    canCreateCalibration,
   });
   return { key, needsRepair, needsRecalibration };
 }
