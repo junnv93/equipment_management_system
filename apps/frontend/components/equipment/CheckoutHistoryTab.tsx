@@ -137,7 +137,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all(), exact: false });
       queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all, exact: false });
       setIsDialogOpen(false);

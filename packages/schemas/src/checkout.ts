@@ -52,3 +52,36 @@ export interface CheckoutListResponse {
   pageSize: number;
   totalPages: number;
 }
+
+// BFF: 반입 현황 집계 쿼리 스키마 (Sprint 3.1)
+export const InboundOverviewQuerySchema = z.object({
+  statusFilter: z.string().optional(),
+  searchTerm: z.string().optional(),
+  limitPerSection: z.coerce.number().int().positive().max(50).default(10),
+});
+export type InboundOverviewQueryInput = z.infer<typeof InboundOverviewQuerySchema>;
+
+// BFF: 반입 현황 섹션 메타 스키마 (PaginationMeta와 동일 구조)
+export const InboundSectionMetaSchema = z.object({
+  totalItems: z.number().int().nonnegative(),
+  itemCount: z.number().int().nonnegative(),
+  itemsPerPage: z.number().int().positive(),
+  totalPages: z.number().int().nonnegative(),
+  currentPage: z.number().int().positive(),
+});
+export type InboundSectionMeta = z.infer<typeof InboundSectionMetaSchema>;
+
+// BFF: 반입 현황 집계 응답 스키마 (Sprint 3.1)
+// items 배열 내부는 각 도메인의 타입 가드로 검증 — Zod passthrough 사용
+export const InboundOverviewResponseSchema = z.object({
+  standard: z.object({ items: z.array(z.unknown()), meta: InboundSectionMetaSchema }),
+  rental: z.object({ items: z.array(z.unknown()), meta: InboundSectionMetaSchema }),
+  internalShared: z.object({ items: z.array(z.unknown()), meta: InboundSectionMetaSchema }),
+  sparkline: z.object({
+    standard: z.array(z.number()).length(14),
+    rental: z.array(z.number()).length(14),
+    internalShared: z.array(z.number()).length(14),
+  }),
+  generatedAt: z.string().datetime(),
+});
+export type InboundOverviewResponseBase = z.infer<typeof InboundOverviewResponseSchema>;

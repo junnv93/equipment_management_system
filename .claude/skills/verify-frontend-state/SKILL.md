@@ -504,6 +504,43 @@ const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 
 **예외:** `hooks/use-auth.ts` 자체 정의 파일 — 제외.
 
+### Step 21: 런타임 feature flag로 union 타입 내로잉 금지 (2026-04-26 추가)
+
+런타임 불리언 플래그(예: `isInboundBffEnabled()`)로 `A | B` union 타입 변수를 내로잉할 수 없다.
+TypeScript는 함수 반환값이 타입 가드(`value is T`)가 아닌 이상 타입을 좁히지 않는다.
+따라서 `if (bffEnabled) resolvedData?.items` 에서 `resolvedData`가 `A | B`이면 `.items` 접근이 불가능하다.
+
+**올바른 패턴:** union 변수 대신 원본 소스 변수를 직접 ternary로 선택.
+
+```typescript
+// ❌ WRONG — resolved union 변수는 내로잉 불가
+const resolvedRentalData: RentalImportListResponse | InboundOverviewSection | undefined =
+  bffEnabled ? overviewData?.rental : rentalImportsData?.data;
+
+// TypeScript: (A | B)['items'] — 두 타입 모두에 items 없으면 오류
+const items = resolvedRentalData?.items; // ← TS2339
+
+// ✅ CORRECT — 원본 소스 변수를 ternary로 직접 접근
+const items = bffEnabled
+  ? overviewData?.rental?.items
+  : rentalImportsData?.data?.items;
+```
+
+**탐지 — feature flag ternary 결과로 union 변수 선언 후 필드 접근:**
+```bash
+# isXxxEnabled() 결과로 union 타입 변수를 선언하는 패턴
+grep -rn "isInboundBffEnabled\|bffEnabled\|featureEnabled" \
+  apps/frontend/app apps/frontend/components \
+  --include="*.tsx" --include="*.ts" \
+  | grep "? .*: " | grep -v "return\|className\|enabled:"
+```
+
+**PASS:** feature flag ternary 결과를 union 변수에 담지 않고 원본 소스 변수를 ternary로 직접 사용.
+**FAIL:** `const resolvedX = flag ? A : B` 선언 후 `resolvedX.fieldName` 접근 — TypeScript 타입 오류 발생.
+
+**근거:** `InboundCheckoutsTab.tsx` Sprint 3.2에서 `resolvedRentalData: RentalImportListResponse | InboundOverviewSection`
+패턴을 사용했다가 `.items`, `.meta.totalItems` 등 필드 접근 시 8개 TS 오류 발생 (2026-04-26).
+
 **근거:** 2026-04-21 78차 반출 세션 — `EmptyState.tsx` 내부 `useAuth` 제거 + `canAct?: boolean` prop 전환. 동일 패턴 재도입 방지.
 
 ### Step 21: toast-templates toastFn 외부 주입 + useOnboardingHint 패턴 (2026-04-24 추가)

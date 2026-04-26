@@ -107,7 +107,7 @@ export default function CheckoutDetailClient({
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
   // invalidateQueries → 자동 refetch → UI 자동 갱신 (수동 동기화 불필요)
   const { data: checkout = initialCheckout } = useQuery({
-    queryKey: queryKeys.checkouts.detail(initialCheckout.id),
+    queryKey: queryKeys.checkouts.resource.detail(initialCheckout.id),
     queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
     placeholderData: initialCheckout,
     ...QUERY_CONFIG.CHECKOUT_DETAIL,
@@ -156,7 +156,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.approveCheckout(checkout.id, version);
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -178,7 +178,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.rejectCheckout(checkout.id, version, reason);
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old, reason): Checkout =>
       ({
         ...old,
@@ -211,7 +211,7 @@ export default function CheckoutDetailClient({
         conditions.length > 0 ? { itemConditions: conditions } : undefined
       );
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -236,7 +236,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.approveReturn(checkout.id, { version });
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -262,7 +262,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.cancelCheckout(checkout.id, version);
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -287,7 +287,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.borrowerApproveCheckout(checkout.id, version);
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -313,7 +313,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.borrowerRejectCheckout(checkout.id, version, reason);
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old, reason): Checkout =>
       ({
         ...old,
@@ -341,7 +341,7 @@ export default function CheckoutDetailClient({
       const { version } = await checkoutApi.getCheckout(checkout.id);
       return checkoutApi.rejectReturn(checkout.id, { version, reason });
     },
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old, _reason): Checkout =>
       ({
         ...old,

@@ -107,7 +107,7 @@ export default function PendingChecksClient({
     isError,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.checkouts.pending(apiRole),
+    queryKey: queryKeys.checkouts.resource.pending(apiRole),
     queryFn: async () => {
       return checkoutApi.getPendingChecks(apiRole ? { role: apiRole } : {});
     },

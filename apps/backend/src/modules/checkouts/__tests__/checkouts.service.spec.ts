@@ -1076,4 +1076,69 @@ describe('CheckoutsService', () => {
       );
     });
   });
+
+  describe('getInboundOverview', () => {
+    const mockImportList = {
+      data: [],
+      meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
+    };
+
+    beforeEach(() => {
+      // 렌탈 imports findAll mock
+      mockImportsService.findAll.mockResolvedValue(mockImportList);
+      // sparkline 쿼리는 .groupBy().orderBy() 체인을 사용 — 기본 체인에 없으므로 추가
+      const chain = mockChain as Record<string, jest.Mock>;
+      chain.groupBy = jest.fn().mockReturnValue(chain);
+      chain.having = jest.fn().mockReturnValue(chain);
+    });
+
+    it('should return combined overview with standard/rental/internalShared/sparkline', async () => {
+      const query = { limitPerSection: 10 };
+      const result = await service.getInboundOverview(query, null);
+
+      expect(result).toHaveProperty('standard');
+      expect(result).toHaveProperty('rental');
+      expect(result).toHaveProperty('internalShared');
+      expect(result).toHaveProperty('sparkline');
+      expect(result).toHaveProperty('generatedAt');
+      expect(result.sparkline).toHaveProperty('standard');
+      expect(result.sparkline).toHaveProperty('rental');
+      expect(result.sparkline).toHaveProperty('internalShared');
+      // sparkline은 14일치 배열
+      expect(result.sparkline.standard).toHaveLength(14);
+      expect(result.sparkline.rental).toHaveLength(14);
+      expect(result.sparkline.internalShared).toHaveLength(14);
+    });
+
+    it('should call rentalImportsService.findAll twice (rental + internalShared)', async () => {
+      await service.getInboundOverview({ limitPerSection: 10 }, null);
+
+      expect(mockImportsService.findAll).toHaveBeenCalledTimes(2);
+      expect(mockImportsService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceType: 'rental' })
+      );
+      expect(mockImportsService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceType: 'internal_shared' })
+      );
+    });
+
+    it('should pass statusFilter only when it is a valid import status', async () => {
+      await service.getInboundOverview({ limitPerSection: 10, statusFilter: 'pending' }, null);
+      // 'pending'은 유효한 import status
+      expect(mockImportsService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'pending' })
+      );
+    });
+
+    it('should not pass statusFilter to imports when it is a checkout-only status', async () => {
+      // 'lender_checked'는 checkout 전용 status — EQUIPMENT_IMPORT_STATUS_VALUES에 없음
+      await service.getInboundOverview(
+        { limitPerSection: 10, statusFilter: 'lender_checked' },
+        null
+      );
+      expect(mockImportsService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ status: undefined })
+      );
+    });
+  });
 });

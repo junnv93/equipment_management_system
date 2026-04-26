@@ -145,7 +145,7 @@ export default function CheckoutsContent({
   // ⚠️ pendingCount 전용 키 사용: pending 전체 목록(PendingChecksClient)과 캐시 충돌 방지
   // pending()과 동일 키 사용 시 pageSize:1 결과가 전체 목록 캐시를 오염시켜 1건만 표시되는 버그 발생
   const { data: pendingChecksData } = useQuery({
-    queryKey: queryKeys.checkouts.pendingCount(),
+    queryKey: queryKeys.checkouts.resource.pendingCount(),
     queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
     ...QUERY_CONFIG.CHECKOUT_SUMMARY,
   });
@@ -153,7 +153,7 @@ export default function CheckoutsContent({
 
   // 반출지 목록
   const { data: destinations } = useQuery({
-    queryKey: queryKeys.checkouts.destinations(),
+    queryKey: queryKeys.checkouts.resource.destinations(),
     queryFn: () => checkoutApi.getDestinations(),
     ...QUERY_CONFIG.CHECKOUT_DESTINATIONS,
   });
@@ -164,7 +164,7 @@ export default function CheckoutsContent({
     isError: isSummaryError,
     refetch: refetchSummary,
   } = useQuery({
-    queryKey: queryKeys.checkouts.summary({ direction: 'outbound', teamId }),
+    queryKey: queryKeys.checkouts.resource.summary({ direction: 'outbound', teamId }),
     queryFn: async (): Promise<CheckoutSummary> => {
       const result = await checkoutApi.getCheckouts({
         direction: 'outbound',

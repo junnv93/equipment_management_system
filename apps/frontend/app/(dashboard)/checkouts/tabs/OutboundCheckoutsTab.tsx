@@ -169,7 +169,7 @@ export default function OutboundCheckoutsTab({
     isError: checkoutsError,
     refetch: refetchCheckouts,
   } = useQuery({
-    queryKey: queryKeys.checkouts.list({
+    queryKey: queryKeys.checkouts.view.outbound({
       direction: 'outbound',
       ...apiParams,
       teamId,

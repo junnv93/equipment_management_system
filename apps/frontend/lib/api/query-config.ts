@@ -506,19 +506,31 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.disposal.all, 'detail', id] as const,
   },
   checkouts: {
+    /** 루트 키 — 광역 무효화용. exact:false와 함께 view.*와 resource.* 모두 커버 */
     all: ['checkouts'] as const,
-    lists: () => [...queryKeys.checkouts.all, 'list'] as const,
-    list: (filters: object) => [...queryKeys.checkouts.lists(), filters] as const,
-    detail: (id: string) => [...queryKeys.checkouts.all, 'detail', id] as const,
-    outbound: (teamId?: string, status?: string, location?: string) =>
-      [...queryKeys.checkouts.all, 'outbound', teamId, status, location] as const,
-    inbound: (filters: object = {}) => [...queryKeys.checkouts.all, 'inbound', filters] as const,
-    destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
-    pending: (role?: string) => [...queryKeys.checkouts.all, 'pending', role] as const,
-    /** 확인 필요 건수 전용 (count만 필요한 요약 위젯용, pageSize:1 fetch) — pending 전체 목록 캐시와 분리 */
-    pendingCount: () => [...queryKeys.checkouts.all, 'pending-count'] as const,
-    returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
-    summary: (params: object = {}) => [...queryKeys.checkouts.all, 'summary', params] as const,
+    /** 목록 뷰 축 — invalidate({ queryKey: view.all() }) 로 목록만 무효화 */
+    view: {
+      all: () => [...queryKeys.checkouts.all, 'view'] as const,
+      outbound: (filters: object = {}) =>
+        [...queryKeys.checkouts.view.all(), 'outbound', filters] as const,
+      inboundOverview: (filters: object = {}) =>
+        [...queryKeys.checkouts.view.all(), 'inbound-overview', filters] as const,
+      inboundSection: (kind: 'standard' | 'rental' | 'internalShared', filters: object = {}) =>
+        [...queryKeys.checkouts.view.all(), 'inbound-section', kind, filters] as const,
+    },
+    /** 단건/집계 리소스 축 — invalidate({ queryKey: resource.all() }) 로 상세/카운트만 무효화 */
+    resource: {
+      all: () => [...queryKeys.checkouts.all, 'resource'] as const,
+      detail: (id: string) => [...queryKeys.checkouts.resource.all(), 'detail', id] as const,
+      destinations: () => [...queryKeys.checkouts.resource.all(), 'destinations'] as const,
+      /** pending checks 전체 목록 (PendingChecksClient 전용) */
+      pending: (role?: string) => [...queryKeys.checkouts.resource.all(), 'pending', role] as const,
+      /** 확인 필요 건수 전용 (count만 필요한 요약 위젯용) — pending 전체 목록 캐시와 분리 */
+      pendingCount: () => [...queryKeys.checkouts.resource.all(), 'pending-count'] as const,
+      returnPending: () => [...queryKeys.checkouts.resource.all(), 'return-pending'] as const,
+      summary: (params: object = {}) =>
+        [...queryKeys.checkouts.resource.all(), 'summary', params] as const,
+    },
   },
   calibrations: {
     all: ['calibrations'] as const,

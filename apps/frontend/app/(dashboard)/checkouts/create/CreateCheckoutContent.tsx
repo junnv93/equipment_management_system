@@ -158,7 +158,7 @@ export default function CreateCheckoutContent() {
         description: t('toasts.createSuccessDescription'),
         variant: 'default',
       });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
     },
     onError: (error: unknown) => {

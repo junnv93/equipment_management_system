@@ -60,6 +60,8 @@ import {
   BorrowerApproveCheckoutValidationPipe,
   BorrowerRejectCheckoutDto,
   BorrowerRejectCheckoutValidationPipe,
+  InboundOverviewQueryDto,
+  InboundOverviewQueryValidationPipe,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
@@ -274,6 +276,24 @@ export class CheckoutsController {
       query.page ?? 1,
       query.pageSize
     );
+  }
+
+  @Get('inbound-overview')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @UsePipes(InboundOverviewQueryValidationPipe)
+  @ApiOperation({
+    summary: '반입 현황 집계 (BFF)',
+    description:
+      '표준 반입(팀 대여) + 외부 렌탈 + 내부 공용 3섹션을 단일 요청으로 집계합니다. ' +
+      '필터 1회 변경 → 3 round-trip을 1 round-trip으로 축소. Sparkline 14일 시계열 포함.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '반입 현황 집계 성공' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  async getInboundOverview(
+    @Query() query: InboundOverviewQueryDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    return this.checkoutsService.getInboundOverview(query, req.user?.teamId ?? null);
   }
 
   @Get()

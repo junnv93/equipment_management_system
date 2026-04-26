@@ -52,7 +52,7 @@ export default function ReturnCheckoutClient({
   // 성공 시 onSettledCallback에서 네비게이션 (캐시 무효화 완료 후)
   const returnMutation = useOptimisticMutation<Checkout, ReturnCheckoutDto, Checkout>({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
-    queryKey: queryKeys.checkouts.detail(checkout.id),
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,

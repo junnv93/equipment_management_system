@@ -41,6 +41,7 @@ import {
   getSemanticBadgeClasses,
 } from '@/lib/design-tokens';
 import { countActiveFilters, type UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
+import { isInboundBffEnabled } from '@/lib/features/checkout-flags';
 
 interface InboundCheckoutsTabProps {
   teamId?: string;
@@ -70,9 +71,30 @@ export default function InboundCheckoutsTab({
 
   const { status: statusFilter, search: searchTerm } = filters;
   const filterActive = countActiveFilters(filters) > 0;
+  const bffEnabled = isInboundBffEnabled();
 
   // ──────────────────────────────────────────────
-  // 반입: 타팀 장비 대여 건 (독립 페이지네이션 — ?inboundPage=N)
+  // BFF 경로 (flag ON): 3섹션 단일 요청 집계
+  // ──────────────────────────────────────────────
+  const {
+    data: overviewData,
+    isLoading: overviewLoading,
+    isError: overviewError,
+    refetch: refetchOverview,
+  } = useQuery({
+    queryKey: queryKeys.checkouts.view.inboundOverview({ statusFilter, searchTerm }),
+    queryFn: () =>
+      checkoutApi.getInboundOverview({
+        statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
+        searchTerm: searchTerm || undefined,
+        limitPerSection: DEFAULT_PAGE_SIZE,
+      }),
+    enabled: bffEnabled,
+    ...QUERY_CONFIG.CHECKOUT_LIST,
+  });
+
+  // ──────────────────────────────────────────────
+  // 기존 경로 (flag OFF): 3개 독립 useQuery (rollback 안전)
   // ──────────────────────────────────────────────
   const {
     data: inboundCheckoutsData,
@@ -80,7 +102,12 @@ export default function InboundCheckoutsTab({
     isError: inboundCheckoutsError,
     refetch: refetchInbound,
   } = useQuery({
-    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: inboundPage }),
+    queryKey: queryKeys.checkouts.view.inboundSection('standard', {
+      statusFilter,
+      searchTerm,
+      teamId,
+      page: inboundPage,
+    }),
     queryFn: async () => {
       const query: CheckoutQuery = {
         page: inboundPage,
@@ -92,12 +119,10 @@ export default function InboundCheckoutsTab({
       if (statusFilter !== 'all') query.statuses = statusFilter;
       return checkoutApi.getCheckouts(query);
     },
+    enabled: !bffEnabled,
     ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 
-  // ──────────────────────────────────────────────
-  // 반입: 외부 업체 렌탈 (독립 페이지네이션)
-  // ──────────────────────────────────────────────
   const {
     data: rentalImportsData,
     isLoading: rentalImportsLoading,
@@ -117,12 +142,10 @@ export default function InboundCheckoutsTab({
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
       }),
+    enabled: !bffEnabled,
     ...QUERY_CONFIG.EQUIPMENT_IMPORT_LIST,
   });
 
-  // ──────────────────────────────────────────────
-  // 반입: 내부 공용장비 (독립 페이지네이션)
-  // ──────────────────────────────────────────────
   const {
     data: internalSharedImportsData,
     isLoading: internalSharedImportsLoading,
@@ -142,37 +165,51 @@ export default function InboundCheckoutsTab({
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
       }),
+    enabled: !bffEnabled,
     ...QUERY_CONFIG.EQUIPMENT_IMPORT_LIST,
   });
 
   // ──────────────────────────────────────────────
-  // 그룹화
+  // BFF sparkline (BFF 경로에서만 사용)
+  // ──────────────────────────────────────────────
+  const resolvedSparkline = overviewData?.sparkline;
+
+  // ──────────────────────────────────────────────
+  // 그룹화 (표준 반입 — 기존 또는 BFF)
   // ──────────────────────────────────────────────
   const inboundGroups = useMemo(() => {
-    if (!inboundCheckoutsData?.data) return [];
-    return groupCheckoutsByDateAndDestination(inboundCheckoutsData.data);
-  }, [inboundCheckoutsData?.data]);
+    const items = bffEnabled ? overviewData?.standard?.items : inboundCheckoutsData?.data;
+    if (!items) return [];
+    return groupCheckoutsByDateAndDestination(items);
+  }, [bffEnabled, overviewData?.standard, inboundCheckoutsData?.data]);
 
   // ──────────────────────────────────────────────
   // 로딩/빈 상태 판단
   // ──────────────────────────────────────────────
   const hasInboundCheckouts = inboundGroups.length > 0;
-  const hasRentalImports = (rentalImportsData?.data?.length ?? 0) > 0;
-  const hasInternalSharedImports = (internalSharedImportsData?.data?.length ?? 0) > 0;
-  const isAnyLoading =
-    inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
-  const isAnyError = inboundCheckoutsError || rentalImportsError || internalSharedImportsError;
+  const hasRentalImports =
+    ((bffEnabled ? overviewData?.rental?.items : rentalImportsData?.data)?.length ?? 0) > 0;
+  const hasInternalSharedImports =
+    ((bffEnabled ? overviewData?.internalShared?.items : internalSharedImportsData?.data)?.length ??
+      0) > 0;
+  const isAnyLoading = bffEnabled
+    ? overviewLoading
+    : inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
+  const isAnyError = bffEnabled
+    ? overviewError
+    : inboundCheckoutsError || rentalImportsError || internalSharedImportsError;
 
-  const rentalTotal =
-    rentalImportsData?.meta?.pagination?.total ?? rentalImportsData?.data?.length ?? 0;
-  const internalTotal =
-    internalSharedImportsData?.meta?.pagination?.total ??
-    internalSharedImportsData?.data?.length ??
-    0;
-  const inboundTotal = inboundCheckoutsData?.meta?.pagination?.total ?? inboundGroups.length;
-
-  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 PR-x에서 연결 예정
-  const sparklineValues: number[] = [];
+  const rentalTotal = bffEnabled
+    ? (overviewData?.rental?.meta?.totalItems ?? 0)
+    : (rentalImportsData?.meta?.pagination?.total ?? rentalImportsData?.data?.length ?? 0);
+  const internalTotal = bffEnabled
+    ? (overviewData?.internalShared?.meta?.totalItems ?? 0)
+    : (internalSharedImportsData?.meta?.pagination?.total ??
+      internalSharedImportsData?.data?.length ??
+      0);
+  const inboundTotal = bffEnabled
+    ? (overviewData?.standard?.meta?.totalItems ?? inboundGroups.length)
+    : (inboundCheckoutsData?.meta?.pagination?.total ?? inboundGroups.length);
 
   // ──────────────────────────────────────────────
   // Render helpers
@@ -232,9 +269,15 @@ export default function InboundCheckoutsTab({
     );
   }
 
-  const rentalTotalPages = rentalImportsData?.meta?.pagination?.totalPages ?? 1;
-  const internalTotalPages = internalSharedImportsData?.meta?.pagination?.totalPages ?? 1;
-  const inboundTotalPages = inboundCheckoutsData?.meta?.pagination?.totalPages ?? 1;
+  const rentalTotalPages = bffEnabled
+    ? (overviewData?.rental?.meta?.totalPages ?? 1)
+    : (rentalImportsData?.meta?.pagination?.totalPages ?? 1);
+  const internalTotalPages = bffEnabled
+    ? (overviewData?.internalShared?.meta?.totalPages ?? 1)
+    : (internalSharedImportsData?.meta?.pagination?.totalPages ?? 1);
+  const inboundTotalPages = bffEnabled
+    ? (overviewData?.standard?.meta?.totalPages ?? 1)
+    : (inboundCheckoutsData?.meta?.pagination?.totalPages ?? 1);
 
   return (
     <div className="space-y-6">
@@ -248,21 +291,20 @@ export default function InboundCheckoutsTab({
         <InboundSectionHeader
           variant="teamLoan"
           count={inboundTotal}
-          isLoading={inboundCheckoutsLoading}
+          isLoading={bffEnabled ? overviewLoading : inboundCheckoutsLoading}
         />
 
-        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
-        {sparklineValues.length > 1 && (
-          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        {resolvedSparkline && resolvedSparkline.standard.length > 1 && (
+          <SparklineMini values={resolvedSparkline.standard} trend="flat" variant="info" />
         )}
 
-        {inboundCheckoutsLoading ? (
+        {(bffEnabled ? overviewLoading : inboundCheckoutsLoading) ? (
           <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
-        ) : inboundCheckoutsError ? (
+        ) : (bffEnabled ? overviewError : inboundCheckoutsError) ? (
           <div className="p-6">
             <ErrorState
               title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchInbound()}
+              onRetry={() => void (bffEnabled ? refetchOverview() : refetchInbound())}
             />
           </div>
         ) : !hasInboundCheckouts ? (
@@ -284,7 +326,7 @@ export default function InboundCheckoutsTab({
             {renderSectionPagination(
               inboundPage,
               inboundTotalPages,
-              inboundCheckoutsLoading,
+              bffEnabled ? overviewLoading : inboundCheckoutsLoading,
               setInboundPage
             )}
           </>
@@ -301,24 +343,23 @@ export default function InboundCheckoutsTab({
         <InboundSectionHeader
           variant="externalRental"
           count={rentalTotal}
-          isLoading={rentalImportsLoading}
+          isLoading={bffEnabled ? overviewLoading : rentalImportsLoading}
         />
 
-        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
-        {sparklineValues.length > 1 && (
-          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        {resolvedSparkline && resolvedSparkline.rental.length > 1 && (
+          <SparklineMini values={resolvedSparkline.rental} trend="flat" variant="info" />
         )}
 
-        {rentalImportsLoading ? (
+        {(bffEnabled ? overviewLoading : rentalImportsLoading) ? (
           <CheckoutListSkeleton
             label={t('loading.externalRental')}
             srOnly={t('loading.externalRentalSr')}
           />
-        ) : rentalImportsError ? (
+        ) : (bffEnabled ? overviewError : rentalImportsError) ? (
           <div className="p-6">
             <ErrorState
               title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchRental()}
+              onRetry={() => void (bffEnabled ? refetchOverview() : refetchRental())}
             />
           </div>
         ) : !hasRentalImports ? (
@@ -355,53 +396,62 @@ export default function InboundCheckoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(rentalImportsData?.data ?? []).map((item) => (
-                    <TableRow
-                      key={item.id}
-                      className={[
-                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
-                        PREMIUM_TABLE_TOKENS.stripe,
-                      ].join(' ')}
-                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))}
-                    >
-                      <TableCell
-                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                  {((bffEnabled ? overviewData?.rental?.items : rentalImportsData?.data) ?? []).map(
+                    (item) => (
+                      <TableRow
+                        key={item.id}
+                        className={[
+                          CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                          PREMIUM_TABLE_TOKENS.stripe,
+                        ].join(' ')}
+                        onClick={() =>
+                          router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                        }
                       >
-                        {item.equipmentName}
-                      </TableCell>
-                      <TableCell>
-                        {tEquip(
-                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
-                        )}
-                      </TableCell>
-                      <TableCell className="line-clamp-1">{item.vendorName}</TableCell>
-                      <TableCell className="tabular-nums">
-                        {fmtDate(item.usagePeriodStart)}
-                        {' ~ '}
-                        {fmtDate(item.usagePeriodEnd)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <EquipmentImportStatusBadge
-                            status={item.status as EquipmentImportStatus}
-                          />
-                          {item.status === EquipmentImportStatusValues.APPROVED && (
-                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
-                              {t('inbound.receiveRequired')}
-                            </Badge>
+                        <TableCell
+                          className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                        >
+                          {item.equipmentName}
+                        </TableCell>
+                        <TableCell>
+                          {tEquip(
+                            `classification.${item.classification}` as Parameters<typeof tEquip>[0]
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="line-clamp-1">
+                          {'vendorName' in item ? item.vendorName : '-'}
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {fmtDate(item.usagePeriodStart)}
+                          {' ~ '}
+                          {fmtDate(item.usagePeriodEnd)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <EquipmentImportStatusBadge
+                              status={item.status as EquipmentImportStatus}
+                            />
+                            {item.status === EquipmentImportStatusValues.APPROVED && (
+                              <Badge
+                                variant="outline"
+                                className={getSemanticBadgeClasses('warning')}
+                              >
+                                {t('inbound.receiveRequired')}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                      </TableRow>
+                    )
+                  )}
                 </TableBody>
               </Table>
             </Card>
             {renderSectionPagination(
               rentalPage,
               rentalTotalPages,
-              rentalImportsLoading,
+              bffEnabled ? overviewLoading : rentalImportsLoading,
               setRentalPage
             )}
           </>
@@ -418,24 +468,23 @@ export default function InboundCheckoutsTab({
         <InboundSectionHeader
           variant="internalShared"
           count={internalTotal}
-          isLoading={internalSharedImportsLoading}
+          isLoading={bffEnabled ? overviewLoading : internalSharedImportsLoading}
         />
 
-        {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
-        {sparklineValues.length > 1 && (
-          <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+        {resolvedSparkline && resolvedSparkline.internalShared.length > 1 && (
+          <SparklineMini values={resolvedSparkline.internalShared} trend="flat" variant="info" />
         )}
 
-        {internalSharedImportsLoading ? (
+        {(bffEnabled ? overviewLoading : internalSharedImportsLoading) ? (
           <CheckoutListSkeleton
             label={t('loading.internalShared')}
             srOnly={t('loading.internalSharedSr')}
           />
-        ) : internalSharedImportsError ? (
+        ) : (bffEnabled ? overviewError : internalSharedImportsError) ? (
           <div className="p-6">
             <ErrorState
               title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchInternal()}
+              onRetry={() => void (bffEnabled ? refetchOverview() : refetchInternal())}
             />
           </div>
         ) : !hasInternalSharedImports ? (
@@ -472,7 +521,11 @@ export default function InboundCheckoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(internalSharedImportsData?.data ?? []).map((item) => (
+                  {(
+                    (bffEnabled
+                      ? overviewData?.internalShared?.items
+                      : internalSharedImportsData?.data) ?? []
+                  ).map((item) => (
                     <TableRow
                       key={item.id}
                       className={[
@@ -491,7 +544,9 @@ export default function InboundCheckoutsTab({
                           `classification.${item.classification}` as Parameters<typeof tEquip>[0]
                         )}
                       </TableCell>
-                      <TableCell className="line-clamp-1">{item.ownerDepartment || '-'}</TableCell>
+                      <TableCell className="line-clamp-1">
+                        {'ownerDepartment' in item ? item.ownerDepartment || '-' : '-'}
+                      </TableCell>
                       <TableCell className="tabular-nums">
                         {fmtDate(item.usagePeriodStart)}
                         {' ~ '}
@@ -518,7 +573,7 @@ export default function InboundCheckoutsTab({
             {renderSectionPagination(
               internalPage,
               internalTotalPages,
-              internalSharedImportsLoading,
+              bffEnabled ? overviewLoading : internalSharedImportsLoading,
               setInternalPage
             )}
           </>

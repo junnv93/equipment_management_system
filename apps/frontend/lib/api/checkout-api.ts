@@ -6,6 +6,7 @@ import {
 } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type { EquipmentImport } from './equipment-import-api';
 
 // ✅ SSOT: 반출 상태/목적 타입 import
 import type {
@@ -16,7 +17,9 @@ import type {
   ConditionStatus,
   AccessoriesStatus,
   NextStepDescriptor,
+  InboundSectionMeta,
 } from '@equipment-management/schemas';
+import { InboundOverviewResponseSchema } from '@equipment-management/schemas';
 
 // ✅ Handover 토큰 타입 (QR Phase 3) — DTO shape은 백엔드와 동일 SSOT 재사용 대상.
 // 프론트에서 백엔드 DTO를 직접 import할 수 없으므로 구조만 로컬 재정의.
@@ -174,6 +177,25 @@ export interface PendingChecksQuery {
   role?: 'lender' | 'borrower';
   page?: number;
   pageSize?: number;
+}
+
+// BFF: 반입 현황 집계 요청 타입 (Sprint 3.1)
+export interface InboundOverviewQuery {
+  statusFilter?: string;
+  searchTerm?: string;
+  limitPerSection?: number;
+}
+
+// InboundSectionMeta는 @equipment-management/schemas에서 import (SSOT)
+export type { InboundSectionMeta };
+
+// BFF 응답 타입 — schemas의 구조적 검증 + 도메인 타입으로 오버레이
+export interface InboundOverviewResponse {
+  standard: { items: Checkout[]; meta: InboundSectionMeta };
+  rental: { items: EquipmentImport[]; meta: InboundSectionMeta };
+  internalShared: { items: EquipmentImport[]; meta: InboundSectionMeta };
+  sparkline: { standard: number[]; rental: number[]; internalShared: number[] };
+  generatedAt: string;
 }
 
 export interface CreateCheckoutDto {
@@ -539,6 +561,24 @@ const checkoutApi = {
       token,
     });
     return transformSingleResponse<VerifyHandoverTokenResponse>(response);
+  },
+
+  /**
+   * BFF: 반입 현황 집계 (Sprint 3.1)
+   * 표준 반입 + 외부 렌탈 + 내부 공용 3섹션을 단일 요청으로 집계.
+   */
+  async getInboundOverview(query: InboundOverviewQuery = {}): Promise<InboundOverviewResponse> {
+    const params = new URLSearchParams();
+    if (query.statusFilter && query.statusFilter !== 'all') {
+      params.append('statusFilter', query.statusFilter);
+    }
+    if (query.searchTerm) params.append('searchTerm', query.searchTerm);
+    if (query.limitPerSection) params.append('limitPerSection', String(query.limitPerSection));
+    const url = `${API_ENDPOINTS.CHECKOUTS.INBOUND_OVERVIEW}${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiClient.get(url);
+    // 런타임 구조 검증 (M9) — items 내부 타입은 도메인별 타입 가드로 보장
+    InboundOverviewResponseSchema.parse(response.data);
+    return response.data as InboundOverviewResponse;
   },
 };
 

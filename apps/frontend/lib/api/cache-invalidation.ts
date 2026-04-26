@@ -335,11 +335,8 @@ export class EquipmentImportCacheInvalidation {
   ): Promise<void> {
     await Promise.all([
       this.invalidateImport(queryClient, importId),
-      // checkout 자동 생성 → checkout 목록 무효화
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.checkouts.all,
-        exact: false,
-      }),
+      // checkout 자동 생성 → checkout 목록 뷰 무효화 (view.all() 축)
+      CheckoutCacheInvalidation.invalidateViews(queryClient),
       // 장비 상태 변경 → 장비 목록 무효화
       EquipmentCacheInvalidation.invalidateAll(queryClient),
       DashboardCacheInvalidation.invalidateAll(queryClient),
@@ -550,7 +547,7 @@ export class CalibrationCacheInvalidation {
 export class CheckoutCacheInvalidation {
   /** 체크아웃 승인/반려 후 무효화 대상 키 */
   static readonly APPROVAL_KEYS: ReadonlyArray<readonly unknown[]> = [
-    queryKeys.checkouts.all,
+    queryKeys.checkouts.all, // view.* + resource.* 전체 (광역)
     queryKeys.equipment.all,
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
@@ -603,6 +600,22 @@ export class CheckoutCacheInvalidation {
    */
   static async invalidateAfterApproval(queryClient: QueryClient): Promise<void> {
     await CheckoutCacheInvalidation.invalidateByKeys(queryClient, this.APPROVAL_KEYS);
+  }
+
+  /**
+   * 목록 뷰 축만 무효화 (view.* prefix)
+   *
+   * 사용 시점:
+   * - 새 반출 생성 후 목록만 갱신 (상세/카운트 무관)
+   * - 외부 반입 → 반출 전환 후 inbound 목록 갱신
+   *
+   * view.all() = ['checkouts', 'view'] — resource.* 는 영향 없음
+   */
+  static async invalidateViews(queryClient: QueryClient): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.checkouts.view.all(),
+      exact: false,
+    });
   }
 }
 

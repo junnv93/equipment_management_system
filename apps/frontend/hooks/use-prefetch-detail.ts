@@ -33,7 +33,7 @@ export function usePrefetchDetail() {
   const prefetchCheckout = useCallback(
     (id: string) => {
       void queryClient.prefetchQuery({
-        queryKey: queryKeys.checkouts.detail(id),
+        queryKey: queryKeys.checkouts.resource.detail(id),
         queryFn: () => checkoutApi.getCheckout(id),
         staleTime: CACHE_TIMES.MEDIUM,
       });

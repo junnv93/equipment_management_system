@@ -400,6 +400,50 @@ rejectionReason: z.string().trim().min(1, VM.approval.rejectReason.required)
 - 선택 필드 (`.optional()`) — min(1)이 없으므로 해당 없음
 - `z.string().min(0)` — 빈 문자열을 허용하는 의도적 선택
 
+### Step 13: Zod `.default(N)` 보장 필드는 DTO 클래스에서 non-optional (2026-04-26 추가)
+
+Zod `.default(N)`이 있는 필드는 검증 후 반드시 값이 있다. 하지만 DTO 클래스에서 `?: number` 또는
+`number | undefined`로 선언하면, 서비스/컨트롤러가 `!` assertion 없이는 `undefined` 분기를 처리해야 하고
+타입 오류를 유발한다. Zod `.default()`가 보장하는 필드는 DTO 클래스에서 반드시 non-optional로 선언한다.
+
+**탐지 — `.default()` 스키마가 있지만 DTO 클래스에서 optional 선언한 패턴:**
+```bash
+# Query DTO에서 .default()를 사용하는 필드의 DTO 클래스 선언 확인
+for f in $(find apps/backend/src/modules/*/dto -name "*.dto.ts"); do
+  # .default(로 끝나는 Zod 필드 이름 추출
+  defaults=$(grep -oP "\w+(?=:\s*z\..+\.default\()" "$f" 2>/dev/null)
+  for field in $defaults; do
+    # 해당 DTO 클래스에서 optional로 선언된 경우 탐지
+    if grep -q "${field}?\s*:" "$f" 2>/dev/null; then
+      echo "OPTIONAL_BUT_DEFAULT: $f → field '$field' has .default() but declared optional"
+    fi
+  done
+done
+```
+
+**PASS 기준:** `.default(N)` 필드가 DTO 클래스에서 non-optional로 선언됨.
+**FAIL 기준:** `.default(N)` 있는 Zod 필드가 DTO 클래스에서 `?: T` — 타입 시스템이 `.default()`의 보장을 무시.
+
+```typescript
+// ❌ WRONG — .default(10) 이 있지만 클래스 타입은 optional
+export const InboundOverviewQuerySchema = z.object({
+  limitPerSection: z.coerce.number().int().positive().max(50).default(10),
+});
+export class InboundOverviewQueryDto {
+  limitPerSection?: number; // ← .default(10) 이 있는데 optional?
+}
+
+// ✅ CORRECT — .default()가 보장하므로 non-optional
+export class InboundOverviewQueryDto {
+  limitPerSection: number; // ← 항상 숫자 (검증 통과 후 Zod가 채워줌)
+  statusFilter?: string;   // ← .optional()은 그대로 optional
+}
+```
+
+**근거:** `InboundOverviewQueryDto.limitPerSection?: number`으로 선언했다가
+`checkoutsService.getInboundOverview()`에서 `query.limitPerSection`이 `number | undefined`가 되어
+서비스 파라미터 타입 불일치 발생 (Sprint 3.1, 2026-04-26).
+
 ## Output Format
 
 ```markdown
@@ -417,6 +461,7 @@ rejectionReason: z.string().trim().min(1, VM.approval.rejectReason.required)
 | 10  | ZodResponse pairing + 2xx only | PASS/FAIL | interceptor 누락 / 4xx 사용 |
 | 11  | 배열 .max() 매직 넘버          | PASS/FAIL | 레이아웃 상수 미경유 숫자 리터럴 위치 |
 | 12  | required string .trim() 여부   | PASS/FAIL | .min(1) 앞 .trim() 누락 DTO 위치 |
+| 13  | .default() 필드 non-optional   | PASS/FAIL | .default() 있는데 DTO 클래스 optional 선언 위치 |
 ```
 
 ## Exceptions

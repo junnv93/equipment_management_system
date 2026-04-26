@@ -138,6 +138,8 @@ export const API_ENDPOINTS = {
     HANDOVER_VERIFY: '/api/checkouts/handover/verify',
     // 반출지 목록 조회 (DB에서 실제 사용된 값들)
     DESTINATIONS: '/api/checkouts/destinations',
+    // BFF: 반입 현황 집계 (Sprint 3.1)
+    INBOUND_OVERVIEW: '/api/checkouts/inbound-overview',
   },
 
   // ============================================================================

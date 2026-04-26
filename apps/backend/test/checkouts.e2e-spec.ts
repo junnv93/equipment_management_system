@@ -350,4 +350,5 @@ describe('CheckoutsController (e2e)', () => {
       }
     });
   });
+
 });

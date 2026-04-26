@@ -29,10 +29,10 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | ----------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
 | `verify-cas`            | CAS(Optimistic Locking) 패턴 검증      | `apps/backend/src/modules/**/*.service.ts`, `*/dto/**/*.dto.ts`       |
 | `verify-auth`           | 서버 사이드 인증/인가 + 라우트 선언 순서 검증 | `apps/backend/src/**/*.controller.ts`, `*/dto/**/*.dto.ts`            |
-| `verify-zod`            | Zod 검증 패턴 검증                     | `*/dto/**/*.dto.ts`, `apps/backend/src/common/pipes/*.ts`             |
+| `verify-zod`            | Zod 검증 패턴 검증 (Step 13: `.default(N)` 보장 필드는 DTO 클래스 non-optional) | `*/dto/**/*.dto.ts`, `apps/backend/src/common/pipes/*.ts`             |
 | `verify-ssot`           | SSOT 임포트 패턴 검증 (Step 27: UserSelectableCheckoutPurpose — CreateCheckoutDto.purpose 서브셋 타입) | `apps/backend/src/**/*.ts`, `apps/frontend/**/*.ts(x)` |
-| `verify-hardcoding`     | SSOT 하드코딩 탐지                     | `apps/frontend/lib/api/**`, `apps/backend/src/**/*.service.ts`        |
-| `verify-frontend-state` | 프론트엔드 상태 관리 패턴 검증         | `apps/frontend/components/**`, `apps/frontend/hooks/**`, `apps/frontend/lib/checkouts/**`  |
+| `verify-hardcoding`     | SSOT 하드코딩 탐지 (Step 2b: checkouts queryKeys view/resource 계층 — 과도한 invalidation 방지) | `apps/frontend/lib/api/**`, `apps/backend/src/**/*.service.ts`        |
+| `verify-frontend-state` | 프론트엔드 상태 관리 패턴 검증 (Step 21: runtime feature flag로 union 타입 내로잉 금지) | `apps/frontend/components/**`, `apps/frontend/hooks/**`, `apps/frontend/lib/checkouts/**`  |
 | `verify-nextjs`         | Next.js 16 패턴 검증                   | `apps/frontend/app/**/page.tsx`, `layout.tsx`, `error.tsx`            |
 | `verify-filters`        | URL-driven 필터 SSOT 패턴 검증 (Step 10: checkout purpose 필터 타입 — `CheckoutPurpose \| 'all'` + enum 검증) | `*-filter-utils.ts`, `use-*-filters.ts`, `page.tsx` |
 | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 검증     | `lib/design-tokens/**`, `apps/frontend/components/**`                 |
