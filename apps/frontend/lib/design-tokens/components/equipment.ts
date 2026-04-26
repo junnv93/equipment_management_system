@@ -9,7 +9,7 @@
  * CRITICAL: 기존 equipment-status-styles.ts, EquipmentHeader.getStatusConfig() 통합
  */
 
-import { FOCUS_TOKENS, EMPTY_STATE_TOKENS, MICRO_TYPO } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticStatusClasses,
@@ -444,15 +444,6 @@ export const EQUIPMENT_FILTER_TOKENS = {
 } as const;
 
 // ============================================================================
-// Equipment Empty State Tokens
-// ============================================================================
-
-/**
- * @deprecated semantic.ts의 EMPTY_STATE_TOKENS로 승격됨.
- * 기존 호출부 호환성을 위해 re-export 유지 — 신규 코드는 EMPTY_STATE_TOKENS 사용.
- */
-export const EQUIPMENT_EMPTY_STATE_TOKENS = EMPTY_STATE_TOKENS;
-
 // ============================================================================
 // Equipment Table Tokens
 // ============================================================================

@@ -104,6 +104,7 @@ export {
   getRoleChipClasses,
   type RoleChipKey,
   ALERT_TAB_BADGE_COLOR,
+  CONFIRM_PREVIEW_TOKENS,
 } from './semantic';
 
 // ============================================================================
@@ -157,8 +158,6 @@ export {
 
 // Notification
 export {
-  NOTIFICATION_BADGE_VARIANTS,
-  getNotificationBadgeVariant,
   getNotificationBadgeClasses,
   NOTIFICATION_DROPDOWN_ANIMATION,
   getNotificationItemAnimation,
@@ -249,7 +248,6 @@ export {
   EQUIPMENT_KPI_STRIP_TOKENS,
   EQUIPMENT_TAB_UNDERLINE_TOKENS,
   EQUIPMENT_FILTER_TOKENS,
-  EQUIPMENT_EMPTY_STATE_TOKENS,
   EQUIPMENT_TABLE_TOKENS,
   EQUIPMENT_LIST_HEADER_TOKENS,
   EQUIPMENT_STATS_STRIP_TOKENS,
@@ -287,6 +285,7 @@ export {
   NC_FILTER_TOKENS,
   NC_LIST_GRID_COLS,
   NC_LIST_TOKENS,
+  ACTION_CHIP_BASE,
   getActionChipClasses,
   NC_TYPE_CHIP_TOKENS,
   NC_MINI_WORKFLOW_TOKENS,
@@ -617,8 +616,6 @@ export {
 export {
   ROLE_BADGE_TOKENS,
   TEAM_CARD_TOKENS,
-  TEAM_FILTER_PANEL_TOKENS,
-  TEAM_SECTION_TOKENS,
   TEAM_MEMBER_GROUP_TOKENS,
   SITE_PANEL_TOKENS,
   TEAM_ROW_TOKENS,
@@ -774,7 +771,7 @@ export { CHECKOUT_TOAST_TOKENS, type CheckoutToastSeverity } from './components/
  * 사용 가이드라인:
  *
  * 1. **컴포넌트 개발 시**: Layer 3 (Components) 사용
- *    → getHeaderButtonClasses(), NOTIFICATION_BADGE_VARIANTS 등
+ *    → getHeaderButtonClasses(), getNotificationBadgeClasses() 등
  *
  * 2. **새로운 컴포넌트 토큰 생성 시**: Layer 2 (Semantic) 참조
  *    → INTERACTIVE_TOKENS, MOTION_TOKENS 조합

@@ -22,42 +22,6 @@ import { getCountBasedUrgency, getUrgencyFeedbackClasses } from '../visual-feedb
 import { PAGE_HEADER_TOKENS } from './page-layout';
 
 /**
- * 배지 시각적 강조 레벨 (DEPRECATED)
- *
- * @deprecated Use getCountBasedUrgency() + getUrgencyFeedbackClasses() instead
- *
- * 마이그레이션 예시:
- * ```tsx
- * // Before
- * const variant = NOTIFICATION_BADGE_VARIANTS[getNotificationBadgeVariant(count)];
- *
- * // After
- * const urgency = getCountBasedUrgency(count);
- * const classes = getUrgencyFeedbackClasses(urgency);
- * ```
- */
-export const NOTIFICATION_BADGE_VARIANTS = {
-  default: { scale: 'scale-100', animation: '', ring: '' },
-  attention: {
-    scale: 'scale-105',
-    animation: '',
-    ring: 'ring-1 ring-destructive/30 ring-offset-1',
-  },
-  urgent: { scale: 'scale-110', animation: '', ring: 'ring-2 ring-destructive/50 ring-offset-2' },
-} as const;
-
-/**
- * 알림 개수에 따른 배지 variant 결정 (DEPRECATED)
- *
- * @deprecated Use getCountBasedUrgency() instead
- */
-export function getNotificationBadgeVariant(count: number): 'default' | 'attention' | 'urgent' {
-  if (count >= 10) return 'urgent';
-  if (count >= 6) return 'attention';
-  return 'default';
-}
-
-/**
  * 배지 스타일 클래스 조합 (Architecture v3)
  *
  * SSOT: Visual Feedback System 위임

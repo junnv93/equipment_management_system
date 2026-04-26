@@ -113,61 +113,6 @@ export const TEAM_CARD_TOKENS = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 팀 목록 필터 패널 (좌측 sticky)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @deprecated v3 리디자인에서 사이트 패널 구조로 대체됨. 다음 정리 시 제거 예정. */
-export const TEAM_FILTER_PANEL_TOKENS = {
-  container: 'w-56 flex-shrink-0',
-
-  sectionLabel: [
-    'block px-2 pb-1 pt-0.5',
-    `${MICRO_TYPO.label} font-semibold uppercase tracking-wider`,
-    'text-muted-foreground',
-  ].join(' '),
-
-  filterItem: [
-    'flex items-center justify-between w-full px-2.5 py-1.5 rounded-md',
-    'text-sm text-left',
-    TRANSITION_PRESETS.fastColor,
-    'hover:bg-muted/70',
-    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
-    'disabled:opacity-40 disabled:cursor-not-allowed',
-  ].join(' '),
-
-  filterItemActive: 'bg-muted/80 text-foreground font-medium',
-
-  filterCount: [
-    `${MICRO_TYPO.meta} font-mono tabular-nums text-muted-foreground ml-1 shrink-0`,
-  ].join(' '),
-
-  filterCountActive: 'text-foreground',
-
-  separator: 'h-px bg-border/60 my-2',
-
-  statsBox: ['p-3 rounded-lg bg-muted/40 border border-border/50', 'space-y-1.5'].join(' '),
-
-  statsRow: 'flex items-center justify-between',
-  statsLabel: 'text-xs text-muted-foreground',
-  statsValue: 'text-xs font-mono font-semibold tabular-nums text-foreground',
-  statsValueWarn: 'text-xs font-mono font-semibold tabular-nums text-brand-warning',
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 팀 분류 섹션 (TeamListContent 메인 영역)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @deprecated v3 리디자인에서 사이트 패널 구조로 대체됨. 다음 정리 시 제거 예정. */
-export const TEAM_SECTION_TOKENS = {
-  section: 'space-y-3',
-  header: 'flex items-center gap-2.5',
-  accentBar: 'w-1 h-5 rounded-full flex-shrink-0',
-  title: 'text-sm font-semibold text-foreground',
-  meta: 'ml-auto text-xs text-muted-foreground tabular-nums',
-  grid: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4',
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────────
 // 사이트 패널 (TeamListContent — 3-column site-first layout)
 // ─────────────────────────────────────────────────────────────────────────────
 

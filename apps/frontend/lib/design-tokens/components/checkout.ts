@@ -683,9 +683,11 @@ export function formatDday(daysRemaining: number): string {
  *
  * Alert-First: 중요 상태는 페이지 최상단에 배너로 표시
  *
- * @deprecated 향후 semantic.ts `CALLOUT_TOKENS` + `getCalloutClasses()`로 통합 예정.
- *             신규 반출입 알림 UI는 getCalloutClasses(variant, 'leftBorder', size) 사용 권장.
- *             마이그레이션 가이드: 별도 세션에서 문서화 (NC 리뷰 rev-2 플랜 Deferred 섹션 참조).
+ * Alert-First 배너 전용 토큰 (CALLOUT_TOKENS와 별도 유지 이유):
+ * - items-center 수평 정렬 (CALLOUT_TOKENS.base는 items-start)
+ * - dismiss 버튼(close) 포함 → 닫기 가능한 배너 패턴
+ * - shadow-md 포함 → 페이지 콘텐츠 위에 떠있는 시각적 계층감
+ * 일반 알림/안내 블록은 getCalloutClasses() 사용.
  */
 export const CHECKOUT_ALERT_TOKENS = {
   overdue: {

@@ -22,7 +22,7 @@ import {
   EQUIPMENT_CARD_PERFORMANCE_CLASSES,
   EQUIPMENT_CARD_GRID_TOKENS,
   getEquipmentCardClasses,
-  EQUIPMENT_EMPTY_STATE_TOKENS,
+  EMPTY_STATE_TOKENS,
   getStaggerDelay,
   getManagementNumberClasses,
   getEquipmentStatusTokenStyle,
@@ -330,13 +330,13 @@ function EquipmentCardGridComponent({
 
   if (items.length === 0) {
     return (
-      <div className={EQUIPMENT_EMPTY_STATE_TOKENS.container} data-testid="equipment-card-grid">
+      <div className={EMPTY_STATE_TOKENS.container} data-testid="equipment-card-grid">
         <Package
-          className={cn(EQUIPMENT_EMPTY_STATE_TOKENS.icon, 'motion-safe:animate-gentle-bounce')}
+          className={cn(EMPTY_STATE_TOKENS.icon, 'motion-safe:animate-gentle-bounce')}
           aria-hidden="true"
         />
-        <p className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>{t('list.noItems')}</p>
-        <p className={EQUIPMENT_EMPTY_STATE_TOKENS.description}>{t('list.tryOtherFilters')}</p>
+        <p className={EMPTY_STATE_TOKENS.title}>{t('list.noItems')}</p>
+        <p className={EMPTY_STATE_TOKENS.description}>{t('list.tryOtherFilters')}</p>
       </div>
     );
   }
