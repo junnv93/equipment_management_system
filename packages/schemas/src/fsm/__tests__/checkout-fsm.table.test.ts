@@ -83,7 +83,7 @@ describe('NextStepDescriptorSchema — all combinations pass', () => {
 // ============================================================================
 
 describe('getNextStep behavioral regression', () => {
-  it('all 280 combinations match snapshot', () => {
+  it(`all ${EXPECTED_ENTRY_COUNT} combinations match snapshot`, () => {
     const snapshot: Record<
       string,
       { nextAction: string | null; nextActor: string; availableToCurrentUser: boolean }

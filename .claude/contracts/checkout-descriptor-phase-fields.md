@@ -84,7 +84,7 @@ export interface NextStepDescriptor {
 | # | Criterion | Verification |
 |---|-----------|--------------|
 | M1 | `pnpm tsc --noEmit` exit 0 | 빌드 통과 |
-| M2 | `pnpm --filter schemas run test` 전체 통과, 208 table test 업데이트된 fixture 통과 | 테스트 실행 |
+| M2 | `pnpm --filter schemas run test` 전체 통과, `EXPECTED_ENTRY_COUNT`(= `TOTAL_STATUSES × TOTAL_PURPOSES × TOTAL_ROLES`) table test 업데이트된 fixture 통과 — fixture는 `buildDescriptorTable()`로 동적 생성 | 테스트 실행 |
 | M3 | `packages/schemas/src/fsm/rental-phase.ts` 신규 파일 존재 + `RENTAL_PHASES`, `RentalPhase`, `getRentalPhase`, `getPhaseIndex`, `getStepsInPhase`, `PHASE_STEP_COUNT` export | grep 확인 |
 | M4 | `RENTAL_STATUS_TO_PHASE`가 `as const satisfies Record<CheckoutStatus, RentalPhase \| null>` 표기로 컴파일 타임 누락 검증 | `grep -n "as const satisfies Record<CheckoutStatus" packages/schemas/src/fsm/rental-phase.ts` = 1+ hit |
 | M5 | `NextStepDescriptor`에 `nextStepIndex`, `phase`, `phaseIndex`, `totalPhases` 필드 추가 (readonly) | grep + 타입 컴파일 |
@@ -95,7 +95,7 @@ export interface NextStepDescriptor {
 | M10 | `nextStepIndex` 계산 규칙: `nextAction === null`(terminal) → `null`, else → `currentStepIndex + 1` (but capped at `totalSteps`) | logic check via test |
 | M11 | `rental-phase.ts`의 `RENTAL_STATUS_TO_PHASE`는 **새 CheckoutStatus 추가 시 컴파일 에러 발생** | negative test: `// @ts-expect-error` 주석으로 누락 매핑 시뮬레이션 |
 | M12 | 호출부(frontend hooks/components) 수정 0건 — 본 contract는 **스키마 확장만** | `git diff --name-only apps/frontend/` = 0 파일 |
-| M13 | fixture `DESCRIPTOR_TABLE` 208 entry 모두 `nextStepIndex`, `phase`, `phaseIndex`, `totalPhases` 포함 | runtime check |
+| M13 | fixture `DESCRIPTOR_TABLE`의 모든 entry(= `EXPECTED_ENTRY_COUNT`, 현재 280)에 `nextStepIndex`, `phase`, `phaseIndex`, `totalPhases` 포함 — `buildDescriptorTable()`이 동적 생성하므로 상태/목적 추가 시 자동 확장 | runtime check |
 | M14 | 변경 파일 = `checkout-fsm.ts` + `rental-phase.ts`(신규) + fixture + test = 총 4 | `git diff --name-only \| grep -v '^\.claude/' \| wc -l` = 4 |
 
 ---
@@ -170,7 +170,7 @@ export const DESCRIPTOR_TABLE = {
 
 ## Acceptance
 
-루프 완료 조건 = 위 MUST 14개 모두 PASS + 208 table test 신규 필드까지 포함해 통과.
+루프 완료 조건 = 위 MUST 14개 모두 PASS + `EXPECTED_ENTRY_COUNT` table test 신규 필드까지 포함해 통과.
 Sprint 4.4 UI 구현이 시작 가능한 상태(schema 계약 고정).
 SHOULD 미달 항목은 `tech-debt-tracker.md`에 등록 후 루프 종료.
 
@@ -178,6 +178,6 @@ SHOULD 미달 항목은 `tech-debt-tracker.md`에 등록 후 루프 종료.
 
 ## 연계 contracts
 
-- Sprint 1.1 · `checkout-fsm-resolve-action.md` — 본 contract가 확장하는 baseline. 208 table test 선행.
+- Sprint 1.1 · `checkout-fsm-resolve-action.md` — 본 contract가 확장하는 baseline. `EXPECTED_ENTRY_COUNT` table test 선행.
 - Sprint 1.5 · `checkout-fsm-exhaustive-satisfies.md` — `computeStepIndex` satisfies 전환과 시점 조율 (같은 PR 내 병합 권장).
 - Sprint 4.4 · `rental-phase-ui.md` (신규 작성 예정) — `CheckoutPhaseIndicator` 컴포넌트, `WorkflowTimeline` phase 접힘, i18n 키 추가. 본 contract의 `phase` 필드 소비.

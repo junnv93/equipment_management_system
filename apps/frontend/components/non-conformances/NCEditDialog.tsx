@@ -7,8 +7,12 @@ import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conforman
 import { queryKeys } from '@/lib/api/query-config';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { isConflictError } from '@/lib/api/error';
-import { REQUIRED_FIELD_TOKENS, REQUIRED_FIELD_A11Y } from '@/lib/design-tokens/form-field-tokens';
-import { CONFIRM_PREVIEW_TOKENS, NC_DIALOG_TOKENS } from '@/lib/design-tokens';
+import {
+  REQUIRED_FIELD_TOKENS,
+  REQUIRED_FIELD_A11Y,
+  CONFIRM_PREVIEW_TOKENS,
+  NC_DIALOG_TOKENS,
+} from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';

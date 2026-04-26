@@ -92,8 +92,7 @@ export const NC_BANNER_TOKENS = {
     'bg-card p-3 rounded-lg border border-brand-critical/20 hover:border-brand-critical/40 cursor-pointer',
   detailText: 'text-sm text-foreground',
   /** 상태 기반 경고 Alert — NC 기록 없이 non_conforming/calibration_overdue일 때 사용 */
-  statusAlert:
-    'border-brand-critical/20 bg-brand-critical/5 dark:border-brand-critical/30 dark:bg-brand-critical/10',
+  statusAlert: 'border-brand-critical/20 bg-brand-critical/5',
   statusAlertIcon: 'h-4 w-4 text-brand-critical',
   // -- compact variant (inline-strip) --
   /** 컴팩트 Alert 컨테이너 — 한 줄 inline strip */
