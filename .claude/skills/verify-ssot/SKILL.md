@@ -469,6 +469,39 @@ onSuccess: () => toast({ title: '승인 완료' }), // SSOT 우회
 - `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — approve onSuccess 소비처
 - `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` — detail 액션 소비처
 
+### Step 27: UserSelectableCheckoutPurpose SSOT — CreateCheckoutDto.purpose (2026-04-26 추가)
+
+`checkout-api.ts`의 `CreateCheckoutDto.purpose`가 전체 `CheckoutPurpose` 대신
+`UserSelectableCheckoutPurpose` (= `'calibration' | 'repair' | 'rental'`)를 사용하는지 확인.
+`return_to_vendor`는 시스템 전용 목적이며 사용자가 신청 시 선택 불가능해야 한다.
+
+**규칙 근거:** `CreateCheckoutDto.purpose: CheckoutPurpose`이면 프론트엔드에서 `return_to_vendor`를
+전달해도 타입 오류가 없음. `UserSelectableCheckoutPurpose`로 좁혀야 tsc가 서브셋 위반을 컴파일 타임에 차단.
+
+```bash
+# CreateCheckoutDto.purpose가 string 또는 전체 CheckoutPurpose이면 SSOT 위반
+grep -n "purpose.*: string\|purpose.*: CheckoutPurpose[^|]" \
+  apps/frontend/lib/api/checkout-api.ts \
+  | grep -v "UserSelectableCheckoutPurpose\|import\|//"
+# 결과: 0건 (UserSelectableCheckoutPurpose 사용)
+
+# UserSelectableCheckoutPurpose import 확인
+grep -n "UserSelectableCheckoutPurpose" apps/frontend/lib/api/checkout-api.ts
+# 결과: import 라인 + 사용 라인 2건 이상
+
+# 사용자 입력 폼(create)에서도 UserSelectableCheckoutPurpose로 타입 선언했는지 확인
+grep -n "UserSelectableCheckoutPurpose" \
+  "apps/frontend/app/(dashboard)/checkouts/create/CreateCheckoutContent.tsx"
+# 결과: import + useState<UserSelectableCheckoutPurpose> 2건 이상
+```
+
+**PASS:** `CreateCheckoutDto.purpose: UserSelectableCheckoutPurpose` + 폼 state도 동일 타입.
+**FAIL:** `purpose: string` 또는 `purpose: CheckoutPurpose` 잔존 → `UserSelectableCheckoutPurpose`로 교체.
+
+**예외:**
+- `Checkout.purpose: CheckoutPurpose` — 서버 응답(조회)에는 전체 `CheckoutPurpose` 사용 (return_to_vendor 포함). 이 Step은 생성 DTO만 대상.
+- `CheckoutQuery.purpose?: CheckoutPurpose` — 필터 파라미터는 return_to_vendor 포함 전체 목적으로 조회 가능.
+
 ## Output Format
 
 ```markdown
@@ -505,6 +538,7 @@ onSuccess: () => toast({ title: '승인 완료' }), // SSOT 우회
 | 24  | UASVal SSOT — approvals-api.ts | PASS/FAIL | UnifiedApprovalStatus raw 리터럴 직접 할당 위치 |
 | 25  | design-token 헬퍼 내 status literal 직접 비교 금지 | PASS/FAIL | `=== 'overdue'` 등 raw 리터럴 비교 위치 (`*StatusValues` 경유 필요) |
 | 26  | notifyCheckoutAction SSOT 경유 — 반출 onSuccess 직접 toast 금지 | PASS/FAIL | checkout 액션 onSuccess에서 `toast({...})` 직접 호출 위치 |
+| 27  | UserSelectableCheckoutPurpose SSOT — CreateCheckoutDto.purpose | PASS/FAIL | `purpose: string` 또는 `purpose: CheckoutPurpose` 잔존 위치 |
 ```
 
 ## Exceptions

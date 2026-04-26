@@ -300,6 +300,35 @@ grep -rn "filterActive.*!==\|filterActive.*!!" \
   --include="*.tsx"
 ```
 
+### Step 10: checkout purpose 필터 타입 SSOT 검증 (2026-04-26 추가)
+
+`checkout-filter-utils.ts`의 `UICheckoutFilters.purpose`와 `ApiCheckoutParams.purpose`가
+`string` 대신 `CheckoutPurpose | 'all'` / `CheckoutPurpose`로 타입 강화되어 있는지,
+URL 파싱 시 `CHECKOUT_PURPOSE_VALUES.includes()` 검증을 통해 enum SSOT를 경유하는지 확인합니다.
+
+**규칙 근거:** `purpose: string` 이면 유효하지 않은 URL 파라미터(`?purpose=hack`)가 API로 그대로 전달됨.
+`CHECKOUT_PURPOSE_VALUES.includes(purposeRaw)` 가드가 없으면 URL 변조로 서버 에러 유발 가능.
+
+```bash
+# UICheckoutFilters.purpose / ApiCheckoutParams.purpose가 string이면 SSOT 타입 위반
+grep -n "purpose.*: string" apps/frontend/lib/utils/checkout-filter-utils.ts
+# 결과: 0건 (CheckoutPurpose | 'all' 또는 CheckoutPurpose 사용)
+
+# URL 파라미터 파싱 시 CHECKOUT_PURPOSE_VALUES enum 검증 존재 확인
+grep -n "CHECKOUT_PURPOSE_VALUES" apps/frontend/lib/utils/checkout-filter-utils.ts
+# 결과: import + includes() 사용 2건 이상
+
+# CheckoutsContent.tsx handlePurposeChange도 CHECKOUT_PURPOSE_VALUES로 검증하는지 확인
+grep -n "CHECKOUT_PURPOSE_VALUES" "apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx"
+# 결과: import + includes() 사용 1건 이상
+```
+
+**PASS:** `purpose: string` 0건 + `CHECKOUT_PURPOSE_VALUES.includes()` 검증 존재.
+**FAIL:** `UICheckoutFilters.purpose: string` 또는 URL 파싱 시 enum 검증 누락 → `CheckoutPurpose | 'all'` + `includes()` 가드로 교체.
+
+**예외:**
+- `handlePurposeChange(value: string)` 파라미터 — shadcn `Select.onValueChange`가 `string`을 반환하므로 입력 타입은 `string`. 내부에서 `includes()` 검증 후 `CheckoutPurpose | 'all'`로 좁혀야 함.
+
 ## Output Format
 
 ```markdown
@@ -314,6 +343,7 @@ grep -rn "filterActive.*!==\|filterActive.*!!" \
 | 7   | subTab SSOT 파생 (checkout) | PASS/FAIL | inProgress 하드코딩 여부 |
 | 8   | filtersToSearchParams SSOT | PASS/FAIL | new URLSearchParams 직접 조작 위치 |
 | 9   | 탭 컴포넌트 countActiveFilters SSOT | PASS/FAIL | 인라인 filterActive 계산 위치 |
+| 10  | checkout purpose 필터 타입 SSOT | PASS/FAIL | purpose: string 잔존 또는 enum 검증 누락 위치 |
 ```
 
 ## Exceptions
