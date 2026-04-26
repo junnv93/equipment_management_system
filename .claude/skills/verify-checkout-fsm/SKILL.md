@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), 280 table test 존재(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), EXPECTED_ENTRY_COUNT 동적 table test(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -433,7 +433,7 @@ grep -n "BadRequestException" \
 | 29 | findOne userPermissions 필수 파라미터 (no ?) | PASS/FAIL | userPermissions? 0건 |
 | 30 | FSM drift safeParse 가드 — buildNextStep 내 | PASS/FAIL | NextStepDescriptorSchema.safeParse + [FSM drift] Logger.warn |
 | 31 | findOne 반환 타입 — CheckoutWithMeta 단일 | PASS/FAIL | Promise<CheckoutWithMeta> 선언 + 유니온 타입 0건 |
-| 32 | 280 table test 존재 (Sprint 1.1 신규) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts |
+| 32 | EXPECTED_ENTRY_COUNT 동적 table test (Sprint 1.1 신규, 2026-04-26 동적화) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts — 하드코딩 숫자 금지, template literal 사용 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -860,37 +860,50 @@ grep -n "as Promise<CheckoutWithMeta>" \
 **PASS:** `Promise<CheckoutWithMeta>` 단일 반환 + 유니온 0건 + controller type cast 0건.
 **FAIL:** 유니온 타입 잔존 → `findCheckoutEntity` + `buildNextStep` 분리 패턴으로 교체.
 
-### Step 32: 280 table test 존재 확인 (Sprint 1.1 신규)
+### Step 32: EXPECTED_ENTRY_COUNT 동적 table test 검증 (Sprint 1.1 신규, 2026-04-26 동적화)
 
-Sprint 1.1에서 신규 도입된 exhaustive table test:
-- `CHECKOUT_STATUS_VALUES` × `CHECKOUT_PURPOSE_VALUES` × `FIXTURE_ROLE_VALUES` = 14 × 4 × 5 = 280 조합
+Sprint 1.1에서 신규 도입된 exhaustive table test. 조합 수는 하드코딩 금지 — 반드시 동적 계산:
+- `EXPECTED_ENTRY_COUNT = TOTAL_STATUSES * TOTAL_PURPOSES * TOTAL_ROLES` (현재 14×4×5=280)
+- describe 문자열에 하드코딩 숫자 금지 → template literal `${EXPECTED_ENTRY_COUNT}` 사용
+- `DESCRIPTOR_TABLE`은 `buildDescriptorTable()` 동적 생성 — 상태/목적 추가 시 자동 확장
 - `NextStepDescriptorSchema.safeParse()` 모든 조합 검증
-- `toMatchSnapshot()` behavioral regression guard
 - `DESCRIPTOR_TABLE satisfies Record<TableKey, TableRow>` compile-time 완전성 검사
 
 ```bash
 # table test 파일 존재 확인
 ls packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts 2>/dev/null \
   && echo "EXISTS" || echo "MISSING"
-# 결과: EXISTS (PASS)
 
 # fixture 파일 존재 확인
 ls packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts 2>/dev/null \
   && echo "EXISTS" || echo "MISSING"
-# 결과: EXISTS (PASS)
 
-# 조합 수 계산 상수 확인
-grep -n "EXPECTED_ENTRY_COUNT\|280" \
-  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts | head -5
+# EXPECTED_ENTRY_COUNT 동적 상수 선언 확인 (하드코딩 금지)
+grep -n "EXPECTED_ENTRY_COUNT\s*=" \
+  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts
+# 기대: TOTAL_STATUSES * TOTAL_PURPOSES * TOTAL_ROLES 형태 (1건)
 
-# satisfies 컴파일 가드 확인 (runtime + compile-time 이중 보장)
+# describe 문자열 하드코딩 숫자 탐지 (0건 기대)
+grep -n "it('all [0-9]\+ combinations\|it(\"all [0-9]\+ combinations" \
+  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts
+# 결과: 0건 (PASS) — template literal 사용 중이어야 함
+
+# buildDescriptorTable 동적 생성 확인
+grep -n "buildDescriptorTable\|function buildDescriptorTable" \
+  packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts
+# 결과: 1건 (PASS)
+
+# satisfies 컴파일 가드 확인
 grep -n "satisfies Record<TableKey, TableRow>" \
   packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts
 # 결과: 1건 (PASS)
 ```
 
-**PASS:** 두 파일 모두 EXISTS + `satisfies Record<TableKey, TableRow>` 컴파일 가드 존재.
-**FAIL:** 파일 없음 → Sprint 1.1 구현 누락. `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가.
+**PASS:** 두 파일 모두 EXISTS + `EXPECTED_ENTRY_COUNT` 동적 상수 + `buildDescriptorTable()` + `satisfies Record<TableKey, TableRow>`.
+**FAIL:**
+- 파일 없음 → Sprint 1.1 구현 누락
+- `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가
+- 하드코딩 숫자(예: `'all 280 combinations'`) → `EXPECTED_ENTRY_COUNT` template literal로 교체
 
 ### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
 

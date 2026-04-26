@@ -5,6 +5,10 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 ## Open
 
+### 2026-04-26 harness: manage-skills 신규 탐지
+
+- [ ] **[2026-04-26 manage-skills] 🟡 MEDIUM bulk-action-bar-subpath-import** — `components/common/BulkActionBar.tsx:6` `@/lib/design-tokens/components/bulk-action-bar` 직접 서브패스 import. verify-design-tokens Step 3 강화(2026-04-26)에서 신규 탐지. `index.ts`에 `BULK_ACTION_BAR_TOKENS` barrel re-export 추가 + BulkActionBar import 수정 필요. 트리거: BulkActionBar 작업 시.
+
 ### 2026-04-26 harness: NC Round-2 (R1a~R5) SHOULD 이연 항목
 
 - [x] **[2026-04-26 nc-verify] 🟡 MEDIUM nceditdialog-form-field-tokens-barrel** — ~~`NCEditDialog.tsx:10` 직접 서브패스 import~~ → `index.ts`에 `REQUIRED_FIELD_TOKENS`·`REQUIRED_FIELD_A11Y` barrel re-export 추가 + NCEditDialog import 통합 완료 (2026-04-26 harness medium-token-ssot-fixes).
