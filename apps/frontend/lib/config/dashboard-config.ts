@@ -31,6 +31,18 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import type { ApprovalCategory } from '@equipment-management/shared-constants';
 
+// ─── 임계값 SSOT ────────────────────────────────────────────────
+
+/** 가동률 상태 임계값 (UL-QP-18 기준) + Hysteresis */
+export const UTILIZATION_THRESHOLDS = {
+  HIGH: 70,
+  MEDIUM: 40,
+  HYSTERESIS: 2,
+} as const;
+
+/** AlertBanner stacked 모드 전환 임계값 */
+export const ALERT_BANNER_STACKED_THRESHOLD = 10;
+
 // ─── 승인 카드 레이아웃 타입 ────────────────────────────────────
 
 /** 승인 카테고리 시각적 우선순위 */
@@ -60,7 +72,11 @@ export type PendingApprovalLayoutHint = 'single-focus' | 'prioritized-grid' | 'g
  * - 'three-col-action-first': [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
  *   → 액션 카드 좌측 우선. 기술책임자에서 사용.
  */
-export type Row3Layout = 'two-col-left-dominant' | 'three-col-action-first';
+export type Row3Layout =
+  | 'two-col-left-dominant'
+  | 'three-col-action-first'
+  | 'single-col-stretch'
+  | 'two-col-balanced';
 
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
@@ -85,8 +101,6 @@ export interface QuickActionItem {
   labelKey: string;
   href: string;
   icon: LucideIcon;
-  /** Tailwind class for icon bg */
-  iconBgClass: string;
   /** Tailwind class for icon color */
   iconColorClass: string;
   /** 시각적 우선순위 — primary: 채운 배경, secondary: 아웃라인 (기본값) */
@@ -106,24 +120,38 @@ export const DASHBOARD_GRID = {
   /**
    * Row 3 기본 그리드: [교정현황 2fr | 승인대기+반출현황 서브그리드 1.5fr]
    *
+   * lg: → xl: (P0 — 1280px 이하 sub-grid 압축 해결)
    * two-col-left-dominant 레이아웃 및 loading.tsx 스켈레톤 공용 상수.
-   * 역할별 Row3Layout 분기는 DashboardClient에서 처리.
    */
-  row3: 'grid grid-cols-1 lg:grid-cols-[2fr_1.5fr] gap-4 items-start',
+  row3: 'grid grid-cols-1 xl:grid-cols-[2fr_1.5fr] gap-4 items-start',
   /**
    * Row 3 three-col-action-first 그리드
    *
-   * [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
-   * 좌→우 스캔 시 액션(승인대기) → 감시(교정) → 감시(반출) 의미 계층과 일치.
-   * 기술책임자(TECHNICAL_MANAGER) 전용.
+   * [승인대기 1.4fr | 교정현황 1.4fr | 반출현황 1.2fr]
+   * lg: 2-col 중간 단계 → xl: 3-col 전체 펼침
+   * quality_manager / technical_manager 전용.
    */
-  row3ThreeCol: 'grid grid-cols-1 lg:grid-cols-[1.5fr_1.5fr_1fr] gap-4 items-start',
+  row3ThreeCol:
+    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.4fr_1.4fr_1.2fr] gap-4 items-start',
   /**
    * 하단 행: 최근활동(2fr) | 사이드바(1fr)
    *
-   * items-stretch: 사이드바가 최근활동 높이에 맞게 늘어남 (MiniCalendar 높이 동기화)
+   * lg: → xl: (P0 — 브레이크포인트 통일)
+   * items-stretch: 사이드바가 최근활동 높이에 맞게 늘어남
    */
-  bottomRow: 'grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-stretch',
+  bottomRow: 'grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 items-stretch',
+  /** Row 3 서브그리드: 승인대기 + 반출현황 2단 배치 */
+  row3SubGrid: 'grid gap-4 grid-cols-1 md:grid-cols-2',
+  /** Row 3 서브그리드 단일 카드 (반출현황 없는 역할) */
+  row3SubGridSingle: 'grid gap-4 grid-cols-1',
+  /** test_engineer 1-col 풀폭 레이아웃 */
+  row3SingleCol: 'grid grid-cols-1 gap-4 items-stretch',
+  /** two-col-balanced 레이아웃 */
+  row3TwoColBalanced: 'grid grid-cols-1 xl:grid-cols-[2fr_1.5fr] gap-4 items-start',
+  /** Row 3 severity row (stacked variant 내부) */
+  row3SeverityRow: 'flex items-center gap-3 px-3 py-2',
+  /** system_admin bottomRow — [1.5fr_1fr] (§04 Warning Gap-02) */
+  bottomRowAdmin: 'grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4 items-stretch',
 } as const;
 
 // ─── Control Center 설정 ────────────────────────────────────────
@@ -186,6 +214,10 @@ export interface ControlCenterConfig {
    * 미지정/false → 기본 elevation.
    */
   pendingApprovalElevated?: boolean;
+  /** 내 활동 카드 표시 여부 (test_engineer Row3) */
+  showMyActivity?: boolean;
+  /** AlertBanner trailing action 슬롯 타입 */
+  alertBannerTrailingAction?: 'approval' | 'createCheckout' | null;
 }
 
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
@@ -196,6 +228,8 @@ export interface DashboardRoleConfig {
   alertSections: Array<'overdueCalibrations' | 'overdueCheckouts'>;
   /** Control Center 3-Tier 레이아웃 설정 */
   controlCenter: ControlCenterConfig;
+  /** 하단 행 그리드 템플릿 변형 (미지정 시 'default') */
+  bottomRowTemplate?: 'default' | 'admin';
 }
 
 // ─── 재사용 가능한 Stats Card 팩토리 ────────────────────────────
@@ -281,63 +315,54 @@ const QUICK_ACTIONS = {
     labelKey: 'registerEquipment',
     href: FRONTEND_ROUTES.EQUIPMENT.CREATE,
     icon: Plus,
-    iconBgClass: 'bg-ul-blue/15',
     iconColorClass: 'text-ul-blue dark:text-ul-info',
   },
   registerCalibration: {
     labelKey: 'registerCalibration',
     href: FRONTEND_ROUTES.CALIBRATION.REGISTER,
     icon: ClipboardList,
-    iconBgClass: 'bg-ul-green/15',
     iconColorClass: 'text-ul-green',
   },
   createCheckout: {
     labelKey: 'createCheckout',
     href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
     icon: Truck,
-    iconBgClass: 'bg-ul-orange/15',
     iconColorClass: 'text-ul-orange',
   },
   equipmentList: {
     labelKey: 'equipmentList',
     href: FRONTEND_ROUTES.EQUIPMENT.LIST,
     icon: List,
-    iconBgClass: 'bg-muted',
     iconColorClass: 'text-muted-foreground',
   },
   approvalManagement: {
     labelKey: 'approvalManagement',
     href: FRONTEND_ROUTES.ADMIN.APPROVALS,
     icon: ShieldCheck,
-    iconBgClass: 'bg-ul-midnight/10 dark:bg-ul-info/15',
     iconColorClass: 'text-ul-midnight dark:text-ul-info',
   },
   calibrationPlans: {
     labelKey: 'calibrationPlans',
     href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
     icon: FileText,
-    iconBgClass: 'bg-ul-blue/15',
     iconColorClass: 'text-ul-blue dark:text-ul-info',
   },
   checkoutStatus: {
     labelKey: 'checkoutStatus',
     href: FRONTEND_ROUTES.CHECKOUTS.LIST,
     icon: ArrowLeftRight,
-    iconBgClass: 'bg-ul-orange/15',
     iconColorClass: 'text-ul-orange',
   },
   userManagement: {
     labelKey: 'userManagement',
     href: FRONTEND_ROUTES.ADMIN.USERS,
     icon: Users,
-    iconBgClass: 'bg-ul-fog/15',
     iconColorClass: 'text-ul-fog dark:text-muted-foreground',
   },
   systemSettings: {
     labelKey: 'systemSettings',
     href: FRONTEND_ROUTES.ADMIN.SETTINGS,
     icon: Settings,
-    iconBgClass: 'bg-muted',
     iconColorClass: 'text-muted-foreground',
   },
 } as const satisfies Record<string, QuickActionItem>;
@@ -374,6 +399,8 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       requiresTeamScope: true,
       pendingApprovalLayoutHint: 'grid',
       approvalCategoryPriorities: {},
+      row3Layout: 'single-col-stretch',
+      showMyActivity: true,
     },
   },
 
@@ -409,6 +436,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       approvalCategoryPriorities: {},
       row3Layout: 'three-col-action-first',
       pendingApprovalElevated: true,
+      alertBannerTrailingAction: 'approval',
     },
   },
 
@@ -444,6 +472,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       approvalCategoryPriorities: {
         plan_review: 'hero',
       },
+      row3Layout: 'three-col-action-first',
     },
   },
 
@@ -482,6 +511,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
         disposal_final: 'default',
         incoming: 'default',
       },
+      alertBannerTrailingAction: 'approval',
     },
   },
 
@@ -517,6 +547,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       pendingApprovalLayoutHint: 'grid',
       approvalCategoryPriorities: {},
     },
+    bottomRowTemplate: 'admin',
   },
 };
 

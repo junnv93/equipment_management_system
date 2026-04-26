@@ -346,11 +346,28 @@
   },
   "alertBanner": {
     "ariaLabel": "Urgent action summary",
+    "ariaLabelStacked": "{count} items require action",
     "allClear": "No items require action",
     "actionRequired": "Items require immediate action",
     "overdueCalibrations": "{count} calibration overdue",
     "overdueCheckouts": "{count} checkout overdue",
-    "nonConforming": "{count} non-conforming"
+    "nonConforming": "{count} non-conforming",
+    "view": "View",
+    "stacked": {
+      "criticalHeader": "Critical — Immediate action required",
+      "warningHeader": "Warning — Action within 24h",
+      "infoHeader": "Upcoming — Within 3 days"
+    },
+    "info": {
+      "upcomingCalibrations": "{count} calibration upcoming",
+      "upcomingCheckoutReturns": "{count} return upcoming"
+    }
+  },
+  "myActivity": {
+    "title": "My Recent Activity",
+    "ariaLabel": "{name}'s recent activity",
+    "empty": "No recent activity",
+    "viewAll": "View all activity"
   },
   "aggregate": {
     "error": "Some dashboard data could not be loaded."

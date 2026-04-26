@@ -8,30 +8,21 @@
  * Row 2: KPI 4카드 (독립 행)                              — animate-scale-in-subtle
  * Row 3: 액션 행 — [승인대기+반출현황 | 교정현황]          — animate-fade-in-up
  * Row 4: 하단 — 최근활동(2fr) | [팀분포+]달력(1fr)        — animate-fade-in
- *
- * v3 개선사항 (와이어프레임 dashboard-redesign-v3-test-engineer):
- * - AP-01: Row 3 좌측 서브그리드 — 아이템 1개일 때 grid-cols-1로 풀너비
- * - AP-01: Row 4 — showTeamDistribution=false여도 [2fr_1fr] 가로 배치
- * - AP-06: Row별 다른 진입 애니메이션 (fade-up, slide-left, scale-in-subtle, fade-in)
  */
 
 import { useMemo, memo } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
-import { PendingApprovalCard } from '@/components/dashboard/PendingApprovalCard';
-import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { KpiStatusGrid } from '@/components/dashboard/KpiStatusGrid';
-import { OverdueCheckoutsCard } from '@/components/dashboard/OverdueCheckoutsCard';
-import { TeamEquipmentDistribution } from '@/components/dashboard/TeamEquipmentDistribution';
 import { QuickActionBar } from '@/components/dashboard/QuickActionBar';
-import { CalibrationDdayList } from '@/components/dashboard/CalibrationDdayList';
-import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
-import { SystemHealthCard } from '@/components/dashboard/SystemHealthCard';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api/dashboard-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -46,15 +37,49 @@ import type {
   UpcomingCheckoutReturn,
   DashboardAggregate,
 } from '@/lib/api/dashboard-api';
-import {
-  DASHBOARD_ROLE_CONFIG,
-  DEFAULT_ROLE,
-  DASHBOARD_GRID,
-  type SidebarWidget,
-} from '@/lib/config/dashboard-config';
+import { DASHBOARD_GRID, type SidebarWidget } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
+import { getPageContainerClasses, DASHBOARD_ENTRANCE as E } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+
+// AP-16: below-the-fold 컴포넌트 동적 임포트 (First Load JS -15~30KB)
+const PendingApprovalCard = dynamic(
+  () => import('@/components/dashboard/PendingApprovalCard').then((m) => m.PendingApprovalCard),
+  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+);
+const RecentActivities = dynamic(
+  () => import('@/components/dashboard/RecentActivities').then((m) => m.RecentActivities),
+  { ssr: true, loading: () => <Skeleton className="min-h-[16rem] rounded-lg" /> }
+);
+const OverdueCheckoutsCard = dynamic(
+  () => import('@/components/dashboard/OverdueCheckoutsCard').then((m) => m.OverdueCheckoutsCard),
+  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+);
+const TeamEquipmentDistribution = dynamic(
+  () =>
+    import('@/components/dashboard/TeamEquipmentDistribution').then(
+      (m) => m.TeamEquipmentDistribution
+    ),
+  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+);
+const CalibrationDdayList = dynamic(
+  () => import('@/components/dashboard/CalibrationDdayList').then((m) => m.CalibrationDdayList),
+  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+);
+const MiniCalendar = dynamic(
+  () => import('@/components/dashboard/MiniCalendar').then((m) => m.MiniCalendar),
+  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+);
+const SystemHealthCard = dynamic(
+  () => import('@/components/dashboard/SystemHealthCard').then((m) => m.SystemHealthCard),
+  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+);
+const MyActivityCard = dynamic(
+  () => import('@/components/dashboard/MyActivityCard').then((m) => m.MyActivityCard),
+  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+);
 
 // 사이드바 위젯 렌더러 props 타입
 interface SidebarWidgetRendererProps {
@@ -123,9 +148,8 @@ function DashboardClientComponent({
   const t = useTranslations('dashboard');
   const searchParams = useSearchParams();
 
-  const userRole = session?.user?.role?.toLowerCase() || DEFAULT_ROLE;
-
-  const config = DASHBOARD_ROLE_CONFIG[userRole] || DASHBOARD_ROLE_CONFIG[DEFAULT_ROLE];
+  // AP-09: resolveDashboardRoleConfig 헬퍼 — server/client 중복 제거
+  const { role: userRole, config } = resolveDashboardRoleConfig(session?.user?.role);
   const { controlCenter } = config;
 
   // 대시보드 스코프 — API 호출 / queryKey / KPI 링크 세 곳이 동일한 범위를 참조
@@ -182,6 +206,21 @@ function DashboardClientComponent({
   const equipmentStatusStats = aggregate?.equipmentStatusStats ?? {};
   const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns?.items ?? [];
 
+  // AP-14: AlertBanner trailingAction 슬롯
+  const alertTrailingAction =
+    controlCenter.alertBannerTrailingAction === 'approval' ? (
+      <Link
+        href={FRONTEND_ROUTES.ADMIN.APPROVALS}
+        className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+      >
+        {t('alertBanner.view')}
+      </Link>
+    ) : null;
+
+  // AP-06: 사이드바 grid-rows 동적 계산 — last widget stretches to fill
+  const sidebarCount = controlCenter.sidebarWidgets.length;
+  const sidebarGridRows = sidebarCount <= 1 ? '1fr' : `repeat(${sidebarCount - 1}, auto) 1fr`;
+
   return (
     <div className={getPageContainerClasses('list')}>
       {isError && (
@@ -192,35 +231,42 @@ function DashboardClientComponent({
           </Alert>
         </div>
       )}
-      {/* Row 0: Welcome + QuickActionBar — 입장 애니메이션 */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 motion-safe:animate-fade-in-up">
+
+      {/* Row 0: Welcome + QuickActionBar — AP-01: xl: 브레이크포인트, AP-08: 토큰 */}
+      <div
+        className={cn(
+          'flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3',
+          E.stagger.welcome,
+          E.stagger.welcomeDelay
+        )}
+      >
         <header className="flex-1 min-w-0">
           <WelcomeHeader />
         </header>
         {controlCenter.showQuickActionBar && controlCenter.quickActions.length > 0 && (
-          <div className="lg:flex-shrink-0">
+          <div className="xl:flex-shrink-0">
             <QuickActionBar actions={controlCenter.quickActions} />
           </div>
         )}
       </div>
 
-      {/* Row 1: AlertBanner — AP-02: Welcome→Alert 넓은 간격 (mt-6), AP-06: slide-left */}
+      {/* Row 1: AlertBanner — AP-02: AP-11: info severity, AP-14: trailingAction */}
       {controlCenter.showAlertBanner && (
-        <div className="mt-6 motion-safe:animate-slide-left" style={{ animationDelay: '80ms' }}>
+        <div className={cn(E.rowSpacing.welcomeToAlert, E.stagger.alert, E.stagger.alertDelay)}>
           <AlertBanner
             overdueCalibrationCount={equipmentStatusStats.calibration_overdue ?? 0}
             overdueCheckoutCount={overdueCheckouts.length}
             nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
+            upcomingCalibrationCount={upcomingCalibrations.length}
+            upcomingCheckoutReturnCount={upcomingCheckoutReturns.length}
             scope={scope}
+            trailingAction={alertTrailingAction}
           />
         </div>
       )}
 
-      {/* Row 2: KPI 4카드 — AP-02: Alert→KPI 넓은 간격, KPI→액션 최대 간격, AP-06: scale-in-subtle */}
-      <div
-        className="mt-7 mb-8 motion-safe:animate-scale-in-subtle"
-        style={{ animationDelay: '160ms' }}
-      >
+      {/* Row 2: KPI 4카드 — AP-04: SSOT + hysteresis, AP-12: useCountUp */}
+      <div className={cn('mt-7 mb-8', E.stagger.kpi, E.stagger.kpiDelay)}>
         <KpiStatusGrid
           summary={summary}
           equipmentStatusStats={equipmentStatusStats}
@@ -230,109 +276,142 @@ function DashboardClientComponent({
       </div>
 
       {/*
-       * Row 3: 액션 행
+       * Row 3: 액션 행 — AP-07: row3Layout 분기
        *
-       * row3Layout에 따라 두 가지 레이아웃으로 분기:
+       * 'three-col-action-first' (quality_manager):
+       *   [승인대기 1.4fr | 교정현황 1.4fr | 반출현황 1.2fr]
        *
-       * 'three-col-action-first' (기술책임자):
-       *   [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
-       *   좌→우 스캔 시 액션(action) → 감시(watch) → 감시(watch) 의미 계층과 일치
+       * 'single-col-stretch' (test_engineer):
+       *   [MyActivityCard 풀폭] — 교정현황 없음
        *
-       * 'two-col-left-dominant' (기본값):
+       * 'two-col-balanced' (two-col 비율 조정):
+       *   [교정현황 2fr | 서브그리드 1.5fr]
+       *
+       * 'two-col-left-dominant' / 기본값:
        *   [교정현황 2fr | 서브그리드(승인+반출) 1.5fr]
-       *   loading.tsx 스켈레톤과 동기화
        */}
       {(controlCenter.showPendingApprovals ||
         controlCenter.showCheckoutOverdue ||
-        controlCenter.showCalibrationDday) &&
-        (controlCenter.row3Layout === 'three-col-action-first' ? (
-          /* three-col-action-first: 승인대기 우선, 3컬럼 flat grid */
-          <div
-            className={cn(DASHBOARD_GRID.row3ThreeCol, 'mb-8 motion-safe:animate-fade-in-up')}
-            style={{ animationDelay: '240ms' }}
-          >
-            {controlCenter.showPendingApprovals && (
-              <PendingApprovalCard
-                compact
-                layoutHint={controlCenter.pendingApprovalLayoutHint}
-                priorities={controlCenter.approvalCategoryPriorities}
-                elevate={controlCenter.pendingApprovalElevated}
-              />
-            )}
-            {controlCenter.showCalibrationDday && (
-              <CalibrationDdayList
-                overdueCalibrations={overdueCalibrations}
-                upcomingCalibrations={upcomingCalibrations}
-                scope={scope}
-                loading={isLoading}
-              />
-            )}
-            {controlCenter.showCheckoutOverdue && (
-              <OverdueCheckoutsCard
-                overdueCheckouts={overdueCheckouts}
-                upcomingCheckoutReturns={upcomingCheckoutReturns}
-                loading={isLoading}
-              />
-            )}
-          </div>
-        ) : (
-          /* two-col-left-dominant: 교정현황 좌/2fr, 서브그리드 우/1.5fr (기본값) */
-          <div
-            className={cn(DASHBOARD_GRID.row3, 'mb-8 motion-safe:animate-fade-in-up')}
-            style={{ animationDelay: '240ms' }}
-          >
-            {controlCenter.showCalibrationDday && (
-              <CalibrationDdayList
-                overdueCalibrations={overdueCalibrations}
-                upcomingCalibrations={upcomingCalibrations}
-                scope={scope}
-                loading={isLoading}
-              />
-            )}
-            {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
-              <div
-                className={cn(
-                  'grid gap-4',
-                  controlCenter.showPendingApprovals && controlCenter.showCheckoutOverdue
-                    ? 'grid-cols-1 md:grid-cols-2'
-                    : 'grid-cols-1'
-                )}
-              >
-                {controlCenter.showPendingApprovals && (
-                  <PendingApprovalCard
-                    compact
-                    layoutHint={controlCenter.pendingApprovalLayoutHint}
-                    priorities={controlCenter.approvalCategoryPriorities}
-                    elevate={controlCenter.pendingApprovalElevated}
-                  />
-                )}
-                {controlCenter.showCheckoutOverdue && (
-                  <OverdueCheckoutsCard
-                    overdueCheckouts={overdueCheckouts}
-                    upcomingCheckoutReturns={upcomingCheckoutReturns}
-                    loading={isLoading}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        controlCenter.showCalibrationDday ||
+        controlCenter.showMyActivity) && (
+        <>
+          {controlCenter.row3Layout === 'three-col-action-first' ? (
+            /* three-col-action-first: 승인대기 우선, 3컬럼 flat grid */
+            <div
+              className={cn(
+                DASHBOARD_GRID.row3ThreeCol,
+                'mb-8',
+                E.stagger.row3,
+                E.stagger.row3Delay
+              )}
+            >
+              {controlCenter.showPendingApprovals && (
+                <PendingApprovalCard
+                  compact
+                  layoutHint={controlCenter.pendingApprovalLayoutHint}
+                  priorities={controlCenter.approvalCategoryPriorities}
+                  elevate={controlCenter.pendingApprovalElevated}
+                />
+              )}
+              {controlCenter.showCalibrationDday && (
+                <CalibrationDdayList
+                  overdueCalibrations={overdueCalibrations}
+                  upcomingCalibrations={upcomingCalibrations}
+                  scope={scope}
+                  loading={isLoading}
+                />
+              )}
+              {controlCenter.showCheckoutOverdue && (
+                <OverdueCheckoutsCard
+                  overdueCheckouts={overdueCheckouts}
+                  upcomingCheckoutReturns={upcomingCheckoutReturns}
+                  loading={isLoading}
+                />
+              )}
+            </div>
+          ) : controlCenter.row3Layout === 'single-col-stretch' ? (
+            /* single-col-stretch: test_engineer — MyActivityCard 풀폭 */
+            <div
+              className={cn(
+                DASHBOARD_GRID.row3SingleCol,
+                'mb-8',
+                E.stagger.row3,
+                E.stagger.row3Delay
+              )}
+            >
+              {controlCenter.showMyActivity && session?.user?.id && (
+                <MyActivityCard userId={session.user.id} recentActivities={recentActivities} />
+              )}
+            </div>
+          ) : (
+            /* two-col-left-dominant (기본값) / two-col-balanced */
+            <div
+              className={cn(
+                controlCenter.row3Layout === 'two-col-balanced'
+                  ? DASHBOARD_GRID.row3TwoColBalanced
+                  : DASHBOARD_GRID.row3,
+                'mb-8',
+                E.stagger.row3,
+                E.stagger.row3Delay
+              )}
+            >
+              {controlCenter.showCalibrationDday && (
+                <CalibrationDdayList
+                  overdueCalibrations={overdueCalibrations}
+                  upcomingCalibrations={upcomingCalibrations}
+                  scope={scope}
+                  loading={isLoading}
+                />
+              )}
+              {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
+                <div
+                  className={cn(
+                    controlCenter.showPendingApprovals && controlCenter.showCheckoutOverdue
+                      ? DASHBOARD_GRID.row3SubGrid
+                      : DASHBOARD_GRID.row3SubGridSingle
+                  )}
+                >
+                  {controlCenter.showPendingApprovals && (
+                    <PendingApprovalCard
+                      compact
+                      layoutHint={controlCenter.pendingApprovalLayoutHint}
+                      priorities={controlCenter.approvalCategoryPriorities}
+                      elevate={controlCenter.pendingApprovalElevated}
+                    />
+                  )}
+                  {controlCenter.showCheckoutOverdue && (
+                    <OverdueCheckoutsCard
+                      overdueCheckouts={overdueCheckouts}
+                      upcomingCheckoutReturns={upcomingCheckoutReturns}
+                      loading={isLoading}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/*
        * Row 4: 하단 — AP-06: animate-fade-in
-       *
-       * v3 개선 (AP-01): showTeamDistribution 유무와 무관하게
-       * 항상 [2fr_1fr] 가로 배치 유지 — 세로 스택 단조로움 해소
+       * Gap-02: system_admin → bottomRowAdmin [1.5fr_1fr]
+       * AP-06: sidebar grid-rows 동적 계산 — last widget stretches
        */}
       <div
-        className={cn(DASHBOARD_GRID.bottomRow, 'motion-safe:animate-fade-in')}
-        style={{ animationDelay: '320ms' }}
+        className={cn(
+          config.bottomRowTemplate === 'admin'
+            ? DASHBOARD_GRID.bottomRowAdmin
+            : DASHBOARD_GRID.bottomRow,
+          E.stagger.row4Anim,
+          E.stagger.row4Delay
+        )}
       >
         <section aria-label={t('srOnly.recentActivity')}>
           <RecentActivities data={recentActivities} loading={isLoading} />
         </section>
-        {controlCenter.sidebarWidgets.length > 0 && (
-          <div className="flex flex-col gap-4 h-full">
+        {sidebarCount > 0 && (
+          <div className="grid gap-4 h-full" style={{ gridTemplateRows: sidebarGridRows }}>
             {controlCenter.sidebarWidgets.map((widget) => {
               const sidebarProps: SidebarWidgetRendererProps = {
                 equipmentByTeam,

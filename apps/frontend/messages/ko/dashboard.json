@@ -346,11 +346,28 @@
   },
   "alertBanner": {
     "ariaLabel": "긴급 조치 요약",
+    "ariaLabelStacked": "{count}건의 조치 필요 항목",
     "allClear": "조치 필요 항목이 없습니다",
     "actionRequired": "즉시 조치가 필요한 항목이 있습니다",
     "overdueCalibrations": "교정 초과 {count}건",
     "overdueCheckouts": "반출 초과 {count}건",
-    "nonConforming": "부적합 {count}건"
+    "nonConforming": "부적합 {count}건",
+    "view": "보기",
+    "stacked": {
+      "criticalHeader": "치명적 — 즉시 조치",
+      "warningHeader": "경고 — 24시간 내 조치",
+      "infoHeader": "예정 — 3일 이내"
+    },
+    "info": {
+      "upcomingCalibrations": "교정 예정 {count}건",
+      "upcomingCheckoutReturns": "반납 예정 {count}건"
+    }
+  },
+  "myActivity": {
+    "title": "내 최근 활동",
+    "ariaLabel": "{name}님의 최근 활동",
+    "empty": "최근 활동이 없습니다",
+    "viewAll": "전체 활동 보기"
   },
   "aggregate": {
     "error": "대시보드 데이터 일부를 불러오지 못했습니다."

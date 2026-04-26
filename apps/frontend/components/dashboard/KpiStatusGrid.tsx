@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,10 +10,11 @@ import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { EquipmentStatusValues } from '@equipment-management/schemas';
 import { buildScopedEquipmentUrl, type DashboardScope } from '@/lib/utils/dashboard-scope';
-import { DASHBOARD_GRID } from '@/lib/config/dashboard-config';
+import { DASHBOARD_GRID, UTILIZATION_THRESHOLDS } from '@/lib/config/dashboard-config';
+import { computeUtilizationState, type UtilizationState } from '@/lib/utils/utilization-state';
+import { useCountUp } from '@/lib/utils/use-count-up';
 
 export interface KpiTrend {
-  /** 전주 대비 절대 변화량 */
   change: number;
   direction: 'up' | 'down' | 'same';
 }
@@ -30,19 +31,10 @@ interface KpiStatusGridProps {
   summary: DashboardSummary;
   loading?: boolean;
   scope: DashboardScope;
-  /** 선택적 트렌드 데이터 — API 지원 시 전달 */
   trends?: KpiTrends;
 }
 
-/** 트렌드 배지 서브컴포넌트 */
-function TrendBadge({
-  trend,
-  /** true이면 up이 나쁨(red), down이 좋음(green) — 부적합 등 */
-  invertColors = false,
-}: {
-  trend?: KpiTrend;
-  invertColors?: boolean;
-}) {
+function TrendBadge({ trend, invertColors = false }: { trend?: KpiTrend; invertColors?: boolean }) {
   if (!trend || trend.direction === 'same' || trend.change === 0) return null;
   const isUp = trend.direction === 'up';
   const isGood = invertColors ? !isUp : isUp;
@@ -76,16 +68,23 @@ export function KpiStatusGrid({
   const utilizationPct = total > 0 ? Math.round((available / total) * 100) : 0;
   const checkoutPct = total > 0 ? Math.round((activeCheckouts / total) * 100) : 0;
 
-  // 가동률 임계값 — UL-QP-18 시험소 운영 기준 (70%+ 양호 / 40-70% 보통 / <40% 저조)
-  const UTILIZATION_HIGH = 70;
-  const UTILIZATION_MEDIUM = 40;
+  // Hysteresis 기반 utilization 상태 — 경계값 진동 방지
+  const prevStateRef = useRef<UtilizationState | undefined>(undefined);
+  const utilizationState = computeUtilizationState(utilizationPct, prevStateRef.current);
+  prevStateRef.current = utilizationState;
+
+  // 카운트업 애니메이션
+  const animatedTotal = useCountUp({ target: total });
+  const animatedPct = useCountUp({ target: utilizationPct });
+  const animatedActive = useCountUp({ target: activeCheckouts });
+  const animatedNonConforming = useCountUp({ target: nonConforming });
 
   if (loading) {
     return (
       <div className={DASHBOARD_GRID.kpi} aria-hidden="true">
-        <Skeleton className="h-36 rounded-lg" />
+        <Skeleton className={`${T.heroMinH} rounded-lg`} />
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-lg" />
+          <Skeleton key={i} className={`${T.primaryMinH} rounded-lg`} />
         ))}
       </div>
     );
@@ -97,7 +96,7 @@ export function KpiStatusGrid({
         {/* 1. Hero KPI: 전체 장비 (midnight gradient + 가동률 바) */}
         <Link
           href={buildScopedEquipmentUrl(scope, FRONTEND_ROUTES.EQUIPMENT.LIST)}
-          className={cn(T.heroCard, 'min-h-[8.5rem]')}
+          className={cn(T.heroCard, T.heroMinH)}
         >
           <div>
             <div className="flex items-start justify-between gap-1">
@@ -105,15 +104,35 @@ export function KpiStatusGrid({
               <TrendBadge trend={trends?.total} />
             </div>
             <div className={T.heroCount}>
-              {total}
+              {animatedTotal}
               <span className={T.heroUnit}>{t('kpi.totalUnit')}</span>
             </div>
             <span className={T.heroSub}>{t('kpi.heroSub')}</span>
           </div>
-          {/* 가동률 프로그레스 바 */}
+          {/* 가동률 프로그레스 바 (h-2, relative로 임계 눈금 배치) */}
           <div>
-            <div className={T.heroBarTrack}>
+            <div
+              className={T.heroBarTrack}
+              role="meter"
+              aria-label={t('kpi.utilization')}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={utilizationPct}
+            >
               <div className={T.heroBarFill} style={{ width: `${utilizationPct}%` }} />
+              {/* 임계 눈금 — UTILIZATION_THRESHOLDS SSOT */}
+              <span
+                className={cn(T.heroBarThreshold, T.heroBarThresholdMedium)}
+                style={{ left: `${UTILIZATION_THRESHOLDS.MEDIUM}%` }}
+                data-threshold={UTILIZATION_THRESHOLDS.MEDIUM}
+                aria-hidden="true"
+              />
+              <span
+                className={cn(T.heroBarThreshold, T.heroBarThresholdHigh)}
+                style={{ left: `${UTILIZATION_THRESHOLDS.HIGH}%` }}
+                data-threshold={UTILIZATION_THRESHOLDS.HIGH}
+                aria-hidden="true"
+              />
             </div>
             <div className={T.heroBarLabels}>
               <span>0</span>
@@ -129,7 +148,7 @@ export function KpiStatusGrid({
             FRONTEND_ROUTES.EQUIPMENT.LIST,
             EquipmentStatusValues.AVAILABLE
           )}
-          className={cn(T.primaryCard, 'min-h-[7rem]')}
+          className={cn(T.primaryCard, T.primaryMinH)}
         >
           <div className="flex items-start justify-between gap-1">
             <span className={T.primaryLabel}>{t('kpi.utilization')}</span>
@@ -138,14 +157,14 @@ export function KpiStatusGrid({
           <span
             className={cn(
               T.primaryCount,
-              utilizationPct >= UTILIZATION_HIGH
+              utilizationState === 'good'
                 ? T.statusColor.good
-                : utilizationPct >= UTILIZATION_MEDIUM
+                : utilizationState === 'warning'
                   ? T.statusColor.warning
                   : T.statusColor.danger
             )}
           >
-            {utilizationPct}%
+            {animatedPct}%
           </span>
           <span className={T.primarySub}>{t('kpi.utilizationSub', { count: available })}</span>
         </Link>
@@ -157,7 +176,7 @@ export function KpiStatusGrid({
             FRONTEND_ROUTES.EQUIPMENT.LIST,
             EquipmentStatusValues.CHECKED_OUT
           )}
-          className={cn(T.primaryCard, 'min-h-[7rem]')}
+          className={cn(T.primaryCard, T.primaryMinH)}
         >
           <div className="flex items-start justify-between gap-1">
             <span className={T.primaryLabel}>{t('kpi.activeCheckouts')}</span>
@@ -169,7 +188,7 @@ export function KpiStatusGrid({
               activeCheckouts > 0 ? T.statusColor.active : 'text-foreground'
             )}
           >
-            {activeCheckouts}
+            {animatedActive}
           </span>
           <span className={T.primarySub}>
             {t('kpi.activeCheckoutsSub', { percent: checkoutPct })}
@@ -185,13 +204,13 @@ export function KpiStatusGrid({
           )}
           className={cn(
             T.primaryCard,
-            'min-h-[7rem]',
-            nonConforming > 0 ? T.statusColor.alertBorder : ''
+            T.primaryMinH,
+            nonConforming > 0 ? T.statusColor.alertBorder : '',
+            nonConforming > 0 ? 'animate-in fade-in-50 duration-300' : ''
           )}
         >
           <div className="flex items-start justify-between gap-1">
             <span className={T.primaryLabel}>{t('kpi.nonConforming')}</span>
-            {/* 부적합은 증가가 나쁨 → invertColors */}
             <TrendBadge trend={trends?.nonConforming} invertColors />
           </div>
           <span
@@ -200,7 +219,7 @@ export function KpiStatusGrid({
               nonConforming > 0 ? T.statusColor.danger : 'text-foreground'
             )}
           >
-            {nonConforming}
+            {animatedNonConforming}
           </span>
           <span className={T.primarySub}>
             {nonConforming > 0 ? t('kpi.nonConformingSub') : t('kpi.nonConformingSubNone')}

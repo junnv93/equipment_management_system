@@ -325,6 +325,19 @@
 @utility animation-delay-900 { animation-delay: 900ms; }
 @utility animation-delay-1000 { animation-delay: 1000ms; }
 
+/* Tailwind v4 JIT safelist — DASHBOARD_ENTRANCE 토큰의 arbitrary delay 클래스 보장 */
+@source inline("motion-reduce:[animation-delay:0ms] [animation-delay:0ms] [animation-delay:80ms] [animation-delay:160ms] [animation-delay:240ms] [animation-delay:320ms]");
+
+/* AP-08: prefers-reduced-motion 글로벌 — 모든 애니메이션/전환을 즉각 처리 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ============================================================================
    Runtime CSS variables — SSOT for the Design Token 3-Layer bridge.
    These names/values are consumed by lib/design-tokens/* and the @theme inline

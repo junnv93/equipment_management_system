@@ -3,8 +3,8 @@ import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import DashboardLoading from './loading';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { getDashboardAggregate } from '@/lib/api/dashboard-api-server';
-import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
+import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
 
 /**
  * 대시보드 페이지 (PPR Non-Blocking 패턴)
@@ -40,8 +40,7 @@ async function DashboardAsync({
   }
 
   // SSR도 클라이언트와 동일한 scope 결정 로직 적용
-  const userRole = session.user.role?.toLowerCase() || DEFAULT_ROLE;
-  const roleConfig = DASHBOARD_ROLE_CONFIG[userRole] || DASHBOARD_ROLE_CONFIG[DEFAULT_ROLE];
+  const { config: roleConfig } = resolveDashboardRoleConfig(session.user.role);
   const scope = resolveDashboardScope(
     roleConfig.controlCenter.kpiDisplay,
     roleConfig.controlCenter.requiresTeamScope,

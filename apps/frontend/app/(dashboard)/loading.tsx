@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { DASHBOARD_GRID } from '@/lib/config/dashboard-config';
+import { DASHBOARD_KPI_TOKENS as T } from '@/lib/design-tokens';
 
 /**
  * 대시보드 로딩 상태 컴포넌트 — Command Center Layout
@@ -40,9 +41,9 @@ export default function DashboardLoading() {
       {/* Row 2: KPI 4카드 — mt-7 mb-8 + DASHBOARD_GRID.kpi 비대칭 그리드 */}
       <div className="mt-7 mb-8" aria-hidden="true">
         <div className={DASHBOARD_GRID.kpi}>
-          <Skeleton className="h-36 rounded-lg" />
+          <Skeleton className={`${T.heroMinH} rounded-lg`} />
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-lg" />
+            <Skeleton key={i} className={`${T.primaryMinH} rounded-lg`} />
           ))}
         </div>
       </div>

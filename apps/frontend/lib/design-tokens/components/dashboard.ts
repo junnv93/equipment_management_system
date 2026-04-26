@@ -320,9 +320,18 @@ export const DASHBOARD_KPI_TOKENS = {
   heroUnit: 'text-2xl font-normal opacity-50',
   heroLabel: 'text-xs font-medium uppercase tracking-wider opacity-60',
   heroSub: `${MICRO_TYPO.detail} opacity-60`,
-  heroBarTrack: 'h-1.5 rounded-full bg-white/15 overflow-hidden',
+  heroBarTrack: 'relative h-2 rounded-full bg-white/15 overflow-hidden',
   heroBarFill: 'h-full rounded-full bg-gradient-to-r from-brand-ok to-brand-ok/60',
   heroBarLabels: `flex justify-between ${MICRO_TYPO.badge} font-mono opacity-40 mt-1`,
+  /** 임계 눈금 (절대 위치 — heroBarTrack 기준) */
+  heroBarThreshold: 'absolute top-0 bottom-0 w-px',
+  heroBarThresholdHigh: 'bg-white/50',
+  heroBarThresholdMedium: 'bg-white/30',
+  heroBarThresholdLabel: 'absolute -bottom-4 text-[9px] font-mono text-white/40 tabular-nums',
+  /** Hero KPI 카드 최소 높이 */
+  heroMinH: 'min-h-[8.5rem]',
+  /** Primary KPI 카드 최소 높이 */
+  primaryMinH: 'min-h-[7rem]',
   /**
    * 가동률/반출/부적합 상태별 색상 토큰
    *
@@ -337,8 +346,8 @@ export const DASHBOARD_KPI_TOKENS = {
     danger: 'text-brand-critical',
     /** 반출 중 (양수인 경우) */
     active: 'text-brand-info',
-    /** 부적합 존재 시 카드 테두리 */
-    alertBorder: 'border-brand-critical/30',
+    /** 부적합 존재 시 카드 테두리 + 배경 + ring 3중 강화 (§02 Critical) */
+    alertBorder: 'border-brand-critical/40 bg-brand-critical/5 ring-1 ring-brand-critical/10',
   },
 } as const;
 
@@ -495,10 +504,12 @@ export const DASHBOARD_QUICK_ACTION_TOKENS = {
   container: 'bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-4 flex-wrap',
   label: 'text-xs font-medium text-muted-foreground flex-shrink-0',
   grid: 'flex items-center gap-2 flex-wrap',
-  action: `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/60 active:scale-[0.98] ${TRANSITION_PRESETS.instantBgShadowTransform} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`,
+  /** 터치 타겟 36px 보장 (AP-05) */
+  action: `inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-md border border-border bg-background hover:bg-muted/60 active:scale-[0.98] ${TRANSITION_PRESETS.instantBgShadowTransform} ${FOCUS_TOKENS.classes.default}`,
   /** 주요 액션 (filled bg-primary/10) — secondary와 시각적 위계 구분 */
-  actionPrimary: `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 active:scale-[0.98] ${TRANSITION_PRESETS.instantBgShadowTransform} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`,
-  actionIcon: 'h-3.5 w-3.5 flex-shrink-0',
+  actionPrimary: `inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 active:scale-[0.98] font-semibold shadow-sm ${TRANSITION_PRESETS.instantBgShadowTransform} ${FOCUS_TOKENS.classes.default}`,
+  /** 아이콘 16px (AP-05 — 14px → 16px) */
+  actionIcon: 'h-4 w-4 flex-shrink-0',
   actionLabel: 'text-xs font-medium text-foreground whitespace-nowrap',
 } as const;
 
@@ -516,14 +527,15 @@ export const DASHBOARD_QUICK_ACTION_TOKENS = {
 export const DASHBOARD_ALERT_BANNER_TOKENS = {
   container:
     'flex items-center gap-3 min-h-[2.75rem] px-3 py-2 rounded-lg border bg-card overflow-hidden shadow-sm',
-  /** 좌측 severity 색상 바 (border-l-4) */
+  /** 좌측 severity 색상 바 (inline variant) */
   severityBorder: {
     critical: 'border-l-4 border-l-brand-critical',
     warning: 'border-l-4 border-l-brand-warning',
+    info: 'border-l-4 border-l-brand-info',
     none: 'border-l-4 border-l-transparent',
   },
-  /** 원형 카운트 배지 */
-  countCircle: `flex-shrink-0 h-6 w-6 rounded-full bg-brand-critical text-white ${MICRO_TYPO.badge} font-bold flex items-center justify-center tabular-nums`,
+  /** 원형 카운트 배지 — min-w로 99+ 오버플로 방지 (AP-02) */
+  countCircle: `flex-shrink-0 min-w-[1.75rem] h-7 px-1.5 rounded-full bg-brand-critical text-white ${MICRO_TYPO.badge} font-bold flex items-center justify-center tabular-nums`,
   /** 요약 텍스트 */
   summaryText: 'text-xs font-medium text-foreground',
   /** pill 칩 컨테이너 — ml-auto로 우측 정렬 (와이어프레임 준수) */
@@ -534,9 +546,27 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
   chipUrgent: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-brand-critical/10 text-brand-critical border border-brand-critical/20`,
   /** 경고 카테고리 pill (overdue 등) */
   chipWarning: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-brand-warning/10 text-brand-warning border border-brand-warning/20`,
+  /** 정보 pill (upcoming 등) */
+  chipInfo: `inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${MICRO_TYPO.badge} font-medium bg-brand-info/10 text-brand-info border border-brand-info/20`,
   /** "이상 없음" 인라인 상태 */
   clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
   clearIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
+  /** "이상 없음" compact (totalCount=0, §05 Warning 3) */
+  allClearCompact: 'border-dashed border-brand-ok/30 py-1.5',
+  // ─── Stacked variant (totalCount ≥ ALERT_BANNER_STACKED_THRESHOLD) ───
+  /** stacked 컨테이너 — flex-col로 severity row 누적 */
+  stackedContainer: 'flex flex-col gap-1 rounded-lg border bg-card overflow-hidden shadow-sm',
+  /** stacked 개별 row — border-l-8 (§01 Critical note) + min-h 터치 타겟 */
+  stackedRow: 'flex items-center gap-3 px-3 py-2 border-l-8 min-h-[44px]',
+  stackedRowCritical: 'border-l-brand-critical bg-brand-critical/5',
+  stackedRowWarning: 'border-l-brand-warning bg-brand-warning/5',
+  stackedRowInfo: 'border-l-brand-info bg-brand-info/5',
+  stackedRowNone: '',
+  /** countPill — 가변 폭 pill (인라인 countCircle 대체) */
+  countPill: `inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 rounded-full ${MICRO_TYPO.badge} font-bold tabular-nums`,
+  countPillCritical: 'bg-brand-critical text-white',
+  countPillWarning: 'bg-brand-warning text-white',
+  countPillInfo: 'bg-brand-info text-white',
 } as const;
 
 // ============================================================================
@@ -822,12 +852,30 @@ export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
 export const DASHBOARD_ENTRANCE = {
   /** 기본 입장 애니메이션 (delay 없음) */
   base: 'motion-safe:animate-fade-in-up',
-  /** Row별 stagger delay — CSS animation-delay로 적용 */
+  /** 섹션 간 간격 토큰 — DashboardClient inline mt/mb 제거용 */
+  rowSpacing: {
+    welcomeToAlert: 'mt-5',
+    alertToKpi: 'mt-5',
+    kpiToRow3: 'mb-6',
+    row3ToRow4: 'mb-6',
+  },
   stagger: {
+    // Row-number 키 (MonitoringDashboardClient 호환 유지)
     row0: 'motion-safe:animate-fade-in-up [animation-delay:0ms]',
     row1: 'motion-safe:animate-fade-in-up [animation-delay:80ms]',
     row2: 'motion-safe:animate-fade-in-up [animation-delay:160ms]',
     row3: 'motion-safe:animate-fade-in-up [animation-delay:240ms]',
     row4: 'motion-safe:animate-fade-in-up [animation-delay:320ms]',
+    // 섹션-named 애니메이션 클래스 (DashboardClient Phase 2 용)
+    welcome: 'motion-safe:animate-fade-in-up',
+    alert: 'motion-safe:animate-slide-left',
+    kpi: 'motion-safe:animate-scale-in-subtle',
+    row4Anim: 'motion-safe:animate-fade-in',
+    // 섹션-named delay 클래스 (cn()으로 합성)
+    welcomeDelay: '[animation-delay:0ms]',
+    alertDelay: 'motion-reduce:[animation-delay:0ms] [animation-delay:80ms]',
+    kpiDelay: 'motion-reduce:[animation-delay:0ms] [animation-delay:160ms]',
+    row3Delay: 'motion-reduce:[animation-delay:0ms] [animation-delay:240ms]',
+    row4Delay: 'motion-reduce:[animation-delay:0ms] [animation-delay:320ms]',
   },
 } as const;
