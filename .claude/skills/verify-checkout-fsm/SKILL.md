@@ -428,7 +428,7 @@ grep -n "BadRequestException" \
 | 24 | checkout-api.ts Checkout.meta.nextStep 타입 동기화 | PASS/FAIL | meta.nextStep?: NextStepDescriptor \| null 선언 존재 |
 | 25 | borrower 액터 identity-rule 강제 (2026-04-24 상시) | PASS/FAIL | scope-먼저 순서 + lenderTeamId payload (Sprint 1.4: 프론트 const 기준 제거) |
 | 26 | handleNextStepAction FRONTEND_ROUTES 완전 매핑 | PASS/FAIL | router.push/href 인라인 URL 0건 |
-| 27 | useCheckoutGroupDescriptors N+1 방지 + feature flag | PASS/FAIL | getNextStep useMemo 단독 + isNextStepPanelEnabled 2곳 |
+| 27 | useCheckoutGroupDescriptors N+1 방지 (feature flag 완전 제거) | PASS/FAIL | getNextStep useMemo 단독 + isNextStepPanelEnabled 0곳 |
 | 28 | findCheckoutEntity 분리 — 순수 엔티티 취득 | PASS/FAIL | private findCheckoutEntity 1건 + this.findCheckoutEntity ≥ 2건 |
 | 29 | findOne userPermissions 필수 파라미터 (no ?) | PASS/FAIL | userPermissions? 0건 |
 | 30 | FSM drift safeParse 가드 — buildNextStep 내 | PASS/FAIL | NextStepDescriptorSchema.safeParse + [FSM drift] Logger.warn |
@@ -723,21 +723,23 @@ grep -A5 "CheckoutAction\s*=" \
 5. **RENTAL purpose의 `reject_return` FSM 미지원** — FSM `reject_return` 전이는 `purposes: CAL_REPAIR`만 허용. RENTAL 반출의 `rejectReturn` 호출 시 `assertFsmAction`에서 INVALID_TRANSITION으로 차단되므로, `rejectReturn` 내부의 `LENDER_TEAM_ONLY` 체크는 RENTAL에 대해 dead code. Step 20은 CAL_REPAIR 목적 흐름만 검증 대상.
 6. **`mockChain.then` 테스트 패턴** — `chain.where.then` 오버라이드가 불가한 jest mock 제약으로 `mockChain.then`을 직접 오버라이드하는 패턴은 테스트 전용 관용구. 서비스 코드 검증 대상 아님.
 
-### Step 27: 프론트엔드 useCheckoutGroupDescriptors — N+1 방지 + feature flag 게이팅 (2026-04-24 추가)
+### Step 27: 프론트엔드 useCheckoutGroupDescriptors — N+1 방지 + feature flag 완전 제거 (2026-04-26 수정)
 
 `use-checkout-group-descriptors.ts` 훅은 `getNextStep`을 루프 내부에서 호출하는 대신 단일 `useMemo`로 Map을 일괄 계산해야 한다 (N+1 재계산 방지).
-`isNextStepPanelEnabled()` feature flag가 훅 내부와 소비 컴포넌트(`CheckoutGroupCard.tsx`) 양쪽에 적용되어야 한다.
+`checkout-flags.ts` + `isNextStepPanelEnabled()` feature flag는 2026-04-26 완전 삭제됨 — 훅·컴포넌트 양쪽에 0건이어야 한다.
 
 ```bash
 # getNextStep이 useMemo 외부(render 함수 직접)에서 호출되는지 확인 — PASS = 없어야 함
 grep -n "getNextStep" apps/frontend/hooks/use-checkout-group-descriptors.ts
 # useMemo 내부에서만 호출 → OK
 
-# feature flag 게이팅 확인
-grep -n "isNextStepPanelEnabled" \
-  apps/frontend/hooks/use-checkout-group-descriptors.ts \
-  apps/frontend/components/checkouts/CheckoutGroupCard.tsx
-# 최소 2곳 이상 존재 (훅 + 컴포넌트)
+# feature flag 완전 제거 확인 — 0건이어야 함 (파일 삭제됨)
+grep -rn "isNextStepPanelEnabled\|checkout-flags" \
+  apps/frontend/hooks/ \
+  apps/frontend/components/checkouts/ \
+  apps/frontend/lib/ \
+  --include="*.ts" --include="*.tsx"
+# 기대: 0건 (PASS) — 1건 이상이면 stale import 또는 재도입 FAIL
 
 # permissions 안정화 — permissions를 먼저 useMemo로 memoize 후 descriptor Map의 dep으로 사용하는지
 grep -B2 -A8 "const permissions" apps/frontend/hooks/use-checkout-group-descriptors.ts
@@ -746,7 +748,7 @@ grep -B2 -A8 "const permissions" apps/frontend/hooks/use-checkout-group-descript
 
 ```
 ✅ PASS: getNextStep이 단일 useMemo 내부에서만 호출됨
-✅ PASS: isNextStepPanelEnabled() 가드가 훅 + 컴포넌트 양쪽에 존재
+✅ PASS: isNextStepPanelEnabled() / checkout-flags 참조 0건 (feature flag 완전 제거됨)
 ✅ PASS: permissions를 별도 useMemo로 먼저 안정화 후 descriptor Map dep으로 사용
 ```
 
