@@ -94,7 +94,7 @@ Layer 3 파일이 Layer 2만 참조하는지 + index.ts barrel export 확인.
 
 ### Step 7: Architecture v3 Visual Feedback + 한국어 label 잔존
 
-- **7a:** deprecated `NOTIFICATION_BADGE_VARIANTS` 직접 사용 0개
+- **7a:** Architecture v3 배지 패턴 — `getNotificationBadgeClasses(count)` 경유 확인, 직접 urgency 클래스 인라인 0개
 - **7b:** count/time/status 기반 Urgency 함수 사용 확인
 - **7c:** Design Token에 한국어 `label` 필드 잔존 0개 (→ `labelKey` 사용)
 
@@ -294,7 +294,7 @@ done
 **PASS (INFO):** dead token 0개. **INFO:** dead token 목록 출력 후 삭제 또는 사용처 추가 검토 권고.
 
 **예외:**
-- `@deprecated` 주석이 달린 하위 호환 re-export (`EQUIPMENT_EMPTY_STATE_TOKENS` 등) — 마이그레이션 완료 전까지 유예
+- `CHECKOUT_HEADER_TOKENS`, `CHECKOUT_SUB_HEADER_TOKENS` — spread 위임 패턴으로 실제 사용됨 (중복 제거용)
 - `CHECKOUT_HEADER_TOKENS`, `CHECKOUT_SUB_HEADER_TOKENS` — spread 위임 패턴으로 실제 사용됨
 
 **FAIL 기준:** dead token ≥ 5개 시 FAIL (0~4개는 INFO 레벨). 즉각 삭제보다 tech-debt-tracker 등록 권고.
@@ -966,6 +966,31 @@ grep -n "ALERT_TAB_BADGE_COLOR" \
 - `apps/frontend/lib/design-tokens/index.ts` — `ALERT_TAB_BADGE_COLOR` barrel re-export
 - `apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx` — `CHECKOUT_TAB_BADGE_TOKENS.alert` 소비처
 
+### Step 30: FOCUS_TOKENS.ringCurrent — 스테퍼 현재 단계 링 하드코딩 탐지 (2026-04-26 추가)
+
+`semantic.ts`의 `FOCUS_TOKENS.ringCurrent`가 "현재 단계(current step)" 강조 링의 SSOT.
+`ring-2 ring-brand-info ring-offset-2`를 컴포넌트에서 직접 조합하면 brand 색상 변경 시 drift 발생.
+
+**탐지:**
+```bash
+# 현재 단계 링 클래스 인라인 직접 조합 탐지 — focus-visible: prefix 없는 패턴만 (의도적 키보드 포커스 링 제외)
+grep -rn "ring-2.*ring-brand-info\|ring-brand-info.*ring-2" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "design-tokens\|focus-visible:\|// \|node_modules"
+```
+
+**PASS:** 0건 (`FOCUS_TOKENS.ringCurrent` 경유). **FAIL:** 인라인 ring 조합 발견 시 `FOCUS_TOKENS.ringCurrent`로 교체.
+
+**예외:** `focus-visible:ring-2 focus-visible:ring-brand-info` — 키보드 포커스 링 (접근성 목적, `FOCUS_TOKENS.classes.*` 경유 권장이나 인라인 허용).
+
+**배경:** Sprint 2.6(2026-04-26)에서 스테퍼 `current.node` 클래스가 `FOCUS_TOKENS.ringCurrent`로 통일.
+`focus-visible:` prefix 없음 — `FOCUS_TOKENS.classes.*`와 혼용 주의.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `FOCUS_TOKENS.ringCurrent` 정의 (최상위, `classes` 블록 외부)
+- `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_STEPPER_TOKENS` 소비처
+
 ## Output Format
 
 ```markdown
@@ -1023,7 +1048,7 @@ grep -n "ALERT_TAB_BADGE_COLOR" \
 4. **장식용 요소** — 순수 장식 요소의 크기 하드코딩
 5. **유틸리티 함수 import** — `toTailwindSize`, `toTailwindGap`은 Layer 3에서 직접 import 허용
 6. **ANIMATION_PRESETS / TRANSITION_PRESETS import** — motion.ts에서 Layer 3 직접 import 허용
-7. **notification.ts의 NOTIFICATION_BADGE_VARIANTS** — 호환성 export 유지, 컴포넌트 직접 사용 금지
+7. **`getNotificationBadgeClasses()` 내부 urgency 분기** — notification.ts 내부 Visual Feedback System 구현 코드 (소비처가 아닌 SSOT 구현)
 8. **calibration-status.ts** — 3개 컴포넌트 중복 로직 통합 SSOT
 9. **not-found.tsx / error.tsx** — 비정상 상태 표시, 독립 디자인
 10. **SETTINGS_PAGE_HEADER_TOKENS** — 아이콘+border-b 포함 독립 헤더 디자인

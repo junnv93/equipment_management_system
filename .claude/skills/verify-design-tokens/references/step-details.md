@@ -197,20 +197,26 @@ if (currentStepIndex === NC_CORRECTED_STEP_INDEX) return label.currentInfo;
 
 ## Step 7: Architecture v3 Visual Feedback System
 
-### 7a: Deprecated 패턴
+### 7a: Architecture v3 배지 패턴
 
 ```bash
-grep -rn "NOTIFICATION_BADGE_VARIANTS\[" apps/frontend/components --include="*.tsx" | grep -v "notification.ts\|// "
+# getNotificationBadgeClasses 사용 확인 (notification 관련 컴포넌트)
+grep -rn "getNotificationBadgeClasses\|getCountBasedUrgency" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "node_modules\|// "
 ```
 
 ```tsx
-// ❌ WRONG - deprecated
-const variant = NOTIFICATION_BADGE_VARIANTS[getNotificationBadgeVariant(count)];
+// ❌ WRONG - urgency 클래스 인라인 직접 조합
+<Badge className="bg-red-500 text-white font-bold">{count}</Badge>
 
-// ✅ CORRECT - Architecture v3
-const urgency = getCountBasedUrgency(count);
-const classes = getUrgencyFeedbackClasses(urgency, false);
+// ✅ CORRECT - Architecture v3 위임 패턴
+<Badge className={getNotificationBadgeClasses(count)}>{count}</Badge>
 ```
+
+> `NOTIFICATION_BADGE_VARIANTS` / `getNotificationBadgeVariant`는 2026-04-26에 완전 삭제됨 (소비처 0건 확인 후).
+> tsc 컴파일 오류가 재도입 방지 회귀 보호 역할. grep 탐지 불필요.
 
 ### 7b: Urgency 함수 사용
 
