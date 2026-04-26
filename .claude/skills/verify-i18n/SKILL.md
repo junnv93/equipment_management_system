@@ -216,6 +216,33 @@ node scripts/check-i18n-keys.mjs --all
 **pre-commit 연동**: `.husky/pre-commit`에서 `check-i18n-keys.mjs --changed` 실행
 staged에 checkouts.json 없어도 LOCALES 전체 폴백 검사 (false negative 방지)
 
+### Step 14: checkouts.emptyState.*.description 마침표 없음 규칙 (2026-04-26 추가)
+
+**배경**: `checkouts.json`의 `emptyState` 하위 description 값은 마침표 없이 끝나는 것이 프로젝트 컨벤션.
+Sprint 2.3에서 `overdueClear.description`에 마침표가 추가되어 일관성이 깨졌다가 post-verify에서 발견됨.
+
+```bash
+node -e "
+const ko = require('./apps/frontend/messages/ko/checkouts.json');
+const en = require('./apps/frontend/messages/en/checkouts.json');
+const emptyStateKo = ko.emptyState || {};
+const emptyStateEn = en.emptyState || {};
+const badKo = Object.keys(emptyStateKo).filter(k => emptyStateKo[k].description?.endsWith('.'));
+const badEn = Object.keys(emptyStateEn).filter(k => emptyStateEn[k].description?.endsWith('.'));
+if (badKo.length === 0 && badEn.length === 0) {
+  console.log('PASS: emptyState.*.description 마침표 없음 (' + Object.keys(emptyStateKo).length + '개 키 검사)');
+} else {
+  if (badKo.length) console.log('FAIL ko: ' + badKo.join(', '));
+  if (badEn.length) console.log('FAIL en: ' + badEn.join(', '));
+}
+" 2>/dev/null
+```
+
+**PASS**: `emptyState.*.description` 마침표 없음 (ko/en 모두).
+**FAIL**: `overdueClear`, `filtered` 등 특정 키의 description이 `.`으로 끝남 → 마침표 제거.
+
+> **범위**: `checkouts.emptyState.*`에만 적용. `onboarding.description` 등 상위 레벨 description은 별도 컨벤션.
+
 ## Output Format
 
 ```markdown
@@ -234,6 +261,7 @@ staged에 checkouts.json 없어도 LOCALES 전체 폴백 검사 (false negative 
 | 11  | getSamplerPresetOrder ↔ qr.json | PASS/FAIL | sampler.header/size 누락·초과 preset 목록 |
 | 12  | NCGuidanceKey ↔ non-conformances.json 동기화 | PASS/FAIL | en/ko 누락 guidance 키, ctaHint 잔재 목록 |
 | 13  | checkouts v2 네임스페이스 107개 필수 키 존재 | PASS/FAIL | 누락 키 경로 목록 |
+| 14  | checkouts.emptyState.*.description 마침표 없음 | PASS/FAIL | 마침표 잔존 키 목록 |
 ```
 
 ## Exceptions
