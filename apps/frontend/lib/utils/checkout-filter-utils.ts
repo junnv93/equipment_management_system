@@ -29,7 +29,9 @@
 import {
   findCheckoutStatusGroupKey,
   CHECKOUT_STATUS_VALUES,
+  CHECKOUT_PURPOSE_VALUES,
   type CheckoutStatus,
+  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
@@ -97,8 +99,8 @@ export interface UICheckoutFilters {
   status: string;
   /** 반출지 ('all' 또는 특정 destination) */
   destination: string;
-  /** 반출 목적 ('all', 'calibration', 'repair', 'rental') */
-  purpose: string;
+  /** 반출 목적 ('all', 'calibration', 'repair', 'rental', 'return_to_vendor') */
+  purpose: CheckoutPurpose | 'all';
   /** 기간 프리셋 */
   period: CheckoutPeriod;
   /** 현재 페이지 */
@@ -116,7 +118,7 @@ export interface ApiCheckoutParams {
   search?: string;
   statuses?: string;
   destination?: string;
-  purpose?: string;
+  purpose?: CheckoutPurpose;
   checkoutFrom?: string;
   checkoutTo?: string;
 }
@@ -180,7 +182,11 @@ export function parseCheckoutFiltersFromSearchParams(
   const search = get('search') || DEFAULT_UI_FILTERS.search;
   const status = get('status') || DEFAULT_UI_FILTERS.status;
   const destination = get('destination') || DEFAULT_UI_FILTERS.destination;
-  const purpose = get('purpose') || DEFAULT_UI_FILTERS.purpose;
+  const purposeRaw = get('purpose');
+  const purpose: CheckoutPurpose | 'all' =
+    purposeRaw !== null && (CHECKOUT_PURPOSE_VALUES as ReadonlyArray<string>).includes(purposeRaw)
+      ? (purposeRaw as CheckoutPurpose)
+      : DEFAULT_UI_FILTERS.purpose;
 
   const periodRaw = get('period');
   const period: CheckoutPeriod =

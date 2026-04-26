@@ -42,8 +42,10 @@ import Link from 'next/link';
 import checkoutApi, { type CheckoutSummary } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_STATUS_FILTER_OPTIONS,
+  CHECKOUT_PURPOSE_VALUES,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   USER_SELECTABLE_CHECKOUT_PURPOSES,
+  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -63,9 +65,9 @@ import {
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_TAB_BADGE_TOKENS,
   getPageContainerClasses,
-  MICRO_TYPO,
   SECTION_RHYTHM_TOKENS,
 } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
@@ -227,7 +229,11 @@ export default function CheckoutsContent({
   };
   const handlePurposeChange = (value: string) => {
     if (value === filters.purpose) return;
-    updateUrl({ ...filters, purpose: value, page: 1 });
+    const purpose: CheckoutPurpose | 'all' =
+      value === 'all' || (CHECKOUT_PURPOSE_VALUES as ReadonlyArray<string>).includes(value)
+        ? (value as CheckoutPurpose | 'all')
+        : 'all';
+    updateUrl({ ...filters, purpose, page: 1 });
   };
   const handlePeriodChange = (value: string) => {
     if (value === filters.period) return;
@@ -280,7 +286,11 @@ export default function CheckoutsContent({
                   <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                   {t('pendingChecks.title')}
                   <span
-                    className={`ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 ${MICRO_TYPO.badge} font-medium text-destructive-foreground`}
+                    className={cn(
+                      CHECKOUT_TAB_BADGE_TOKENS.base,
+                      CHECKOUT_TAB_BADGE_TOKENS.alert,
+                      'ml-1.5 inline-flex items-center justify-center'
+                    )}
                   >
                     {pendingChecksCount}
                   </span>

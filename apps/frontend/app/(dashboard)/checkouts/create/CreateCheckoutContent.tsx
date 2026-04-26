@@ -56,6 +56,7 @@ import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import {
   CheckoutPurposeValues as CPVal,
   type EquipmentStatus,
+  type UserSelectableCheckoutPurpose,
 } from '@equipment-management/schemas';
 import {
   FRONTEND_ROUTES,
@@ -91,7 +92,7 @@ export default function CreateCheckoutContent() {
   const [destination, setDestination] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [purpose, setPurpose] = useState<'calibration' | 'repair' | 'rental'>('calibration');
+  const [purpose, setPurpose] = useState<UserSelectableCheckoutPurpose>('calibration');
   const [reason, setReason] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date>(addDays(new Date(), 7));
 
@@ -170,7 +171,7 @@ export default function CreateCheckoutContent() {
   });
 
   // 목적 변경 시 장비 및 사이트/팀 초기화
-  const handlePurposeChange = (value: 'calibration' | 'repair' | 'rental') => {
+  const handlePurposeChange = (value: UserSelectableCheckoutPurpose) => {
     setPurpose(value);
     setSelectedEquipments([]);
     setSelectedSite('');
@@ -652,7 +653,7 @@ export default function CreateCheckoutContent() {
                 <Select
                   value={purpose}
                   onValueChange={(value) =>
-                    handlePurposeChange(value as 'calibration' | 'repair' | 'rental')
+                    handlePurposeChange(value as UserSelectableCheckoutPurpose)
                   }
                 >
                   <SelectTrigger id="purpose" className="h-10">

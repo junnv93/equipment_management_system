@@ -54,6 +54,7 @@ export type CheckoutPurpose = z.infer<typeof CheckoutPurposeEnum>;
  */
 export const USER_SELECTABLE_CHECKOUT_PURPOSES = ['calibration', 'repair', 'rental'] as const;
 export const UserSelectableCheckoutPurposeEnum = z.enum(USER_SELECTABLE_CHECKOUT_PURPOSES);
+export type UserSelectableCheckoutPurpose = z.infer<typeof UserSelectableCheckoutPurposeEnum>;
 
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 반출 유형 열거형

@@ -92,7 +92,7 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
     const purposeSet = new Set<CheckoutPurpose>();
     for (const co of groupCheckouts) {
       if (co.purpose) {
-        purposeSet.add(co.purpose as CheckoutPurpose);
+        purposeSet.add(co.purpose);
       }
     }
 

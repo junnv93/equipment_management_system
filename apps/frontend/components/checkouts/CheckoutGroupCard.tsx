@@ -35,7 +35,6 @@ import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   type CheckoutStatus,
-  type CheckoutPurpose,
   type NextStepDescriptor,
 } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
@@ -212,7 +211,7 @@ function CheckoutGroupCard({
           equipmentId: equip.id,
           equipmentName: equip.name,
           managementNumber: equip.managementNumber,
-          purpose: checkout.purpose as string,
+          purpose: checkout.purpose,
           status: checkout.status,
           checkoutType: (checkout.purpose ?? 'calibration') as 'calibration' | 'repair' | 'rental',
           userName: checkout.user?.name || t('groupCard.unknownUser'),
@@ -478,7 +477,7 @@ function CheckoutGroupCard({
                     >
                       {/* 목적 색상 바 */}
                       <div
-                        className={`${CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base} ${getPurposeBarClass(row.purpose as CheckoutPurpose)}`}
+                        className={`${CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base} ${getPurposeBarClass(row.purpose)}`}
                         aria-hidden="true"
                       />
 

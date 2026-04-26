@@ -7,9 +7,11 @@ import {
 import type { PaginatedResponse } from './types';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
-// ✅ SSOT: 반출 상태 타입 import
+// ✅ SSOT: 반출 상태/목적 타입 import
 import type {
   CheckoutStatus,
+  CheckoutPurpose,
+  UserSelectableCheckoutPurpose,
   ConditionCheckStep,
   ConditionStatus,
   AccessoriesStatus,
@@ -68,7 +70,7 @@ export interface Checkout {
   destination: string; // ✅ 백엔드 필드명
   phoneNumber?: string; // ✅ 백엔드 필드명
   address?: string;
-  purpose: string; // ✅ CheckoutPurpose (calibration, repair, rental)
+  purpose: CheckoutPurpose;
   reason: string; // ✅ 백엔드 필수 필드
   checkoutDate?: string; // ✅ 백엔드 필드명
   expectedReturnDate: string;
@@ -159,7 +161,7 @@ export interface CheckoutQuery {
   equipmentId?: string;
   teamId?: string;
   direction?: 'outbound' | 'inbound';
-  purpose?: string; // ✅ 반출 목적 필터 (calibration, repair, rental, return_to_vendor)
+  purpose?: CheckoutPurpose;
   endDate?: string;
   checkoutFrom?: string; // ✅ 반출일 시작 (YYYY-MM-DD)
   checkoutTo?: string; // ✅ 반출일 종료 (YYYY-MM-DD)
@@ -179,7 +181,7 @@ export interface CreateCheckoutDto {
   destination: string; // ✅ 백엔드 필드명에 맞게 수정 (location → destination)
   phoneNumber?: string; // ✅ 백엔드 필드명에 맞게 수정 (contactNumber → phoneNumber)
   address?: string;
-  purpose: string; // ✅ 백엔드: CheckoutPurpose (calibration, repair, rental)
+  purpose: UserSelectableCheckoutPurpose;
   reason: string; // ✅ 백엔드 필수 필드 추가
   expectedReturnDate: string; // ISO 형식
   notes?: string; // ✅ 백엔드에는 notes 필드가 없지만, reason에 포함 가능
