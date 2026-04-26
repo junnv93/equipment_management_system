@@ -729,6 +729,18 @@ export const CONFIRM_PREVIEW_TOKENS = {
 } as const;
 
 /**
+ * Menu Item Tokens (DropdownMenuItem 상호작용 패턴)
+ *
+ * DropdownMenuItem에 적용하는 상태 클래스 SSOT.
+ * - WCAG 2.4.11: focus-visible: 전용 (마우스 클릭 포커스 시 스타일 미적용)
+ * - 신규 도메인에서 destructive menu item 추가 시 반드시 이 토큰 사용
+ */
+export const MENU_ITEM_TOKENS = {
+  /** 삭제·반려 등 파괴적 액션: 텍스트 색상 + 키보드 포커스 상태 */
+  destructive: 'text-destructive focus-visible:text-destructive',
+} as const;
+
+/**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용
  */
 export type InteractiveSize = keyof typeof INTERACTIVE_TOKENS.size;

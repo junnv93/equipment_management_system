@@ -79,6 +79,7 @@ import {
 import {
   getJudgmentBadgeClasses,
   getSemanticBadgeClasses,
+  MENU_ITEM_TOKENS,
   type SemanticColorKey,
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
@@ -370,6 +371,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                             params={{ equipmentId, inspectionId: inspection.id }}
                             label={tSI('actions.exportForm')}
                             errorToastDescription={tSI('actions.exportFormError')}
+                            canAct={can(Permission.EXPORT_REPORTS)}
                           />
                         )}
                         {showMenu && (
@@ -472,7 +474,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onClick={() => setDeleteTarget(inspection)}
-                                    className="text-destructive focus:text-destructive"
+                                    className={MENU_ITEM_TOKENS.destructive}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     {tSI('actions.delete')}

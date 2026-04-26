@@ -59,6 +59,7 @@ import {
   getResultBadgeClasses,
   getSemanticBadgeClasses,
   getSemanticLeftBorderClasses,
+  MENU_ITEM_TOKENS,
   type SemanticColorKey,
 } from '@/lib/design-tokens';
 import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
@@ -400,7 +401,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               key={item.key}
               onClick={item.onClick}
               disabled={isPending}
-              className="text-destructive focus:text-destructive"
+              className={MENU_ITEM_TOKENS.destructive}
             >
               {item.icon}
               {item.label}

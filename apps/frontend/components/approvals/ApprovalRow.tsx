@@ -22,6 +22,7 @@ import {
   getElapsedDaysClasses,
   APPROVAL_MOTION,
   FONT,
+  MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -166,10 +167,7 @@ export function ApprovalRow({
               {actionLabel}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onReject}
-              className="text-destructive focus:text-destructive"
-            >
+            <DropdownMenuItem onClick={onReject} className={MENU_ITEM_TOKENS.destructive}>
               <XCircle className="h-4 w-4 mr-2" />
               {t('item.reject')}
             </DropdownMenuItem>

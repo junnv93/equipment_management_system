@@ -105,6 +105,7 @@ export {
   type RoleChipKey,
   ALERT_TAB_BADGE_COLOR,
   CONFIRM_PREVIEW_TOKENS,
+  MENU_ITEM_TOKENS,
 } from './semantic';
 
 // ============================================================================

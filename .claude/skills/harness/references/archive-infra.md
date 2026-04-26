@@ -399,3 +399,21 @@ apps/backend/package.json devDependencies 버전 업:
 > service에서 호출 확인. FALSE POSITIVE.
 
 ---
+
+## env-nextpublic-documentation (2026-04-27 완료)
+
+### env-nextpublic-documentation: .env.example NEXT_PUBLIC_* 미문서화 ✅
+
+```
+완료 결과:
+- .env.example에 Frontend (Next.js) 섹션 추가
+- NEXT_PUBLIC_API_URL=http://localhost:3001
+- NEXT_PUBLIC_APP_URL=http://localhost:3000
+- NEXT_PUBLIC_CHECKOUT_INBOUND_BFF=false (Sprint 3.1 canary flag)
+- 주석: "Next.js 빌드 타임 인라인 변수 — apps/frontend/.env.local에 별도 설정 필요 (monorepo root .env 미인식)"
+
+영향: 새 개발환경 세팅 시 NEXT_PUBLIC_* 누락 원인 불명 오류 방지
+apps/frontend/.env.local.example: 파일 미존재로 생략
+```
+
+---

@@ -55,7 +55,9 @@ shadcn/ui 제외 모든 컴포넌트에서 `transition-all` 미사용 확인.
 
 shadcn/ui와 SkipLink 제외 모든 컴포넌트에서 `focus-visible:` 사용 확인.
 
-**PASS:** `focus:ring`/`focus:outline` 0개. **FAIL:** `focus-visible:` 변경.
+**PASS:** `focus:ring`/`focus:outline`/`focus:bg`/`focus:text` 0개. **FAIL:** `focus-visible:` 변경.
+
+> `focus:text-destructive` (DropdownMenuItem destructive 아이템)도 탐지 대상 — Step 32의 MENU_ITEM_TOKENS 처방과 함께 적용.
 
 **상세:** [references/step-details.md](references/step-details.md) Step 2
 
@@ -1035,6 +1037,41 @@ grep -rn 'role="alert"' \
 
 **배경:** `GuidanceCallout`이 조건부 `role="alert"/"status"` → 항상 `role="status"` 로 통일. 페이지 진입 시 h2 포커스 + aria-live 이중 읽기 제거.
 
+### Step 32: MENU_ITEM_TOKENS.destructive SSOT — DropdownMenuItem 파괴적 액션 하드코딩 금지 (2026-04-27 추가)
+
+**원칙:** DropdownMenuItem의 destructive 액션(삭제·반려 등)에 사용하는 `text-destructive focus-visible:text-destructive` 패턴은 `MENU_ITEM_TOKENS.destructive` SSOT를 경유해야 한다. 리터럴 직접 사용 시 `focus:` → `focus-visible:` 전환 누락 버그가 도메인별로 반복 발생한다. (실측: 3개 도메인 4파일 동일 버그, 2026-04-27)
+
+**규칙:**
+- `DropdownMenuItem` destructive 아이템에는 반드시 `className={MENU_ITEM_TOKENS.destructive}` 사용
+- `text-destructive focus:text-destructive` / `text-destructive focus-visible:text-destructive` 리터럴 직접 사용 금지
+- `MENU_ITEM_TOKENS`는 `lib/design-tokens/semantic.ts` (Layer 2) 단일 정의 — 로컬 재정의 금지
+
+```bash
+# DropdownMenuItem destructive 리터럴 하드코딩 탐지
+grep -rn "\"text-destructive focus[^\"]*text-destructive\"\|'text-destructive focus[^']*text-destructive'" \
+  apps/frontend/components/ \
+  --include="*.tsx" \
+  | grep -v "components/ui/\|node_modules"
+```
+
+```bash
+# MENU_ITEM_TOKENS 로컬 재정의 탐지 (semantic.ts 이외 정의 금지)
+grep -rn "MENU_ITEM_TOKENS\s*=" \
+  apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "semantic\.ts\|node_modules"
+```
+
+**PASS:** 첫 번째 명령어 0 hit, 두 번째 명령어 0 hit. **FAIL:** 리터럴 직접 사용 또는 로컬 재정의 발견 → `MENU_ITEM_TOKENS.destructive` import + 교체.
+
+**예외:**
+- `components/ui/` (shadcn/ui) — 서드파티 생성 코드
+- `toast.tsx`의 `group-[.destructive]:focus:ring-destructive` — Tailwind group modifier 패턴, 별개 맥락
+
+**상세:** [references/step-details.md](references/step-details.md) Step 32
+
+---
+
 ## Output Format
 
 ```markdown
@@ -1080,6 +1117,9 @@ grep -rn 'role="alert"' \
 | 29a | 크로스 도메인 공유 색상 semantic.ts 배치 (도메인 간 직접 import 금지) | PASS/FAIL | checkout.ts↔notification.ts 직접 import 위치 |
 | 29b | tabBadge alert 상태 `ALERT_TAB_BADGE_COLOR` SSOT 경유 (raw bg-destructive 인라인 금지) | PASS/FAIL | raw 리터럴 또는 컴포넌트 직접 사용 위치 |
 | 29c | `CHECKOUT_TAB_BADGE_TOKENS` `as const satisfies` 제약 + `ALERT_TAB_BADGE_COLOR` index re-export | PASS/FAIL | satisfies 미존재 또는 index.ts 누락 위치 |
+| 30  | `FOCUS_TOKENS.ringCurrent` 스테퍼 현재 단계 링 하드코딩 탐지 | PASS/FAIL | raw ring-2 ring-brand-info 조합 위치 |
+| 31  | callout/aside `role="alert"` 금지 — `role="status"` 강제 | PASS/FAIL | callout/안내 패널에서 role="alert" 위치 |
+| 32  | `MENU_ITEM_TOKENS.destructive` SSOT — DropdownMenuItem 파괴적 액션 리터럴 금지 | PASS/FAIL | focus:text-destructive 또는 focus-visible:text-destructive 리터럴 위치 |
 ```
 
 ## Exceptions

@@ -338,3 +338,33 @@ grep -n '@tailwindcss/postcss' apps/frontend/postcss.config.js || echo "FAIL: mi
 ```
 
 **PASS:** 첫 명령 0 hits + 두 번째 명령 매치. **FAIL:** `postcss.config.js`를 `{ plugins: { '@tailwindcss/postcss': {} } }`로 교체.
+
+## Step 32: MENU_ITEM_TOKENS.destructive SSOT
+
+```bash
+# DropdownMenuItem destructive 리터럴 하드코딩 탐지
+grep -rn "\"text-destructive focus[^\"]*text-destructive\"\|'text-destructive focus[^']*text-destructive'" \
+  apps/frontend/components/ \
+  --include="*.tsx" \
+  | grep -v "components/ui/\|node_modules"
+```
+
+```bash
+# MENU_ITEM_TOKENS 로컬 재정의 탐지
+grep -rn "MENU_ITEM_TOKENS\s*=" \
+  apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "semantic\.ts\|node_modules"
+```
+
+```tsx
+// ❌ WRONG — 리터럴 직접 사용
+className="text-destructive focus:text-destructive"
+className="text-destructive focus-visible:text-destructive"
+
+// ✅ CORRECT — SSOT 토큰 경유
+import { MENU_ITEM_TOKENS } from '@/lib/design-tokens';
+className={MENU_ITEM_TOKENS.destructive}
+```
+
+**PASS:** 두 명령어 모두 0 hit. **FAIL:** 리터럴 직접 사용 → `import { MENU_ITEM_TOKENS } from '@/lib/design-tokens'` 추가 + `className={MENU_ITEM_TOKENS.destructive}` 교체.

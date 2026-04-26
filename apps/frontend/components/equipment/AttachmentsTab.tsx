@@ -31,7 +31,12 @@ import {
 import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE, TIMELINE_TOKENS } from '@/lib/design-tokens';
+import {
+  DOCUMENT_TABLE,
+  DOCUMENT_EMPTY_STATE,
+  TIMELINE_TOKENS,
+  MENU_ITEM_TOKENS,
+} from '@/lib/design-tokens';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -251,7 +256,7 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleDelete(doc.id)}
-                                  className="text-destructive focus:text-destructive"
+                                  className={MENU_ITEM_TOKENS.destructive}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   {t('attachmentsTab.delete')}

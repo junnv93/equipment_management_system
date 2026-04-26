@@ -465,3 +465,29 @@ Phase 4: 워크플로우 연결
 ```
 
 ---
+
+## equipment-approvals-focus-visible → MENU_ITEM_TOKENS SSOT (2026-04-27 완료)
+
+### equipment-approvals-focus-visible: DropdownMenuItem destructive 아이템 MENU_ITEM_TOKENS 토큰화 ✅
+
+```
+완료 결과 (Mode 1 — 아키텍처 수준 확장):
+- lib/design-tokens/semantic.ts: MENU_ITEM_TOKENS 신규 정의 (Layer 2)
+  destructive: 'text-destructive focus-visible:text-destructive'
+- lib/design-tokens/index.ts: MENU_ITEM_TOKENS barrel export 추가
+- 5개 컴포넌트 교체 (className 리터럴 → MENU_ITEM_TOKENS.destructive):
+  - components/approvals/ApprovalRow.tsx:171
+  - components/equipment/AttachmentsTab.tsx:254
+  - components/equipment/SelfInspectionTab.tsx:475
+  - components/equipment/IntermediateInspectionList.tsx:403
+  - components/shared/NextStepPanel.tsx:275 (focus: 구버전 버그도 함께 수정)
+- verify-design-tokens Step 32 추가 (MENU_ITEM_TOKENS SSOT 검증)
+- verify-design-tokens Step 2 요약 업데이트 (focus:text 포함 명시)
+
+아키텍처 결정:
+- Mode 0(4파일 치환)에서 Mode 1(SSOT 토큰화)으로 상향 — 3개 도메인 반복 버그가 근거
+- MENU_ITEM_TOKENS는 semantic.ts Layer 2 — 도메인 교차 패턴이므로 component 토큰 아닌 semantic 레이어
+- focus:text-destructive → focus-visible:text-destructive (WCAG 2.4.11 Focus Appearance 준수)
+```
+
+---

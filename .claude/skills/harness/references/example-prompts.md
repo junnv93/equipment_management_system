@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-24 (96차 정리: Sprint 1.1 resolveNextAction 완료 [findCheckoutEntity 분리·findOne always-meta·280 table test·FSM drift safeParse]. Sprint 1.2 스키마 필드 선착수 [phase/nextStepIndex 4필드 checkout-fsm.ts 추가]. active: Sprint 1.2 rental-phase.ts SSOT 완성·1.3~1.5·2.x·3.x·PR-16·PR-21~PR-23)**
+> **마지막 정리일: 2026-04-27 (세션 정리: env-nextpublic·focus-visible-equipment 2건 완료 아카이브. MENU_ITEM_TOKENS SSOT 토큰화로 업그레이드 완료. active: Sprint 1.2~5·2.x·3.x·PR-16·PR-21~PR-23 + 잔여 2건)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -178,6 +178,90 @@ Agent C (`name="fleet-infra"`, `subagent_type="Explore"`, `run_in_background=tru
 > 현재 파일은 활성(미해결) harness 프롬프트만 포함. 새 프롬프트는 활성 영역에 추가.
 
 ---
+
+## 🆕 2026-04-27 — generate-prompts 스캔 신규 발견 (4건)
+
+> **발견 배경**: 코드베이스 전수 스캔 (scan-backend·scan-frontend·scan-infra 3 parallel agent) + 2차 검증 완료.
+> false positive 8건 아카이브 처리 (Drizzle relations 4건, error.tsx 5건, data-migration @AuditLog, template download, Sprint 3.2 queryKeys 완료).
+
+### 🟡 MEDIUM — documents-revision-permission: POST /documents/:id/revisions 권한 오용 (Mode 0)
+
+```
+문제 (2차 검증 완료):
+apps/backend/src/modules/documents/documents.controller.ts:353
+  @RequirePermissions(Permission.CREATE_CALIBRATION)  ← 오용
+  async createRevision(...)
+
+문서 개정판(revision) 업로드 엔드포인트에 CREATE_CALIBRATION 권한이 사용됨.
+문서는 교정 외 장비사진·수리이력 등 다목적이므로 교정 권한만 체크하면 다른 용도 업로드 차단됨.
+Permission enum에 적절한 문서 권한 확인 후 교체 필요.
+
+작업:
+1. packages/shared-constants/src/role-permissions.ts에서 문서 업로드에 적합한 Permission 값 확인
+   - 후보: Permission.UPLOAD_DOCUMENT, Permission.MANAGE_DOCUMENTS, Permission.VIEW_EQUIPMENT
+   - 없으면 신규 Permission 추가 후 ROLE_PERMISSIONS 매트릭스 업데이트
+2. documents.controller.ts:353 @RequirePermissions 교체
+3. 관련 E2E 또는 unit test permission 기대값 업데이트
+
+SSOT 주의:
+- Permission 추가 시 packages/shared-constants/src/role-permissions.ts에만 정의
+- controller 직접 string 금지
+
+검증:
+- pnpm --filter backend exec tsc --noEmit exit 0
+- grep "CREATE_CALIBRATION" apps/backend/src/modules/documents/ → 0 hit
+- Permission.UPLOAD_DOCUMENT (또는 선택한 권한) 모든 역할 접근 정책 확인
+```
+
+---
+
+### 🟡 MEDIUM — equipment-pwa-audit-i18n: 하드코딩 한글 3파일 i18n 외부화 (Mode 1)
+
+```
+문제 (2차 검증 완료):
+1. apps/frontend/components/equipment/VirtualizedEquipmentList.tsx:195-199
+   <TableHead>관리번호</TableHead>  ← 하드코딩 (i18n hook 있으나 미사용)
+   <TableHead>장비명</TableHead>
+   <TableHead>분류</TableHead> / <TableHead>상태</TableHead> / <TableHead>마지막 교정일</TableHead> / <TableHead>상세</TableHead>
+   :219 "데이터를 로딩 중입니다..."
+   :223 "검색 결과가 없습니다"
+   ※ useTranslations('equipment')는 import됨 — hook 재사용 가능
+
+2. apps/frontend/components/audit-logs/PrintableAuditReport.tsx:83,86
+   <h1>감사 로그 보고서</h1>  ← 하드코딩
+   <p>출력 일시: {fmtDateTime(...)}</p>
+   ※ useTranslations('audit'), useTranslations('common') 모두 import됨
+
+3. apps/frontend/components/pwa/PWAInstallBanner.tsx:26,39
+   aria-label="앱 설치 안내"
+   <p>앱으로 설치</p>
+   ※ useTranslations import 없음 — hook 추가 필요
+
+작업:
+1. apps/frontend/messages/ko/*.json에 누락 키 추가:
+   - equipment.json: virtualizedList.headers.{managementNumber,name,classification,status,lastCalibration,detail} + loading + emptySearch
+   - audit.json: report.{title,printedAt,printedBy,filter,timestamp,user,action,target,changes}
+   - common.json (또는 pwa.json): pwa.{installBanner.cta,installBanner.ariaLabel}
+
+2. apps/frontend/messages/en/*.json에 동일 키 영문 추가
+
+3. 각 컴포넌트에서 t() 함수로 교체:
+   VirtualizedEquipmentList.tsx: headers를 t('virtualizedList.headers.managementNumber') 패턴
+   PrintableAuditReport.tsx: t('audit.report.title') 패턴 (이미 tAudit 사용 중)
+   PWAInstallBanner.tsx: useTranslations hook 추가 후 적용
+
+SSOT 주의:
+- 번역 키는 ko/en 동시 추가 필수 (verify-i18n Step 1 기준)
+- 신규 네임스페이스 추가 시 pwa.json 별도 파일 생성 후 next-intl 설정에 등록
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit
+- verify-i18n PASS (ko/en key parity)
+- grep "관리번호\|장비명\|로딩 중입니다\|결과가 없습니다\|앱으로 설치\|감사 로그 보고서" apps/frontend/components/ → 0 hit
+```
+
+---
+
 
 ## 34차 후속 — wf20-infra-debt harness 결과 review-architecture tech debt (3건)
 
