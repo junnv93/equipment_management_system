@@ -5,6 +5,50 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-26 — design-tokens SSOT 정비 + FSM 컨트랙트 동적화 + Sprint 1.x 다수 확인
+
+### 2026-04-26 harness: medium-token-ssot-fixes — 실수정 완료 6건
+
+- [x] **[2026-04-26 nc-verify] 🟡 MEDIUM nceditdialog-form-field-tokens-barrel** — ~~`NCEditDialog.tsx:10` 직접 서브패스 import~~ → `index.ts`에 `REQUIRED_FIELD_TOKENS`·`REQUIRED_FIELD_A11Y` barrel re-export 추가 + NCEditDialog import 통합 완료 (2026-04-26 harness medium-token-ssot-fixes).
+- [x] **[2026-04-26 nc-verify] 🟡 MEDIUM statusAlert-dark-prefix** — ~~`non-conformance.ts:96` `dark:border-brand-critical/30 dark:bg-brand-critical/10` 잔존~~ → `dark:` prefix 2개 제거 완료, CSS 변수 자동 전환 체계 복구 (2026-04-26 harness medium-token-ssot-fixes).
+- [x] **[2026-04-26 sprint-2.4] 🟡 MEDIUM tab-badge-raw-class-audit** — ~~`NOTIFICATION_LIST_FILTER_TOKENS.tabBadge` raw class~~ → `semantic.ts`에 `ALERT_TAB_BADGE_COLOR` 공유 토큰 신설, checkout·notification 양쪽 참조로 통합 완료 (e32c12cb).
+- [x] **[2026-04-26 sprint-2.3] 🟡 MEDIUM overdueClear icon SSOT 통일** — 실측 결과 `checkout-icons.ts:60`에 `overdueClear: CheckCircle2` 이미 등록됨 + `OutboundCheckoutsTab.tsx`가 `CHECKOUT_ICON_MAP.emptyState.overdueClear` SSOT 경유 중. 이미 완료 상태 확인 (2026-04-26 medium-token-ssot-fixes 검증).
+- [x] **[2026-04-26 sprint-2.3] 🟡 MEDIUM OutboundCheckoutsTab aria-label "건" 하드코딩** — 실측 결과 L323 `t('list.count.unit', { value: card.value })` i18n 사용 중. `ko/checkouts.json:544 "unit": "{value}건"` + `en/checkouts.json:544 "unit": "{value} items"`. 이미 완료 상태 확인 (2026-04-26 medium-token-ssot-fixes 검증).
+- [x] **[2026-04-24 sprint-1.2] 🟡 MEDIUM 컨트랙트 M2·M13 "208 entry" 스테일 수치** — ~~"208" 하드코딩~~ → M2·M13·Acceptance·연계 contracts 섹션 전체 `EXPECTED_ENTRY_COUNT`(= `TOTAL_STATUSES × TOTAL_PURPOSES × TOTAL_ROLES`) 동적 참조로 교체. 테스트 describe 문자열도 template literal로 통일 완료 (2026-04-26 harness medium-token-ssot-fixes).
+
+### 2026-04-26 harness: 이전 세션 항목 실측 확인 완료
+
+- [x] **[2026-04-24 wf34-pr13] 🟡 MEDIUM URGENCY_ICON 로컬 맵 → checkout-icons.ts SSOT 이관** — 실측 확인(2026-04-26): `YourTurnBadge.tsx:30` `CHECKOUT_ICON_MAP.urgencyBadge[urgency]` SSOT 경유. 로컬 URGENCY_ICON 맵 없음. 이미 수정됨.
+- [x] **[2026-04-22 checkout-arch-pr3-11] 🟢 LOW .env.example 플래그 문서화 누락** — Sprint 1.4(2026-04-24) 해소: 변수 자체를 .env.local/.env.example에서 제거.
+- [x] **[2026-04-22 checkout-arch-pr3-11] 🟡 MEDIUM NextStepPanel 플래그 상시화** — Sprint 1.4(2026-04-24) 완료: checkout-flags.ts return true 상시화, LegacyActionsBlock 제거, isNextStepPanelEnabled 호출부 전체 제거.
+- [x] **[2026-04-22 pr22] 🟢 LOW approvals-api.ts approverId 미사용 파라미터** — 실측 확인(2026-04-26): approvals-api.ts에서 approverId/userId 파라미터 없음. use-approvals-api.ts hook wrapper도 동일. 이미 수정됨.
+- [x] **[2026-04-22 pr22] 🟢 LOW Checkout.user.department 백엔드 DTO 미지원 필드** — 실측 확인(2026-04-26): `checkout-api.ts:67` `department?: string` optional로 이미 수정됨.
+- [x] **[2026-04-24 pr-3] 🟢 LOW Layer 1 직접 import — dashboard.ts/header.ts/sidebar.ts** — 실측 확인(2026-04-26): dashboard/header/sidebar 모두 `../utils`에서 import (primitives 직접 import 없음). `utils.ts`는 design-tokens 내부 중간 계층 — Layer 1 위반 아님. 이미 수정됨.
+- [x] **[2026-04-24 pr4-7] 🟢 LOW en/checkouts.json 3개 키 누락** — 2026-04-24 해소: cancelCheckout/cancelTitle/cancelDescription 추가.
+- [x] **[2026-04-24 pr4-7] 🟢 LOW CheckoutsContent.tsx PURPOSE_OPTIONS 로컬 재정의** — 실측 확인(2026-04-26): `CheckoutsContent.tsx:47/412` `USER_SELECTABLE_CHECKOUT_PURPOSES` SSOT 경유. 로컬 배열 없음. 이미 수정됨.
+- [x] **[2026-04-24 pr4-7] 🟢 LOW OutboundCheckoutsTab pagination ?? 10 매직넘버** — 실측 확인(2026-04-26): `pageSize ?? 10` 패턴 전체 codebase 검색 0건. 이미 수정됨.
+- [x] **[2026-04-24 rental-phase5-8] 🟢 LOW borrowerReject dialog onErrorCallback reason 미초기화** — 89차 세션 수정: `onErrorCallback`에 `setBorrowerRejectReason('')` 추가 (commit 14c2d526).
+- [x] **[2026-04-24 rental-phase5-8] 🟢 LOW REJECTED 상태 카드에 borrowerRejectionReason 미표시** — 89차 세션 수정: `borrowerRejectionReason ?? rejectionReason` 우선순위로 표시 (commit 14c2d526).
+- [x] **[2026-04-24 rental-phase5-8] 🟢 LOW CheckoutNotificationEvent lenderTeamId 미선언** — 88차 세션 즉시 수정: notification-events.ts에 `lenderTeamId?: string` 추가.
+- [x] **[2026-04-24 rental-phase5-8] 🟢 LOW lenderTeamId ?? '' 빈 문자열 fallback** — 88차 세션 즉시 수정: `?? undefined`로 교체.
+- [x] **[2026-04-24 rental-phase5-8] 🔴 Critical LegacyActionsBlock 취소 조건 BORROWER_APPROVED 누락** — 88차 세션 즉시 수정: FSM SSOT 일치.
+- [x] **[2026-04-24 pr5] 🟢 LOW checkout-fsm-borrower-actions** — 이미 수정됨: CheckoutDetailClient.tsx handleNextStepAction에 borrower_approve/borrower_reject case 명시적 존재 확인(2026-04-24 검증).
+- [x] **[2026-04-24 pr5] 🟢 LOW checkout-legacy-rental-flow-cleanup** — 2026-04-26 해소: `CheckoutGroupCard.tsx` `RentalFlowInline` + `isNextStepPanelEnabled()` 분기 제거, `RENTAL_FLOW_INLINE_TOKENS` checkout.ts/index.ts에서 제거, `i18n.checkouts.rentalFlow.*` ko/en 양쪽 제거 완료.
+- [x] **[2026-04-24 pr5] 🟢 LOW checkout-legacy-next-step-panel-cleanup** — 2026-04-26 해소: `checkout-flags.ts` 파일 삭제, `isNextStepPanelEnabled` 모든 import/호출부 제거 완료. (components/checkouts/NextStepPanel.tsx는 신규 구현 확인 — 삭제 불가)
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM Stale CAS 5차 재발 — CheckoutDetailClient 8개 mutation** — 실측 확인(2026-04-26): mutationFn L155/178/203/236/262/287/313/341 전체 `getCheckout(checkout.id)` fresh fetch 패턴으로 이미 구현 완료. 트래커 기록 시점 이후 수정됨.
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM WorkflowTimeline TooltipTrigger > div 키보드 포커스 불가** — 실측 확인(2026-04-26): `WorkflowTimeline.tsx:133` `tabIndex={0}` 이미 존재. 트래커 기록 시점 이후 수정됨.
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM CheckoutGroupCard useMutation 직접 사용** — 2026-04-26 Stale CAS 위험 해소: `mutationFn` 내 `checkoutApi.getCheckout(id)` fresh fetch 패턴 적용 (개별·bulk 모두). `useOptimisticMutation` 미전환은 의도적 설계 결정 — list-level predicate invalidation이 단일 queryKey로 표현 불가, safeCallback 자동화는 후속 리팩토링으로 이연.
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM nextStepIndex prop +1 오프셋 혼란** — 실측 확인(2026-04-26): `CheckoutDetailClient.tsx:519-521` `nextStepDescriptor.currentStepIndex` (+1 없음). descriptor null 시 undefined 전달 패턴으로 이미 수정됨.
+- [x] **[2026-04-24 pr14-15] 🟢 LOW WorkflowTimeline 내부 Suspense 무의미** — 실측 확인(2026-04-26): WorkflowTimeline.tsx에 Suspense import/사용 없음. 이미 제거됨.
+- [x] **[2026-04-24 pr14-15] 🟢 LOW staggerItem 60ms SSOT 이탈** — 실측 확인(2026-04-26): `motion.ts` `getStaggerFadeInStyle()` 함수가 `MOTION_TOKENS.stagger[type]` SSOT 경유. magic 60 없음. 이미 수정됨.
+- [x] **[2026-04-24 pr14-15] 🟢 LOW CheckoutDetailClient href 하드코딩** — 실측 확인(2026-04-26): `FRONTEND_ROUTES.EQUIPMENT.DETAIL(equip.id)` 이미 사용됨. 이미 수정됨.
+- [x] **[2026-04-24 pr-19] 🟢 LOW CHECKOUT_DETAIL 프리셋 미등록 (4차 QUERY_CONFIG 인라인)** — 실측 확인(2026-04-26): `query-config.ts:347` `CHECKOUT_DETAIL` 프리셋 존재, `CheckoutDetailClient.tsx:113` `...QUERY_CONFIG.CHECKOUT_DETAIL` 스프레드 사용. 이미 수정됨.
+- [x] **[2026-04-24 pr-19] 🟢 LOW Error 배너 3종 px-4 py-3 spacing 중복** — 2026-04-26 해소: `components/shared/InlineErrorBanner.tsx` 공통 컴포넌트 추출, HeroKPIError/NextStepPanelError/WorkflowTimelineError 3종 모두 교체 완료.
+- [x] **[2026-Q2 pr-17] 🟡 MEDIUM NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 상시화** — Sprint 1.4(2026-04-24) 완료. CheckoutDetailClient LegacyActionsBlock 제거, checkout-flags.ts 상시화, env 파일 변수 제거. CheckoutGroupCard.tsx 잔여 분기는 checkout-legacy-rental-flow-cleanup 항목으로 이연.
+- [x] **[2026-04-24 sprint-1.3] 🟡 MEDIUM checkout-role-canapprove-removal** — 2026-04-26 해소: `CheckoutGroupCard.tsx` `canApprove` prop 완전 제거, `yourTurnCount` legacy 분기 제거, `descriptor.availableToCurrentUser` 기반 YourTurnBadge 교체 완료. `OutboundCheckoutsTab.tsx` `can(Permission.APPROVE_CHECKOUT)` 호출 제거 완료.
+
+---
+
 ## 2026-04-22 — checkout-subtab-ia + subtab-ssot-fix 후속 (63261b0d + followup)
 
 ### 2026-04-22: subtab-ia tech-debt 4건 + verify/review 후속 3건 — WCAG / Select / QUERY_CONFIG / URL SSOT
