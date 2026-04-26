@@ -354,7 +354,7 @@ export default function OutboundCheckoutsTab({
 
   // 서브탭별 빈 상태 렌더링 함수
   const renderEmptyState = () => {
-    // overdue 필터 + summary.overdue === 0 → celebration variant (기한 초과 없음 축하)
+    // overdue 필터 + summary.overdue === 0 → celebration variant (overdueClear)
     if (filters.status === CSVal.OVERDUE && summary.overdue === 0) {
       return (
         <EmptyState
