@@ -8,7 +8,7 @@
  */
 
 import { INTERACTIVE_TOKENS, CONTENT_TOKENS } from '../semantic';
-import { toTailwindSize, toTailwindGap } from '../primitives';
+import { toTailwindSize, toTailwindGap } from '../utils';
 import { TRANSITION_PRESETS } from '../motion';
 
 /**

@@ -6,7 +6,7 @@
  */
 
 import { INTERACTIVE_TOKENS, FOCUS_TOKENS, ELEVATION_TOKENS, MICRO_TYPO } from '../semantic';
-import { toTailwindSize } from '../primitives';
+import { toTailwindSize } from '../utils';
 import { TRANSITION_PRESETS } from '../motion';
 
 /**

@@ -13,7 +13,7 @@
 
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { INTERACTIVE_TOKENS, FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
-import { toTailwindSize } from '../primitives';
+import { toTailwindSize } from '../utils';
 import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
