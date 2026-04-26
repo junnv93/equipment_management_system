@@ -34,11 +34,10 @@ import equipmentImportApi, { type EquipmentImport } from '@/lib/api/equipment-im
 import { EquipmentImportStatusBadge } from './EquipmentImportStatusBadge';
 import {
   type EquipmentImportStatus,
-  UserRoleValues as URVal,
   EquipmentImportStatusValues as EISVal,
   EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
@@ -58,7 +57,7 @@ interface Props {
 export default function EquipmentImportDetail({ id }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('equipment');
 
@@ -183,11 +182,7 @@ export default function EquipmentImportDetail({ id }: Props) {
 
   const status = equipmentImport.status as EquipmentImportStatus;
   const isRequester = user?.id === equipmentImport.requesterId;
-  const userRole = user?.roles?.[0];
-  const canApprove =
-    userRole === URVal.TECHNICAL_MANAGER ||
-    userRole === URVal.LAB_MANAGER ||
-    userRole === URVal.SYSTEM_ADMIN;
+  const canApprove = can(Permission.APPROVE_EQUIPMENT_IMPORT);
 
   const isRental = equipmentImport.sourceType === EISrcVal.RENTAL;
   const isInternalShared = equipmentImport.sourceType === EISrcVal.INTERNAL_SHARED;

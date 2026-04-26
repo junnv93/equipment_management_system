@@ -732,7 +732,6 @@ class ApprovalsApi {
   async approve(
     category: ApprovalCategory,
     id: string,
-    approverId: string,
     comment?: string,
     equipmentId?: string,
     originalData?: unknown
@@ -839,7 +838,6 @@ class ApprovalsApi {
   async reject(
     category: ApprovalCategory,
     id: string,
-    approverId: string,
     reason: string,
     equipmentId?: string,
     originalData?: unknown
@@ -938,7 +936,6 @@ class ApprovalsApi {
   async bulkApprove(
     category: ApprovalCategory,
     ids: string[],
-    approverId: string,
     comment?: string
   ): Promise<{ success: string[]; failed: string[] }> {
     const success: string[] = [];
@@ -956,7 +953,7 @@ class ApprovalsApi {
           equipmentId = item?.details?.equipmentId as string | undefined;
           originalData = item?.originalData;
         }
-        await this.approve(category, id, approverId, comment, equipmentId, originalData);
+        await this.approve(category, id, comment, equipmentId, originalData);
         success.push(id);
       } catch {
         failed.push(id);
@@ -975,7 +972,6 @@ class ApprovalsApi {
   async bulkReject(
     category: ApprovalCategory,
     ids: string[],
-    approverId: string,
     reason: string
   ): Promise<{ success: string[]; failed: string[] }> {
     const success: string[] = [];
@@ -993,7 +989,7 @@ class ApprovalsApi {
           equipmentId = item?.details?.equipmentId as string | undefined;
           originalData = item?.originalData;
         }
-        await this.reject(category, id, approverId, reason, equipmentId, originalData);
+        await this.reject(category, id, reason, equipmentId, originalData);
         success.push(id);
       } catch {
         failed.push(id);
