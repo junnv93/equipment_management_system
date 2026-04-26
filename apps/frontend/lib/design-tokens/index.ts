@@ -103,6 +103,7 @@ export {
   ROLE_CHIP_TOKENS,
   getRoleChipClasses,
   type RoleChipKey,
+  ALERT_TAB_BADGE_COLOR,
 } from './semantic';
 
 // ============================================================================

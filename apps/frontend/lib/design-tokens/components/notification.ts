@@ -16,7 +16,7 @@
  * @see ../visual-feedback.ts - SSOT for urgency-based feedback
  */
 
-import { MOTION_TOKENS, ELEVATION_TOKENS } from '../semantic';
+import { ALERT_TAB_BADGE_COLOR, MOTION_TOKENS, ELEVATION_TOKENS } from '../semantic';
 import { getStaggerDelay, ANIMATION_PRESETS, TRANSITION_PRESETS } from '../motion';
 import { getCountBasedUrgency, getUrgencyFeedbackClasses } from '../visual-feedback';
 import { PAGE_HEADER_TOKENS } from './page-layout';
@@ -214,8 +214,7 @@ export const NOTIFICATION_LIST_HEADER_TOKENS = {
 export const NOTIFICATION_LIST_FILTER_TOKENS = {
   filterRow: 'flex items-center justify-between flex-wrap gap-3',
   filterGroup: 'flex items-center gap-2',
-  tabBadge:
-    'ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground tabular-nums',
+  tabBadge: `ml-1 rounded-full ${ALERT_TAB_BADGE_COLOR} px-1.5 py-0.5 text-xs tabular-nums`,
   categorySelect: 'w-[130px]',
   searchInput: 'w-[200px]',
   tabContent: 'mt-4',

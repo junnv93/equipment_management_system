@@ -12,6 +12,7 @@
  */
 
 import {
+  ALERT_TAB_BADGE_COLOR,
   ELEVATION_TOKENS,
   FOCUS_TOKENS,
   MICRO_TYPO,
@@ -1015,5 +1016,5 @@ export const CHECKOUT_TAB_BADGE_TOKENS = {
   base: `ml-1 px-1.5 py-0.5 rounded-full ${MICRO_TYPO.badge} font-semibold leading-none tabular-nums`,
   active: 'bg-primary/15 text-primary',
   inactive: 'bg-muted text-muted-foreground',
-  alert: 'bg-destructive text-destructive-foreground',
+  alert: ALERT_TAB_BADGE_COLOR,
 } as const satisfies { base: string; active: string; inactive: string; alert: string };

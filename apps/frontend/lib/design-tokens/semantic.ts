@@ -449,6 +449,17 @@ export const MICRO_TYPO = {
 } as const;
 
 /**
+ * Alert Badge Color — 크로스 도메인 공유 시맨틱 색상
+ *
+ * 탭 카운트 배지의 "긴급 알림" 상태 색상 쌍.
+ * checkout / notification 등 여러 도메인의 도메인 토큰 파일이 이 값을 참조하여
+ * "destructive 계열 배지 색상" 변경 시 단일 지점 수정을 보장한다.
+ *
+ * 사용처: CHECKOUT_TAB_BADGE_TOKENS.alert, NOTIFICATION_LIST_FILTER_TOKENS.tabBadge
+ */
+export const ALERT_TAB_BADGE_COLOR = 'bg-destructive text-destructive-foreground' as const;
+
+/**
  * UI Dimension Tokens (UI 치수 토큰)
  *
  * globals.css @theme 등록 변수 기반 named Tailwind 유틸리티.
