@@ -460,10 +460,9 @@ export const EQUIPMENT_TABLE_TOKENS = {
   headerRow:
     'bg-brand-bg-elevated/80 border-b-2 border-brand-border-default [&_th]:sticky [&_th]:top-0 [&_th]:bg-brand-bg-elevated/95 [&_th]:z-10',
 
-  /** Row hover — AP-07 좌측 accent bar 효과 (inset box-shadow) + AP-08 다크모드 */
+  /** Row hover — AP-07 좌측 accent bar 효과 (inset box-shadow) */
   rowHover: [
     'hover:bg-brand-info/[0.03] hover:shadow-[inset_4px_0_0_hsl(var(--brand-color-info))]',
-    'dark:hover:bg-brand-info/[0.08]',
     TRANSITION_PRESETS.instantBg,
   ].join(' '),
 
@@ -803,8 +802,8 @@ export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
  * 하드코딩 dark: 클래스를 토큰으로 추출하여 AP-08 개선.
  */
 export const SHARED_EQUIPMENT_BANNER_TOKENS = {
-  alert: 'border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10',
-  icon: 'h-4 w-4 text-brand-info dark:text-brand-info',
+  alert: 'border-brand-info/20 bg-brand-info/5',
+  icon: 'h-4 w-4 text-brand-info',
 } as const;
 
 // ============================================================================

@@ -334,7 +334,7 @@ export const CALIBRATION_TABLE = {
 
   /** Row hover: accent bar (left inset shadow) + background */
   rowHover: [
-    'hover:bg-brand-info/[0.04] dark:hover:bg-brand-info/[0.06]',
+    'hover:bg-brand-info/[0.04]',
     'hover:shadow-[inset_3px_0_0_hsl(var(--brand-color-info))]',
     CALIBRATION_MOTION.tableRow,
   ].join(' '),
