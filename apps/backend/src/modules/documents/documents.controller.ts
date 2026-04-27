@@ -72,7 +72,7 @@ export class DocumentsController {
     },
   })
   @UseInterceptors(FileInterceptor('file'))
-  @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @RequirePermissions(Permission.UPLOAD_DOCUMENT)
   @AuditLog({ action: 'upload', entityType: 'document' })
   async uploadDocument(
     @UploadedFile() file: MulterFile,
@@ -102,7 +102,7 @@ export class DocumentsController {
     }
 
     // 도메인 격리 — NC 첨부는 전용 엔드포인트(`POST /non-conformances/:id/attachments`)만 사용.
-    // 범용 /documents에서 nonConformanceId 수신 시 permission 경계 우회 가능성(CREATE_EQUIPMENT만으로 NC 첨부).
+    // 범용 /documents(UPLOAD_DOCUMENT 권한)에서 nonConformanceId 수신 시 NC 전용 permission(UPLOAD_NON_CONFORMANCE_ATTACHMENT) 우회 가능성.
     // 400 + 명확한 메시지로 전용 경로 유도.
     if (nonConformanceId) {
       throw new BadRequestException({
