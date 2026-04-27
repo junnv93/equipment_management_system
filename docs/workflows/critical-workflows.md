@@ -893,6 +893,36 @@ ELLLX-NNN
 
 ---
 
+## WF-AP: 통합 승인 관리 워크플로우
+
+### WF-AP-03: 승인 철회 (Revoke Approval)
+
+**시나리오:** 기술책임자(TM)가 반출 승인 후 5분 이내에 승인을 취소하여 반출이 pending 상태로 롤백됨
+
+| #   | 단계             | 역할 | Route                                     | UI 액션               | UI 단서                                         |
+| --- | ---------------- | ---- | ----------------------------------------- | --------------------- | ----------------------------------------------- |
+| 1   | 반출 신청 생성   | TE   | `POST /api/checkouts`                     | 반출 신청             | 반출 상태 `pending`                             |
+| 2   | 반출 승인        | TM   | `PATCH /api/checkouts/:id/approve`        | 승인                  | 반출 상태 `approved`, `approvedAt` 기록됨       |
+| 3   | 즉시 철회 (성공) | TM   | `POST /api/checkouts/:id/revoke-approval` | 사유 입력 → 철회 확인 | 반출 상태 → `pending` 롤백, `approverId` 초기화 |
+| 4   | 감사 로그 확인   | -    | -                                         | -                     | `isRevocation: true` 마커 포함 감사 로그 생성   |
+
+**에러 시나리오:**
+
+| 시나리오                   | 에러 코드                   | 조건                                  |
+| -------------------------- | --------------------------- | ------------------------------------- |
+| 승인 상태가 아닌 경우 철회 | `INVALID_TRANSITION`        | `status !== 'approved'`               |
+| 5분 초과 철회 시도         | `REVOCATION_WINDOW_EXPIRED` | `Date.now() - approvedAt > 300_000ms` |
+| 타인의 승인 철회 시도      | `FORBIDDEN`                 | `checkout.approverId !== approverId`  |
+
+**제약:**
+
+- 5분 타임아웃(`REVOCATION_WINDOW_EXPIRED`) E2E 직접 검증 불가 → backend unit test 커버 (`checkouts.service.spec.ts`)
+- scope → FSM → domain 순서 보안 fail-close 원칙 준수 (scope 외 사용자에게 상태 노출 방지)
+
+**E2E 스펙:** `workflows/wf-ap03-revoke-approval.spec.ts`
+
+---
+
 ## UI 검증 매핑 (페이지 → WF)
 
 기존 WF-01~21 을 **진입 페이지 기준**으로 정리합니다. Playwright 또는 수동 회귀 시 이 표를 인덱스로 활용하세요.
@@ -959,3 +989,4 @@ ELLLX-NNN
 | **P3**   | WF-37 (모니터링)                   | 표시 + 자동 갱신                                                                  |
 | **P1**   | WF-AP01 (승인 mini stepper ARIA)   | totalApprovalSteps SSOT, role="progressbar" 균일 렌더, 단일단계 분수레이블 미노출 |
 | **P1**   | WF-AP02 (승인 일괄 반려)           | BulkActionBar aria-hidden 토글, RejectModal bulk 모드, 반려 완료 카운트 감소      |
+| **P1**   | WF-AP03 (승인 철회)                | 5분 이내 approved→pending 롤백, REVOCATION_WINDOW_EXPIRED, 본인 외 철회 차단      |
