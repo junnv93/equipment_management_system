@@ -302,9 +302,11 @@ export function NextStepPanel({
             )}
             aria-hidden="true"
           />
-          <span className="text-xs text-muted-foreground truncate max-w-[72px]">
-            {t(`action.${descriptor.labelKey}`)}
-          </span>
+          {!canAct && (
+            <span className="text-xs text-muted-foreground truncate max-w-[72px]">
+              {t(`action.${descriptor.labelKey}`)}
+            </span>
+          )}
 
           {canAct && (
             <button

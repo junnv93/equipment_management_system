@@ -194,11 +194,21 @@ export const InlineVariant: Story = {
   },
 };
 
-/** Compact variant — 좁은 공간용 */
-export const CompactVariant: Story = {
-  name: 'Variant — compact',
+/** Compact variant — canAct=true (내 차례, 액션 버튼만 표시) */
+export const CompactVariantCanAct: Story = {
+  name: 'Compact — canAct=true (버튼만)',
   args: {
     descriptor: APPROVED_DESCRIPTOR,
+    variant: 'compact',
+    onActionClick: () => {},
+  },
+};
+
+/** Compact variant — canAct=false (내 차례 아님, 라벨만 표시) */
+export const CompactVariantNoAct: Story = {
+  name: 'Compact — canAct=false (라벨만)',
+  args: {
+    descriptor: PENDING_DESCRIPTOR,
     variant: 'compact',
   },
 };
