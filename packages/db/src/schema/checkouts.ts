@@ -62,6 +62,10 @@ export const checkouts = pgTable(
     status: varchar('status', { length: 50 }).$type<CheckoutStatus>().notNull().default('pending'),
     approvedAt: timestamp('approved_at'), // 승인 시간
     rejectionReason: text('rejection_reason'), // 반려 사유 (반려 시 필수)
+    // terminal 종료 직전 상태 — reject/cancel/borrower_reject 전환 시 기록.
+    // computeReachedStepIndex()에서 "어느 단계에서 종료됐는가"를 복원하는 데 사용.
+    // null = active 상태 또는 legacy row (getNextStep fallback = currentStepIndex).
+    terminatedFromStatus: varchar('terminated_from_status', { length: 50 }).$type<CheckoutStatus>(),
 
     // 반입 검사 정보
     calibrationChecked: boolean('calibration_checked').default(false), // 교정 확인 여부

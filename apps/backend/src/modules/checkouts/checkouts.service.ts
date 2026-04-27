@@ -263,6 +263,7 @@ export class CheckoutsService extends VersionedBaseService {
         status: checkout.status,
         purpose: checkout.purpose as CheckoutPurpose,
         dueAt: checkout.expectedReturnDate?.toISOString() ?? null,
+        terminatedFromStatus: (checkout.terminatedFromStatus as CheckoutStatus) ?? null,
       },
       userPermissions
     );
@@ -880,6 +881,29 @@ export class CheckoutsService extends VersionedBaseService {
         currentPage: Number(page),
       },
     };
+  }
+
+  async getPendingChecksCount(userId: string, userTeamId: string | undefined): Promise<number> {
+    const lenderStatuses = [CSVal.APPROVED, CSVal.BORROWER_RETURNED];
+    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.BORROWER_RECEIVED, CSVal.IN_USE];
+
+    const lenderCondition = userTeamId
+      ? and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))
+      : undefined;
+    const borrowerCondition = and(
+      eq(checkouts.requesterId, userId),
+      inArray(checkouts.status, borrowerStatuses)
+    );
+    const whereClause = and(
+      eq(checkouts.purpose, CPVal.RENTAL),
+      lenderCondition ? or(lenderCondition, borrowerCondition)! : borrowerCondition!
+    );
+
+    const [row] = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(checkouts)
+      .where(whereClause);
+    return Number(row?.count ?? 0);
   }
 
   private emptyListResponse(page: number, pageSize: number, totalItems = 0): CheckoutListResponse {
@@ -1926,6 +1950,7 @@ export class CheckoutsService extends VersionedBaseService {
         {
           borrowerApproverId: dto.approverId,
           borrowerRejectionReason: dto.reason.trim(),
+          terminatedFromStatus: checkout.status,
         }
       );
 
@@ -2013,6 +2038,7 @@ export class CheckoutsService extends VersionedBaseService {
         {
           approverId: rejectDto.approverId,
           rejectionReason: rejectDto.reason.trim(),
+          terminatedFromStatus: checkout.status,
         }
       );
 
@@ -2798,7 +2824,8 @@ export class CheckoutsService extends VersionedBaseService {
       const updated = await this.updateCheckoutStatus(
         uuid,
         { ...checkout, version },
-        CSVal.CANCELED as CheckoutStatus
+        CSVal.CANCELED as CheckoutStatus,
+        { terminatedFromStatus: checkout.status }
       );
 
       // 렌탈 반납 목적 checkout 취소 시 import 상태 롤백 콜백

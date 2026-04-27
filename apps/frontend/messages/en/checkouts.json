@@ -174,7 +174,9 @@
     "appearanceStatus": "Appearance Status",
     "operationStatus": "Operation Status",
     "accessoriesStatus": "Accessories Status",
-    "workflowTimeline": "Workflow Steps"
+    "workflowTimeline": "Workflow Steps",
+    "ddayLabel": "Return {dday} ({date})",
+    "ddaySrLabel": "{days} days until return date"
   },
   "returnInspection": {
     "purposeLabel": "Checkout Purpose:",
@@ -290,6 +292,10 @@
       "normal": "Normal",
       "warning": "Warning",
       "critical": "Critical"
+    },
+    "yourTurn": {
+      "label": "Your Turn",
+      "ariaLabel": "Your turn"
     }
   },
   "condition": {
@@ -645,6 +651,36 @@
     "overdueClear": {
       "title": "No Overdue Checkouts",
       "description": "All checkouts are within their return dates"
+    },
+    "noneYet": {
+      "title": "No Checkouts Yet",
+      "description": "Submit a checkout request to track equipment movement here.",
+      "primaryCta": "New Checkout",
+      "secondaryCta": ""
+    },
+    "noPermission": {
+      "title": "Access Restricted",
+      "description": "Your current role does not have access to the checkout list.",
+      "primaryCta": "",
+      "secondaryCta": ""
+    },
+    "noFilterResult": {
+      "title": "No Results",
+      "description": "Try adjusting your filters or search term.",
+      "primaryCta": "Reset Filters",
+      "secondaryCta": ""
+    },
+    "error": {
+      "title": "Failed to Load Checkouts",
+      "description": "A temporary error occurred. Please try again shortly.",
+      "primaryCta": "Retry",
+      "secondaryCta": "Go Home"
+    },
+    "network": {
+      "title": "No Internet Connection",
+      "description": "Check your network connection and try again.",
+      "primaryCta": "Retry",
+      "secondaryCta": ""
     }
   },
   "yourTurn": {
@@ -806,5 +842,22 @@
     "downloadBoth": "Download Both Forms",
     "lenderDescription": "For lending team (Checkout → Return order)",
     "borrowerDescription": "For borrowing team (Receipt → Return order)"
+  },
+  "rentalPhase": {
+    "ariaLabel": "Phase {current} of {total}",
+    "xOfY": "Phase {current}/{total}",
+    "expandAll": "View all steps",
+    "collapseAll": "Collapse steps",
+    "viewSteps": "View steps",
+    "waiting": "{n} steps waiting",
+    "approve": {
+      "label": "Approval"
+    },
+    "handover": {
+      "label": "Handover"
+    },
+    "return": {
+      "label": "Return"
+    }
   }
 }

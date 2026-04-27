@@ -9,6 +9,8 @@ import {
   computeStepIndex,
   computeTotalSteps,
   computeUrgency,
+  computeReachedStepIndex,
+  roleToActorVariant,
 } from '../fsm/checkout-fsm';
 import type { CheckoutStatus, CheckoutPurpose } from '../enums/checkout';
 
@@ -498,5 +500,136 @@ describe('NextStepDescriptorSchema', () => {
       TECHNICAL_MANAGER_PERMS
     );
     expect(NextStepDescriptorSchema.safeParse(missing).success).toBe(false);
+  });
+
+  it('validates descriptor includes reachedStepIndex', () => {
+    const descriptor = getNextStep(
+      { status: 'pending', purpose: 'rental' },
+      TECHNICAL_MANAGER_PERMS
+    );
+    expect(typeof descriptor.reachedStepIndex).toBe('number');
+    expect(NextStepDescriptorSchema.safeParse(descriptor).success).toBe(true);
+  });
+});
+
+// ============================================================================
+// computeReachedStepIndex
+// ============================================================================
+
+describe('computeReachedStepIndex — non-terminal states', () => {
+  const cases: Array<[CheckoutStatus, CheckoutPurpose, number]> = [
+    ['pending', 'calibration', 1],
+    ['approved', 'calibration', 2],
+    ['checked_out', 'calibration', 3],
+    ['returned', 'calibration', 4],
+    ['return_approved', 'calibration', 5],
+    ['pending', 'rental', 1],
+    ['borrower_approved', 'rental', 2],
+    ['approved', 'rental', 3],
+    ['in_use', 'rental', 6],
+  ];
+
+  it.each(cases)(
+    'non-terminal: computeReachedStepIndex(%s, %s) === computeStepIndex result %d',
+    (status, purpose, expected) => {
+      expect(computeReachedStepIndex(status, purpose)).toBe(expected);
+    }
+  );
+});
+
+describe('computeReachedStepIndex — terminal states with terminatedFromStatus', () => {
+  it('rejected (rental) from borrower_approved → step 2', () => {
+    expect(computeReachedStepIndex('rejected', 'rental', 'borrower_approved')).toBe(2);
+  });
+
+  it('rejected (rental) from pending → step 1', () => {
+    expect(computeReachedStepIndex('rejected', 'rental', 'pending')).toBe(1);
+  });
+
+  it('rejected (calibration) from pending → step 1', () => {
+    expect(computeReachedStepIndex('rejected', 'calibration', 'pending')).toBe(1);
+  });
+
+  it('canceled (rental) from approved → step 3', () => {
+    expect(computeReachedStepIndex('canceled', 'rental', 'approved')).toBe(3);
+  });
+
+  it('canceled (rental) from borrower_approved → step 2', () => {
+    expect(computeReachedStepIndex('canceled', 'rental', 'borrower_approved')).toBe(2);
+  });
+
+  it('canceled (calibration) from approved → step 2', () => {
+    expect(computeReachedStepIndex('canceled', 'calibration', 'approved')).toBe(2);
+  });
+
+  it('canceled (calibration) from pending → step 1', () => {
+    expect(computeReachedStepIndex('canceled', 'calibration', 'pending')).toBe(1);
+  });
+});
+
+describe('computeReachedStepIndex — terminal states without terminatedFromStatus (legacy fallback)', () => {
+  it('rejected (rental) no terminatedFromStatus → fallback to computeStepIndex = 1', () => {
+    expect(computeReachedStepIndex('rejected', 'rental')).toBe(1);
+    expect(computeReachedStepIndex('rejected', 'rental', null)).toBe(1);
+    expect(computeReachedStepIndex('rejected', 'rental', undefined)).toBe(1);
+  });
+
+  it('canceled (calibration) no terminatedFromStatus → fallback = 1', () => {
+    expect(computeReachedStepIndex('canceled', 'calibration')).toBe(1);
+  });
+});
+
+describe('computeReachedStepIndex — getNextStep integration', () => {
+  it('getNextStep with terminatedFromStatus populates reachedStepIndex correctly', () => {
+    const result = getNextStep(
+      { status: 'rejected', purpose: 'rental', terminatedFromStatus: 'borrower_approved' },
+      []
+    );
+    expect(result.reachedStepIndex).toBe(2);
+    expect(result.currentStepIndex).toBe(1); // 기존 매핑 보존
+  });
+
+  it('getNextStep without terminatedFromStatus uses legacy fallback', () => {
+    const result = getNextStep({ status: 'rejected', purpose: 'rental' }, []);
+    expect(result.reachedStepIndex).toBe(1);
+  });
+
+  it('getNextStep non-terminal reachedStepIndex === currentStepIndex', () => {
+    const result = getNextStep(
+      { status: 'borrower_approved', purpose: 'rental' },
+      TECHNICAL_MANAGER_PERMS
+    );
+    expect(result.reachedStepIndex).toBe(result.currentStepIndex);
+  });
+});
+
+// ============================================================================
+// roleToActorVariant
+// ============================================================================
+
+describe('roleToActorVariant', () => {
+  it('test_engineer → requester', () => {
+    expect(roleToActorVariant('test_engineer')).toBe('requester');
+  });
+
+  it('quality_manager → approver', () => {
+    expect(roleToActorVariant('quality_manager')).toBe('approver');
+  });
+
+  it('lab_manager → approver', () => {
+    expect(roleToActorVariant('lab_manager')).toBe('approver');
+  });
+
+  it('technical_manager → receiver', () => {
+    expect(roleToActorVariant('technical_manager')).toBe('receiver');
+  });
+
+  it('system_admin → null', () => {
+    expect(roleToActorVariant('system_admin')).toBeNull();
+  });
+
+  it('unknown role → null', () => {
+    expect(roleToActorVariant('visitor')).toBeNull();
+    expect(roleToActorVariant('')).toBeNull();
   });
 });

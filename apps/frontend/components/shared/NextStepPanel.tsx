@@ -1,14 +1,17 @@
 'use client';
 
-import { CheckCircle2, Loader2, MoreHorizontal } from 'lucide-react';
+import { Bell, CheckCircle2, Loader2, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type {
+  ActorVariant,
   CheckoutAction,
   NextStepDescriptor,
   NextActor,
+  Urgency,
   UserRole,
 } from '@equipment-management/schemas';
+import { roleToActorVariant } from '@equipment-management/schemas';
 
 import {
   DropdownMenu,
@@ -22,6 +25,7 @@ import {
   ANIMATION_PRESETS,
   REDUCED_MOTION,
   MENU_ITEM_TOKENS,
+  CHECKOUT_YOUR_TURN_BADGE_TOKENS,
 } from '@/lib/design-tokens';
 import { useOnboardingHint } from '@/hooks/use-onboarding-hint';
 import { cn } from '@/lib/utils';
@@ -35,8 +39,6 @@ export interface OverflowAction {
   onClick: () => void;
   variant?: 'default' | 'destructive';
 }
-
-type ActorVariant = 'requester' | 'approver' | 'receiver';
 
 interface NextStepPanelProps {
   descriptor: NextStepDescriptor;
@@ -69,6 +71,29 @@ function resolveActorVariant(nextActor: NextActor): ActorVariant {
   }
 }
 
+/**
+ * "내 차례" 뱃지 — 현재 사용자가 처리해야 하는 단계임을 시각적으로 표시.
+ * urgency에 따라 색상 분기. terminal 분기에서는 렌더 안 됨.
+ */
+function YourTurnBadge({ urgency }: { urgency: Urgency }) {
+  const t = useTranslations('checkouts.fsm');
+  return (
+    <span
+      role="status"
+      aria-label={t('yourTurn.ariaLabel')}
+      className={cn(
+        CHECKOUT_YOUR_TURN_BADGE_TOKENS.base,
+        CHECKOUT_YOUR_TURN_BADGE_TOKENS.variant[urgency]
+      )}
+      data-testid="your-turn-badge"
+      data-urgency={urgency}
+    >
+      <Bell className={CHECKOUT_YOUR_TURN_BADGE_TOKENS.icon} aria-hidden="true" />
+      {t('yourTurn.label')}
+    </span>
+  );
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -86,7 +111,7 @@ function resolveActorVariant(nextActor: NextActor): ActorVariant {
 export function NextStepPanel({
   descriptor,
   variant = 'inline',
-  currentUserRole: _currentUserRole,
+  currentUserRole,
   onActionClick,
   isPending = false,
   overflowActions,
@@ -102,6 +127,13 @@ export function NextStepPanel({
   const isHero = variant === 'hero';
   const isCompact = variant === 'compact';
   const canAct = descriptor.availableToCurrentUser && !isPending;
+
+  // 내 차례 판정 — system_admin은 availableToCurrentUser로 판단 (전체 역할 겸임)
+  const userActorVariant = currentUserRole ? roleToActorVariant(currentUserRole) : null;
+  const isMyTurn =
+    currentUserRole === 'system_admin'
+      ? descriptor.availableToCurrentUser
+      : userActorVariant !== null && userActorVariant === actorVariant;
 
   // ── Terminal state ─────────────────────────────────────────────────────────
   if (descriptor.nextAction === null) {
@@ -129,6 +161,7 @@ export function NextStepPanel({
         className={terminalContainerClass}
         data-variant={variant}
         data-actor-variant={actorVariant}
+        data-my-turn="false"
         data-testid={testId}
       >
         <span className={NEXT_STEP_PANEL_TOKENS.terminal.badge}>
@@ -163,6 +196,7 @@ export function NextStepPanel({
         )}
         data-variant="hero"
         data-actor-variant={actorVariant}
+        data-my-turn={isMyTurn ? 'true' : 'false'}
         data-testid={testId}
       >
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -175,6 +209,7 @@ export function NextStepPanel({
               aria-hidden="true"
             />
             <h2 className={WORKFLOW_PANEL_TOKENS.variant.hero.heading}>{t('panelTitle')}</h2>
+            {isMyTurn && <YourTurnBadge urgency={urgency} />}
           </div>
           <span className={NEXT_STEP_PANEL_TOKENS.labels.actor}>
             {t(`actor.${descriptor.nextActor}`)}
@@ -241,9 +276,23 @@ export function NextStepPanel({
         )}
         data-variant="compact"
         data-actor-variant={actorVariant}
+        data-my-turn={isMyTurn ? 'true' : 'false'}
         data-testid={testId}
       >
-        <h3 className={WORKFLOW_PANEL_TOKENS.variant.compact.heading}>{t('panelTitle')}</h3>
+        <div className="flex items-center gap-1">
+          <h3 className={WORKFLOW_PANEL_TOKENS.variant.compact.heading}>{t('panelTitle')}</h3>
+          {isMyTurn && (
+            <span
+              role="status"
+              aria-label={t('yourTurn.ariaLabel')}
+              className={CHECKOUT_YOUR_TURN_BADGE_TOKENS.summary.container}
+              data-testid="your-turn-badge"
+              data-urgency={urgency}
+            >
+              ●
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-1.5">
           <span
@@ -328,8 +377,10 @@ export function NextStepPanel({
       className={containerClasses}
       data-variant={variant}
       data-actor-variant={actorVariant}
+      data-my-turn={isMyTurn ? 'true' : 'false'}
       data-testid={testId}
     >
+      {isMyTurn && <YourTurnBadge urgency={urgency} />}
       <p className={NEXT_STEP_PANEL_TOKENS.labels.current}>{stepLabel}</p>
       <p className={cn(NEXT_STEP_PANEL_TOKENS.labels.hint, 'mt-0.5')}>
         {t(`hint.${descriptor.hintKey}`)}

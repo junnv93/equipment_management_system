@@ -174,7 +174,9 @@
     "appearanceStatus": "외관 상태",
     "operationStatus": "작동 상태",
     "accessoriesStatus": "부속품 상태",
-    "workflowTimeline": "진행 단계"
+    "workflowTimeline": "진행 단계",
+    "ddayLabel": "반납 {dday} ({date})",
+    "ddaySrLabel": "반납 예정일까지 {days}일"
   },
   "returnInspection": {
     "purposeLabel": "반출 목적:",
@@ -290,6 +292,10 @@
       "normal": "일반",
       "warning": "주의",
       "critical": "긴급"
+    },
+    "yourTurn": {
+      "label": "내 차례",
+      "ariaLabel": "내 차례"
     }
   },
   "condition": {
@@ -645,6 +651,36 @@
     "overdueClear": {
       "title": "기한 초과 없음",
       "description": "현재 기한이 초과된 반출 건이 없습니다"
+    },
+    "noneYet": {
+      "title": "아직 반출 내역이 없습니다",
+      "description": "반출 신청을 등록하면 여기에서 현황을 확인할 수 있습니다.",
+      "primaryCta": "반출 신청",
+      "secondaryCta": ""
+    },
+    "noPermission": {
+      "title": "반출 현황을 볼 수 없습니다",
+      "description": "현재 역할로는 반출 목록에 접근할 권한이 없습니다.",
+      "primaryCta": "",
+      "secondaryCta": ""
+    },
+    "noFilterResult": {
+      "title": "검색 결과가 없습니다",
+      "description": "필터 조건을 변경하거나 검색어를 수정해보세요.",
+      "primaryCta": "필터 초기화",
+      "secondaryCta": ""
+    },
+    "error": {
+      "title": "반출 목록을 불러오지 못했습니다",
+      "description": "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+      "primaryCta": "다시 시도",
+      "secondaryCta": "홈으로"
+    },
+    "network": {
+      "title": "네트워크 연결을 확인해주세요",
+      "description": "인터넷 연결이 끊어졌습니다. 연결 후 다시 시도하세요.",
+      "primaryCta": "다시 시도",
+      "secondaryCta": ""
     }
   },
   "yourTurn": {
@@ -806,5 +842,22 @@
     "downloadBoth": "양식 모두 다운로드",
     "lenderDescription": "빌려주는 팀 작성용 (반출→반입 순서)",
     "borrowerDescription": "빌리는 팀 작성용 (반입→반출 순서)"
+  },
+  "rentalPhase": {
+    "ariaLabel": "현재 {current}단계 (전체 {total}단계)",
+    "xOfY": "Phase {current}/{total}",
+    "expandAll": "전체 단계 보기",
+    "collapseAll": "단계 접기",
+    "viewSteps": "단계 보기",
+    "waiting": "{n}단계 대기",
+    "approve": {
+      "label": "승인"
+    },
+    "handover": {
+      "label": "반출·인수"
+    },
+    "return": {
+      "label": "반납"
+    }
   }
 }

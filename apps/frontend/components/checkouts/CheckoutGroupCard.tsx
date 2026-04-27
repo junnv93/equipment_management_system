@@ -14,11 +14,13 @@ import { cn } from '@/lib/utils';
 import { AlertTriangle, CalendarDays, Building, ChevronDown, CheckCheck } from 'lucide-react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
+import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndicator';
 import { NextStepPanel, type OverflowAction } from '@/components/shared/NextStepPanel';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
+import { queryKeys } from '@/lib/api/query-config';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
@@ -37,7 +39,7 @@ import {
   CHECKOUT_INTERACTION_TOKENS,
   CHECKOUT_YOUR_TURN_BADGE_TOKENS,
   getPurposeBarClass,
-  getDdayClasses,
+  getDdayBadgeClasses,
   formatDday,
   FONT,
   getManagementNumberClasses,
@@ -167,8 +169,10 @@ function CheckoutGroupCard({
     onSuccess: (_data, variables) => {
       notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName ?? '' }, t);
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
       if (isConflictError(error)) {
+        // CAS 409: detail 캐시 즉시 제거 → 재시도 시 fresh version 조회 보장
+        queryClient.removeQueries({ queryKey: queryKeys.checkouts.resource.detail(variables.id) });
         toast({
           title: t('toasts.versionConflict'),
           description: t('toasts.versionConflictDesc'),
@@ -288,7 +292,10 @@ function CheckoutGroupCard({
                 </div>
 
                 {isRentalGroup && rentalStatus && rentalDescriptor && (
-                  <NextStepPanel variant="compact" descriptor={rentalDescriptor} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CheckoutPhaseIndicator descriptor={rentalDescriptor} variant="compact" />
+                    <NextStepPanel variant="compact" descriptor={rentalDescriptor} />
+                  </div>
                 )}
               </button>
             </CollapsibleTrigger>
@@ -402,7 +409,7 @@ function CheckoutGroupCard({
                         />
                         {daysRemaining !== null && (
                           <span
-                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getDdayClasses(daysRemaining)}`}
+                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getDdayBadgeClasses(daysRemaining)}`}
                           >
                             {formatDday(daysRemaining)}
                           </span>

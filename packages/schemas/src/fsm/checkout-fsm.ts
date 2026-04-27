@@ -46,6 +46,13 @@ export type NextActor =
   | 'system'
   | 'none';
 
+/**
+ * UI 표현용 actor 3-way 그루핑 (SSOT).
+ * NextActor(FSM 워크플로 시점)와 분리: ActorVariant는 화면 컬러·뱃지 분류 전용.
+ * 소비처: NextStepPanel.tsx (resolveActorVariant), roleToActorVariant()
+ */
+export type ActorVariant = 'requester' | 'approver' | 'receiver';
+
 export type Urgency = 'normal' | 'warning' | 'critical';
 
 /**
@@ -98,6 +105,16 @@ export interface NextStepDescriptor {
   readonly phaseIndex: number | null;
   /** rental=3, non-rental=null. */
   readonly totalPhases: 3 | null;
+  /**
+   * 도달 단계 — terminal 상태에서도 "마지막으로 도달한 step"을 의미론적으로 반영.
+   * 비-terminal: currentStepIndex와 동일.
+   * terminal + terminatedFromStatus 있음: computeStepIndex(terminatedFromStatus, purpose).
+   * terminal + terminatedFromStatus 없음: currentStepIndex (legacy row fallback = 1).
+   *
+   * UI 소비처: 반려/취소 시 "X단계에서 종료됨" 표시 (Stage 2: CheckoutStatusStepper 업데이트 시).
+   * API 소비처: 현재 서버 응답에 포함되어 frontend hook의 nextStep pathway로 전달.
+   */
+  readonly reachedStepIndex: number;
 }
 
 // ============================================================================
@@ -137,6 +154,7 @@ export const NextStepDescriptorSchema: z.ZodType<NextStepDescriptor> = z.object(
   phase: z.enum(RENTAL_PHASES).nullable(),
   phaseIndex: z.number().int().min(0).max(2).nullable(),
   totalPhases: z.literal(3).nullable(),
+  reachedStepIndex: z.number().int().positive(),
 });
 
 // ============================================================================
@@ -525,6 +543,53 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
   return map[status];
 }
 
+/**
+ * Terminal 상태(rejected, canceled)에서 "마지막으로 도달한 step" 복원.
+ *
+ * 기존 computeStepIndex의 `rejected: 1, canceled: 1` 매핑은 호환성·snapshot 보존을 위해 유지.
+ * 이 함수는 `terminatedFromStatus`(reject/cancel 직전 상태)를 활용해 실제 도달 단계를 반환.
+ *
+ * - 비-terminal 상태: computeStepIndex(status, purpose) 그대로 반환
+ * - terminal + terminatedFromStatus 제공: computeStepIndex(terminatedFromStatus, purpose)
+ * - terminal + terminatedFromStatus 없음: computeStepIndex(status, purpose) — legacy fallback (=1)
+ */
+export function computeReachedStepIndex(
+  status: CheckoutStatus,
+  purpose: CheckoutPurpose,
+  terminatedFromStatus?: CheckoutStatus | null
+): number {
+  if ((status === 'rejected' || status === 'canceled') && terminatedFromStatus) {
+    return computeStepIndex(terminatedFromStatus, purpose);
+  }
+  return computeStepIndex(status, purpose);
+}
+
+/**
+ * UserRole → ActorVariant 매핑 SSOT.
+ *
+ * string 타입으로 받아 순환 의존성 회피 (schemas는 UserRoleEnum을 직접 import 하지 않음).
+ * 호출자가 UserRole 타입의 값을 string literal로 전달.
+ *
+ * - test_engineer  → 'requester' (반출 신청·진행 측)
+ * - quality_manager / lab_manager → 'approver' (검토·승인 측)
+ * - technical_manager → 'receiver' (logistics + lender 양측 활동, 수령·인도 책임)
+ * - system_admin → null (특정 본분 없음, availableToCurrentUser 기반 별도 판단)
+ * - unknown → null
+ */
+export function roleToActorVariant(role: string): ActorVariant | null {
+  switch (role) {
+    case 'test_engineer':
+      return 'requester';
+    case 'quality_manager':
+    case 'lab_manager':
+      return 'approver';
+    case 'technical_manager':
+      return 'receiver';
+    default:
+      return null;
+  }
+}
+
 export function computeUrgency(
   checkout: Pick<{ status: CheckoutStatus; dueAt?: string | null }, 'status' | 'dueAt'>
 ): Urgency {
@@ -574,12 +639,22 @@ export function canPerformAction(
  */
 export function getNextStep(
   checkout: Pick<
-    { status: CheckoutStatus; purpose: CheckoutPurpose; dueAt?: string | null },
-    'status' | 'purpose' | 'dueAt'
+    {
+      status: CheckoutStatus;
+      purpose: CheckoutPurpose;
+      dueAt?: string | null;
+      terminatedFromStatus?: CheckoutStatus | null;
+    },
+    'status' | 'purpose' | 'dueAt' | 'terminatedFromStatus'
   >,
   userPermissions: readonly string[]
 ): NextStepDescriptor {
   const currentStepIndex = computeStepIndex(checkout.status, checkout.purpose);
+  const reachedStepIndex = computeReachedStepIndex(
+    checkout.status,
+    checkout.purpose,
+    checkout.terminatedFromStatus
+  );
   const totalSteps = computeTotalSteps(checkout.purpose);
   const urgency = computeUrgency(checkout);
   const phase = getRentalPhase(checkout.status, checkout.purpose);
@@ -603,6 +678,7 @@ export function getNextStep(
       phase,
       phaseIndex,
       totalPhases,
+      reachedStepIndex,
     };
   }
 
@@ -629,6 +705,7 @@ export function getNextStep(
       phase,
       phaseIndex,
       totalPhases,
+      reachedStepIndex,
     };
   }
 
@@ -650,5 +727,6 @@ export function getNextStep(
     phase,
     phaseIndex,
     totalPhases,
+    reachedStepIndex,
   };
 }
