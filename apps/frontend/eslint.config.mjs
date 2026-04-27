@@ -97,10 +97,16 @@ const eslintConfig = [
       },
     },
   },
-  // @deprecated 토큰 회귀 방지 가드 — design-tokens 스코프로 한정 (typed linting 비용 최소화)
+  // @deprecated 토큰 회귀 방지 가드 (typed linting — 점진 확장)
+  // 스코프 1: design-tokens 내부 — 토큰 간 상호 deprecated 참조 방지
+  // 스코프 2: checkout 컴포넌트/페이지 — deprecated checkout 토큰 소비처 방지
   // index.ts 제외: 배럴 파일은 하위호환 유지를 위해 의도적으로 deprecated 심볼을 re-export
   {
-    files: ['lib/design-tokens/**/*.ts'],
+    files: [
+      'lib/design-tokens/**/*.ts',
+      'components/checkouts/**/*.{ts,tsx}',
+      'app/(dashboard)/checkouts/**/*.{ts,tsx}',
+    ],
     ignores: ['lib/design-tokens/index.ts'],
     languageOptions: {
       parser: tsParser,

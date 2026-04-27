@@ -416,7 +416,7 @@ export default function OutboundCheckoutsTab({
         role="tabpanel"
         aria-labelledby={`subtab-trigger-${filters.subTab}`}
       >
-        <div className="space-y-3">
+        <div className={SECTION_RHYTHM_TOKENS.tight}>
           {checkoutsLoading ? (
             <CheckoutListSkeleton label={t('loading.outbound')} srOnly={t('loading.outboundSr')} />
           ) : checkoutsError ? (

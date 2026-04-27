@@ -229,7 +229,7 @@ export default function CreateCheckoutContent() {
   };
 
   // 반출 신청 제출 처리
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (selectedEquipments.length === 0) {

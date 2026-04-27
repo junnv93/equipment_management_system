@@ -206,7 +206,7 @@ export interface CreateCheckoutDto {
   purpose: UserSelectableCheckoutPurpose;
   reason: string; // ✅ 백엔드 필수 필드 추가
   expectedReturnDate: string; // ISO 형식
-  notes?: string; // ✅ 백엔드에는 notes 필드가 없지만, reason에 포함 가능
+  notes?: string;
   lenderTeamId?: string; // 외부 대여 시 빌려주는 팀 ID
   lenderSiteId?: string; // 외부 대여 시 빌려주는 사이트 ID
   // startDate는 백엔드에서 자동 설정되므로 프론트엔드에서 보내지 않음
