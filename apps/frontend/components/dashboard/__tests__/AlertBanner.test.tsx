@@ -128,9 +128,9 @@ describe('AlertBanner', () => {
       expect(screen.getByText('info.upcomingCalibrations:3')).toBeInTheDocument();
     });
 
-    it('info 상태는 role="alert"를 가진다', () => {
+    it('info 상태는 role="status"를 가진다 (polite — 긴급 인터럽트 불필요)', () => {
       render(<AlertBanner {...BASE_PROPS} upcomingCalibrationCount={3} />);
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toBeInTheDocument();
     });
   });
 

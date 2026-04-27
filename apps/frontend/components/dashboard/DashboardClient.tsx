@@ -44,6 +44,7 @@ import {
   getPageContainerClasses,
   DASHBOARD_ENTRANCE as E,
   DASHBOARD_MOTION,
+  DASHBOARD_SKELETON_MIN_H as SK,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -51,38 +52,38 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 // AP-16: below-the-fold 컴포넌트 동적 임포트 (First Load JS -15~30KB)
 const PendingApprovalCard = dynamic(
   () => import('@/components/dashboard/PendingApprovalCard').then((m) => m.PendingApprovalCard),
-  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const RecentActivities = dynamic(
   () => import('@/components/dashboard/RecentActivities').then((m) => m.RecentActivities),
-  { ssr: true, loading: () => <Skeleton className="min-h-[16rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.lg} rounded-lg`} /> }
 );
 const OverdueCheckoutsCard = dynamic(
   () => import('@/components/dashboard/OverdueCheckoutsCard').then((m) => m.OverdueCheckoutsCard),
-  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const TeamEquipmentDistribution = dynamic(
   () =>
     import('@/components/dashboard/TeamEquipmentDistribution').then(
       (m) => m.TeamEquipmentDistribution
     ),
-  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 const CalibrationDdayList = dynamic(
   () => import('@/components/dashboard/CalibrationDdayList').then((m) => m.CalibrationDdayList),
-  { ssr: true, loading: () => <Skeleton className="min-h-[12rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const MiniCalendar = dynamic(
   () => import('@/components/dashboard/MiniCalendar').then((m) => m.MiniCalendar),
-  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 const SystemHealthCard = dynamic(
   () => import('@/components/dashboard/SystemHealthCard').then((m) => m.SystemHealthCard),
-  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 const MyActivityCard = dynamic(
   () => import('@/components/dashboard/MyActivityCard').then((m) => m.MyActivityCard),
-  { ssr: true, loading: () => <Skeleton className="min-h-[10rem] rounded-lg" /> }
+  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 
 // 사이드바 위젯 렌더러 props 타입
@@ -347,7 +348,11 @@ function DashboardClientComponent({
               )}
             >
               {controlCenter.showMyActivity && session?.user?.id && (
-                <MyActivityCard userId={session.user.id} recentActivities={recentActivities} />
+                <MyActivityCard
+                  userId={session.user.id}
+                  userName={session.user.name ?? undefined}
+                  recentActivities={recentActivities}
+                />
               )}
             </div>
           ) : (

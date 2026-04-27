@@ -879,3 +879,17 @@ export const DASHBOARD_ENTRANCE = {
     row4Delay: 'motion-reduce:[animation-delay:0ms] [animation-delay:320ms]',
   },
 } as const;
+
+// ============================================================================
+// 22. DASHBOARD_SKELETON_MIN_H — dynamic() 로딩 폴백 Skeleton 높이 SSOT
+// ============================================================================
+
+/** AP-16 next/dynamic Skeleton 폴백 최소 높이 — 컴포넌트별 CLS 방지 */
+export const DASHBOARD_SKELETON_MIN_H = {
+  /** 소형 위젯: TeamDist, MiniCalendar, SystemHealth, MyActivity */
+  sm: 'min-h-[10rem]',
+  /** 중형 위젯: PendingApproval, OverdueCheckouts, CalibrationDday */
+  md: 'min-h-[12rem]',
+  /** 대형 위젯: RecentActivities */
+  lg: 'min-h-[16rem]',
+} as const;

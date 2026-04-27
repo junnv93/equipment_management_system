@@ -84,8 +84,11 @@ function InlineVariant({
           ? T.severityBorder.info
           : T.severityBorder.none;
 
+  // info/none은 긴급 인터럽트 불필요 → role="status" (polite), critical/warning은 role="alert" (assertive)
+  const ariaRole = severity === 'info' || severity === 'none' ? 'status' : 'alert';
+
   return (
-    <div className={cn(T.container, borderClass)} role="alert" aria-label={t('ariaLabel')}>
+    <div className={cn(T.container, borderClass)} role={ariaRole} aria-label={t('ariaLabel')}>
       <span className={T.countCircle} aria-hidden="true">
         {totalCount > 99 ? '99+' : totalCount}
       </span>

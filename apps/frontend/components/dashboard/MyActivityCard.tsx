@@ -10,6 +10,7 @@ import type { RecentActivity } from '@/lib/api/dashboard-api';
 
 interface MyActivityCardProps {
   userId: string;
+  userName?: string;
   recentActivities: RecentActivity[];
 }
 
@@ -21,7 +22,7 @@ function ActivityKindIcon({ type }: { type: string }) {
   return <Activity className="h-4 w-4" aria-hidden="true" />;
 }
 
-export function MyActivityCard({ userId, recentActivities }: MyActivityCardProps) {
+export function MyActivityCard({ userId, userName, recentActivities }: MyActivityCardProps) {
   const t = useTranslations('dashboard.myActivity');
 
   const myActivities = useMemo(
@@ -32,7 +33,7 @@ export function MyActivityCard({ userId, recentActivities }: MyActivityCardProps
   return (
     <section
       className="bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm"
-      aria-label={t('ariaLabel', { name: '' })}
+      aria-label={t('ariaLabel', { name: userName ?? '' })}
     >
       <header>
         <span className="text-sm font-semibold text-foreground">{t('title')}</span>

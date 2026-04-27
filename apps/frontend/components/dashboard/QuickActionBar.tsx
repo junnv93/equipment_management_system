@@ -36,6 +36,7 @@ export function QuickActionBar({ actions, className }: QuickActionBarProps) {
               href={action.href}
               className={actionClass}
               aria-label={t(action.labelKey as Parameters<typeof t>[0])}
+              data-action={action.labelKey}
             >
               <Icon className={cn(T.actionIcon, action.iconColorClass)} aria-hidden="true" />
               <span className={T.actionLabel}>{t(action.labelKey as Parameters<typeof t>[0])}</span>

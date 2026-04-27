@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DASHBOARD_GRID } from '@/lib/config/dashboard-config';
 import { DASHBOARD_KPI_TOKENS as T } from '@/lib/design-tokens';
@@ -16,10 +17,11 @@ import { DASHBOARD_KPI_TOKENS as T } from '@/lib/design-tokens';
  * Row 3: 3컬럼 액션 카드 (mb-8)
  * Row 4: 하단 2컬럼 (DASHBOARD_GRID.bottomRow)
  */
-export default function DashboardLoading() {
+export default async function DashboardLoading() {
+  const t = await getTranslations('dashboard.srOnly');
   return (
     <div className="p-4 md:p-6" aria-busy="true" aria-live="polite" role="status">
-      <span className="sr-only">대시보드를 불러오는 중입니다...</span>
+      <span className="sr-only">{t('loading')}</span>
 
       {/* Row 0: Welcome + QuickAction */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
