@@ -166,8 +166,7 @@ export const NEXT_STEP_PANEL_TOKENS = {
   urgency: {
     normal: '',
     warning: 'border-l-4 border-l-brand-warning bg-brand-warning/5',
-    critical:
-      'border-l-4 border-l-brand-critical bg-brand-critical/5 motion-safe:animate-pulse-soft motion-reduce:animate-none',
+    critical: `border-l-4 border-l-brand-critical bg-brand-critical/5 ${ANIMATION_PRESETS.pulseSoft}`,
   },
 
   actionButton: {
