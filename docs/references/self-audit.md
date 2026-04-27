@@ -142,7 +142,7 @@ if (role === UserRole.SYSTEM_ADMIN) { ... }
 
 **의도**: `useOptimisticMutation`의 `onSuccess`에서 `setQueryData`를 사용하면 `TData`와 `TCachedData` 타입 불일치로 `.map` crash 위험 (memory 항목 등록됨).
 
-**감지**: `onSuccess` 콜백 블록 내 `setQueryData` 호출 (12줄 윈도우)
+**감지**: `onSuccess` 콜백 블록 내 `setQueryData` 호출 (brace-depth 추적 — 인접 `onError` 블록 오탐 방지)
 
 **올바른 대안**:
 

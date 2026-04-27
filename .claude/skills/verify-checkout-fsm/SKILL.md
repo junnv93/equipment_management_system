@@ -1069,6 +1069,30 @@ grep -A 30 "async returnCheckout\b" apps/backend/src/modules/checkouts/checkouts
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — `reject`, `borrowerReject`, `cancel`, `buildNextStep`
 - `packages/db/src/schema/checkouts.ts` — `terminatedFromStatus` nullable 컬럼
 
+### Step 38: `revokeApproval` `writeTransitionAudit` `isRevocation` 마커 (2026-04-27 추가)
+
+`revokeApproval` 메서드는 FSM `reject` 액션을 재사용하지만, 감사 이력 검색에서 일반 반려와 구분되어야 한다.
+`CheckoutAction` 타입에 `'revoke'` 값이 없으므로 `writeTransitionAudit`의 `extraInfo`에
+`isRevocation: true` 마커를 추가해 구분한다.
+
+```bash
+# revokeApproval의 writeTransitionAudit 호출에 isRevocation 마커 확인
+grep -A 10 "async revokeApproval" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "isRevocation"
+# 기대: isRevocation: true 1건 (PASS)
+
+# isRevocation 마커가 revokeApproval 외부에 없는지 확인 (다른 메서드 오용 방지)
+grep -n "isRevocation" apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: revokeApproval 블록(3204 근처) 내 1건만 (PASS)
+```
+
+**PASS:** `revokeApproval` `writeTransitionAudit` 호출에 `isRevocation: true` + `revokeReason` + `previousApprovedAt` 3개 extraInfo 키 존재.
+**FAIL:** `isRevocation` 없음 → 감사 이력에서 취소 승인과 일반 반려 구분 불가.
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `revokeApproval` 메서드
+
 ### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
 
 Sprint 1.2에서 신규 도입된 `rental-phase.ts`의 두 가지 컴파일 타임 안전장치 확인:

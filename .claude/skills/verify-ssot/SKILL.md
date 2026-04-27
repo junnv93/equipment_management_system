@@ -617,6 +617,52 @@ grep -A10 "STATUS_ORDER\s*[=:]\s*{" \
 
 **근거:** `ApprovalStepIndicator.tsx` `STATUS_ORDER` + `disposalSteps/planSteps.key`에서 리터럴 → UASVal 교체 (2026-04-27, verify-ssot 지적).
 
+### Step 31: `computeUrgency` SSOT — 인라인 시간 계산 금지 (2026-04-27 추가)
+
+긴급도(urgency) 계산은 `@equipment-management/schemas`의 `computeUrgency` SSOT 함수를 경유해야 한다.
+`48 * 60 * 60 * 1000` 같은 인라인 시간 상수 + 직접 비교는 임계값 변경 시 SSOT와 분리된다.
+
+```typescript
+// ❌ 인라인 계산 — SSOT 분리
+const msUntilDue = new Date(dueAt).getTime() - Date.now();
+const urgency = msUntilDue < 0 ? 'critical' : msUntilDue < 48 * 60 * 60 * 1000 ? 'warning' : 'normal';
+
+// ✅ SSOT 경유
+import { computeUrgency } from '@equipment-management/schemas';
+import type { CheckoutStatus } from '@equipment-management/schemas';
+
+// 승인 컨텍스트: status='pending'으로 고정 — UnifiedApprovalStatus에 'overdue' 없으므로
+// overdue→critical 단락 비활성화 후 날짜 기반 로직만 사용
+const urgency = computeUrgency({ status: 'pending' as CheckoutStatus, dueAt });
+```
+
+**탐지 — `computeUrgency` 미경유 인라인 긴급도 계산:**
+```bash
+# 48 * 60 * 60 * 1000 또는 86400000 (1일) 시간 상수 탐지
+grep -n "48 \* 60\|86_400_000\|86400000" \
+  apps/frontend/components/**/*.tsx apps/frontend/lib/**/*.ts 2>/dev/null
+
+# msUntilDue 등 인라인 긴급도 변수명 탐지
+grep -n "msUntilDue\|msUntil\|urgencyMs" \
+  apps/frontend/components/**/*.tsx apps/frontend/lib/**/*.ts 2>/dev/null
+
+# computeUrgency를 경유하지 않고 urgency를 직접 계산하는 패턴
+grep -n "urgency.*critical\|urgency.*warning\|urgency.*normal" \
+  apps/frontend/components/**/*.tsx 2>/dev/null \
+  | grep -v "computeUrgency\|t(\|className\|tokens\|design"
+```
+
+**PASS:** 긴급도 계산 전부 `computeUrgency` 경유. **FAIL:** 인라인 시간 상수 → `computeUrgency` 교체.
+
+**Note — 승인 컨텍스트 `status: 'pending' as CheckoutStatus`:**
+`UnifiedApprovalStatus`에는 `'overdue'` 값이 없어 `item.status as CheckoutStatus`는 타입 거짓말.
+`computeUrgency` 내부의 `overdue→critical` 단락을 우회하고 날짜 기반 로직만 실행하기 위해
+`'pending' as CheckoutStatus`로 고정하는 것이 의도적 패턴.
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeUrgency` 정의
+- `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — 도입 컴포넌트 (2026-04-27)
+
 ## Output Format
 
 ```markdown

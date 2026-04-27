@@ -655,6 +655,58 @@ grep -A5 "async.*bulk\|bulkApprove\|bulkReject\|bulkDelete" \
 - 순서 의존적 트랜잭션 (앞 항목 성공 후에만 다음 항목 처리 가능) — `for...of + await` 허용, 주석 필수.
 - 단일 뮤테이션 — 해당 없음.
 
+### Step 23: TanStack Query v5 `onError` snapshot rollback — `getQueriesData` + `forEach setQueryData` (2026-04-27 추가)
+
+`useOptimisticMutation` 없이 직접 `useMutation`을 사용하는 경우, optimistic update 롤백은
+`onMutate`에서 `getQueriesData` 스냅샷 → `onError`에서 `forEach setQueryData` 즉시 복원이 올바른 패턴.
+
+`onError`에서 `invalidateQueries`를 사용하면 refetch 왕복 시간 동안 UI가 낙관적 상태로 남아 사용자에게 깜빡임.
+
+**올바른 패턴 — `getQueriesData` 스냅샷 + `onError` forEach 즉시 복원:**
+
+```typescript
+// ✅ onMutate: 스냅샷 캡처 + optimistic update
+onMutate: async ({ id }) => {
+  await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
+  const previousViewQueries = queryClient.getQueriesData<PaginatedResponse<T>>(
+    { queryKey: queryKeys.checkouts.view.all() }
+  );
+  queryClient.setQueriesData<PaginatedResponse<T>>(
+    { queryKey: queryKeys.checkouts.view.all() },
+    (old) => old ? { ...old, data: old.data.map((co) => co.id === id ? { ...co, status: newStatus } : co) } : old
+  );
+  return { previousViewQueries };
+},
+
+// ✅ onError: 스냅샷 즉시 복원 (refetch 없음)
+onError: (error, variables, context) => {
+  context?.previousViewQueries?.forEach(([key, data]) => {
+    queryClient.setQueryData(key, data);   // ← onError 컨텍스트 — 허용
+  });
+},
+
+// ❌ 금지 — invalidateQueries로 롤백 (UI 깜빡임)
+onError: () => {
+  queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
+}
+```
+
+**탐지 — `onError` 내 `invalidateQueries` 롤백 (스냅샷 없이):**
+```bash
+# onError에 invalidateQueries만 있고 previousViewQueries 없는 패턴 탐지
+grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
+  | grep "invalidateQueries" | grep -v "//\|self-audit"
+```
+
+**PASS:** `onError` 롤백이 스냅샷 복원 패턴 사용. **INFO:** `invalidateQueries`만 사용 시 의도적 여부 확인.
+
+**Note:** `onError`에서의 `setQueryData`는 **허용** — 스냅샷 타입이 왕복 보존됨 (TData/TCachedData 불일치 없음).
+`onSuccess`에서의 `setQueryData`만 금지 (Memory: useOptimisticMutation 버그 이력).
+
+**예외:**
+- `useOptimisticMutation` 사용 시 — 훅 내부에서 처리, 이 패턴 불필요.
+- optimistic update 없는 단순 뮤테이션 — `onError`에서 `invalidateQueries` 허용.
+
 ## Output Format
 
 ```markdown
