@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { CheckCircle2, XCircle, X } from 'lucide-react';
 import {
   AlertDialog,
@@ -15,8 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import RejectModal from './RejectModal';
 import { APPROVAL_BULK_BAR_TOKENS, getApprovalActionButtonClasses } from '@/lib/design-tokens';
-import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
@@ -30,11 +28,12 @@ interface BulkActionBarProps {
 }
 
 /**
- * BulkActionBar — fixed bottom floating action bar (AP-02)
+ * BulkActionBar — fixed bottom floating action bar (AP-02/03)
  *
  * 0건 → opacity-0 + pointer-events-none (DOM 유지 — 스크린리더 접근)
  * ≥1건 → opacity-1 (200ms fade-in)
  * Esc → 선택 해제 (dialog 닫힌 상태에서만)
+ * 반려: RejectModal(mode='bulk')으로 통합 (AP-03)
  */
 export function BulkActionBar({
   selectedCount,
@@ -45,8 +44,7 @@ export function BulkActionBar({
   actionLabel,
 }: BulkActionBarProps) {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const t = useTranslations('approvals');
 
@@ -60,31 +58,19 @@ export function BulkActionBar({
   // Esc → 선택 해제 (dialog 열려 있으면 dialog가 Esc 처리)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isVisible && !isApproveDialogOpen && !isRejectDialogOpen) {
+      if (e.key === 'Escape' && isVisible && !isApproveDialogOpen && !isRejectModalOpen) {
         onClearSelection();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isVisible, isApproveDialogOpen, isRejectDialogOpen, onClearSelection]);
+  }, [isVisible, isApproveDialogOpen, isRejectModalOpen, onClearSelection]);
 
   const handleBulkApprove = async () => {
     setIsProcessing(true);
     try {
       await onBulkApprove();
       setIsApproveDialogOpen(false);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleBulkReject = async () => {
-    if (!rejectReason.trim() || rejectReason.length < REJECTION_MIN_LENGTH) return;
-    setIsProcessing(true);
-    try {
-      await onBulkReject(rejectReason);
-      setIsRejectDialogOpen(false);
-      setRejectReason('');
     } finally {
       setIsProcessing(false);
     }
@@ -152,7 +138,7 @@ export function BulkActionBar({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => setIsRejectDialogOpen(true)}
+            onClick={() => setIsRejectModalOpen(true)}
             className={getApprovalActionButtonClasses('reject')}
             tabIndex={isVisible ? 0 : -1}
           >
@@ -184,43 +170,14 @@ export function BulkActionBar({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 일괄 반려 다이얼로그 — AP-03에서 RejectModal로 통합 예정 */}
-      <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('bulk.reject')}</AlertDialogTitle>
-            <AlertDialogDescription id="bulk-reject-desc">
-              {t('bulk.rejectDescription', { count: selectedCount })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="bulk-reject-reason">{t('rejectModal.reasonLabel')}</Label>
-            <Textarea
-              id="bulk-reject-reason"
-              aria-describedby="bulk-reject-desc"
-              placeholder={t('rejectModal.reasonPlaceholder')}
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="mt-2 min-h-[100px]"
-            />
-            {rejectReason.length > 0 && rejectReason.length < REJECTION_MIN_LENGTH && (
-              <p className="text-sm text-destructive mt-1" role="alert">
-                {t('bulk.rejectValidation')} ({rejectReason.length}/{REJECTION_MIN_LENGTH})
-              </p>
-            )}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>{t('actions.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBulkReject}
-              disabled={isProcessing || rejectReason.length < REJECTION_MIN_LENGTH}
-              className={getApprovalActionButtonClasses('reject')}
-            >
-              {isProcessing ? t('processing') : t('actions.reject')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* 일괄 반려 — RejectModal(mode='bulk')으로 통합 (AP-03) */}
+      <RejectModal
+        mode="bulk"
+        count={selectedCount}
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        onBulkConfirm={onBulkReject}
+      />
     </>
   );
 }

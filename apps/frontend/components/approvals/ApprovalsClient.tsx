@@ -127,6 +127,15 @@ export function ApprovalsClient({
   // KPI 데이터 — 서버 사이드 집계 (GET /api/approvals/kpi?category=X)
   const kpi = useApprovalKpi(pendingCounts, activeTab, availableTabs);
 
+  // AR-4: 승인/반려 후 공통 invalidation 키 — 4× 중복 제거
+  const getInvalidationKeys = () => [
+    queryKeys.approvals.counts(userRole),
+    queryKeys.approvals.kpi(activeTab),
+    ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    queryKeys.equipment.all,
+    queryKeys.nonConformances.all,
+  ];
+
   // ✅ 승인 처리 - Optimistic Update 패턴
   const approveMutation = useOptimisticMutation<
     void,
@@ -145,14 +154,7 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [
-      queryKeys.approvals.counts(userRole),
-      queryKeys.approvals.kpi(activeTab),
-      queryKeys.calibrations.intermediateChecks(),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
+    invalidateKeys: [...getInvalidationKeys(), queryKeys.calibrations.intermediateChecks()],
     successMessage: (_, { item }) =>
       t('toasts.approveDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.approveError'),
@@ -216,13 +218,7 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [
-      queryKeys.approvals.counts(userRole),
-      queryKeys.approvals.kpi(activeTab),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
+    invalidateKeys: getInvalidationKeys(),
     successMessage: (_, { item }) =>
       t('toasts.rejectDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.rejectError'),
@@ -267,14 +263,7 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [
-      queryKeys.approvals.counts(userRole),
-      queryKeys.approvals.kpi(activeTab),
-      queryKeys.calibrations.intermediateChecks(),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
+    invalidateKeys: [...getInvalidationKeys(), queryKeys.calibrations.intermediateChecks()],
     // successMessage 생략 — 부분 실패 시 토스트 title/variant를 분기해야 하므로 onSuccessCallback에서 직접 처리
     errorMessage: t('toasts.bulkApproveError'),
     onSuccessCallback: (result, { ids }) => {
@@ -364,13 +353,7 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [
-      queryKeys.approvals.counts(userRole),
-      queryKeys.approvals.kpi(activeTab),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
+    invalidateKeys: getInvalidationKeys(),
     // successMessage 생략 — 부분 실패 시 토스트 title/variant를 분기해야 하므로 onSuccessCallback에서 직접 처리
     errorMessage: t('toasts.bulkRejectError'),
     onSuccessCallback: (result, { ids }) => {
@@ -532,6 +515,7 @@ export function ApprovalsClient({
         {/* 반려 모달 */}
         {rejectModalItem && (
           <RejectModal
+            mode="single"
             item={rejectModalItem}
             isOpen={!!rejectModalItem}
             onClose={() => setRejectModalItem(null)}

@@ -191,6 +191,12 @@
     "reasonPlaceholder": "Enter rejection reason...",
     "validation": "Rejection reason must be at least 10 characters.",
     "description": "Reject the request \"{summary}\". Please enter a rejection reason.",
+    "single": {
+      "description": "Reject the request \"{summary}\". Please enter a rejection reason."
+    },
+    "bulk": {
+      "description": "The same rejection reason will be applied to all {count} selected items."
+    },
     "templateSelectPlaceholder": "Select template (optional)",
     "directInput": "Type directly",
     "submit": "Submit Rejection",

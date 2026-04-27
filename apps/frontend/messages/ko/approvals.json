@@ -191,6 +191,12 @@
     "reasonPlaceholder": "반려 사유를 입력하세요...",
     "validation": "반려 사유는 10자 이상 입력해주세요.",
     "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요.",
+    "single": {
+      "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요."
+    },
+    "bulk": {
+      "description": "선택한 {count}건에 동일한 사유로 반려됩니다."
+    },
     "templateSelectPlaceholder": "템플릿 선택 (선택사항)",
     "directInput": "직접 입력",
     "submit": "반려 처리",

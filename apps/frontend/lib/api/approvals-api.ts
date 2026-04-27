@@ -8,6 +8,7 @@
  * @see docs/development/FRONTEND_UI_PROMPTS(UI-3: 승인 관리 통합 페이지_수정O).md
  */
 
+import { z } from 'zod';
 import { apiClient } from './api-client';
 import {
   API_ENDPOINTS,
@@ -190,6 +191,19 @@ export const APPROVAL_SECTIONS = {
 
 /** 반려 사유 최소 글자 수 — SSOT: shared-constants/validation-rules */
 export const REJECTION_MIN_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+
+/**
+ * 반려 사유 검증 Zod 스키마 (SSOT)
+ *
+ * min: 서버에서도 동일 규칙 적용 (defense in depth — backend validation exists)
+ * max 500: DB column 제한 기반
+ */
+// min(1): 프론트엔드는 "입력됨" 여부만 검증. 실제 글자수 규칙(REJECTION_MIN_LENGTH=10)은
+// 백엔드에서 defense-in-depth로 동일 적용 (validation-rules.ts REJECTION_REASON_MIN_LENGTH).
+export const RejectReasonSchema = z
+  .string()
+  .min(1, '반려 사유를 입력해주세요.')
+  .max(500, '반려 사유는 500자 이내로 입력해주세요.');
 
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based (checkout section)
@@ -974,14 +988,12 @@ class ApprovalsApi {
     ids: string[],
     reason: string
   ): Promise<{ success: string[]; failed: string[] }> {
-    const success: string[] = [];
-    const failed: string[] = [];
-
     // incoming 타입 판별, disposal equipmentId 추출에 originalData 필요
     const itemsMap = await this.fetchItemsMapIfNeeded(category);
 
-    for (const id of ids) {
-      try {
+    // Promise.allSettled: 병렬 실행 + 부분 실패 허용 (실패해도 나머지 계속 진행)
+    const results = await Promise.allSettled(
+      ids.map((id) => {
         let equipmentId: string | undefined;
         let originalData: unknown;
         if (itemsMap) {
@@ -989,12 +1001,19 @@ class ApprovalsApi {
           equipmentId = item?.details?.equipmentId as string | undefined;
           originalData = item?.originalData;
         }
-        await this.reject(category, id, reason, equipmentId, originalData);
-        success.push(id);
-      } catch {
-        failed.push(id);
+        return this.reject(category, id, reason, equipmentId, originalData);
+      })
+    );
+
+    const success: string[] = [];
+    const failed: string[] = [];
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        success.push(ids[i]);
+      } else {
+        failed.push(ids[i]);
       }
-    }
+    });
 
     return { success, failed };
   }
