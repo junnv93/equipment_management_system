@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DASHBOARD_SKELETON_MIN_H as SK, DASHBOARD_ENTRANCE as E } from '@/lib/design-tokens';
 import { DASHBOARD_GRID } from '@/lib/config/dashboard-config';
@@ -83,6 +82,7 @@ export interface DashboardRow4Props {
   equipmentStatusStats: Record<string, number>;
   recentActivities: RecentActivity[];
   loading: boolean;
+  recentActivityAriaLabel?: string;
 }
 
 export function DashboardRow4({
@@ -96,8 +96,8 @@ export function DashboardRow4({
   equipmentStatusStats,
   recentActivities,
   loading,
+  recentActivityAriaLabel = '',
 }: DashboardRow4Props) {
-  const t = useTranslations('dashboard');
   const { sidebarWidgets, showRecentActivities } = controlCenter;
   const sidebarCount = sidebarWidgets.length;
   const sidebarGridRows = sidebarCount <= 1 ? '1fr' : `repeat(${sidebarCount - 1}, auto) 1fr`;
@@ -122,7 +122,7 @@ export function DashboardRow4({
       )}
     >
       {showRecentActivities !== false && (
-        <section aria-label={t('srOnly.recentActivity')}>
+        <section aria-label={recentActivityAriaLabel}>
           <RecentActivities data={recentActivities} loading={loading} />
         </section>
       )}

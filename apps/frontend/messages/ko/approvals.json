@@ -198,6 +198,7 @@
     "templatesLabel": "사유 템플릿",
     "reasonLabel": "반려 사유 (10자 이상 필수)",
     "reasonPlaceholder": "반려 사유를 입력하세요...",
+    "minLengthHint": "{min}자 이상 입력하세요.",
     "validation": "반려 사유는 10자 이상 입력해주세요.",
     "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요.",
     "single": {

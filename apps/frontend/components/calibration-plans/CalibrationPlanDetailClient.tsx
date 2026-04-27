@@ -40,7 +40,7 @@ import {
   UserCheck,
   AlertCircle,
 } from 'lucide-react';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import {
   getActionButtonClasses,
@@ -316,7 +316,7 @@ export function CalibrationPlanDetailClient({
       >
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
           <Button variant="ghost" size="icon" asChild aria-label={t('planDetail.backToList')}>
-            <Link href="/calibration-plans">
+            <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.LIST}>
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>

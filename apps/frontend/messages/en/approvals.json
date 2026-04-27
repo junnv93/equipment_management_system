@@ -198,6 +198,7 @@
     "templatesLabel": "Reason Templates",
     "reasonLabel": "Rejection Reason (min. 10 characters)",
     "reasonPlaceholder": "Enter rejection reason...",
+    "minLengthHint": "Please enter at least {min} characters.",
     "validation": "Rejection reason must be at least 10 characters.",
     "description": "Reject the request \"{summary}\". Please enter a rejection reason.",
     "single": {

@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { RejectReasonSchema } from '@/lib/api/approvals-api';
+import { RejectReasonSchema, REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
@@ -112,6 +112,7 @@ export default function RejectModal(props: RejectModalProps) {
         await props.onConfirm(reason.trim());
       } else {
         await props.onBulkConfirm(reason.trim());
+        props.onClose();
       }
     } catch {
       setError(t('toasts.rejectError'));
@@ -169,6 +170,9 @@ export default function RejectModal(props: RejectModalProps) {
               className="min-h-[120px]"
               aria-describedby={error ? 'reject-error' : 'reject-modal-desc'}
             />
+            <p className="text-xs text-muted-foreground">
+              {t('rejectModal.minLengthHint', { min: REJECTION_MIN_LENGTH })}
+            </p>
             {error && (
               <p
                 id="reject-error"

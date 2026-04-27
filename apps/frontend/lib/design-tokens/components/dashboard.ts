@@ -98,11 +98,11 @@ export const DASHBOARD_ROLE_BADGES = {
     bgColor: 'bg-brand-ok/10',
   },
   [URVal.QUALITY_MANAGER]: {
-    color: 'text-ul-fog dark:text-brand-info',
+    color: 'text-brand-info',
     bgColor: 'bg-ul-fog/10 dark:bg-ul-fog/20',
   },
   [URVal.LAB_MANAGER]: {
-    color: 'text-ul-midnight dark:text-brand-info',
+    color: 'text-brand-info',
     bgColor: 'bg-ul-midnight/10 dark:bg-ul-midnight/20',
   },
   [URVal.SYSTEM_ADMIN]: {

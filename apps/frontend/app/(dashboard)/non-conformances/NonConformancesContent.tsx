@@ -23,7 +23,7 @@ import {
   NonConformanceTypeValues,
   SITE_VALUES,
 } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -648,7 +648,7 @@ function EmptyState({ hasFilters, onClear }: { hasFilters: boolean; onClear: () 
         </Button>
       ) : (
         <div className={NC_EMPTY_STATE_TOKENS.ctaWrapper}>
-          <Link href="/equipment" className={NC_EMPTY_STATE_TOKENS.ctaLink}>
+          <Link href={FRONTEND_ROUTES.EQUIPMENT.LIST} className={NC_EMPTY_STATE_TOKENS.ctaLink}>
             {t('list.emptyNoFiltersCta')}
           </Link>
         </div>

@@ -38,6 +38,7 @@ import {
   TEAM_RESTRICTED_ROLES,
   SELECTOR_PAGE_SIZE,
   Permission,
+  FRONTEND_ROUTES,
 } from '@equipment-management/shared-constants';
 import type { UserRole, Site } from '@equipment-management/schemas';
 import {
@@ -172,7 +173,7 @@ export default function CreateCalibrationPlanContent() {
     <div className={getPageContainerClasses('wide')}>
       <div className={CALIBRATION_PLAN_CREATE_TOKENS.header.container}>
         <Button variant="ghost" size="icon" asChild aria-label={t('planCreate.backToList')}>
-          <Link href="/calibration-plans">
+          <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.LIST}>
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
         </Button>
@@ -355,7 +356,9 @@ export default function CreateCalibrationPlanContent() {
       {/* 액션 버튼 */}
       <div className={CALIBRATION_PLAN_CREATE_TOKENS.actions.container}>
         <Button variant="outline" asChild>
-          <Link href="/calibration-plans">{t('planCreate.actions.cancel')}</Link>
+          <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.LIST}>
+            {t('planCreate.actions.cancel')}
+          </Link>
         </Button>
         <Button
           onClick={handleCreate}

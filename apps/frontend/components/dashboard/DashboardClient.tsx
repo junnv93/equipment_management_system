@@ -188,6 +188,7 @@ function DashboardClientComponent({
         equipmentStatusStats={equipmentStatusStats}
         recentActivities={recentActivities}
         loading={isLoading}
+        recentActivityAriaLabel={t('srOnly.recentActivity')}
       />
     </div>
   );

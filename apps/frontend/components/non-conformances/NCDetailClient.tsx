@@ -33,7 +33,7 @@ import { GuidanceCallout } from '@/components/non-conformances/GuidanceCallout';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type NonConformanceStatus,
@@ -351,7 +351,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 {t('detail.editButton')}
               </Button>
             )}
-            <Link href="/non-conformances">
+            <Link href={FRONTEND_ROUTES.NON_CONFORMANCES.LIST}>
               <Button variant="outline" size="sm">
                 {t('detail.listButton')}
               </Button>

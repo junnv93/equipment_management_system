@@ -8,7 +8,7 @@ import { Search, Package, Calendar, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { SELECTOR_PAGE_SIZE, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
@@ -135,7 +135,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                 {search ? t('list.noSearchResults') : t('list.empty')}
               </p>
               <Button variant="outline" className="mt-4" asChild>
-                <Link href="/equipment/create">{t('teamEquipmentList.createLink')}</Link>
+                <Link href={FRONTEND_ROUTES.EQUIPMENT.CREATE}>
+                  {t('teamEquipmentList.createLink')}
+                </Link>
               </Button>
             </div>
           ) : (

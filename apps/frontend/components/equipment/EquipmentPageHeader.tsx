@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { EQUIPMENT_LIST_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 /**
@@ -65,7 +65,7 @@ export function EquipmentPageHeader() {
         />
         {canCreate && (
           <Button asChild>
-            <Link href="/equipment/create">
+            <Link href={FRONTEND_ROUTES.EQUIPMENT.CREATE}>
               <Plus className="h-4 w-4 mr-2" />
               {t('list.createButton')}
             </Link>

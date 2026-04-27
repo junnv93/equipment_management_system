@@ -153,7 +153,10 @@ export function EquipmentStickyHeader({
             {t('title')} › {equipment.name}
           </span>
           {/* SSOT: EQUIPMENT_DETAIL_HEADER_TOKENS.backLink (getTransitionClasses 포함) */}
-          <Link href="/equipment" className={EQUIPMENT_DETAIL_HEADER_TOKENS.backLink}>
+          <Link
+            href={FRONTEND_ROUTES.EQUIPMENT.LIST}
+            className={EQUIPMENT_DETAIL_HEADER_TOKENS.backLink}
+          >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             {t('detail.backToList')}
           </Link>
