@@ -1321,6 +1321,55 @@ grep -n "ariaRole\|severity.*alert\|alert.*severity" \
 
 ---
 
+### Step 39: `getPageContainerClasses()` variant 필수 인수 — 빈 호출 금지 (2026-04-27 추가)
+
+`getPageContainerClasses()`를 인수 없이 호출하면 variant가 `undefined`로 처리되어
+`PAGE_MAX_WIDTH`에서 잘못된 너비를 반환한다. 모든 호출 시 명시적 variant 인수가 필수다.
+
+**PageContainerVariant 선택 규칙 (SSOT: `lib/design-tokens/components/page-layout.ts`):**
+
+| variant | max-width | 사용 도메인 |
+|---|---|---|
+| `list` | container 1400px | 목록/검색 페이지 |
+| `detail` | max-w-4xl (896px) | 단일 엔티티 집중 상세 |
+| `wide` | max-w-5xl (1024px) | 다단계 폼 / 복합 상세 |
+| `dashboard` | max-w-7xl (1280px) | KPI+탭 포함 대시보드형 상세 |
+| `form` | max-w-2xl (672px) | 단순 입력 폼 |
+| `centered` | container 1400px | 중앙정렬 전체폭 |
+
+```bash
+# 빈 인수 호출 탐지 (0건 기대)
+grep -rn "getPageContainerClasses()" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "getPageContainerClasses('.*')\|getPageContainerClasses(\".*\")"
+
+# 실제 빈 호출 탐지 (variant 인수 없이 ')' 로 닫히는 패턴)
+grep -rn "getPageContainerClasses()" \
+  apps/frontend \
+  --include="*.tsx" --include="*.ts"
+```
+
+**PASS:** 0건 (모든 호출에 variant 인수 존재). **FAIL:** 빈 호출 → variant 명시.
+
+**올바른 패턴:**
+```tsx
+// ❌ variant 미지정 — 너비 결정 불가
+<div className={getPageContainerClasses()}>
+
+// ✅ variant 명시 — SSOT 너비 보장
+<div className={getPageContainerClasses('wide')}>
+<div className={getPageContainerClasses('detail', 'space-y-6')}>
+```
+
+**배경:** 세션에서 `CreateCalibrationPlanContent.tsx`, `CreateCheckoutContent.tsx`의 `getPageContainerClasses()` 빈 호출을 `getPageContainerClasses('wide')`로 교정하면서 이 규칙이 확립됨. 2026-04-27.
+
+**예외:**
+- `page-layout.ts` 자체 — variant 타입 정의 파일.
+- 함수 시그니처 재정의 없는 테스트 목(mock) — 테스트 파일에서 타입 확인 목적으로만 사용 시 면제.
+
+---
+
 ## Output Format
 
 ```markdown

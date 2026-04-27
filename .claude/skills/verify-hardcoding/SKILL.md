@@ -506,6 +506,49 @@ grep -rn '<SelectItem value="[a-z_]*"' \
 - shadcn/ui 기본 예시나 UI 표시 전용(aria 레이블, 비도메인 옵션) — SITE_OPTIONS `value="gangnam"` 등은 로컬 정의 허용.
 - 비도메인 enum 값 — 정렬 방향(`"asc"/"desc"`), 뷰 타입(`"grid"/"list"`) 등 프레젠테이션 값.
 
+### Step 28: `href` 인라인 도메인 경로 탐지 — `FRONTEND_ROUTES` 미경유 금지 (2026-04-27 추가)
+
+`<Link href="/equipment">`, `<a href="/calibration-plans">` 같이 도메인 경로를 raw 문자열로 인라인 사용하면,
+`FRONTEND_ROUTES.EQUIPMENT.LIST` 같은 상수가 변경될 때 TypeScript 컴파일러가 drift를 감지할 수 없어 런타임 404가 발생한다.
+
+**규칙:** 도메인 경로(`/equipment`, `/checkouts`, `/calibration-plans` 등)를 `href` prop에 직접 사용 금지.
+반드시 `FRONTEND_ROUTES.*` 상수를 경유해야 한다.
+
+```bash
+# 도메인 목록 경로 직접 사용 탐지 (FRONTEND_ROUTES 미경유)
+grep -rn 'href="\/\(equipment\|checkouts\|calibration-plans\|calibration\|non-conformances\|software\|cables\|teams\|notifications\|dashboard\|approvals\)"' \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "node_modules\|// "
+
+# FRONTEND_ROUTES import 없이 /경로 직접 사용하는 파일 탐지
+grep -rln 'href="\/[a-z-]*"' \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" \
+  | xargs -I{} sh -c 'grep -l "FRONTEND_ROUTES" {} > /dev/null || echo "MISSING_ROUTES_IMPORT: {}"'
+```
+
+**PASS:** 0건 (FRONTEND_ROUTES 상수 경유). **FAIL:** raw 경로 문자열 발견 → 아래 패턴으로 교체.
+
+**올바른 패턴:**
+```tsx
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+
+// ❌ 경로 변경 시 TypeScript 미탐지
+<Link href="/equipment">목록</Link>
+
+// ✅ SSOT 경유 — 컴파일 타임 보호
+<Link href={FRONTEND_ROUTES.EQUIPMENT.LIST}>목록</Link>
+```
+
+**배경:** `EquipmentStickyHeader.tsx`의 `href="/equipment"`, `CreateCalibrationPlanContent.tsx`의 `href="/calibration-plans"` (2곳), `NonConformanceManagementClient.tsx`의 직접 경로 4곳이 verify-hardcoding 검증에서 FAIL로 발견됨. `FRONTEND_ROUTES.EQUIPMENT.LIST`, `FRONTEND_ROUTES.CALIBRATION_PLANS.LIST` 등 상수로 교체 필요. 2026-04-27 세션에서 tech-debt 등록.
+
+**예외:**
+- `href="/"` (홈 루트), `href="/login"`, `href="/handover"` — 단일 depth 또는 인증 전용 경로는 `FRONTEND_ROUTES` 미등록 허용.
+- 동적 빌더 함수 (`FRONTEND_ROUTES.EQUIPMENT.DETAIL(id)`) 결과 인라인 저장 후 전달 — 허용.
+
+---
+
 ## Exceptions
 
 1. **프론트엔드 UI 표시용 옵션 객체** — `SITE_OPTIONS` 등 레이블+값 쌍은 로컬 정의 허용
