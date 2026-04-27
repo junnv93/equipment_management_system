@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ClipboardList, Truck, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_RECENT_ACTIVITIES_TOKENS as T } from '@/lib/design-tokens';
+import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 import type { RecentActivity } from '@/lib/api/dashboard-api';
 
 interface MyActivityCardProps {
@@ -24,7 +25,7 @@ export function MyActivityCard({ userId, recentActivities }: MyActivityCardProps
   const t = useTranslations('dashboard.myActivity');
 
   const myActivities = useMemo(
-    () => recentActivities.filter((a) => a.userId === userId).slice(0, 5),
+    () => recentActivities.filter((a) => a.userId === userId).slice(0, DISPLAY_LIMITS.myActivity),
     [recentActivities, userId]
   );
 

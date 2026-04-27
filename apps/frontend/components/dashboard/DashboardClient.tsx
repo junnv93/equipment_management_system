@@ -40,7 +40,11 @@ import type {
 import { DASHBOARD_GRID, type SidebarWidget } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
 import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
-import { getPageContainerClasses, DASHBOARD_ENTRANCE as E } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  DASHBOARD_ENTRANCE as E,
+  DASHBOARD_MOTION,
+} from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
@@ -179,6 +183,7 @@ function DashboardClientComponent({
   } = useQuery<DashboardAggregate>({
     queryKey: queryKeys.dashboard.aggregate(userRole, scope.teamId),
     queryFn: () => dashboardApi.getAggregate(scope.teamId),
+    ...QUERY_CONFIG.DASHBOARD,
     placeholderData: {
       summary: initialSummary ?? null,
       equipmentByTeam: initialEquipmentByTeam ?? null,
@@ -189,7 +194,6 @@ function DashboardClientComponent({
       equipmentStatusStats: initialEquipmentStatusStats ?? null,
       upcomingCheckoutReturns: initialUpcomingCheckoutReturns ?? null,
     },
-    ...QUERY_CONFIG.DASHBOARD,
   });
 
   const summary = aggregate?.summary ?? {
@@ -211,7 +215,10 @@ function DashboardClientComponent({
     controlCenter.alertBannerTrailingAction === 'approval' ? (
       <Link
         href={FRONTEND_ROUTES.ADMIN.APPROVALS}
-        className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+        className={cn(
+          'text-xs font-medium text-muted-foreground hover:text-foreground whitespace-nowrap',
+          DASHBOARD_MOTION.textColor
+        )}
       >
         {t('alertBanner.view')}
       </Link>

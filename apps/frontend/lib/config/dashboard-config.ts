@@ -577,4 +577,6 @@ export const DISPLAY_LIMITS = {
   calibrationDday: 8,
   /** MiniCalendar 팝업 최대 이벤트 수 */
   calendarEvents: 5,
+  /** MyActivityCard 최근 활동 최대 표시 건수 (AP-13) */
+  myActivity: 5,
 } as const;

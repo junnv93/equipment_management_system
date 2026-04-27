@@ -93,9 +93,9 @@ jest.mock('@/lib/utils/dashboard-scope', () => ({
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const SCOPE: DashboardScope = {
-  teamId: null,
+  teamId: undefined,
   displayMode: 'all',
-  sitePath: '',
+  site: undefined,
 };
 
 const BASE_PROPS = {
