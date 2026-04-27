@@ -99,7 +99,7 @@ export interface CheckoutAvailableActions {
  * 메타데이터(availableActions + nextStep)를 포함한 Checkout
  */
 export interface CheckoutWithMeta extends Checkout {
-  equipment: CheckoutEquipment[];
+  equipment: CheckoutEquipmentSummary[];
   user: CheckoutUser | null;
   meta: {
     availableActions: CheckoutAvailableActions;
@@ -116,9 +116,9 @@ interface QueryConditions {
 }
 
 /**
- * 장비 정보 인터페이스 (반출 목록용)
+ * 장비 요약 정보 인터페이스 — packages/schemas의 CheckoutEquipment(행 타입)와 구분
  */
-interface CheckoutEquipment {
+interface CheckoutEquipmentSummary {
   id: string;
   name: string | null;
   managementNumber: string | null;
@@ -138,7 +138,7 @@ interface CheckoutUser {
  * 반출 항목 (관계 데이터 포함)
  */
 interface CheckoutWithRelations extends Checkout {
-  equipment: CheckoutEquipment[];
+  equipment: CheckoutEquipmentSummary[];
   user: CheckoutUser | null;
 }
 
