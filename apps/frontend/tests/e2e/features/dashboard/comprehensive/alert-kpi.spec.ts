@@ -120,11 +120,13 @@ test.describe('시나리오 4: AlertBanner', () => {
 });
 
 test.describe('시나리오 4B: AlertBanner — stacked + info 모드 (API 모킹)', () => {
+  const AGGREGATE_PATTERN = '**/api/dashboard/aggregate**';
+
   test('TC-18: totalCount ≥ 10 → stacked 모드(role="region") 렌더', async ({
     siteAdminPage: page,
   }) => {
     // API 응답을 가로채 calibration_overdue=6, non_conforming=5 주입 → totalCount=11
-    await page.route('**/api/dashboard/aggregate**', (route) => {
+    await page.route(AGGREGATE_PATTERN, (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -141,13 +143,15 @@ test.describe('시나리오 4B: AlertBanner — stacked + info 모드 (API 모�
 
     // critical + warning row 둘 다 존재
     await expect(stackedBanner.getByText(/즉시 조치|치명적/i).first()).toBeVisible();
+
+    await page.unroute(AGGREGATE_PATTERN);
   });
 
   test('TC-19: overdue=0, upcoming>0 → info severity(role="status") 렌더', async ({
     siteAdminPage: page,
   }) => {
     // API 응답: 모든 overdue=0, upcomingCalibrations=5
-    await page.route('**/api/dashboard/aggregate**', (route) => {
+    await page.route(AGGREGATE_PATTERN, (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -167,6 +171,8 @@ test.describe('시나리오 4B: AlertBanner — stacked + info 모드 (API 모�
     // info severity는 role="status" (ARIA polite — 긴급 인터럽트 불필요)
     const infoBanner = page.locator('[role="status"][aria-label="긴급 조치 요약"]');
     await expect(infoBanner).toBeVisible({ timeout: 5000 });
+
+    await page.unroute(AGGREGATE_PATTERN);
   });
 });
 

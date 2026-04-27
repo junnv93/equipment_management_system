@@ -21,6 +21,13 @@
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 import { test as baseTest } from '@playwright/test';
 
+// 로그인 폼 UI 테스트(Group 1)용 시드 자격증명 — 환경변수 우선, 없으면 시드 fallback
+const E2E_PASSWORDS = {
+  user: process.env.DEV_USER_PASSWORD ?? 'user123',
+  manager: process.env.DEV_MANAGER_PASSWORD ?? 'manager123',
+  admin: process.env.DEV_ADMIN_PASSWORD ?? 'admin123',
+} as const;
+
 test.describe('Authentication and Role-based Access', () => {
   // Run tests only on chromium for consistent results
   // Temporarily disabled to debug tests
@@ -42,7 +49,7 @@ test.describe('Authentication and Role-based Access', () => {
 
       // 3. Enter password 'user123' in the password field
       const passwordInput = page.locator('input[name="password"]');
-      await passwordInput.fill('user123');
+      await passwordInput.fill(E2E_PASSWORDS.user);
 
       // 4. Click the login button
       const loginButton = page.getByRole('button', { name: /로그인/i });
@@ -83,7 +90,7 @@ test.describe('Authentication and Role-based Access', () => {
 
       // 3. Enter password 'manager123' in the password field
       const passwordInput = page.locator('input[name="password"]');
-      await passwordInput.fill('manager123');
+      await passwordInput.fill(E2E_PASSWORDS.manager);
 
       // 4. Click the login button
       const loginButton = page.getByRole('button', { name: /로그인/i });
@@ -133,7 +140,7 @@ test.describe('Authentication and Role-based Access', () => {
 
       // 3. Enter password 'admin123' in the password field
       const passwordInput = page.locator('input[name="password"]');
-      await passwordInput.fill('admin123');
+      await passwordInput.fill(E2E_PASSWORDS.admin);
 
       // 4. Click the login button
       const loginButton = page.getByRole('button', { name: /로그인/i });

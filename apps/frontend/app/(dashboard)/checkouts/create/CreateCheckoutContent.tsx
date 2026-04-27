@@ -660,7 +660,7 @@ export default function CreateCheckoutContent() {
                     <SelectValue placeholder={t('create.purposePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="calibration">
+                    <SelectItem value={CPVal.CALIBRATION}>
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeCalibration')}</span>
                         <span className="text-xs text-muted-foreground">
@@ -668,7 +668,7 @@ export default function CreateCheckoutContent() {
                         </span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="repair">
+                    <SelectItem value={CPVal.REPAIR}>
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeRepair')}</span>
                         <span className="text-xs text-muted-foreground">
@@ -676,7 +676,7 @@ export default function CreateCheckoutContent() {
                         </span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="rental">
+                    <SelectItem value={CPVal.RENTAL}>
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeRental')}</span>
                         <span className="text-xs text-muted-foreground">
