@@ -17,7 +17,7 @@ import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgres
 import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndicator';
 import { NextStepPanel, type OverflowAction } from '@/components/shared/NextStepPanel';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
-import checkoutApi, { type Checkout } from '@/lib/api/checkout-api';
+import checkoutApi, { type Checkout, type CheckoutSummary } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
@@ -170,8 +170,14 @@ function CheckoutGroupCard({
     onMutate: async ({ id }) => {
       // 뷰 쿼리 in-flight 취소 — 낙관적 업데이트가 서버 응답에 덮어써지지 않도록
       await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
+      // 롤백용 스냅샷 저장 (onError에서 즉시 복원)
+      const previousViewQueries = queryClient.getQueriesData<
+        PaginatedResponse<Checkout, CheckoutSummary>
+      >({
+        queryKey: queryKeys.checkouts.view.all(),
+      });
       // 낙관적: 해당 checkout status → approved (즉시 UI 반영)
-      queryClient.setQueriesData<PaginatedResponse<Checkout>>(
+      queryClient.setQueriesData<PaginatedResponse<Checkout, CheckoutSummary>>(
         { queryKey: queryKeys.checkouts.view.all() },
         (old) => {
           if (!old?.data) return old;
@@ -181,13 +187,16 @@ function CheckoutGroupCard({
           };
         }
       );
+      return { previousViewQueries };
     },
     onSuccess: (_data, variables) => {
       notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName ?? '' }, t);
     },
-    onError: (error: unknown, variables) => {
-      // 낙관적 업데이트 롤백 — 서버 상태 재조회
-      void queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
+    onError: (error: unknown, variables, context) => {
+      // 낙관적 업데이트 즉시 롤백 (스냅샷 복원 — refetch 대기 없이 즉시 원복)
+      context?.previousViewQueries?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
       if (isConflictError(error)) {
         // CAS 409: detail 캐시 즉시 제거 → 재시도 시 fresh version 조회 보장
         queryClient.removeQueries({ queryKey: queryKeys.checkouts.resource.detail(variables.id) });

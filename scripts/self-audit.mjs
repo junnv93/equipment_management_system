@@ -271,21 +271,39 @@ function checkRoleLiterals(file, lines) {
 
 // ─── 체크 ⑥ onSuccess 내 setQueryData ─────────────────────────────────────
 // --staged, --all 모두 적용
-// 휴리스틱: onSuccess 블록 내 setQueryData 호출 탐지
+// brace-depth 방식: onSuccess 콜백 블록 경계를 정확히 추적하여 onError 등 인접 콜백 오탐 방지
 
 function checkSetQueryDataInOnSuccess(file, content, lines) {
   if (isTestFile(file)) return;
-  // onSuccess 콜백 내에서 setQueryData 사용 여부 탐지
-  // window 방식: onSuccess가 등장한 라인 이후 10줄 내에 setQueryData가 있으면 위반
   for (let i = 0; i < lines.length; i++) {
     const stripped = stripComments(lines[i]);
-    if (/\bonSuccess\s*[:(]/.test(stripped) && !/\/\//.test(lines[i])) {
-      // 주변 10줄 내에 setQueryData가 있는지 확인
-      const window = lines.slice(i, Math.min(i + 12, lines.length)).join('\n');
-      if (/\bsetQueryData\b/.test(window)) {
-        // setQueryData가 주석 안에 있지 않은지 확인
-        const windowNoComments = window.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-        if (/\bsetQueryData\b/.test(windowNoComments)) {
+    if (!/\bonSuccess\s*[:(]/.test(stripped) || /\/\//.test(lines[i])) continue;
+
+    // onSuccess 라인에서 여는 중괄호를 찾아 콜백 블록 시작점 확정
+    // onSuccess: () => { ... }  또는  onSuccess(data) { ... }
+    let depth = 0;
+    let bodyStart = false;
+    let bodyEnd = false;
+
+    for (let j = i; j < Math.min(i + 60, lines.length); j++) {
+      const raw = lines[j];
+      for (const ch of raw) {
+        if (ch === '{') {
+          depth++;
+          bodyStart = true;
+        } else if (ch === '}') {
+          depth--;
+          if (bodyStart && depth === 0) {
+            bodyEnd = true;
+            break;
+          }
+        }
+      }
+      if (bodyEnd) {
+        // onSuccess 블록(i..j)의 내용만 검사
+        const block = lines.slice(i, j + 1).join('\n');
+        const blockNoComments = block.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+        if (/\bsetQueryData\b/.test(blockNoComments)) {
           fail(
             '⑥ setQueryData in onSuccess',
             file,
@@ -293,6 +311,7 @@ function checkSetQueryDataInOnSuccess(file, content, lines) {
             'onSuccess 내 setQueryData — TData/TCachedData 타입 불일치 위험 (memory: useOptimisticMutation 버그). invalidateQueries 사용 권장',
           );
         }
+        break;
       }
     }
   }

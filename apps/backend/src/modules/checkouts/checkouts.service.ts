@@ -3201,6 +3201,7 @@ export class CheckoutsService extends VersionedBaseService {
     );
 
     // Audit — reject 액션으로 기록 (approved→pending 롤백)
+    // isRevocation: true 마커로 일반 반려와 구분 (감사 이력 검색용)
     await this.writeTransitionAudit(
       checkout,
       'reject',
@@ -3208,6 +3209,7 @@ export class CheckoutsService extends VersionedBaseService {
       CSVal.PENDING as CheckoutStatus,
       req,
       {
+        isRevocation: true,
         revokeReason: dto.reason,
         previousApprovedAt: approvedAt.toISOString(),
       }
