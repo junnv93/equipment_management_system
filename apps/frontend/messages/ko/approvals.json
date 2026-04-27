@@ -47,6 +47,7 @@
     "equipment": { "label": "장비", "action": "승인" },
     "calibration": { "label": "교정 기록", "action": "승인" },
     "inspection": { "label": "중간점검", "action": "승인" },
+    "self_inspection": { "label": "자체점검", "action": "승인" },
     "nonconformity": { "label": "부적합 재개", "action": "승인" },
     "disposal_review": {
       "label": "폐기 검토",
@@ -320,6 +321,7 @@
     "disposal_final": "{equipment} ({managementNumber}) 폐기 승인",
     "software_validation": "{name} 변경 요청",
     "inspection": "{equipment} 중간점검",
+    "self_inspection": "{equipment} 자체점검",
     "nonConformance": "{cause} (조치 완료)",
     "calibration": "장비({equipmentId}) 교정 기록 등록",
     "checkoutOutgoing": "{equipmentNames} 반출 요청",

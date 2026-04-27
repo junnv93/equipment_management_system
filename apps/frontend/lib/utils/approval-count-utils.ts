@@ -68,6 +68,7 @@ const CATEGORY_SEMANTIC_COLOR: Record<ApprovalCategory, SemanticColorKey> = {
   equipment: 'info', // 장비 → blue 계열
   calibration: 'ok', // 교정 → green 계열
   inspection: 'temporary', // 점검 → cyan 계열
+  self_inspection: 'temporary', // 자체점검 → cyan 계열
   nonconformity: 'warning', // 부적합 → amber 계열
   disposal_review: 'critical', // 폐기 검토 → red 계열
   disposal_final: 'critical', // 폐기 승인 → red 계열

@@ -13,6 +13,7 @@ import {
   inspectionDocumentItems,
   inspectionResultSections,
   equipment,
+  teams,
   type EquipmentSelfInspection,
   type NewEquipmentSelfInspection,
   type SelfInspectionItem,
@@ -30,7 +31,12 @@ import {
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  SELF_INSPECTION_DATA_SCOPE,
+  type UserScopeContext,
+} from '@equipment-management/shared-constants';
+import { buildScopePredicate } from '../../common/scope/scope-sql-builder';
 import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 import type { CreateSelfInspectionInput } from './dto/create-self-inspection.dto';
 import type { UpdateSelfInspectionInput } from './dto/update-self-inspection.dto';
@@ -715,6 +721,54 @@ export class SelfInspectionsService extends VersionedBaseService {
       safety: itemMap.get('safety') ?? 'na',
       calibrationStatus: itemMap.get('calibrationStatus') ?? 'na',
     };
+  }
+
+  /**
+   * 승인 대기 자체점검 목록 — 통합 승인 뷰용 (SELF_INSPECTION_DATA_SCOPE 스코프 적용)
+   *
+   * status = 'submitted'인 항목만 반환.
+   * 역할별 스코프: technical_manager=소속팀, lab_manager=소속사이트, system_admin=전체
+   */
+  async findPendingApproval(userCtx: UserScopeContext): Promise<
+    {
+      id: string;
+      equipmentId: string;
+      equipmentName: string;
+      teamName: string;
+      submittedAt: string | null;
+    }[]
+  > {
+    const scopeCondition = buildScopePredicate(SELF_INSPECTION_DATA_SCOPE, userCtx, {
+      site: (s) => eq(equipment.site, s),
+      team: (t) => eq(equipment.teamId, t),
+    });
+
+    const conditions = [
+      eq(equipmentSelfInspections.approvalStatus, SelfInspectionStatusValues.SUBMITTED),
+    ];
+    if (scopeCondition) conditions.push(scopeCondition);
+
+    const rows = await this.db
+      .select({
+        id: equipmentSelfInspections.id,
+        equipmentId: equipment.id,
+        equipmentName: equipment.name,
+        teamName: teams.name,
+        submittedAt: equipmentSelfInspections.submittedAt,
+      })
+      .from(equipmentSelfInspections)
+      .innerJoin(equipment, eq(equipmentSelfInspections.equipmentId, equipment.id))
+      .leftJoin(teams, eq(equipment.teamId, teams.id))
+      .where(and(...conditions))
+      .orderBy(desc(equipmentSelfInspections.submittedAt));
+
+    return rows.map((r) => ({
+      id: r.id,
+      equipmentId: r.equipmentId,
+      equipmentName: r.equipmentName,
+      teamName: r.teamName ?? '',
+      submittedAt: r.submittedAt ? r.submittedAt.toISOString() : null,
+    }));
   }
 }
 

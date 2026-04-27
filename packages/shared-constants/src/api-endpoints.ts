@@ -475,6 +475,7 @@ export const API_ENDPOINTS = {
   // ============================================================================
   SELF_INSPECTIONS: {
     BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/self-inspections`,
+    PENDING_APPROVAL: '/api/self-inspections/pending-approval',
     GET: (id: string) => `/api/self-inspections/${id}`,
     UPDATE: (id: string) => `/api/self-inspections/${id}`,
     SUBMIT: (id: string) => `/api/self-inspections/${id}/submit`,

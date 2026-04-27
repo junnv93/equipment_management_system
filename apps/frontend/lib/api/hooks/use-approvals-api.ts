@@ -44,6 +44,7 @@ export function useApprovalsApi() {
           equipment: 0,
           calibration: 0,
           inspection: 0,
+          self_inspection: 0,
           nonconformity: 0,
           disposal_review: 0,
           disposal_final: 0,

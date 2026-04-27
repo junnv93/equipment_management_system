@@ -47,6 +47,7 @@
     "equipment": { "label": "Equipment", "action": "Approve" },
     "calibration": { "label": "Calibration", "action": "Approve" },
     "inspection": { "label": "Inspection", "action": "Approve" },
+    "self_inspection": { "label": "Self Inspection", "action": "Approve" },
     "nonconformity": { "label": "Non-Conformance", "action": "Approve" },
     "disposal_review": {
       "label": "Disposal Review",
@@ -320,6 +321,7 @@
     "disposal_final": "{equipment} ({managementNumber}) Disposal Approval",
     "software_validation": "{name} Change Request",
     "inspection": "{equipment} Intermediate Check",
+    "self_inspection": "{equipment} Self Inspection",
     "nonConformance": "{cause} (Corrected)",
     "calibration": "Equipment ({equipmentId}) Calibration Record",
     "checkoutOutgoing": "{equipmentNames} Checkout Request",

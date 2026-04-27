@@ -23,6 +23,8 @@ import {
   EQUIPMENT_DATA_SCOPE,
   FILE_UPLOAD_LIMITS,
 } from '@equipment-management/shared-constants';
+import type { UserScopeContext } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -122,6 +124,21 @@ export class SelfInspectionsController {
     private readonly documentService: DocumentService,
     private readonly resultSectionsService: ResultSectionsService
   ) {}
+
+  /**
+   * ⚠️ 라우트 순서 주의: 정적 경로(pending-approval)는 반드시 ':uuid' 파라미터 라우트보다 앞에 선언
+   */
+  @Get('pending-approval')
+  @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
+  @ApiOperation({ summary: '승인 대기 자체점검 목록 (통합 승인 뷰용)' })
+  async findPendingApproval(@Request() req: AuthenticatedRequest) {
+    const userCtx: UserScopeContext = {
+      role: req.user?.roles?.[0] as UserRole,
+      site: req.user.site ?? undefined,
+      teamId: req.user.teamId ?? undefined,
+    };
+    return this.selfInspectionsService.findPendingApproval(userCtx);
+  }
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)

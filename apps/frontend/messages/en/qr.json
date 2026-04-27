@@ -48,7 +48,8 @@
         "medium": "Medium ({widthMm} × {heightMm} mm)",
         "small": "Small ({widthMm} × {heightMm} mm)",
         "xs": "XS ({widthMm} × {heightMm} mm)",
-        "xxs": "XXS ({widthMm} × {heightMm} mm)"
+        "xxs": "XXS ({widthMm} × {heightMm} mm)",
+        "micro": "Micro ({widthMm} × {heightMm} mm)"
       }
     },
     "layoutModeLabel": "Print layout",
@@ -63,7 +64,8 @@
       "medium": "Medium ({widthMm} × {heightMm} mm)",
       "small": "Small ({widthMm} × {heightMm} mm)",
       "xs": "XS ({widthMm} × {heightMm} mm)",
-      "xxs": "XXS ({widthMm} × {heightMm} mm)"
+      "xxs": "XXS ({widthMm} × {heightMm} mm)",
+      "micro": "Micro ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
     "fallbackMode": {

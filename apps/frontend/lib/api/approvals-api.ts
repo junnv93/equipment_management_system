@@ -111,6 +111,16 @@ interface InspectionApprovalRow {
   equipmentName?: string;
 }
 
+/** 자체점검 승인 대기 응답 행 — 백엔드 SelfInspectionsService.findPendingApproval() */
+interface SelfInspectionApprovalRow {
+  [key: string]: unknown;
+  id: string;
+  equipmentId: string;
+  equipmentName: string;
+  teamName: string;
+  submittedAt: string | null;
+}
+
 // ============================================================================
 // 통합 승인 상태 타입
 // ✅ SSOT: UnifiedApprovalStatus는 @equipment-management/schemas에서 import
@@ -247,6 +257,14 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     canReject: false, // AR-8: 점검 항목은 반려 불가 — backend도 hard-throw
     section: 'equipment',
   },
+  self_inspection: {
+    labelKey: 'tabMeta.self_inspection.label',
+    icon: 'ClipboardList',
+    actionKey: 'tabMeta.self_inspection.action',
+    totalApprovalSteps: 1,
+    canReject: true,
+    section: 'equipment',
+  },
   nonconformity: {
     labelKey: 'tabMeta.nonconformity.label',
     icon: 'AlertTriangle',
@@ -347,6 +365,7 @@ export type ApprovalSummaryData =
   | { type: 'disposal'; equipmentName: string; managementNumber: string; step: 'review' | 'final' }
   | { type: 'software_validation'; softwareName: string }
   | { type: 'inspection'; equipmentName: string }
+  | { type: 'self_inspection'; equipmentName: string }
   | { type: 'non_conformance'; cause: string }
   | {
       type: 'equipment_import';
@@ -390,6 +409,7 @@ export interface PendingCountsByCategory {
   equipment: number;
   calibration: number;
   inspection: number;
+  self_inspection: number;
   nonconformity: number;
   disposal_review: number;
   disposal_final: number;
@@ -441,6 +461,8 @@ class ApprovalsApi {
         return this.getPendingCalibrations(teamId);
       case 'inspection':
         return this.getPendingInspections(teamId);
+      case 'self_inspection':
+        return this.getPendingSelfInspections(teamId);
       case 'nonconformity':
         return this.getPendingNonConformities();
       case 'disposal_review':
@@ -649,6 +671,27 @@ class ApprovalsApi {
   }
 
   /**
+   * 자체점검 승인 대기 목록 조회
+   */
+  private async getPendingSelfInspections(teamId?: string): Promise<ApprovalItem[]> {
+    try {
+      const params = new URLSearchParams();
+      if (teamId) params.set('teamId', teamId);
+      const url =
+        params.size > 0
+          ? `${API_ENDPOINTS.SELF_INSPECTIONS.PENDING_APPROVAL}?${params.toString()}`
+          : API_ENDPOINTS.SELF_INSPECTIONS.PENDING_APPROVAL;
+      const response = await apiClient.get(url);
+      const items = transformArrayResponse<SelfInspectionApprovalRow>(response);
+
+      return items.map((item) => this.mapSelfInspectionToApprovalItem(item));
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingSelfInspections failed:', error);
+      return [];
+    }
+  }
+
+  /**
    * 폐기 검토 대기 목록 조회 (기술책임자)
    */
   private async getPendingDisposalReviews(): Promise<ApprovalItem[]> {
@@ -731,6 +774,7 @@ class ApprovalsApi {
       equipment: 0,
       calibration: 0,
       inspection: 0,
+      self_inspection: 0,
       nonconformity: 0,
       disposal_review: 0,
       disposal_final: 0,
@@ -797,6 +841,14 @@ class ApprovalsApi {
           comment,
         });
         break;
+      case 'self_inspection': {
+        const selfInspDetail = await apiClient.get(API_ENDPOINTS.SELF_INSPECTIONS.GET(id));
+        const selfInspVersion = (selfInspDetail as { version?: number }).version;
+        await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.APPROVE(id), {
+          version: selfInspVersion,
+        });
+        break;
+      }
       case 'nonconformity': {
         const { version: ncVersion } = await nonConformancesApi.getNonConformance(id);
         await nonConformancesApi.closeNonConformance(id, {
@@ -898,6 +950,15 @@ class ApprovalsApi {
       }
       case 'inspection':
         throw new Error('Inspection items cannot be rejected.');
+      case 'self_inspection': {
+        const selfInspRejectDetail = await apiClient.get(API_ENDPOINTS.SELF_INSPECTIONS.GET(id));
+        const selfInspRejectVersion = (selfInspRejectDetail as { version?: number }).version;
+        await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.REJECT(id), {
+          version: selfInspRejectVersion,
+          rejectionReason: reason,
+        });
+        break;
+      }
       case 'nonconformity': {
         const { version: ncRejectVersion } = await nonConformancesApi.getNonConformance(id);
         await nonConformancesApi.rejectCorrection(id, {
@@ -1215,6 +1276,22 @@ class ApprovalsApi {
       requestedAt: item.nextIntermediateCheckDate ?? item.createdAt ?? '',
       summary: `${item.equipmentName ?? 'Equipment'} Intermediate Check`,
       summaryData: { type: 'inspection', equipmentName: item.equipmentName ?? 'Equipment' },
+      details: item,
+      originalData: item,
+    };
+  }
+
+  private mapSelfInspectionToApprovalItem(item: SelfInspectionApprovalRow): ApprovalItem {
+    return {
+      id: item.id,
+      category: 'self_inspection',
+      status: UASVal.PENDING,
+      requesterId: '',
+      requesterName: item.teamName,
+      requesterTeam: item.teamName,
+      requestedAt: item.submittedAt ?? '',
+      summary: `${item.equipmentName} Self Inspection`,
+      summaryData: { type: 'self_inspection', equipmentName: item.equipmentName },
       details: item,
       originalData: item,
     };

@@ -28,6 +28,7 @@ import {
   NonConformanceStatusValues,
   DisposalReviewStatusValues,
   ApprovalStatusEnum,
+  SelfInspectionStatusValues,
   type UserRole,
   type CheckoutStatus,
   type CalibrationPlanStatus,
@@ -42,6 +43,7 @@ import {
   NON_CONFORMANCE_DATA_SCOPE,
   CHECKOUT_DATA_SCOPE,
   INTERMEDIATE_CHECK_DATA_SCOPE,
+  SELF_INSPECTION_DATA_SCOPE,
   CALIBRATION_DATA_SCOPE,
   CALIBRATION_PLAN_DATA_SCOPE,
   TEST_SOFTWARE_DATA_SCOPE,
@@ -96,6 +98,7 @@ export interface PendingCountsByCategory {
   equipment: number;
   calibration: number;
   inspection: number;
+  self_inspection: number;
   nonconformity: number;
   disposal_review: number;
   disposal_final: number;
@@ -170,6 +173,7 @@ export class ApprovalsService {
       equipmentCount,
       calibrationCount,
       inspectionCount,
+      selfInspectionCount,
       nonconformityCount,
       disposalReviewCount,
       disposalFinalCount,
@@ -220,6 +224,7 @@ export class ApprovalsService {
       shouldQuery(AC.EQUIPMENT) ? this.getEquipmentRequestCount(userCtx) : Promise.resolve(0),
       shouldQuery(AC.CALIBRATION) ? this.getCalibrationCount(userCtx) : Promise.resolve(0),
       shouldQuery(AC.INSPECTION) ? this.getIntermediateCheckCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.SELF_INSPECTION) ? this.getSelfInspectionCount(userCtx) : Promise.resolve(0),
       shouldQuery(AC.NONCONFORMITY) ? this.getNonConformanceCount(userCtx) : Promise.resolve(0),
       shouldQuery(AC.DISPOSAL_REVIEW)
         ? this.getDisposalCount(DisposalReviewStatusValues.PENDING, userCtx)
@@ -242,6 +247,7 @@ export class ApprovalsService {
       equipment: equipmentCount,
       calibration: calibrationCount,
       inspection: inspectionCount,
+      self_inspection: selfInspectionCount,
       nonconformity: nonconformityCount,
       disposal_review: disposalReviewCount,
       disposal_final: disposalFinalCount,
@@ -324,6 +330,8 @@ export class ApprovalsService {
           return this.getCalibrationKpi(userCtx, thresholdDays);
         case AC.INSPECTION:
           return this.getInspectionKpi(userCtx, thresholdDays);
+        case AC.SELF_INSPECTION:
+          return this.getSelfInspectionKpi(userCtx, thresholdDays);
         case AC.NONCONFORMITY:
           return this.getNonConformanceKpi(userCtx, thresholdDays);
         case AC.DISPOSAL_REVIEW:
@@ -1018,6 +1026,88 @@ export class ApprovalsService {
       );
       return 0;
     }
+  }
+
+  /**
+   * 자체점검 승인 대기 개수 — SSOT: SELF_INSPECTION_DATA_SCOPE
+   */
+  private async getSelfInspectionCount(userCtx: UserScopeContext): Promise<number> {
+    try {
+      const conditions: SQL[] = [
+        eq(schema.equipmentSelfInspections.approvalStatus, SelfInspectionStatusValues.SUBMITTED),
+      ];
+      const scopeCondition = buildScopePredicate(SELF_INSPECTION_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+
+      if (scopeCondition) {
+        const [result] = await this.db
+          .select({ count: count() })
+          .from(schema.equipmentSelfInspections)
+          .innerJoin(
+            schema.equipment,
+            eq(schema.equipmentSelfInspections.equipmentId, schema.equipment.id)
+          )
+          .where(and(...conditions, scopeCondition));
+        return result?.count ?? 0;
+      }
+
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.equipmentSelfInspections)
+        .where(and(...conditions));
+      return result?.count ?? 0;
+    } catch (error) {
+      this.logger.error(
+        '자체점검 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * 자체점검 KPI — SSOT: SELF_INSPECTION_DATA_SCOPE
+   */
+  private async getSelfInspectionKpi(
+    userCtx: UserScopeContext,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.equipmentSelfInspections.approvalStatus, SelfInspectionStatusValues.SUBMITTED),
+    ];
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.equipmentSelfInspections.submittedAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentSelfInspections.submittedAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+    const scopeCondition = buildScopePredicate(SELF_INSPECTION_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
+
+    const [result] = scopeCondition
+      ? await this.db
+          .select(kpiSelect)
+          .from(schema.equipmentSelfInspections)
+          .innerJoin(
+            schema.equipment,
+            eq(schema.equipmentSelfInspections.equipmentId, schema.equipment.id)
+          )
+          .where(and(...conditions, scopeCondition))
+      : await this.db
+          .select(kpiSelect)
+          .from(schema.equipmentSelfInspections)
+          .where(and(...conditions));
+
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**

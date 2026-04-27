@@ -108,6 +108,15 @@ export const EQUIPMENT_IMPORT_DATA_SCOPE: FeatureScopePolicy = {
   system_admin: { type: 'all', label: '전체 반입 기록' },
 };
 
+/** 자체점검: 팀 장비 기준 관리 (UL-QP-18-05) */
+export const SELF_INSPECTION_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'team', label: '소속 팀 자체점검' },
+  technical_manager: { type: 'team', label: '소속 팀 자체점검' },
+  quality_manager: { type: 'all', label: '전체 자체점검' },
+  lab_manager: { type: 'site', label: '소속 사이트 자체점검' },
+  system_admin: { type: 'all', label: '전체 자체점검' },
+};
+
 /** 중간점검: 팀 장비 기준 관리 */
 export const INTERMEDIATE_CHECK_DATA_SCOPE: FeatureScopePolicy = {
   test_engineer: { type: 'team', label: '소속 팀 중간점검' },
