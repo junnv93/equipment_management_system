@@ -459,3 +459,35 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-24 pr4-7] 🟢 LOW OutboundCheckoutsTab celebration EmptyState i18n 하드코딩** — 실측 확인(2026-04-27): `t('emptyState.overdueClear.title/description')` i18n 키 이미 사용 중. ko/en 번역 키 존재 확인. 이미 완료 상태.
 - [x] **[2026-04-24 rental-phase9] 🟢 LOW router.refresh() + invalidateKeys 이중 동기화** — 실측 확인(2026-04-27): `CheckoutDetailPage`가 async Server Component — 상태 변경 후 breadcrumb·메타데이터 동기화에 `router.refresh()` 필수. 의도적 이중 갱신. 유지 결정.
 - [x] **[2026-04-24 sprint-1.2] 🟢 LOW computeStepIndex exhaustive satisfies 전환 미완** — 실측 확인(2026-04-27): `checkout-fsm.ts` `computeStepIndex` 이미 `as const satisfies Record<CheckoutStatus, number>` 패턴 적용됨 (rental/non-rental 양쪽). 이미 완료 상태.
+
+## 2026-04-27 — tech-debt-0427-cleanup harness + 백엔드 API 4종 + FSM 아키텍처 + approvals E2E
+
+### harness: tech-debt-0427-cleanup (M1~M11 전 PASS) + 추가 완료 2건
+
+- [x] **[2026-04-27 dashboard-design] 🟡 MEDIUM dynamic-ssr-strategy** — `DashboardRow3/4` 8개 위젯 `ssr:true` → `ssr:false` 전환 완료. "First Load JS -15~30KB" 주석 제거. (2026-04-27 별도 세션)
+- [x] **[2026-04-27 tech-debt-0427-cleanup] 🟢 LOW equipment-ts-dark-text-brand-info** — `equipment.ts:92` `text-ul-midnight dark:text-brand-info` → `text-brand-info`. CSS 변수 자동 전환 체계 준수. (2026-04-27 별도 세션)
+- [x] **[2026-04-27 dashboard-design] 🟢 LOW dark-text-brand-prefix** — `dashboard.ts:101,105` `dark:text-brand-info` → `text-brand-info` 교체 완료. CSS 변수 자동 전환 체계 준수. (2026-04-27 harness: tech-debt-0427-cleanup M2 PASS)
+- [x] **[2026-04-27 vi] 🟢 LOW guidance-urgency-normal-i18n** — `ko/checkouts.json` `guidance.urgency.normal: "일반"`, `en/checkouts.json` `"Normal"` 추가 완료. 빈 문자열 해소. (2026-04-27 harness: tech-debt-0427-cleanup M5 PASS)
+- [x] **[2026-04-27 page-container-ssot] 🟡 MEDIUM frontend-routes-inline-href** — `EquipmentStickyHeader.tsx`, `CreateCalibrationPlanContent.tsx` 2곳, `NonConformanceManagementClient.tsx` 4곳, 4개 `not-found.tsx` 총 8곳 하드코딩 href → `FRONTEND_ROUTES.*` SSOT 상수 교체 완료. (2026-04-27 harness: tech-debt-0427-cleanup M1+M11 PASS)
+- [x] **[2026-04-27 sprint-2.1-2.2] 🟢 LOW brand-info-font-medium-audit** — `grep -rn "text-brand-info font-medium" apps/frontend/components/` 결과 0건 확인. 전수 스캔 완료. (2026-04-27 harness: tech-debt-0427-cleanup M6 PASS)
+- [x] **[2026-04-27 dashboard-phase4-6] 🟢 LOW row4-use-translations-extraction** — `DashboardRow4.tsx` `useTranslations('dashboard')` 직접 호출 → `recentActivityAriaLabel?: string` prop으로 추출. `DashboardClient.tsx:191`에서 `recentActivityAriaLabel={t('srOnly.recentActivity')}` 전달. (2026-04-27 harness: tech-debt-0427-cleanup M7 PASS)
+- [x] **[2026-04-27 approvals-ui-r2] 🟢 LOW reject-modal-ux-min-length-inconsistency** — `RejectModal` 입력창 아래 `t('rejectModal.minLengthHint', { min: REJECTION_MIN_LENGTH })` helper text 추가. ko `"{min}자 이상 입력하세요."`, en `"Please enter at least {min} characters."` i18n 양쪽 추가. (2026-04-27 harness: tech-debt-0427-cleanup M3+M10 PASS)
+- [x] **[2026-04-27 approvals-ui-r2] 🟢 LOW bulk-reject-modal-no-auto-close** — `handleSubmit` bulk 분기에서 `await props.onBulkConfirm(...)` 성공 후 `props.onClose()` 자동 호출 추가. catch 진입 시 onClose 미호출(의도된 UX). (2026-04-27 harness: tech-debt-0427-cleanup M4 PASS)
+
+### harness: checkout-sprint4-3-to-5 (M8~M11 PASS)
+
+- [x] **[2026-04-27 sprint4-3-to-5] 🔴 HIGH bulk-approve-endpoint** — `bulk-approve.dto.ts` + `PATCH /checkouts/bulk-approve` controller + `bulkApprove(Promise.allSettled + CAS)` service 구현. 947 tests PASS. (2026-04-27 harness: checkout-sprint4-3-to-5 M8 PASS)
+- [x] **[2026-04-27 sprint4-3-to-5] 🟡 MEDIUM destinations-recent-endpoint** — `GET /checkouts/destinations/recent` — userId scope + 60s TTL Redis 캐시 + `selectDistinct` + limit 5. (2026-04-27 harness: checkout-sprint4-3-to-5 M10 PASS)
+- [x] **[2026-04-27 sprint4-3-to-5] 🔴 HIGH revoke-approval-endpoint** — `PATCH /checkouts/:id/revoke-approval` — fail-close(scope→FSM→domain) + CAS + `REVOCATION_WINDOW_EXPIRED` 에러코드 + `AuditLog extraInfo: { revokeReason, previousApprovedAt }`. (2026-04-27 harness: checkout-sprint4-3-to-5 M11 PASS)
+- [x] **[2026-04-27 sprint4-3-to-5] 🟢 LOW backend-lint-unused-vars** — `pnpm --filter backend run lint` exit 0 확인. 미사용 변수 제거 완료. (2026-04-27 커밋 a8421829)
+
+### harness: fsm-terminal-actor-variant (완료 항목)
+
+- [x] **[2026-04-24 sprint-1.5] 🟡 MEDIUM fsm-terminal-step-index-semantics** — `terminatedFromStatus` DB 컬럼(nullable) + `computeReachedStepIndex` 헬퍼 + `NextStepDescriptor.reachedStepIndex` 필드 구현. reject/borrowerReject/cancel 전이 시 `terminatedFromStatus` 저장, `buildNextStep`에서 전달. (2026-04-27 harness: fsm-terminal-actor-variant)
+- [x] **[2026-04-27 sprint-4.1] 🟡 MEDIUM actor-variant-role-mapping-gap** — `ActorVariant` + `roleToActorVariant` SSOT → `@equipment-management/schemas` 승격. `isMyTurn` 계산 + `YourTurnBadge` 컴포넌트 구현. `data-my-turn` 전 variant 적용. (2026-04-27 harness: fsm-terminal-actor-variant)
+- [x] **[2026-04-27 dashboard-design-review] 🟢 LOW dashboard-client-row-extraction** — `DashboardClient.tsx` 449→197라인. `DashboardRow0~4` 분리 완료. 동적 임포트 + `SIDEBAR_WIDGET_RENDERERS` → Row3/Row4 이동. (2026-04-27 완료)
+
+### harness: approvals-ar7-ar6-e2e (완료 항목)
+
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approvals-mini-stepper-e2e-spec** — `wf-ap01-approvals-mini-stepper.spec.ts` 생성. `role="progressbar"` 균일 렌더 + `aria-valuemax` + 단일단계 분수레이블 미노출 E2E 커버. (2026-04-27 harness: approvals-ar7-ar6-e2e)
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approvals-bulk-reject-e2e-spec** — `wf-ap02-approvals-bulk-reject.spec.ts` 생성. `BulkActionBar` aria-hidden 토글 + `RejectModal` bulk 모드 + 일괄 반려 완료 + 선택 해제 시퀀스 커버. (2026-04-27 harness: approvals-ar7-ar6-e2e)

@@ -5,11 +5,6 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 ## Open
 
-### 2026-04-27 harness: dashboard-design-review-0427 SHOULD 이연 항목
-
-- [x] **[2026-04-27 dashboard-design] 🟡 MEDIUM dynamic-ssr-strategy** — ✅ DONE 2026-04-27. DashboardRow3/4 8개 위젯 ssr:true → ssr:false. 실제 위치: DashboardRow3.tsx + DashboardRow4.tsx.
-- [x] **[2026-04-27 tech-debt-0427-cleanup] 🟢 LOW equipment-ts-dark-text-brand-info** — ✅ DONE 2026-04-27. equipment.ts:92 text-ul-midnight dark:text-brand-info → text-brand-info.
-
 ### 2026-04-27 harness: Sprint 4.1+4.2 NextStepPanel+Row3Zone SHOULD 이연 항목
 
 - [ ] **[2026-04-27 sprint-4.2] 🟢 LOW overflow-action-type-ssot** — `OverflowAction` 인터페이스가 `components/shared/NextStepPanel.tsx` 로컬 정의. 두 번째 사용처 등장 시 `lib/types/checkout-ui.ts`로 승격 검토.
