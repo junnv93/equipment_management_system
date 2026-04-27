@@ -216,6 +216,12 @@ export interface ControlCenterConfig {
   pendingApprovalElevated?: boolean;
   /** 내 활동 카드 표시 여부 (test_engineer Row3) */
   showMyActivity?: boolean;
+  /**
+   * Row4 RecentActivities 피드 표시 여부.
+   * false → Row3에 MyActivityCard가 이미 있어 중복 방지 (test_engineer).
+   * 미지정/true → 기본 표시.
+   */
+  showRecentActivities?: boolean;
   /** AlertBanner trailing action 슬롯 타입 */
   alertBannerTrailingAction?: 'approval' | 'createCheckout' | null;
 }
@@ -401,6 +407,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       approvalCategoryPriorities: {},
       row3Layout: 'single-col-stretch',
       showMyActivity: true,
+      showRecentActivities: false,
     },
   },
 

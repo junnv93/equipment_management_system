@@ -903,7 +903,14 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   ].join(' '),
   /** 장비 수 배지 */
   countBadge: 'text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md',
-} as const;
+} as const satisfies {
+  grid: string;
+  zoneStatus: string;
+  zoneIdentity: string;
+  zoneAction: string;
+  miniProgressTooltipButton: string;
+  [key: string]: unknown;
+};
 
 /** CheckoutPurpose → purposeBar 색상 클래스 SSOT 헬퍼. 타입 강제로 default fallback 미사용. */
 export function getPurposeBarClass(purpose: CheckoutPurpose): string {

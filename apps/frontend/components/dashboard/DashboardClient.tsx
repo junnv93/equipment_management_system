@@ -414,9 +414,11 @@ function DashboardClientComponent({
           E.stagger.row4Delay
         )}
       >
-        <section aria-label={t('srOnly.recentActivity')}>
-          <RecentActivities data={recentActivities} loading={isLoading} />
-        </section>
+        {controlCenter.showRecentActivities !== false && (
+          <section aria-label={t('srOnly.recentActivity')}>
+            <RecentActivities data={recentActivities} loading={isLoading} />
+          </section>
+        )}
         {sidebarCount > 0 && (
           <div className="grid gap-4 h-full" style={{ gridTemplateRows: sidebarGridRows }}>
             {controlCenter.sidebarWidgets.map((widget) => {
