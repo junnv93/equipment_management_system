@@ -74,7 +74,8 @@
       "Bash(echo \"\")",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-24-rental-phase3-4.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-24-rental-phase3-4.md)",
       "Bash(mkdir -p /home/kmjkds/equipment_management_system/.claude/evaluations)",
-      "Bash(git -C /home/kmjkds/equipment_management_system diff --name-only)"
+      "Bash(git -C /home/kmjkds/equipment_management_system diff --name-only)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-26-dashboard-design-overhaul.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-26-dashboard-design-overhaul.md)"
     ],
     "deny": [],
     "ask": []
