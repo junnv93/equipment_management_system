@@ -1,7 +1,7 @@
 ---
 slug: tech-debt-0427-cleanup
 date: 2026-04-27
-iteration: 2
+iteration: 3
 verdict: PASS
 ---
 
@@ -42,6 +42,26 @@ verdict: PASS
 - 영향: SHOULD 기준, 비차단. P2 수정 범위(dashboard.ts)와 동일 패턴이나 equipment.ts는 tracker 미포함
 - 권고: 다음 세션에서 동일 패턴 일괄 정리 대상으로 이월
 
+## Iteration 3 Re-verification (2026-04-27, lint fix session)
+
+Re-ran all M1–M11 checks after `self-inspections.controller.ts:134` return type annotation fix.
+
+| Check | Command | Result |
+|-------|---------|--------|
+| M1 | `grep -rn 'href="/equipment"\|...'` | 0건 PASS |
+| M2 | `grep -n "dark:text-brand-info" dashboard.ts` | 0건 PASS |
+| M3 | `grep -n "minLengthHint\|minLength" RejectModal.tsx` | line 174 PASS |
+| M4 | `grep -n "onClose()" RejectModal.tsx` | line 115 (bulk else 분기) PASS |
+| M5 | `grep "urgency" ko/checkouts.json en/checkouts.json` | `"일반"/"Normal"` 비어있지 않음 PASS |
+| M6 | `grep -rn "text-brand-info font-medium\|..."` | 0건 PASS |
+| M7 | `grep "useTranslations" DashboardRow4.tsx` | 0건 PASS |
+| M8 | `pnpm --filter frontend exec tsc --noEmit` + backend | exit 0 / exit 0 PASS |
+| M9 | `pnpm --filter backend run lint` | exit 0 PASS |
+| M10 | `grep -n "minLengthHint" ko/approvals.json en/approvals.json` | line 202 양쪽 PASS |
+| M11 | FRONTEND_ROUTES import source 전수 확인 | 모두 `@equipment-management/shared-constants` PASS |
+
+S2(equipment.ts `dark:text-brand-info`) 여부 재확인 → 파일 내 해당 패턴 없음. 이전 iteration에서 이미 해소된 것으로 확인. S3(not-found.tsx `href="/"`) 4개 파일 잔존 — fallback 루트 링크, FRONTEND_ROUTES 미적용. 비차단.
+
 ## Verdict
 
-PASS — M1~M11 전 기준 충족. SHOULD S2(equipment.ts dark:text-brand-info)만 잔존, 비차단.
+PASS — M1~M11 전 기준 충족. SHOULD S3(not-found.tsx `href="/"` 4건)만 잔존, 비차단.
