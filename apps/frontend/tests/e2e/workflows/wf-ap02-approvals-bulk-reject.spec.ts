@@ -149,8 +149,8 @@ test.describe('WF-AP02: 승인 목록 일괄 반려', () => {
       .last();
     await confirmButton.click();
 
-    // 처리 완료 후 카운트 감소 확인
-    await page.waitForTimeout(2000);
+    // 모달 닫힘 대기 (event-based)
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     await clearBackendCache();
 
     // 반려 후 항목 수 감소 (또는 toast 표시)

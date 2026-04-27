@@ -123,8 +123,11 @@ test.describe('WF-AP01: 승인 목록 mini stepper ARIA 균일성', () => {
         .first();
       if (await approveMenuItem.isVisible({ timeout: 2000 }).catch(() => false)) {
         await approveMenuItem.click();
-        // 행이 사라지거나 카운트 감소 확인
-        await page.waitForTimeout(1000);
+        // 행이 사라지거나 카운트 감소 확인 (event-based)
+        await rows
+          .first()
+          .waitFor({ state: 'detached', timeout: 5000 })
+          .catch(() => {});
       }
     }
 
