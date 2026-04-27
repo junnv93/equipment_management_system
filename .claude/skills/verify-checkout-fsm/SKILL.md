@@ -439,6 +439,7 @@ grep -n "BadRequestException" \
 | 36 | reachedStepIndex — NextStepDescriptor 3분기 + computeReachedStepIndex terminatedFromStatus 위임 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | getNextStep 3개 return 분기 모두 reachedStepIndex 포함 + 함수 terminatedFromStatus 파라미터 존재 |
 | 37 | terminatedFromStatus 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | reject/borrowerReject/cancel에 terminatedFromStatus 설정, 비-terminal 메서드에 미설정 |
 | 39 | useCheckoutNextStep hook terminatedFromStatus 입력 passthrough (2026-04-27) | PASS/FAIL | UseCheckoutNextStepInput 인터페이스 + getNextStep 전달 + useMemo deps 포함 |
+| 40 | compact canAct 분기 — !canAct span 단독 / canAct button 단독, 이중 렌더 금지 (2026-04-27) | PASS/FAIL | !canAct span 1건 + canAct button 1건 + 동시 렌더 0건 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -1163,3 +1164,38 @@ grep -A 10 "useMemo" apps/frontend/hooks/use-checkout-next-step.ts | grep "termi
 **관련 파일:**
 - `apps/frontend/hooks/use-checkout-next-step.ts` — `UseCheckoutNextStepInput`, `getNextStep` 호출부
 - `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex` (Step 36 연동)
+
+### Step 40: compact variant `canAct` 분기 — span/button 이중 렌더 금지 (2026-04-27 추가)
+
+`NextStepPanel.tsx` compact 분기에서 `canAct` 값에 따라 span과 button을 **상호 배타적**으로 렌더해야 한다:
+- `canAct=false`: `{!canAct && <span>}` — 텍스트 레이블만 (버튼 없음)
+- `canAct=true`: `{canAct && <button>}` — 액션 버튼만 (레이블 중복 없음)
+
+span이 조건 없이 항상 렌더되면 `canAct=true` 시 동일 텍스트가 span + button 두 곳에 노출되어 스크린리더가 두 번 읽는다.
+
+```bash
+# !canAct span 조건부 렌더 확인
+grep -n "!canAct" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 1건 이상 (PASS)
+
+# canAct button 조건부 렌더 확인
+grep -n "canAct &&" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 1건 이상 (PASS)
+
+# span이 canAct 조건 없이 무조건 렌더되는 패턴 탐지 (FAIL 조건)
+grep -n "action\.\${descriptor\.labelKey}" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: compact 분기 내 span은 !canAct 블록 내에만 존재, button은 canAct 블록 내에만 존재
+```
+
+**PASS:**
+1. `{!canAct && <span>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
+2. `{canAct && <button>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
+3. 두 분기가 상호 배타적 — 동일 조건 블록 내 동시 렌더 없음
+
+**FAIL:**
+- span이 `!canAct` 없이 compact 분기 최상위에서 무조건 렌더 → `canAct=true` 시 이중 텍스트
+- button이 `canAct` 조건 없이 항상 렌더 → 권한 없는 사용자에게 버튼 노출
+
+**관련 파일:**
+- `apps/frontend/components/shared/NextStepPanel.tsx` — compact 분기 (~라인 305-330)
+- `apps/frontend/components/shared/NextStepPanel.stories.tsx` — CompactVariantCanAct(canAct=true) + CompactVariantNoAct(canAct=false)

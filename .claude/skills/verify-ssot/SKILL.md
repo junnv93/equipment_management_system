@@ -790,6 +790,7 @@ grep -n "onBulkReject" apps/frontend/components/approvals/ApprovalsClient.tsx | 
 | 29  | prebuild guard 스크립트 존재 + package.json 연결 | PASS/FAIL | check-role-config-sync.mjs·check-css-vars.mjs 파일 누락 또는 prebuild 훅 미연결 |
 | 30  | 상태 순서 매핑 키 enum Computed Property Name 경유 | PASS/FAIL | `STATUS_ORDER`/`PRIORITY_MAP` 등에서 문자열 리터럴 키 또는 `Record<string, N>` 타입 위치 |
 | 33  | TAB_META capability guard 완전성 — canReject 4-path | PASS/FAIL | 미가드 onReject/onBulkReject 직접 전달 위치 |
+| 34  | 로컬 인터페이스명 packages 동명 타입 충돌 금지 (2026-04-27) | PASS/FAIL | `packages/schemas` export 타입과 서비스 로컬 interface 동명 충돌 위치 |
 ```
 
 ## Exceptions
@@ -806,3 +807,41 @@ grep -n "onBulkReject" apps/frontend/components/approvals/ApprovalsClient.tsx | 
 8. **`Promise<unknown>` 허용 케이스** — `private` 헬퍼 메서드나 단순 delete/count 반환은 면제
 9. **audit-logs route 의 인라인 `resolveDataScope` 호출** — `AUDIT_LOG_SCOPE` + 'none → 빈 보고서' fallback 정책으로 인터셉터 통합 불가, 의도적 예외 (`reports.controller.exportAuditLogs`)
 10. **`CheckoutPermissionKey` 로컬 string union** — `packages/schemas/src/fsm/checkout-fsm.ts`의 `CheckoutPermissionKey` 타입은 `Permission` enum을 직접 import하면 순환 의존성(`schemas ← shared-constants ← schemas`)이 발생하므로, Permission 값을 로컬에서 string union으로 미러링하는 것이 설계 의도. `/verify-checkout-fsm`의 Step 4에서 `shared-constants`와의 동기화 여부를 별도 검증함.
+
+### Step 34: 로컬 인터페이스명 packages 동명 타입 충돌 금지 (2026-04-27 추가)
+
+`packages/schemas`에 이미 export된 타입과 **동일한 이름**으로 서비스 로컬 인터페이스를 선언하면,
+미래에 패키지 타입을 import하는 코드와 혼동을 유발한다. 로컬 인터페이스는 목적을 명시하는 접미사로 구분해야 한다.
+
+**규칙:** `interface Foo { ... }`가 로컬에 선언됐고 `packages/schemas`에 동명 `Foo` export가 존재하면 FAIL.
+접미사 예시: `Summary`, `Row`, `Dto`, `Payload`, `Input`, `Output`.
+
+**발생 이력 (2026-04-27):** `checkouts.service.ts`의 로컬 `interface CheckoutEquipment`가 `packages/schemas`의 `export type CheckoutEquipment`(행 타입)와 동명 충돌. → `CheckoutEquipmentSummary`로 이름 변경.
+
+```bash
+# packages/schemas export 타입 목록
+grep -rn "^export\s\+\(interface\|type\|class\)" \
+  packages/schemas/src/ --include="*.ts" \
+  | grep -oP "(?<=(interface|type|class) )\w+" | sort -u > /tmp/schema_types.txt
+
+# 백엔드 서비스 로컬 interface 목록
+grep -rn "^interface\s\+\w\+\s*{" \
+  apps/backend/src/modules/ --include="*.service.ts" \
+  | grep -oP "(?<=interface )\w+" | sort -u > /tmp/local_interfaces.txt
+
+# 충돌 탐지
+comm -12 /tmp/schema_types.txt /tmp/local_interfaces.txt
+# 기대: 출력 없음 (PASS) — 출력 있으면 FAIL
+```
+
+**PASS:** `comm -12` 결과 0줄 — 동명 충돌 없음.
+**FAIL:** 동명 충돌 발견 → 로컬 인터페이스에 역할 명시 접미사 추가.
+
+**예외:**
+- 로컬 인터페이스가 동명 타입을 `extends`하는 경우 — 확장이지 재정의 아님
+- `packages/schemas`에서 `import { Foo }` 후 재사용하는 경우 — 로컬 재정의 없음
+- `private`/`non-export` 인터페이스도 동명이면 혼동 유발 → 예외 없음
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `CheckoutEquipmentSummary` (이름 변경 이력)
+- `packages/schemas/src/checkout.ts` — `CheckoutEquipment` 행 타입 SSOT
