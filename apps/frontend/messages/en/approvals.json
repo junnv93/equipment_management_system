@@ -120,6 +120,15 @@
     "ariaLabel": "Approval categories navigation",
     "completedHint": "Done"
   },
+  "bulkBar": {
+    "ariaLabel": "Bulk action toolbar",
+    "selectionCount": "{count} selected",
+    "allSelected": "All selected ({count}/{total})",
+    "dismiss": "Clear selection",
+    "selectionCleared": "Selection cleared.",
+    "stickyHint": "Bulk action mode",
+    "selectionAnnouncement": "{count} items selected."
+  },
   "mobileBar": {
     "ariaLabel": "Approval category tabs"
   },

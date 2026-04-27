@@ -205,7 +205,32 @@ export const APPROVAL_TAB_TOKENS = {
  * SSOT: BulkActionBar.tsx 컨테이너 스타일
  */
 export const APPROVAL_BULK_BAR_TOKENS = {
+  /** inline 변형 (하위 호환 — deprecated, AP-02에서 fixed로 전환) */
   container: 'bg-muted/30',
+
+  /** fixed bottom floating bar — viewport 기준 고정, safe-area 경유 */
+  fixedBottom: [
+    'fixed bottom-[var(--bulk-bar-offset,0px)] left-0 right-0',
+    'z-[30]',
+    'border-t border-border',
+    'bg-background/95 backdrop-blur-sm',
+    'shadow-[0_-2px_8px_rgb(0_0_0/0.06)]',
+    'transition-all duration-200 motion-reduce:transition-none',
+  ].join(' '),
+
+  /** 0건 → 시각적 숨김 (DOM 유지) */
+  hidden: 'opacity-0 pointer-events-none translate-y-1',
+  /** ≥1건 → 표시 */
+  visible: 'opacity-100 pointer-events-auto translate-y-0',
+
+  /** inner flex layout */
+  inner: 'flex items-center gap-3 px-4 py-3',
+
+  /** 선택 카운트 chip (role="status") */
+  countChip: 'text-sm font-semibold text-foreground tabular-nums',
+
+  /** × 선택 해제 버튼 */
+  dismissButton: 'h-7 text-xs px-2',
 } as const;
 
 // ============================================================================

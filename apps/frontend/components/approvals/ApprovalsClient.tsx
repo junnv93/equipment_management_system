@@ -437,15 +437,6 @@ export function ApprovalsClient({
     setSelectedItems((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }, []);
 
-  // 전체 선택
-  const handleSelectAll = useCallback(() => {
-    if (selectedItems.length === sortedItems.length) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(sortedItems.map((item) => item.id));
-    }
-  }, [sortedItems, selectedItems.length]);
-
   // 현재 탭의 코멘트 다이얼로그 메타 (SSOT: TAB_META)
   const activeTabMeta = TAB_META[activeTab];
   const commentMeta = approveCommentItem ? TAB_META[approveCommentItem.category] : null;
@@ -500,7 +491,7 @@ export function ApprovalsClient({
             <BulkActionBar
               selectedCount={selectedItems.length}
               totalCount={sortedItems.length}
-              onSelectAll={handleSelectAll}
+              onClearSelection={() => setSelectedItems([])}
               onBulkApprove={handleBulkApprove}
               onBulkReject={handleBulkReject}
               actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}

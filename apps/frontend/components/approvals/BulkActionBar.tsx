@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { CheckCircle2, XCircle, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,25 +15,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { APPROVAL_BULK_BAR_TOKENS, getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
+import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 interface BulkActionBarProps {
   selectedCount: number;
   totalCount: number;
-  onSelectAll: () => void;
+  onClearSelection: () => void;
   onBulkApprove: () => void | Promise<void>;
   onBulkReject: (reason: string) => Promise<void>;
   actionLabel: string;
 }
 
+/**
+ * BulkActionBar — fixed bottom floating action bar (AP-02)
+ *
+ * 0건 → opacity-0 + pointer-events-none (DOM 유지 — 스크린리더 접근)
+ * ≥1건 → opacity-1 (200ms fade-in)
+ * Esc → 선택 해제 (dialog 닫힌 상태에서만)
+ */
 export function BulkActionBar({
   selectedCount,
   totalCount,
-  onSelectAll,
+  onClearSelection,
   onBulkApprove,
   onBulkReject,
   actionLabel,
@@ -43,8 +50,23 @@ export function BulkActionBar({
   const [isProcessing, setIsProcessing] = useState(false);
   const t = useTranslations('approvals');
 
+  const isVisible = selectedCount > 0;
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
-  const hasSelection = selectedCount > 0;
+
+  const selectionLabel = isAllSelected
+    ? t('bulkBar.allSelected', { count: selectedCount, total: totalCount })
+    : t('bulkBar.selectionCount', { count: selectedCount });
+
+  // Esc → 선택 해제 (dialog 열려 있으면 dialog가 Esc 처리)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isVisible && !isApproveDialogOpen && !isRejectDialogOpen) {
+        onClearSelection();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVisible, isApproveDialogOpen, isRejectDialogOpen, onClearSelection]);
 
   const handleBulkApprove = async () => {
     setIsProcessing(true);
@@ -57,10 +79,7 @@ export function BulkActionBar({
   };
 
   const handleBulkReject = async () => {
-    if (!rejectReason.trim() || rejectReason.length < REJECTION_MIN_LENGTH) {
-      return;
-    }
-
+    if (!rejectReason.trim() || rejectReason.length < REJECTION_MIN_LENGTH) return;
     setIsProcessing(true);
     try {
       await onBulkReject(rejectReason);
@@ -71,50 +90,76 @@ export function BulkActionBar({
     }
   };
 
-  if (totalCount === 0) {
-    return null;
-  }
-
   return (
-    <div
-      className={`flex items-center justify-between py-3 px-4 rounded-lg ${APPROVAL_BULK_BAR_TOKENS.container}`}
-    >
-      {/* 전체 선택 */}
-      <div className="flex items-center gap-3">
-        <Checkbox
-          id="select-all"
-          checked={isAllSelected}
-          onCheckedChange={onSelectAll}
-          aria-label={isAllSelected ? t('bulk.deselectAll') : t('bulk.selectAll')}
-        />
-        <Label htmlFor="select-all" className="text-sm cursor-pointer">
-          {t('bulk.selectAll')} ({selectedCount}/{totalCount})
-        </Label>
+    <>
+      {/* SR 전용 라이브 영역 — 선택 변동 공지 */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {isVisible ? selectionLabel : t('bulkBar.selectionCleared')}
       </div>
 
-      {/* 일괄 처리 버튼 */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          size="sm"
-          disabled={!hasSelection}
-          onClick={() => setIsApproveDialogOpen(true)}
-          className={getApprovalActionButtonClasses('approve')}
-        >
-          <CheckCircle2 className="h-4 w-4 mr-1" />
-          {t('bulk.action', { action: actionLabel })}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={!hasSelection}
-          onClick={() => setIsRejectDialogOpen(true)}
-          className={getApprovalActionButtonClasses('reject')}
-        >
-          <XCircle className="h-4 w-4 mr-1" />
-          {t('bulk.reject')}
-        </Button>
+      {/* Fixed bottom floating bar */}
+      <div
+        className={cn(
+          APPROVAL_BULK_BAR_TOKENS.fixedBottom,
+          isVisible ? APPROVAL_BULK_BAR_TOKENS.visible : APPROVAL_BULK_BAR_TOKENS.hidden
+        )}
+        role="toolbar"
+        aria-label={t('bulkBar.ariaLabel')}
+        aria-hidden={!isVisible}
+        data-testid="bulk-action-bar"
+      >
+        <div className={APPROVAL_BULK_BAR_TOKENS.inner}>
+          {/* 선택 카운트 chip */}
+          <div
+            role="status"
+            aria-live="polite"
+            className={APPROVAL_BULK_BAR_TOKENS.countChip}
+            data-testid="bulk-selection-count"
+          >
+            {isVisible ? selectionLabel : ''}
+          </div>
+
+          {/* × 선택 해제 */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              APPROVAL_BULK_BAR_TOKENS.dismissButton,
+              'text-muted-foreground hover:text-foreground'
+            )}
+            onClick={onClearSelection}
+            aria-label={t('bulkBar.dismiss')}
+            tabIndex={isVisible ? 0 : -1}
+          >
+            <X className="h-3 w-3 mr-1" aria-hidden="true" />
+            {t('bulkBar.dismiss')}
+          </Button>
+
+          <div className="flex-1" />
+
+          {/* 일괄 처리 버튼 */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsApproveDialogOpen(true)}
+            className={getApprovalActionButtonClasses('approve')}
+            tabIndex={isVisible ? 0 : -1}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {actionLabel} ({selectedCount})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setIsRejectDialogOpen(true)}
+            className={getApprovalActionButtonClasses('reject')}
+            tabIndex={isVisible ? 0 : -1}
+          >
+            <XCircle className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {t('bulk.reject')}
+          </Button>
+        </div>
       </div>
 
       {/* 일괄 승인 확인 다이얼로그 */}
@@ -139,12 +184,12 @@ export function BulkActionBar({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 일괄 반려 다이얼로그 */}
+      {/* 일괄 반려 다이얼로그 — AP-03에서 RejectModal로 통합 예정 */}
       <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('bulk.reject')}</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription id="bulk-reject-desc">
               {t('bulk.rejectDescription', { count: selectedCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -152,6 +197,7 @@ export function BulkActionBar({
             <Label htmlFor="bulk-reject-reason">{t('rejectModal.reasonLabel')}</Label>
             <Textarea
               id="bulk-reject-reason"
+              aria-describedby="bulk-reject-desc"
               placeholder={t('rejectModal.reasonPlaceholder')}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -159,7 +205,7 @@ export function BulkActionBar({
             />
             {rejectReason.length > 0 && rejectReason.length < REJECTION_MIN_LENGTH && (
               <p className="text-sm text-destructive mt-1" role="alert">
-                {t('bulk.rejectValidation')} ({rejectReason.length}/10)
+                {t('bulk.rejectValidation')} ({rejectReason.length}/{REJECTION_MIN_LENGTH})
               </p>
             )}
           </div>
@@ -175,6 +221,6 @@ export function BulkActionBar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

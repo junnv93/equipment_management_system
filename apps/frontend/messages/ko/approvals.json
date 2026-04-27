@@ -120,6 +120,15 @@
     "ariaLabel": "승인 카테고리 네비게이션",
     "completedHint": "완료"
   },
+  "bulkBar": {
+    "ariaLabel": "일괄 처리 도구 모음",
+    "selectionCount": "{count}개 선택됨",
+    "allSelected": "전체 선택됨 ({count}/{total})",
+    "dismiss": "선택 해제",
+    "selectionCleared": "선택이 해제되었습니다.",
+    "stickyHint": "일괄 처리 모드",
+    "selectionAnnouncement": "{count}개 항목이 선택되었습니다."
+  },
   "mobileBar": {
     "ariaLabel": "승인 카테고리 탭"
   },
