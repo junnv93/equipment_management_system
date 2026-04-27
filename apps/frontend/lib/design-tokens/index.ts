@@ -123,6 +123,7 @@ export {
   EASING_CLASSES,
   REDUCED_MOTION,
   staggerItem,
+  STAGGER_ROW_LIMIT,
 } from './motion';
 
 // ============================================================================

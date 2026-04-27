@@ -82,10 +82,22 @@ export function getStaggerDelay(
   return `${index * delay}ms`;
 }
 
+/**
+ * stagger 애니메이션을 적용할 최대 row 수.
+ * 이 상한 이상의 row는 animation-delay 없이 렌더 — 저사양 기기 GPU layer 분리 비용 방지.
+ */
+export const STAGGER_ROW_LIMIT = 12 as const;
+
 export function getStaggerFadeInStyle(
   index: number,
   type: keyof typeof MOTION_TOKENS.stagger = 'list'
-): React.CSSProperties {
+): React.CSSProperties | undefined {
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return undefined;
+  }
   return { animationDelay: getStaggerDelay(index, type) };
 }
 

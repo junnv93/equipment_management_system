@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -68,6 +68,11 @@ export default function InboundCheckoutsTab({
   const { fmtDate } = useDateFormatter();
   const { inboundPage, rentalPage, internalPage, setInboundPage, setRentalPage, setInternalPage } =
     useInboundSectionPagination();
+
+  const handleCheckoutClick = useCallback(
+    (id: string) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
+    [router]
+  );
 
   const { status: statusFilter, search: searchTerm } = filters;
   const filterActive = countActiveFilters(filters) > 0;
@@ -320,7 +325,7 @@ export default function InboundCheckoutsTab({
               <CheckoutGroupCard
                 key={group.key}
                 group={group}
-                onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
+                onCheckoutClick={handleCheckoutClick}
               />
             ))}
             {renderSectionPagination(

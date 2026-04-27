@@ -47,6 +47,7 @@ import {
   MICRO_TYPO,
   ANIMATION_PRESETS,
   getStaggerFadeInStyle,
+  STAGGER_ROW_LIMIT,
 } from '@/lib/design-tokens';
 
 // ============================================================================
@@ -106,6 +107,8 @@ function CheckoutGroupCard({
 
   const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role);
 
+  const unknownUserLabel = t('groupCard.unknownUser');
+
   const equipmentRows = useMemo(
     () =>
       group.checkouts.flatMap((checkout) => {
@@ -117,7 +120,7 @@ function CheckoutGroupCard({
           purpose: checkout.purpose,
           status: checkout.status,
           checkoutType: (checkout.purpose ?? 'calibration') as UserSelectableCheckoutPurpose,
-          userName: checkout.user?.name || t('groupCard.unknownUser'),
+          userName: checkout.user?.name || unknownUserLabel,
           checkoutId: checkout.id,
           expectedReturnDate: checkout.expectedReturnDate,
           destination: checkout.destination,
@@ -126,7 +129,7 @@ function CheckoutGroupCard({
           descriptor,
         }));
       }),
-    [group.checkouts, t, descriptorMap]
+    [group.checkouts, unknownUserLabel, descriptorMap]
   );
 
   const pendingCount = useMemo(
@@ -415,9 +418,13 @@ function CheckoutGroupCard({
                       className={cn(
                         rowBaseClass,
                         CHECKOUT_ITEM_ROW_TOKENS.grid,
-                        ANIMATION_PRESETS.staggerFadeInItem
+                        rowIndex < STAGGER_ROW_LIMIT && ANIMATION_PRESETS.staggerFadeInItem
                       )}
-                      style={getStaggerFadeInStyle(rowIndex, 'grid')}
+                      style={
+                        rowIndex < STAGGER_ROW_LIMIT
+                          ? getStaggerFadeInStyle(rowIndex, 'grid')
+                          : undefined
+                      }
                     >
                       {/* Zone 1: purposeBar (3px) */}
                       <span

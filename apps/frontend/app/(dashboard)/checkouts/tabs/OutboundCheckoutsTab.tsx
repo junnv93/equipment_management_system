@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -192,6 +192,11 @@ export default function OutboundCheckoutsTab({
     },
     ...QUERY_CONFIG.CHECKOUT_LIST,
   });
+
+  const handleCheckoutClick = useCallback(
+    (id: string) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
+    [router]
+  );
 
   // ──────────────────────────────────────────────
   // 그룹화 + 기한 초과 그룹 최상단 고정
@@ -437,7 +442,7 @@ export default function OutboundCheckoutsTab({
               >
                 <CheckoutGroupCard
                   group={group}
-                  onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
+                  onCheckoutClick={handleCheckoutClick}
                   isOverdueGroup={group.statuses.includes(CSVal.OVERDUE)}
                 />
               </div>
