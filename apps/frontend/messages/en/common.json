@@ -285,5 +285,14 @@
     "selectedOf": "{count}/{total} selected",
     "clearSelection": "Clear Selection",
     "selectRow": "Select {name}"
+  },
+  "pwa": {
+    "installBanner": {
+      "ariaLabel": "App install prompt",
+      "title": "Install as App",
+      "subtitle": "Add to home screen for faster access",
+      "installCta": "Install",
+      "laterCta": "Later"
+    }
   }
 }

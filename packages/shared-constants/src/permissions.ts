@@ -221,6 +221,11 @@ export enum Permission {
   // 데이터 마이그레이션 권한 (SYSTEM_ADMIN 전용)
   // ============================================================================
   PERFORM_DATA_MIGRATION = 'perform:data:migration',
+
+  // ============================================================================
+  // 문서 관련 권한 (다목적: 장비사진·수리이력·교정성적서 등)
+  // ============================================================================
+  UPLOAD_DOCUMENT = 'upload:document',
 }
 
 /**
@@ -337,6 +342,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.PERFORM_DATA_MIGRATION]: '데이터 마이그레이션 실행',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
+
+  [Permission.UPLOAD_DOCUMENT]: '문서 업로드',
 };
 
 /**
@@ -456,6 +463,8 @@ export const PERMISSION_LABELS_EN: Record<Permission, string> = {
   [Permission.MANAGE_SYSTEM_SETTINGS]: 'Manage System Settings',
   [Permission.VIEW_SYSTEM_SETTINGS]: 'View System Settings',
   [Permission.PERFORM_DATA_MIGRATION]: 'Perform Data Migration',
+
+  [Permission.UPLOAD_DOCUMENT]: 'Upload Document',
 };
 
 /**

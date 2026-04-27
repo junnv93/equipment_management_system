@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Download, X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 
@@ -17,13 +18,14 @@ import { Button } from '@/components/ui/button';
 export function PWAInstallBanner() {
   const { canInstall, promptInstall } = usePWAInstall();
   const [dismissed, setDismissed] = useState(false);
+  const t = useTranslations('common');
 
   if (!canInstall || dismissed) return null;
 
   return (
     <div
       role="banner"
-      aria-label="앱 설치 안내"
+      aria-label={t('pwa.installBanner.ariaLabel')}
       className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
     >
       <div className="flex items-start gap-3">
@@ -36,14 +38,12 @@ export function PWAInstallBanner() {
           className="flex-shrink-0 rounded-lg"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">앱으로 설치</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            홈 화면에 추가해 더 빠르게 사용하세요
-          </p>
+          <p className="text-sm font-semibold text-foreground">{t('pwa.installBanner.title')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('pwa.installBanner.subtitle')}</p>
         </div>
         <button
           onClick={() => setDismissed(true)}
-          aria-label="닫기"
+          aria-label={t('actions.close')}
           className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -52,10 +52,10 @@ export function PWAInstallBanner() {
       <div className="mt-3 flex gap-2">
         <Button size="sm" className="flex-1 gap-1.5" onClick={promptInstall}>
           <Download className="h-3.5 w-3.5" />
-          설치하기
+          {t('pwa.installBanner.installCta')}
         </Button>
         <Button size="sm" variant="outline" onClick={() => setDismissed(true)}>
-          나중에
+          {t('pwa.installBanner.laterCta')}
         </Button>
       </div>
     </div>

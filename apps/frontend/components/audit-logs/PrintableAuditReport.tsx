@@ -20,11 +20,6 @@ interface PrintableAuditReportProps {
  * - 페이지 나누기, 헤더/푸터 포함
  * - 색상 보존 (print-color-adjust: exact)
  *
- * **i18n 미적용 의도적 예외**:
- * 이 컴포넌트의 한국어 하드코딩은 의도된 설계 결정입니다.
- * UL-QP-18 품질 심사 증적 자료는 한국어 고정 규정 문서이며,
- * 인쇄 전용 출력물로 다국어 지원이 불필요합니다.
- *
  * @example
  * ```tsx
  * <PrintableAuditReport
@@ -37,7 +32,7 @@ interface PrintableAuditReportProps {
  */
 export function PrintableAuditReport({
   logs,
-  title = '감사 로그 보고서',
+  title,
   filters,
   generatedBy,
 }: PrintableAuditReportProps) {
@@ -72,20 +67,30 @@ export function PrintableAuditReport({
       (key) => JSON.stringify(previousValue[key]) !== JSON.stringify(newValue[key])
     );
 
-    if (changedFields.length === 0) return '변경 없음';
-    return `${changedFields.length}개 필드 변경`;
+    if (changedFields.length === 0) return tAudit('report.noChanges');
+    return tAudit('report.fieldsChanged', { count: changedFields.length });
   };
 
   return (
     <div className="print:block hidden">
       {/* 헤더 */}
       <div className="print:mb-8">
-        <h1 className="text-3xl font-bold mb-2">감사 로그 보고서</h1>
+        <h1 className="text-3xl font-bold mb-2">{tAudit('report.title')}</h1>
         {title && <h2 className="text-xl text-muted-foreground mb-4">{title}</h2>}
         <div className="mt-4 text-sm text-muted-foreground space-y-1">
-          <p>출력 일시: {fmtDateTime(new Date())}</p>
-          {generatedBy && <p>출력자: {generatedBy}</p>}
-          {filters && <p>필터: {formatFilters(filters)}</p>}
+          <p>
+            {tAudit('report.printedAt')}: {fmtDateTime(new Date())}
+          </p>
+          {generatedBy && (
+            <p>
+              {tAudit('report.printedBy')}: {generatedBy}
+            </p>
+          )}
+          {filters && (
+            <p>
+              {tAudit('filter')}: {formatFilters(filters)}
+            </p>
+          )}
         </div>
         <hr className="mt-4 mb-6 border-border" />
       </div>
@@ -94,11 +99,11 @@ export function PrintableAuditReport({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b-2 border-foreground">
-            <th className="text-left p-3 font-semibold">시간</th>
-            <th className="text-left p-3 font-semibold">사용자</th>
-            <th className="text-left p-3 font-semibold">액션</th>
-            <th className="text-left p-3 font-semibold">대상</th>
-            <th className="text-left p-3 font-semibold">변경 사항</th>
+            <th className="text-left p-3 font-semibold">{tAudit('table.time')}</th>
+            <th className="text-left p-3 font-semibold">{tAudit('table.user')}</th>
+            <th className="text-left p-3 font-semibold">{tAudit('table.action')}</th>
+            <th className="text-left p-3 font-semibold">{tAudit('table.target')}</th>
+            <th className="text-left p-3 font-semibold">{tAudit('table.changes')}</th>
           </tr>
         </thead>
         <tbody>
@@ -145,8 +150,8 @@ export function PrintableAuditReport({
 
       {/* 푸터 */}
       <div className="print:mt-8 text-xs text-muted-foreground space-y-1">
-        <p>총 {logs.length.toLocaleString()}개의 로그</p>
-        <p>본 문서는 품질 관리 시스템의 공식 감사 기록입니다.</p>
+        <p>{tAudit('totalLogs', { count: logs.length })}</p>
+        <p>{tAudit('report.footerNote')}</p>
         <p>UL Solutions - Equipment Management System</p>
       </div>
     </div>

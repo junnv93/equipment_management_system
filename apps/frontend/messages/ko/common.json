@@ -285,5 +285,14 @@
     "selectedOf": "{count}/{total}개 선택됨",
     "clearSelection": "선택 해제",
     "selectRow": "{name} 선택"
+  },
+  "pwa": {
+    "installBanner": {
+      "ariaLabel": "앱 설치 안내",
+      "title": "앱으로 설치",
+      "subtitle": "홈 화면에 추가해 더 빠르게 사용하세요",
+      "installCta": "설치하기",
+      "laterCta": "나중에"
+    }
   }
 }

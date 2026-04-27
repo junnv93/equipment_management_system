@@ -90,6 +90,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_REPORTS,
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
+    // 문서 업로드 (장비사진·수리이력 등 다목적)
+    Permission.UPLOAD_DOCUMENT,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -186,6 +188,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
+    // 문서 업로드 (장비사진·수리이력 등 다목적)
+    Permission.UPLOAD_DOCUMENT,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -325,6 +329,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
     Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
+    // 문서 업로드 (장비사진·수리이력 등 다목적)
+    Permission.UPLOAD_DOCUMENT,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated

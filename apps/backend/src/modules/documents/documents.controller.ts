@@ -350,7 +350,7 @@ export class DocumentsController {
   @ApiParam({ name: 'id', description: '기존 문서 ID (UUID)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
-  @RequirePermissions(Permission.CREATE_CALIBRATION)
+  @RequirePermissions(Permission.UPLOAD_DOCUMENT)
   @AuditLog({ action: 'revision', entityType: 'document', entityIdPath: 'params.id' })
   async createRevision(
     @Param('id', ParseUUIDPipe) id: string,

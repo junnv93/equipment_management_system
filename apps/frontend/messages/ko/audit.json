@@ -28,7 +28,16 @@
     "action": "액션",
     "target": "대상",
     "targetName": "대상명",
+    "changes": "변경 사항",
     "ip": "IP"
+  },
+  "report": {
+    "title": "감사 로그 보고서",
+    "printedAt": "출력 일시",
+    "printedBy": "출력자",
+    "noChanges": "변경 없음",
+    "fieldsChanged": "{count}개 필드 변경",
+    "footerNote": "본 문서는 품질 관리 시스템의 공식 감사 기록입니다."
   },
   "actions": {
     "create": "생성",

@@ -1541,5 +1541,18 @@
     "noLocationInfo": "N/A"
   },
   "equipmentImportLoadError": "Failed to load equipment import details.",
-  "receiveEquipmentImportLoadError": "Failed to load equipment import."
+  "receiveEquipmentImportLoadError": "Failed to load equipment import.",
+  "virtualizedList": {
+    "headers": {
+      "managementNumber": "Mgmt No.",
+      "name": "Equipment Name",
+      "classification": "Classification",
+      "status": "Status",
+      "lastCalibration": "Last Calibration",
+      "location": "Location",
+      "detail": "Detail"
+    },
+    "loading": "Loading data...",
+    "emptySearch": "No search results"
+  }
 }

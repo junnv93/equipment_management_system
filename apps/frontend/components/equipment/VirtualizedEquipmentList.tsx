@@ -69,7 +69,7 @@ const EquipmentRow = memo(
         <TableCell className="text-right">
           <Link href={`/equipment/${equipment.id}`}>
             <Button variant="outline" size="sm">
-              상세
+              {t('virtualizedList.headers.detail')}
             </Button>
           </Link>
         </TableCell>
@@ -146,6 +146,8 @@ const VirtualizedEquipmentList = ({
   loadNextPage,
   onItemClick,
 }: VirtualizedEquipmentListProps) => {
+  const t = useTranslations('equipment');
+
   // 무한 스크롤 설정
   const rowCount = useMemo(() => {
     return hasNextPage ? items.length + 1 : items.length;
@@ -192,13 +194,21 @@ const VirtualizedEquipmentList = ({
       <Table>
         <TableHeader>
           <TableRow className="dark:border-border">
-            <TableHead className="w-[100px] md:w-auto">관리번호</TableHead>
-            <TableHead>장비명</TableHead>
-            <TableHead className="hidden sm:table-cell">분류</TableHead>
-            <TableHead>상태</TableHead>
-            <TableHead className="hidden md:table-cell">마지막 교정일</TableHead>
-            <TableHead className="hidden md:table-cell">위치</TableHead>
-            <TableHead className="text-right">상세</TableHead>
+            <TableHead className="w-[100px] md:w-auto">
+              {t('virtualizedList.headers.managementNumber')}
+            </TableHead>
+            <TableHead>{t('virtualizedList.headers.name')}</TableHead>
+            <TableHead className="hidden sm:table-cell">
+              {t('virtualizedList.headers.classification')}
+            </TableHead>
+            <TableHead>{t('virtualizedList.headers.status')}</TableHead>
+            <TableHead className="hidden md:table-cell">
+              {t('virtualizedList.headers.lastCalibration')}
+            </TableHead>
+            <TableHead className="hidden md:table-cell">
+              {t('virtualizedList.headers.location')}
+            </TableHead>
+            <TableHead className="text-right">{t('virtualizedList.headers.detail')}</TableHead>
           </TableRow>
         </TableHeader>
       </Table>
@@ -216,11 +226,11 @@ const VirtualizedEquipmentList = ({
       </div>
 
       {isLoading && items.length === 0 && (
-        <div className="p-4 text-center">데이터를 로딩 중입니다...</div>
+        <div className="p-4 text-center">{t('virtualizedList.loading')}</div>
       )}
 
       {!isLoading && items.length === 0 && (
-        <div className="p-4 text-center">검색 결과가 없습니다</div>
+        <div className="p-4 text-center">{t('virtualizedList.emptySearch')}</div>
       )}
     </div>
   );

@@ -1541,5 +1541,18 @@
     "noLocationInfo": "정보 없음"
   },
   "equipmentImportLoadError": "반입 요청 정보를 불러오지 못했습니다.",
-  "receiveEquipmentImportLoadError": "반입 요청을 불러오지 못했습니다."
+  "receiveEquipmentImportLoadError": "반입 요청을 불러오지 못했습니다.",
+  "virtualizedList": {
+    "headers": {
+      "managementNumber": "관리번호",
+      "name": "장비명",
+      "classification": "분류",
+      "status": "상태",
+      "lastCalibration": "마지막 교정일",
+      "location": "위치",
+      "detail": "상세"
+    },
+    "loading": "데이터를 로딩 중입니다...",
+    "emptySearch": "검색 결과가 없습니다"
+  }
 }

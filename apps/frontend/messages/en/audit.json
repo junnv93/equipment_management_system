@@ -28,7 +28,16 @@
     "action": "Action",
     "target": "Target",
     "targetName": "Target Name",
+    "changes": "Changes",
     "ip": "IP"
+  },
+  "report": {
+    "title": "Audit Log Report",
+    "printedAt": "Printed at",
+    "printedBy": "Printed by",
+    "noChanges": "No changes",
+    "fieldsChanged": "{count} field(s) changed",
+    "footerNote": "This document is an official audit record of the quality management system."
   },
   "actions": {
     "create": "Create",
