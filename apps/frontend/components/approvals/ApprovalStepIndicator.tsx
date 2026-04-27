@@ -25,24 +25,24 @@ interface Step {
 
 // 폐기: 2단계
 const disposalSteps: Step[] = [
-  { key: 'pending_review', labelKey: 'steps.request', roleKey: 'steps.roles.test_engineer' },
-  { key: 'reviewed', labelKey: 'steps.review', roleKey: 'steps.roles.technical_manager' },
-  { key: 'approved', labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
+  { key: UASVal.PENDING_REVIEW, labelKey: 'steps.request', roleKey: 'steps.roles.test_engineer' },
+  { key: UASVal.REVIEWED, labelKey: 'steps.review', roleKey: 'steps.roles.technical_manager' },
+  { key: UASVal.APPROVED, labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
 ];
 
 // 교정계획서: 3단계
 const planSteps: Step[] = [
-  { key: 'pending_review', labelKey: 'steps.draft', roleKey: 'steps.roles.technical_manager' },
-  { key: 'reviewed', labelKey: 'steps.review', roleKey: 'steps.roles.quality_manager' },
-  { key: 'approved', labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
+  { key: UASVal.PENDING_REVIEW, labelKey: 'steps.draft', roleKey: 'steps.roles.technical_manager' },
+  { key: UASVal.REVIEWED, labelKey: 'steps.review', roleKey: 'steps.roles.quality_manager' },
+  { key: UASVal.APPROVED, labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
 ];
 
-const STATUS_ORDER: Record<string, number> = {
-  pending: 0,
-  pending_review: 1,
-  reviewed: 2,
-  approved: 3,
-  rejected: -1,
+const STATUS_ORDER: Partial<Record<UnifiedApprovalStatus, number>> = {
+  [UASVal.PENDING]: 0,
+  [UASVal.PENDING_REVIEW]: 1,
+  [UASVal.REVIEWED]: 2,
+  [UASVal.APPROVED]: 3,
+  [UASVal.REJECTED]: -1,
 };
 
 export function ApprovalStepIndicator({
