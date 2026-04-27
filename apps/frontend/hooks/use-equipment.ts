@@ -18,7 +18,7 @@ import equipmentApi, {
   type CreateEquipmentDto,
   type UpdateEquipmentDto,
 } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
 
 /**
  * 장비 목록 조회 훅
@@ -27,7 +27,7 @@ export function useEquipmentList(query?: EquipmentQuery) {
   return useQuery({
     queryKey: queryKeys.equipment.list(query ?? {}),
     queryFn: () => equipmentApi.getEquipmentList(query),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 }
 
@@ -39,7 +39,7 @@ export function useEquipment(id: string) {
     queryKey: queryKeys.equipment.detail(id),
     queryFn: () => equipmentApi.getEquipment(id),
     enabled: !!id,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
   });
 }
 

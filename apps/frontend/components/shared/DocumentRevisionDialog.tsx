@@ -18,7 +18,7 @@ import { Download, ShieldCheck } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { DocumentStatusValues } from '@equipment-management/schemas';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, getDocumentRowClasses } from '@/lib/design-tokens';
 import { formatFileSize } from '@/lib/utils/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -46,7 +46,7 @@ export function DocumentRevisionDialog({
     queryKey: queryKeys.documents.revisions(documentId),
     queryFn: () => documentApi.getRevisionHistory(documentId),
     enabled: open && !!documentId,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   const handleDownload = async (doc: DocumentRecord) => {

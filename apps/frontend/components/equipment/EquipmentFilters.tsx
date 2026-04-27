@@ -36,7 +36,7 @@ import type {
 } from '@/hooks/useEquipmentFilters';
 import { useAuth } from '@/hooks/use-auth';
 import teamsApi from '@/lib/api/teams-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 interface EquipmentFiltersProps {
   filters: FiltersType;
@@ -215,8 +215,7 @@ function EquipmentFiltersComponent({
         site: teamQuerySite,
         pageSize: SELECTOR_PAGE_SIZE,
       }),
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
     enabled: !!teamQuerySite,
   });
 

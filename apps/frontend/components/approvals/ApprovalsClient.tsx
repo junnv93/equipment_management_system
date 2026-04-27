@@ -29,7 +29,7 @@ import {
 } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { ApprovalKpiStrip } from './ApprovalKpiStrip';
 import { ApprovalCategorySidebar } from './ApprovalCategorySidebar';
 import { ApprovalMobileCategoryBar } from './ApprovalMobileCategoryBar';
@@ -101,7 +101,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   } = useQuery({
     queryKey: queryKeys.approvals.list(activeTab),
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.PENDING_APPROVALS,
   });
 
   // 경과일 내림차순 정렬 (오래된 건 상단)
@@ -115,7 +115,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   const { data: pendingCounts } = useQuery({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(userRole),
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.APPROVAL_COUNTS,
   });
 
   // KPI 데이터 — 서버 사이드 집계 (GET /api/approvals/kpi?category=X)

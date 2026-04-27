@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import usersApi, { type UserOption } from '@/lib/api/users-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -57,7 +57,7 @@ export function UserCombobox({
     queryKey: queryKeys.users.detail(value!),
     queryFn: () => usersApi.get(value!),
     enabled: !!value,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.USERS,
   });
 
   const displayName = initialUser && initialUser.id === value ? initialUser.name : undefined;

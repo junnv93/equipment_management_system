@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -67,7 +67,7 @@ export function EquipmentCombobox({
     queryKey: queryKeys.equipment.detail(value!),
     queryFn: () => equipmentApi.getEquipment(value!),
     enabled: !!value,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
   });
 
   const displayName =

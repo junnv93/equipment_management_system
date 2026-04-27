@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import equipmentApi from '@/lib/api/equipment-api';
 import checkoutApi from '@/lib/api/checkout-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 /**
  * 장비 KPI 스트립 데이터 훅
@@ -17,7 +17,7 @@ export function useEquipmentKpiData(equipmentId: string) {
       total: data?.meta?.pagination?.total ?? 0,
       lastDate: data?.data?.[0]?.createdAt ?? null,
     }),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.HISTORY,
     enabled: !!equipmentId,
   });
 
@@ -28,7 +28,7 @@ export function useEquipmentKpiData(equipmentId: string) {
       total: data?.length ?? 0,
       lastDate: data?.[0]?.performedAt ?? null,
     }),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.HISTORY,
     enabled: !!equipmentId,
   });
 
@@ -39,7 +39,7 @@ export function useEquipmentKpiData(equipmentId: string) {
       total: data?.length ?? 0,
       lastDate: data?.[0]?.occurredAt ?? null,
     }),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.HISTORY,
     enabled: !!equipmentId,
   });
 

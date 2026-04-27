@@ -33,7 +33,7 @@ import {
   NonConformanceStatusValues as NCStatusVal,
 } from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
@@ -83,7 +83,7 @@ export default function NonConformanceManagementClient({
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     placeholderData: initialEquipment,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
   });
 
   const {
@@ -95,7 +95,7 @@ export default function NonConformanceManagementClient({
     queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
     placeholderData: initialNonConformances,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.NON_CONFORMANCES_LIST,
   });
 
   const nonConformances = nonConformancesData?.data || [];

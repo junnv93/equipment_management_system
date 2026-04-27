@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
 import { ROLE_BADGE_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -63,7 +63,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
     queryKey: queryKeys.users.detail(value!),
     queryFn: () => teamsApi.getUser(value!),
     enabled: !!value,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.USERS,
   });
 
   // 표시할 사용자 이름 결정

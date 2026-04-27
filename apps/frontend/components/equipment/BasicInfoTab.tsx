@@ -22,7 +22,7 @@ import {
   DOCUMENT_DISPLAY,
 } from '@/lib/design-tokens';
 import { Badge } from '@/components/ui/badge';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -54,7 +54,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.CALIBRATION_LIST,
   });
 
   // 장비 문서 (사진, 매뉴얼)
@@ -62,7 +62,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
     queryKey: queryKeys.documents.byEquipment(equipmentId),
     queryFn: () => documentApi.getEquipmentDocuments(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
 
   const photos = useMemo(

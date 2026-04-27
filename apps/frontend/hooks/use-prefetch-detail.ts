@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import equipmentApi from '@/lib/api/equipment-api';
 import checkoutApi from '@/lib/api/checkout-api';
 
@@ -24,7 +24,7 @@ export function usePrefetchDetail() {
       void queryClient.prefetchQuery({
         queryKey: queryKeys.equipment.detail(id),
         queryFn: () => equipmentApi.getById(id),
-        staleTime: CACHE_TIMES.MEDIUM,
+        ...QUERY_CONFIG.EQUIPMENT_DETAIL,
       });
     },
     [queryClient]
@@ -35,7 +35,7 @@ export function usePrefetchDetail() {
       void queryClient.prefetchQuery({
         queryKey: queryKeys.checkouts.resource.detail(id),
         queryFn: () => checkoutApi.getCheckout(id),
-        staleTime: CACHE_TIMES.MEDIUM,
+        ...QUERY_CONFIG.CHECKOUT_DETAIL,
       });
     },
     [queryClient]

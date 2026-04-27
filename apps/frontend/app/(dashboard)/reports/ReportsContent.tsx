@@ -47,7 +47,7 @@ import {
 } from '@/lib/design-tokens';
 import { SITE_VALUES, type Site } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
 import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
 import { useReportsFilters } from '@/hooks/use-reports-filters';
@@ -112,7 +112,7 @@ export default function ReportsContent(_props: ReportsContentProps) {
     queryKey: queryKeys.teams.bySite(site || undefined),
     queryFn: () => teamsApi.getTeams({ site: (site as Site) || undefined, pageSize: 100 }),
     enabled: needsTeamFilter,
-    staleTime: CACHE_TIMES.REFERENCE,
+    ...QUERY_CONFIG.TEAMS,
   });
   const teams: Team[] = teamsData?.data ?? [];
 

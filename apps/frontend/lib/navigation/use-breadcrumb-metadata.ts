@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, usePathname } from 'next/navigation';
 import equipmentApi from '@/lib/api/equipment-api';
 import { extractDynamicParams, normalizeDynamicRoute } from './route-metadata';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 /**
  * 동적 라우트의 커스텀 라벨을 가져오는 훅
@@ -53,8 +53,7 @@ export function useDynamicBreadcrumbLabels(): Record<string, string> | undefined
       }
     },
     enabled: isDynamic && normalizedRoute.includes('/equipment/[id]'),
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 
   // 팀 상세 페이지 (필요시 추가)
@@ -132,8 +131,7 @@ export function useBreadcrumbLabel<T>(
       }
     },
     enabled: !!resourceId,
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 
   return data;

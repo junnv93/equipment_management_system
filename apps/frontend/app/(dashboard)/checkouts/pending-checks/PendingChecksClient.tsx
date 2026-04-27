@@ -14,7 +14,7 @@ import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { CheckoutStatus } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { TRANSITION_PRESETS, getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -112,7 +112,7 @@ export default function PendingChecksClient({
       return checkoutApi.getPendingChecks(apiRole ? { role: apiRole } : {});
     },
     placeholderData: activeRole === initialRole ? initialData : undefined,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 
   // 빈 상태 렌더링

@@ -17,7 +17,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from 'next-intl';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationFactorsApi, {
   type CalibrationFactorRegistry,
 } from '@/lib/api/calibration-factors-api';
@@ -67,7 +67,7 @@ export default function CalibrationFactorsRegistryContent({
     queryKey: queryKeys.calibrationFactors.registry(),
     queryFn: () => calibrationFactorsApi.getCalibrationFactorRegistry(),
     placeholderData: initialData ?? undefined,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.CALIBRATION_LIST,
   });
 
   const toggleEquipment = (equipmentId: string) => {
