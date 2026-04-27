@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-27 (세션 정리: documents-revision-permission·equipment-pwa-audit-i18n 2건 완료 아카이브. active: Sprint 1.2~5·2.x·3.x·PR-16·PR-21~PR-23)**
+> **마지막 정리일: 2026-04-27 (세션 정리: Sprint 2 Tokens 봉합 4종 완료 + approvals AR-8·audit i18n·checkout enum SSOT + FRONTEND_ROUTES 5파일 수정. active: Sprint 1.2~5·3.x·PR-16·PR-21~PR-23)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -20,11 +20,11 @@
 4. `.claude/contracts/legacy-actions-block-removal.md` (P0 F-1·C-1 · LegacyActionsBlock 완전 삭제)
 5. `.claude/contracts/checkout-fsm-exhaustive-satisfies.md` (§5 · satisfies 전수 전환)
 
-### Sprint 2 · Tokens 봉합 (Contract 4종 작성 완료 — 실행 대기)
-6. `.claude/contracts/checkout-row-token-consolidation.md` (L-1·L-2)
-7. `.claude/contracts/checkout-i18n-tab-badge-tokens.md` (L-3·L-4)
-8. `.claude/contracts/checkout-rhythm-focus-inbound-tokens.md` (L-5·L-6·L-7)
-9. `.claude/contracts/checkout-deprecated-token-removal.md` (L-8 · eslint-plugin-deprecation)
+### ~~Sprint 2 · Tokens 봉합~~ ✅ 전체 완료 (2026-04-27)
+6. ~~`.claude/contracts/checkout-row-token-consolidation.md` (L-1·L-2)~~ ✅ purposeBar SSOT + satisfies + getPurposeBarClass export
+7. ~~`.claude/contracts/checkout-i18n-tab-badge-tokens.md` (L-3·L-4)~~ ✅ CHECKOUT_TAB_BADGE_TOKENS.alert + overdueClear i18n
+8. ~~`.claude/contracts/checkout-rhythm-focus-inbound-tokens.md` (L-5·L-6·L-7)~~ ✅ FOCUS_TOKENS.ringCurrent + CHECKOUT_INBOUND_SECTION_TOKENS
+9. ~~`.claude/contracts/checkout-deprecated-token-removal.md` (L-8 · eslint-plugin-deprecation)~~ ✅ @typescript-eslint/no-deprecated eslint guard 적용
 
 ### Sprint 3 · Perf & Cache (Contract 3종 작성 완료 — 실행 대기)
 10. `.claude/contracts/checkout-inbound-bff-overview.md` (P-1 · BFF 신설 + canary)

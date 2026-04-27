@@ -5,6 +5,16 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-27 — approvals SSOT + checkout i18n/enum SSOT 완료
+
+### 2026-04-27 harness: approvals-ar7-ar6-e2e + checkout-sprint4-3-to-5
+
+- [x] **[2026-04-27 approvals-ar7-ar6-e2e] 🟢 LOW approval-detail-modal-deprecated-section-tokens** — ✅ 2026-04-27 완료. `APPROVAL_DETAIL_SECTION_TOKENS` → `APPROVAL_DETAIL_MODAL_TOKENS.sectionBody`/`.historyCard` 교체 + deprecated 정의 삭제. 영향: ApprovalDetailModal.tsx, ApprovalHistoryCard.tsx, approval.ts, index.ts. tsc PASS.
+- [x] **[2026-04-27 checkout-sprint4-3-to-5] 🟡 MEDIUM i18n-audit-borrower-actions** — ✅ 2026-04-27 완료. ko/en audit.json에 `actions.borrower_approve`/`borrower_reject` 키 추가 (커밋 27f71c79).
+- [x] **[2026-04-27 checkout-sprint4-3-to-5] 🟡 MEDIUM checkout-history-purpose-raw-literals** — ✅ 2026-04-27 완료. SelectItem value를 `UserSelectableCheckoutPurposeEnum.enum.*` SSOT로 교체 (커밋 27f71c79).
+
+---
+
 ## 2026-04-26 — design-tokens SSOT 정비 + FSM 컨트랙트 동적화 + Sprint 1.x 다수 확인
 
 ### 2026-04-26 harness: medium-token-ssot-fixes — 실수정 완료 6건
