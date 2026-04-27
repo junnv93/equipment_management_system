@@ -470,7 +470,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
               totalCount={sortedItems.length}
               onClearSelection={() => setSelectedItems([])}
               onBulkApprove={handleBulkApprove}
-              onBulkReject={handleBulkReject}
+              onBulkReject={TAB_META[activeTab].canReject !== false ? handleBulkReject : undefined}
               actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
             />
 
@@ -483,7 +483,11 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
               exitingIds={exitingIds}
               onToggleSelect={handleToggleSelect}
               onApprove={handleApprove}
-              onReject={(item) => setRejectModalItem(item)}
+              onReject={
+                TAB_META[activeTab].canReject !== false
+                  ? (item) => setRejectModalItem(item)
+                  : undefined
+              }
               onViewDetail={(item) => setDetailModalItem(item)}
               actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
               todayProcessed={kpi.todayProcessed}
@@ -498,10 +502,14 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
             isOpen={!!detailModalItem}
             onClose={() => setDetailModalItem(null)}
             onApprove={() => handleApprove(detailModalItem)}
-            onReject={() => {
-              setDetailModalItem(null);
-              setRejectModalItem(detailModalItem);
-            }}
+            onReject={
+              TAB_META[detailModalItem.category].canReject !== false
+                ? () => {
+                    setDetailModalItem(null);
+                    setRejectModalItem(detailModalItem);
+                  }
+                : undefined
+            }
             actionLabel={t(TAB_META[detailModalItem.category].actionKey as Parameters<typeof t>[0])}
           />
         )}

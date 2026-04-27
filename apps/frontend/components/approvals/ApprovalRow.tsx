@@ -37,7 +37,8 @@ interface ApprovalRowProps {
   isExiting?: 'success' | 'reject' | false;
   onToggleSelect: () => void;
   onApprove: () => void;
-  onReject: () => void;
+  /** canReject: false인 카테고리에서 undefined — 반려 버튼 미표시 (AR-8) */
+  onReject?: () => void;
   onViewDetail: () => void;
   actionLabel: string;
 }
@@ -149,19 +150,21 @@ export function ApprovalRow({
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-7 w-7 hidden group-hover:inline-flex',
-              APPROVAL_ACTION_BUTTON_TOKENS.rejectIcon
-            )}
-            disabled={isMutating || !!isExiting}
-            onClick={onReject}
-            aria-label={t('row.hoverReject')}
-          >
-            <XCircle className="h-3.5 w-3.5" />
-          </Button>
+          {onReject && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7 hidden group-hover:inline-flex',
+                APPROVAL_ACTION_BUTTON_TOKENS.rejectIcon
+              )}
+              disabled={isMutating || !!isExiting}
+              onClick={onReject}
+              aria-label={t('row.hoverReject')}
+            >
+              <XCircle className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
           {/* Dropdown — 항상 노출 (상세 보기 + keyboard/mobile 접근) */}
           <DropdownMenu>
@@ -185,11 +188,15 @@ export function ApprovalRow({
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 {actionLabel}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onReject} className={MENU_ITEM_TOKENS.destructive}>
-                <XCircle className="h-4 w-4 mr-2" />
-                {t('item.reject')}
-              </DropdownMenuItem>
+              {onReject && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onReject} className={MENU_ITEM_TOKENS.destructive}>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    {t('item.reject')}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

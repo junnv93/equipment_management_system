@@ -23,7 +23,8 @@ interface BulkActionBarProps {
   totalCount: number;
   onClearSelection: () => void;
   onBulkApprove: () => void | Promise<void>;
-  onBulkReject: (reason: string) => Promise<void>;
+  /** canReject: false 카테고리(inspection 등)에서 undefined — 반려 버튼 + 모달 미표시 (AR-8) */
+  onBulkReject?: (reason: string) => Promise<void>;
   actionLabel: string;
 }
 
@@ -134,17 +135,19 @@ export function BulkActionBar({
             <CheckCircle2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
             {actionLabel} ({selectedCount})
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setIsRejectModalOpen(true)}
-            className={getApprovalActionButtonClasses('reject')}
-            tabIndex={isVisible ? 0 : -1}
-          >
-            <XCircle className="h-4 w-4 mr-1.5" aria-hidden="true" />
-            {t('bulk.reject')}
-          </Button>
+          {onBulkReject && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsRejectModalOpen(true)}
+              className={getApprovalActionButtonClasses('reject')}
+              tabIndex={isVisible ? 0 : -1}
+            >
+              <XCircle className="h-4 w-4 mr-1.5" aria-hidden="true" />
+              {t('bulk.reject')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -170,14 +173,16 @@ export function BulkActionBar({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 일괄 반려 — RejectModal(mode='bulk')으로 통합 (AP-03) */}
-      <RejectModal
-        mode="bulk"
-        count={selectedCount}
-        isOpen={isRejectModalOpen}
-        onClose={() => setIsRejectModalOpen(false)}
-        onBulkConfirm={onBulkReject}
-      />
+      {/* 일괄 반려 — RejectModal(mode='bulk')으로 통합 (AP-03) / onBulkReject 없으면 미표시 (AR-8) */}
+      {onBulkReject && (
+        <RejectModal
+          mode="bulk"
+          count={selectedCount}
+          isOpen={isRejectModalOpen}
+          onClose={() => setIsRejectModalOpen(false)}
+          onBulkConfirm={onBulkReject}
+        />
+      )}
     </>
   );
 }

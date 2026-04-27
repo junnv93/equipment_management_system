@@ -169,6 +169,8 @@ export interface TabMeta {
   totalApprovalSteps: number;
   /** 다단계 승인 타입 — StepIndicator의 type 파라미터 (totalApprovalSteps > 1일 때만 유효) */
   multiStepType?: 'disposal' | 'calibration_plan';
+  /** 반려 가능 여부 — false면 반려 버튼 미표시 + API hard-throw 차단 (AR-8) */
+  canReject?: boolean;
   /** 사이드바 섹션 그룹핑 */
   section: ApprovalSection;
 }
@@ -242,6 +244,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     icon: 'ClipboardCheck',
     actionKey: 'tabMeta.inspection.action',
     totalApprovalSteps: 1,
+    canReject: false, // AR-8: 점검 항목은 반려 불가 — backend도 hard-throw
     section: 'equipment',
   },
   nonconformity: {
@@ -292,7 +295,9 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.software_validation.label',
     icon: 'Code',
     actionKey: 'tabMeta.software_validation.action',
-    commentRequired: false,
+    commentRequired: true, // AR-14: 검토완료 액션은 코멘트 필수 — 기존 commentDialogTitle/Placeholder i18n과 일관
+    commentDialogTitleKey: 'tabMeta.software_validation.commentDialogTitle',
+    commentPlaceholderKey: 'tabMeta.software_validation.commentPlaceholder',
     totalApprovalSteps: 1,
     section: 'management',
   },

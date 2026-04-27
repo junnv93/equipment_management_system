@@ -35,7 +35,8 @@ interface ApprovalDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApprove: () => void;
-  onReject: () => void;
+  /** canReject: false인 카테고리에서 undefined — 반려 버튼 미표시 (AR-8) */
+  onReject?: () => void;
   actionLabel: string;
 }
 
@@ -219,15 +220,17 @@ export default function ApprovalDetailModal({
             <CheckCircle2 className="h-4 w-4 mr-1" aria-hidden="true" />
             {actionLabel}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onReject}
-            className={getApprovalActionButtonClasses('reject')}
-          >
-            <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
-            {t('detail.reject')}
-          </Button>
+          {onReject && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onReject}
+              className={getApprovalActionButtonClasses('reject')}
+            >
+              <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
+              {t('detail.reject')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

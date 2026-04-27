@@ -196,7 +196,7 @@
     "defaultDescription": "Please enter a rejection reason. A rejection reason is required.",
     "reasonRequired": "Rejection Reason *",
     "templatesLabel": "Reason Templates",
-    "reasonLabel": "Rejection Reason (min. 10 characters)",
+    "reasonLabel": "Rejection Reason",
     "reasonPlaceholder": "Enter rejection reason...",
     "minLengthHint": "Please enter at least {min} characters.",
     "validation": "Rejection reason must be at least 10 characters.",
