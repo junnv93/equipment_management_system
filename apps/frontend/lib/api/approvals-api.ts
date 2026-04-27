@@ -655,25 +655,6 @@ class ApprovalsApi {
   }
 
   /**
-   * 렌탈 반입 승인 대기 목록 조회
-   *
-   * @deprecated Use getPendingIncoming() instead (consolidated into incoming category)
-   */
-  private async getPendingRentalImports(): Promise<ApprovalItem[]> {
-    try {
-      const response = await equipmentImportApi.getList({
-        status: EIStVal.PENDING,
-        sourceType: 'rental',
-      });
-      const items = response.data || [];
-
-      return items.map((item) => this.mapEquipmentImportToApprovalItem(item, 'incoming'));
-    } catch {
-      return [];
-    }
-  }
-
-  /**
    * 카테고리별 대기 개수 조회
    *
    * ✅ SSOT: 백엔드 통합 API 사용

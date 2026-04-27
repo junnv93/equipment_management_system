@@ -14,3 +14,5 @@ export * from './pending-checks-query.dto';
 export * from './borrower-approve-checkout.dto';
 export * from './borrower-reject-checkout.dto';
 export * from './inbound-overview.dto';
+export * from './bulk-approve.dto';
+export * from './revoke-approval.dto';

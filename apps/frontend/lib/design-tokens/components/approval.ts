@@ -10,7 +10,7 @@
  * - 정보 그리드 (요청자/팀/일시)
  */
 
-import { FOCUS_TOKENS, MOTION_TOKENS, MICRO_TYPO } from '../semantic';
+import { FOCUS_TOKENS, MICRO_TYPO } from '../semantic';
 import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticContainerColorClasses,
@@ -80,8 +80,8 @@ export const APPROVAL_STEPPER_TOKENS = {
   status: {
     /** 완료 (OK — brand-ok) */
     completed: 'border-brand-ok bg-brand-ok text-white',
-    /** 진행 중 (Info — brand-info) */
-    current: 'border-brand-info bg-brand-info text-white',
+    /** 진행 중 (Info — brand-info) + ring halo */
+    current: 'border-brand-info bg-brand-info text-white ring-4 ring-brand-info/20',
     /** 대기 (Neutral) */
     pending: 'border-brand-neutral/30 bg-background text-muted-foreground',
     /** 반려 (Critical — brand-critical) */
@@ -97,11 +97,13 @@ export const APPROVAL_STEPPER_TOKENS = {
     inactive: 'text-muted-foreground',
   },
 
-  /** 연결선 */
+  /** 연결선 (flex-1로 늘어남 — 단계 수에 무관하게 균등 분배) */
   connector: {
-    base: 'w-8 h-0.5 mx-2',
+    base: 'flex-1 min-w-[24px] h-0.5 mx-2',
     completed: 'bg-brand-ok',
     pending: 'bg-brand-neutral/20',
+    /** 반려 이후 — dashed + opacity 억제 */
+    rejectedDashed: 'border-t border-dashed border-brand-neutral/30 opacity-40 bg-transparent',
   },
 
   /** 아이콘 */
@@ -402,8 +404,17 @@ export const APPROVAL_ROW_TOKENS = {
   /** 호버 스타일 */
   hover: 'hover:bg-muted/40',
 
-  /** 다단계 인라인 도트 배지 */
-  stepBadge: 'text-xs text-muted-foreground font-mono tabular-nums',
+  /** 다단계 인라인 미니 스테퍼 */
+  miniStepper: {
+    container: 'flex items-center gap-0.5',
+    dot: {
+      base: 'w-1.5 h-1.5 rounded-full',
+      completed: 'bg-brand-ok',
+      current: 'bg-brand-info ring-2 ring-brand-info/20',
+      pending: 'bg-muted-foreground/30',
+    },
+    label: 'text-xs text-muted-foreground/70 tabular-nums ml-1',
+  },
 
   /** 액션 버튼 영역 (desktop: icon-only, mobile: text 포함) */
   actions: {
@@ -531,70 +542,27 @@ export const APPROVAL_MOBILE_CATEGORY_BAR_TOKENS = {
 } as const;
 
 // ============================================================================
-// 16. Approval Detail Panel Tokens (Split View 우측 상세 패널)
+// 16. Approval Detail Modal Tokens (AP-04: Panel 제거 후 Modal SSOT)
 // ============================================================================
 
-/**
- * 승인 상세 인라인 패널 — Split View 우측 (xl:+)
- *
- * 모달 대체: 리스트에서 항목 클릭 시 즉시 렌더링.
- * Layer 2 (semantic) + motion preset 참조로 3-Layer 아키텍처 준수.
- *
- * SSOT: ApprovalDetailPanel.tsx 하드코딩 제거
- */
-export const APPROVAL_DETAIL_PANEL_TOKENS = {
-  /** 패널 최외곽 컨테이너 */
-  container: 'flex flex-col h-full overflow-hidden bg-card border-l border-border',
+/** 승인 상세 모달 레이아웃 + 섹션 토큰 */
+export const APPROVAL_DETAIL_MODAL_TOKENS = {
+  /** 메타 그리드 — 2열 기본, 경과일/긴급도 포함 */
+  metaGrid: 'grid grid-cols-2 gap-4 text-sm',
+  metaLabel: 'text-muted-foreground',
+  metaValue: 'font-medium',
+  /** 섹션 본문 컨테이너 (bg-muted/50 하드코딩 SSOT 승격) */
+  sectionBody: 'bg-muted/50 rounded-lg p-4 divide-y',
+  /** 첨부파일 행 */
+  attachmentRow: 'flex items-center justify-between bg-muted/50 rounded-lg p-3',
+  /** 이력 카드 */
+  historyCard: 'bg-muted/50 rounded-lg p-3 ml-2',
+} as const;
 
-  /** 진입 애니메이션 — APPROVAL_MOTION.listItemEnter 패턴과 일관 */
-  contentEnter: `flex flex-col h-full motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-${MOTION_TOKENS.transition.fast.duration}`,
-
-  /** 헤더 (요약 정보) */
-  header: {
-    container: 'flex-shrink-0 p-4 border-b border-border space-y-3',
-    topRow: 'flex items-center gap-2',
-    title: 'text-base font-semibold text-foreground line-clamp-2',
-    metaGrid: 'grid grid-cols-3 gap-3',
-    /** APPROVAL_INFO_GRID_TOKENS.label 패턴 재사용 */
-    metaLabel: APPROVAL_INFO_GRID_TOKENS.label,
-    metaValue: 'text-sm font-medium text-foreground',
-  },
-
-  /** 스크롤 영역 (본문) */
-  body: 'flex-1 overflow-y-auto p-4 space-y-4',
-
-  /** 섹션 (상세 정보 블록) */
-  section: {
-    container: 'space-y-2',
-    title: 'flex items-center gap-2 text-sm font-medium text-foreground',
-    titleLine: 'flex-1 h-px bg-border',
-  },
-
-  /** 첨부 파일 행 */
-  attachment: {
-    row: 'flex items-center gap-2 py-1.5',
-    icon: `${APPROVAL_INFO_GRID_TOKENS.icon} flex-shrink-0`,
-    name: 'text-sm truncate flex-1',
-    size: 'text-xs text-muted-foreground tabular-nums',
-  },
-
-  /** 하단 고정 액션 영역 */
-  footer: {
-    container: `flex-shrink-0 flex items-center gap-2 p-4 border-t border-border ${APPROVAL_BULK_BAR_TOKENS.container}`,
-    button: 'flex-1 h-9 text-sm font-medium',
-  },
-
-  /** 키보드 단축키 배지 */
-  kbdBadge: `ml-auto ${MICRO_TYPO.badge} font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded border border-border`,
-
-  /** 빈 상태 (항목 미선택) — 패널 전용 축소판 */
-  empty: {
-    wrapper: 'flex-1 flex items-center justify-center p-8',
-    iconContainer: 'mx-auto mb-3 w-12 h-12 rounded-full bg-muted flex items-center justify-center',
-    icon: 'h-6 w-6 text-muted-foreground/50',
-    text: 'text-sm font-medium text-foreground',
-    hint: 'text-xs text-muted-foreground mt-1',
-  },
+/** @deprecated use APPROVAL_DETAIL_MODAL_TOKENS.sectionBody */
+export const APPROVAL_DETAIL_SECTION_TOKENS = {
+  sectionBody: APPROVAL_DETAIL_MODAL_TOKENS.sectionBody,
+  cardRow: APPROVAL_DETAIL_MODAL_TOKENS.historyCard,
 } as const;
 
 // ============================================================================

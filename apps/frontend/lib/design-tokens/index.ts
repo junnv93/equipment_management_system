@@ -484,6 +484,20 @@ export {
   type CheckoutEmptyStateVariant,
 } from './components/checkout-empty-state';
 
+// D-day 6단계 색온도 (SSOT)
+export {
+  DDAY_TIERS,
+  DDAY_TIER_CLASSES,
+  DDAY_TIER_ICON_KEY,
+  getDdayTier,
+  getDdayBadgeClasses,
+  getDdayIconKey,
+  type DdayTier,
+} from './components/dday-colors';
+
+// Checkout Phase (Rental Phase UI 토큰)
+export { CHECKOUT_RENTAL_PHASE_TOKENS, getPhaseCardState } from './components/checkout-phase';
+
 // Checkout Loading Skeleton
 export { CHECKOUT_LOADING_SKELETON_TOKENS } from './components/checkout-loading-skeleton';
 
@@ -547,7 +561,8 @@ export {
   APPROVAL_KPI_STRIP_TOKENS,
   APPROVAL_CATEGORY_SIDEBAR_TOKENS,
   APPROVAL_MOBILE_CATEGORY_BAR_TOKENS,
-  APPROVAL_DETAIL_PANEL_TOKENS,
+  APPROVAL_DETAIL_MODAL_TOKENS,
+  APPROVAL_DETAIL_SECTION_TOKENS,
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,

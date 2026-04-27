@@ -46,6 +46,7 @@ export const CHECKOUT_QUERY_PARAMS = {
   },
   VIEW_VALUES: {
     ACTIVE: 'active',
+    YOUR_TURN: 'yourTurn',
   },
 } as const;
 

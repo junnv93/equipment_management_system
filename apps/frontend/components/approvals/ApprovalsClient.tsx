@@ -43,17 +43,11 @@ import { ErrorState } from '@/components/shared/ErrorState';
 
 interface ApprovalsClientProps {
   userRole: UserRole;
-  userId: string;
   userTeamId?: string;
   initialTab?: string;
 }
 
-export function ApprovalsClient({
-  userRole,
-  userId: _userId,
-  userTeamId,
-  initialTab,
-}: ApprovalsClientProps) {
+export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const approvalsApi = useApprovalsApi();

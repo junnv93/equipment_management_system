@@ -52,59 +52,60 @@ export function ApprovalCategorySidebar({
   );
 
   return (
-    <nav
-      className={cn(tokens.container, className)}
-      role="navigation"
-      aria-label={t('sidebar.ariaLabel')}
-    >
-      {sortedSections.map((section, sectionIndex) => (
-        <div key={section}>
-          {sectionIndex > 0 && <div className={tokens.divider} />}
-          <div className={tokens.sectionLabel}>{t(APPROVAL_SECTIONS[section].labelKey)}</div>
-          {sectionGroups[section].map((tab) => {
-            const meta = TAB_META[tab];
-            const count = pendingCounts?.[tab] ?? 0;
-            const isActive = activeTab === tab;
-            const urgency = getCountBasedUrgency(count);
-            const isUrgent = urgency === 'critical' || urgency === 'emergency';
-            const IconComponent = APPROVAL_ICONS[meta.icon];
+    <nav className={cn(tokens.container, className)} aria-label={t('sidebar.ariaLabel')}>
+      {/* 단일 tablist — ApprovalMobileCategoryBar와 ARIA 패턴 통일 (AP-04) */}
+      <div role="tablist" aria-orientation="vertical">
+        {sortedSections.map((section, sectionIndex) => (
+          // className="contents": 래퍼 div를 렌더 트리에서 투명하게 처리, tablist 구조 유지
+          <div key={section} className="contents">
+            {sectionIndex > 0 && <div className={tokens.divider} role="presentation" />}
+            <div className={tokens.sectionLabel} role="presentation">
+              {t(APPROVAL_SECTIONS[section].labelKey)}
+            </div>
+            {sectionGroups[section].map((tab) => {
+              const meta = TAB_META[tab];
+              const count = pendingCounts?.[tab] ?? 0;
+              const isActive = activeTab === tab;
+              const urgency = getCountBasedUrgency(count);
+              const isUrgent = urgency === 'critical' || urgency === 'emergency';
+              const IconComponent = APPROVAL_ICONS[meta.icon];
 
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => onTabChange(tab)}
-                className={cn(
-                  tokens.item.base,
-                  isActive ? `${tokens.item.active} ${tokens.item.activeBar}` : tokens.item.inactive
-                )}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                {IconComponent && <IconComponent className={tokens.icon} aria-hidden="true" />}
-                <span className="truncate">{t(`tabMeta.${tab}.label`)}</span>
-                {count > 0 ? (
-                  <span
-                    className={cn(
-                      tokens.badge.base,
-                      isActive
-                        ? '' // active 상태에서는 primary-foreground 색상 상속
-                        : isUrgent
-                          ? tokens.badge.urgent
-                          : tokens.badge.normal
-                    )}
-                  >
-                    {count}
-                  </span>
-                ) : isActive ? (
-                  <span className={cn(tokens.badge.base, tokens.badge.completed)}>
-                    {t('sidebar.completedHint')}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      ))}
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => onTabChange(tab)}
+                  className={cn(
+                    tokens.item.base,
+                    isActive
+                      ? `${tokens.item.active} ${tokens.item.activeBar}`
+                      : tokens.item.inactive
+                  )}
+                >
+                  {IconComponent && <IconComponent className={tokens.icon} aria-hidden="true" />}
+                  <span className="truncate">{t(`tabMeta.${tab}.label`)}</span>
+                  {count > 0 ? (
+                    <span
+                      className={cn(
+                        tokens.badge.base,
+                        isActive ? '' : isUrgent ? tokens.badge.urgent : tokens.badge.normal
+                      )}
+                    >
+                      {count}
+                    </span>
+                  ) : isActive ? (
+                    <span className={cn(tokens.badge.base, tokens.badge.completed)}>
+                      {t('sidebar.completedHint')}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </nav>
   );
 }

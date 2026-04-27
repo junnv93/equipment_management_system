@@ -114,7 +114,16 @@
     "tooltipDetail": "상세 보기",
     "colSummary": "요약",
     "colActions": "작업",
-    "menuAriaLabel": "{summary} 승인 작업 메뉴"
+    "menuAriaLabel": "{summary} 승인 작업 메뉴",
+    "hoverApprove": "승인",
+    "hoverReject": "반려"
+  },
+  "miniStepper": {
+    "aria": {
+      "label": "{current}/{total} 단계 완료",
+      "currentStep": "{step}단계 진행 중",
+      "completedStep": "{step}단계 완료"
+    }
   },
   "sidebar": {
     "ariaLabel": "승인 카테고리 네비게이션",
@@ -215,6 +224,9 @@
     "requester": "요청자",
     "department": "소속",
     "requestDate": "요청일시",
+    "elapsedDays": "경과일",
+    "elapsedDaysValue": "{days}일",
+    "urgencyLabel": "긴급도",
     "approvalStatus": "승인 진행 상태",
     "requestDetail": "요청 상세",
     "attachments": "첨부 파일",

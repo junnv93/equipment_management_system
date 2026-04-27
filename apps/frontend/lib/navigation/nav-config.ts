@@ -38,7 +38,7 @@ export interface NavItemConfig {
   labelKey: string;
   requiredPermission: Permission | null;
   /** 배지 데이터 소스 식별자 */
-  badgeKey?: 'approvals';
+  badgeKey?: 'approvals' | 'checkouts-your-turn';
 }
 
 /** 정적 섹션 설정 */
@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.CHECKOUTS.LIST,
         labelKey: 'checkouts',
         requiredPermission: Permission.VIEW_CHECKOUTS,
+        badgeKey: 'checkouts-your-turn',
       },
       {
         icon: FileSpreadsheet,
@@ -183,11 +184,13 @@ export const NAV_SECTIONS: NavSection[] = [
  * @param role - 사용자 역할 (미인증 시 undefined)
  * @param t - 번역 함수 (navigation 네임스페이스)
  * @param pendingCounts - 승인 대기 건수 (배지용)
+ * @param checkoutYourTurnCount - 반출 "내 차례" 건수 (배지용)
  */
 export function getFilteredNavSections(
   role: UserRole | undefined,
   t: (key: string) => string,
-  pendingCounts?: PendingCountsByCategory
+  pendingCounts?: PendingCountsByCategory,
+  checkoutYourTurnCount?: number
 ): FilteredNavSection[] {
   return NAV_SECTIONS.map((section) => {
     const filteredItems: FilteredNavItem[] = section.items
@@ -209,6 +212,8 @@ export function getFilteredNavSections(
         ) {
           const total = computeApprovalTotal(pendingCounts, role);
           badge = total > 0 ? total : undefined;
+        } else if (item.badgeKey === 'checkouts-your-turn' && checkoutYourTurnCount) {
+          badge = checkoutYourTurnCount > 0 ? checkoutYourTurnCount : undefined;
         }
         return {
           icon: item.icon,

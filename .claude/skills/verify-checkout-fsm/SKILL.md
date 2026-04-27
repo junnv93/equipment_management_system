@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), EXPECTED_ENTRY_COUNT 동적 table test(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33), resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성(Step 34). packages/schemas/src/fsm/** 또는 checkouts.service.ts 또는 NextStepPanel.tsx 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), EXPECTED_ENTRY_COUNT 동적 table test(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33), resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성(Step 34), roleToActorVariant+ActorVariant schemas SSOT+isMyTurn UserRoleValues.SYSTEM_ADMIN(Step 35), reachedStepIndex 3분기+computeReachedStepIndex terminatedFromStatus 위임(Step 36), terminatedFromStatus terminal 저장 패턴(Step 37). packages/schemas/src/fsm/** 또는 checkouts.service.ts 또는 NextStepPanel.tsx 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -435,6 +435,9 @@ grep -n "BadRequestException" \
 | 31 | findOne 반환 타입 — CheckoutWithMeta 단일 | PASS/FAIL | Promise<CheckoutWithMeta> 선언 + 유니온 타입 0건 |
 | 32 | EXPECTED_ENTRY_COUNT 동적 table test (Sprint 1.1 신규, 2026-04-26 동적화) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts — 하드코딩 숫자 금지, template literal 사용 |
 | 34 | resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성 (Sprint 4.1) | PASS/FAIL | 함수 정의 1건 + NextActor exhaustive + 속성 hero/compact 양쪽 존재 |
+| 35 | roleToActorVariant + ActorVariant schemas SSOT + isMyTurn UserRoleValues.SYSTEM_ADMIN (Sprint fsm-terminal-actor-variant) | PASS/FAIL | ActorVariant frontend 재정의 0건 + roleToActorVariant schemas import + UserRoleValues.SYSTEM_ADMIN 사용 |
+| 36 | reachedStepIndex — NextStepDescriptor 3분기 + computeReachedStepIndex terminatedFromStatus 위임 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | getNextStep 3개 return 분기 모두 reachedStepIndex 포함 + 함수 terminatedFromStatus 파라미터 존재 |
+| 37 | terminatedFromStatus 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | reject/borrowerReject/cancel에 terminatedFromStatus 설정, 비-terminal 메서드에 미설정 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -954,6 +957,117 @@ grep -c "data-actor-variant" apps/frontend/components/shared/NextStepPanel.tsx
 - `apps/frontend/components/shared/NextStepPanel.tsx` — `resolveActorVariant` 정의 + `data-variant`/`data-actor-variant` DOM 속성
 - `packages/schemas/src/fsm/checkout-fsm.ts` — `NextActor` 타입 SSOT
 - `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `WORKFLOW_PANEL_TOKENS.actor` (ActorVariant → 색상 토큰 매핑)
+
+### Step 35: `roleToActorVariant` + `ActorVariant` schemas SSOT + `isMyTurn` `UserRoleValues.SYSTEM_ADMIN` (Sprint fsm-terminal-actor-variant, 2026-04-27)
+
+`ActorVariant` 타입과 `roleToActorVariant` 함수는 `packages/schemas`에서만 정의/export되어야 한다.
+frontend(`apps/frontend`)에서 재정의하면 schemas 변경 시 불일치 발생.
+`isMyTurn` 로직의 `system_admin` 특수 케이스는 하드코딩 문자열 `'system_admin'`이 아닌 `UserRoleValues.SYSTEM_ADMIN`을 사용해야 한다.
+
+```bash
+# ActorVariant frontend 로컬 재정의 금지
+grep -rn "type ActorVariant\s*=" apps/frontend/ --include="*.ts" --include="*.tsx"
+# 기대: 0건 (PASS) — packages/schemas에만 존재해야 함
+
+# roleToActorVariant frontend 로컬 정의 금지
+grep -rn "function roleToActorVariant\|const roleToActorVariant\s*=" apps/frontend/ --include="*.ts" --include="*.tsx"
+# 기대: 0건 (PASS) — import only
+
+# roleToActorVariant schemas에서 import 사용 확인
+grep -n "roleToActorVariant" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: import 행 + 사용 행 (schemas 경유, PASS)
+
+# isMyTurn system_admin: UserRoleValues 사용, 하드코딩 금지
+grep -n "'system_admin'" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 0건 (PASS) — UserRoleValues.SYSTEM_ADMIN 사용
+
+grep -n "UserRoleValues.SYSTEM_ADMIN" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 1건 이상 (PASS)
+```
+
+**PASS:**
+1. `type ActorVariant` frontend 재정의 0건
+2. `roleToActorVariant` frontend 정의 0건, schemas import만 사용
+3. `'system_admin'` 하드코딩 0건, `UserRoleValues.SYSTEM_ADMIN` 사용
+
+**FAIL:**
+- `type ActorVariant = 'requester' | 'approver' | 'receiver'` frontend 재정의 → schemas 변경 시 불일치
+- `function roleToActorVariant` frontend 정의 → SSOT 분산
+- `'system_admin'` 리터럴 → UserRole rename 시 silent break
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `ActorVariant`, `roleToActorVariant`, `UserRoleValues` SSOT
+- `apps/frontend/components/shared/NextStepPanel.tsx` — `isMyTurn` 로직
+
+### Step 36: `reachedStepIndex` — `NextStepDescriptor` 3분기 필수 + `computeReachedStepIndex` `terminatedFromStatus` 위임 (Sprint fsm-terminal-actor-variant, 2026-04-27)
+
+`getNextStep`의 3개 return 분기(terminal early-return / no-candidate / 정상 candidate) 모두 `reachedStepIndex` 필드를 포함해야 한다.
+누락 시 Zod `NextStepDescriptorSchema.safeParse` 실패 → FSM drift fallback 발동.
+`computeReachedStepIndex`는 `terminatedFromStatus` 옵셔널 파라미터를 받아 terminal 상태에서 정확한 단계를 반환해야 한다.
+
+```bash
+# NextStepDescriptor 인터페이스에 reachedStepIndex 필드 존재
+grep -n "reachedStepIndex" packages/schemas/src/fsm/checkout-fsm.ts
+# 기대: 인터페이스 + Zod 스키마 + computeReachedStepIndex 함수 3곳 이상 (PASS)
+
+# getNextStep 3개 return 분기 모두 reachedStepIndex 포함
+grep -c "reachedStepIndex," packages/schemas/src/fsm/checkout-fsm.ts
+# 기대: 3 이상 (terminal/no-candidate/normal 각 1건, PASS)
+
+# computeReachedStepIndex terminatedFromStatus 파라미터 확인
+grep -A 5 "function computeReachedStepIndex" packages/schemas/src/fsm/checkout-fsm.ts
+# 기대: terminatedFromStatus?: CheckoutStatus | null 파라미터 존재 (PASS)
+
+# buildNextStep에서 terminatedFromStatus 전달 확인
+grep -n "terminatedFromStatus" apps/backend/src/modules/checkouts/checkouts.service.ts | head -5
+# 기대: getNextStep 호출부에 terminatedFromStatus 전달 (PASS)
+```
+
+**PASS:**
+1. `reachedStepIndex` 인터페이스 + Zod 스키마 양쪽 선언
+2. `getNextStep` 3개 return 분기 모두 `reachedStepIndex` 포함
+3. `computeReachedStepIndex`에 `terminatedFromStatus` 파라미터 존재
+
+**FAIL:**
+- `reachedStepIndex` 누락된 return 분기 → Zod safeParse 실패 → FSM drift fallback
+- `computeReachedStepIndex`에 `terminatedFromStatus` 없음 → terminal 상태 항상 step 1 반환
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex`, `NextStepDescriptor`, `NextStepDescriptorSchema`
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `buildNextStep`
+
+### Step 37: `terminatedFromStatus` 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant, 2026-04-27)
+
+`reject` / `borrowerReject` / `cancel` 메서드는 status 전환 직전 `checkout.status`를 `terminatedFromStatus`로 저장해야 한다.
+비-terminal 메서드(`approve`, `borrowerApprove`, `startCheckout`, `returnCheckout`, `approveReturn`, `rejectReturn`)에는 `terminatedFromStatus` 설정 없어야 한다.
+기존 `updateWithVersion` / `updateCheckoutStatus` CAS 경로는 그대로 유지 — `terminatedFromStatus`는 additionalData에만 추가.
+
+```bash
+# terminal 3개 메서드에 terminatedFromStatus 설정 확인
+grep -n "terminatedFromStatus" apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: buildNextStep 전달(1건) + reject(1건) + borrowerReject(1건) + cancel(1건) = 4건 이상 (PASS)
+
+# 비-terminal 메서드에 terminatedFromStatus 미설정 확인 (approve/return 계열)
+grep -A 30 "async approve\b" apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "terminatedFromStatus"
+# 기대: 0건 (PASS)
+
+grep -A 30 "async returnCheckout\b" apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "terminatedFromStatus"
+# 기대: 0건 (PASS)
+```
+
+**PASS:**
+1. `terminatedFromStatus` 총 4건 이상 (`buildNextStep` + 3개 terminal 메서드)
+2. `approve` / `returnCheckout` 등 비-terminal 메서드에 `terminatedFromStatus` 없음
+
+**FAIL:**
+- `reject`/`cancel`/`borrowerReject` 중 `terminatedFromStatus` 누락 → terminal 상태 `reachedStepIndex` 항상 1
+- 비-terminal 메서드에 `terminatedFromStatus` 설정 → 의미론 오염
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `reject`, `borrowerReject`, `cancel`, `buildNextStep`
+- `packages/db/src/schema/checkouts.ts` — `terminatedFromStatus` nullable 컬럼
 
 ### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
 

@@ -6,6 +6,21 @@
  *
  * SSOT: 용도 기반 토큰 - 컴포넌트는 이 레이어를 참조
  * 변경 시: primitive 참조를 바꾸면 모든 사용처가 자동 업데이트
+ *
+ * ## Color Semantic 5축 원칙
+ *
+ * | 축 | CSS 변수 | 의미 | 사용 |
+ * |---|---|---|---|
+ * | ok | brand-ok | 정상/완료/성공 | 완료 배지, 체크아이콘 |
+ * | info | brand-info | 정보/진행 중 | 진행 배지, 링크 |
+ * | warning | brand-warning | 주의/임박 | D-day soon, 경고 배너 |
+ * | critical | brand-critical | 위험/초과/오류 | 연체 배지, 오류 메시지 |
+ * | neutral | muted | 비활성/보조 | 미래 단계, 부제목 |
+ *
+ * 규칙:
+ * - raw 색상 클래스(`bg-red-500`) 직접 사용 금지 — brand CSS 변수 경유 필수
+ * - `dark:` prefix 불필요 — CSS 변수가 :root + .dark 양쪽 정의 (globals.css)
+ * - 동사 앞 아이콘: 액션 버튼에는 반드시 아이콘 선행 (접근성 시각 단서)
  */
 
 import {
@@ -428,6 +443,22 @@ export const TYPOGRAPHY_TOKENS = {
   kpi: 'text-4xl font-bold tabular-nums leading-none',
   /** KPI 레이블 — 숫자 아래 설명 텍스트 */
   kpiLabel: 'text-xs font-medium uppercase tracking-wider text-muted-foreground',
+
+  /** Checkout 도메인 편의 alias — heading 계층 직접 참조용 */
+  alias: {
+    /** 페이지 최상단 영웅 헤딩 (반출 목적지 등) */
+    heroH: 'text-3xl font-bold tracking-tight',
+    /** 섹션/그룹 카드 액션 헤딩 (NextStepPanel 제목 등) */
+    actionH: 'text-sm font-semibold leading-snug',
+    /** 행 아이템 제목 (장비명, 목적지) */
+    rowTitle: 'text-sm font-medium leading-snug',
+    /** 기본 본문 */
+    body: 'text-sm leading-normal',
+    /** 보조 메타 정보 (날짜, 관리번호, 타임스탬프) */
+    meta: 'text-xs text-muted-foreground tabular-nums',
+    /** 섹션 kicker 라벨 (PENDING · 3건) */
+    kicker: 'text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+  },
 } as const;
 
 export type TypographyScale = keyof typeof TYPOGRAPHY_TOKENS;

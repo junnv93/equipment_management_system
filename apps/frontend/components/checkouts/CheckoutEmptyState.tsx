@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +26,8 @@ export interface CheckoutEmptyStateProps {
    * false 시 primaryAction을 숨긴다 (권한 없음). undefined이면 항상 표시.
    */
   canAct?: boolean;
+  /** noPermission variant: 현재 역할 인라인 표시용 */
+  roleLabel?: string;
   className?: string;
 }
 
@@ -41,10 +44,26 @@ export default function CheckoutEmptyState({
   primaryAction,
   secondaryAction,
   canAct,
+  roleLabel,
   className,
 }: CheckoutEmptyStateProps) {
   const showPrimary = canAct !== false;
   const Icon = CHECKOUT_ICON_MAP.emptyState[variant];
+
+  // network variant: navigator.onLine 감지 — 온라인 복구 시 자동 재시도 안내
+  const [isOnline, setIsOnline] = useState(true);
+  useEffect(() => {
+    if (variant !== 'network') return;
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [variant]);
   const iconColorClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconColor[variant];
   const iconBgClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconBg[variant];
 
@@ -61,6 +80,18 @@ export default function CheckoutEmptyState({
 
       <h3 className={EMPTY_STATE_TOKENS.title}>{title}</h3>
       <p className={EMPTY_STATE_TOKENS.description}>{description}</p>
+
+      {variant === 'network' && isOnline && (
+        <p className="mt-1 text-xs text-brand-ok bg-brand-ok/10 rounded px-2 py-1 inline-block">
+          연결이 복구되었습니다. 다시 시도해 주세요.
+        </p>
+      )}
+
+      {variant === 'noPermission' && roleLabel && (
+        <p className="mt-1 text-xs text-muted-foreground bg-muted rounded px-2 py-1 inline-block">
+          {roleLabel}
+        </p>
+      )}
 
       {(showPrimary && primaryAction) || secondaryAction ? (
         <div className={EMPTY_STATE_TOKENS.actions}>

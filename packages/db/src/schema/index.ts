@@ -74,3 +74,6 @@ export * from './form-template-revisions';
 
 // 보안 모니터링
 export * from './csp-reports';
+
+// 반려 사유 프리셋 (UL-QP-18 반출 반려 workflow)
+export * from './rejection-presets';

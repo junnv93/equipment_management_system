@@ -4,7 +4,7 @@ import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Check, XCircle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApprovalHistoryEntry } from '@/lib/api/approvals-api';
-import { APPROVAL_TIMELINE_TOKENS } from '@/lib/design-tokens';
+import { APPROVAL_TIMELINE_TOKENS, APPROVAL_DETAIL_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
 interface ApprovalHistoryCardProps {
@@ -53,6 +53,10 @@ export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
               index < sortedHistory.length - 1 && APPROVAL_TIMELINE_TOKENS.connector
             )}
           >
+            {/* 첫 항목 connector 머리 — 아이콘 위로 짧은 수직선 */}
+            {index === 0 && sortedHistory.length > 1 && (
+              <div className="absolute left-[11px] top-6 w-px h-2 bg-border" aria-hidden="true" />
+            )}
             {/* 타임라인 아이콘 */}
             <div
               className={cn(
@@ -64,7 +68,7 @@ export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
             </div>
 
             {/* 이력 내용 */}
-            <div className="bg-muted/50 rounded-lg p-3 ml-2">
+            <div className={APPROVAL_DETAIL_SECTION_TOKENS.cardRow}>
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-sm">
                   {actionLabels[entry.action] || entry.action}

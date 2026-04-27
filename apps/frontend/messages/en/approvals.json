@@ -114,7 +114,16 @@
     "tooltipDetail": "View detail",
     "colSummary": "Summary",
     "colActions": "Actions",
-    "menuAriaLabel": "Actions menu for {summary}"
+    "menuAriaLabel": "Actions menu for {summary}",
+    "hoverApprove": "Approve",
+    "hoverReject": "Reject"
+  },
+  "miniStepper": {
+    "aria": {
+      "label": "{current} of {total} steps completed",
+      "currentStep": "Step {step} in progress",
+      "completedStep": "Step {step} completed"
+    }
   },
   "sidebar": {
     "ariaLabel": "Approval categories navigation",
@@ -215,6 +224,9 @@
     "requester": "Requester",
     "department": "Department",
     "requestDate": "Request Date",
+    "elapsedDays": "Elapsed Days",
+    "elapsedDaysValue": "{days}d",
+    "urgencyLabel": "Urgency",
     "approvalStatus": "Approval Status",
     "requestDetail": "Request Detail",
     "attachments": "Attachments",

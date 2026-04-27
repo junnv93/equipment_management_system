@@ -62,6 +62,11 @@ import {
   BorrowerRejectCheckoutValidationPipe,
   InboundOverviewQueryDto,
   InboundOverviewQueryValidationPipe,
+  BulkApproveDto,
+  BulkApproveValidationPipe,
+  type BulkApproveResult,
+  RevokeApprovalDto,
+  RevokeApprovalValidationPipe,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
@@ -253,6 +258,20 @@ export class CheckoutsController {
   // ⚠️ @SiteScoped 의도적 미적용: 개인 action-item 엔드포인트.
   // 데이터는 userId/teamId 기반으로 서비스에서 직접 스코핑하며,
   // 역할 기반 데이터 가시성 정책(CHECKOUT_DATA_SCOPE)과 무관합니다.
+  @Get('pending-count')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: 'Nav 배지용 "내 차례" 건수 조회',
+    description: '현재 사용자의 액션이 필요한 렌탈 반출 건수를 반환합니다. Nav 배지 전용.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '건수 조회 성공' })
+  async getPendingChecksCount(@Request() req: AuthenticatedRequest): Promise<{ count: number }> {
+    const userId = extractUserId(req);
+    const userTeamId = req.user?.teamId;
+    const count = await this.checkoutsService.getPendingChecksCount(userId, userTeamId);
+    return { count };
+  }
+
   @Get('pending-checks')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(PendingChecksQueryValidationPipe)
@@ -292,7 +311,7 @@ export class CheckoutsController {
   async getInboundOverview(
     @Query() query: InboundOverviewQueryDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.checkoutsService.getInboundOverview(query, req.user?.teamId ?? null);
   }
 
@@ -808,5 +827,88 @@ export class CheckoutsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     return this.checkoutsService.cancel(uuid, cancelDto.version, req);
+  }
+
+  // ============================================================================
+  // M8: 일괄 승인
+  // ============================================================================
+
+  @Post('bulk-approve')
+  @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @UsePipes(BulkApproveValidationPipe)
+  @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'body.ids' })
+  @ApiOperation({
+    summary: '반출 일괄 승인',
+    description: 'Promise.allSettled 기반 — 부분 실패 허용. max 50건. approverId는 세션에서 추출.',
+  })
+  @ApiBody({ type: BulkApproveDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '일괄 승인 결과 (approved/failed 목록)' })
+  @HttpCode(HttpStatus.OK)
+  async bulkApprove(
+    @Body() dto: BulkApproveDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<BulkApproveResult> {
+    const approverId = extractUserId(req);
+    return this.checkoutsService.bulkApprove(dto.ids, approverId, req);
+  }
+
+  // ============================================================================
+  // M9: 반려 사유 프리셋 목록
+  // ============================================================================
+
+  @Get('rejection-presets')
+  @RequirePermissions(Permission.REJECT_CHECKOUT)
+  @ApiOperation({
+    summary: '반려 사유 프리셋 목록',
+    description: '관리자 등록 고정 템플릿. 반려 모달에서 1-click 선택용.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '프리셋 목록' })
+  async getRejectionPresets(): Promise<
+    { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
+  > {
+    return this.checkoutsService.getRejectionPresets();
+  }
+
+  // ============================================================================
+  // M10: 최근 사용한 반출지 목록
+  // ============================================================================
+
+  @Get('destinations/recent')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '최근 사용 반출지 목록',
+    description: '로그인 사용자 본인의 반출 이력에서 최근 5건. userId 스코핑 — cross-user 0.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '반출지 목록 (최대 5건)' })
+  async getRecentDestinations(@Request() req: AuthenticatedRequest): Promise<string[]> {
+    const userId = extractUserId(req);
+    return this.checkoutsService.getRecentDestinations(userId);
+  }
+
+  // ============================================================================
+  // M11: 승인 철회
+  // ============================================================================
+
+  @Post(':uuid/revoke-approval')
+  @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @UsePipes(RevokeApprovalValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
+  @ApiOperation({
+    summary: '승인 철회',
+    description:
+      'approved 상태 + 승인 후 5분 이내 + 본인 승인만 철회 가능. CAS version 필수. fail-close: scope → FSM → domain 순.',
+  })
+  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: RevokeApprovalDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '철회 성공 — pending으로 롤백' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '5분 초과 또는 타인 승인 건' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'CAS 충돌 (409)' })
+  async revokeApproval(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: RevokeApprovalDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    const approverId = extractUserId(req);
+    return this.checkoutsService.revokeApproval(uuid, dto, approverId, req);
   }
 }

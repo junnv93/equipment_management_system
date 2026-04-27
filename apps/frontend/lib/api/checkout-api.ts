@@ -563,6 +563,13 @@ const checkoutApi = {
     return transformSingleResponse<VerifyHandoverTokenResponse>(response);
   },
 
+  /** Nav 배지용 "내 차례" 건수 — userId/teamId 스코핑, 30s 캐시 */
+  async getPendingCheckoutsCount(): Promise<number> {
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.PENDING_COUNT);
+    const data = response.data as { count: number };
+    return data.count;
+  },
+
   /**
    * BFF: 반입 현황 집계 (Sprint 3.1)
    * 표준 반입 + 외부 렌탈 + 내부 공용 3섹션을 단일 요청으로 집계.

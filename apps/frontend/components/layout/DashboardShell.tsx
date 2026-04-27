@@ -28,6 +28,7 @@ import type { UserRole } from '@equipment-management/schemas';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
+import { NavBadge } from '@/components/layout/NavBadge';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
@@ -35,13 +36,13 @@ import { GlobalSearchTrigger } from '@/components/layout/GlobalSearchTrigger';
 import { MobileScanTrigger } from '@/components/layout/MobileScanTrigger';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
+import checkoutApi from '@/lib/api/checkout-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 import {
   getHeaderSpacingClass,
   getHeaderBarClasses,
   FOCUS_TOKENS,
-  ANIMATION_PRESETS,
   TRANSITION_PRESETS,
   SIDEBAR_LAYOUT,
   SIDEBAR_COLORS,
@@ -55,6 +56,7 @@ import {
 } from '@/lib/design-tokens';
 import { getFilteredNavSections, isNavItemActive } from '@/lib/navigation/nav-config';
 import type { FilteredNavSection } from '@/lib/navigation/nav-config';
+import { CHECKOUT_QUERY_PARAMS, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { saveRecentPage } from '@/components/layout/GlobalSearchDialog';
 import { useSidebarState } from '@/hooks/use-sidebar-state';
 import { useTranslations } from 'next-intl';
@@ -65,6 +67,7 @@ interface SidebarItemProps {
   label: string;
   isActive?: boolean;
   badge?: number;
+  badgeLinkHref?: string;
   isCollapsed?: boolean;
 }
 
@@ -75,6 +78,7 @@ const SidebarItem = memo(function SidebarItem({
   label,
   isActive,
   badge,
+  badgeLinkHref,
   isCollapsed,
 }: SidebarItemProps) {
   const t = useTranslations('navigation');
@@ -89,19 +93,13 @@ const SidebarItem = memo(function SidebarItem({
         <Icon className={SIDEBAR_ITEM_TOKENS.iconSize} />
       </span>
       {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
-      {/* 펼쳐진 상태: 숫자 배지 */}
+      {/* 펼쳐진 상태: NavBadge (별도 링크 지원) */}
       {!isCollapsed && badge !== undefined && badge > 0 && (
-        <span
-          className={cn(
-            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full',
-            SIDEBAR_ITEM_TOKENS.badge.background,
-            SIDEBAR_ITEM_TOKENS.badge.text,
-            ANIMATION_PRESETS.pulse
-          )}
-          aria-label={t('layout.notificationCount', { count: badge })}
-        >
-          {badge}
-        </span>
+        <NavBadge
+          count={badge}
+          srLabel={t('layout.notificationCount', { count: badge })}
+          badgeLinkHref={badgeLinkHref}
+        />
       )}
       {/* 접힌 상태: dot 인디케이터 */}
       {isCollapsed && badge !== undefined && badge > 0 && (
@@ -140,12 +138,25 @@ export function DashboardShell({ children }: DashboardShellProps) {
     ...QUERY_CONFIG.APPROVAL_COUNTS,
   });
 
+  // 반출 "내 차례" 카운트 조회 (VIEW_CHECKOUTS 권한 보유자)
+  const { data: checkoutYourTurnCount } = useQuery<number>({
+    queryKey: queryKeys.checkouts.resource.pendingCount(),
+    queryFn: () => checkoutApi.getPendingCheckoutsCount(),
+    enabled: !!userRole,
+    ...QUERY_CONFIG.CHECKOUT_SUMMARY,
+  });
+
   // SSOT: nav-config.ts에서 필터링된 섹션 조회
   // getFilteredNavSections가 useMemo 안에서만 호출되므로 참조 안정적
   const filteredSections = useMemo(
     () =>
-      getFilteredNavSections(userRole, (key) => t(key as Parameters<typeof t>[0]), pendingCounts),
-    [userRole, pendingCounts, t]
+      getFilteredNavSections(
+        userRole,
+        (key) => t(key as Parameters<typeof t>[0]),
+        pendingCounts,
+        checkoutYourTurnCount
+      ),
+    [userRole, pendingCounts, checkoutYourTurnCount, t]
   );
 
   // 페이지 방문 시 최근 페이지 자동 저장 — 검색 다이얼로그 '최근 페이지' 섹션용
@@ -286,17 +297,24 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 )}
                 {/* 아이템 목록 */}
                 <div className="flex flex-col gap-1">
-                  {section.items.map((item) => (
-                    <SidebarItem
-                      key={item.href}
-                      icon={item.icon}
-                      href={item.href}
-                      label={item.label}
-                      isActive={isNavItemActive(item.href, pathname)}
-                      badge={item.badge}
-                      isCollapsed={isCollapsed}
-                    />
-                  ))}
+                  {section.items.map((item) => {
+                    const yourTurnHref =
+                      item.href === FRONTEND_ROUTES.CHECKOUTS.LIST && item.badge && item.badge > 0
+                        ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${CHECKOUT_QUERY_PARAMS.VIEW}=${CHECKOUT_QUERY_PARAMS.VIEW_VALUES.YOUR_TURN}`
+                        : undefined;
+                    return (
+                      <SidebarItem
+                        key={item.href}
+                        icon={item.icon}
+                        href={item.href}
+                        label={item.label}
+                        isActive={isNavItemActive(item.href, pathname)}
+                        badge={item.badge}
+                        badgeLinkHref={yourTurnHref}
+                        isCollapsed={isCollapsed}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}

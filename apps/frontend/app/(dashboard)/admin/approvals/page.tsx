@@ -119,7 +119,6 @@ async function ApprovalsContentAsync({
   }
 
   const userRole = session.user.role as UserRole;
-  const userId = session.user.id;
   const userTeamId = session.user.teamId;
 
   if (!APPROVAL_ROLES.includes(userRole)) {
@@ -140,12 +139,7 @@ async function ApprovalsContentAsync({
   return (
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />
-      <ApprovalsClient
-        userRole={userRole}
-        userId={userId}
-        userTeamId={userTeamId}
-        initialTab={initialTab}
-      />
+      <ApprovalsClient userRole={userRole} userTeamId={userTeamId} initialTab={initialTab} />
     </>
   );
 }

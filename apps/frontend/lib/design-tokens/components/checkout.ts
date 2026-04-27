@@ -27,6 +27,7 @@ import {
   getSemanticContainerTextClasses,
 } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
+import { getDdayBadgeClasses as _getDdayBadgeClasses } from './dday-colors';
 import {
   CheckoutStatusValues,
   type CheckoutStatus,
@@ -653,14 +654,11 @@ export const CHECKOUT_DDAY_TOKENS = {
 export type DdayVariant = keyof typeof CHECKOUT_DDAY_TOKENS;
 
 /**
- * D-day 클래스 결정
- *
- * @param daysRemaining - 오늘 기준 남은 일수 (음수 = 초과)
+ * @deprecated dday-colors.ts의 getDdayBadgeClasses를 사용하세요 — 6단계 색온도 SSOT.
+ * 하위 호환성 유지용 wrapper (신규 코드에서 직접 호출 금지).
  */
 export function getDdayClasses(daysRemaining: number): string {
-  if (daysRemaining < 0) return CHECKOUT_DDAY_TOKENS.danger;
-  if (daysRemaining <= 3) return CHECKOUT_DDAY_TOKENS.warn;
-  return CHECKOUT_DDAY_TOKENS.ok;
+  return _getDdayBadgeClasses(daysRemaining);
 }
 
 /**
@@ -823,9 +821,10 @@ export const CHECKOUT_FILTER_BAR_TOKENS = {
  * Zone 1 (3px): purposeBar | Zone 2 (72px): status+dday | Zone 3 (1fr): identity | Zone 4 (auto): action
  */
 export const CHECKOUT_ITEM_ROW_TOKENS = {
-  /** 행 컨테이너 — 기본 스타일 (레이아웃 제외). grid 토큰과 함께 사용. */
+  /** 행 컨테이너 — 기본 스타일 (레이아웃 제외). grid 토큰과 함께 사용.
+   * Density: py-2.5(20px) + 콘텐츠 ≈44px → 총 64px cozy 밀도 준수 */
   container: [
-    'px-3 py-2.5',
+    'px-3 py-2.5 min-h-[64px]',
     'border-b border-border/40 last:border-0',
     'cursor-pointer',
     TRANSITION_PRESETS.instantBg,

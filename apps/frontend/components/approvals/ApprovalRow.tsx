@@ -27,6 +27,7 @@ import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
+import { ApprovalRowMiniStepper } from './ApprovalRowMiniStepper';
 
 interface ApprovalRowProps {
   item: ApprovalItem;
@@ -95,16 +96,18 @@ export function ApprovalRow({
 
       {/* 요약 + 다단계 인디케이터 (배지 컬럼 삭제 — urgency bar로 흡수) */}
       <TableCell>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn('text-sm font-medium truncate', FONT.heading)}>
+        <div className="flex items-center gap-2 flex-nowrap min-w-0">
+          <span
+            className={cn('text-sm font-medium truncate min-w-0', FONT.heading)}
+            title={localizedSummary}
+          >
             {localizedSummary}
           </span>
           {meta.multiStep && (
-            <span className="text-xs text-muted-foreground font-mono tabular-nums">
-              {item.approvalHistory && item.approvalHistory.length > 0
-                ? `${'●'.repeat(item.approvalHistory.length)}${'○'.repeat(Math.max(0, (meta.multiStepType === 'disposal' ? 2 : 3) - item.approvalHistory.length))} ${item.approvalHistory.length}/${meta.multiStepType === 'disposal' ? 2 : 3}`
-                : `○○${meta.multiStepType === 'calibration_plan' ? '○' : ''} 0/${meta.multiStepType === 'disposal' ? 2 : 3}`}
-            </span>
+            <ApprovalRowMiniStepper
+              currentStep={item.approvalHistory?.length ?? 0}
+              totalSteps={meta.multiStepType === 'disposal' ? 2 : 3}
+            />
           )}
         </div>
       </TableCell>

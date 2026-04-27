@@ -1152,10 +1152,9 @@ grep -A 4 "} satisfies Record<" apps/frontend/lib/design-tokens/components/workf
   | grep "'compact' | 'hero'"
 # 기대: 1건 (PASS)
 
-# actor satisfies 확인 (3-way)
-grep -A 4 "} satisfies Record<" apps/frontend/lib/design-tokens/components/workflow-panel.ts \
-  | grep "'requester' | 'approver' | 'receiver'"
-# 기대: 1건 (PASS)
+# actor satisfies 확인 — ActorVariant SSOT 경유 (schemas import)
+grep "satisfies Record<ActorVariant" apps/frontend/lib/design-tokens/components/workflow-panel.ts
+# 기대: 1건 (PASS) — 인라인 리터럴 'requester'|'approver'|'receiver' 대신 ActorVariant 사용
 
 # WorkflowPanelActorVariant 타입 export 확인
 grep -n "WorkflowPanelActorVariant" \
@@ -1168,9 +1167,10 @@ grep -n "workflow-panel\|WorkflowPanelActorVariant" \
 # 기대: workflow-panel 파일 re-export + WorkflowPanelActorVariant 포함
 ```
 
-**PASS:** variant satisfies 1건 + actor satisfies 1건 + `WorkflowPanelActorVariant` export + index.ts barrel re-export.
+**PASS:** variant satisfies 1건 + `satisfies Record<ActorVariant>` 1건 + `WorkflowPanelActorVariant` export + index.ts barrel re-export.
 **FAIL:**
 - `satisfies` 누락 → 새 variant/actor 추가 시 TypeScript 미탐지
+- `ActorVariant` 대신 inline 리터럴 `'requester' | 'approver' | 'receiver'` 사용 → schemas SSOT 연결 끊김 (ActorVariant 확장 시 미탐지)
 - `WorkflowPanelActorVariant` 미export → 소비처가 직접 union 리터럴 재정의 (SSOT 위반)
 - index.ts barrel 누락 → 소비처가 직접 서브패스 import (Step 3 위반)
 

@@ -14,14 +14,17 @@ import {
   Ban,
   Bell,
   CheckCircle2,
+  ClipboardList,
   Clock,
   Lock,
   Package,
   RotateCcw,
+  SearchX,
   Send,
   ShieldCheck,
   Timer,
   UserCheck,
+  WifiOff,
 } from 'lucide-react';
 
 export const CHECKOUT_ICON_MAP = {
@@ -58,6 +61,11 @@ export const CHECKOUT_ICON_MAP = {
     completed: CheckCircle2,
     filtered: AlertTriangle,
     overdueClear: CheckCircle2,
+    noneYet: ClipboardList,
+    noPermission: Lock,
+    noFilterResult: SearchX,
+    error: AlertCircle,
+    network: WifiOff,
   },
 
   /** 긴급도별 아이콘 — WorkflowPanel urgency dot 옆 */

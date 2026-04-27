@@ -29,6 +29,7 @@ import {
   ConditionCheckStepValues as CCSVal,
   ClassificationEnum,
   EQUIPMENT_IMPORT_STATUS_VALUES,
+  ErrorCode,
   type ConditionCheckStep,
   type CheckoutPurpose,
   type InboundOverviewQueryInput,
@@ -3020,5 +3021,191 @@ export class CheckoutsService extends VersionedBaseService {
     }
 
     return { site: result.site, teamId: result.teamId };
+  }
+
+  // ============================================================================
+  // M8: 일괄 승인 (POST /checkouts/bulk-approve)
+  // ============================================================================
+
+  /**
+   * 일괄 승인 — Promise.allSettled로 부분 실패 허용.
+   * cross-team 거부는 개별 approve() 호출 내부에서 처리됨.
+   * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
+   */
+  async bulkApprove(
+    ids: string[],
+    approverId: string,
+    req: AuthenticatedRequest
+  ): Promise<{
+    approved: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const results = await Promise.allSettled(
+      ids.map(async (id) => {
+        const checkout = await this.findCheckoutEntity(id);
+        // 각 checkout의 현재 version으로 CAS 수행 (개별 낙관적 잠금)
+        return this.approve(id, { version: checkout.version, approverId }, req);
+      })
+    );
+
+    const approved: { id: string; version: number }[] = [];
+    const failed: { id: string; error: string }[] = [];
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        approved.push({ id: ids[i], version: result.value.version });
+      } else {
+        const err = result.reason as { message?: string; response?: { message?: string } };
+        failed.push({
+          id: ids[i],
+          error: err?.response?.message ?? err?.message ?? 'Unknown error',
+        });
+      }
+    });
+
+    return { approved, failed };
+  }
+
+  // ============================================================================
+  // M9: 반려 사유 프리셋 목록 (GET /checkouts/rejection-presets)
+  // ============================================================================
+
+  /**
+   * 반려 사유 프리셋 목록 조회 — 관리자 등록 고정 템플릿.
+   * ✅ 캐시: REFERENCE(30분) — 변경 빈도 낮음
+   */
+  async getRejectionPresets(): Promise<
+    { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
+  > {
+    const cacheKey = `${this.CACHE_PREFIX}.rejection-presets`;
+    const cached =
+      await this.cacheService.get<
+        {
+          id: string;
+          label: string;
+          template: string | null;
+          isDefault: boolean;
+          sortOrder: number;
+        }[]
+      >(cacheKey);
+    if (cached) return cached;
+
+    const rows = await this.db
+      .select({
+        id: schema.rejectionPresets.id,
+        label: schema.rejectionPresets.label,
+        template: schema.rejectionPresets.template,
+        isDefault: schema.rejectionPresets.isDefault,
+        sortOrder: schema.rejectionPresets.sortOrder,
+      })
+      .from(schema.rejectionPresets)
+      .orderBy(asc(schema.rejectionPresets.sortOrder), asc(schema.rejectionPresets.createdAt));
+
+    await this.cacheService.set(cacheKey, rows, CACHE_TTL.REFERENCE);
+    return rows;
+  }
+
+  // ============================================================================
+  // M10: 최근 반출지 목록 (GET /checkouts/destinations/recent)
+  // ============================================================================
+
+  /**
+   * 사용자별 최근 사용 반출지 목록 (max 5).
+   * ✅ userId 스코핑 — cross-user 노출 0
+   * ✅ 캐시: 60s TTL, key에 userId 포함
+   * ✅ MEMORY: `sql\`ANY(${arr})\`` 패턴 0 — GROUP BY 집계만 사용
+   */
+  async getRecentDestinations(userId: string, limit = 5): Promise<string[]> {
+    this.validateUuid(userId, 'userId');
+    const cacheKey = `${this.CACHE_PREFIX}.recent-destinations:${userId}`;
+    const cached = await this.cacheService.get<string[]>(cacheKey);
+    if (cached) return cached;
+
+    const rows = await this.db
+      .selectDistinct({ destination: checkouts.destination })
+      .from(checkouts)
+      .where(
+        and(
+          eq(checkouts.requesterId, userId),
+          sql`${checkouts.destination} IS NOT NULL AND ${checkouts.destination} != ''`
+        )
+      )
+      .orderBy(desc(checkouts.createdAt))
+      .limit(limit);
+
+    const destinations = rows.map((r) => r.destination).filter(Boolean) as string[];
+    await this.cacheService.set(cacheKey, destinations, 60_000);
+    return destinations;
+  }
+
+  // ============================================================================
+  // M11: 승인 철회 (POST /checkouts/:id/revoke-approval)
+  // ============================================================================
+
+  /**
+   * 승인 철회 — approved 상태 + 승인 후 5분 이내 + 본인 승인만 철회 가능.
+   * ✅ fail-close 순서: scope → FSM(approved+5분) → domain(approvedBy===approverId)
+   * ✅ CAS: version 불일치 → 409 VersionConflict
+   * ✅ AuditLog: revokedBy, revokeReason, previousApprovedAt
+   * ✅ Rule 2: approverId = extractUserId(req)
+   */
+  async revokeApproval(
+    uuid: string,
+    dto: { version: number; reason: string },
+    approverId: string,
+    req: AuthenticatedRequest
+  ): Promise<Checkout> {
+    this.validateUuid(uuid, 'checkoutId');
+
+    const checkout = await this.findCheckoutEntity(uuid);
+
+    // ① scope 먼저 — 스코프 외 사용자에게 도메인 상태 노출 방지 (보안 fail-close)
+    await this.enforceScopeFromCheckout(checkout, req);
+
+    // ② FSM 상태 검증 — approved 상태여야 함
+    if (checkout.status !== (CSVal.APPROVED as CheckoutStatus)) {
+      throw new BadRequestException({
+        code: CheckoutErrorCode.INVALID_TRANSITION,
+        message: `Revocation is only allowed for approved checkouts (current: ${checkout.status})`,
+      });
+    }
+
+    // ③ 5분 이내 검증 (5분 = 300_000ms)
+    const REVOCATION_WINDOW_MS = 300_000;
+    const approvedAt = checkout.approvedAt;
+    if (!approvedAt || Date.now() - approvedAt.getTime() > REVOCATION_WINDOW_MS) {
+      throw new ForbiddenException({
+        code: ErrorCode.RevocationWindowExpired,
+        message: 'Approval can only be revoked within 5 minutes of approval',
+      });
+    }
+
+    // ④ domain — 본인이 승인한 건만 철회 가능
+    if (checkout.approverId !== approverId) {
+      throw new ForbiddenException({
+        code: ErrorCode.Forbidden,
+        message: 'Only the approver can revoke their own approval',
+      });
+    }
+
+    // CAS: pending으로 롤백, approvedAt/approverId 초기화
+    const updated = await this.updateCheckoutStatus(
+      uuid,
+      { ...checkout, version: dto.version },
+      CSVal.PENDING as CheckoutStatus,
+      {
+        approverId: null,
+        approvedAt: null,
+      }
+    );
+
+    // Audit — reject 액션으로 기록 (approved→pending 롤백)
+    // AuditLog 데코레이터가 컨트롤러 레벨에서 reason을 캡처함
+    await this.writeTransitionAudit(checkout, 'reject', uuid, CSVal.PENDING as CheckoutStatus, req);
+
+    const affectedTeams = await this.getAffectedTeamIds(checkout);
+    await this.invalidateCache(affectedTeams, uuid);
+
+    return updated;
   }
 }

@@ -126,9 +126,11 @@ export function ApprovalStepIndicator({
               <div
                 className={cn(
                   APPROVAL_STEPPER_TOKENS.connector.base,
-                  currentOrder > stepOrder
-                    ? APPROVAL_STEPPER_TOKENS.connector.completed
-                    : APPROVAL_STEPPER_TOKENS.connector.pending
+                  isRejected
+                    ? APPROVAL_STEPPER_TOKENS.connector.rejectedDashed
+                    : currentOrder > stepOrder
+                      ? APPROVAL_STEPPER_TOKENS.connector.completed
+                      : APPROVAL_STEPPER_TOKENS.connector.pending
                 )}
                 aria-hidden="true"
               />

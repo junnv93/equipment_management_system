@@ -111,6 +111,12 @@ export enum ErrorCode {
   HandoverTokenExpired = 'HANDOVER_TOKEN_EXPIRED',
   /** 이미 한 번 소비된 토큰 (재사용 시도 차단). */
   HandoverTokenConsumed = 'HANDOVER_TOKEN_CONSUMED',
+
+  // ============================================================================
+  // 승인 철회 (Revoke Approval)
+  // ============================================================================
+  /** 승인 후 5분 경과 — 철회 가능 시간 초과. */
+  RevocationWindowExpired = 'REVOCATION_WINDOW_EXPIRED',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
@@ -179,6 +185,9 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.HandoverTokenInvalid]: 400,
   [ErrorCode.HandoverTokenExpired]: 401,
   [ErrorCode.HandoverTokenConsumed]: 409,
+
+  // 승인 철회
+  [ErrorCode.RevocationWindowExpired]: 403,
 
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,

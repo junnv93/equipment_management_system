@@ -140,6 +140,16 @@ export const API_ENDPOINTS = {
     DESTINATIONS: '/api/checkouts/destinations',
     // BFF: 반입 현황 집계 (Sprint 3.1)
     INBOUND_OVERVIEW: '/api/checkouts/inbound-overview',
+    /** Nav 배지용 "내 차례" 건수 (GET) — userId/teamId 스코핑, 캐시 30s */
+    PENDING_COUNT: '/api/checkouts/pending-count',
+    /** 일괄 승인 (POST) — Promise.allSettled, max 50건 */
+    BULK_APPROVE: '/api/checkouts/bulk-approve',
+    /** 반려 사유 프리셋 목록 (GET) — 관리자 등록 고정 템플릿 */
+    REJECTION_PRESETS: '/api/checkouts/rejection-presets',
+    /** 최근 사용한 반출지 목록 (GET) — userId 스코핑, 캐시 60s */
+    DESTINATIONS_RECENT: '/api/checkouts/destinations/recent',
+    /** 승인 철회 (POST) — approved 상태 + 5분 이내만 허용 */
+    REVOKE_APPROVAL: (id: string) => `/api/checkouts/${id}/revoke-approval`,
   },
 
   // ============================================================================
