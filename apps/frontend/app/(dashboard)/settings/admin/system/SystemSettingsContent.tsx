@@ -36,7 +36,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { useTranslations } from 'next-intl';
 import { apiClient } from '@/lib/api/api-client';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from '@equipment-management/schemas';
 import {
@@ -75,7 +75,7 @@ export default function SystemSettingsContent() {
       const res = await apiClient.get<SystemSettings>(API_ENDPOINTS.SETTINGS.SYSTEM);
       return res.data;
     },
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.SETTINGS,
   });
 
   if (isLoading) {

@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import testSoftwareApi, { type TestSoftware } from '@/lib/api/software-api';
-import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -53,7 +53,7 @@ export function TestSoftwareCombobox({
     queryKey: [...queryKeys.testSoftware.lists(), { search: debouncedSearch, pageSize: 20 }],
     queryFn: () => testSoftwareApi.list({ search: debouncedSearch, pageSize: 20 }),
     enabled: isQueryEnabled,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.COMBOBOX_SEARCH,
   });
 
   const softwareList = (searchResult?.data ?? []).filter((sw) => !excludeIds.includes(sw.id));

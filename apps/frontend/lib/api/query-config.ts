@@ -366,6 +366,22 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: true,
     retry: 2,
   },
+
+  /**
+   * 콤보박스/자동완성 검색 결과 - SHORT staleTime (입력 시 신선도 보장)
+   *
+   * CHECKOUT_LIST와 staleTime/gcTime은 동일하나 아래 차이점이 있음:
+   * - refetchOnWindowFocus: false — 드롭다운이 열려있지 않을 때 포커스 이동으로 재호출 불필요
+   * - retry: 1 — 검색 실패는 빠르게 인지해야 하므로 최소 재시도
+   *
+   * 사용처: LeaderCombobox, equipment-combobox, test-software-combobox, user-combobox 검색 쿼리
+   */
+  COMBOBOX_SEARCH: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  },
 } as const;
 
 /**

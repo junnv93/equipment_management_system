@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
-import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { ROLE_BADGE_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -55,7 +55,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
     queryKey: queryKeys.users.search(searchParams),
     queryFn: () => teamsApi.searchUsers(searchParams),
     enabled: isQueryEnabled,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.COMBOBOX_SEARCH,
   });
 
   // 초기값 해석: 단건 조회 API로 효율적 처리

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import notificationsApi from '@/lib/api/notifications-api';
 import type { NotificationQueryParams } from '@/lib/api/notifications-api';
-import { queryKeys, QUERY_CONFIG, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 /**
  * 미읽음 알림 개수 조회 훅
@@ -90,7 +90,7 @@ export function useNotificationPreferences() {
   return useQuery({
     queryKey: queryKeys.notifications.preferences(),
     queryFn: () => notificationsApi.getPreferences(),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.SETTINGS,
   });
 }
 

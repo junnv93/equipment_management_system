@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/api-client';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import StorageImage from '@/components/shared/StorageImage';
 import {
   API_ENDPOINTS,
@@ -543,7 +543,7 @@ export default function ProfileContent() {
       const res = await apiClient.get<UserProfile>(API_ENDPOINTS.USERS.ME);
       return res.data;
     },
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.SETTINGS,
   });
 
   if (isLoading) {
