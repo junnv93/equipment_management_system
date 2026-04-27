@@ -174,6 +174,8 @@ grep -n "beforeAll\|afterAll\|resetEquipmentForWorkflow\|cleanupSharedPool" \
 | P0 | WF-10 교정기한초과 | wf-10-*.spec.ts | ✅ |
 | P0 | WF-11 부적합→수리 | wf-11-*.spec.ts | ✅ |
 | P1 | WF-07 대여 반출 | - | ❌ 미구현 |
+| P1 | WF-AP01 승인 mini stepper ARIA | wf-ap01-*.spec.ts | ✅ |
+| P1 | WF-AP02 승인 일괄 반려 | wf-ap02-*.spec.ts | ✅ |
 | ... | ... | ... | ... |
 
 ### 상세 검증

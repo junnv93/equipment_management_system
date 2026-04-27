@@ -279,16 +279,32 @@ const { data } = useQuery({
 });
 ```
 
-**탐지:**
+**탐지 — staleTime:**
 ```bash
-# useQuery/useInfiniteQuery 내 staleTime: CACHE_TIMES.X 직접 지정
 grep -rn "staleTime:\s*CACHE_TIMES\." \
   apps/frontend/app apps/frontend/components apps/frontend/hooks \
   --include="*.ts" --include="*.tsx" \
   | grep -v "// \|node_modules"
 ```
 
-**PASS:** 0건 (또는 주석 있는 예외). **FAIL:** `staleTime: CACHE_TIMES.SHORT` 등 직접 지정.
+**탐지 — gcTime:**
+```bash
+grep -rn "gcTime:\s*CACHE_TIMES\." \
+  apps/frontend/app apps/frontend/components apps/frontend/hooks \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "// \|node_modules"
+```
+
+**PASS:** 0건 (또는 하기 허용 목록에 있는 파일). **FAIL:** `staleTime/gcTime: CACHE_TIMES.SHORT` 등 직접 지정.
+
+**허용된 의도적 보존 (2026-04-27 전수 검증, 5건):**
+| 파일 | 설정 | 이유 |
+|---|---|---|
+| `lib/providers.tsx` | `staleTime: CACHE_TIMES.LONG` | QueryClient 전역 defaultOptions — 쿼리별 설정 아님 |
+| `hooks/use-equipment.ts:84` | `staleTime: CACHE_TIMES.SHORT` | 백엔드 캐시 협력 주석 — `useEquipmentWithInitialData` 전용 |
+| `hooks/use-management-number-check.ts:88,127` | `staleTime: SHORT, gcTime: LONG, retry:1` | 관리번호 중복체크 fetchQuery 전용 커스텀 조합 |
+| `components/shared/StorageImage.tsx` | `gcTime: CACHE_TIMES.SHORT` | Blob URL revoke lifecycle — staleTime:MEDIUM + gcTime:SHORT 비대칭 의도적 |
+
 **예외:** `staleTime: Infinity` (런타임 불변, 주석 필수), `query-config.ts` 자체 정의.
 
 ### Step 20: 파일 확장자/MIME 타입 SSOT
@@ -373,6 +389,9 @@ grep -rn "\.slice(0,\s*[2-9][^0-9]\|\.slice(0,\s*[3-9][0-9]" \
 | 24  | Layer 3 arbitrary 픽셀 타이포   | PASS/FAIL | `text-[Npx]` 잔존 위치 + 건수 |
 | 25  | DISPLAY_LIMITS SSOT (UI 표시 건수) | PASS/FAIL | `.slice(0, N)` 매직넘버 위치 |
 | 26  | 컴포넌트 비-JSX 함수 내 한국어 문자열 조합 | PASS/SHOULD | `parts.push('[가-힣]')` 패턴 위치 |
+| 27  | SelectItem value 속성 enum SSOT    | PASS/FAIL | 도메인 리터럴 인라인 value 위치 |
+| 28  | href 인라인 도메인 경로            | PASS/FAIL | FRONTEND_ROUTES 미경유 위치 |
+| 29  | 백엔드 시간 윈도우 상수 로컬 선언  | PASS/WARN | `*_WINDOW_MS` 로컬 const 위치 (tech-debt 여부 포함) |
 ```
 
 ### Step 24: Design Token Layer 3 arbitrary 픽셀 타이포 탐지 (2026-04-21 추가)
@@ -546,6 +565,48 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 **예외:**
 - `href="/"` (홈 루트), `href="/login"`, `href="/handover"` — 단일 depth 또는 인증 전용 경로는 `FRONTEND_ROUTES` 미등록 허용.
 - 동적 빌더 함수 (`FRONTEND_ROUTES.EQUIPMENT.DETAIL(id)`) 결과 인라인 저장 후 전달 — 허용.
+
+### Step 29: 백엔드 시간 윈도우 상수 `shared-constants` SSOT 승격 요구 (2026-04-27 추가)
+
+서비스 메서드 내부에서만 사용되는 시간 윈도우 상수(`*_WINDOW_MS`, `*_TTL_MS` 등)가
+`packages/shared-constants/src/business-rules.ts`에 이관되지 않고 로컬 `const`로 선언된 경우를 탐지.
+이 패턴은 동일 제약 조건이 여러 곳에서 재정의될 때 drift를 막지 못한다.
+
+**현재 알려진 tech-debt 항목:**
+- `checkouts.service.ts` L3177: `const REVOCATION_WINDOW_MS = 300_000` — 5분 취소 윈도우 (2026-04-27 확인)
+
+```bash
+# 백엔드 서비스 내 시간 윈도우/TTL 로컬 상수 탐지
+grep -rn "const [A-Z_]*WINDOW_MS\|const [A-Z_]*TTL_MS\|const [A-Z_]*TIMEOUT_MS" \
+  apps/backend/src/modules --include="*.service.ts" \
+  | grep -v "//\|test\|spec"
+# 결과: 기대는 0건 (shared-constants로 승격)
+# 현재 알려진 위반: checkouts.service.ts (REVOCATION_WINDOW_MS = 300_000)
+
+# shared-constants 파일에 대응 상수 존재 확인
+grep -n "REVOCATION_WINDOW_MS\|APPROVAL_REVOCATION_WINDOW" \
+  packages/shared-constants/src/business-rules.ts
+# 결과: 승격 완료 시 1건 이상
+```
+
+**올바른 패턴:**
+```typescript
+// ✅ CORRECT — shared-constants SSOT
+import { APPROVAL_REVOCATION_WINDOW_MS } from '@equipment-management/shared-constants';
+
+if (Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) { ... }
+
+// ❌ WRONG — 로컬 상수 (서비스 내 하드코딩)
+const REVOCATION_WINDOW_MS = 300_000; // 승격 전 패턴
+```
+
+**PASS:** 서비스 내 `*_WINDOW_MS` 로컬 선언 0건 (shared-constants 경유).
+**WARN:** 로컬 선언 존재 + tech-debt 등록 완료 시 (이 세션에서 확인된 REVOCATION_WINDOW_MS).
+**FAIL:** 로컬 선언 존재 + tech-debt 미등록 시.
+
+**관련 파일:**
+- `packages/shared-constants/src/business-rules.ts` — 비즈니스 규칙 상수 SSOT
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — REVOCATION_WINDOW_MS 승격 대상
 
 ---
 
