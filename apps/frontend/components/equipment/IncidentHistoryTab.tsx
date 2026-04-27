@@ -75,6 +75,7 @@ import {
   TIMELINE_SKELETON_TOKENS,
   getIncidentTypeNodeColor,
   getSemanticContainerClasses,
+  getSemanticContainerTextClasses,
 } from '@/lib/design-tokens';
 
 // 사고 이력 등록 스키마
@@ -673,7 +674,9 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                   {/* 워크플로우 안내 */}
                   {createNonConformance && isNcCreatingIncidentType(incidentType) && (
                     <div className={getSemanticContainerClasses('info')}>
-                      <h4 className="font-medium text-brand-info mb-2 flex items-center gap-2">
+                      <h4
+                        className={`font-medium mb-2 flex items-center gap-2 ${getSemanticContainerTextClasses('info')}`}
+                      >
                         <Info className="h-4 w-4" />
                         {t('incidentHistoryTab.nonConformance.workflowTitle')}
                       </h4>

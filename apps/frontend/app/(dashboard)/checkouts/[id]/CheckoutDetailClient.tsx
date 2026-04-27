@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -63,8 +64,10 @@ import {
   computeTotalSteps,
   type CheckoutAction,
   type CheckoutPurpose,
+  type UserRole,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
@@ -101,7 +104,11 @@ export default function CheckoutDetailClient({
   const t = useTranslations('checkouts');
   const tEquipment = useTranslations('equipment');
   const router = useRouter();
+  const { can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+
+  const { data: session } = useSession();
+  const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -482,6 +489,7 @@ export default function CheckoutDetailClient({
               label={t('actions.exportForm')}
               errorToastDescription={t('toasts.exportFormError')}
               size="default"
+              canAct={can(Permission.EXPORT_REPORTS)}
             />
           )}
         </div>
@@ -495,11 +503,12 @@ export default function CheckoutDetailClient({
         </Alert>
       )}
 
-      {/* 다음 단계 안내 패널 */}
+      {/* 다음 단계 안내 패널 — hero: 상세 헤더 강조, actor variant 색 분기 */}
       <ErrorBoundary fallback={(_, reset) => <NextStepPanelError onRetry={reset} />}>
         <NextStepPanel
-          variant="floating"
+          variant="hero"
           descriptor={nextStepDescriptor}
+          currentUserRole={role}
           onActionClick={handleNextStepAction}
           isPending={isAnyNextStepMutationPending}
         />

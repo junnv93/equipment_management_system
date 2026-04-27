@@ -530,6 +530,7 @@ export default function EquipmentImportDetail({ id }: Props) {
             label={t('equipmentImport.exportForm')}
             errorToastDescription={t('equipmentImport.exportFormError')}
             size="default"
+            canAct={can(Permission.EXPORT_REPORTS)}
           />
         )}
       </div>

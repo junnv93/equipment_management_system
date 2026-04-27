@@ -61,6 +61,7 @@ export function EquipmentPageHeader() {
           label={t('list.exportLedger')}
           errorToastDescription={t('list.exportError')}
           size="default"
+          canAct={can(Permission.EXPORT_REPORTS)}
         />
         {canCreate && (
           <Button asChild>

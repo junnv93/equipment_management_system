@@ -819,25 +819,28 @@ export const CHECKOUT_FILTER_BAR_TOKENS = {
 /**
  * 반출 그룹 카드 내 장비 아이템 행 토큰
  *
- * 기존 Table → 개별 행(Row) 기반으로 재설계
- * 각 행: [목적 색상 바] [장비 정보] [메타] [진행 상태] [배지] [액션]
+ * Sprint 4.2: 4-zone grid 재구조화
+ * Zone 1 (3px): purposeBar | Zone 2 (72px): status+dday | Zone 3 (1fr): identity | Zone 4 (auto): action
  */
 export const CHECKOUT_ITEM_ROW_TOKENS = {
-  /** 행 컨테이너 */
+  /** 행 컨테이너 — 기본 스타일 (레이아웃 제외). grid 토큰과 함께 사용. */
   container: [
-    'flex items-center gap-3 px-3 py-2.5',
+    'px-3 py-2.5',
     'border-b border-border/40 last:border-0',
     'cursor-pointer',
     TRANSITION_PRESETS.instantBg,
     'hover:bg-muted/40',
   ].join(' '),
 
+  /** Sprint 4.2: 4-zone grid 레이아웃 — container와 함께 적용 */
+  grid: 'grid grid-cols-[3px_72px_1fr_auto] gap-3 items-center',
+
   /** 기한 초과 행 배경 */
   containerOverdue: 'bg-brand-critical/5 hover:bg-brand-critical/8',
 
   /** 목적별 3px 세로 색상 바 */
   purposeBar: {
-    base: `${DIMENSION_TOKENS.purposeBar} self-stretch rounded-full shrink-0`,
+    base: `${DIMENSION_TOKENS.purposeBar} self-stretch rounded-full`,
     calibration: 'bg-brand-info',
     repair: 'bg-brand-repair',
     rental: 'bg-brand-purple',
@@ -845,26 +848,35 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
     default: 'bg-brand-neutral/50',
   } satisfies { base: string; default: string } & Record<CheckoutPurpose, string>,
 
-  /** 장비 정보 블록 */
-  infoBlock: 'flex-1 min-w-0',
+  /** Zone 2: 상태 + D-day 세로 스택 (72px 고정) */
+  zoneStatus: 'flex flex-col items-center gap-1 max-w-[72px] overflow-hidden',
+
+  /** Zone 3: 장비명 + 메타 identity */
+  zoneIdentity: 'min-w-0',
+
+  /** Zone 4: NextStepPanel compact + MiniProgress tooltip */
+  zoneAction: 'flex items-center gap-1.5 shrink-0',
+
+  /** MiniProgress 7×7 tooltip 트리거 버튼 — Zone 4 보조 */
+  miniProgressTooltipButton: [
+    'h-7 w-7 flex items-center justify-center rounded shrink-0',
+    'text-muted-foreground hover:text-foreground hover:bg-muted/60',
+    TRANSITION_PRESETS.fastBg,
+    FOCUS_TOKENS.classes.default,
+  ].join(' '),
+
+  /** 장비 정보 블록 (Zone 3 내부) */
   nameRow: 'flex items-center gap-1.5 flex-wrap',
   name: 'text-sm font-semibold text-foreground truncate',
   mgmt: 'text-xs text-muted-foreground font-mono shrink-0',
   dday: `${MICRO_TYPO.badge} px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0`,
   meta: 'text-xs text-muted-foreground mt-0.5 truncate',
 
-  /** 우측 액션 영역 */
-  actionsArea: 'flex items-center gap-1.5 shrink-0',
-
-  /** 인라인 액션 버튼 */
+  /** 인라인 액션 버튼 (Zone 4 내 보조 — 일괄 승인 등 그룹 헤더 용도 유지) */
   actionButtons: {
-    /** 승인/반려 공통 compact 버튼 오버라이드 */
     compact: 'h-7 px-2.5 text-xs gap-1',
-    /** 일괄 승인 버튼 (그룹 헤더) */
     bulkApprove: 'h-7 px-2.5 text-xs gap-1 bg-primary hover:bg-primary/90',
-    /** 독촉 연락 버튼 (overdue 전용) */
     urgent: `h-7 px-2.5 text-xs text-brand-warning gap-1 ${TRANSITION_PRESETS.fastBg} hover:bg-brand-warning/10`,
-    /** 반입 처리 링크 (checked_out / overdue) */
     returnLink: [
       'flex items-center gap-1 h-7 px-2.5 text-xs shrink-0',
       'rounded-md border border-border/60',

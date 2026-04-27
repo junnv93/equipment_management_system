@@ -720,6 +720,8 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/reject-return')
+  // REJECT_CHECKOUT covers both checkout rejection and return rejection — FSM service enforces
+  // the state-specific transition (returned → checked_out), so no separate permission needed.
   @RequirePermissions(Permission.REJECT_CHECKOUT)
   @UsePipes(RejectReturnValidationPipe)
   @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })

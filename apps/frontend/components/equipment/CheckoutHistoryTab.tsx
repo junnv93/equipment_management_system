@@ -544,6 +544,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                               label={tCheckouts('actions.exportForm')}
                               errorToastDescription={tCheckouts('toasts.exportFormError')}
                               size="sm"
+                              canAct={can(Permission.EXPORT_REPORTS)}
                             />
                           )}
                         </div>

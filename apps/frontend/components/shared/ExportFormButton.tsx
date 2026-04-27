@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/hooks/use-auth';
-import { Permission } from '@equipment-management/shared-constants';
 import { exportFormTemplate } from '@/lib/api/reports-api';
 import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 
@@ -13,7 +11,7 @@ import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
  * UL-QP-18 form template 다운로드 버튼 (SSOT).
  *
  * 8개 call site 에서 반복되던 4-part boilerplate 를 단일 컴포넌트로 통합:
- *  1. `can(Permission.EXPORT_REPORTS)` 권한 게이트
+ *  1. canAct 권한 게이트 — Container에서 can(Permission.EXPORT_REPORTS) 결과를 주입
  *  2. loading state
  *  3. `exportFormTemplate(formNumber, params)` 호출
  *  4. 에러 시 destructive toast (silent swallow 금지 — tracker L28 계약 준수)
@@ -32,6 +30,8 @@ interface ExportFormButtonProps {
   label: string;
   /** 에러 toast description (i18n 값). */
   errorToastDescription: string;
+  /** 권한 게이트 — Container에서 can(Permission.EXPORT_REPORTS) 결과를 주입. false이면 null 반환. */
+  canAct: boolean;
   /** 외부에서 강제 비활성화할 때. */
   disabled?: boolean;
   className?: string;
@@ -46,16 +46,16 @@ export function ExportFormButton({
   params,
   label,
   errorToastDescription,
+  canAct,
   disabled,
   className,
   iconOnly = false,
   size = 'sm',
 }: ExportFormButtonProps): React.ReactElement | null {
-  const { can } = useAuth();
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
 
-  if (!can(Permission.EXPORT_REPORTS)) return null;
+  if (!canAct) return null;
 
   const handleExport = async () => {
     setExporting(true);

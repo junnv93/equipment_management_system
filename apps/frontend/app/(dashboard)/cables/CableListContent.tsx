@@ -157,6 +157,7 @@ export default function CableListContent() {
             label={t('list.exportButton')}
             errorToastDescription={t('list.exportError')}
             size="default"
+            canAct={can(Permission.EXPORT_REPORTS)}
           />
           {canCreate && (
             <Link href={FRONTEND_ROUTES.CABLES.CREATE}>

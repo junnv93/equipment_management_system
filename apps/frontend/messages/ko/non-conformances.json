@@ -108,6 +108,9 @@
         "recalibration": "재교정 필요"
       },
       "done": "완료"
+    },
+    "chip": {
+      "arrow": " →"
     }
   },
   "banner": {

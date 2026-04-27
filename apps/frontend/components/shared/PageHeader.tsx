@@ -10,8 +10,6 @@ import {
   SUB_PAGE_HEADER_TOKENS,
   PAGE_HEADER_ONBOARDING_TOKENS,
 } from '@/lib/design-tokens';
-import type { Permission } from '@equipment-management/shared-constants';
-import { useAuth } from '@/hooks/use-auth';
 import { useOnboardingHint } from '@/hooks/use-onboarding-hint';
 
 export interface OnboardingHint {
@@ -23,8 +21,9 @@ export interface OnboardingHint {
   primaryAction?: {
     label: string;
     href: string;
-    permission?: Permission;
   };
+  /** 권한 게이트 — 컨테이너에서 can(Permission.*) 결과를 주입. false이면 CTA 숨김. 미전달 시 항상 표시. */
+  canShowPrimaryAction?: boolean;
   /** default: true */
   dismissible?: boolean;
 }
@@ -63,13 +62,12 @@ export type PageHeaderProps = ListPageProps | SubPageLinkProps | SubPageCallback
 // ─────────────────────────────────────────────────────────────────────────────
 
 function OnboardingHintBanner({ hint }: { hint: OnboardingHint }) {
-  const { can } = useAuth();
   const { isVisible, dismiss } = useOnboardingHint(hint.id);
   const isDismissible = hint.dismissible !== false;
 
   if (!isVisible) return null;
 
-  const showAction = !hint.primaryAction?.permission || can(hint.primaryAction.permission);
+  const showAction = hint.canShowPrimaryAction !== false;
   const Icon = hint.icon ?? Info;
 
   return (

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, memo, useCallback } from 'react';
-import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card } from '@/components/ui/card';
@@ -12,28 +11,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/components/ui/use-toast';
 import { notifyCheckoutAction } from '@/lib/checkouts/toast-templates';
 import { cn } from '@/lib/utils';
-import {
-  AlertTriangle,
-  CalendarDays,
-  Building,
-  ChevronDown,
-  ArrowRight,
-  Check,
-  X,
-  CheckCheck,
-} from 'lucide-react';
+import { AlertTriangle, CalendarDays, Building, ChevronDown, CheckCheck } from 'lucide-react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
-import { NextStepPanel } from '@/components/shared/NextStepPanel';
-import { YourTurnBadge } from '@/components/checkouts/YourTurnBadge';
+import { NextStepPanel, type OverflowAction } from '@/components/shared/NextStepPanel';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type CheckoutAction,
+  type NextStepDescriptor,
+  type UserSelectableCheckoutPurpose,
 } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@equipment-management/schemas';
@@ -59,7 +50,6 @@ import {
 // Helpers
 // ============================================================================
 
-/** 오늘 기준 남은 일수 계산 (음수 = 초과) */
 function calculateDaysRemaining(expectedReturnDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -75,23 +65,29 @@ function calculateDaysRemaining(expectedReturnDate: string): number {
 interface CheckoutGroupCardProps {
   group: CheckoutGroup;
   onCheckoutClick: (checkoutId: string) => void;
-  /** 기한 초과 그룹 최상단 고정을 위한 id */
   isOverdueGroup?: boolean;
+}
+
+interface EquipmentRow {
+  equipmentId: string;
+  equipmentName: string;
+  managementNumber: string;
+  purpose: string;
+  status: string;
+  checkoutType: 'calibration' | 'repair' | 'rental';
+  userName: string;
+  checkoutId: string;
+  expectedReturnDate: string | undefined;
+  destination: string | undefined;
+  canApproveItem: boolean;
+  canReturnItem: boolean;
+  descriptor: NextStepDescriptor | undefined;
 }
 
 // ============================================================================
 // CheckoutGroupCard
 // ============================================================================
 
-/**
- * 반출 그룹 카드 (v2 리디자인)
- *
- * - 목적 색상 바가 있는 개별 장비 행 (table → row 전환)
- * - 인라인 승인 버튼 (pending 상태)
- * - 반입 처리 링크 (checked_out / overdue 상태)
- * - 기한 초과 그룹 특별 스타일
- * - D-day 배지
- */
 function CheckoutGroupCard({
   group,
   onCheckoutClick,
@@ -100,34 +96,28 @@ function CheckoutGroupCard({
   const t = useTranslations('checkouts');
   const locale = useLocale();
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(isOverdueGroup); // 기한 초과 그룹은 기본 펼침
+  const [isOpen, setIsOpen] = useState(isOverdueGroup);
 
-  // FSM descriptor 계산용 role/permissions
   const { data: session } = useSession();
   const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
 
   const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role);
 
-  // ──────────────────────────────────────────────
-  // 장비 행 데이터 (checkout > equipment[] 평탄화)
-  // ──────────────────────────────────────────────
   const equipmentRows = useMemo(
     () =>
       group.checkouts.flatMap((checkout) => {
         const descriptor = descriptorMap.get(checkout.id);
-
         return (checkout.equipment || []).map((equip) => ({
           equipmentId: equip.id,
           equipmentName: equip.name,
           managementNumber: equip.managementNumber,
           purpose: checkout.purpose,
           status: checkout.status,
-          checkoutType: (checkout.purpose ?? 'calibration') as 'calibration' | 'repair' | 'rental',
+          checkoutType: (checkout.purpose ?? 'calibration') as UserSelectableCheckoutPurpose,
           userName: checkout.user?.name || t('groupCard.unknownUser'),
           checkoutId: checkout.id,
           expectedReturnDate: checkout.expectedReturnDate,
           destination: checkout.destination,
-          // 서버가 계산한 가능한 액션 사용. meta 누락 시 fail-closed (false)
           canApproveItem: checkout.meta?.availableActions?.canApprove ?? false,
           canReturnItem: checkout.meta?.availableActions?.canReturn ?? false,
           descriptor,
@@ -136,13 +126,11 @@ function CheckoutGroupCard({
     [group.checkouts, t, descriptorMap]
   );
 
-  // 그룹 내 pending 건수 + 일괄 승인 가능 여부
   const pendingCount = useMemo(
     () => group.checkouts.filter((co) => co.status === CSVal.PENDING).length,
     [group.checkouts]
   );
 
-  // "내 차례" 카운트 — availableToCurrentUser인 checkout 수
   const yourTurnCount = useMemo(() => {
     let count = 0;
     for (const co of group.checkouts) {
@@ -151,7 +139,6 @@ function CheckoutGroupCard({
     return count;
   }, [group.checkouts, descriptorMap]);
 
-  // 일괄 승인: pending 중 하나라도 canApprove가 true면 버튼 표시 (meta 누락 시 fail-closed)
   const canApproveBulk = useMemo(
     () =>
       group.checkouts
@@ -160,7 +147,6 @@ function CheckoutGroupCard({
     [group.checkouts]
   );
 
-  // 렌탈 그룹 감지 + 현재 렌탈 상태
   const isRentalGroup = group.purposes.includes(CPVal.RENTAL as never);
   const rentalStatus = isRentalGroup
     ? (group.checkouts.find((co) => co.purpose === CPVal.RENTAL)?.status ?? '')
@@ -172,9 +158,7 @@ function CheckoutGroupCard({
     return descriptorMap.get(rentalCheckout.id);
   }, [group.checkouts, descriptorMap]);
 
-  // ──────────────────────────────────────────────
-  // 인라인 승인 mutation (fresh CAS — 렌더 캡처 version 금지)
-  // ──────────────────────────────────────────────
+  // ── 인라인 승인 mutation (fresh CAS) ──────────────────────────────────────
   const approveMutation = useMutation({
     mutationFn: async ({ id }: { id: string; equipmentName?: string }) => {
       const { version } = await checkoutApi.getCheckout(id);
@@ -199,17 +183,39 @@ function CheckoutGroupCard({
     },
   });
 
-  const handleApprove = useCallback(
-    (checkoutId: string, e: React.MouseEvent, equipmentName?: string) => {
-      e.stopPropagation();
-      approveMutation.mutate({ id: checkoutId, equipmentName });
+  // ── Row-level NextStepPanel action dispatcher ────────────────────────────
+  const handleRowAction = useCallback(
+    (checkoutId: string, equipmentName: string) => (action: CheckoutAction) => {
+      switch (action) {
+        case 'approve':
+        case 'borrower_approve':
+          approveMutation.mutate({ id: checkoutId, equipmentName });
+          break;
+        default:
+          onCheckoutClick(checkoutId);
+          break;
+      }
     },
-    [approveMutation]
+    [approveMutation, onCheckoutClick]
   );
 
-  // ──────────────────────────────────────────────
-  // Group card 스타일 (기한 초과 여부)
-  // ──────────────────────────────────────────────
+  // ── Row overflow actions (reject → 상세 이동, fail-closed) ────────────────
+  const buildRowOverflowActions = useCallback(
+    (row: EquipmentRow): OverflowAction[] => {
+      const actions: OverflowAction[] = [];
+      if (row.canApproveItem && row.status === CSVal.PENDING) {
+        actions.push({
+          label: t('actions.reject'),
+          onClick: () => onCheckoutClick(row.checkoutId),
+          variant: 'destructive',
+        });
+      }
+      return actions;
+    },
+    [t, onCheckoutClick]
+  );
+
+  // ── Group card 스타일 ─────────────────────────────────────────────────────
   const cardClass = isOverdueGroup
     ? `overflow-hidden ${CHECKOUT_OVERDUE_GROUP_TOKENS.card}`
     : 'overflow-hidden';
@@ -221,12 +227,10 @@ function CheckoutGroupCard({
     <TooltipProvider>
       <Card className={cardClass}>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          {/* ── 그룹 헤더 — div 컨테이너 (button > button 방지) ── */}
+          {/* ── 그룹 헤더 ── */}
           <div className={headerContainerClass}>
-            {/* 왼쪽: Collapsible 토글 트리거 (flex-1) */}
             <CollapsibleTrigger asChild>
               <button type="button" className={CHECKOUT_ITEM_ROW_TOKENS.groupHeaderInfoTrigger}>
-                {/* 기한 초과 레이블 + 아이콘 */}
                 {isOverdueGroup && (
                   <span
                     className={`flex items-center gap-1.5 ${CHECKOUT_OVERDUE_GROUP_TOKENS.headerText}`}
@@ -239,7 +243,6 @@ function CheckoutGroupCard({
                   </span>
                 )}
 
-                {/* 날짜 */}
                 {!isOverdueGroup && (
                   <div className={`flex items-center gap-1.5 text-sm font-medium ${FONT.mono}`}>
                     <CalendarDays
@@ -253,7 +256,6 @@ function CheckoutGroupCard({
                   </div>
                 )}
 
-                {/* 반출지 */}
                 {!isOverdueGroup && (
                   <div className="flex items-center gap-1.5 text-sm min-w-0">
                     <Building
@@ -273,7 +275,6 @@ function CheckoutGroupCard({
                   </div>
                 )}
 
-                {/* 목적 배지 */}
                 <div className="hidden sm:flex items-center gap-1">
                   {group.purposes.map((purpose) => (
                     <Badge
@@ -292,7 +293,6 @@ function CheckoutGroupCard({
               </button>
             </CollapsibleTrigger>
 
-            {/* 오른쪽: 일괄 승인 + 장비 수 배지 + 화살표 (siblings — button 중첩 없음) */}
             {yourTurnCount > 0 && (
               <span
                 data-testid="your-turn-summary"
@@ -341,13 +341,18 @@ function CheckoutGroupCard({
 
           {/* ── 장비 행 목록 ── */}
           <CollapsibleContent>
-            <div className="border-t border-border/50">
-              {equipmentRows.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  {t('groupCard.noEquipment')}
-                </div>
-              ) : (
-                equipmentRows.map((row, rowIndex) => {
+            {equipmentRows.length === 0 ? (
+              <div className="border-t border-border/50 px-4 py-6 text-center text-sm text-muted-foreground">
+                {t('groupCard.noEquipment')}
+              </div>
+            ) : (
+              // role="grid" — WAI-ARIA grid pattern: role="row" + role="gridcell" 조합에 필요
+              <div
+                role="grid"
+                aria-label={t('groupCard.equipmentCount', { count: group.totalEquipment })}
+                className="border-t border-border/50"
+              >
+                {equipmentRows.map((row, rowIndex) => {
                   const daysRemaining = row.expectedReturnDate
                     ? calculateDaysRemaining(row.expectedReturnDate)
                     : null;
@@ -357,31 +362,55 @@ function CheckoutGroupCard({
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
 
                   return (
-                    // div[role=button]은 의도적 선택 — 내부에 <Button>/<Link> 중첩으로 <button> 사용 불가 (HTML5 spec)
-                    // WCAG 2.1 AA: role + tabIndex + onKeyDown + aria-label 모두 충족
                     <div
                       key={`${row.checkoutId}-${row.equipmentId}`}
-                      className={cn(rowBaseClass, ANIMATION_PRESETS.staggerFadeInItem)}
-                      style={getStaggerFadeInStyle(rowIndex, 'grid')}
-                      onClick={() => onCheckoutClick(row.checkoutId)}
-                      role="button"
+                      role="row"
                       tabIndex={0}
+                      aria-label={t('groupCard.rowAria', {
+                        equipment: row.equipmentName,
+                        status: t(`status.${row.status}`),
+                        dday: daysRemaining !== null ? formatDday(daysRemaining) : '',
+                      })}
+                      onClick={() => onCheckoutClick(row.checkoutId)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if (e.key === 'Enter') {
                           e.preventDefault();
                           onCheckoutClick(row.checkoutId);
                         }
                       }}
-                      aria-label={t('groupCard.viewDetail', { name: row.equipmentName })}
+                      className={cn(
+                        rowBaseClass,
+                        CHECKOUT_ITEM_ROW_TOKENS.grid,
+                        ANIMATION_PRESETS.staggerFadeInItem
+                      )}
+                      style={getStaggerFadeInStyle(rowIndex, 'grid')}
                     >
-                      {/* 목적 색상 바 */}
-                      <div
-                        className={`${CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base} ${getPurposeBarClass(row.purpose)}`}
+                      {/* Zone 1: purposeBar (3px) */}
+                      <span
+                        className={cn(
+                          CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base,
+                          getPurposeBarClass(row.purpose)
+                        )}
                         aria-hidden="true"
                       />
 
-                      {/* 장비 정보 블록 */}
-                      <div className={CHECKOUT_ITEM_ROW_TOKENS.infoBlock}>
+                      {/* Zone 2: status + D-day 세로 스택 (72px) */}
+                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneStatus}>
+                        <CheckoutStatusBadge
+                          status={row.status}
+                          className={`${MICRO_TYPO.badge} py-0 max-w-[68px] truncate`}
+                        />
+                        {daysRemaining !== null && (
+                          <span
+                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getDdayClasses(daysRemaining)}`}
+                          >
+                            {formatDday(daysRemaining)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Zone 3: identity — 장비명 + meta (1fr) */}
+                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneIdentity}>
                         <div className={CHECKOUT_ITEM_ROW_TOKENS.nameRow}>
                           <span className={CHECKOUT_ITEM_ROW_TOKENS.name}>{row.equipmentName}</span>
                           <code
@@ -389,97 +418,47 @@ function CheckoutGroupCard({
                           >
                             {row.managementNumber}
                           </code>
-                          {daysRemaining !== null && (
-                            <span
-                              className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getDdayClasses(daysRemaining)}`}
-                            >
-                              {formatDday(daysRemaining)}
-                            </span>
-                          )}
                         </div>
-                        <div className={CHECKOUT_ITEM_ROW_TOKENS.meta}>
-                          {row.destination && (
-                            <>
-                              <span>{row.destination}</span>
-                              <span className="mx-1 text-border">·</span>
-                            </>
-                          )}
+                        <p className={CHECKOUT_ITEM_ROW_TOKENS.meta}>
+                          {row.destination && <>{row.destination} · </>}
                           {row.expectedReturnDate && (
                             <>
-                              <span>
-                                {t('groupCard.expectedReturn')}{' '}
-                                {new Date(row.expectedReturnDate).toLocaleDateString(locale, {
-                                  month: 'long',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                              <span className="mx-1 text-border">·</span>
+                              {t('groupCard.expectedReturn')}{' '}
+                              {new Date(row.expectedReturnDate).toLocaleDateString(locale, {
+                                month: 'long',
+                                day: 'numeric',
+                              })}{' '}
+                              ·{' '}
                             </>
                           )}
-                          <span>{row.userName}</span>
-                        </div>
+                          {row.userName}
+                        </p>
                       </div>
 
-                      {/* 우측: 진행 상태 + 배지 + 액션 */}
-                      <div className={CHECKOUT_ITEM_ROW_TOKENS.actionsArea}>
+                      {/* Zone 4: NextStepPanel compact + MiniProgress tooltip (auto) */}
+                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneAction}>
+                        {row.descriptor && (
+                          <NextStepPanel
+                            variant="compact"
+                            descriptor={row.descriptor}
+                            currentUserRole={role}
+                            onActionClick={handleRowAction(row.checkoutId, row.equipmentName)}
+                            isPending={approveMutation.isPending}
+                            overflowActions={buildRowOverflowActions(row)}
+                          />
+                        )}
                         <CheckoutMiniProgress
+                          variant="tooltipButton"
                           currentStatus={row.status}
                           checkoutType={row.checkoutType}
                           descriptor={row.descriptor}
                         />
-                        <CheckoutStatusBadge
-                          status={row.status}
-                          className={`${MICRO_TYPO.badge} py-0`}
-                        />
-
-                        {row.descriptor?.availableToCurrentUser === true && (
-                          <YourTurnBadge urgency={row.descriptor.urgency} />
-                        )}
-
-                        {/* 인라인 액션 버튼 */}
-                        {row.canApproveItem && row.status === CSVal.PENDING && (
-                          <>
-                            <Button
-                              size="sm"
-                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.compact}
-                              onClick={(e) => handleApprove(row.checkoutId, e, row.equipmentName)}
-                              disabled={approveMutation.isPending}
-                            >
-                              <Check className="h-3 w-3" />
-                              {t('actions.approve')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.compact}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCheckoutClick(row.checkoutId);
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                              {t('actions.reject')}
-                            </Button>
-                          </>
-                        )}
-
-                        {row.canReturnItem &&
-                          (row.status === CSVal.CHECKED_OUT || row.status === CSVal.OVERDUE) && (
-                            <Link
-                              href={FRONTEND_ROUTES.CHECKOUTS.RETURN(row.checkoutId)}
-                              onClick={(e) => e.stopPropagation()}
-                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.returnLink}
-                            >
-                              {t('actions.processReturn')}
-                              <ArrowRight className="h-3 w-3" />
-                            </Link>
-                          )}
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </Card>

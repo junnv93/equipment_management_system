@@ -181,7 +181,7 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
         <div className={INSPECTION_SPACING.field}>
           <textarea
             ref={pasteRef}
-            className="w-full h-24 border rounded-md p-2 font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full h-24 border rounded-md p-2 font-mono text-xs resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="Freq (GHz)&#9;Gain (dB)&#9;Spec&#10;1.0&#9;44.12&#9;45 ± 2.5"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { BULK_ACTION_BAR_TOKENS } from '@/lib/design-tokens/components/bulk-action-bar';
+import { BULK_ACTION_BAR_TOKENS } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
 // ────────────────────────────────────────────────────────────────────────────

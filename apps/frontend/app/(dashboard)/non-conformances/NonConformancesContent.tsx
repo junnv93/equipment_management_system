@@ -523,7 +523,11 @@ function NCListRow({
           {hasRejection && (
             <span className={NC_REJECTION_BADGE_TOKENS.badge}>{t('list.rejectedBadge')}</span>
           )}
-          <MiniWorkflow currentStepIndex={statusIndex} isLongOverdue={longOverdue} />
+          <MiniWorkflow
+            currentStepIndex={statusIndex}
+            isLongOverdue={longOverdue}
+            stepLabel={t('ncStatus.' + nc.status)}
+          />
         </div>
         {/* 유형 */}
         <div>
@@ -555,7 +559,7 @@ function NCListRow({
               aria-label={chip.tooltip ?? chip.label}
             >
               {chip.label}
-              {chip.showArrow && <span aria-hidden="true"> →</span>}
+              {chip.showArrow && <span aria-hidden="true">{t('list.chip.arrow')}</span>}
             </span>
           )}
           <span className={NC_LIST_TOKENS.actionIndicator}>
@@ -601,21 +605,26 @@ function NCListRow({
 function MiniWorkflow({
   currentStepIndex,
   isLongOverdue,
+  stepLabel,
 }: {
   currentStepIndex: number;
   isLongOverdue: boolean;
+  stepLabel?: string;
 }) {
   return (
-    <div className={NC_MINI_WORKFLOW_TOKENS.container} aria-hidden="true">
-      {NC_WORKFLOW_STEPS.map((_: string, stepIdx: number) => (
-        <div key={stepIdx} className="flex items-center">
-          {stepIdx > 0 && (
-            <div className={getNCMiniConnectorClasses(stepIdx - 1, currentStepIndex)} />
-          )}
-          <div className={getNCMiniDotClasses(stepIdx, currentStepIndex, isLongOverdue)} />
-        </div>
-      ))}
-    </div>
+    <>
+      {stepLabel && <span className="sr-only">{stepLabel}</span>}
+      <div className={NC_MINI_WORKFLOW_TOKENS.container} aria-hidden="true">
+        {NC_WORKFLOW_STEPS.map((_: string, stepIdx: number) => (
+          <div key={stepIdx} className="flex items-center">
+            {stepIdx > 0 && (
+              <div className={getNCMiniConnectorClasses(stepIdx - 1, currentStepIndex)} />
+            )}
+            <div className={getNCMiniDotClasses(stepIdx, currentStepIndex, isLongOverdue)} />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

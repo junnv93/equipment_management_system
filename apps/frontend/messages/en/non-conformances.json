@@ -108,6 +108,9 @@
         "recalibration": "Recalibration required"
       },
       "done": "Done"
+    },
+    "chip": {
+      "arrow": " →"
     }
   },
   "banner": {

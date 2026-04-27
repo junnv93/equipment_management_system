@@ -272,10 +272,10 @@ export default function CheckoutsContent({
           id: 'checkouts-first-visit',
           title: t('onboarding.title'),
           description: t('onboarding.description'),
+          canShowPrimaryAction: canCreateCheckout,
           primaryAction: {
             label: t('onboarding.cta'),
             href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
-            permission: Permission.CREATE_CHECKOUT,
           },
         }}
         actions={

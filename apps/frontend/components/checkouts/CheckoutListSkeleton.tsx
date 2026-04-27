@@ -1,8 +1,7 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getStaggerDelay } from '@/lib/design-tokens';
+import { CHECKOUT_LOADING_SKELETON_TOKENS, getStaggerDelay } from '@/lib/design-tokens';
 
 /**
  * 반출 목록 로딩 스켈레톤 (CheckoutsContent + OutboundCheckoutsTab + InboundCheckoutsTab 공유)
@@ -31,13 +30,13 @@ export function CheckoutListSkeleton({
         >
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <div className="flex items-center gap-4">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-5 w-16" />
+              <div className={`${CHECKOUT_LOADING_SKELETON_TOKENS.base} h-5 w-24`} />
+              <div className={`${CHECKOUT_LOADING_SKELETON_TOKENS.base} h-5 w-28`} />
+              <div className={`${CHECKOUT_LOADING_SKELETON_TOKENS.base} h-5 w-16`} />
             </div>
             <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-16" />
-              <Skeleton className="h-5 w-12" />
+              <div className={`${CHECKOUT_LOADING_SKELETON_TOKENS.base} h-5 w-16`} />
+              <div className={`${CHECKOUT_LOADING_SKELETON_TOKENS.base} h-5 w-12`} />
             </div>
           </div>
         </Card>

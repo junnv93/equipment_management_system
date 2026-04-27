@@ -411,3 +411,29 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-24 PR-20] 🟢 LOW assertFsmAction 순서 비대칭 — approve/approveReturn vs rejectReturn** — ✅ 2026-04-24 완료: approve·approveReturn 모두 scope-먼저 패턴으로 통일 (커밋 1b573f5a)
 - [x] **[2026-04-24 review-arch] 🔶 WARNING approve·rejectReturn Map 삽입 순서 비결정성** — ✅ 2026-04-24 완료: `equipmentMap.values().next().value` → `equipmentMap.get(items[0].equipmentId)` 교체 (approve + rejectReturn). approveReturn은 이미 올바른 패턴 사용 중이었음 (커밋 e6d485b1).
 - [x] **[2026-04-24 review-arch] 🔶 WARNING rejectReturn reason 검증 순서 — scope/FSM 이전 정보 노출** — ✅ 2026-04-24 완료: reason 빈값 검증 블록을 `enforceScopeFromData` + `assertFsmAction` 이후로 이동. 스코프 외 사용자 checkout 상태 역추론 방지 (커밋 e6d485b1).
+
+---
+
+## 2026-04-27 — tech-debt-tracker 전수 처리 (harness tech-debt-batch-0427)
+
+### 실측 확인 — 이전 세션에서 이미 완료된 항목
+
+- [x] **[2026-04-24 86th-session] 🟡 MEDIUM SOFTWARE_VALIDATION_* 이벤트 5개 cache-event.registry.ts 미등록** — ✅ 2026-04-27 실측 확인: `cache-event.registry.ts` L359-391에 `SOFTWARE_VALIDATION_*` 이벤트 5개 이미 등록됨. 트래커 stale 항목.
+- [x] **[2026-04-24 rental-phase9] 🟢 LOW rejectReturnMutation onErrorCallback returnRejectReason 미초기화** — ✅ 2026-04-27 실측 확인: `CheckoutDetailClient.tsx` `rejectReturnMutation`의 `onSuccessCallback`·`onErrorCallback` 양쪽 모두 `setReturnRejectReason('')` 있음. 트래커 stale 항목.
+- [x] **[2026-04-24 pr-3] 🟢 LOW EquipmentImportDetail.tsx role 리터럴 액션 게이트** — ✅ 2026-04-27 실측 확인: `EquipmentImportDetail.tsx`는 이미 `can(Permission.APPROVE_EQUIPMENT_IMPORT)` 패턴 사용. 트래커 stale 항목.
+- [x] **[2026-04-24 sprint-1.1] 🟢 LOW checkout-fsm.test.ts 13건 기존 실패** — ✅ 2026-04-27 실측 확인: `pnpm --filter @equipment-management/schemas run test` 643건 PASS (0 failures). 트래커 stale 항목.
+- [x] **[2026-04-24 rental-phase3-4] 🟡 MEDIUM borrowerApprove/borrowerReject 단위 테스트** — ✅ 2026-04-27 부분 완료: borrowerApprove (a)(b)(c)(d) + borrowerReject (a)(b)(c)는 이전 세션에서 이미 구현됨.
+
+### 실수정 완료 — 이번 세션 (2026-04-27)
+
+- [x] **[2026-04-26 manage-skills] 🟡 MEDIUM bulk-action-bar-subpath-import** — ✅ 2026-04-27 완료: `BulkActionBar.tsx:6` `@/lib/design-tokens` barrel import로 교체.
+- [x] **[2026-04-26 nc-r3] 🟢 LOW list-chip-arrow-i18n** — ✅ 2026-04-27 완료: `ko/en non-conformances.json`에 `list.chip.arrow: " →"` 추가 + `NonConformancesContent.tsx` chip 화살표 `t('list.chip.arrow')` 교체.
+- [x] **[2026-04-26 nc-r4] 🟢 LOW nclistrow-mini-workflow-sr-only** — ✅ 2026-04-27 완료: `NonConformancesContent.tsx` `MiniWorkflow`에 `stepLabel?: string` prop 추가, `sr-only` span 렌더링, 호출부 `stepLabel={t('ncStatus.' + nc.status)}` 전달.
+- [x] **[2026-04-26 nc-verify] 🟢 LOW visualTableEditor-focus-ring** — ✅ 2026-04-27 완료: `VisualTableEditor.tsx:184` `focus:ring-2` → `focus-visible:ring-2` 교체.
+- [x] **[2026-04-22 verify-fsm] 🟢 LOW reject-return 컨트롤러 guard ↔ FSM permission 동기화 주석 누락** — ✅ 2026-04-27 완료: `checkouts.controller.ts` reject-return 엔드포인트에 `REJECT_CHECKOUT` ↔ FSM `reject_return` 정렬 주석 추가.
+- [x] **[2026-04-22 checkout-arch-pr3-11] 🟢 LOW blocked 버튼 focus-visible 누락** — ✅ 2026-04-27 완료: `workflow-panel.ts:49-52` `WORKFLOW_PANEL_TOKENS.action.blocked`에 `FOCUS_TOKENS.classes.default` 추가.
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM shared/ExportFormButton + PageHeader useAuth() 직접 호출** — ✅ 2026-04-27 완료: `ExportFormButton.tsx` `canAct: boolean` prop 추가 + 8개 call site 전수 업데이트. `PageHeader.tsx` `OnboardingHintBanner`에서 `useAuth()` 제거 + `OnboardingHint.canShowPrimaryAction?: boolean` 추가.
+- [x] **[2026-04-24 pr14-15] 🟡 MEDIUM pulseHard container-level scale animation UX 저하** — ✅ 2026-04-27 완료: `workflow-panel.ts:163-164` critical urgency `animate-pulse-hard` → `animate-pulse-soft` 교체 (scale 제거, opacity-only).
+- [x] **[2026-04-24 pr-19] 🟢 LOW CheckoutListSkeleton CHECKOUT_LOADING_SKELETON_TOKENS 미사용** — ✅ 2026-04-27 완료: `CheckoutListSkeleton.tsx` shadcn `<Skeleton>` 제거 + `CHECKOUT_LOADING_SKELETON_TOKENS.base` raw div 패턴으로 교체 (`HeroKPISkeleton` 동일 패턴).
+- [x] **[2026-04-26 sprint-2.4] 🟢 LOW checkout-group-card-purpose-cast** — ✅ 2026-04-27 완료: `CheckoutGroupCard.tsx` `as 'calibration' | 'repair' | 'rental'` 리터럴 캐스트 → `as UserSelectableCheckoutPurpose` SSOT 교체.
+- [x] **[2026-04-24 rental-phase3-4] 🟡 MEDIUM borrowerReject (d) 테스트 추가** — ✅ 2026-04-27 완료: `checkouts.service.spec.ts` borrowerReject (d) `req.user.teamId !== requester.teamId → ForbiddenException(BORROWER_TEAM_ONLY)` 케이스 추가. 37/37 PASS.

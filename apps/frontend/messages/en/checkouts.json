@@ -368,7 +368,9 @@
     "expectedReturn": "Expected return",
     "overdueBy": "{days}d overdue",
     "collapse": "Collapse group",
-    "expand": "Expand group"
+    "expand": "Expand group",
+    "rowAria": "{equipment} · {status}{dday}",
+    "progressTooltipAria": "{current}/{total} steps"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
@@ -670,11 +672,21 @@
         "warning": "{equipmentName} is overdue. Please return immediately."
       }
     },
-    "approve": { "success": "{equipmentName} approved" },
-    "reject": { "success": "Request rejected" },
-    "start": { "success": "Checkout started" },
-    "return": { "success": "Return completed" },
-    "approveReturn": { "success": "Return approved" }
+    "approve": {
+      "success": "{equipmentName} approved"
+    },
+    "reject": {
+      "success": "Request rejected"
+    },
+    "start": {
+      "success": "Checkout started"
+    },
+    "return": {
+      "success": "Return completed"
+    },
+    "approveReturn": {
+      "success": "Return approved"
+    }
   },
   "help": {
     "status": {

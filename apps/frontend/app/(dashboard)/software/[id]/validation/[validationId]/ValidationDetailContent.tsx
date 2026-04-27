@@ -11,7 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { softwareValidationApi } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES, FORM_CATALOG } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, FORM_CATALOG, Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isValidationExportable } from '@/lib/utils/software-validation-exportability';
 import { ValidationStatusValues, ValidationTypeValues } from '@equipment-management/schemas';
@@ -44,6 +45,7 @@ export default function ValidationDetailContent({
   validationId,
 }: ValidationDetailContentProps) {
   const t = useTranslations('software');
+  const { can } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -113,6 +115,7 @@ export default function ValidationDetailContent({
             label={t('validation.actions.exportValidation')}
             errorToastDescription={t('toast.error')}
             disabled={!isValidationExportable(validation.status)}
+            canAct={can(Permission.EXPORT_REPORTS)}
           />
           {validation.status === ValidationStatusValues.DRAFT && (
             <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>

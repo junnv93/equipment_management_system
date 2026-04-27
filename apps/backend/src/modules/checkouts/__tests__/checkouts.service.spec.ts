@@ -941,6 +941,23 @@ describe('CheckoutsService', () => {
         service.borrowerReject(checkoutId, mockRejectDto, mockReqNoTeam)
       ).rejects.toThrow(ForbiddenException);
     });
+
+    it('(d) req.user.teamId != requester.teamId → ForbiddenException(BORROWER_TEAM_ONLY)', async () => {
+      const mockReqDiffTeam = {
+        user: {
+          ...mockReq.user,
+          teamId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue({ ...rentalPendingCheckout });
+      // requester teamId = borrowerTeamId; req.user.teamId is different ↑
+      mockDrizzle.limit.mockResolvedValueOnce([{ site: 'suwon', teamId: borrowerTeamId }]);
+
+      await expect(
+        service.borrowerReject(checkoutId, mockRejectDto, mockReqDiffTeam)
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('callback error resilience', () => {

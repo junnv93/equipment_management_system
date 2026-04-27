@@ -37,7 +37,7 @@ export const WORKFLOW_PANEL_TOKENS = {
   },
 
   hint: 'text-sm text-muted-foreground leading-relaxed',
-  actor: `${MICRO_TYPO.label} text-muted-foreground mt-2`,
+  actorLabel: `${MICRO_TYPO.label} text-muted-foreground mt-2`,
 
   action: {
     primary: [
@@ -49,14 +49,88 @@ export const WORKFLOW_PANEL_TOKENS = {
     blocked: [
       'mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md',
       'bg-muted text-muted-foreground cursor-not-allowed',
+      FOCUS_TOKENS.classes.default,
     ].join(' '),
   },
 
   blockedReason: 'text-xs text-muted-foreground italic mt-1',
   terminal: 'text-sm text-muted-foreground text-center py-4',
+
+  /**
+   * variant 서브트리 — compact(행 Zone 4 용) / hero(상세 Hero 용)
+   * Sprint 4.1: NextStepPanel variant prop의 UI 차별화 토큰
+   */
+  variant: {
+    compact: {
+      container: 'flex items-center gap-1.5 px-1.5 py-1 rounded',
+      heading: 'sr-only',
+      actionButton: [
+        'h-6 px-2 text-xs rounded inline-flex items-center gap-1 shrink-0',
+        'bg-primary text-primary-foreground hover:bg-primary/90',
+        TRANSITION_PRESETS.fastBg,
+        FOCUS_TOKENS.classes.default,
+      ].join(' '),
+    },
+    hero: {
+      container: [
+        ELEVATION_TOKENS.surface.floating,
+        'rounded-xl',
+        SPACING_RHYTHM_TOKENS.comfortable.padding,
+      ].join(' '),
+      heading: 'text-lg font-semibold text-foreground',
+      actionButton: [
+        'mt-4 w-full h-10 px-4 text-sm rounded-md inline-flex items-center justify-center gap-2',
+        'bg-primary text-primary-foreground hover:bg-primary/90',
+        TRANSITION_PRESETS.fastBg,
+        FOCUS_TOKENS.classes.default,
+      ].join(' '),
+    },
+  } satisfies Record<
+    'compact' | 'hero',
+    { container: string; heading: string; actionButton: string }
+  >,
+
+  /**
+   * actor 서브트리 — FSM nextActor → 3-way 색 분기 (requester / approver / receiver)
+   * Sprint 4.1 V1 S3: 역할별 다음 행동 즉시 구별
+   */
+  actor: {
+    requester: {
+      border: getSemanticLeftBorderClasses('info'),
+      icon: 'text-brand-info',
+      accent: 'bg-brand-info/5',
+    },
+    approver: {
+      border: getSemanticLeftBorderClasses('warning'),
+      icon: 'text-brand-warning',
+      accent: 'bg-brand-warning/5',
+    },
+    receiver: {
+      border: getSemanticLeftBorderClasses('ok'),
+      icon: 'text-brand-ok',
+      accent: 'bg-brand-ok/5',
+    },
+  } satisfies Record<
+    'requester' | 'approver' | 'receiver',
+    { border: string; icon: string; accent: string }
+  >,
+
+  /**
+   * overflow 서브트리 — compact variant DropdownMenu 트리거 / 메뉴 토큰
+   */
+  overflow: {
+    trigger: [
+      'h-6 w-6 rounded flex items-center justify-center shrink-0',
+      'text-muted-foreground hover:text-foreground hover:bg-muted',
+      FOCUS_TOKENS.classes.default,
+      TRANSITION_PRESETS.fastBg,
+    ].join(' '),
+    menu: 'min-w-[140px]',
+  },
 } as const;
 
 export type WorkflowPanelUrgency = keyof typeof WORKFLOW_PANEL_TOKENS.container.urgency;
+export type WorkflowPanelActorVariant = keyof typeof WORKFLOW_PANEL_TOKENS.actor;
 
 // ============================================================================
 // NEXT_STEP_PANEL_TOKENS — FSM 다음 단계 안내 패널 (NextStepPanel.tsx 전용)
@@ -67,12 +141,14 @@ export type WorkflowPanelUrgency = keyof typeof WORKFLOW_PANEL_TOKENS.container.
  *
  * container.floating: 모달/드롭다운 수준 강조 (ELEVATION_TOKENS.surface.emphasis 기반)
  * container.inline: 그룹 카드 내 인라인 삽입 (ELEVATION_TOKENS.surface.raised 기반)
+ * container.hero: 상세 Hero 영역 강조 (ELEVATION_TOKENS.surface.emphasis 기반, 더 큰 패딩)
  */
 export const NEXT_STEP_PANEL_TOKENS = {
   container: {
     floating: `${ELEVATION_TOKENS.surface.emphasis} rounded-lg ${SPACING_RHYTHM_TOKENS.comfortable.padding}`,
     inline: `${ELEVATION_TOKENS.surface.raised} rounded-md ${SPACING_RHYTHM_TOKENS.tight.padding}`,
     compact: `${ELEVATION_TOKENS.surface.raised} rounded px-2 py-1.5`,
+    hero: `${ELEVATION_TOKENS.surface.emphasis} rounded-xl ${SPACING_RHYTHM_TOKENS.comfortable.padding}`,
   },
 
   labels: {
@@ -91,7 +167,7 @@ export const NEXT_STEP_PANEL_TOKENS = {
     normal: '',
     warning: 'border-l-4 border-l-brand-warning bg-brand-warning/5',
     critical:
-      'border-l-4 border-l-brand-critical bg-brand-critical/5 motion-safe:animate-pulse-hard motion-reduce:animate-none',
+      'border-l-4 border-l-brand-critical bg-brand-critical/5 motion-safe:animate-pulse-soft motion-reduce:animate-none',
   },
 
   actionButton: {
