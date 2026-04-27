@@ -99,7 +99,7 @@ export default function RejectModal(props: RejectModalProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const parsed = RejectReasonSchema.safeParse(reason.trim());
     if (!parsed.success) {

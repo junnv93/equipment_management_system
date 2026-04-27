@@ -45,19 +45,6 @@ export const APPROVAL_STATUS_BADGE_TOKENS = {
   rejected: getSemanticSolidBgClasses('critical'),
 } as const;
 
-/**
- * 카드 왼쪽 보더 색상 매핑 (상태별 시각적 구분)
- *
- * SSOT: ApprovalItem.tsx의 BORDER_COLORS 통합
- */
-export const APPROVAL_CARD_BORDER_TOKENS = {
-  pending: getSemanticLeftBorderClasses('warning'),
-  pending_review: getSemanticLeftBorderClasses('warning'),
-  reviewed: getSemanticLeftBorderClasses('info'),
-  approved: getSemanticLeftBorderClasses('ok'),
-  rejected: getSemanticLeftBorderClasses('critical'),
-} as const;
-
 // ============================================================================
 // 2. Approval Stepper Tokens (다단계 승인 진행 표시기)
 // ============================================================================
@@ -570,16 +557,6 @@ export function getApprovalStatusBadgeClasses(status: string): string {
   return (
     APPROVAL_STATUS_BADGE_TOKENS[status as keyof typeof APPROVAL_STATUS_BADGE_TOKENS] ||
     APPROVAL_STATUS_BADGE_TOKENS.pending
-  );
-}
-
-/**
- * 카드 왼쪽 보더 클래스 반환
- */
-export function getApprovalCardBorderClasses(status: string): string {
-  return (
-    APPROVAL_CARD_BORDER_TOKENS[status as keyof typeof APPROVAL_CARD_BORDER_TOKENS] ||
-    APPROVAL_CARD_BORDER_TOKENS.pending
   );
 }
 

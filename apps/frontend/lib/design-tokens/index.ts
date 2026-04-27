@@ -545,7 +545,6 @@ export {
 // Approval
 export {
   APPROVAL_STATUS_BADGE_TOKENS,
-  APPROVAL_CARD_BORDER_TOKENS,
   APPROVAL_STEPPER_TOKENS,
   APPROVAL_TIMELINE_TOKENS,
   APPROVAL_ACTION_BUTTON_TOKENS,
@@ -563,7 +562,6 @@ export {
   APPROVAL_MOBILE_CATEGORY_BAR_TOKENS,
   APPROVAL_DETAIL_MODAL_TOKENS,
   getApprovalStatusBadgeClasses,
-  getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,
   getApprovalActionButtonClasses,
   getElapsedDaysClasses,

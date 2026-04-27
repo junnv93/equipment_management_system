@@ -3045,7 +3045,8 @@ export class CheckoutsService extends VersionedBaseService {
     const results = await Promise.allSettled(
       ids.map(async (id) => {
         const checkout = await this.findCheckoutEntity(id);
-        // 각 checkout의 현재 version으로 CAS 수행 (개별 낙관적 잠금)
+        // Rule 11 예외: bulk UX상 클라이언트가 per-item version을 전달할 수 없으므로
+        // DB 최신값 사용. CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리됨.
         return this.approve(id, { version: checkout.version, approverId }, req);
       })
     );
@@ -3164,6 +3165,7 @@ export class CheckoutsService extends VersionedBaseService {
     await this.enforceScopeFromCheckout(checkout, req);
 
     // ② FSM 상태 검증 — approved 상태여야 함
+    // assertFsmAction 미사용: revoke는 FSM 전이표에 없는 관리 액션이므로 직접 상태 체크
     if (checkout.status !== (CSVal.APPROVED as CheckoutStatus)) {
       throw new BadRequestException({
         code: CheckoutErrorCode.INVALID_TRANSITION,
