@@ -319,41 +319,75 @@ done
 
 **상세:** [references/step-details.md](references/step-details.md) Step 13
 
-### Step 14: Collapsible/Disclosure button WCAG 2.1 패턴 (2026-04-21 추가)
+### Step 14: Collapsible/Disclosure button WCAG 2.1 패턴 (2026-04-21 추가, 2026-04-27 탐지 강화)
 
 `button[aria-expanded]`는 WCAG 2.1 Disclosure 패턴 상 반드시 `aria-controls`와 쌍을 이루어야 한다.
 `aria-controls` 값은 열고/닫는 콘텐츠 영역의 `id`와 일치해야 한다.
 
-이번 세션(78차2)에서 `NCDetailClient.tsx`의 `CollapsibleSection`에 `contentId` prop + `aria-controls={contentId}` + `id={contentId}` 패턴이 도입되었다.
+이번 세션(78차2)에서 `NCDetailClient.tsx`의 `CollapsibleSection`에 `contentId` prop + `aria-controls={contentId}` + `id={contentId}` 패턴이 도입됨.
+2026-04-27 세션: `DashboardShell.tsx` 사이드바 토글 `<Button>`에 `aria-controls="desktop-sidebar"` + `<aside id="desktop-sidebar">` 패턴 추가.
 
 ```bash
-# aria-expanded는 있지만 aria-controls가 없는 button 탐지
+# aria-expanded는 있지만 aria-controls가 없는 button/Button 탐지
+# <button>(HTML) + <Button>(shadcn/ui React 컴포넌트) 모두 검사
 grep -rn "aria-expanded" apps/frontend/components apps/frontend/app \
   --include="*.tsx" -l | while read f; do
-  # 같은 파일에서 aria-controls가 없는 button[aria-expanded] 패턴
   node -e "
     const fs = require('fs');
     const content = fs.readFileSync('$f', 'utf-8');
     const lines = content.split('\n');
     lines.forEach((line, i) => {
       if (line.includes('aria-expanded') && !line.includes('aria-controls')) {
-        // 앞뒤 2줄 포함해서 button 컨텍스트 확인
-        const ctx = lines.slice(Math.max(0,i-2), i+3).join(' ');
-        if (ctx.includes('<button') && !ctx.includes('aria-controls')) {
+        // 앞뒤 4줄(멀티라인 props 대응) 포함해서 button 컨텍스트 확인
+        const ctx = lines.slice(Math.max(0,i-4), i+5).join(' ');
+        const hasButton = ctx.includes('<button') || ctx.includes('<Button');
+        if (hasButton && !ctx.includes('aria-controls')) {
           console.log('$f:' + (i+1) + ': aria-expanded without aria-controls');
         }
       }
     });
   " 2>/dev/null
 done
-
-# aria-controls 값과 id 일치 확인 (NCDetailClient.tsx 기준)
-grep -n "aria-controls\|contentId\|id=\"nc-" \
-  apps/frontend/components/non-conformances/NCDetailClient.tsx
 ```
 
-**PASS:** `aria-expanded`가 있는 모든 button에 `aria-controls` 존재. 값이 동일 파일 내 `id` 속성과 일치.
+```bash
+# aria-controls 값과 id 일치 확인 — 모든 컴포넌트 대상
+# aria-controls가 있는 파일에서 참조 id가 동일 파일(또는 관련 파일)에 존재하는지 확인
+grep -rn "aria-controls" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" \
+  | grep -v "shadcn\|node_modules\|/ui/" \
+  | grep -oP 'aria-controls=["\x27]\K[^"\']+' \
+  | sort -u
+# 추출된 id 목록이 컴포넌트에 id= 속성으로 존재해야 함
+# 주요 검사: "desktop-sidebar" → DashboardShell.tsx <aside id="desktop-sidebar">
+# 주요 검사: "nc-*" → NCDetailClient.tsx CollapsibleSection id={contentId}
+grep -rn 'id="desktop-sidebar"' apps/frontend/components/ --include="*.tsx"
+# → 1건: DashboardShell.tsx <aside id="desktop-sidebar"> (PASS)
+```
+
+**PASS:** `aria-expanded`가 있는 모든 button/Button에 `aria-controls` 존재. 값이 같은 파일 내 `id` 속성과 일치.
 **FAIL:** `aria-expanded` 단독 사용 → `contentId` prop 또는 인라인 `aria-controls` 추가.
+
+**올바른 패턴:**
+```tsx
+// ✅ shadcn/ui <Button> 컴포넌트 — aria-controls 명시
+<Button
+  aria-expanded={!isCollapsed}
+  aria-controls="desktop-sidebar"   // ← 제어 대상 id 참조
+  onClick={toggleSidebar}
+/>
+<aside id="desktop-sidebar" ...>    // ← 제어 대상 요소
+  ...
+</aside>
+
+// ✅ CollapsibleSection prop 패턴
+<CollapsibleSection
+  contentId="nc-findings"           // ← prop → aria-controls={contentId}
+>
+  <div id="nc-findings">...</div>   // ← 제어 대상 요소
+</CollapsibleSection>
+```
 
 **예외:** `aria-expanded`가 외부 라이브러리(shadcn/ui Accordion, Collapsible)에서 관리되는 경우 — 라이브러리가 `aria-controls`를 자동 주입하므로 제외.
 
@@ -1480,7 +1514,7 @@ grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null
 | 10d | `postcss.config.js` 단일 `@tailwindcss/postcss` 플러그인 | PASS/FAIL | 위반 플러그인 |
 | 12  | @theme CSS 변수 ↔ primitives.ts 3-way 동기화 | PASS/FAIL | 불일치 변수 목록 |
 | 13  | Dead Token 탐지 (0 usage exports) | PASS/INFO/FAIL | dead token 목록 |
-| 14  | Collapsible button: aria-expanded + aria-controls 쌍 | PASS/FAIL | aria-controls 누락 button 위치 |
+| 14  | Collapsible/Disclosure button: aria-expanded + aria-controls 쌍 (`<button>`+`<Button>` 모두) | PASS/FAIL | aria-controls 누락 button/Button 위치 |
 | 15  | staggerFadeInItem SSOT + NC_SPACING_TOKENS.detail 우회 금지 | PASS/FAIL | raw index 곱셈 또는 `'link'` ctaKind 잔재 위치 |
 | 16a | SPACING_RHYTHM_TOKENS `.replace()` 안티패턴 금지 | PASS/FAIL | `.replace('p','px')` 발견 위치 |
 | 16b | NCGuidanceKeyReachable narrowing (Record 타입 좁힘) | PASS/FAIL | `Record<NCGuidanceKey,...>` 잔재 또는 dead entry 존재 |
