@@ -566,6 +566,57 @@ node scripts/check-role-config-sync.mjs && node scripts/check-css-vars.mjs \
 
 **근거:** DASHBOARD_ROLE_CONFIG는 `lib/config/dashboard-config.ts`에 정의되고, UserRoleValues는 `packages/schemas`에 정의된다. 두 파일은 다른 도메인에 위치하므로 자동 타입 체크만으로는 불일치 탐지 불가. 빌드 타임 가드가 유일한 확실한 방어선.
 
+---
+
+### Step 30: 상태 순서 매핑 객체 키 — enum Computed Property Name 경유 필수 (2026-04-27 추가)
+
+상태값을 순서(숫자) 또는 우선순위에 매핑하는 객체(`STATUS_ORDER`, `PRIORITY_MAP` 등)의 키는
+반드시 enum/Values 상수를 Computed Property Name으로 경유해야 한다.
+문자열 리터럴 키를 사용하면 스키마 변경 시 컴파일 에러가 발생하지 않아 매핑이 조용히 깨진다.
+
+```typescript
+// ❌ 문자열 리터럴 — 스키마 변경 시 silent bug
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  pending_review: 1,
+  rejected: -1,
+};
+
+// ✅ Computed Property Name + Partial<Record<EnumType>> — 스키마 변경 시 컴파일 에러
+const STATUS_ORDER: Partial<Record<UnifiedApprovalStatus, number>> = {
+  [UASVal.PENDING]: 0,
+  [UASVal.PENDING_REVIEW]: 1,
+  [UASVal.REJECTED]: -1,
+};
+```
+
+**탐지 — 상태 매핑 객체 내 문자열 리터럴 키:**
+```bash
+# STATUS_ORDER / PRIORITY_MAP 등 상태→숫자 매핑에서 리터럴 키 탐지
+grep -n "STATUS_ORDER\|PRIORITY_MAP\|statusOrder\|priorityMap" \
+  apps/frontend/components/**/*.tsx apps/frontend/lib/**/*.ts 2>/dev/null \
+  | head -10
+
+# 매핑 객체 내 문자열 리터럴 키 패턴 (enum 경유 아닌 것)
+grep -A10 "STATUS_ORDER\s*[=:]\s*{" \
+  apps/frontend/components/**/*.tsx apps/frontend/lib/**/*.ts 2>/dev/null \
+  | grep "^\s*[a-z_]*:\s*[0-9-]" | grep -v "\[.*Val\."
+```
+
+**PASS:** 상태 매핑 객체의 모든 키가 `[EnumVal.CONSTANT]` 패턴. **FAIL:** 문자열 리터럴 키 → enum Computed Property Name으로 교체 + `Record<string, N>` → `Partial<Record<EnumType, N>>` 타입 강화.
+
+**연관 패턴 — 단계 배열 key 필드:**
+다단계 스텝 정의(`disposalSteps`, `planSteps`)의 `key` 필드도 동일하게 enum 경유 필수:
+```typescript
+// ❌ 리터럴
+{ key: 'pending_review', ... }
+
+// ✅ enum 경유
+{ key: UASVal.PENDING_REVIEW, ... }
+```
+
+**근거:** `ApprovalStepIndicator.tsx` `STATUS_ORDER` + `disposalSteps/planSteps.key`에서 리터럴 → UASVal 교체 (2026-04-27, verify-ssot 지적).
+
 ## Output Format
 
 ```markdown
@@ -604,6 +655,7 @@ node scripts/check-role-config-sync.mjs && node scripts/check-css-vars.mjs \
 | 26  | notifyCheckoutAction SSOT 경유 — 반출 onSuccess 직접 toast 금지 | PASS/FAIL | checkout 액션 onSuccess에서 `toast({...})` 직접 호출 위치 |
 | 27  | UserSelectableCheckoutPurpose SSOT — CreateCheckoutDto.purpose | PASS/FAIL | `purpose: string` 또는 `purpose: CheckoutPurpose` 잔존 위치 |
 | 29  | prebuild guard 스크립트 존재 + package.json 연결 | PASS/FAIL | check-role-config-sync.mjs·check-css-vars.mjs 파일 누락 또는 prebuild 훅 미연결 |
+| 30  | 상태 순서 매핑 키 enum Computed Property Name 경유 | PASS/FAIL | `STATUS_ORDER`/`PRIORITY_MAP` 등에서 문자열 리터럴 키 또는 `Record<string, N>` 타입 위치 |
 ```
 
 ## Exceptions

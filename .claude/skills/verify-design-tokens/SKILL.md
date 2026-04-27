@@ -1370,6 +1370,90 @@ grep -rn "getPageContainerClasses()" \
 
 ---
 
+### Step 40: hover-inline 버튼 — `APPROVAL_ACTION_BUTTON_TOKENS.approveIcon/rejectIcon` 토큰 경유 필수 (2026-04-27 추가)
+
+테이블 행 hover 시 표시되는 인라인 승인/반려 아이콘 버튼은 `APPROVAL_ACTION_BUTTON_TOKENS.approveIcon`/`rejectIcon` 토큰을 경유해야 한다.
+`text-green-*`, `text-emerald-*`, `text-red-*` 등 원시 Tailwind color class를 직접 사용하면 dark mode 전환과 브랜드 색상 변경 시 일관성이 깨진다.
+
+**패턴: `group` + `group-hover:inline-flex` + 토큰 경유**
+
+```tsx
+// ❌ 하드코딩 color — 브랜드/다크모드 변경 시 불일치
+<Button className="hidden group-hover:inline-flex text-green-600 hover:bg-green-100">
+
+// ✅ 토큰 경유 — CSS 변수 자동 전환
+<Button className={cn(
+  'hidden group-hover:inline-flex',
+  APPROVAL_ACTION_BUTTON_TOKENS.approveIcon  // 'text-brand-ok hover:bg-brand-ok/10'
+)}>
+```
+
+```bash
+# hover-inline 버튼에서 토큰 미경유 raw color class 탐지
+grep -n "group-hover:inline-flex\|group-hover:flex" \
+  apps/frontend/components/**/*.tsx 2>/dev/null \
+  | grep -v "APPROVAL_ACTION_BUTTON_TOKENS\|approveIcon\|rejectIcon\|MENU_ITEM_TOKENS"
+
+# raw color class 직접 사용 탐지 (group-hover 버튼 컨텍스트)
+grep -n "text-green-\|text-emerald-\|hover:bg-green-\|hover:bg-emerald-" \
+  apps/frontend/components/**/*.tsx 2>/dev/null \
+  | grep -v "//\|design-tokens"
+```
+
+**PASS:** 0건 (모든 hover-inline 버튼이 토큰 경유). **FAIL:** raw color class → 해당 토큰으로 교체.
+
+**배경:** `ApprovalRow.tsx` AP-05에서 `group` + `hidden group-hover:inline-flex` + `APPROVAL_ACTION_BUTTON_TOKENS.approveIcon/rejectIcon` 패턴 확립. 2026-04-27.
+
+---
+
+### Step 41: 단일 `role="tablist"` + `className="contents"` ARIA tablist 패턴 (2026-04-27 추가)
+
+여러 섹션으로 나뉜 탭 목록을 렌더링할 때, `role="tablist"`는 **반드시 단일 wrapper에만** 적용해야 한다.
+`map()` 내부에서 각 섹션마다 `role="tablist"`를 생성하면 ARIA 트리에 N개의 독립 tablist가 생겨 스크린리더가 탭 관계를 파악하지 못한다.
+
+**올바른 패턴: CSS `display: contents` + `role="presentation"` 분리자/라벨**
+
+```tsx
+// ❌ N개 tablist — 스크린리더 탭 관계 파악 불가
+{sections.map(section => (
+  <div key={section} role="tablist">
+    {tabs.map(tab => <button role="tab">)}
+  </div>
+))}
+
+// ✅ 단일 tablist — contents wrapper로 시각/ARIA 분리
+<div role="tablist" aria-orientation="vertical">
+  {sections.map((section, i) => (
+    <div key={section} className="contents">           {/* CSS display:contents — ARIA 투명 */}
+      {i > 0 && <div className={tokens.divider} role="presentation" />}  {/* 분리자 */}
+      <div className={tokens.sectionLabel} role="presentation">          {/* 라벨 */}
+        {sectionName}
+      </div>
+      {tabs.map(tab => <button role="tab" aria-selected={isActive}>)}
+    </div>
+  ))}
+</div>
+```
+
+```bash
+# 복수 tablist 탐지 (map 내부 role="tablist")
+grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null \
+  | awk -F: '{file=$1; line=$2} {print file}' | sort | uniq -d
+# → 동일 파일에 2+ tablist가 있으면 map 내부 중복 의심
+
+# className="contents" 없이 tablist 하위 래퍼 탐지
+grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null
+```
+
+**PASS:** 컴포넌트 당 `role="tablist"` 1건. **FAIL:** 같은 파일 2+ tablist → 단일 wrapper로 통합.
+
+**배경:** `ApprovalCategorySidebar.tsx` AP-04에서 `className="contents"` + `role="presentation"` 패턴으로 WAI-ARIA Tabs 패턴 준수. 2026-04-27.
+
+**예외:**
+- 완전히 독립된 별개의 tab UI가 한 컴포넌트에 존재하는 경우 (예: 상단/하단 별개 탭) — 의도적 복수 tablist 허용. 주석 필수.
+
+---
+
 ## Output Format
 
 ```markdown
@@ -1427,6 +1511,9 @@ grep -rn "getPageContainerClasses()" \
 | 36  | `WORKFLOW_PANEL_TOKENS.variant/.actor` `satisfies Record` + `WorkflowPanelActorVariant` export | PASS/FAIL | satisfies 누락 또는 타입 미export 위치 |
 | 37  | Layer 3 토큰 파일 내 ANIMATION_PRESETS 인라인 우회 금지 | PASS/FAIL | motion-safe+motion-reduce 페어 인라인 위치 |
 | 38  | AlertBanner severity → ARIA role 분기 (critical/warning=alert, info/none=status) | PASS/FAIL | 정적 role 하드코딩 또는 분기 로직 누락 위치 |
+| 39  | `getPageContainerClasses()` variant 필수 인수 — 빈 호출 금지 | PASS/FAIL | variant 미지정 빈 호출 위치 |
+| 40  | hover-inline 버튼 `approveIcon`/`rejectIcon` 토큰 경유 | PASS/FAIL | raw text-green-*/text-red-* 직접 사용 위치 |
+| 41  | 단일 `role="tablist"` + `className="contents"` ARIA tablist 패턴 | PASS/FAIL | 컴포넌트 당 tablist 2+ 발견 위치 |
 ```
 
 ## Exceptions

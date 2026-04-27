@@ -608,6 +608,53 @@ grep -rn "onboarding-dismissed" apps/frontend --include="*.ts" --include="*.tsx"
 - `apps/frontend/lib/checkouts/toast-templates.ts` — toastFn 외부 주입 패턴 참고 구현
 - `apps/frontend/components/shared/NextStepPanel.tsx` — useOnboardingHint('checkout-next-step') 사용 예
 
+---
+
+### Step 22: `Promise.allSettled` 병렬 bulk mutation — `for...of` 순차 처리 금지 (2026-04-27 추가)
+
+여러 항목에 동일한 뮤테이션을 적용하는 bulk 작업은 `Promise.allSettled`로 병렬 실행해야 한다.
+`for...of` + `await` 순차 처리는 N번 직렬 API 호출로 사용자 대기 시간이 N배가 되며,
+한 건 실패 시 나머지가 중단될 수 있다.
+
+**올바른 패턴 — `Promise.allSettled` + index-based 결과 매핑:**
+
+```typescript
+// ✅ 병렬 + 부분 실패 지원
+const results = await Promise.allSettled(
+  ids.map((id) => this.singleMutation(id, reason))
+);
+
+const success: string[] = [];
+const failed: string[] = [];
+results.forEach((result, i) => {
+  if (result.status === 'fulfilled') success.push(ids[i]);
+  else failed.push(ids[i]);
+});
+return { success, failed };
+
+// ❌ 금지 — 순차 처리 (N배 지연 + 중간 실패 시 나머지 중단)
+for (const id of ids) {
+  await this.singleMutation(id, reason);
+}
+```
+
+**탐지 — bulk 함수 내 for...of + await 순차 뮤테이션:**
+```bash
+# bulk* 함수 내 for...of + await 패턴 탐지
+grep -A5 "async.*bulk\|bulkApprove\|bulkReject\|bulkDelete" \
+  apps/frontend/lib/api/*.ts \
+  | grep "for.*of\|await.*forEach"
+```
+
+**PASS:** bulk 함수에서 `Promise.allSettled` 사용. **FAIL:** `for...of + await` 패턴 → `Promise.allSettled`로 교체.
+
+**근거:** `approvals-api.ts`의 `bulkReject()`에서 `Promise.allSettled` 도입 (AP-03, 2026-04-27).
+부분 실패 지원 필수 — `{ success: string[], failed: string[] }` 반환 타입이 API 계약.
+
+**예외:**
+- 순서 의존적 트랜잭션 (앞 항목 성공 후에만 다음 항목 처리 가능) — `for...of + await` 허용, 주석 필수.
+- 단일 뮤테이션 — 해당 없음.
+
 ## Output Format
 
 ```markdown
@@ -639,6 +686,7 @@ grep -rn "onboarding-dismissed" apps/frontend --include="*.ts" --include="*.tsx"
 | 19  | shared/ui 컴포넌트 useAuth 금지 | PASS/FAIL | components/shared·ui에서 useAuth import 위치 |
 | 20  | isMounted ref skip-first-render | PASS/FAIL | 상태 의존 포커스 effect에 isMounted guard 누락 위치 |
 | 21  | toast toastFn 외부 주입 + useOnboardingHint SSOT | PASS/FAIL | lib/ 레이어에서 useToast 직접 호출 위치 / onboarding-dismissed 하드코딩 위치 |
+| 22  | bulk 뮤테이션 `Promise.allSettled` 병렬 — `for...of` 순차 금지 | PASS/FAIL | bulk 함수 내 for...of+await 패턴 위치 |
 ```
 
 ## Exceptions
