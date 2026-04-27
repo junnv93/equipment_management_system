@@ -11,8 +11,7 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   ArrowLeft,
   Calendar,
@@ -103,6 +102,7 @@ export default function CheckoutDetailClient({
 }: CheckoutDetailClientProps) {
   const t = useTranslations('checkouts');
   const tEquipment = useTranslations('equipment');
+  const { fmtDate, fmtDateTime } = useDateFormatter();
   const router = useRouter();
   const { can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
@@ -630,16 +630,12 @@ export default function CheckoutDetailClient({
                 <Calendar className="h-4 w-4" />
                 {t('detail.requestDate')}
               </span>
-              <span className="font-medium">
-                {format(new Date(checkout.createdAt), 'yyyy년 MM월 dd일', { locale: ko })}
-              </span>
+              <span className="font-medium">{fmtDate(checkout.createdAt)}</span>
             </div>
             {checkout.checkoutDate && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t('detail.checkoutDate')}</span>
-                <span className="font-medium">
-                  {format(new Date(checkout.checkoutDate), 'yyyy년 MM월 dd일', { locale: ko })}
-                </span>
+                <span className="font-medium">{fmtDate(checkout.checkoutDate)}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -647,16 +643,12 @@ export default function CheckoutDetailClient({
                 <Clock className="h-4 w-4" />
                 {t('detail.expectedReturn')}
               </span>
-              <span className="font-medium">
-                {format(new Date(checkout.expectedReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
-              </span>
+              <span className="font-medium">{fmtDate(checkout.expectedReturnDate)}</span>
             </div>
             {checkout.actualReturnDate && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t('detail.actualReturn')}</span>
-                <span className="font-medium">
-                  {format(new Date(checkout.actualReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
-                </span>
+                <span className="font-medium">{fmtDate(checkout.actualReturnDate)}</span>
               </div>
             )}
           </CardContent>
@@ -746,7 +738,7 @@ export default function CheckoutDetailClient({
                   <div className="flex items-center justify-between mb-3">
                     <Badge variant="secondary">{t(`condition.stepLabels.${check.step}`)}</Badge>
                     <span className="text-sm text-muted-foreground">
-                      {format(new Date(check.checkedAt), 'yyyy-MM-dd HH:mm', { locale: ko })}
+                      {fmtDateTime(check.checkedAt)}
                     </span>
                   </div>
                   <div className="grid gap-2 text-sm">

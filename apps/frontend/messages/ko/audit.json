@@ -37,7 +37,15 @@
     "printedBy": "출력자",
     "noChanges": "변경 없음",
     "fieldsChanged": "{count}개 필드 변경",
-    "footerNote": "본 문서는 품질 관리 시스템의 공식 감사 기록입니다."
+    "footerNote": "본 문서는 품질 관리 시스템의 공식 감사 기록입니다.",
+    "filter": {
+      "all": "전체",
+      "entityType": "대상={value}",
+      "action": "액션={value}",
+      "userId": "사용자={value}",
+      "startDate": "시작일={value}",
+      "endDate": "종료일={value}"
+    }
   },
   "actions": {
     "create": "생성",

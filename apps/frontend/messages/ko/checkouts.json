@@ -651,7 +651,6 @@
     "tooltip": "{action} 필요",
     "label": "내 차례",
     "count": "내 차례 {count}건",
-    "summary": "내 차례 {count}건",
     "summaryAria": "내 차례 대기 {count}건"
   },
   "toast": {

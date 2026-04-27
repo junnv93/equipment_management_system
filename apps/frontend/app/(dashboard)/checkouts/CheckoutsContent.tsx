@@ -286,11 +286,7 @@ export default function CheckoutsContent({
                   <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                   {t('pendingChecks.title')}
                   <span
-                    className={cn(
-                      CHECKOUT_TAB_BADGE_TOKENS.base,
-                      CHECKOUT_TAB_BADGE_TOKENS.alert,
-                      'ml-1.5 inline-flex items-center justify-center'
-                    )}
+                    className={cn(CHECKOUT_TAB_BADGE_TOKENS.base, CHECKOUT_TAB_BADGE_TOKENS.alert)}
                   >
                     {pendingChecksCount}
                   </span>

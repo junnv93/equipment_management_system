@@ -57,6 +57,26 @@ export async function apiPatch(
   });
 }
 
+/** role 대신 Bearer token을 직접 주입하는 GET 래퍼 (rental borrower 함수 전용). */
+export async function apiGetWithToken(page: Page, path: string, token: string) {
+  return page.request.get(`${BACKEND_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** role 대신 Bearer token을 직접 주입하는 PATCH 래퍼 (rental borrower 함수 전용). */
+export async function apiPatchWithToken(
+  page: Page,
+  path: string,
+  data: Record<string, unknown>,
+  token: string
+) {
+  return page.request.patch(`${BACKEND_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data,
+  });
+}
+
 /**
  * 응답 body에서 version 필드 추출 (일반 CAS 테이블: equipment, checkouts, disposal 등).
  *
@@ -1219,15 +1239,15 @@ export async function resetSelfInspections(equipmentId: string): Promise<void> {
  * @param token - 차용팀 TM의 Bearer token (getBackendTokenByEmail로 취득)
  */
 export async function borrowerApproveCheckout(page: Page, checkoutId: string, token: string) {
-  const detailResp = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const detailResp = await apiGetWithToken(page, `/api/checkouts/${checkoutId}`, token);
   const detail = await detailResp.json();
   const version = extractVersion(detail);
-  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/borrower-approve`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    data: { version },
-  });
+  return apiPatchWithToken(
+    page,
+    `/api/checkouts/${checkoutId}/borrower-approve`,
+    { version },
+    token
+  );
 }
 
 /**
@@ -1241,15 +1261,15 @@ export async function borrowerRejectCheckout(
   reason: string,
   token: string
 ) {
-  const detailResp = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const detailResp = await apiGetWithToken(page, `/api/checkouts/${checkoutId}`, token);
   const detail = await detailResp.json();
   const version = extractVersion(detail);
-  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/borrower-reject`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    data: { version, reason },
-  });
+  return apiPatchWithToken(
+    page,
+    `/api/checkouts/${checkoutId}/borrower-reject`,
+    { version, reason },
+    token
+  );
 }
 
 export { clearBackendCache, cleanupSharedPool, getSharedPool };

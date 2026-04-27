@@ -37,7 +37,15 @@
     "printedBy": "Printed by",
     "noChanges": "No changes",
     "fieldsChanged": "{count} field(s) changed",
-    "footerNote": "This document is an official audit record of the quality management system."
+    "footerNote": "This document is an official audit record of the quality management system.",
+    "filter": {
+      "all": "All",
+      "entityType": "Target={value}",
+      "action": "Action={value}",
+      "userId": "User={value}",
+      "startDate": "From={value}",
+      "endDate": "To={value}"
+    }
   },
   "actions": {
     "create": "Create",

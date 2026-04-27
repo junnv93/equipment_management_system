@@ -437,3 +437,25 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-24 pr-19] 🟢 LOW CheckoutListSkeleton CHECKOUT_LOADING_SKELETON_TOKENS 미사용** — ✅ 2026-04-27 완료: `CheckoutListSkeleton.tsx` shadcn `<Skeleton>` 제거 + `CHECKOUT_LOADING_SKELETON_TOKENS.base` raw div 패턴으로 교체 (`HeroKPISkeleton` 동일 패턴).
 - [x] **[2026-04-26 sprint-2.4] 🟢 LOW checkout-group-card-purpose-cast** — ✅ 2026-04-27 완료: `CheckoutGroupCard.tsx` `as 'calibration' | 'repair' | 'rental'` 리터럴 캐스트 → `as UserSelectableCheckoutPurpose` SSOT 교체.
 - [x] **[2026-04-24 rental-phase3-4] 🟡 MEDIUM borrowerReject (d) 테스트 추가** — ✅ 2026-04-27 완료: `checkouts.service.spec.ts` borrowerReject (d) `req.user.teamId !== requester.teamId → ForbiddenException(BORROWER_TEAM_ONLY)` 케이스 추가. 37/37 PASS.
+
+---
+
+## 2026-04-27 — tech-debt-batch-0427 배치 처리 (harness Mode 1)
+
+### 실구현 완료 7건
+
+- [x] **[2026-04-27 vi] 🟢 LOW workflow-panel-urgency-dot-animation-ssot** — `workflow-panel.ts` urgencyDot.warning/critical의 인라인 `'motion-safe:animate-pulse'`를 `ANIMATION_PRESETS.pulse` SSOT 경유로 교체. `ANIMATION_PRESETS` import 추가. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-27 vi] 🟢 LOW condition-check-query-key-tier** — `ConditionCheckClient.tsx` L58 `queryKeys.checkouts.all` 광역 invalidate → `queryKeys.checkouts.view.all()` 계층 경유로 교체. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-27 equipment-pwa-audit-i18n] 🟢 LOW formatFilters-compound-i18n** — `PrintableAuditReport.tsx` `formatFilters()` 6개 한국어 리터럴 → `tAudit('report.filter.*')` i18n 키로 완전 교체. ko/en audit.json에 `report.filter` 서브트리 추가. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-26 sprint-2.4] 🟢 LOW tab-badge-base-absorb-layout** — `CHECKOUT_TAB_BADGE_TOKENS.base`에 `inline-flex items-center justify-center` 흡수 + `ml-1` → `ml-1.5`. `CheckoutsContent.tsx` 호출부 중복 클래스 제거. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-24 wf34-pr13] 🟢 LOW yourTurn.summary dead i18n key 정리** — ko/en `checkouts.json` `yourTurn.summary` 키 제거. 사용 중인 `count`/`summaryAria`만 유지. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-24 wf34-pr13] 🟢 LOW borrowerApproveCheckout apiPatch 래퍼 미사용** — `workflow-helpers.ts`에 `apiGetWithToken`/`apiPatchWithToken` 헬퍼 추가. `borrowerApproveCheckout`/`borrowerRejectCheckout`가 직접 `page.request.get/patch` 대신 새 헬퍼 사용으로 패턴 통일. (2026-04-27 tech-debt-batch-0427)
+- [x] **[2026-04-24 pr14-15] 🟢 LOW CheckoutDetailClient date-fns format 직접 사용** — `CheckoutDetailClient.tsx` 5곳의 `format(new Date(...), { locale: ko })` → `useDateFormatter().fmtDate()/fmtDateTime()` 전환. `date-fns`/`ko` import 제거. (2026-04-27 tech-debt-batch-0427)
+
+### 실측 확인 완료 5건 (코드 수정 없음)
+
+- [x] **[2026-04-24 pr-3] 🟢 LOW NEXT_STEP_PANEL_TOKENS dead token** — 실측 확인(2026-04-27): `NextStepPanel.tsx`가 `NEXT_STEP_PANEL_TOKENS.container/urgency/terminal/labels` 전부 사용 중. PR-4 구현으로 이미 해소됨.
+- [x] **[2026-04-24 pr4-7] 🟡 MEDIUM use-inbound-section-pagination.ts URLSearchParams 직접 조작** — 실측 확인(2026-04-27): `CheckoutsContent.updateUrl()`이 `filtersToSearchParams()` 결과로 URL을 완전 교체 — 기존 section page params 자동 소거됨. resetFilters 시 실제 잔존 없음. 설계 정상.
+- [x] **[2026-04-24 pr4-7] 🟢 LOW OutboundCheckoutsTab celebration EmptyState i18n 하드코딩** — 실측 확인(2026-04-27): `t('emptyState.overdueClear.title/description')` i18n 키 이미 사용 중. ko/en 번역 키 존재 확인. 이미 완료 상태.
+- [x] **[2026-04-24 rental-phase9] 🟢 LOW router.refresh() + invalidateKeys 이중 동기화** — 실측 확인(2026-04-27): `CheckoutDetailPage`가 async Server Component — 상태 변경 후 breadcrumb·메타데이터 동기화에 `router.refresh()` 필수. 의도적 이중 갱신. 유지 결정.
+- [x] **[2026-04-24 sprint-1.2] 🟢 LOW computeStepIndex exhaustive satisfies 전환 미완** — 실측 확인(2026-04-27): `checkout-fsm.ts` `computeStepIndex` 이미 `as const satisfies Record<CheckoutStatus, number>` 패턴 적용됨 (rental/non-rental 양쪽). 이미 완료 상태.

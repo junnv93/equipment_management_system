@@ -651,7 +651,6 @@
     "label": "Your Turn",
     "tooltip": "{action} required",
     "count": "{count} to review",
-    "summary": "Your turn: {count} items",
     "summaryAria": "Your turn pending: {count} items"
   },
   "toast": {

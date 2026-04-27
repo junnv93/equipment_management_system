@@ -41,17 +41,15 @@ export function PrintableAuditReport({
   const { fmtDateTime } = useDateFormatter();
   const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(tAudit);
 
-  /**
-   * 필터 정보 포맷팅
-   */
   const formatFilters = (f: AuditLogFilter): string => {
     const parts: string[] = [];
-    if (f.entityType) parts.push(`대상=${getEntityTypeLabel(f.entityType)}`);
-    if (f.action) parts.push(`액션=${getActionLabel(f.action)}`);
-    if (f.userId) parts.push(`사용자=${f.userId}`);
-    if (f.startDate) parts.push(`시작일=${f.startDate}`);
-    if (f.endDate) parts.push(`종료일=${f.endDate}`);
-    return parts.length > 0 ? parts.join(', ') : '전체';
+    if (f.entityType)
+      parts.push(tAudit('report.filter.entityType', { value: getEntityTypeLabel(f.entityType) }));
+    if (f.action) parts.push(tAudit('report.filter.action', { value: getActionLabel(f.action) }));
+    if (f.userId) parts.push(tAudit('report.filter.userId', { value: f.userId }));
+    if (f.startDate) parts.push(tAudit('report.filter.startDate', { value: f.startDate }));
+    if (f.endDate) parts.push(tAudit('report.filter.endDate', { value: f.endDate }));
+    return parts.length > 0 ? parts.join(', ') : tAudit('report.filter.all');
   };
 
   /**

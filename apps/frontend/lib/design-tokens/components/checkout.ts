@@ -952,7 +952,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
  * 탭 카운트 배지 토큰 — 활성/비활성/알림 상태에 따라 색상 전환
  */
 export const CHECKOUT_TAB_BADGE_TOKENS = {
-  base: `ml-1 px-1.5 py-0.5 rounded-full ${MICRO_TYPO.badge} font-semibold leading-none tabular-nums`,
+  base: `ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full ${MICRO_TYPO.badge} font-semibold leading-none tabular-nums`,
   active: 'bg-primary/15 text-primary',
   inactive: 'bg-muted text-muted-foreground',
   alert: ALERT_TAB_BADGE_COLOR,

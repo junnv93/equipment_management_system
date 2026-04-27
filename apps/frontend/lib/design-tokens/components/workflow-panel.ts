@@ -9,7 +9,7 @@
  */
 
 import { ELEVATION_TOKENS, FOCUS_TOKENS, MICRO_TYPO, SPACING_RHYTHM_TOKENS } from '../semantic';
-import { TRANSITION_PRESETS } from '../motion';
+import { ANIMATION_PRESETS, TRANSITION_PRESETS } from '../motion';
 import { getSemanticLeftBorderClasses } from '../brand';
 
 export const WORKFLOW_PANEL_TOKENS = {
@@ -32,8 +32,8 @@ export const WORKFLOW_PANEL_TOKENS = {
 
   urgencyDot: {
     normal: 'w-2 h-2 rounded-full bg-brand-info',
-    warning: 'w-2 h-2 rounded-full bg-brand-warning motion-safe:animate-pulse',
-    critical: 'w-2 h-2 rounded-full bg-brand-critical motion-safe:animate-pulse',
+    warning: `w-2 h-2 rounded-full bg-brand-warning ${ANIMATION_PRESETS.pulse}`,
+    critical: `w-2 h-2 rounded-full bg-brand-critical ${ANIMATION_PRESETS.pulse}`,
   },
 
   hint: 'text-sm text-muted-foreground leading-relaxed',

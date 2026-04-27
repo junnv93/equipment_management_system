@@ -55,7 +55,7 @@ export default function ConditionCheckClient({
       checkoutApi.submitConditionCheck(checkout.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.resource.detail(checkout.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
       router.push(`/checkouts/${checkout.id}`);
     },
   });
