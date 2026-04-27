@@ -315,6 +315,56 @@ test.describe('Authentication and Role-based Access', () => {
     });
   });
 
+  test.describe('Group 1: quality_manager Authentication', () => {
+    test('quality_manager — 3컬럼 Row3 레이아웃 + AlertBanner 표시', async ({
+      qualityManagerPage,
+    }) => {
+      await qualityManagerPage.goto('/');
+      await qualityManagerPage.waitForLoadState('load');
+
+      // 역할 배지 확인
+      const roleBadge = qualityManagerPage.locator('[aria-label*="현재 역할"]', {
+        hasText: '품질책임자',
+      });
+      await expect(roleBadge).toBeVisible({ timeout: 10000 });
+
+      // AlertBanner 표시 확인
+      const banner = qualityManagerPage.locator('[aria-label="긴급 조치 요약"]');
+      await expect(banner).toBeVisible({ timeout: 5000 });
+
+      // Row3: 승인대기 카드 표시 확인 (three-col-action-first 레이아웃)
+      const approvalCard = qualityManagerPage.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
+    });
+  });
+
+  test.describe('Group 1: system_admin Authentication', () => {
+    test('system_admin — 사이드바 3 위젯 표시', async ({ systemAdminPage }) => {
+      await systemAdminPage.goto('/');
+      await systemAdminPage.waitForLoadState('load');
+
+      // 역할 배지 확인
+      const roleBadge = systemAdminPage.locator('[aria-label*="현재 역할"]', {
+        hasText: '시스템 관리자',
+      });
+      await expect(roleBadge).toBeVisible({ timeout: 10000 });
+
+      // 사이드바 3 위젯 존재 확인 (data-widget 속성)
+      const systemHealthWidget = systemAdminPage.locator('[data-widget="systemHealth"]');
+      const teamDistributionWidget = systemAdminPage.locator('[data-widget="teamDistribution"]');
+      const miniCalendarWidget = systemAdminPage.locator('[data-widget="miniCalendar"]');
+
+      await expect(systemHealthWidget).toBeVisible({ timeout: 5000 });
+      await expect(teamDistributionWidget).toBeVisible();
+      await expect(miniCalendarWidget).toBeVisible();
+
+      // 수평 스크롤 없음 확인
+      const bodyWidth = await systemAdminPage.evaluate(() => document.body.scrollWidth);
+      const vp = await systemAdminPage.viewportSize();
+      expect(bodyWidth).toBeLessThanOrEqual((vp?.width ?? 1280) + 20);
+    });
+  });
+
   test.describe('Group 7: Accessibility - Role Badge Labels', () => {
     test('Role badges use correct Korean labels', async ({
       testOperatorPage,

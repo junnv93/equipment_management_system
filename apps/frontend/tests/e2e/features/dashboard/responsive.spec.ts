@@ -314,4 +314,60 @@ test.describe('Responsive Design', () => {
     // Verify chart is interactive (if applicable)
     console.log('✓ Chart responsiveness verified across mobile, tablet, and desktop viewports');
   });
+
+  // ── AP-01: xl: 브레이크포인트 검증 (1024 / 1280 / 1440 / 1920) ──────────────
+
+  const WIDE_VIEWPORTS = [
+    { name: '1024px (tablet-xl)', width: 1024, height: 768 },
+    { name: '1280px (laptop)', width: 1280, height: 800 },
+    { name: '1440px (desktop)', width: 1440, height: 900 },
+    { name: '1920px (wide)', width: 1920, height: 1080 },
+  ] as const;
+
+  for (const vp of WIDE_VIEWPORTS) {
+    test(`Test 9.6: ${vp.name} — 대시보드 핵심 위젯 표시`, async ({ siteAdminPage }) => {
+      await siteAdminPage.setViewportSize({ width: vp.width, height: vp.height });
+      await siteAdminPage.goto('/');
+      await siteAdminPage.waitForLoadState('load');
+
+      // Welcome header 표시
+      const welcomeHeader = siteAdminPage.getByRole('heading', { level: 1 }).first();
+      await expect(welcomeHeader).toBeVisible({ timeout: 10000 });
+
+      // KPI 섹션 표시
+      const kpiSection = siteAdminPage.locator('section[aria-label="장비 현황 통계"]');
+      await expect(kpiSection).toBeVisible();
+
+      // AlertBanner 표시 (role="status" 또는 role="alert")
+      const banner = siteAdminPage.locator('[aria-label="긴급 조치 요약"]');
+      await expect(banner).toBeVisible();
+
+      // 수평 스크롤 없음
+      const bodyWidth = await siteAdminPage.evaluate(() => document.body.scrollWidth);
+      expect(bodyWidth).toBeLessThanOrEqual(vp.width + 20);
+
+      console.log(`✓ ${vp.name} 레이아웃 검증 완료`);
+    });
+  }
+
+  test('Test 9.7: xl: 브레이크포인트(≥1280) — Row0 수평 레이아웃 전환', async ({
+    siteAdminPage,
+  }) => {
+    // 1024px: Row0 세로 스택 (flex-col)
+    await siteAdminPage.setViewportSize({ width: 1024, height: 768 });
+    await siteAdminPage.goto('/');
+    await siteAdminPage.waitForLoadState('load');
+
+    // 1280px: Row0 수평 배치 (xl:flex-row)
+    await siteAdminPage.setViewportSize({ width: 1280, height: 800 });
+
+    // header + quick-action-bar 둘 다 표시 확인
+    const header = siteAdminPage.getByRole('heading', { level: 1 }).first();
+    const quickNav = siteAdminPage.locator('nav[aria-label="빠른 액션"]');
+
+    await expect(header).toBeVisible({ timeout: 5000 });
+    await expect(quickNav).toBeVisible();
+
+    console.log('✓ xl: 브레이크포인트(1280px) Row0 수평 레이아웃 확인');
+  });
 });
