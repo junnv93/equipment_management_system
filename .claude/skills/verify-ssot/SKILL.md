@@ -663,6 +663,43 @@ grep -n "urgency.*critical\|urgency.*warning\|urgency.*normal" \
 - `packages/schemas/src/fsm/checkout-fsm.ts` — `computeUrgency` 정의
 - `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — 도입 컴포넌트 (2026-04-27)
 
+### Step 32: config 객체 파생 boolean 필드 → 수치 SSOT (2026-04-27 추가)
+
+설정 객체(TabMeta 등)에서 `boolean` 필드가 다른 수치 필드에서 **파생 가능**하면, boolean을 제거하고 수치 필드를 SSOT로 유지해야 한다. boolean은 수치의 중복 표현이므로 값이 어긋날 위험이 있다.
+
+**패턴:** `multiStep?: boolean` 같은 필드가 `totalApprovalSteps: number`에서 `> 1`로 도출 가능하면 → boolean 제거.
+
+```typescript
+// ❌ boolean + 수치 중복 — drift 위험
+interface TabMeta {
+  multiStep?: boolean;        // totalApprovalSteps > 1과 중복
+  totalApprovalSteps: number;
+}
+
+// ✅ 수치 SSOT 단일화
+interface TabMeta {
+  totalApprovalSteps: number; // 1=단일, 2=disposal, 3=calibration_plan
+}
+// 소비처: const isMultiStep = meta.totalApprovalSteps > 1;
+```
+
+**탐지 — approvals-api.ts TabMeta:**
+```bash
+# multiStep boolean 재도입 탐지
+grep -n "multiStep\s*[?:]\s*boolean" apps/frontend/lib/api/approvals-api.ts
+
+# totalApprovalSteps가 있는데 별도 boolean 필드로 중복 파생하는 패턴
+grep -n "totalSteps\s*[?:]\s*boolean\|stepCount\s*[?:]\s*boolean\|hasMultipleSteps\s*[?:]\s*boolean" \
+  apps/frontend/lib/api/ --include="*.ts"
+```
+
+**PASS:** `multiStep?: boolean` 선언 0건 (전 approve 카테고리 파일). **FAIL:** boolean 재도입 → 제거 후 수치 비교 패턴으로 교체.
+
+**관련 파일:**
+- `apps/frontend/lib/api/approvals-api.ts` — `TabMeta.totalApprovalSteps` SSOT (2026-04-27)
+- `apps/frontend/components/approvals/ApprovalRow.tsx` — `meta.totalApprovalSteps` 소비
+- `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — `meta.totalApprovalSteps > 1`
+
 ## Output Format
 
 ```markdown

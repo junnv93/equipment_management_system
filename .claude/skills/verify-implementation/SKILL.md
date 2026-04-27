@@ -25,7 +25,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 1  | `verify-cas`            | both     | CAS 패턴 — version, VersionedBaseService, 캐시 무효화   |
 | 2  | `verify-auth`           | backend  | 인증/인가 — req.user.userId, @RequirePermissions         |
 | 3  | `verify-zod`            | backend  | Zod 검증 — ZodValidationPipe, Query targets              |
-| 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 로컬 재정의 금지                      |
+| 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 로컬 재정의 금지, config 파생 boolean → 수치 SSOT(Step 32) |
 | 5  | `verify-hardcoding`     | both     | 하드코딩 탐지 — API 경로, queryKeys, 환경변수             |
 | 6  | `verify-frontend-state` | frontend | 상태 관리 — TanStack Query, 동적 import                   |
 | 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState            |

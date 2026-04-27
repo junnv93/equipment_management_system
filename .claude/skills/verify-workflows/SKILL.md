@@ -41,11 +41,23 @@ argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
 for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 25 33 34 35; do
   ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
 done
+
+# WF-AP 시리즈 (승인 UI 전용 — wf-ap* 프리픽스, 2026-04-27 추가)
+ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
 ```
+
+**파일 네이밍 규칙 (2026-04-27 추가):**
+- `wf-NN-*.spec.ts` — 도메인 워크플로우 (반출/교정/폐기 등 엔티티 상태 전이)
+- `wf-ap*.spec.ts` — 승인 UI 전용 워크플로우 (ARIA/접근성/bulk 액션 등 UI 패턴)
+  - `wf-ap01-*` → 승인 목록 stepper/ARIA 균일성
+  - `wf-ap02-*` → 승인 일괄 액션 (BulkActionBar/RejectModal)
+  
+두 네이밍 모두 `critical-workflows.md`에 등재되어야 한다.
 
 **PASS:** P0 워크플로우(WF-03, WF-10, WF-11) 100% 커버
 **WARN:** P1 워크플로우(WF-07, WF-08, WF-12, WF-13) 일부 미커버. WF-13 cancel 롤백 경로 추가됨 (onReturnCanceled + suite-27 S27-08)
 **INFO:** WF-20 자체점검 결재 워크플로우(P3): wf-20-self-inspection-confirmation.spec.ts, wf-20-self-inspection-ui.spec.ts, wf-20b-self-inspection-export.spec.ts 3파일 커버 (draft→submitted→approved, rejected→resubmit, export)
+**INFO:** WF-AP 시리즈(P1): wf-ap01-approvals-mini-stepper.spec.ts(ARIA 균일성), wf-ap02-approvals-bulk-reject.spec.ts(일괄 반려) 커버
 
 ### Step 2: 단계 완전성
 

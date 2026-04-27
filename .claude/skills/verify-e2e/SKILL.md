@@ -54,9 +54,51 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 
 **PASS:** `waitForTimeout` 0건. **WARN:** 헬퍼의 짧은 대기는 경고 수준.
 
+**Event-based wait 패턴 (2026-04-27 추가):**
+`waitForTimeout`은 DOM 상태 변화와 무관한 고정 sleep이므로 flaky 위험이 있다. 대신 Playwright의 retry-until 기반 어서션을 사용한다:
+
+```typescript
+// ❌ WRONG — 고정 sleep
+await page.waitForTimeout(2000);
+
+// ✅ 모달 닫힘 대기
+await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+// ✅ 행 제거 대기 (승인/반려 후 목록에서 사라짐)
+await rows.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+
+// ✅ 카운트 변화 대기
+await expect(rows).not.toHaveCount(initialCount, { timeout: 5000 });
+```
+
+`waitFor({state:'detached'})` + `.catch(() => {})` 패턴: 조건부 플로우(if 블록 내) 에서 액션이 실행될 수도 있고 안 될 수도 있을 때 — catch는 "실행 안 됨"을 정상 경로로 허용.
+
 ### Step 5: Locator 안티패턴
 
-**PASS:** `locator('[role=]')` 0건, `waitForFunction` 0건, **Tailwind utility class selector 0건**.
+**PASS:** `locator('[role=]')` 0건(예외 허용 목록 제외), `waitForFunction` 0건, **Tailwind utility class selector 0건**.
+
+**ARIA 역할 locator 허용 예외 (2026-04-27 추가):**
+`[role="X"]` CSS selector는 일반적으로 안티패턴이나, **ARIA 역할 속성 자체를 검증하는 목적**에서는 허용한다. 해당 역할이 올바르게 설정되어 있는지가 테스트 의도일 때 `getByRole()`로 대체하면 검증이 사라진다.
+
+허용 목록:
+- `[role="progressbar"]` — ARIA progressbar 균일 렌더 + aria-valuenow/valuemax 속성 검증
+- `[role="dialog"]` — 모달 열림/닫힘 상태 검증
+- `[role="toolbar"]` — BulkActionBar 같은 toolbar 역할 검증
+- `[role="checkbox"]` — 체크박스 역할 + 선택 상태 연동 검증
+- `[role="menuitem"]` — 드롭다운 메뉴 아이템 역할 검증
+
+```typescript
+// ✅ ARIA 역할 검증 목적 — 허용
+const stepper = row.locator('[role="progressbar"]');
+await expect(stepper).toHaveAttribute('aria-valuemax', '1');
+
+// ✅ dialog 열림 상태 검증 — 허용
+const modal = page.locator('[role="dialog"]');
+await expect(modal).toBeVisible();
+
+// ❌ 일반 레이아웃 요소에 role selector 사용 — 금지 (getByRole 대체)
+const nav = page.locator('[role="navigation"]');  // → page.getByRole('navigation')
+```
 
 **Tailwind utility class selector 금지** (33차 추가, review-architecture 발견):
 스켈레톤/로딩 상태 대기를 위해 `locator('.h-8.w-14')` 같은 Tailwind utility class literal 을 쓰면
