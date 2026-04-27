@@ -131,7 +131,15 @@ export class SelfInspectionsController {
   @Get('pending-approval')
   @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
   @ApiOperation({ summary: '승인 대기 자체점검 목록 (통합 승인 뷰용)' })
-  async findPendingApproval(@Request() req: AuthenticatedRequest) {
+  async findPendingApproval(@Request() req: AuthenticatedRequest): Promise<
+    {
+      id: string;
+      equipmentId: string;
+      equipmentName: string;
+      teamName: string;
+      submittedAt: string | null;
+    }[]
+  > {
     const userCtx: UserScopeContext = {
       role: req.user?.roles?.[0] as UserRole,
       site: req.user.site ?? undefined,
