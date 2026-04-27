@@ -679,6 +679,7 @@
     "network": {
       "title": "네트워크 연결을 확인해주세요",
       "description": "인터넷 연결이 끊어졌습니다. 연결 후 다시 시도하세요.",
+      "restored": "연결이 복구되었습니다. 다시 시도해 주세요.",
       "primaryCta": "다시 시도",
       "secondaryCta": ""
     }

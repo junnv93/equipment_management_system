@@ -648,7 +648,7 @@ export class DataMigrationService {
           >[0] = [];
 
           const sharedChunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
-          let chunkOffset = 0;
+          let _chunkOffset = 0;
           for (const chunk of sharedChunks) {
             const entities = chunk.map((row) => {
               // 공용장비 고정 필드 오버라이드 (사용자 입력 불허)
@@ -682,7 +682,7 @@ export class DataMigrationService {
                 });
               }
             }
-            chunkOffset += chunk.length;
+            _chunkOffset += chunk.length;
           }
 
           await this.equipmentHistoryService.createLocationHistoryBatch(

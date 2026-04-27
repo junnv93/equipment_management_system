@@ -679,6 +679,7 @@
     "network": {
       "title": "No Internet Connection",
       "description": "Check your network connection and try again.",
+      "restored": "Connection restored. Please try again.",
       "primaryCta": "Retry",
       "secondaryCta": ""
     }

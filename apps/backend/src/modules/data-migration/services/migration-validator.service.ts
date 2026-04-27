@@ -524,7 +524,7 @@ export class MigrationValidatorService {
       }
 
       const group = groups.get(groupKey)!;
-      const siteCode2 = SITE_TO_CODE[site as keyof typeof SITE_TO_CODE];
+      const _siteCode2 = SITE_TO_CODE[site as keyof typeof SITE_TO_CODE];
       row.mappedData.managementNumber = generateTemporaryManagementNumber(
         site as Site,
         classification as Classification,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   EMPTY_STATE_TOKENS,
@@ -47,6 +48,7 @@ export default function CheckoutEmptyState({
   roleLabel,
   className,
 }: CheckoutEmptyStateProps) {
+  const t = useTranslations('checkouts');
   const showPrimary = canAct !== false;
   const Icon = CHECKOUT_ICON_MAP.emptyState[variant];
 
@@ -83,7 +85,7 @@ export default function CheckoutEmptyState({
 
       {variant === 'network' && isOnline && (
         <p className="mt-1 text-xs text-brand-ok bg-brand-ok/10 rounded px-2 py-1 inline-block">
-          연결이 복구되었습니다. 다시 시도해 주세요.
+          {t('emptyState.network.restored')}
         </p>
       )}
 

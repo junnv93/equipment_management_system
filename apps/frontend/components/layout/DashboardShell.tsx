@@ -68,6 +68,7 @@ interface SidebarItemProps {
   isActive?: boolean;
   badge?: number;
   badgeLinkHref?: string;
+  badgeSrLabel?: string;
   isCollapsed?: boolean;
 }
 
@@ -79,9 +80,11 @@ const SidebarItem = memo(function SidebarItem({
   isActive,
   badge,
   badgeLinkHref,
+  badgeSrLabel,
   isCollapsed,
 }: SidebarItemProps) {
   const t = useTranslations('navigation');
+  const resolvedSrLabel = badgeSrLabel ?? t('layout.notificationCount', { count: badge ?? 0 });
   return (
     <Link
       href={href}
@@ -95,11 +98,7 @@ const SidebarItem = memo(function SidebarItem({
       {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
       {/* 펼쳐진 상태: NavBadge (별도 링크 지원) */}
       {!isCollapsed && badge !== undefined && badge > 0 && (
-        <NavBadge
-          count={badge}
-          srLabel={t('layout.notificationCount', { count: badge })}
-          badgeLinkHref={badgeLinkHref}
-        />
+        <NavBadge count={badge} srLabel={resolvedSrLabel} badgeLinkHref={badgeLinkHref} />
       )}
       {/* 접힌 상태: dot 인디케이터 */}
       {isCollapsed && badge !== undefined && badge > 0 && (
@@ -108,7 +107,7 @@ const SidebarItem = memo(function SidebarItem({
             'absolute top-0.5 right-0.5 w-2 h-2 rounded-full',
             SIDEBAR_ITEM_TOKENS.badge.background
           )}
-          aria-label={t('layout.notificationCount', { count: badge })}
+          aria-label={resolvedSrLabel}
         />
       )}
     </Link>
@@ -298,10 +297,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 {/* 아이템 목록 */}
                 <div className="flex flex-col gap-1">
                   {section.items.map((item) => {
-                    const yourTurnHref =
-                      item.href === FRONTEND_ROUTES.CHECKOUTS.LIST && item.badge && item.badge > 0
-                        ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${CHECKOUT_QUERY_PARAMS.VIEW}=${CHECKOUT_QUERY_PARAMS.VIEW_VALUES.YOUR_TURN}`
-                        : undefined;
+                    const isCheckoutItem =
+                      item.href === FRONTEND_ROUTES.CHECKOUTS.LIST && item.badge && item.badge > 0;
+                    const yourTurnHref = isCheckoutItem
+                      ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${CHECKOUT_QUERY_PARAMS.VIEW}=${CHECKOUT_QUERY_PARAMS.VIEW_VALUES.YOUR_TURN}`
+                      : undefined;
+                    const badgeSrLabel = isCheckoutItem
+                      ? t('layout.checkoutYourTurnAria', { count: item.badge ?? 0 })
+                      : undefined;
                     return (
                       <SidebarItem
                         key={item.href}
@@ -311,6 +314,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                         isActive={isNavItemActive(item.href, pathname)}
                         badge={item.badge}
                         badgeLinkHref={yourTurnHref}
+                        badgeSrLabel={badgeSrLabel}
                         isCollapsed={isCollapsed}
                       />
                     );

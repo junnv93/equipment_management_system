@@ -65,6 +65,19 @@ export default function ApprovalDetailModal({
     ? Math.floor((Date.now() - new Date(item.requestedAt).getTime()) / 86_400_000)
     : 0;
 
+  // checkout 카테고리에서만 긴급도 표시 (expectedReturnDate 기반)
+  const isCheckoutCategory = item.category === 'outgoing' || item.category === 'incoming';
+  const urgency = (() => {
+    if (!isCheckoutCategory) return null;
+    const expectedReturnDate = item.details.expectedReturnDate;
+    if (typeof expectedReturnDate !== 'string') return 'normal' as const;
+    const due = new Date(expectedReturnDate).getTime();
+    const now = Date.now();
+    if (due < now) return 'critical' as const;
+    if (due - now < 48 * 60 * 60 * 1000) return 'warning' as const;
+    return 'normal' as const;
+  })();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] data-[state=open]:motion-safe:duration-300 data-[state=open]:motion-safe:ease-spring-pop">
@@ -107,6 +120,20 @@ export default function ApprovalDetailModal({
                     {t('detail.elapsedDaysValue', { days: elapsedDays })}
                   </p>
                 </div>
+                {urgency !== null && (
+                  <div>
+                    <p className="text-muted-foreground">{t('detail.urgencyLabel')}</p>
+                    <p
+                      className={`font-medium ${urgency === 'critical' ? 'text-brand-critical' : urgency === 'warning' ? 'text-brand-warning' : 'text-muted-foreground'}`}
+                    >
+                      {urgency === 'critical'
+                        ? t('detail.urgencyCritical')
+                        : urgency === 'warning'
+                          ? t('detail.urgencyWarning')
+                          : t('detail.urgencyNormal')}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

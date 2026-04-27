@@ -8,7 +8,7 @@
  *    — validator가 자동 주입 (사용자 입력 불필요)
  * ⚠️ 관리번호 미기입 시 generateTemporaryManagementNumber() SSOT 경유 자동 생성
  */
-import type { Site, SharedSource, Classification } from '@equipment-management/schemas';
+import type { SharedSource, Classification } from '@equipment-management/schemas';
 import {
   SITE_LABELS,
   SHARED_SOURCE_LABELS,

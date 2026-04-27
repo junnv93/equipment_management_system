@@ -285,7 +285,8 @@ export class CheckoutsService extends VersionedBaseService {
     action: CheckoutAction,
     entityId: string,
     nextStatus: CheckoutStatus,
-    req: AuthenticatedRequest
+    req: AuthenticatedRequest,
+    extraInfo?: Record<string, unknown>
   ): Promise<void> {
     try {
       await this.auditService.create({
@@ -302,6 +303,7 @@ export class CheckoutsService extends VersionedBaseService {
             from: checkout.status,
             to: nextStatus,
             purpose: checkout.purpose,
+            ...extraInfo,
           },
         },
         userSite: req.user?.site,
@@ -3078,16 +3080,15 @@ export class CheckoutsService extends VersionedBaseService {
     { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
   > {
     const cacheKey = `${this.CACHE_PREFIX}.rejection-presets`;
-    const cached =
-      await this.cacheService.get<
-        {
-          id: string;
-          label: string;
-          template: string | null;
-          isDefault: boolean;
-          sortOrder: number;
-        }[]
-      >(cacheKey);
+    const cached = await this.cacheService.get<
+      {
+        id: string;
+        label: string;
+        template: string | null;
+        isDefault: boolean;
+        sortOrder: number;
+      }[]
+    >(cacheKey);
     if (cached) return cached;
 
     const rows = await this.db
@@ -3200,8 +3201,17 @@ export class CheckoutsService extends VersionedBaseService {
     );
 
     // Audit — reject 액션으로 기록 (approved→pending 롤백)
-    // AuditLog 데코레이터가 컨트롤러 레벨에서 reason을 캡처함
-    await this.writeTransitionAudit(checkout, 'reject', uuid, CSVal.PENDING as CheckoutStatus, req);
+    await this.writeTransitionAudit(
+      checkout,
+      'reject',
+      uuid,
+      CSVal.PENDING as CheckoutStatus,
+      req,
+      {
+        revokeReason: dto.reason,
+        previousApprovedAt: approvedAt.toISOString(),
+      }
+    );
 
     const affectedTeams = await this.getAffectedTeamIds(checkout);
     await this.invalidateCache(affectedTeams, uuid);
