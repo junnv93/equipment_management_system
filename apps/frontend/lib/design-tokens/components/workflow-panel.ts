@@ -8,6 +8,8 @@
  * 의존: PR-3 ELEVATION_TOKENS.surface / SPACING_RHYTHM_TOKENS
  */
 
+import { type ActorVariant } from '@equipment-management/schemas';
+
 import { ELEVATION_TOKENS, FOCUS_TOKENS, MICRO_TYPO, SPACING_RHYTHM_TOKENS } from '../semantic';
 import { ANIMATION_PRESETS, TRANSITION_PRESETS } from '../motion';
 import { getSemanticLeftBorderClasses } from '../brand';
@@ -110,10 +112,7 @@ export const WORKFLOW_PANEL_TOKENS = {
       icon: 'text-brand-ok',
       accent: 'bg-brand-ok/5',
     },
-  } satisfies Record<
-    'requester' | 'approver' | 'receiver',
-    { border: string; icon: string; accent: string }
-  >,
+  } satisfies Record<ActorVariant, { border: string; icon: string; accent: string }>,
 
   /**
    * overflow 서브트리 — compact variant DropdownMenu 트리거 / 메뉴 토큰

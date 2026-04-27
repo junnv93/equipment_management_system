@@ -11,7 +11,7 @@ import type {
   Urgency,
   UserRole,
 } from '@equipment-management/schemas';
-import { roleToActorVariant } from '@equipment-management/schemas';
+import { roleToActorVariant, UserRoleValues } from '@equipment-management/schemas';
 
 import {
   DropdownMenu,
@@ -131,7 +131,7 @@ export function NextStepPanel({
   // 내 차례 판정 — system_admin은 availableToCurrentUser로 판단 (전체 역할 겸임)
   const userActorVariant = currentUserRole ? roleToActorVariant(currentUserRole) : null;
   const isMyTurn =
-    currentUserRole === 'system_admin'
+    currentUserRole === UserRoleValues.SYSTEM_ADMIN
       ? descriptor.availableToCurrentUser
       : userActorVariant !== null && userActorVariant === actorVariant;
 
