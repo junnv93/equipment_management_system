@@ -45,11 +45,17 @@ export default async function NotFound() {
               {t('equipment')}
             </Link>
             <span className="text-muted-foreground">|</span>
-            <Link href="/calibration" className="text-sm text-primary hover:underline">
+            <Link
+              href={FRONTEND_ROUTES.CALIBRATION.LIST}
+              className="text-sm text-primary hover:underline"
+            >
               {t('calibration')}
             </Link>
             <span className="text-muted-foreground">|</span>
-            <Link href="/checkouts" className="text-sm text-primary hover:underline">
+            <Link
+              href={FRONTEND_ROUTES.CHECKOUTS.LIST}
+              className="text-sm text-primary hover:underline"
+            >
               {t('checkouts')}
             </Link>
           </div>

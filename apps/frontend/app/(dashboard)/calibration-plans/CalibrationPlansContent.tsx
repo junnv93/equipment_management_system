@@ -44,6 +44,7 @@ import {
   resolveDataScope,
   SELECTOR_PAGE_SIZE,
   Permission,
+  FRONTEND_ROUTES,
 } from '@equipment-management/shared-constants';
 import {
   CALIBRATION_PLAN_KPI_TOKENS,
@@ -196,7 +197,7 @@ export default function CalibrationPlansContent({
         actions={
           canCreatePlan ? (
             <Button asChild>
-              <Link href="/calibration-plans/create">
+              <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.CREATE}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('plansList.createButton')}
               </Link>
@@ -396,7 +397,7 @@ export default function CalibrationPlansContent({
             <p className={CALIBRATION_PLAN_LIST_TOKENS.empty.text}>{t('plansList.list.empty')}</p>
             {canCreatePlan && (
               <Button asChild className="mt-4">
-                <Link href="/calibration-plans/create">
+                <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.CREATE}>
                   <Plus className="h-4 w-4 mr-2" />
                   {t('plansList.createButton')}
                 </Link>

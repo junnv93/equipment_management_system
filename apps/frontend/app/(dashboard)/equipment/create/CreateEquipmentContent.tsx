@@ -18,6 +18,7 @@ import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
 import { uploadEquipmentDocuments } from '@/lib/utils/document-upload-utils';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface CreateEquipmentContentProps {
   userDefaults?: {
@@ -194,13 +195,13 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
         onBack={handleCancel}
         actions={
           <div className="flex gap-2">
-            <Link href="/checkouts/import/shared">
+            <Link href={FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL}>
               <Button variant="outline" size="sm" className="gap-2">
                 <Info className="h-4 w-4" />
                 {t('form.create.sharedLink')}
               </Button>
             </Link>
-            <Link href="/checkouts/import/rental">
+            <Link href={FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL}>
               <Button variant="outline" size="sm" className="gap-2">
                 <Info className="h-4 w-4" />
                 {t('form.create.rentalLink')}

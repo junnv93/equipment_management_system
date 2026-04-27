@@ -3,6 +3,7 @@ import { Users, ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 /**
  * 팀 Not Found 페이지
@@ -24,7 +25,7 @@ export default async function TeamsNotFound() {
         <p className="text-muted-foreground mb-6 max-w-md">{t('notFound.description')}</p>
 
         <Button asChild className="gap-2">
-          <Link href="/teams">
+          <Link href={FRONTEND_ROUTES.TEAMS.LIST}>
             <ArrowLeft className="h-4 w-4" />
             {t('notFound.backToList')}
           </Link>
