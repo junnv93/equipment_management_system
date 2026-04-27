@@ -60,7 +60,9 @@ V1 리뷰(UX/Visual)의 90%는 이미 80~87차 harness로 커버되었으나, V2
 
 ---
 
-## Sprint 1 — FSM Authority 단일화 (P0 Block)
+## Sprint 1 — FSM Authority 단일화 (P0 Block) ✅ 완료 (2026-04-24~25)
+
+> **Sprint 1.1~1.5 모두 harness PASS** — eval: checkout-fsm-resolve-action, checkout-descriptor-phase-fields, checkout-meta-fail-closed, sprint-1-4-legacy-actions-removal, checkout-fsm-exhaustive-satisfies
 
 > 리뷰가 "이게 안 되면 나머지는 사상누각"이라 명시. UX·Visual 개선은 이 후에.
 
@@ -118,7 +120,9 @@ V1 리뷰(UX/Visual)의 90%는 이미 80~87차 harness로 커버되었으나, V2
 
 ---
 
-## Sprint 2 — Token Layer 봉합 (L-2~L-8 · V1 S4 · §9 일부)
+## Sprint 2 — Token Layer 봉합 (L-2~L-8 · V1 S4 · §9 일부) ✅ 완료 (2026-04-26~27)
+
+> **Sprint 2.1~2.8 모두 harness PASS** — eval: checkout-arch-pr3-11, checkout-sprint-2-5-2-8
 
 > 기계적 치환 중심. 신규 토큰 3개 + 기존 토큰 확장 4개. MEMORY.md의 `feedback_no_fabricate_domain_data`·`verify-design-tokens` 스킬 준수.
 
@@ -168,7 +172,9 @@ V1 리뷰(UX/Visual)의 90%는 이미 80~87차 harness로 커버되었으나, V2
 
 ---
 
-## Sprint 3 — Perf & Cache Boundary (P-1~P-4 · §3)
+## Sprint 3 — Perf & Cache Boundary (P-1~P-4 · §3) ✅ 완료 (2026-04-27)
+
+> **Sprint 3.1~3.3 harness PASS** — eval: checkout-sprint3-bff-querykeys.md, checkout-memo-boundary-optimization.md
 
 ### 3.1 · Backend BFF endpoint: `/inbound-overview` (P-1, P0)
 
