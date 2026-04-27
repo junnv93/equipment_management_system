@@ -169,7 +169,7 @@ export default function CreateCalibrationPlanContent() {
   if (guardLoading || !allowed) return null;
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('wide')}>
       <div className={CALIBRATION_PLAN_CREATE_TOKENS.header.container}>
         <Button variant="ghost" size="icon" asChild aria-label={t('planCreate.backToList')}>
           <Link href="/calibration-plans">

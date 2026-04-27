@@ -69,6 +69,8 @@ import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-consta
 import { useAuth } from '@/hooks/use-auth';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
+import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
+import { DdayBadge } from '@/components/checkouts/DdayBadge';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
@@ -464,7 +466,7 @@ export default function CheckoutDetailClient({
     borrowerRejectMutation.isPending;
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
       <div className="flex justify-between items-start">
         <div>
@@ -474,10 +476,19 @@ export default function CheckoutDetailClient({
               {t('actions.backToList')}
             </Link>
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('detail.title')}</h1>
             <CheckoutStatusBadge status={checkout.status} />
             {renderPurposeBadge(checkout.purpose)}
+            {checkout.expectedReturnDate &&
+              checkout.status !== CSVal.REJECTED &&
+              checkout.status !== CSVal.CANCELED &&
+              checkout.status !== CSVal.RETURN_APPROVED && (
+                <DdayBadge
+                  variant="hero"
+                  daysRemaining={calculateDaysRemaining(checkout.expectedReturnDate)}
+                />
+              )}
           </div>
           <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>

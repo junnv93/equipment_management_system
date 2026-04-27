@@ -12,6 +12,7 @@ import * as ncApiServer from '@/lib/api/non-conformances-api-server';
 import NCDetailClient from '@/components/non-conformances/NCDetailClient';
 import { ClientOnly } from '@/components/shared/ClientOnly';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -33,9 +34,11 @@ function NCDetailLoadingFallback() {
 
 export default function NCDetailPage(props: PageProps) {
   return (
-    <Suspense fallback={<NCDetailLoadingFallback />}>
-      <NCDetailAsync paramsPromise={props.params} />
-    </Suspense>
+    <div className={getPageContainerClasses('wide', 'space-y-0')}>
+      <Suspense fallback={<NCDetailLoadingFallback />}>
+        <NCDetailAsync paramsPromise={props.params} />
+      </Suspense>
+    </div>
   );
 }
 

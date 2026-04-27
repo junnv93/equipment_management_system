@@ -9,7 +9,7 @@ import { getPageContainerClasses } from '@/lib/design-tokens';
  */
 export function CheckoutDetailSkeleton() {
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div className="space-y-2">

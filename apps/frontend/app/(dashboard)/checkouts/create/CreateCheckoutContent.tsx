@@ -296,7 +296,7 @@ export default function CreateCheckoutContent() {
   if (!canCreate) return null;
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('wide')}>
       <PageHeader
         title={t('create.title')}
         subtitle={t('create.subtitle')}

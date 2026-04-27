@@ -34,6 +34,7 @@ import {
   ANIMATION_PRESETS,
   NC_BANNER_TOKENS,
   SHARED_EQUIPMENT_BANNER_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
@@ -167,7 +168,7 @@ export function EquipmentDetailClient({
       />
 
       {/* 컨텐츠 영역 — AP-02 간격 리듬: 섹션 간 space-y-6 (매크로) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className={getPageContainerClasses('dashboard', 'space-y-6')}>
         {/* KPI 스트립 */}
         <EquipmentKpiStrip equipment={equipment} />
         {/* 폐기 진행 중 배너 */}

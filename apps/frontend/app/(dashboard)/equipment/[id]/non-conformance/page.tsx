@@ -38,9 +38,11 @@ const getEquipmentCached = cache(async (id: string) => {
 
 export default function NonConformanceManagementPage(props: PageProps) {
   return (
-    <Suspense fallback={<NonConformanceSkeleton />}>
-      <NonConformanceAsync paramsPromise={props.params} />
-    </Suspense>
+    <div className={getPageContainerClasses('detail')}>
+      <Suspense fallback={<NonConformanceSkeleton />}>
+        <NonConformanceAsync paramsPromise={props.params} />
+      </Suspense>
+    </div>
   );
 }
 
@@ -80,7 +82,7 @@ async function NonConformanceAsync({ paramsPromise }: { paramsPromise: Promise<{
  */
 function NonConformanceSkeleton() {
   return (
-    <div className={getPageContainerClasses('detail')}>
+    <div className="space-y-6">
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />

@@ -14,21 +14,32 @@
  */
 
 /** 페이지 컨테이너 variant */
-export type PageContainerVariant = 'list' | 'detail' | 'wide' | 'form' | 'centered';
+export type PageContainerVariant = 'list' | 'detail' | 'wide' | 'dashboard' | 'form' | 'centered';
 
 /**
  * 페이지 컨테이너 max-width variants
  *
- * - list: 전체 너비 (container의 2xl: 1400px 제한)
- * - detail: 넓은 폼/상세 (56rem)
- * - wide: 넓은 폼/생성/편집 (64rem) — 장비 등록/수정 등
- * - form: 좁은 폼 (42rem)
- * - centered: 전체 너비 + 수직 중앙 정렬 (로딩/빈 상태)
+ * | variant   | max-width    | px   | 적용 도메인                              |
+ * |-----------|--------------|------|----------------------------------------|
+ * | list      | (없음)       | 1400 | 모든 목록/관리 페이지 (장비·반출·교정·부적합·승인) |
+ * | detail    | max-w-4xl    | 896  | 단일 집중 상세 (교정계획 상세)               |
+ * | wide      | max-w-5xl    | 1024 | 다중 섹션 상세 (부적합 상세·반출 상세·생성폼)   |
+ * | dashboard | max-w-7xl    | 1280 | 대시보드형 상세 (장비 상세: sticky헤더·KPI·탭) |
+ * | form      | max-w-2xl    | 672  | 좁은 단일 폼 (상태확인·반입처리)             |
+ * | centered  | (없음)       | 1400 | 로딩/빈 상태 수직 중앙 정렬                 |
+ *
+ * 컨테이너 선택 규칙:
+ * - 목록 페이지 → list
+ * - 단순 상세/승인 상세 → detail
+ * - 복잡한 상세 (2+ 섹션 그룹) → wide
+ * - KPI strip + 탭 + 테이블 포함 상세 → dashboard
+ * - 단일 폼 → form
  */
 const PAGE_MAX_WIDTH: Record<PageContainerVariant, string> = {
   list: '',
   detail: 'max-w-4xl',
   wide: 'max-w-5xl',
+  dashboard: 'max-w-7xl',
   form: 'max-w-2xl',
   centered: '',
 } as const;
@@ -41,16 +52,19 @@ const PAGE_MAX_WIDTH: Record<PageContainerVariant, string> = {
  * @returns 조합된 Tailwind 클래스 문자열
  *
  * @example
- * // 목록 페이지 (장비, 반출입, 교정 등)
+ * // 목록 페이지 (장비, 반출, 교정, 부적합, 승인 등)
  * <div className={getPageContainerClasses()}>
  *
- * // 상세/편집 페이지
+ * // 단순 상세 페이지 (교정계획 상세 등)
  * <div className={getPageContainerClasses('detail')}>
  *
- * // 넓은 폼 페이지 (장비 등록/수정)
+ * // 복잡한 상세/생성 폼 (부적합 상세, 반출 상세, 생성 폼 등)
  * <div className={getPageContainerClasses('wide')}>
  *
- * // 좁은 폼 페이지 (생성, 체크)
+ * // 대시보드형 상세 (장비 상세: KPI strip + 탭 포함)
+ * <div className={getPageContainerClasses('dashboard')}>
+ *
+ * // 좁은 단일 폼 (상태확인, 반입처리 등)
  * <div className={getPageContainerClasses('form')}>
  *
  * // 로딩/빈 상태 (수직 중앙)

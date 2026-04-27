@@ -233,7 +233,7 @@ export default function NonConformanceManagementClient({
 
   if (loading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-8 w-64" />
@@ -258,7 +258,7 @@ export default function NonConformanceManagementClient({
 
   if (isError) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div>
         <Card className="p-6 bg-destructive/10 border-destructive/20 dark:bg-destructive/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -281,7 +281,7 @@ export default function NonConformanceManagementClient({
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div>
       {/* 헤더 */}
       <div className="mb-6">
         <Link
