@@ -105,7 +105,7 @@ export function ApprovalsClient({
     isError,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    queryKey: queryKeys.approvals.list(activeTab),
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
     staleTime: CACHE_TIMES.SHORT,
   });
@@ -143,7 +143,7 @@ export function ApprovalsClient({
         item.originalData
       );
     },
-    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
@@ -214,7 +214,7 @@ export function ApprovalsClient({
       const equipmentId = item.details?.equipmentId as string | undefined;
       await approvalsApi.reject(item.category, item.id, reason, equipmentId, item.originalData);
     },
-    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
@@ -265,7 +265,7 @@ export function ApprovalsClient({
     mutationFn: async ({ ids, comment }) => {
       return await approvalsApi.bulkApprove(activeTab, ids, comment);
     },
-    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
@@ -362,7 +362,7 @@ export function ApprovalsClient({
     mutationFn: async ({ ids, reason }) => {
       return await approvalsApi.bulkReject(activeTab, ids, reason);
     },
-    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
@@ -466,7 +466,6 @@ export function ApprovalsClient({
           totalPending={kpi.totalPending}
           urgentCount={kpi.urgentCount}
           avgWaitDays={kpi.avgWaitDays}
-          todayProcessed={kpi.todayProcessed}
           isLoading={isLoading && !pendingCounts}
         />
 

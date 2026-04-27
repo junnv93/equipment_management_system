@@ -87,13 +87,25 @@
   },
   "kpi": {
     "totalPending": "Total Pending",
+    "urgent": "Urgent",
     "urgentCount": "Urgent (8d+)",
     "urgentSub": "Over 8 days",
+    "noUrgent": "No urgent",
     "avgWait": "Avg. Wait",
     "days": "{days}d",
     "dayUnit": "d",
     "todayProcessed": "Processed Today",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "empty": {
+      "notReady": "Not ready yet"
+    }
+  },
+  "metadata": {
+    "title": "Approval Management",
+    "description": "Manage all approval requests for equipment, calibration, and checkouts"
+  },
+  "tabFallback": {
+    "invalidTab": "Invalid tab parameter. Redirecting to default tab."
   },
   "row": {
     "stepBadge": "Approval step progress",
@@ -105,7 +117,8 @@
     "menuAriaLabel": "Actions menu for {summary}"
   },
   "sidebar": {
-    "ariaLabel": "Approval categories navigation"
+    "ariaLabel": "Approval categories navigation",
+    "completedHint": "Done"
   },
   "mobileBar": {
     "ariaLabel": "Approval category tabs"

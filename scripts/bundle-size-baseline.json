@@ -1,0 +1,14 @@
+{
+  "/admin/approvals": {
+    "current": null,
+    "note": "AP-01 시작 전 pnpm --filter frontend run build 후 .next/analyze/client.json에서 측정",
+    "ceiling": "+8KB gzip from baseline",
+    "phases": {
+      "AP-01": "+2KB",
+      "AP-02": "+1KB",
+      "AP-03": "+2KB",
+      "AP-04": "-3KB",
+      "AP-05": "+2KB"
+    }
+  }
+}

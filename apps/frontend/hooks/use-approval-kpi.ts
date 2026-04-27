@@ -7,8 +7,8 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 interface ApprovalKpiData {
   /** 역할 기반 전체 대기 건수 (counts에서 파생) */
   totalPending: number;
-  /** 현재 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과 건수 (서버 집계) */
-  urgentCount: number;
+  /** 현재 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과 건수 (서버 집계) — null: 데이터 준비 중 */
+  urgentCount: number | null;
   /** 현재 카테고리 평균 대기일 (서버 집계) */
   avgWaitDays: number;
   /** 오늘 처리 건수 (서버 집계) */
@@ -46,7 +46,7 @@ export function useApprovalKpi(
 
     return {
       totalPending,
-      urgentCount: kpiData?.urgentCount ?? 0,
+      urgentCount: kpiData ? (kpiData.urgentCount ?? 0) : null,
       avgWaitDays: kpiData?.avgWaitDays ?? 0,
       todayProcessed: kpiData?.todayProcessed ?? null,
     };

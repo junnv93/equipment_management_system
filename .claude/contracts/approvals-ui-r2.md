@@ -132,7 +132,7 @@
 - 0건 vs null 시각 분기 (`valueEmpty` 단일처리 폐기)
 - 배지 컬럼 삭제 → `ApprovalRow`에서 `<Badge>` wrapper 제거 (grep `ApprovalBadge\|StatusBadge` → 0건)
 - `verify-design-tokens` PASS (no inline `bg-red-500`, semantic 토큰만)
-- `verify-i18n` PASS (`kpi.urgent`, `kpi.pendingCount`, `kpi.avgDays`, `kpi.noUrgent`, `kpi.comingSoon` ko/en parity)
+- `verify-i18n` PASS (`kpi.urgent`, `kpi.urgentSub`, `kpi.totalPending`, `kpi.avgWait`, `kpi.noUrgent`, `kpi.empty.notReady`, `sidebar.completedHint`, `metadata.title`, `metadata.description` ko/en parity)
 - a11y: `role="region"` + `aria-label` per card, urgent 카운트 `aria-live="polite"`
 - `metadata.title` i18n (`approvals_page.tsx`)
 - Bundle size delta ≤ +2KB (gzip)

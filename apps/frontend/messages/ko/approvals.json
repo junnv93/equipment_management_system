@@ -87,13 +87,25 @@
   },
   "kpi": {
     "totalPending": "전체 대기",
+    "urgent": "긴급",
     "urgentCount": "긴급 (8일+)",
     "urgentSub": "8일 초과",
+    "noUrgent": "긴급 없음",
     "avgWait": "평균 대기",
     "days": "{days}일",
     "dayUnit": "일",
     "todayProcessed": "금일 처리",
-    "comingSoon": "준비 중"
+    "comingSoon": "준비 중",
+    "empty": {
+      "notReady": "준비 중"
+    }
+  },
+  "metadata": {
+    "title": "승인 관리",
+    "description": "장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다"
+  },
+  "tabFallback": {
+    "invalidTab": "잘못된 탭 파라미터입니다. 기본 탭으로 이동합니다."
   },
   "row": {
     "stepBadge": "승인 단계 진행",
@@ -105,7 +117,8 @@
     "menuAriaLabel": "{summary} 승인 작업 메뉴"
   },
   "sidebar": {
-    "ariaLabel": "승인 카테고리 네비게이션"
+    "ariaLabel": "승인 카테고리 네비게이션",
+    "completedHint": "완료"
   },
   "mobileBar": {
     "ariaLabel": "승인 카테고리 탭"

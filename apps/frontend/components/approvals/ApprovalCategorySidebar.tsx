@@ -82,7 +82,7 @@ export function ApprovalCategorySidebar({
               >
                 {IconComponent && <IconComponent className={tokens.icon} aria-hidden="true" />}
                 <span className="truncate">{t(`tabMeta.${tab}.label`)}</span>
-                {count > 0 && (
+                {count > 0 ? (
                   <span
                     className={cn(
                       tokens.badge.base,
@@ -95,7 +95,11 @@ export function ApprovalCategorySidebar({
                   >
                     {count}
                   </span>
-                )}
+                ) : isActive ? (
+                  <span className={cn(tokens.badge.base, tokens.badge.completed)}>
+                    {t('sidebar.completedHint')}
+                  </span>
+                ) : null}
               </button>
             );
           })}

@@ -644,8 +644,7 @@ export const queryKeys = {
   },
   approvals: {
     all: ['approvals'] as const,
-    list: (category?: string, teamId?: string) =>
-      [...queryKeys.approvals.all, category, teamId] as const,
+    list: (category?: string) => [...queryKeys.approvals.all, category] as const,
     /** SSOT: 네비 뱃지, 대시보드 카드, 승인 페이지 공용 */
     counts: (role?: string) => ['approval-counts', role] as const,
     /** 역할 무관 prefix — 무효화 전용 (모든 role의 counts를 한번에 무효화) */

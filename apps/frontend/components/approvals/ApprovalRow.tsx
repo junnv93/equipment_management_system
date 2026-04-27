@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableCell, TableRow } from '@/components/ui/table';
 import {
@@ -18,9 +17,9 @@ import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { TAB_META } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import {
-  getApprovalStatusBadgeClasses,
   getElapsedDaysClasses,
   APPROVAL_MOTION,
+  APPROVAL_ROW_TOKENS,
   FONT,
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
@@ -28,22 +27,6 @@ import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
-
-/** Urgency → 좌측 보더 색상 */
-const URGENCY_BORDER: Record<string, string> = {
-  info: '',
-  warning: 'border-l-2 border-l-brand-warning',
-  critical: 'border-l-2 border-l-brand-critical',
-  emergency: 'border-l-2 border-l-brand-critical',
-};
-
-/** Urgency → 행 배경 틴트 */
-const URGENCY_BG: Record<string, string> = {
-  info: '',
-  warning: 'bg-brand-warning/5',
-  critical: 'bg-brand-critical/5',
-  emergency: 'bg-brand-critical/10',
-};
 
 interface ApprovalRowProps {
   item: ApprovalItem;
@@ -86,16 +69,22 @@ export function ApprovalRow({
   return (
     <TableRow
       className={cn(
-        URGENCY_BORDER[urgency],
-        URGENCY_BG[urgency],
+        APPROVAL_ROW_TOKENS.urgencyBg[urgency],
         isMutating && APPROVAL_MOTION.processing,
         isExiting === 'success' && APPROVAL_MOTION.exitingSuccess,
         isExiting === 'reject' && APPROVAL_MOTION.exitingReject
       )}
       data-testid="approval-item"
     >
-      {/* 체크박스 */}
-      <TableCell className="w-10">
+      {/* 체크박스 (urgency bar: 토큰 기반 4px 세로 바를 셀 좌측에 절대배치) */}
+      <TableCell className="w-10 relative">
+        <div
+          className={cn(
+            'absolute left-0 top-0 bottom-0 w-1',
+            APPROVAL_ROW_TOKENS.urgencyBorder[urgency]
+          )}
+          aria-hidden="true"
+        />
         <Checkbox
           id={`select-${item.id}`}
           checked={isSelected}
@@ -104,12 +93,9 @@ export function ApprovalRow({
         />
       </TableCell>
 
-      {/* 요약 + 상태 배지 + 다단계 인디케이터 */}
+      {/* 요약 + 다단계 인디케이터 (배지 컬럼 삭제 — urgency bar로 흡수) */}
       <TableCell>
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge className={cn(getApprovalStatusBadgeClasses(item.status), 'text-xs')}>
-            {t(`unifiedStatus.${item.status}`)}
-          </Badge>
           <span className={cn('text-sm font-medium truncate', FONT.heading)}>
             {localizedSummary}
           </span>

@@ -1,6 +1,7 @@
 'use client';
 
-import { ClipboardList, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ClipboardList, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { APPROVAL_KPI_STRIP_TOKENS, type ApprovalKpiVariant } from '@/lib/design-tokens';
@@ -8,25 +9,40 @@ import { useTranslations } from 'next-intl';
 
 interface ApprovalKpiStripProps {
   totalPending: number;
-  urgentCount: number;
+  /** null = 데이터 준비 중 ("–"), 0 = 실제 0건 ("0 긴급 없음") */
+  urgentCount: number | null;
   avgWaitDays: number;
-  todayProcessed: number | null;
   isLoading?: boolean;
 }
 
 interface KpiCardProps {
   label: string;
-  value: string;
+  /** null = 준비 중, string = 렌더링 값 */
+  value: string | null;
   sub?: string;
   icon: React.ComponentType<{ className?: string }>;
   colorVariant: ApprovalKpiVariant;
+  testId: string;
   isLoading?: boolean;
+  onClick?: () => void;
+  ariaLive?: 'polite' | 'off';
 }
 
-function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: KpiCardProps) {
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  colorVariant,
+  testId,
+  isLoading,
+  onClick,
+  ariaLive,
+}: KpiCardProps) {
   const tokens = APPROVAL_KPI_STRIP_TOKENS;
   const isUrgent = colorVariant === 'urgent';
-  const numValue = Number(value);
+  const numValue = value ? Number(value) : 0;
+
   return (
     <div
       className={cn(
@@ -35,13 +51,21 @@ function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: Kpi
         tokens.card.hoverWash,
         tokens.card.focus,
         tokens.borderColors[colorVariant],
-        tokens.hoverWashBg[colorVariant]
+        tokens.hoverWashBg[colorVariant],
+        onClick && 'cursor-pointer'
       )}
       tabIndex={0}
-      role="group"
+      role={onClick ? 'button' : 'region'}
       aria-label={label}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
-      {/* 긴급 KPI pulse dot — 0보다 클 때만 */}
+      {/* 긴급 pulse dot — 실제 긴급 건 있을 때만 */}
       {isUrgent && !isLoading && numValue > 0 && (
         <div className={cn(tokens.pulseDot.container, tokens.contentZ)}>
           <div className={tokens.pulseDot.dot} />
@@ -54,11 +78,13 @@ function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: Kpi
       <div className={cn('flex-1 min-w-0', tokens.contentZ)}>
         <div className={tokens.label}>{label}</div>
         {isLoading ? (
-          <Skeleton className="h-8 w-14 mt-0.5" data-testid="kpi-value-skeleton" />
+          <Skeleton className="h-8 w-14 mt-0.5" data-testid="kpi-skeleton" />
         ) : (
-          <div className={tokens.value}>
-            {value === '0' || value === '-' ? (
-              <span className={tokens.valueEmpty}>{value === '0' ? '–' : value}</span>
+          <div className={tokens.value} aria-live={ariaLive} data-testid={testId}>
+            {value === null ? (
+              <span className={tokens.valueNotReady}>–</span>
+            ) : value === '0' ? (
+              <span className={tokens.valueZero}>{value}</span>
             ) : (
               value
             )}
@@ -71,53 +97,64 @@ function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: Kpi
 }
 
 /**
- * 승인 KPI 스트립 — 4개 핵심 지표
+ * 승인 KPI 스트립 — 3개 핵심 지표 (AP-01)
  *
- * 1. 전체 대기 (total pending across all tabs)
- * 2. 긴급 (8일+ 경과)
- * 3. 평균 대기일
- * 4. 오늘 처리 (v1: 미지원)
+ * Tier 1: 긴급 (urgentCount) — 최우선 시각 비중, pulse dot
+ * Tier 2: 전체 대기 (totalPending)
+ * Tier 3: 평균 대기일 (avgWaitDays)
+ *
+ * 0 vs null 분기:
+ * - urgentCount === null: 데이터 준비 중 → "–" + "준비 중"
+ * - urgentCount === 0: 실제 0건 → "0" (muted) + "긴급 없음"
+ * - urgentCount > 0: 긴급 → 값 + pulse dot
  */
 export function ApprovalKpiStrip({
   totalPending,
   urgentCount,
   avgWaitDays,
-  todayProcessed,
   isLoading,
 }: ApprovalKpiStripProps) {
   const t = useTranslations('approvals');
+  const router = useRouter();
+
+  const urgentSub =
+    urgentCount === null
+      ? t('kpi.empty.notReady')
+      : urgentCount === 0
+        ? t('kpi.noUrgent')
+        : t('kpi.urgentSub');
 
   return (
     <div className={APPROVAL_KPI_STRIP_TOKENS.container}>
+      {/* Tier 1: 긴급 — 클릭 시 ?filter=urgent 필터 */}
+      <KpiCard
+        label={t('kpi.urgent')}
+        value={urgentCount === null ? null : String(urgentCount)}
+        sub={urgentSub}
+        icon={AlertTriangle}
+        colorVariant="urgent"
+        testId="kpi-value-urgent"
+        isLoading={isLoading}
+        onClick={() => router.push('?filter=urgent')}
+        ariaLive="polite"
+      />
+      {/* Tier 2: 전체 대기 */}
       <KpiCard
         label={t('kpi.totalPending')}
         value={String(totalPending)}
         icon={ClipboardList}
         colorVariant="total"
+        testId="kpi-value-total"
         isLoading={isLoading}
       />
-      <KpiCard
-        label={t('kpi.urgentCount')}
-        value={String(urgentCount)}
-        sub={urgentCount > 0 ? t('kpi.urgentSub') : undefined}
-        icon={AlertTriangle}
-        colorVariant="urgent"
-        isLoading={isLoading}
-      />
+      {/* Tier 3: 평균 대기일 */}
       <KpiCard
         label={t('kpi.avgWait')}
-        value={avgWaitDays > 0 ? String(avgWaitDays) : '-'}
+        value={avgWaitDays > 0 ? String(avgWaitDays) : '0'}
         sub={avgWaitDays > 0 ? t('kpi.dayUnit') : undefined}
         icon={Clock}
         colorVariant="avgWait"
-        isLoading={isLoading}
-      />
-      <KpiCard
-        label={t('kpi.todayProcessed')}
-        value={todayProcessed !== null ? String(todayProcessed) : '-'}
-        sub={todayProcessed === null ? t('kpi.comingSoon') : undefined}
-        icon={CheckCircle2}
-        colorVariant="processed"
+        testId="kpi-value-avgWait"
         isLoading={isLoading}
       />
     </div>

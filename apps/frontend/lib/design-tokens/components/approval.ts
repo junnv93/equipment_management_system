@@ -391,16 +391,18 @@ export const APPROVAL_ROW_TOKENS = {
 // 13. Approval KPI Strip Tokens (4개 KPI 카드)
 // ============================================================================
 
-/** KPI 카드 4가지 variant */
-export type ApprovalKpiVariant = 'total' | 'urgent' | 'avgWait' | 'processed';
+/** KPI 카드 3가지 variant (AP-01: todayProcessed 제거) */
+export type ApprovalKpiVariant = 'total' | 'urgent' | 'avgWait';
 
 /**
- * 승인 KPI 스트립 — EQUIPMENT_KPI_STRIP_TOKENS 패턴 참조
+ * 승인 KPI 스트립 — 3 카드 hierarchy (AP-01)
  *
- * 4가지 variant: total(blue), urgent(red), avgWait(orange), processed(green)
+ * Tier 1: urgent (긴급 — 최우선 시각 비중)
+ * Tier 2: total (전체 대기)
+ * Tier 3: avgWait (평균 대기일)
  */
 export const APPROVAL_KPI_STRIP_TOKENS = {
-  container: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
+  container: 'grid grid-cols-2 lg:grid-cols-3 gap-3',
   card: {
     base: 'bg-card border border-border rounded-lg p-4 flex items-start gap-3.5 border-l-4 relative overflow-hidden group/kpi',
     hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
@@ -413,8 +415,10 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   contentZ: 'relative z-[1]',
   /** KPI 핵심 숫자 — 32px DM Sans Bold로 시선 유도 */
   value: 'text-3xl font-bold tabular-nums leading-tight font-display tracking-tight',
-  /** KPI 0값/빈값 — muted 처리로 시각적 노이즈 억제 */
-  valueEmpty: 'text-muted-foreground/40',
+  /** KPI 0값 — muted 처리 (실제 0건, 준비는 됨) */
+  valueZero: 'text-muted-foreground/50',
+  /** KPI null값 — 더 연한 처리 (데이터 준비 중) */
+  valueNotReady: 'text-muted-foreground/30',
   /** 숫자 단위 (일, 건) */
   valueUnit: 'text-base font-normal text-muted-foreground ml-0.5',
   label: `${MICRO_TYPO.meta} font-medium text-muted-foreground uppercase tracking-wider`,
@@ -429,20 +433,17 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
     total: getSemanticLeftBorderClasses('info'),
     urgent: getSemanticLeftBorderClasses('critical'),
     avgWait: getSemanticLeftBorderClasses('warning'),
-    processed: getSemanticLeftBorderClasses('ok'),
-  },
+  } as Record<ApprovalKpiVariant, string>,
   iconBg: {
     total: getSemanticStatusClasses('info'),
     urgent: getSemanticStatusClasses('critical'),
     avgWait: getSemanticStatusClasses('warning'),
-    processed: getSemanticStatusClasses('ok'),
-  },
+  } as Record<ApprovalKpiVariant, string>,
   /** hover wash variant별 ::after 배경색 */
   hoverWashBg: {
     total: 'after:bg-brand-info/[0.06]',
     urgent: 'after:bg-brand-critical/[0.05]',
     avgWait: 'after:bg-brand-warning/[0.06]',
-    processed: 'after:bg-brand-ok/[0.06]',
   } as Record<ApprovalKpiVariant, string>,
   /** 아이콘 컨테이너 — 40px, 10px radius */
   iconContainer: 'w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0',
@@ -477,6 +478,8 @@ export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
     base: 'ml-auto text-xs font-medium tabular-nums',
     normal: 'text-muted-foreground',
     urgent: 'text-brand-critical font-semibold',
+    /** active 탭 카운트가 0일 때 "완료" 힌트 */
+    completed: 'text-brand-ok text-[10px]',
   },
   divider: 'border-t border-border my-2',
 } as const;

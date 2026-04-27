@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { z } from 'zod';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { getTranslations } from 'next-intl/server';
 import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
+import { ROLE_TABS, type ApprovalCategory } from '@/lib/api/approvals-api';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPageContainerClasses } from '@/lib/design-tokens';
@@ -16,10 +18,13 @@ import { PageHeader } from '@/components/shared/PageHeader';
  * ✅ Dynamic Hole: i18n 헤더 + 세션 체크 + ApprovalsClient (Suspense로 서버 스트리밍)
  */
 
-export const metadata: Metadata = {
-  title: '승인 관리 | 장비 관리 시스템',
-  description: '장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('approvals');
+  return {
+    title: `${t('metadata.title')} | 장비 관리 시스템`,
+    description: t('metadata.description'),
+  };
+}
 
 function ApprovalsLoadingFallback() {
   return (
@@ -31,8 +36,8 @@ function ApprovalsLoadingFallback() {
       </div>
 
       {/* KPI Strip skeleton */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
             className="bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 border-l-border"
@@ -105,7 +110,6 @@ async function ApprovalsContentAsync({
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const searchParams = await searchParamsPromise;
-  const initialTab = typeof searchParams.tab === 'string' ? searchParams.tab : undefined;
 
   const t = await getTranslations('approvals');
   const session = await getServerAuthSession();
@@ -121,6 +125,17 @@ async function ApprovalsContentAsync({
   if (!APPROVAL_ROLES.includes(userRole)) {
     redirect('/dashboard');
   }
+
+  // URL tab Zod 검증 (AR-5) — 유효하지 않은 탭 파라미터 시 기본 탭으로 redirect
+  const availableTabs = [...(ROLE_TABS[userRole] || [])] as ApprovalCategory[];
+  const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : null;
+  if (tabParam && availableTabs.length > 0) {
+    const tabSchema = z.enum(availableTabs as [ApprovalCategory, ...ApprovalCategory[]]);
+    if (!tabSchema.safeParse(tabParam).success) {
+      redirect(`/admin/approvals?tab=${availableTabs[0]}`);
+    }
+  }
+  const initialTab = tabParam ?? undefined;
 
   return (
     <>
