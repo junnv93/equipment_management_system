@@ -19,7 +19,6 @@ import {
   type UserRole,
   type UnifiedApprovalStatus,
   type ApprovalCategory,
-  UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
   CalibrationApprovalStatusValues as CASVal,
   CheckoutStatusValues as CSVal,
@@ -37,6 +36,7 @@ import calibrationPlansApi from './calibration-plans-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
 import equipmentApi from './equipment-api';
 import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
+import { getRoleDisplayName } from '@/lib/utils/permission-helpers';
 
 // ============================================================================
 // Approval Mapper 전용 백엔드 응답 DTO 인터페이스 (@internal — approvals-api 전용)
@@ -484,7 +484,8 @@ class ApprovalsApi {
       );
 
       return [...regularItems, ...vendorReturnItems];
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingOutgoing failed:', error);
       return [];
     }
   }
@@ -523,7 +524,8 @@ class ApprovalsApi {
       );
 
       return [...returnItems, ...rentalItems, ...sharedItems];
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingIncoming failed:', error);
       return [];
     }
   }
@@ -538,7 +540,8 @@ class ApprovalsApi {
 
       // Note: teamId 필터링은 별도 장비 조회가 필요하므로 현재는 생략
       return items.map((item: Calibration) => this.mapCalibrationToApprovalItem(item));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingCalibrations failed:', error);
       return [];
     }
   }
@@ -552,7 +555,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<CalibrationPlanApprovalRow>(response);
 
       return items.map((item) => this.mapPlanToApprovalItem(item, 'plan_review'));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingPlanReviews failed:', error);
       return [];
     }
   }
@@ -566,7 +570,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<CalibrationPlanApprovalRow>(response);
 
       return items.map((item) => this.mapPlanToApprovalItem(item, 'plan_final'));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingPlanFinals failed:', error);
       return [];
     }
   }
@@ -579,7 +584,8 @@ class ApprovalsApi {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
       const items = transformArrayResponse<EquipmentRequestApprovalRow>(response);
       return items.map((item) => this.mapEquipmentRequestToApprovalItem(item));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingEquipmentApprovals failed:', error);
       return [];
     }
   }
@@ -593,7 +599,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<SoftwareValidationApprovalRow>(response);
 
       return items.map((item) => this.mapSoftwareToApprovalItem(item));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingSoftwareApprovals failed:', error);
       return [];
     }
   }
@@ -609,7 +616,8 @@ class ApprovalsApi {
 
       // 수리 필터는 백엔드에서 pendingClose=true로 적용 (카운트 쿼리와 동일 조건)
       return items.map((item: NonConformance) => this.mapNonConformanceToApprovalItem(item));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingNonConformities failed:', error);
       return [];
     }
   }
@@ -628,7 +636,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<InspectionApprovalRow>(response);
 
       return items.map((item) => this.mapInspectionToApprovalItem(item));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingInspections failed:', error);
       return [];
     }
   }
@@ -642,7 +651,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<DisposalApprovalRow>(response);
 
       return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_review'));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingDisposalReviews failed:', error);
       return [];
     }
   }
@@ -656,7 +666,8 @@ class ApprovalsApi {
       const items = transformArrayResponse<DisposalApprovalRow>(response);
 
       return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_final'));
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getPendingDisposalFinals failed:', error);
       return [];
     }
   }
@@ -698,7 +709,8 @@ class ApprovalsApi {
           avgWaitDays: 0,
         }
       );
-    } catch {
+    } catch (error) {
+      console.error('[ApprovalsApi] getKpi failed:', error);
       return { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
     }
   }
@@ -957,7 +969,8 @@ class ApprovalsApi {
         }
         await this.approve(category, id, comment, equipmentId, originalData);
         success.push(id);
-      } catch {
+      } catch (error) {
+        console.error('[ApprovalsApi] bulk approve item failed:', { id, category, error });
         failed.push(id);
       }
     }
@@ -1062,11 +1075,7 @@ class ApprovalsApi {
       category: 'calibration',
       status: this.mapCalibrationStatus(calibration.approvalStatus),
       requesterId: calibration.registeredBy || '',
-      requesterName:
-        registeredByUser?.name ??
-        (calibration.registeredByRole === URVal.TEST_ENGINEER
-          ? 'Test Engineer'
-          : 'Technical Manager'),
+      requesterName: registeredByUser?.name ?? getRoleDisplayName(calibration.registeredByRole),
       requesterTeam: team?.name ?? '',
       requestedAt: calibration.createdAt,
       summary: `Equipment (${calibration.equipmentId}) Calibration Record`,
