@@ -105,12 +105,10 @@ export function ApprovalRow({
           >
             {localizedSummary}
           </span>
-          {meta.multiStep && (
-            <ApprovalRowMiniStepper
-              currentStep={item.approvalHistory?.length ?? 0}
-              totalSteps={meta.multiStepType === 'disposal' ? 2 : 3}
-            />
-          )}
+          <ApprovalRowMiniStepper
+            currentStep={item.approvalHistory?.length ?? 0}
+            totalSteps={meta.totalApprovalSteps}
+          />
         </div>
       </TableCell>
 

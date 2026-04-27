@@ -15,6 +15,8 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, XCircle, FileText, Download } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { TAB_META } from '@/lib/api/approvals-api';
+import { computeUrgency } from '@equipment-management/schemas';
+import type { CheckoutStatus } from '@equipment-management/schemas';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
@@ -59,23 +61,20 @@ export default function ApprovalDetailModal({
   const { fmtDateTime } = useDateFormatter();
 
   const meta = TAB_META[item.category];
-  const isMultiStep = meta.multiStep === true;
+  const isMultiStep = meta.totalApprovalSteps > 1;
 
   const elapsedDays = item.requestedAt
     ? Math.floor((Date.now() - new Date(item.requestedAt).getTime()) / 86_400_000)
     : 0;
 
-  // checkout 카테고리에서만 긴급도 표시 (expectedReturnDate 기반)
+  // checkout 카테고리에서만 긴급도 표시 — computeUrgency SSOT (schemas 패키지) 경유
+  // 승인 대기 컨텍스트: status는 항상 pending/approved이므로 overdue 분기 비활성화
   const isCheckoutCategory = item.category === 'outgoing' || item.category === 'incoming';
   const urgency = (() => {
     if (!isCheckoutCategory) return null;
-    const expectedReturnDate = item.details.expectedReturnDate;
-    if (typeof expectedReturnDate !== 'string') return 'normal' as const;
-    const due = new Date(expectedReturnDate).getTime();
-    const now = Date.now();
-    if (due < now) return 'critical' as const;
-    if (due - now < 48 * 60 * 60 * 1000) return 'warning' as const;
-    return 'normal' as const;
+    const dueAt = item.details.expectedReturnDate;
+    if (typeof dueAt !== 'string') return 'normal' as const;
+    return computeUrgency({ status: 'pending' as CheckoutStatus, dueAt });
   })();
 
   return (

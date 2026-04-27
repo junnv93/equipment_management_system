@@ -165,9 +165,9 @@ export interface TabMeta {
   commentDialogTitleKey?: string;
   /** i18n 키 — 코멘트 placeholder (commentRequired일 때 사용) */
   commentPlaceholderKey?: string;
-  /** 다단계 승인 여부 (disposal 2-step, calibration_plan 3-step) */
-  multiStep?: boolean;
-  /** 다단계 승인 타입 — StepIndicator의 type 파라미터 */
+  /** 총 승인 단계 수 — SSOT (1=단일 승인, 2=disposal, 3=calibration_plan) */
+  totalApprovalSteps: number;
+  /** 다단계 승인 타입 — StepIndicator의 type 파라미터 (totalApprovalSteps > 1일 때만 유효) */
   multiStepType?: 'disposal' | 'calibration_plan';
   /** 사이드바 섹션 그룹핑 */
   section: ApprovalSection;
@@ -211,12 +211,14 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.outgoing.label',
     icon: 'ArrowUpFromLine',
     actionKey: 'tabMeta.outgoing.action',
+    totalApprovalSteps: 1,
     section: 'checkout',
   },
   incoming: {
     labelKey: 'tabMeta.incoming.label',
     icon: 'ArrowDownToLine',
     actionKey: 'tabMeta.incoming.action',
+    totalApprovalSteps: 1,
     section: 'checkout',
   },
 
@@ -225,24 +227,28 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.equipment.label',
     icon: 'Package',
     actionKey: 'tabMeta.equipment.action',
+    totalApprovalSteps: 1,
     section: 'equipment',
   },
   calibration: {
     labelKey: 'tabMeta.calibration.label',
     icon: 'FileCheck',
     actionKey: 'tabMeta.calibration.action',
+    totalApprovalSteps: 1,
     section: 'equipment',
   },
   inspection: {
     labelKey: 'tabMeta.inspection.label',
     icon: 'ClipboardCheck',
     actionKey: 'tabMeta.inspection.action',
+    totalApprovalSteps: 1,
     section: 'equipment',
   },
   nonconformity: {
     labelKey: 'tabMeta.nonconformity.label',
     icon: 'AlertTriangle',
     actionKey: 'tabMeta.nonconformity.action',
+    totalApprovalSteps: 1,
     section: 'equipment',
   },
 
@@ -254,7 +260,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     commentRequired: true,
     commentDialogTitleKey: 'tabMeta.disposal_review.commentDialogTitle',
     commentPlaceholderKey: 'tabMeta.disposal_review.commentPlaceholder',
-    multiStep: true,
+    totalApprovalSteps: 2,
     multiStepType: 'disposal',
     section: 'management',
   },
@@ -262,7 +268,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.disposal_final.label',
     icon: 'Trash2',
     actionKey: 'tabMeta.disposal_final.action',
-    multiStep: true,
+    totalApprovalSteps: 2,
     multiStepType: 'disposal',
     section: 'management',
   },
@@ -270,7 +276,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.plan_review.label',
     icon: 'Calendar',
     actionKey: 'tabMeta.plan_review.action',
-    multiStep: true,
+    totalApprovalSteps: 3,
     multiStepType: 'calibration_plan',
     section: 'management',
   },
@@ -278,7 +284,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.plan_final.label',
     icon: 'Calendar',
     actionKey: 'tabMeta.plan_final.action',
-    multiStep: true,
+    totalApprovalSteps: 3,
     multiStepType: 'calibration_plan',
     section: 'management',
   },
@@ -287,6 +293,7 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     icon: 'Code',
     actionKey: 'tabMeta.software_validation.action',
     commentRequired: false,
+    totalApprovalSteps: 1,
     section: 'management',
   },
 };

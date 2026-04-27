@@ -56,9 +56,11 @@ export const ApprovalRowMiniStepper = memo(function ApprovalRowMiniStepper({
           />
         );
       })}
-      <span className={tokens.label}>
-        {currentStep}/{totalSteps}
-      </span>
+      {totalSteps > 1 && (
+        <span className={tokens.label}>
+          {currentStep}/{totalSteps}
+        </span>
+      )}
     </span>
   );
 });
