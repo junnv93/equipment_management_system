@@ -82,6 +82,7 @@ import {
 } from './seed-data/history/equipment-documents.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
 import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
+import { REJECTION_PRESETS_SEED_DATA } from './seed-data/admin/rejection-presets.seed';
 
 // Signature PNG generation
 import { generateSignatureImages } from './seed-data/core/generate-signatures';
@@ -409,6 +410,14 @@ async function main(): Promise<void> {
           db
             .insert(schema.notifications)
             .values(NOTIFICATIONS_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: 'Rejection Presets (5)',
+        fn: () =>
+          db
+            .insert(schema.rejectionPresets)
+            .values(REJECTION_PRESETS_SEED_DATA)
             .then(() => {}),
       },
     ];
