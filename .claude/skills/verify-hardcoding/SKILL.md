@@ -300,6 +300,45 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 
 **PASS:** 파일 확장자(`.xlsx`, `.docx`)가 서버 Content-Disposition 또는 FORM_CATALOG 기반으로 결정됨. **FAIL:** 프론트엔드에서 확장자 배열(`XLSX_FORMS = [...]` 등) 하드코딩하여 서버 반환 형식과 불일치 발생 가능.
 
+### Step 25: DISPLAY_LIMITS SSOT — UI 표시 건수 매직넘버 탐지 (2026-04-27 추가)
+
+`apps/frontend/lib/config/dashboard-config.ts`의 `DISPLAY_LIMITS` 객체가 UI 컴포넌트에서 표시할 최대 항목 수의 SSOT.
+`.slice(0, 5)`, `.slice(0, 8)` 등 매직넘버 직접 사용 금지. `DISPLAY_LIMITS.myActivity`, `DISPLAY_LIMITS.calibrationDday` 등 명명 상수 경유 필수.
+
+**현재 정의된 상수:**
+```typescript
+export const DISPLAY_LIMITS = {
+  overdueCheckouts: 6,
+  upcomingCheckoutReturns: 6,
+  calibrationDday: 8,
+  calendarEvents: 5,
+  myActivity: 5,
+} as const;
+```
+
+**탐지:**
+```bash
+# 대시보드 컴포넌트에서 .slice(0, N) 매직넘버 직접 사용 탐지 (DISPLAY_LIMITS 미경유)
+# .slice(0, 1)과 .slice(0, 10) 제외 (단건조회 및 ISO 날짜 파싱)
+grep -rn "\.slice(0,\s*[2-9][^0-9]\|\.slice(0,\s*[3-9][0-9]" \
+  apps/frontend/components/dashboard/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "DISPLAY_LIMITS\|node_modules\|date\|str\|string"
+```
+
+**PASS:** 0 hit (또는 DISPLAY_LIMITS 경유). **FAIL:** `.slice(0, 5)` 등 매직넘버 → `DISPLAY_LIMITS.*` import 후 교체.
+
+**예외:**
+- `.slice(0, 1)` — 단일 항목 취득 (페이지네이션 아님)
+- `.slice(0, 10)` — ISO 날짜 문자열 파싱 (`'2026-04-27T...'.slice(0, 10)` 패턴)
+- 백엔드 코드 — 이 Step은 프론트엔드 dashboard 컴포넌트 전용
+
+**Related Files:**
+- `apps/frontend/lib/config/dashboard-config.ts` — `DISPLAY_LIMITS` SSOT 정의
+- `apps/frontend/components/dashboard/MyActivityCard.tsx` — `DISPLAY_LIMITS.myActivity` 소비처
+- `apps/frontend/components/dashboard/CalibrationDdayList.tsx` — `DISPLAY_LIMITS.calibrationDday` 소비처
+- `apps/frontend/components/dashboard/OverdueCheckoutsCard.tsx` — `DISPLAY_LIMITS.overdueCheckouts` 소비처
+
 ## Output Format
 
 ```markdown
@@ -332,6 +371,7 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 | 22  | Content-Disposition 인라인 조립 | PASS/FAIL | `filename*=UTF-8''` 직접 사용 위치 |
 | 23  | export allowlist 상태 리터럴   | PASS/WARN | enum 미경유 status 배열 요소 위치 |
 | 24  | Layer 3 arbitrary 픽셀 타이포   | PASS/FAIL | `text-[Npx]` 잔존 위치 + 건수 |
+| 25  | DISPLAY_LIMITS SSOT (UI 표시 건수) | PASS/FAIL | `.slice(0, N)` 매직넘버 위치 |
 ```
 
 ### Step 24: Design Token Layer 3 arbitrary 픽셀 타이포 탐지 (2026-04-21 추가)

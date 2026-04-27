@@ -1070,6 +1070,70 @@ grep -rn "MENU_ITEM_TOKENS\s*=" \
 
 **상세:** [references/step-details.md](references/step-details.md) Step 32
 
+### Step 33: DASHBOARD_ENTRANCE/DASHBOARD_MOTION 토큰 + globals.css prefers-reduced-motion (2026-04-27 추가)
+
+**33a: DASHBOARD_ENTRANCE 스태거 딜레이 인라인 금지**
+
+대시보드 Row 단위 섹션 스태거는 `DASHBOARD_ENTRANCE.stagger.*`와 `DASHBOARD_ENTRANCE.stagger.*Delay` 명명 토큰을 경유해야 한다.
+`style={{ animationDelay: 'Xms' }}` 인라인 또는 `animationDelay` 리터럴 직접 할당은 금지.
+(Step 15의 `getStaggerFadeInStyle(index, ...)` 패턴은 per-item stagger용; 이 Step은 섹션 Row 레벨 토큰 검사)
+
+```bash
+# DashboardClient에서 animationDelay 인라인 직접 사용 탐지
+grep -rn "animationDelay\s*:" \
+  apps/frontend/components/dashboard/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "getStaggerFadeInStyle\|getDashboardStaggerDelay\|DASHBOARD_ENTRANCE\|node_modules"
+```
+
+**PASS:** 0 hit. **FAIL:** `animationDelay: 'Xms'` 인라인 → `E.stagger.*Delay` 토큰으로 교체.
+
+**예외:**
+- `getDashboardStaggerDelay(i, 'grid'|'list')` — per-item stagger 헬퍼 경유 (getStaggerFadeInStyle과 동등). Row 섹션 레벨 토큰 규칙과 다른 스코프.
+
+**33b: DASHBOARD_MOTION transition 토큰 경유 강제**
+
+대시보드 컴포넌트에서 `transition-colors`/`transition-opacity`/`transition-shadow` 인라인 리터럴은 `DASHBOARD_MOTION.*` 토큰을 경유해야 한다.
+`text-muted-foreground hover:text-foreground transition-colors`는 `DASHBOARD_MOTION.textColor`로 교체.
+
+```bash
+# DashboardClient 및 대시보드 컴포넌트에서 transition-colors 인라인 사용 탐지
+grep -rn '"[^"]*transition-colors[^"]*"' \
+  apps/frontend/components/dashboard/ \
+  --include="*.tsx" \
+  | grep -v "DASHBOARD_MOTION\|node_modules\|className={cn"
+```
+
+**PASS:** 0 hit. **FAIL:** 인라인 `transition-colors` → `DASHBOARD_MOTION.textColor` (또는 `.listItem`, `.cardHover`) 교체.
+
+**33c: globals.css @media (prefers-reduced-motion) 존재 확인**
+
+접근성 기준(WCAG 2.3.3 Animation from Interactions)에 따라 `globals.css`에 `prefers-reduced-motion` 미디어 쿼리 오버라이드가 존재해야 한다.
+
+```bash
+# globals.css에 reduced-motion 미디어 쿼리 존재 확인
+grep -c "prefers-reduced-motion" \
+  apps/frontend/styles/globals.css
+```
+
+**PASS:** 1 이상. **FAIL:** 0 → globals.css에 `@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; ... } }` 추가.
+
+**33d: @source inline() — animation-delay arbitrary 값 JIT 감지**
+
+Tailwind v4에서 JS/TS 파일에 동적 생성되는 arbitrary class(예: `animation-delay-[Xms]`)는 `@source inline(...)` 지시어로 스캔 대상에 포함해야 한다. 이 지시어가 없으면 프로덕션 빌드에서 해당 클래스가 purge된다.
+
+```bash
+# globals.css에 @source inline 존재 확인
+grep -c "@source inline" apps/frontend/styles/globals.css
+```
+
+**PASS:** 1 이상 (DASHBOARD_ENTRANCE 딜레이 arbitrary 값 커버). **FAIL:** 0 → `@source inline("...")` 추가.
+
+**Related Files:**
+- `apps/frontend/lib/design-tokens/components/dashboard.ts` — `DASHBOARD_ENTRANCE`, `DASHBOARD_MOTION` 정의
+- `apps/frontend/styles/globals.css` — `@source inline()`, `@media (prefers-reduced-motion)` 위치
+- `apps/frontend/components/dashboard/DashboardClient.tsx` — 소비처 (Row별 토큰 사용)
+
 ---
 
 ## Output Format
@@ -1120,6 +1184,10 @@ grep -rn "MENU_ITEM_TOKENS\s*=" \
 | 30  | `FOCUS_TOKENS.ringCurrent` 스테퍼 현재 단계 링 하드코딩 탐지 | PASS/FAIL | raw ring-2 ring-brand-info 조합 위치 |
 | 31  | callout/aside `role="alert"` 금지 — `role="status"` 강제 | PASS/FAIL | callout/안내 패널에서 role="alert" 위치 |
 | 32  | `MENU_ITEM_TOKENS.destructive` SSOT — DropdownMenuItem 파괴적 액션 리터럴 금지 | PASS/FAIL | focus:text-destructive 또는 focus-visible:text-destructive 리터럴 위치 |
+| 33a | `DASHBOARD_ENTRANCE` 스태거 딜레이 인라인 금지 | PASS/FAIL | animationDelay 인라인 사용 위치 |
+| 33b | `DASHBOARD_MOTION` transition 토큰 경유 | PASS/FAIL | 대시보드 컴포넌트 transition-colors 인라인 위치 |
+| 33c | `globals.css` prefers-reduced-motion 존재 | PASS/FAIL | 미디어 쿼리 누락 |
+| 33d | `@source inline()` animation-delay arbitrary 커버 | PASS/FAIL | globals.css 지시어 누락 |
 ```
 
 ## Exceptions
