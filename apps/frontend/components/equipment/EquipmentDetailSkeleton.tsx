@@ -5,6 +5,7 @@ import {
   EQUIPMENT_DETAIL_HEADER_TOKENS,
   EQUIPMENT_KPI_STRIP_TOKENS,
   EQUIPMENT_TAB_UNDERLINE_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
@@ -23,26 +24,30 @@ export function EquipmentDetailSkeleton() {
       {/* 컴팩트 헤더 스켈레톤 — EQUIPMENT_DETAIL_HEADER_TOKENS와 구조 동기화 */}
       <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.container}>
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.breadcrumbRow}>
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-20" />
+          <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.innerContent}>
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-20" />
+          </div>
         </div>
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.mainRow}>
-          <div className="flex-1 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-64" />
-              <Skeleton className="h-5 w-20 rounded-full" />
+          <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.innerContent, 'gap-4')}>
+            <div className="flex-1 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-3.5 w-80" />
             </div>
-            <Skeleton className="h-3.5 w-80" />
-          </div>
-          <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.actions)}>
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-16" />
+            <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.actions)}>
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-16" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* 컨텐츠 영역 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className={getPageContainerClasses('dashboard', 'space-y-4')}>
         {/* KPI 스트립 스켈레톤 — EQUIPMENT_KPI_STRIP_TOKENS와 구조 동기화 */}
         <div className={EQUIPMENT_KPI_STRIP_TOKENS.container}>
           {[1, 2, 3, 4, 5].map((i) => (

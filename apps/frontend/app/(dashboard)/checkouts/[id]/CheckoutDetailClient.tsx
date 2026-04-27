@@ -53,7 +53,6 @@ import {
   CHECKOUT_INTERACTION_TOKENS,
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_PURPOSE_TOKENS,
-  getPageContainerClasses,
   SUB_PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import {
@@ -466,7 +465,7 @@ export default function CheckoutDetailClient({
     borrowerRejectMutation.isPending;
 
   return (
-    <div className={getPageContainerClasses('wide')}>
+    <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex justify-between items-start">
         <div>

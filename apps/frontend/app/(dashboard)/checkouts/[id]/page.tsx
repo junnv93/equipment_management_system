@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import { getTranslations } from 'next-intl/server';
@@ -37,9 +38,11 @@ type PageProps = {
  */
 export default function CheckoutDetailPage(props: PageProps) {
   return (
-    <Suspense fallback={<RouteLoading variant="detail" />}>
-      <CheckoutDetailAsync paramsPromise={props.params} />
-    </Suspense>
+    <div className={getPageContainerClasses('wide')}>
+      <Suspense fallback={<RouteLoading variant="detail" />}>
+        <CheckoutDetailAsync paramsPromise={props.params} />
+      </Suspense>
+    </div>
   );
 }
 

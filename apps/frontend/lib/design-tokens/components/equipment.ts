@@ -614,11 +614,19 @@ export const EQUIPMENT_CRITICAL_STATUSES = new Set<string>([
  * 컴팩트 sticky 헤더용 light background 스타일.
  */
 export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
-  /** sticky + semantic bg (shadcn bg-background: white/dark 자동 대응) */
+  /** sticky + semantic bg — full-width sticky bar (border/shadow은 전체 너비) */
   container: 'sticky top-0 z-30 bg-background border-b border-border shadow-sm',
-  breadcrumbRow:
-    'py-1.5 text-sm text-muted-foreground flex items-center justify-between border-b border-border/50 px-4 sm:px-6 lg:px-8',
-  mainRow: 'py-3 flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8',
+  /** outer row: 수직 패딩 + border만 — 가로 제약 없음 (full-width sticky bar) */
+  breadcrumbRow: 'py-1.5 text-sm text-muted-foreground border-b border-border/50',
+  /** outer row: 수직 패딩만 — 가로 제약 없음 */
+  mainRow: 'py-3',
+  /**
+   * inner content 정렬 컨테이너 — 페이지 content와 수직 정렬 보장
+   *
+   * container(px-8) + max-w-7xl(dashboard variant) + flex justify-between
+   * → 초광폭 화면에서 sticky header 텍스트가 content 위치와 일치
+   */
+  innerContent: 'container mx-auto max-w-7xl flex items-center justify-between',
   nameGroup: 'flex flex-col gap-0.5 min-w-0',
   name: 'text-xl font-bold text-foreground truncate font-display',
   meta: 'text-xs text-muted-foreground flex items-center gap-2 flex-wrap',

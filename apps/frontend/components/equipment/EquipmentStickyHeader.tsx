@@ -148,146 +148,150 @@ export function EquipmentStickyHeader({
     <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.container} id="equipment-sticky-header">
       {/* 브레드크럼 행 */}
       <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.breadcrumbRow}>
-        <span className="truncate max-w-[60%]">
-          {t('title')} › {equipment.name}
-        </span>
-        {/* SSOT: EQUIPMENT_DETAIL_HEADER_TOKENS.backLink (getTransitionClasses 포함) */}
-        <Link href="/equipment" className={EQUIPMENT_DETAIL_HEADER_TOKENS.backLink}>
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('detail.backToList')}
-        </Link>
+        <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.innerContent}>
+          <span className="truncate max-w-[60%]">
+            {t('title')} › {equipment.name}
+          </span>
+          {/* SSOT: EQUIPMENT_DETAIL_HEADER_TOKENS.backLink (getTransitionClasses 포함) */}
+          <Link href="/equipment" className={EQUIPMENT_DETAIL_HEADER_TOKENS.backLink}>
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('detail.backToList')}
+          </Link>
+        </div>
       </div>
 
       {/* 메인 행 */}
       <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.mainRow}>
-        {/* 왼쪽: 장비명 + 배지 + 메타 */}
-        <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.nameGroup, 'flex-1 min-w-0')}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className={EQUIPMENT_DETAIL_HEADER_TOKENS.name}>{equipment.name}</h1>
-            {/* 상태 배지 */}
-            <Badge
-              variant="outline"
-              className={cn('text-xs font-semibold px-2 py-0.5 border', statusConfig.bg)}
-              role="status"
-              aria-label={t('header.statusAriaLabel', { status: statusConfig.label })}
-            >
-              <statusConfig.icon className="h-3 w-3 mr-1 inline" aria-hidden="true" />
-              {statusConfig.label}
-            </Badge>
-            {/* 교정 배지 */}
-            {calibrationStatus && (
+        <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.innerContent, 'gap-4')}>
+          {/* 왼쪽: 장비명 + 배지 + 메타 */}
+          <div className={cn(EQUIPMENT_DETAIL_HEADER_TOKENS.nameGroup, 'flex-1 min-w-0')}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className={EQUIPMENT_DETAIL_HEADER_TOKENS.name}>{equipment.name}</h1>
+              {/* 상태 배지 */}
               <Badge
                 variant="outline"
-                className={cn(
-                  'text-xs font-semibold px-2 py-0.5 border',
-                  calibrationStatus.className
-                )}
+                className={cn('text-xs font-semibold px-2 py-0.5 border', statusConfig.bg)}
                 role="status"
-                aria-label={t('header.calibrationStatusAriaLabel', {
-                  status: calibrationStatus.label,
-                })}
+                aria-label={t('header.statusAriaLabel', { status: statusConfig.label })}
               >
-                <calibrationStatus.icon className="h-3 w-3 mr-1 inline" aria-hidden="true" />
-                {calibrationStatus.label}
+                <statusConfig.icon className="h-3 w-3 mr-1 inline" aria-hidden="true" />
+                {statusConfig.label}
               </Badge>
-            )}
-            {/* 공용장비 배지 */}
-            {equipment.isShared && (
-              <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
-            )}
-          </div>
-          <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.meta}>
-            <span>
-              {t('header.model')}{' '}
-              <span className="font-medium text-foreground">{equipment.modelName}</span>
-            </span>
-            <span className="text-border">·</span>
-            <span>
-              {t('header.managementNumber')}{' '}
-              <span className="font-mono font-medium text-foreground">
-                {equipment.managementNumber}
+              {/* 교정 배지 */}
+              {calibrationStatus && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs font-semibold px-2 py-0.5 border',
+                    calibrationStatus.className
+                  )}
+                  role="status"
+                  aria-label={t('header.calibrationStatusAriaLabel', {
+                    status: calibrationStatus.label,
+                  })}
+                >
+                  <calibrationStatus.icon className="h-3 w-3 mr-1 inline" aria-hidden="true" />
+                  {calibrationStatus.label}
+                </Badge>
+              )}
+              {/* 공용장비 배지 */}
+              {equipment.isShared && (
+                <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
+              )}
+            </div>
+            <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.meta}>
+              <span>
+                {t('header.model')}{' '}
+                <span className="font-medium text-foreground">{equipment.modelName}</span>
               </span>
-            </span>
-            {equipment.serialNumber && (
-              <>
-                <span className="text-border">·</span>
-                <span>
-                  S/N{' '}
-                  <span className="font-mono font-medium text-foreground">
-                    {equipment.serialNumber}
-                  </span>
+              <span className="text-border">·</span>
+              <span>
+                {t('header.managementNumber')}{' '}
+                <span className="font-mono font-medium text-foreground">
+                  {equipment.managementNumber}
                 </span>
-              </>
-            )}
+              </span>
+              {equipment.serialNumber && (
+                <>
+                  <span className="text-border">·</span>
+                  <span>
+                    S/N{' '}
+                    <span className="font-mono font-medium text-foreground">
+                      {equipment.serialNumber}
+                    </span>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* 오른쪽: 액션 버튼 */}
-        <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
-          <EquipmentQRButton
-            managementNumber={equipment.managementNumber}
-            displayName={equipment.name}
-            serialNumber={equipment.serialNumber ?? undefined}
-            subLabel={equipment.teamName ?? undefined}
-            size="sm"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              import('@/lib/api/reports-api')
-                .then(({ downloadHistoryCard }) => downloadHistoryCard(equipmentId))
-                .catch(() =>
-                  toast({
-                    variant: 'destructive',
-                    description: tCommon('errors.downloadFailed'),
-                  })
-                );
-            }}
-            aria-label={t('header.historyCardExportAriaLabel')}
-          >
-            <Download className="h-4 w-4 mr-1.5" aria-hidden="true" />
-            {t('header.exportHistoryCard')}
-          </Button>
-          {canCheckout && (
-            <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
-              <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>
-                <FileOutput className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                {t('header.checkoutRequest')}
-              </Button>
-            </Link>
-          )}
-          {canEdit && (
-            <Link href={`/equipment/${equipmentId}/edit`}>
-              <Button variant="outline" size="sm" aria-label={t('header.editAriaLabel')}>
-                <Edit className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                {t('header.edit')}
-              </Button>
-            </Link>
-          )}
-          {disposalPermissions.showDisposalButton && (
-            <DisposalButton
-              equipment={equipment}
-              disposalRequest={disposalRequest || null}
-              onRequestOpen={onDisposalRequestOpen}
-              onReviewOpen={onDisposalReviewOpen}
-              onApproveOpen={onDisposalApprovalOpen}
-              onCancelOpen={onDisposalCancelOpen}
-              onDetailOpen={onDisposalDetailOpen}
-              permissions={disposalPermissions}
+          {/* 오른쪽: 액션 버튼 */}
+          <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
+            <EquipmentQRButton
+              managementNumber={equipment.managementNumber}
+              displayName={equipment.name}
+              serialNumber={equipment.serialNumber ?? undefined}
+              subLabel={equipment.teamName ?? undefined}
+              size="sm"
             />
-          )}
-          {canDelete && (
             <Button
               variant="outline"
               size="sm"
-              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              aria-label={t('header.deleteAriaLabel')}
+              onClick={() => {
+                import('@/lib/api/reports-api')
+                  .then(({ downloadHistoryCard }) => downloadHistoryCard(equipmentId))
+                  .catch(() =>
+                    toast({
+                      variant: 'destructive',
+                      description: tCommon('errors.downloadFailed'),
+                    })
+                  );
+              }}
+              aria-label={t('header.historyCardExportAriaLabel')}
             >
-              <Trash2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
-              {t('header.delete')}
+              <Download className="h-4 w-4 mr-1.5" aria-hidden="true" />
+              {t('header.exportHistoryCard')}
             </Button>
-          )}
+            {canCheckout && (
+              <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
+                <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>
+                  <FileOutput className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                  {t('header.checkoutRequest')}
+                </Button>
+              </Link>
+            )}
+            {canEdit && (
+              <Link href={`/equipment/${equipmentId}/edit`}>
+                <Button variant="outline" size="sm" aria-label={t('header.editAriaLabel')}>
+                  <Edit className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                  {t('header.edit')}
+                </Button>
+              </Link>
+            )}
+            {disposalPermissions.showDisposalButton && (
+              <DisposalButton
+                equipment={equipment}
+                disposalRequest={disposalRequest || null}
+                onRequestOpen={onDisposalRequestOpen}
+                onReviewOpen={onDisposalReviewOpen}
+                onApproveOpen={onDisposalApprovalOpen}
+                onCancelOpen={onDisposalCancelOpen}
+                onDetailOpen={onDisposalDetailOpen}
+                permissions={disposalPermissions}
+              />
+            )}
+            {canDelete && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                aria-label={t('header.deleteAriaLabel')}
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                {t('header.delete')}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
