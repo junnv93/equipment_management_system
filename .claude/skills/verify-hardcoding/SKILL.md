@@ -372,6 +372,7 @@ grep -rn "\.slice(0,\s*[2-9][^0-9]\|\.slice(0,\s*[3-9][0-9]" \
 | 23  | export allowlist 상태 리터럴   | PASS/WARN | enum 미경유 status 배열 요소 위치 |
 | 24  | Layer 3 arbitrary 픽셀 타이포   | PASS/FAIL | `text-[Npx]` 잔존 위치 + 건수 |
 | 25  | DISPLAY_LIMITS SSOT (UI 표시 건수) | PASS/FAIL | `.slice(0, N)` 매직넘버 위치 |
+| 26  | 컴포넌트 비-JSX 함수 내 한국어 문자열 조합 | PASS/SHOULD | `parts.push('[가-힣]')` 패턴 위치 |
 ```
 
 ### Step 24: Design Token Layer 3 arbitrary 픽셀 타이포 탐지 (2026-04-21 추가)
@@ -439,6 +440,34 @@ grep -rn "filename\\\*=UTF-8''" \
 **PASS:** 0건. **FAIL:** 모듈 또는 common 레이어에서 직접 조립 발견 시 `buildContentDisposition()` 로 교체.
 
 **예외:** `apps/backend/src/common/storage/s3-storage.provider.ts` — S3 Presigned URL의 `ResponseContentDisposition` 파라미터는 SDK가 직접 문자열을 요구하며, `buildContentDisposition` 반환값 형식과 호환. 동일 패턴이므로 방어적 허용.
+
+### Step 26: 컴포넌트 비-JSX 함수 내 한국어 문자열 조합 탐지 (2026-04-27 추가)
+
+컴포넌트 파일에서 JSX 반환 이외의 함수(포맷 헬퍼, 보고서 조합 함수)가 한국어 문자열을 직접 조합하면, 다국어 환경에서 항상 한국어로 고정 출력됨.
+
+**배경:** `PrintableAuditReport.tsx`의 `formatFilters()` 함수가 `대상=`, `액션=`, `사용자=`, `시작일=`, `종료일=`, `'전체'` 6개 복합 문자열을 하드코딩. 인쇄 보고서에서 en locale 사용 시 한국어 출력 버그. 2026-04-27 tech-debt LOW `formatFilters-compound-i18n` 등록.
+
+**탐지:**
+```bash
+# 컴포넌트 내 비-JSX 함수에서 한국어 문자열 push 패턴
+grep -rn "parts\.push.*['\"][가-힣]" \
+  apps/frontend/components/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "node_modules\|// "
+```
+
+**PASS:** 0건 (또는 tech-debt 등록 항목만).
+**SHOULD (현재 잔존):** `PrintableAuditReport.tsx:formatFilters()` — tech-debt `formatFilters-compound-i18n` LOW, audit 보고서 i18n 리뷰 시 `t('report.filterEntry', { key, value })` 패턴으로 교체 예정.
+
+**올바른 패턴:**
+```typescript
+// ❌ 비-JSX 함수에서 한국어 문자열 직접 조합 — locale 무관 출력
+const parts: string[] = [];
+if (f.entityType) parts.push(`대상=${getEntityTypeLabel(f.entityType)}`);
+
+// ✅ t() 함수 사용 — locale-aware 포맷
+if (f.entityType) parts.push(t('report.filterEntry.entityType', { value: getEntityTypeLabel(f.entityType) }));
+```
 
 ## Exceptions
 

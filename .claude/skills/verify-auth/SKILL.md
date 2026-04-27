@@ -120,6 +120,7 @@ grep -n "getPermissions\|roles\[0\]" \
 | 12  | assertIndependentApprover   | PASS/FAIL | 승인 워크플로우 모듈 approve() 미적용 목록 |
 | 13  | FE role 리터럴 직접 비교   | PASS/WARN | URVal.* 직접 비교로 Permission 우회하는 액션 게이트 위치 |
 | 14  | jwt.strategy.ts permissions 파생 | PASS/FAIL | derivePermissionsFromRoles 사용 여부 |
+| 15  | FileInterceptor 비업로드 권한 오용 | PASS/FAIL | UPLOAD_*/MANAGE_* 외 권한으로 업로드 게이팅한 엔드포인트 목록 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
@@ -202,6 +203,39 @@ grep -rn "assertIndependentApprover" \
 **FAIL:** approve()가 있으나 독립성 검사가 전혀 없는 서비스 파일.
 
 **배경:** ISO/IEC 17025 §6.2.2 인원 독립성 요구. 공통 헬퍼: `apps/backend/src/common/guards/assert-independent-approver.ts`
+
+### Step 15: FileInterceptor 엔드포인트 비업로드 권한 오용 탐지 (2026-04-27 추가)
+
+`@UseInterceptors(FileInterceptor(...))`가 있는 엔드포인트는 반드시 `UPLOAD_*` 또는 `MANAGE_*` 패턴의 권한으로 게이팅해야 한다. `CREATE_EQUIPMENT`, `CREATE_CALIBRATION` 등 도메인 CRUD 권한 사용은 FAIL.
+
+**배경:** `documents.controller.ts`의 범용 `uploadDocument` 엔드포인트가 `CREATE_EQUIPMENT` 권한을 오용 — 교정 문서 업로드 시 test_engineer 차단, quality_manager 권한 경계 혼란. 2026-04-27 세션에서 `UPLOAD_DOCUMENT`로 교체.
+
+```bash
+# FileInterceptor 엔드포인트 바로 위 @RequirePermissions 확인
+# UPLOAD_*/MANAGE_* 외 권한이 걸려있으면 FAIL
+grep -B5 "FileInterceptor\b" \
+  apps/backend/src/modules/**/*.controller.ts \
+  2>/dev/null \
+  | grep "@RequirePermissions" \
+  | grep -v "UPLOAD_\|MANAGE_\|//\|spec\."
+```
+
+**PASS:** 0건 (모든 파일 업로드 엔드포인트가 `UPLOAD_*` 또는 `MANAGE_*` 권한 사용).
+**FAIL:** `CREATE_EQUIPMENT`, `CREATE_CALIBRATION`, `UPDATE_*` 등 도메인 권한이 업로드 엔드포인트 게이팅에 사용됨.
+
+**올바른 패턴:**
+```typescript
+// ✅ 범용 다목적 업로드 엔드포인트
+@RequirePermissions(Permission.UPLOAD_DOCUMENT)
+
+// ✅ NC 첨부 전용 업로드 엔드포인트
+@RequirePermissions(Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT)
+
+// ❌ 도메인 권한으로 파일 업로드 게이팅 — 역할 간 권한 교차 오염
+@RequirePermissions(Permission.CREATE_EQUIPMENT)
+```
+
+**예외:** 파일 업로드가 엔티티 생성과 atomic한 단일 폼(예: 장비 이미지를 장비 등록과 동시에 업로드)에서 `CREATE_EQUIPMENT`를 사용하는 경우 — 코드 주석으로 atomic 의도 명시 필요.
 
 ## Exceptions
 
