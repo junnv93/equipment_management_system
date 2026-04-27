@@ -502,6 +502,45 @@ grep -n "UserSelectableCheckoutPurpose" \
 - `Checkout.purpose: CheckoutPurpose` — 서버 응답(조회)에는 전체 `CheckoutPurpose` 사용 (return_to_vendor 포함). 이 Step은 생성 DTO만 대상.
 - `CheckoutQuery.purpose?: CheckoutPurpose` — 필터 파라미터는 return_to_vendor 포함 전체 목적으로 조회 가능.
 
+### Step 28: useDateFormatter SSOT — date-fns 직접 사용 금지 (2026-04-27 추가)
+
+날짜/시각 포맷은 `@/hooks/use-date-formatter`의 `useDateFormatter()` 훅을 경유해야 한다.
+이 훅은 사용자 dateFormat 설정과 `date-fns` locale을 내부에서 처리하는 SSOT이다.
+
+**규칙 근거:** 컴포넌트에서 `import { format } from 'date-fns'` + `import { ko } from 'date-fns/locale'`를
+직접 사용하면 locale이 하드코딩되어 다국어 설정 변경 시 일관성이 깨진다.
+
+```bash
+# locale 직접 import 탐지 — 핵심 위반 (컴포넌트에서 date-fns locale 직접 사용)
+grep -rn "from 'date-fns/locale'" \
+  apps/frontend/app/ apps/frontend/components/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-date-formatter\|node_modules"
+# 결과: 0건 → PASS  (신규 locale 직접 import 금지)
+
+# format + { locale: ... } 조합 탐지 (locale 없는 format은 허용)
+grep -rn "format(.*{.*locale:" \
+  apps/frontend/app/ apps/frontend/components/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-date-formatter\|node_modules"
+# 결과: 0건 → PASS  (locale 결합 format 신규 사용 금지)
+
+# useDateFormatter 훅 자체 파일 존재 확인
+ls apps/frontend/hooks/use-date-formatter.ts 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+**PASS:** `date-fns/locale` 직접 import 0건 + `format(*, { locale: })` 조합 0건.
+**FAIL:** `import { ko } from 'date-fns/locale'` 또는 `format(new Date(...), '...', { locale: ko })` 신규 추가
+→ `useDateFormatter().fmtDate()` / `fmtDateTime()`으로 교체.
+
+**예외 (PASS로 처리):**
+- `apps/frontend/hooks/use-date-formatter.ts` 자체 — SSOT 구현 파일이므로 date-fns + locale 직접 import 허용.
+- `differenceInDays`, `addDays`, `addMonths`, `isBefore`, `isAfter`, `startOfMonth`, `parseISO`, `formatISO`, `getYear`, `getMonth` 등 계산/변환 전용 함수 — locale 의존 없으므로 직접 import 허용.
+- `components/ui/date-picker.tsx`, `components/ui/date-range-picker.tsx` — shadcn/ui Calendar 컴포넌트 내부 locale 요구사항. UI 라이브러리 래퍼로 예외.
+- `components/calibration/CalibrationTimeline.tsx` — 기존 tech-debt LOW (2026-04-27 기준, 교체 대상이나 긴급 아님).
+- `components/equipment-imports/EquipmentImportDetail.tsx` — 기존 tech-debt LOW (동일).
+- `date-fns` 타입 전용 import — 런타임 locale 없는 타입 import는 허용.
+
 ## Output Format
 
 ```markdown

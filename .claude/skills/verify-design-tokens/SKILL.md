@@ -1244,6 +1244,46 @@ grep -c "@source inline" apps/frontend/styles/globals.css
 
 ---
 
+### Step 37: Layer 3 토큰 파일 내 ANIMATION_PRESETS 인라인 우회 금지 (2026-04-27 추가)
+
+Layer 3 컴포넌트 토큰 파일(`lib/design-tokens/components/*.ts`)에서
+`motion-safe:animate-*` / `motion-reduce:animate-*` 클래스 문자열을 직접 인라인으로 사용하는 경우
+`motion.ts`의 `ANIMATION_PRESETS` 상수를 경유해야 한다.
+
+**규칙 근거:**
+- `ANIMATION_PRESETS.pulse` = `'motion-safe:animate-pulse motion-reduce:animate-none'`
+- `ANIMATION_PRESETS.pulseSoft` = `'motion-safe:animate-pulse-soft motion-reduce:animate-none'`
+이 값들은 `motion.ts`가 SSOT이며, Layer 3 파일이 인라인 문자열을 복제하면
+motion.ts 변경 시 동기화 실패가 발생한다.
+
+```bash
+# Layer 3 토큰 파일에서 motion-safe + motion-reduce 페어 인라인 탐지
+# (ANIMATION_PRESETS.pulse / .pulseSoft 가 제공하는 완전한 쌍 패턴)
+grep -rn "motion-safe:animate-.*motion-reduce:animate-none" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts" \
+  | grep -v "ANIMATION_PRESETS\|node_modules"
+# 결과: 0건 → PASS
+# hit 발생 시: ANIMATION_PRESETS에 동일 값 있으면 교체 필수
+# 예: motion-safe:animate-pulse motion-reduce:animate-none → ANIMATION_PRESETS.pulse
+# 예: motion-safe:animate-pulse-soft motion-reduce:animate-none → ANIMATION_PRESETS.pulseSoft
+```
+
+**PASS:** `motion-safe:animate-* motion-reduce:animate-none` 페어 문자열이 Layer 3 파일에서 0건 (ANIMATION_PRESETS 경유).
+**FAIL:** 페어 패턴 인라인 발견 → `ANIMATION_PRESETS.pulse` 또는 `.pulseSoft`로 교체.
+
+**예외:**
+- `motion.ts` 자체 — ANIMATION_PRESETS 정의 파일이므로 직접 문자열 사용 허용.
+- Layer 1(primitives), Layer 2(semantic) — motion.ts와 동급이면 허용. Layer 3(components)만 대상.
+- 단독 `motion-safe:animate-fade-in-up` 등 커스텀 keyframe — `motion-reduce:animate-none` 쌍이 아닌 접근성 prefix 단독 사용은 허용. ANIMATION_PRESETS 정의 대상이 아님.
+- Tailwind `@keyframes` 정의 또는 JSDoc 주석 내 예시 코드 — 런타임 클래스 아님.
+
+**Related Files:**
+- `apps/frontend/lib/design-tokens/motion.ts` — `ANIMATION_PRESETS` SSOT 정의
+- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — urgency.critical pulseSoft 소비처
+
+---
+
 ## Output Format
 
 ```markdown

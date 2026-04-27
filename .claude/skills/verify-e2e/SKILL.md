@@ -672,3 +672,32 @@ grep -A5 "expect(resp.status()).toBe(403\|400)" \
 ls apps/frontend/tests/e2e/.auth/*.json | wc -l
 # 6 → PASS, 7 이상 → FAIL (신규 storageState 추가 확인 필요)
 ```
+
+**20d: apiGetWithToken / apiPatchWithToken — role vs token 헬퍼 분리 패턴 (2026-04-27 추가)**
+
+borrower처럼 storageState가 없는 역할(동적 token 주입)에서 API 호출 시
+`apiGet(role)` / `apiPatch(role)` 대신 `apiGetWithToken(token)` / `apiPatchWithToken(token)` 헬퍼를 사용해야 한다.
+두 헬퍼를 동일 operation에 혼용하면 Authorization 헤더 전략이 충돌한다.
+
+```bash
+# workflow-helpers.ts에 apiGetWithToken 정의 확인
+grep -n "apiGetWithToken\|apiPatchWithToken" \
+  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
+  | head -10
+# 결과: function apiGetWithToken(token: string) 및 apiPatchWithToken(token: string) → PASS
+
+# borrowerApproveCheckout / borrowerRejectCheckout이 token 헬퍼를 사용하는지 확인
+grep -A5 "borrowerApproveCheckout\|borrowerRejectCheckout" \
+  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
+  | grep "apiGetWithToken\|apiPatchWithToken"
+# 결과: 두 함수 모두 token 헬퍼 경유 → PASS
+
+# storageState와 token 주입 혼용 금지 확인
+grep -B2 -A2 "apiGet\b\|apiPatch\b" \
+  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
+  | grep -c "borrower"
+# 0 → PASS (role 기반 헬퍼에 borrower 혼용 없음)
+```
+
+**PASS:** `apiGetWithToken/apiPatchWithToken`이 token 파라미터로 정의되고 borrower 함수들이 이를 경유.
+**FAIL:** `apiGet('borrower')` 형태로 role 기반 헬퍼에 존재하지 않는 role 전달, 또는 storageState 기반 context에서 token 헬퍼 혼용.

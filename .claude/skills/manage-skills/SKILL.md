@@ -30,16 +30,16 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-cas`            | CAS(Optimistic Locking) 패턴 검증      | `apps/backend/src/modules/**/*.service.ts`, `*/dto/**/*.dto.ts`       |
 | `verify-auth`           | 서버 사이드 인증/인가 + 라우트 선언 순서 검증 (Step 15: FileInterceptor 비업로드 권한 오용 탐지) | `apps/backend/src/**/*.controller.ts`, `*/dto/**/*.dto.ts`            |
 | `verify-zod`            | Zod 검증 패턴 검증 (Step 13: `.default(N)` 보장 필드는 DTO 클래스 non-optional) | `*/dto/**/*.dto.ts`, `apps/backend/src/common/pipes/*.ts`             |
-| `verify-ssot`           | SSOT 임포트 패턴 검증 (Step 27: UserSelectableCheckoutPurpose — CreateCheckoutDto.purpose 서브셋 타입) | `apps/backend/src/**/*.ts`, `apps/frontend/**/*.ts(x)` |
+| `verify-ssot`           | SSOT 임포트 패턴 검증 (Step 27: UserSelectableCheckoutPurpose — CreateCheckoutDto.purpose 서브셋 타입, Step 28: useDateFormatter SSOT — date-fns 직접 사용 금지) | `apps/backend/src/**/*.ts`, `apps/frontend/**/*.ts(x)` |
 | `verify-hardcoding`     | SSOT 하드코딩 탐지 (Step 2b: checkouts queryKeys view/resource 계층, Step 25: DISPLAY_LIMITS SSOT — `.slice(0, N)` 매직넘버 탐지, Step 26: 컴포넌트 비-JSX 함수 내 한국어 문자열 조합) | `apps/frontend/lib/api/**`, `apps/backend/src/**/*.service.ts`, `apps/frontend/lib/config/dashboard-config.ts`, `apps/frontend/components/**`        |
 | `verify-frontend-state` | 프론트엔드 상태 관리 패턴 검증 (Step 21: runtime feature flag로 union 타입 내로잉 금지) | `apps/frontend/components/**`, `apps/frontend/hooks/**`, `apps/frontend/lib/checkouts/**`  |
 | `verify-nextjs`         | Next.js 16 패턴 검증                   | `apps/frontend/app/**/page.tsx`, `layout.tsx`, `error.tsx`            |
 | `verify-filters`        | URL-driven 필터 SSOT 패턴 검증 (Step 10: checkout purpose 필터 타입 — `CheckoutPurpose \| 'all'` + enum 검증) | `*-filter-utils.ts`, `use-*-filters.ts`, `page.tsx` |
-| `verify-design-tokens`  | Design Token 3-Layer 아키텍처 검증 (Step 33: DASHBOARD_ENTRANCE/DASHBOARD_MOTION 인라인 딜레이 금지, Step 34: WAI-ARIA grid 3단계 패턴, Step 35: CHECKOUT_ITEM_ROW_TOKENS zone key satisfies, Step 36: WORKFLOW_PANEL_TOKENS.actor satisfies + WorkflowPanelActorVariant) | `lib/design-tokens/**`, `apps/frontend/components/**`, `styles/globals.css`                 |
+| `verify-design-tokens`  | Design Token 3-Layer 아키텍처 검증 (Step 33: DASHBOARD_ENTRANCE/DASHBOARD_MOTION 인라인 딜레이 금지, Step 34: WAI-ARIA grid 3단계 패턴, Step 35: CHECKOUT_ITEM_ROW_TOKENS zone key satisfies, Step 36: WORKFLOW_PANEL_TOKENS.actor satisfies + WorkflowPanelActorVariant, Step 37: Layer 3 토큰 파일 내 ANIMATION_PRESETS 인라인 우회 금지) | `lib/design-tokens/**`, `apps/frontend/components/**`, `styles/globals.css`                 |
 | `verify-security`       | 보안 설정 검증                         | `helmet-config.ts`, `next.config.js`, `**/*.controller.ts`           |
 | `verify-i18n`           | i18n 번역 + routeMap↔navigation.json + audit SSOT enum 동기화 검증 | `apps/frontend/messages/{en,ko}/*.json`, `lib/navigation/route-metadata.ts`, `packages/schemas/src/enums/audit.ts` |
 | `verify-sql-safety`     | SQL 안전성 검증                        | `apps/backend/src/modules/**/*.service.ts`                             |
-| `verify-e2e`            | E2E 테스트 패턴 검증                   | `tests/e2e/**/*.spec.ts`, `tests/e2e/shared/**`, `global-setup.ts`    |
+| `verify-e2e`            | E2E 테스트 패턴 검증 (Step 20d: apiGetWithToken/apiPatchWithToken role vs token 헬퍼 분리 패턴) | `tests/e2e/**/*.spec.ts`, `tests/e2e/shared/**`, `global-setup.ts`    |
 | `verify-seed-integrity` | 시드 인프라 3자 SSOT 삼각형 정합성     | `database/seed-data/**/*.seed.ts`, `seed-test-new.ts`, `verification.ts` |
 | `verify-workflows`      | 크리티컬 워크플로우 E2E 커버리지 검증  | `docs/workflows/critical-workflows.md`, `tests/e2e/workflows/**/*.spec.ts` |
 | `verify-cache-events`   | 이벤트 기반 캐시 무효화 아키텍처 검증  | `cache-event.registry.ts`, `cache-event-listener.ts`, `cache-invalidation.helper.ts`, `cache-patterns.ts` |
