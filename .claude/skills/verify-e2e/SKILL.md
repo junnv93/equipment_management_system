@@ -327,6 +327,11 @@ grep -rn '\[data-[a-z]' \
 **PASS:** spec의 `[data-xxx]` 셀렉터가 컴포넌트에 attribute로 실재함.
 **FAIL:** spec이 존재하지 않는 attribute를 참조 → 셀렉터가 항상 0 match → 결과가 false negative.
 
+**현재 baseline (2026-04-27):**
+- `data-widget` — `DashboardRow4.tsx:` `data-widget={widget}` 부착. `auth-role-access.spec.ts`에서 `[data-widget="systemHealth"]` 등 사용.
+- `data-timeline-card` — `CheckoutTimeline.tsx` 부착. E2E 워크플로우 spec에서 사용.
+- `data-guidance-key` — `GuidanceCallout.tsx` 부착. NC E2E spec에서 사용.
+
 **16c: `toHaveAttribute` 기반 상태 검증 패턴 (2026-04-22 추가)**
 
 상태 머신(FSM) 컴포넌트의 현재 상태를 E2E에서 검증할 때 `data-<domain>-key` attribute +
@@ -612,6 +617,7 @@ grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
 | 19a | suite-ux localStorage 조작 패턴 | PASS/FAIL | page.evaluate() 외부 localStorage 직접 접근 또는 키 prefix 누락 위치 |
 | 19b | emulateMedia reducedMotion 패턴 | PASS/INFO | pulse 클래스 검증 테스트에서 reduced-motion 시나리오 누락 |
 | 19c | 모바일 viewport + aria-modal 검증 | PASS/FAIL | Drawer toBeVisible 후 aria-modal="true" 검증 누락 |
+| 20e | 로그인 폼 자격증명 SSOT | PASS/FAIL | fill('user123') 등 하드코딩 리터럴 → E2E_PASSWORDS + DEV_*_PASSWORD fallback |
 ```
 
 ## Exceptions
@@ -625,7 +631,7 @@ grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
 7. **단일 테스트 describe에 serial 미설정** — 순서 의존성 없으면 불필요
 8. **global-setup/teardown** — 글로벌 파일, localhost 폴백 정상
 9. **auth.spec.ts, auth-token-sync.spec.ts** — 로그인 플로우 테스트
-10. **auth-role-access.spec.ts** — 비인증 리다이렉트 테스트
+10. **auth-role-access.spec.ts Group 1 (1.1~1.3)** — 로그인 폼 UI 자체를 테스트하므로 `baseTest` + 실제 로그인 폼 접근이 정당. 단, 자격증명은 반드시 `DEV_*_PASSWORD` 환경변수 + fallback 상수를 경유해야 한다 (Step 20e 참조). 비인증 리다이렉트 검증(Group 7)도 포함.
 11. **security.spec.ts** — API 보안 테스트
 12. **calibration/overdue-auto-nc/** — API 전용 테스트
 13. **seed 파일** — 시드 스크립트
@@ -701,3 +707,41 @@ grep -B2 -A2 "apiGet\b\|apiPatch\b" \
 
 **PASS:** `apiGetWithToken/apiPatchWithToken`이 token 파라미터로 정의되고 borrower 함수들이 이를 경유.
 **FAIL:** `apiGet('borrower')` 형태로 role 기반 헬퍼에 존재하지 않는 role 전달, 또는 storageState 기반 context에서 token 헬퍼 혼용.
+
+### Step 20e: 로그인 폼 E2E 자격증명 — DEV_*_PASSWORD 환경변수 + fallback SSOT (2026-04-27 추가)
+
+로그인 폼 UI를 직접 테스트하는 spec(auth-role-access.spec.ts Group 1 등)에서
+시드 자격증명을 하드코딩하면 CI 환경 password 변경 시 일괄 수정이 필요하다.
+`DEV_*_PASSWORD` 환경변수 + fallback 패턴으로 추출해야 한다.
+
+**올바른 패턴:**
+```typescript
+// ✅ 파일 상단 상수 — 환경변수 우선, 없으면 시드 fallback
+const E2E_PASSWORDS = {
+  user: process.env.DEV_USER_PASSWORD ?? 'user123',
+  manager: process.env.DEV_MANAGER_PASSWORD ?? 'manager123',
+  admin: process.env.DEV_ADMIN_PASSWORD ?? 'admin123',
+} as const;
+
+// ✅ 사용
+await passwordInput.fill(E2E_PASSWORDS.user);
+```
+
+**탐지:**
+```bash
+# 로그인 폼 spec에 하드코딩 password 리터럴 탐지
+grep -rn "\.fill('user123'\|\.fill('manager123'\|\.fill('admin123'" \
+  apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -v "auth.setup\|global-setup"
+# → 0건 (E2E_PASSWORDS 상수 경유)
+
+# E2E_PASSWORDS 상수가 DEV_*_PASSWORD 환경변수 경유인지 확인
+grep -n "E2E_PASSWORDS\|DEV_USER_PASSWORD\|DEV_MANAGER_PASSWORD\|DEV_ADMIN_PASSWORD" \
+  apps/frontend/tests/e2e/features/dashboard/auth-role-access.spec.ts
+# → DEV_*_PASSWORD ?? 'fallback' 패턴 존재
+```
+
+**PASS:** 로그인 폼 spec 내 `fill('user123')` / `fill('manager123')` / `fill('admin123')` 리터럴 0건.
+**FAIL:** 하드코딩 → `E2E_PASSWORDS` 상수 경유로 교체.
+
+**예외:** `auth.setup.ts` 및 `global-setup.ts` — test-login endpoint 경유 storageState 생성, 패스워드 직접 참조 없음.

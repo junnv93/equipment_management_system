@@ -541,6 +541,31 @@ ls apps/frontend/hooks/use-date-formatter.ts 2>/dev/null && echo "EXISTS" || ech
 - `components/equipment-imports/EquipmentImportDetail.tsx` — 기존 tech-debt LOW (동일).
 - `date-fns` 타입 전용 import — 런타임 locale 없는 타입 import는 허용.
 
+### Step 29: prebuild guard 스크립트 존재 + package.json 연결 (2026-04-27 추가)
+
+DASHBOARD_ROLE_CONFIG ↔ UserRoleValues 동기화(`check-role-config-sync.mjs`)와
+`:root ↔ .dark` brand CSS 변수 대칭(`check-css-vars.mjs`)은 빌드 타임에 강제되어야 한다.
+두 스크립트가 `package.json`의 `prebuild` 훅에 연결되지 않으면 새 role/색상 추가 시 드리프트가 무음 통과한다.
+
+```bash
+# 빌드 가드 스크립트 파일 존재 확인
+ls scripts/check-role-config-sync.mjs scripts/check-css-vars.mjs 2>/dev/null \
+  && echo "EXISTS" || echo "MISSING"
+
+# package.json prebuild에 두 스크립트 모두 연결되어 있는지 확인
+grep '"prebuild"' package.json
+# 결과: "prebuild": "node scripts/check-role-config-sync.mjs && node scripts/check-css-vars.mjs"
+
+# 드라이런 — 두 스크립트 모두 exit 0 반환하는지 확인
+node scripts/check-role-config-sync.mjs && node scripts/check-css-vars.mjs \
+  && echo "✅ PASS" || echo "❌ FAIL"
+```
+
+**PASS:** 두 파일 존재 + `prebuild`에 연결 + 드라이런 exit 0.
+**FAIL:** 스크립트 파일 없음 또는 `prebuild` 훅 미연결 또는 드라이런 exit 1(동기화 불일치 감지).
+
+**근거:** DASHBOARD_ROLE_CONFIG는 `lib/config/dashboard-config.ts`에 정의되고, UserRoleValues는 `packages/schemas`에 정의된다. 두 파일은 다른 도메인에 위치하므로 자동 타입 체크만으로는 불일치 탐지 불가. 빌드 타임 가드가 유일한 확실한 방어선.
+
 ## Output Format
 
 ```markdown
@@ -578,6 +603,7 @@ ls apps/frontend/hooks/use-date-formatter.ts 2>/dev/null && echo "EXISTS" || ech
 | 25  | design-token 헬퍼 내 status literal 직접 비교 금지 | PASS/FAIL | `=== 'overdue'` 등 raw 리터럴 비교 위치 (`*StatusValues` 경유 필요) |
 | 26  | notifyCheckoutAction SSOT 경유 — 반출 onSuccess 직접 toast 금지 | PASS/FAIL | checkout 액션 onSuccess에서 `toast({...})` 직접 호출 위치 |
 | 27  | UserSelectableCheckoutPurpose SSOT — CreateCheckoutDto.purpose | PASS/FAIL | `purpose: string` 또는 `purpose: CheckoutPurpose` 잔존 위치 |
+| 29  | prebuild guard 스크립트 존재 + package.json 연결 | PASS/FAIL | check-role-config-sync.mjs·check-css-vars.mjs 파일 누락 또는 prebuild 훅 미연결 |
 ```
 
 ## Exceptions
