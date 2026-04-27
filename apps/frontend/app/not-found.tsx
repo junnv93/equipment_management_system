@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { FileQuestion, Home, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 export default async function NotFound() {
   const t = await getTranslations('navigation');
@@ -27,7 +28,7 @@ export default async function NotFound() {
             </Link>
           </Button>
           <Button variant="outline" asChild className="gap-2">
-            <Link href="/equipment">
+            <Link href={FRONTEND_ROUTES.EQUIPMENT.LIST}>
               <ArrowLeft className="h-4 w-4" />
               {t('layout.goToEquipment')}
             </Link>
@@ -37,7 +38,10 @@ export default async function NotFound() {
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <p className="text-sm text-muted-foreground">{t('layout.notFoundHelp')}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
-            <Link href="/equipment" className="text-sm text-primary hover:underline">
+            <Link
+              href={FRONTEND_ROUTES.EQUIPMENT.LIST}
+              className="text-sm text-primary hover:underline"
+            >
               {t('equipment')}
             </Link>
             <span className="text-muted-foreground">|</span>

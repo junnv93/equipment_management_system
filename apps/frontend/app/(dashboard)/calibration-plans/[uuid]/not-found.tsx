@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileQuestion, ArrowLeft, List } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 export default async function CalibrationPlanNotFound() {
   const t = await getTranslations('calibration');
@@ -19,7 +20,7 @@ export default async function CalibrationPlanNotFound() {
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button asChild className="gap-2">
-            <Link href="/calibration-plans">
+            <Link href={FRONTEND_ROUTES.CALIBRATION_PLANS.LIST}>
               <List className="h-4 w-4" />
               {t('notFound.backToList')}
             </Link>

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileQuestion, ArrowLeft, List } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 /**
  * 장비 상세 404 페이지
@@ -32,7 +33,7 @@ export default async function EquipmentNotFound() {
         {/* 액션 버튼 */}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button asChild className="gap-2">
-            <Link href="/equipment">
+            <Link href={FRONTEND_ROUTES.EQUIPMENT.LIST}>
               <List className="h-4 w-4" />
               {t('notFound.backToList')}
             </Link>
