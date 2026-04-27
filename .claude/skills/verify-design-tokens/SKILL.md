@@ -1070,6 +1070,114 @@ grep -rn "MENU_ITEM_TOKENS\s*=" \
 
 **상세:** [references/step-details.md](references/step-details.md) Step 32
 
+### Step 34: WAI-ARIA grid 패턴 — `role="grid" > role="row" > role="gridcell"` 3단계 일관성 (2026-04-27 추가)
+
+`CheckoutGroupCard`처럼 비표준 div 기반 그리드(`display: grid`)를 테이블처럼 탐색해야 하는 컴포넌트는
+WAI-ARIA 명세의 `grid → row → gridcell` 3단계 역할 계층을 반드시 준수해야 한다.
+`role="grid"` 만 선언하고 자식에 `role="row"` / `role="gridcell"` 이 없으면
+스크린리더가 셀 탐색 키(`←/→/↑/↓`)를 올바르게 처리하지 못한다.
+
+```bash
+# role="grid"가 있는 컴포넌트에서 role="row" 미사용 탐지
+grep -rln "role=\"grid\"" apps/frontend/components/ --include="*.tsx" \
+  | grep -v "ui/" \
+  | while read f; do
+      if ! grep -q 'role="row"' "$f"; then
+        echo "MISSING role=row in: $f"
+      fi
+    done
+
+# role="grid"가 있는 컴포넌트에서 role="gridcell" 미사용 탐지
+grep -rln "role=\"grid\"" apps/frontend/components/ --include="*.tsx" \
+  | grep -v "ui/" \
+  | while read f; do
+      if ! grep -q 'role="gridcell"' "$f"; then
+        echo "MISSING role=gridcell in: $f"
+      fi
+    done
+```
+
+**PASS:** `role="grid"` 선언 컴포넌트 모두 `role="row"` + `role="gridcell"` 동시 존재.
+**FAIL:** 3단계 중 하나라도 누락 → 부모부터 순서대로 `role="grid" > role="row" > role="gridcell"` 추가.
+
+**예외:**
+- shadcn/ui의 `<Table>` 컴포넌트 — HTML 네이티브 `<table>/<tr>/<td>` 사용, 별도 `role` 불필요
+- `EquipmentTable.tsx` — HTML `<Table>` 내부에 `role="grid"` 추가 + `role="row"/"gridcell"` 명시 패턴 (이미 적용)
+
+**관련 파일:**
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — Sprint 4.2 도입, div-based grid + ARIA 3단계
+- `apps/frontend/components/equipment/EquipmentTable.tsx` — 기존 참고 구현
+
+### Step 35: `CHECKOUT_ITEM_ROW_TOKENS` zone key `satisfies { ... [key: string]: unknown }` 강제 (2026-04-27 추가)
+
+Sprint 4.2에서 도입된 `CHECKOUT_ITEM_ROW_TOKENS`는 4-zone grid의 핵심 키(`grid`, `zoneStatus`, `zoneIdentity`, `zoneAction`, `miniProgressTooltipButton`)가 반드시 존재함을 컴파일 타임에 강제한다.
+
+`as const satisfies { grid: string; zoneStatus: string; zoneIdentity: string; zoneAction: string; miniProgressTooltipButton: string; [key: string]: unknown }` 제약이 이 역할을 한다.
+`[key: string]: unknown` 인덱스 시그니처가 없으면 `purposeBar`, `container` 등 추가 키를 가진 넓은 객체에 `satisfies`가 거부되므로 필수다.
+
+```bash
+# CHECKOUT_ITEM_ROW_TOKENS satisfies 제약 존재 확인
+grep -A 8 "^} as const satisfies" \
+  apps/frontend/lib/design-tokens/components/checkout.ts \
+  | grep -B1 "zoneStatus\|zoneIdentity\|zoneAction\|miniProgressTooltipButton"
+# 기대: zone key가 포함된 satisfies 블록 존재
+
+# [key: string]: unknown 인덱스 시그니처 존재 확인 (넓은 객체 허용용)
+grep -A 10 "CHECKOUT_ITEM_ROW_TOKENS" \
+  apps/frontend/lib/design-tokens/components/checkout.ts \
+  | grep "\[key: string\]: unknown"
+# 기대: 1건 (PASS)
+```
+
+**PASS:** `satisfies { grid: string; zoneStatus: string; zoneIdentity: string; zoneAction: string; miniProgressTooltipButton: string; [key: string]: unknown }` 제약 존재.
+**FAIL:** `satisfies` 없음 → zone key 삭제/오타 시 컴파일 에러 미발생 → 런타임 undefined 접근 위험.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_ITEM_ROW_TOKENS` 정의 (Sprint 4.2 신규 zone keys)
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — zone key 소비처 (`CHECKOUT_ITEM_ROW_TOKENS.zoneStatus` 등)
+
+### Step 36: `WORKFLOW_PANEL_TOKENS.variant` + `.actor` `satisfies Record` 완전성 + `WorkflowPanelActorVariant` 타입 (2026-04-27 추가)
+
+Sprint 4.1에서 `WORKFLOW_PANEL_TOKENS`에 `variant` / `actor` 두 서브트리가 추가됨:
+- `variant`: `compact | hero` 2-way → `satisfies Record<'compact' | 'hero', { container: string; heading: string; actionButton: string }>` 강제
+- `actor`: `requester | approver | receiver` 3-way → `satisfies Record<'requester' | 'approver' | 'receiver', { border: string; icon: string; accent: string }>` 강제
+
+이 `satisfies` 가드가 없으면 새 actor/variant 추가 시 누락을 TypeScript가 잡지 못한다.
+또한 `WorkflowPanelActorVariant = keyof typeof WORKFLOW_PANEL_TOKENS.actor` 타입이 export되어야 한다.
+
+```bash
+# variant satisfies 확인 (2-way)
+grep -A 4 "} satisfies Record<" apps/frontend/lib/design-tokens/components/workflow-panel.ts \
+  | grep "'compact' | 'hero'"
+# 기대: 1건 (PASS)
+
+# actor satisfies 확인 (3-way)
+grep -A 4 "} satisfies Record<" apps/frontend/lib/design-tokens/components/workflow-panel.ts \
+  | grep "'requester' | 'approver' | 'receiver'"
+# 기대: 1건 (PASS)
+
+# WorkflowPanelActorVariant 타입 export 확인
+grep -n "WorkflowPanelActorVariant" \
+  apps/frontend/lib/design-tokens/components/workflow-panel.ts
+# 기대: export type WorkflowPanelActorVariant = keyof ... (PASS)
+
+# index.ts barrel re-export 확인
+grep -n "workflow-panel\|WorkflowPanelActorVariant" \
+  apps/frontend/lib/design-tokens/index.ts
+# 기대: workflow-panel 파일 re-export + WorkflowPanelActorVariant 포함
+```
+
+**PASS:** variant satisfies 1건 + actor satisfies 1건 + `WorkflowPanelActorVariant` export + index.ts barrel re-export.
+**FAIL:**
+- `satisfies` 누락 → 새 variant/actor 추가 시 TypeScript 미탐지
+- `WorkflowPanelActorVariant` 미export → 소비처가 직접 union 리터럴 재정의 (SSOT 위반)
+- index.ts barrel 누락 → 소비처가 직접 서브패스 import (Step 3 위반)
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `WORKFLOW_PANEL_TOKENS.variant`, `WORKFLOW_PANEL_TOKENS.actor`, `WorkflowPanelActorVariant`
+- `apps/frontend/lib/design-tokens/index.ts` — barrel re-export
+- `apps/frontend/components/shared/NextStepPanel.tsx` — actor/variant 소비처, `resolveActorVariant()` 내부 사용
+
 ### Step 33: DASHBOARD_ENTRANCE/DASHBOARD_MOTION 토큰 + globals.css prefers-reduced-motion (2026-04-27 추가)
 
 **33a: DASHBOARD_ENTRANCE 스태거 딜레이 인라인 금지**
@@ -1188,6 +1296,9 @@ grep -c "@source inline" apps/frontend/styles/globals.css
 | 33b | `DASHBOARD_MOTION` transition 토큰 경유 | PASS/FAIL | 대시보드 컴포넌트 transition-colors 인라인 위치 |
 | 33c | `globals.css` prefers-reduced-motion 존재 | PASS/FAIL | 미디어 쿼리 누락 |
 | 33d | `@source inline()` animation-delay arbitrary 커버 | PASS/FAIL | globals.css 지시어 누락 |
+| 34  | WAI-ARIA grid 3단계: `role="grid" > row > gridcell` 일관성 | PASS/FAIL | role="row"/"gridcell" 누락 컴포넌트 |
+| 35  | `CHECKOUT_ITEM_ROW_TOKENS` zone key `satisfies { ... [key: string]: unknown }` | PASS/FAIL | satisfies 미존재 또는 zone key 누락 위치 |
+| 36  | `WORKFLOW_PANEL_TOKENS.variant/.actor` `satisfies Record` + `WorkflowPanelActorVariant` export | PASS/FAIL | satisfies 누락 또는 타입 미export 위치 |
 ```
 
 ## Exceptions

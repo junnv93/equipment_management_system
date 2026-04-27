@@ -116,8 +116,8 @@ export default function CheckoutDetailClient({
   const { data: checkout = initialCheckout } = useQuery({
     queryKey: queryKeys.checkouts.resource.detail(initialCheckout.id),
     queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
-    placeholderData: initialCheckout,
     ...QUERY_CONFIG.CHECKOUT_DETAIL,
+    placeholderData: initialCheckout,
   });
 
   // FSM 다음 단계 descriptor (feature flag on일 때만 실질적으로 사용)

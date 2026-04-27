@@ -1,6 +1,6 @@
 ---
 name: verify-checkout-fsm
-description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), EXPECTED_ENTRY_COUNT 동적 table test(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33). packages/schemas/src/fsm/** 또는 checkouts.service.ts 변경 후 사용.
+description: Checkout FSM SSOT 아키텍처 검증 — Dependency Inversion(UserRole import 금지), assertFsmInvariants, CheckoutPermissionKey 동기화, assertFsmAction 헬퍼, calculateAvailableActions sync, FSM_TO_AUDIT_ACTION 커버리지, lenderTeam identity-rule 강제 패턴, NO_EQUIPMENT 가드 배치, findCheckoutEntity 분리(Step 28), findOne userPermissions 필수(Step 29), FSM drift safeParse(Step 30), findOne CheckoutWithMeta 단일 반환(Step 31), EXPECTED_ENTRY_COUNT 동적 table test(Step 32), rental-phase.ts SSOT exhaustiveness guard(Step 33), resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성(Step 34). packages/schemas/src/fsm/** 또는 checkouts.service.ts 또는 NextStepPanel.tsx 변경 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -434,6 +434,7 @@ grep -n "BadRequestException" \
 | 30 | FSM drift safeParse 가드 — buildNextStep 내 | PASS/FAIL | NextStepDescriptorSchema.safeParse + [FSM drift] Logger.warn |
 | 31 | findOne 반환 타입 — CheckoutWithMeta 단일 | PASS/FAIL | Promise<CheckoutWithMeta> 선언 + 유니온 타입 0건 |
 | 32 | EXPECTED_ENTRY_COUNT 동적 table test (Sprint 1.1 신규, 2026-04-26 동적화) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts — 하드코딩 숫자 금지, template literal 사용 |
+| 34 | resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성 (Sprint 4.1) | PASS/FAIL | 함수 정의 1건 + NextActor exhaustive + 속성 hero/compact 양쪽 존재 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -904,6 +905,55 @@ grep -n "satisfies Record<TableKey, TableRow>" \
 - 파일 없음 → Sprint 1.1 구현 누락
 - `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가
 - 하드코딩 숫자(예: `'all 280 combinations'`) → `EXPECTED_ENTRY_COUNT` template literal로 교체
+
+### Step 34: `resolveActorVariant` 순수 함수 SSOT + `data-variant`/`data-actor-variant` 테스트 선택자 (Sprint 4.1 신규, 2026-04-27 추가)
+
+Sprint 4.1에서 도입된 `resolveActorVariant(nextActor: NextActor): ActorVariant` 순수 함수는
+FSM `NextActor` 값을 `components/shared/NextStepPanel.tsx` 내부에서 UI `ActorVariant`(`requester | approver | receiver`)로 변환한다.
+이 함수는 `NextActor` enum의 **모든 값**을 처리하는 exhaustive 매핑이어야 하며, 미처리 값에 대한 fallback이 존재해야 한다.
+`data-variant` / `data-actor-variant` DOM 속성은 Playwright E2E 셀렉터 기반이므로 hero/compact 분기 양쪽에 반드시 존재해야 한다.
+
+```bash
+# resolveActorVariant 함수 정의 확인 (SSOT 위치)
+grep -n "function resolveActorVariant\|resolveActorVariant" \
+  apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 1건 이상 (정의 + 호출, PASS)
+
+# NextActor 값 목록 확인 (packages/schemas SSOT)
+grep -n "NextActor\b" packages/schemas/src/fsm/checkout-fsm.ts | head -10
+# 기대: type/enum NextActor 정의 확인
+
+# resolveActorVariant가 모든 NextActor 값을 처리하는지 확인 (switch 또는 Record 패턴)
+grep -A 20 "function resolveActorVariant" \
+  apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: requester/approver/receiver 3 케이스 + default fallback 존재
+
+# data-variant hero/compact 양쪽 존재 확인
+grep -c "data-variant" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 3 이상 (floating default + hero + compact 각 1건)
+
+# data-actor-variant hero/compact 양쪽 존재 확인
+grep -c "data-actor-variant" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 3 이상 (PASS)
+```
+
+**PASS:**
+1. `resolveActorVariant` 정의 1건 + `NextActor` 모든 케이스 처리 + fallback 존재
+2. `data-variant` 3건 이상 (hero/compact/default 분기 각각)
+3. `data-actor-variant` 3건 이상 (hero/compact/default 분기 각각)
+
+**FAIL:**
+- `resolveActorVariant` 미존재 → `NextActor → ActorVariant` 변환 로직이 JSX 인라인 조건식으로 분산 (SSOT 위반)
+- `NextActor` 새 값 추가 후 `resolveActorVariant` 미업데이트 → fallback으로 모든 신규 액터가 동일 스타일 사용
+- `data-variant` 누락 → Playwright 셀렉터 `[data-variant="hero"]` 탐지 불가
+
+**예외:**
+- `resolveActorVariant`의 `default` case 반환값 — `NextActor.requester`로 fallback 하는 것은 안전한 UI 기본값
+
+**관련 파일:**
+- `apps/frontend/components/shared/NextStepPanel.tsx` — `resolveActorVariant` 정의 + `data-variant`/`data-actor-variant` DOM 속성
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `NextActor` 타입 SSOT
+- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `WORKFLOW_PANEL_TOKENS.actor` (ActorVariant → 색상 토큰 매핑)
 
 ### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
 
