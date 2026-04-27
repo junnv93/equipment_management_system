@@ -121,6 +121,7 @@ grep -n "getPermissions\|roles\[0\]" \
 | 13  | FE role 리터럴 직접 비교   | PASS/WARN | URVal.* 직접 비교로 Permission 우회하는 액션 게이트 위치 |
 | 14  | jwt.strategy.ts permissions 파생 | PASS/FAIL | derivePermissionsFromRoles 사용 여부 |
 | 15  | FileInterceptor 비업로드 권한 오용 | PASS/FAIL | UPLOAD_*/MANAGE_* 외 권한으로 업로드 게이팅한 엔드포인트 목록 |
+| 16  | 백엔드 role 리터럴 직접 비교       | PASS/WARN | controller에서 'system_admin' 등 리터럴 === 비교 건수 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
@@ -236,6 +237,38 @@ grep -B5 "FileInterceptor\b" \
 ```
 
 **예외:** 파일 업로드가 엔티티 생성과 atomic한 단일 폼(예: 장비 이미지를 장비 등록과 동시에 업로드)에서 `CREATE_EQUIPMENT`를 사용하는 경우 — 코드 주석으로 atomic 의도 명시 필요.
+
+### Step 16: 백엔드 컨트롤러 role 문자열 리터럴 직접 비교 탐지 (2026-04-27 추가)
+
+백엔드 컨트롤러 내에서 `req.user?.roles?.some((r) => r === 'system_admin')` 형태의 role 리터럴 비교는
+`UserRoleValues.SYSTEM_ADMIN` SSOT 상수를 우회한다. UserRole rename 시 silent break 발생.
+
+**배경:** `self-inspections.controller.ts:284`에서 발견 — `r === 'system_admin' || r === 'technical_manager'` 리터럴 직접 비교.
+`UserRoleValues`는 `packages/schemas`에서 import 가능하며 `schemas` 패키지는 backend에서 항상 사용 가능.
+
+```bash
+# 백엔드 컨트롤러 role 리터럴 비교 탐지
+grep -rn "'system_admin'\|'technical_manager'\|'lab_manager'\|'quality_manager'\|'test_engineer'\|'admin'" \
+  apps/backend/src/modules/**/*.controller.ts \
+  2>/dev/null \
+  | grep -v "//\|spec\." | grep "==="
+# 기대: 0건 (PASS) — UserRoleValues.SYSTEM_ADMIN 등 SSOT 상수 경유
+```
+
+**PASS:** 0건 (모든 role 비교가 `UserRoleValues.*` 상수 경유).
+**WARN:** 1건 이상 — `UserRoleValues.ROLE` SSOT 상수로 교체 권장. (FAIL 수준 아님 — 오타 없으면 기능 동작하나 SSOT 드리프트 위험)
+
+**올바른 패턴:**
+```typescript
+// ❌ 리터럴 직접 비교
+req.user?.roles?.some((r) => r === 'system_admin' || r === 'technical_manager')
+
+// ✅ SSOT 상수 경유
+import { UserRoleValues } from '@equipment-management/schemas';
+req.user?.roles?.some((r) => r === UserRoleValues.SYSTEM_ADMIN || r === UserRoleValues.TECHNICAL_MANAGER)
+```
+
+**예외:** 타입 내로잉이 아닌 순수 타입 단언용 `satisfies` / `as` 컨텍스트는 허용.
 
 ## Exceptions
 

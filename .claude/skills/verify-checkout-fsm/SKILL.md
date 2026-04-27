@@ -438,6 +438,7 @@ grep -n "BadRequestException" \
 | 35 | roleToActorVariant + ActorVariant schemas SSOT + isMyTurn UserRoleValues.SYSTEM_ADMIN (Sprint fsm-terminal-actor-variant) | PASS/FAIL | ActorVariant frontend 재정의 0건 + roleToActorVariant schemas import + UserRoleValues.SYSTEM_ADMIN 사용 |
 | 36 | reachedStepIndex — NextStepDescriptor 3분기 + computeReachedStepIndex terminatedFromStatus 위임 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | getNextStep 3개 return 분기 모두 reachedStepIndex 포함 + 함수 terminatedFromStatus 파라미터 존재 |
 | 37 | terminatedFromStatus 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | reject/borrowerReject/cancel에 terminatedFromStatus 설정, 비-terminal 메서드에 미설정 |
+| 39 | useCheckoutNextStep hook terminatedFromStatus 입력 passthrough (2026-04-27) | PASS/FAIL | UseCheckoutNextStepInput 인터페이스 + getNextStep 전달 + useMemo deps 포함 |
 ```
 
 ### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
@@ -1128,3 +1129,37 @@ grep -n "rental-phase" \
 
 **PASS:** rental-phase.ts 존재 + satisfies 가드 1건 + @ts-expect-error 1건 이상 + shared-constants import 0건 + checkout-fsm.ts re-export 존재.
 **FAIL:** 파일 없음 → Sprint 1.2 구현 누락. satisfies/ts-expect-error 없음 → CheckoutStatus 추가 시 RENTAL_STATUS_TO_PHASE 누락 컴파일 에러 미발생. circular dep 발견 → packages/schemas 빌드 실패.
+
+### Step 39: `useCheckoutNextStep` hook `terminatedFromStatus` 입력 passthrough (2026-04-27 추가)
+
+`computeReachedStepIndex`에 `terminatedFromStatus`가 추가됨(Step 36)에 따라,
+프론트엔드 훅 `use-checkout-next-step.ts`도 동일한 파라미터를 입력으로 받아 `getNextStep` 호출에 전달해야 한다.
+`UseCheckoutNextStepInput` 인터페이스에 누락 시 caller가 전달할 방법이 없어 terminal 상태에서 항상 step 1이 표시된다.
+
+```bash
+# UseCheckoutNextStepInput 인터페이스에 terminatedFromStatus 필드 존재
+grep -n "terminatedFromStatus" apps/frontend/hooks/use-checkout-next-step.ts
+# 기대: interface 선언(1건) + destructuring(1건) + getNextStep 호출(1건) + useMemo deps(1건) = 4건 이상 (PASS)
+
+# getNextStep 호출에 terminatedFromStatus 전달 확인
+grep -A 5 "getNextStep(" apps/frontend/hooks/use-checkout-next-step.ts | grep "terminatedFromStatus"
+# 기대: 1건 (PASS)
+
+# useMemo deps에 포함 확인
+grep -A 10 "useMemo" apps/frontend/hooks/use-checkout-next-step.ts | grep "terminatedFromStatus"
+# 기대: 1건 (PASS)
+```
+
+**PASS:**
+1. `UseCheckoutNextStepInput` 인터페이스에 `terminatedFromStatus?: CheckoutStatus | null` 필드
+2. destructuring에서 수신 후 `getNextStep({ ..., terminatedFromStatus })` 호출 전달
+3. `useMemo` deps 배열에 `terminatedFromStatus` 포함
+
+**FAIL:**
+- 인터페이스에 `terminatedFromStatus` 없음 → caller가 전달 불가 → terminal 상태 `reachedStepIndex` 항상 1
+- `getNextStep` 호출에 미전달 → schemas 함수 파라미터 존재해도 hook 레벨에서 누락
+- `useMemo` deps 미포함 → `terminatedFromStatus` 변경 시 재계산 안 됨 (stale closure)
+
+**관련 파일:**
+- `apps/frontend/hooks/use-checkout-next-step.ts` — `UseCheckoutNextStepInput`, `getNextStep` 호출부
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex` (Step 36 연동)
