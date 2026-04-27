@@ -295,9 +295,10 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.software_validation.label',
     icon: 'Code',
     actionKey: 'tabMeta.software_validation.action',
-    commentRequired: true, // AR-14: 검토완료 액션은 코멘트 필수 — 기존 commentDialogTitle/Placeholder i18n과 일관
-    commentDialogTitleKey: 'tabMeta.software_validation.commentDialogTitle',
-    commentPlaceholderKey: 'tabMeta.software_validation.commentPlaceholder',
+    // AR-14: commentRequired는 false 유지 — backend approveValidationSchema에 comment 필드 없음.
+    // 액션 라벨 "검토완료"와의 의미 불일치는 backend DTO에 approvalComment 추가 후 true로 전환.
+    // commentDialogTitleKey/commentPlaceholderKey는 해당 시점을 위해 i18n에 사전 정의됨.
+    commentRequired: false,
     totalApprovalSteps: 1,
     section: 'management',
   },
