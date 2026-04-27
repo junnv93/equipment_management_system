@@ -217,7 +217,7 @@ export const APPROVAL_BULK_BAR_TOKENS = {
     'border-t border-border',
     'bg-background/95 backdrop-blur-sm',
     'shadow-[0_-2px_8px_rgb(0_0_0/0.06)]',
-    'transition-all duration-200 motion-reduce:transition-none',
+    'transition-[opacity,transform,box-shadow] duration-200 motion-reduce:transition-none',
   ].join(' '),
 
   /** 0건 → 시각적 숨김 (DOM 유지) */

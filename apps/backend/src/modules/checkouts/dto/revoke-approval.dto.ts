@@ -12,7 +12,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const revokeApprovalSchema = z.object({
   ...versionedSchema,
-  reason: z.string().min(1, '철회 사유를 입력해주세요'),
+  reason: z.string().trim().min(1, '철회 사유를 입력해주세요'),
 });
 
 export type RevokeApprovalInput = z.infer<typeof revokeApprovalSchema>;

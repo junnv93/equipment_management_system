@@ -189,6 +189,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             SIDEBAR_ELEVATION.shadow,
             SIDEBAR_LAYOUT.transition
           )}
+          id="desktop-sidebar"
           aria-label={t('layout.sidebar')}
         >
           {/* 사이드바 헤더 — 펼침/접힘 모두 동일 높이 영역 내 토글 버튼 배치 */}
@@ -222,6 +223,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   onClick={toggle}
                   aria-label={t('layout.expandSidebar')}
                   aria-expanded={!isCollapsed}
+                  aria-controls="desktop-sidebar"
                 >
                   <ChevronsRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
@@ -261,6 +263,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   onClick={toggle}
                   aria-label={t('layout.collapseSidebar')}
                   aria-expanded={!isCollapsed}
+                  aria-controls="desktop-sidebar"
                 >
                   <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
                 </Button>

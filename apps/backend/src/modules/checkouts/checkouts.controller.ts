@@ -337,6 +337,23 @@ export class CheckoutsController {
     return this.checkoutsService.findAll(query, query.includeSummary ?? false);
   }
 
+  // ============================================================================
+  // M9: 반려 사유 프리셋 목록 — 리터럴 라우트이므로 :uuid 앞에 선언
+  // ============================================================================
+
+  @Get('rejection-presets')
+  @RequirePermissions(Permission.REJECT_CHECKOUT)
+  @ApiOperation({
+    summary: '반려 사유 프리셋 목록',
+    description: '관리자 등록 고정 템플릿. 반려 모달에서 1-click 선택용.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '프리셋 목록' })
+  async getRejectionPresets(): Promise<
+    { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
+  > {
+    return this.checkoutsService.getRejectionPresets();
+  }
+
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
@@ -850,23 +867,6 @@ export class CheckoutsController {
   ): Promise<BulkApproveResult> {
     const approverId = extractUserId(req);
     return this.checkoutsService.bulkApprove(dto.ids, approverId, req);
-  }
-
-  // ============================================================================
-  // M9: 반려 사유 프리셋 목록
-  // ============================================================================
-
-  @Get('rejection-presets')
-  @RequirePermissions(Permission.REJECT_CHECKOUT)
-  @ApiOperation({
-    summary: '반려 사유 프리셋 목록',
-    description: '관리자 등록 고정 템플릿. 반려 모달에서 1-click 선택용.',
-  })
-  @ApiResponse({ status: HttpStatus.OK, description: '프리셋 목록' })
-  async getRejectionPresets(): Promise<
-    { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
-  > {
-    return this.checkoutsService.getRejectionPresets();
   }
 
   // ============================================================================

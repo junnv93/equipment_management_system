@@ -612,7 +612,7 @@
     "actor": "담당",
     "panelTitle": "다음 할 일",
     "urgency": {
-      "normal": "",
+      "normal": "일반",
       "warning": "주의",
       "critical": "기한 초과"
     },
@@ -654,31 +654,31 @@
     },
     "noneYet": {
       "title": "아직 반출 내역이 없습니다",
-      "description": "반출 신청을 등록하면 여기에서 현황을 확인할 수 있습니다.",
+      "description": "반출 신청을 등록하면 여기에서 현황을 확인할 수 있습니다",
       "primaryCta": "반출 신청",
       "secondaryCta": ""
     },
     "noPermission": {
       "title": "반출 현황을 볼 수 없습니다",
-      "description": "현재 역할로는 반출 목록에 접근할 권한이 없습니다.",
+      "description": "현재 역할로는 반출 목록에 접근할 권한이 없습니다",
       "primaryCta": "",
       "secondaryCta": ""
     },
     "noFilterResult": {
       "title": "검색 결과가 없습니다",
-      "description": "필터 조건을 변경하거나 검색어를 수정해보세요.",
+      "description": "필터 조건을 변경하거나 검색어를 수정해보세요",
       "primaryCta": "필터 초기화",
       "secondaryCta": ""
     },
     "error": {
       "title": "반출 목록을 불러오지 못했습니다",
-      "description": "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+      "description": "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요",
       "primaryCta": "다시 시도",
       "secondaryCta": "홈으로"
     },
     "network": {
       "title": "네트워크 연결을 확인해주세요",
-      "description": "인터넷 연결이 끊어졌습니다. 연결 후 다시 시도하세요.",
+      "description": "인터넷 연결이 끊어졌습니다. 연결 후 다시 시도하세요",
       "restored": "연결이 복구되었습니다. 다시 시도해 주세요.",
       "primaryCta": "다시 시도",
       "secondaryCta": ""

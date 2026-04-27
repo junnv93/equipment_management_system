@@ -612,7 +612,7 @@
     "actor": "Actor",
     "panelTitle": "What to do next",
     "urgency": {
-      "normal": "",
+      "normal": "Normal",
       "warning": "Warning",
       "critical": "Overdue"
     },
@@ -654,31 +654,31 @@
     },
     "noneYet": {
       "title": "No Checkouts Yet",
-      "description": "Submit a checkout request to track equipment movement here.",
+      "description": "Submit a checkout request to track equipment movement here",
       "primaryCta": "New Checkout",
       "secondaryCta": ""
     },
     "noPermission": {
       "title": "Access Restricted",
-      "description": "Your current role does not have access to the checkout list.",
+      "description": "Your current role does not have access to the checkout list",
       "primaryCta": "",
       "secondaryCta": ""
     },
     "noFilterResult": {
       "title": "No Results",
-      "description": "Try adjusting your filters or search term.",
+      "description": "Try adjusting your filters or search term",
       "primaryCta": "Reset Filters",
       "secondaryCta": ""
     },
     "error": {
       "title": "Failed to Load Checkouts",
-      "description": "A temporary error occurred. Please try again shortly.",
+      "description": "A temporary error occurred. Please try again shortly",
       "primaryCta": "Retry",
       "secondaryCta": "Go Home"
     },
     "network": {
       "title": "No Internet Connection",
-      "description": "Check your network connection and try again.",
+      "description": "Check your network connection and try again",
       "restored": "Connection restored. Please try again.",
       "primaryCta": "Retry",
       "secondaryCta": ""
