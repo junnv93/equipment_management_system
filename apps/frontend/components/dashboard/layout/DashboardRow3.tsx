@@ -18,19 +18,19 @@ import type { DashboardScope } from '@/lib/utils/dashboard-scope';
 // AP-16: Row 3 위젯 동적 임포트
 const PendingApprovalCard = dynamic(
   () => import('@/components/dashboard/PendingApprovalCard').then((m) => m.PendingApprovalCard),
-  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const CalibrationDdayList = dynamic(
   () => import('@/components/dashboard/CalibrationDdayList').then((m) => m.CalibrationDdayList),
-  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const OverdueCheckoutsCard = dynamic(
   () => import('@/components/dashboard/OverdueCheckoutsCard').then((m) => m.OverdueCheckoutsCard),
-  { ssr: true, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.md} rounded-lg`} /> }
 );
 const MyActivityCard = dynamic(
   () => import('@/components/dashboard/MyActivityCard').then((m) => m.MyActivityCard),
-  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 
 export interface DashboardRow3Props {

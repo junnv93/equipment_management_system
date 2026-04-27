@@ -89,7 +89,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       statusBarColor: 'bg-brand-info/70',
     },
     header: {
-      textColor: 'text-ul-midnight dark:text-brand-info',
+      textColor: 'text-brand-info',
       bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: FileOutput,

@@ -18,22 +18,22 @@ import type {
 // AP-16: Row 4 위젯 동적 임포트
 const RecentActivities = dynamic(
   () => import('@/components/dashboard/RecentActivities').then((m) => m.RecentActivities),
-  { ssr: true, loading: () => <Skeleton className={`${SK.lg} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.lg} rounded-lg`} /> }
 );
 const TeamEquipmentDistribution = dynamic(
   () =>
     import('@/components/dashboard/TeamEquipmentDistribution').then(
       (m) => m.TeamEquipmentDistribution
     ),
-  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 const MiniCalendar = dynamic(
   () => import('@/components/dashboard/MiniCalendar').then((m) => m.MiniCalendar),
-  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 const SystemHealthCard = dynamic(
   () => import('@/components/dashboard/SystemHealthCard').then((m) => m.SystemHealthCard),
-  { ssr: true, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
+  { ssr: false, loading: () => <Skeleton className={`${SK.sm} rounded-lg`} /> }
 );
 
 interface SidebarWidgetRendererProps {
