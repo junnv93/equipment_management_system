@@ -559,12 +559,6 @@ export const APPROVAL_DETAIL_MODAL_TOKENS = {
   historyCard: 'bg-muted/50 rounded-lg p-3 ml-2',
 } as const;
 
-/** @deprecated use APPROVAL_DETAIL_MODAL_TOKENS.sectionBody */
-export const APPROVAL_DETAIL_SECTION_TOKENS = {
-  sectionBody: APPROVAL_DETAIL_MODAL_TOKENS.sectionBody,
-  cardRow: APPROVAL_DETAIL_MODAL_TOKENS.historyCard,
-} as const;
-
 // ============================================================================
 // Utility Functions
 // ============================================================================

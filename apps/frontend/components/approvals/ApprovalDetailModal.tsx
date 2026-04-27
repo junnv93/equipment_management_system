@@ -25,7 +25,7 @@ import {
   getApprovalStatusBadgeClasses,
   getApprovalActionButtonClasses,
   getElapsedDaysClasses,
-  APPROVAL_DETAIL_SECTION_TOKENS,
+  APPROVAL_DETAIL_MODAL_TOKENS,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -155,7 +155,7 @@ export default function ApprovalDetailModal({
 
             {/* 요청 상세 정보 */}
             <DetailSection title={t('detail.requestDetail')}>
-              <div className={APPROVAL_DETAIL_SECTION_TOKENS.sectionBody}>
+              <div className={APPROVAL_DETAIL_MODAL_TOKENS.sectionBody}>
                 <CategoryDetails category={item.category} details={item.details} />
               </div>
             </DetailSection>
@@ -169,7 +169,7 @@ export default function ApprovalDetailModal({
                     {item.attachments.map((attachment) => (
                       <div
                         key={attachment.id}
-                        className={`flex items-center justify-between ${APPROVAL_DETAIL_SECTION_TOKENS.sectionBody}`}
+                        className={`flex items-center justify-between ${APPROVAL_DETAIL_MODAL_TOKENS.sectionBody}`}
                       >
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />

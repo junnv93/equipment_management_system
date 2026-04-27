@@ -562,7 +562,6 @@ export {
   APPROVAL_CATEGORY_SIDEBAR_TOKENS,
   APPROVAL_MOBILE_CATEGORY_BAR_TOKENS,
   APPROVAL_DETAIL_MODAL_TOKENS,
-  APPROVAL_DETAIL_SECTION_TOKENS,
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,
