@@ -219,7 +219,7 @@ export class SelfInspectionsController {
 
   @Patch(':uuid/approve')
   @RequirePermissions(Permission.APPROVE_SELF_INSPECTION)
-  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @AuditLog({ action: 'approve', entityType: 'self_inspection' })
   @UsePipes(ApproveSelfInspectionPipe)
   @ApiOperation({ summary: '자체점검 승인 (기술책임자)' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
@@ -236,7 +236,7 @@ export class SelfInspectionsController {
 
   @Patch(':uuid/reject')
   @RequirePermissions(Permission.REJECT_SELF_INSPECTION)
-  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @AuditLog({ action: 'reject', entityType: 'self_inspection' })
   @UsePipes(RejectSelfInspectionPipe)
   @ApiOperation({ summary: '자체점검 반려 (기술책임자, submitted 상태에서만)' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })

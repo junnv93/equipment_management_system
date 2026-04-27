@@ -110,7 +110,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!form.classification) {

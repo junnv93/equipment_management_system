@@ -185,7 +185,7 @@
     "reject": "Bulk Reject",
     "rejectReason": "Enter bulk rejection reason.",
     "rejectDescription": "Reject {count} selected items. Please enter a common rejection reason.",
-    "rejectValidation": "Rejection reason must be at least 10 characters.",
+    "rejectValidation": "Rejection reason must be at least {min} characters.",
     "confirmTitle": "Bulk {action} Confirmation",
     "confirmDescription": "Bulk {action} {count} selected requests?",
     "commentTitle": "Bulk {action} Comment",
@@ -200,7 +200,7 @@
     "reasonLabel": "Rejection Reason",
     "reasonPlaceholder": "Enter rejection reason...",
     "minLengthHint": "Please enter at least {min} characters.",
-    "validation": "Rejection reason must be at least 10 characters.",
+    "validation": "Rejection reason must be at least {min} characters.",
     "description": "Reject the request \"{summary}\". Please enter a rejection reason.",
     "single": {
       "description": "Reject the request \"{summary}\". Please enter a rejection reason."

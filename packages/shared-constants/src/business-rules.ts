@@ -175,3 +175,11 @@ export const HISTORY_CARD_QUERY_LIMITS = {
 
 /** @deprecated Use HISTORY_CARD_QUERY_LIMITS.SECTION_ITEMS instead */
 export const HISTORY_CARD_QUERY_LIMIT = HISTORY_CARD_QUERY_LIMITS.SECTION_ITEMS;
+
+/**
+ * 승인 후 철회(revoke) 가능 시간 윈도우(ms).
+ *
+ * UL-QP-18 운영 기준 5분. 이 시간 내에만 승인자 본인이 승인을 철회할 수 있음.
+ * checkouts.service.ts revokeApproval() 의 SSOT.
+ */
+export const APPROVAL_REVOCATION_WINDOW_MS = 300_000;

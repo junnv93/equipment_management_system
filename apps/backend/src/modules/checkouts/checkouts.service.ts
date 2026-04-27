@@ -51,6 +51,7 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   QUERY_SAFETY_LIMITS,
+  APPROVAL_REVOCATION_WINDOW_MS,
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
@@ -98,6 +99,8 @@ export interface CheckoutAvailableActions {
  * 메타데이터(availableActions + nextStep)를 포함한 Checkout
  */
 export interface CheckoutWithMeta extends Checkout {
+  equipment: CheckoutEquipment[];
+  user: CheckoutUser | null;
   meta: {
     availableActions: CheckoutAvailableActions;
     nextStep: NextStepDescriptor;
@@ -119,6 +122,7 @@ interface CheckoutEquipment {
   id: string;
   name: string | null;
   managementNumber: string | null;
+  status?: string | null;
 }
 
 /**
@@ -1204,9 +1208,33 @@ export class CheckoutsService extends VersionedBaseService {
     userTeamId?: string
   ): Promise<CheckoutWithMeta> {
     const checkout = await this.findCheckoutEntity(uuid);
+
+    const [equipmentRows, userRow] = await Promise.all([
+      this.db
+        .select({
+          id: schema.equipment.id,
+          name: schema.equipment.name,
+          managementNumber: schema.equipment.managementNumber,
+          status: schema.equipment.status,
+        })
+        .from(checkoutItems)
+        .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+        .where(eq(checkoutItems.checkoutId, uuid)),
+      this.db
+        .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .from(schema.users)
+        .where(eq(schema.users.id, checkout.requesterId))
+        .limit(1),
+    ]);
+
     const availableActions = this.calculateAvailableActions(checkout, userPermissions, userTeamId);
     const nextStep = this.buildNextStep(checkout, userPermissions);
-    return { ...checkout, meta: { availableActions, nextStep } };
+    return {
+      ...checkout,
+      equipment: equipmentRows,
+      user: userRow[0] ?? null,
+      meta: { availableActions, nextStep },
+    };
   }
 
   // ==========================================================================
@@ -3173,10 +3201,9 @@ export class CheckoutsService extends VersionedBaseService {
       });
     }
 
-    // ③ 5분 이내 검증 (5분 = 300_000ms)
-    const REVOCATION_WINDOW_MS = 300_000;
+    // ③ 승인 철회 윈도우 검증 — APPROVAL_REVOCATION_WINDOW_MS (SSOT)
     const approvedAt = checkout.approvedAt;
-    if (!approvedAt || Date.now() - approvedAt.getTime() > REVOCATION_WINDOW_MS) {
+    if (!approvedAt || Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) {
       throw new ForbiddenException({
         code: ErrorCode.RevocationWindowExpired,
         message: 'Approval can only be revoked within 5 minutes of approval',

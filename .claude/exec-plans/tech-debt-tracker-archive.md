@@ -5,6 +5,33 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-27 — tech-debt-0427-open 완료 (10건 수정 + 4건 기존 archive 이동)
+
+### 2026-04-27 harness: tech-debt-0427-open
+
+#### 기존 완료 [x] 4건 이동
+
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM ar-13-self-inspection-category** — ✅ 2026-04-27 완료. `self_inspection` SSOT 체인 전체 추가 (schemas → shared-constants → backend → frontend → i18n).
+- [x] **[2026-04-27 sprint4-3-to-5] 🔴 HIGH rejection-presets-seed** — ✅ 2026-04-27 완료. 5건 삽입. `seed-data/admin/rejection-presets.seed.ts` 신규. 교정유효기간만료(is_default)·장비상태부적합(is_default)·반출정보오류(is_default)·중복신청·신청요건미충족.
+- [x] **[2026-04-27 checkout-sprint4-3-to-5] 🟡 MEDIUM stale-time-query-config-presets** — ✅ 2026-04-27 완료. 36건 전수 교체. COMBOBOX_SEARCH preset 신규, Settings/Profile/NotificationPreferences→SETTINGS, 콤보박스 4개→COMBOBOX_SEARCH.
+- [x] **[2026-04-27 tech-debt-0427-cleanup] 🟡 MEDIUM revoke-approval-workflow-e2e** — ✅ 2026-04-27 완료. WF-AP-03 등록 + wf-ap03-revoke-approval.spec.ts 작성. test.skip(REVOCATION_WINDOW_EXPIRED) 명시적 마킹.
+
+#### 이번 세션 처리 10건
+
+- [x] **[2026-04-27 fsm-terminal-actor-variant] 🟡 MEDIUM use-checkout-next-step-fallback-terminated-from** — ✅ 2026-04-27 완료. `UseCheckoutNextStepInput`에 `terminatedFromStatus?: CheckoutStatus | null` 추가, fallback getNextStep() 전달 + useMemo deps 포함. tsc 0 error.
+- [x] **[2026-04-27 ar13] 🟢 LOW ar13-self-inspection-approve-weak-cast** — ✅ 2026-04-27 완료. `SelfInspectionDetail` 인터페이스 추가, `apiClient.get<SelfInspectionDetail>()` + `.data.version` 타입 안전 패턴 적용. tsc 0 error.
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM ar-14-software-validation-approve-comment** — ✅ 2026-04-27 완료. backend `approveValidationSchema`에 `approvalComment` optional 추가, `softwareValidationApi.approve()` 3-arity 확장, `TAB_META.commentRequired: true` 활성화. tsc 0 error, backend 947 tests PASS.
+- [x] **[2026-04-27 manage-skills] 🟢 LOW revocation-window-ms-shared-constants** — ✅ 2026-04-27 완료. `APPROVAL_REVOCATION_WINDOW_MS = 300_000` business-rules.ts + index.ts SSOT 승격. checkouts.service.ts 로컬 상수 제거 + import 교체.
+- [x] **[2026-04-27 tech-debt-0427-cleanup] 🟢 LOW not-found-href-ssot** — ✅ 2026-04-27 완료. 4개 파일(app/not-found.tsx, equipment/[id], non-conformances/[id], calibration-plans/[uuid]) `href="/"` → `href={FRONTEND_ROUTES.DASHBOARD}`.
+- [x] **[2026-04-27 tech-debt-0427-cleanup] 🟢 LOW create-equipment-import-form-react-formevent** — ✅ 2026-04-27 완료. `CreateEquipmentImportForm.tsx:113` `React.FormEvent` → `React.SyntheticEvent<HTMLFormElement>`.
+- [x] **[2026-04-27 approvals-ui-r2] 🟢 LOW reject-reason-stale-i18n** — ✅ 2026-04-27 완료. `RejectReasonSchema` min(1) → min(REJECTION_MIN_LENGTH=10) defense-in-depth. ko/en `{min}자 이상` placeholder 통일.
+- [x] **[2026-04-27 ar13] 🟢 LOW ar13-dashboard-kpi-self-inspection** — ✅ 2026-04-27 완료. self-inspections.controller.ts approve/reject `@AuditLog` action 'update' → 'approve'/'reject'. APPROVAL_KPI.PROCESSED_ACTIONS 자동 포함.
+- [x] **[2026-04-24 sprint-1.1] 🟡 MEDIUM DESCRIPTOR_TABLE 재생성 스크립트 부재** — ✅ 2026-04-27 완료. `packages/schemas/scripts/gen-descriptor-table.ts` 신규 + package.json `gen:descriptor-table` 등록. schemas 695 tests PASS.
+- [x] **[2026-04-27 checkout-sprint4-3-to-5] 🟡 MEDIUM qr-label-size-preset-micro-ssot** — ✅ 2026-04-27 완료. `LabelSizePreset`에 `'micro'` 추가(30×12mm, qrSizeMm=8), `LABEL_SAMPLER_LAYOUT.micro`, `getSamplerPresetOrder()` 갱신. 세로 합계 259.7mm < 297mm ✓
+- [x] **[2026-04-27 approvals-ui-r2] 🟢 LOW react-form-event-deprecation** — ✅ 2026-04-27 확인. RejectModal.tsx:102 이미 수정됨. CreateEquipmentImportForm.tsx는 위 항목에서 처리 완료.
+
+---
+
 ## 2026-04-27 — approvals SSOT + checkout i18n/enum SSOT 완료
 
 ### 2026-04-27 harness: approvals-ar7-ar6-e2e + checkout-sprint4-3-to-5

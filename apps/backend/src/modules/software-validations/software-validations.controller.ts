@@ -172,7 +172,7 @@ export class SoftwareValidationsController {
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
-    return this.validationsService.approve(uuid, dto.version, approverId);
+    return this.validationsService.approve(uuid, dto.version, approverId, dto.approvalComment);
   }
 
   @Patch(':uuid/quality-approve')

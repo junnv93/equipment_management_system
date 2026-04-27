@@ -185,7 +185,7 @@
     "reject": "일괄 반려",
     "rejectReason": "일괄 반려 사유를 입력하세요.",
     "rejectDescription": "선택한 {count}개 항목을 반려합니다. 공통 반려 사유를 입력해주세요.",
-    "rejectValidation": "반려 사유는 10자 이상 입력해주세요.",
+    "rejectValidation": "반려 사유는 {min}자 이상 입력해주세요.",
     "confirmTitle": "일괄 {action} 확인",
     "confirmDescription": "선택한 {count}건의 요청을 일괄 {action}하시겠습니까?",
     "commentTitle": "일괄 {action} 의견",
@@ -200,7 +200,7 @@
     "reasonLabel": "반려 사유",
     "reasonPlaceholder": "반려 사유를 입력하세요...",
     "minLengthHint": "{min}자 이상 입력하세요.",
-    "validation": "반려 사유는 10자 이상 입력해주세요.",
+    "validation": "반려 사유는 {min}자 이상 입력해주세요.",
     "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요.",
     "single": {
       "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요."

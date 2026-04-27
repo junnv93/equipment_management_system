@@ -121,6 +121,12 @@ interface SelfInspectionApprovalRow {
   submittedAt: string | null;
 }
 
+/** 자체점검 단건 조회 응답 — approve/reject 시 version 추출용 */
+interface SelfInspectionDetail {
+  id: string;
+  version: number;
+}
+
 // ============================================================================
 // 통합 승인 상태 타입
 // ✅ SSOT: UnifiedApprovalStatus는 @equipment-management/schemas에서 import
@@ -210,11 +216,11 @@ export const REJECTION_MIN_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
  * min: 서버에서도 동일 규칙 적용 (defense in depth — backend validation exists)
  * max 500: DB column 제한 기반
  */
-// min(1): 프론트엔드는 "입력됨" 여부만 검증. 실제 글자수 규칙(REJECTION_MIN_LENGTH=10)은
-// 백엔드에서 defense-in-depth로 동일 적용 (validation-rules.ts REJECTION_REASON_MIN_LENGTH).
+// defense in depth: backend 동일 규칙(REJECTION_MIN_LENGTH) SSOT 적용.
+// 프론트엔드에서 먼저 차단하여 불필요한 API 요청 방지.
 export const RejectReasonSchema = z
   .string()
-  .min(1, '반려 사유를 입력해주세요.')
+  .min(REJECTION_MIN_LENGTH, `반려 사유는 ${REJECTION_MIN_LENGTH}자 이상 입력해주세요.`)
   .max(500, '반려 사유는 500자 이내로 입력해주세요.');
 
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
@@ -313,10 +319,10 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.software_validation.label',
     icon: 'Code',
     actionKey: 'tabMeta.software_validation.action',
-    // AR-14: commentRequired는 false 유지 — backend approveValidationSchema에 comment 필드 없음.
-    // 액션 라벨 "검토완료"와의 의미 불일치는 backend DTO에 approvalComment 추가 후 true로 전환.
-    // commentDialogTitleKey/commentPlaceholderKey는 해당 시점을 위해 i18n에 사전 정의됨.
-    commentRequired: false,
+    // AR-14: backend approveValidationSchema에 approvalComment 추가 완료 (2026-04-27).
+    commentRequired: true,
+    commentDialogTitleKey: 'tabMeta.software_validation.commentDialogTitle',
+    commentPlaceholderKey: 'tabMeta.software_validation.commentPlaceholder',
     totalApprovalSteps: 1,
     section: 'management',
   },
@@ -842,10 +848,11 @@ class ApprovalsApi {
         });
         break;
       case 'self_inspection': {
-        const selfInspDetail = await apiClient.get(API_ENDPOINTS.SELF_INSPECTIONS.GET(id));
-        const selfInspVersion = (selfInspDetail as { version?: number }).version;
+        const selfInspResponse = await apiClient.get<SelfInspectionDetail>(
+          API_ENDPOINTS.SELF_INSPECTIONS.GET(id)
+        );
         await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.APPROVE(id), {
-          version: selfInspVersion,
+          version: selfInspResponse.data.version,
         });
         break;
       }
@@ -896,7 +903,7 @@ class ApprovalsApi {
       }
       case 'software_validation': {
         const validation = await softwareValidationApi.get(id);
-        await softwareValidationApi.approve(id, validation.version);
+        await softwareValidationApi.approve(id, validation.version, comment || undefined);
         break;
       }
       default:
@@ -951,10 +958,11 @@ class ApprovalsApi {
       case 'inspection':
         throw new Error('Inspection items cannot be rejected.');
       case 'self_inspection': {
-        const selfInspRejectDetail = await apiClient.get(API_ENDPOINTS.SELF_INSPECTIONS.GET(id));
-        const selfInspRejectVersion = (selfInspRejectDetail as { version?: number }).version;
+        const selfInspRejectResponse = await apiClient.get<SelfInspectionDetail>(
+          API_ENDPOINTS.SELF_INSPECTIONS.GET(id)
+        );
         await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.REJECT(id), {
-          version: selfInspRejectVersion,
+          version: selfInspRejectResponse.data.version,
           rejectionReason: reason,
         });
         break;

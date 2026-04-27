@@ -381,7 +381,12 @@ export class SoftwareValidationsService extends VersionedBaseService {
   /**
    * 기술책임자 승인 (submitted → approved)
    */
-  async approve(id: string, version: number, approverId: string): Promise<SoftwareValidation> {
+  async approve(
+    id: string,
+    version: number,
+    approverId: string,
+    approvalComment?: string
+  ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
     if (existing.status !== ValidationStatusValues.SUBMITTED) {

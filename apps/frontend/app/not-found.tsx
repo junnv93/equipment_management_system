@@ -22,7 +22,7 @@ export default async function NotFound() {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Button variant="default" asChild className="gap-2">
-            <Link href="/">
+            <Link href={FRONTEND_ROUTES.DASHBOARD}>
               <Home className="h-4 w-4" />
               {t('layout.goToHome')}
             </Link>

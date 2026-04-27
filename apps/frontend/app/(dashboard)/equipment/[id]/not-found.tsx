@@ -39,7 +39,7 @@ export default async function EquipmentNotFound() {
             </Link>
           </Button>
           <Button variant="outline" asChild className="gap-2">
-            <Link href="/">
+            <Link href={FRONTEND_ROUTES.DASHBOARD}>
               <ArrowLeft className="h-4 w-4" />
               {t('notFound.backToHome')}
             </Link>

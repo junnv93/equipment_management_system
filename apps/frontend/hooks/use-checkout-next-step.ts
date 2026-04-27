@@ -17,6 +17,8 @@ interface UseCheckoutNextStepInput {
   status: CheckoutStatus;
   purpose: CheckoutPurpose;
   dueAt?: string | null;
+  /** terminal 상태(rejected/canceled) 직전 상태 — reachedStepIndex 정확도 향상 */
+  terminatedFromStatus?: CheckoutStatus | null;
   /** 서버 응답의 nextStep 필드 — Zod 검증 통과 시 우선 사용, 스키마 드리프트 시 client-side fallback */
   nextStep?: NextStepDescriptor | null;
 }
@@ -32,6 +34,7 @@ export function useCheckoutNextStep({
   status,
   purpose,
   dueAt,
+  terminatedFromStatus,
   nextStep,
 }: UseCheckoutNextStepInput): NextStepDescriptor {
   const { data: session } = useSession();
@@ -44,6 +47,6 @@ export function useCheckoutNextStep({
       if (parsed.success) return parsed.data;
       // 스키마 드리프트 → client-side fallback
     }
-    return getNextStep({ status, purpose, dueAt }, permissions);
-  }, [status, purpose, dueAt, nextStep, permissions]);
+    return getNextStep({ status, purpose, dueAt, terminatedFromStatus }, permissions);
+  }, [status, purpose, dueAt, terminatedFromStatus, nextStep, permissions]);
 }
