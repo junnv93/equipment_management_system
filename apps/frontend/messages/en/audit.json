@@ -71,7 +71,9 @@
     "review": "Review",
     "read": "View",
     "link": "Link",
-    "unlink": "Unlink"
+    "unlink": "Unlink",
+    "borrower_approve": "Borrower Approve",
+    "borrower_reject": "Borrower Reject"
   },
   "entityTypes": {
     "equipment": "Equipment",

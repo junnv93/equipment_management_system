@@ -270,13 +270,16 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="calibration">
+                      <SelectItem value={UserSelectableCheckoutPurposeEnum.enum.calibration}>
                         {t('checkoutHistoryTab.purpose.calibration')}
                       </SelectItem>
-                      <SelectItem value="repair">
+                      <SelectItem value={UserSelectableCheckoutPurposeEnum.enum.repair}>
                         {t('checkoutHistoryTab.purpose.repair')}
                       </SelectItem>
-                      <SelectItem value="rental" disabled={canCheckoutOnlyForCalibrationRepair}>
+                      <SelectItem
+                        value={UserSelectableCheckoutPurposeEnum.enum.rental}
+                        disabled={canCheckoutOnlyForCalibrationRepair}
+                      >
                         {canCheckoutOnlyForCalibrationRepair
                           ? t('checkoutHistoryTab.dialog.rentalDisabled')
                           : t('checkoutHistoryTab.purpose.rental')}
