@@ -1500,6 +1500,20 @@ BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequentia
 
 > 완료(2026-04-22): OutboundCheckoutsTab tablist → tabpanel sibling으로 이동(WCAG 4.1.2), CheckoutsContent.tsx 4개 Select 핸들러 spurious 가드 추가, QUERY_CONFIG.checkout 프리셋 신규 + staleTime 3곳 교체, handlePageChange/handleSubTabChange → filtersToSearchParams 경유 일원화.
 
+### ~~🟡 MEDIUM — documents-revision-permission: POST /documents/:id/revisions 권한 오용 (Mode 0)~~ ✅ 완료 (2026-04-27)
+
+> `documents.controller.ts:353` `@RequirePermissions(Permission.CREATE_CALIBRATION)` → `Permission.UPLOAD_DOCUMENT` 교체.
+> `packages/shared-constants/src/permissions.ts`에 `UPLOAD_DOCUMENT = 'upload:document'` 신규 추가 + PERMISSION_LABELS(ko)/PERMISSION_LABELS_EN 라벨 추가.
+> `role-permissions.ts` test_engineer·technical_manager·lab_manager 화이트리스트 추가.
+> system_admin은 `Object.values(Permission).filter(p => p !== CREATE_CALIBRATION)` 패턴으로 자동 취득.
+
+### ~~🟡 MEDIUM — equipment-pwa-audit-i18n: 하드코딩 한글 3파일 i18n 외부화 (Mode 1)~~ ✅ 완료 (2026-04-27)
+
+> `VirtualizedEquipmentList.tsx`: 테이블 헤더 7개 + 로딩/빈 상태 메시지 + EquipmentRow `상세` 버튼 → `equipment.virtualizedList.*` 키 경유.
+> `PrintableAuditReport.tsx`: h1 title·출력일시·출력자·테이블헤더(5열)·renderChangesSummary·footer note → `audit.report.*` + 기존 `audit.table.*` 경유. "의도적 예외" JSDoc 제거. prop default `'감사 로그 보고서'` 제거(두 호출처 모두 명시적 title 전달).
+> `PWAInstallBanner.tsx`: aria-label·title·subtitle·installCta·laterCta → `common.pwa.installBanner.*` 경유. `닫기` → `common.actions.close` 재사용.
+> `formatFilters` compound 문자열 tech-debt 등록 (🟢 LOW, 별도 처리).
+
 ### ~~🟠 HIGH — PR-12: 목록 IA 서브탭 + 이중 카운트 헤더 + 빈 상태 3종 (Mode 2)~~ ✅
 
 > 완료(2026-04-24, 89차): backend statuses 복수 필터 이미 지원(0·1번 생략), SUBTAB_STATUS_GROUPS/CheckoutListTabs/서브탭 URL SSOT 이미 구현(3번 생략).
