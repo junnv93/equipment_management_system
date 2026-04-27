@@ -97,18 +97,45 @@ grep -n "export.*function proxy\|export.*proxy" apps/frontend/proxy.ts
 - `middleware.ts` 파일 존재 → proxy.ts와 충돌하여 서버 시작 불가
 - `config`를 다른 파일에서 re-export → Next.js가 인식 못함
 
-### Step 4: useFormState (deprecated) 사용 탐지
+### Step 4: useFormState (deprecated) 사용 탐지 + React 19 deprecated 이벤트 타입
 
-`useFormState`가 사용되지 않고 `useActionState`로 대체되었는지 확인합니다.
+`useFormState`가 사용되지 않고 `useActionState`로 대체되었는지 확인합니다. 또한 React 19에서 deprecated된 이벤트 타입이 사용되지 않는지 확인합니다.
 
+**4a: useFormState 탐지**
 ```bash
 # useFormState 사용 탐지
 grep -rn "useFormState" apps/frontend --include="*.tsx" --include="*.ts" | grep -v "// \|deprecated\|node_modules"
 ```
 
 **PASS 기준:** 0개 결과 (`useActionState`로 모두 마이그레이션).
-
 **FAIL 기준:** `import { useFormState }` 또는 `useFormState(` 발견 시 `useActionState`로 변경 필요.
+
+**4b: React 19 deprecated 이벤트 타입 탐지 (2026-04-27 추가)**
+
+React 19에서 `React.FormEvent` / `React.ChangeEvent` 등의 이벤트 타입이 deprecated됨.
+checkout 컴포넌트·페이지의 `no-deprecated` ESLint 규칙이 자동 탐지하지만, 다른 디렉토리는 grep 검사 필요.
+
+```bash
+# React.FormEvent 직접 사용 탐지 (React 19 deprecated)
+grep -rn "React\.FormEvent\b" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "node_modules\|// "
+```
+
+**PASS 기준:** 0건 (`React.SyntheticEvent<HTMLFormElement>` 또는 커스텀 타입 사용).
+**FAIL 기준:** `React.FormEvent` 발견 → `React.SyntheticEvent<HTMLFormElement>`로 교체.
+
+**올바른 패턴 (React 19):**
+```typescript
+// ❌ React 19 deprecated
+const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); };
+
+// ✅ 올바른 패턴
+const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => { e.preventDefault(); };
+```
+
+**배경:** `CreateCheckoutContent.tsx:232`에서 `React.FormEvent` 사용 발견. 확장된 `no-deprecated` ESLint 스코프(checkout 컴포넌트·페이지)에서 탐지되어 수정 (2026-04-27). `eslint.config.mjs`의 `no-deprecated` 스코프가 적용된 파일은 ESLint가 자동 탐지, 미적용 파일은 이 grep 검사로 보완.
 
 ### Step 4: 서버/클라이언트 컴포넌트 경계
 

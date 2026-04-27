@@ -1034,6 +1034,7 @@ grep -rn 'role="alert"' \
 **예외:**
 - `<AlertDialog>`, `<AlertDialogContent>` 컴포넌트 내부 — Radix UI 구조상 허용
 - 즉각적 에러 알림(form 제출 실패, 네트워크 오류 등) — `role="alert"` 허용 (`aria-live="assertive"` 포함)
+- `AlertBanner.tsx` — severity-conditional role 패턴 (Step 38): `critical/warning → role="alert"`, `info/none → role="status"`. 정적 callout이 아닌 동적 알림 배너 전용 허용.
 
 **배경:** `GuidanceCallout`이 조건부 `role="alert"/"status"` → 항상 `role="status"` 로 통일. 페이지 진입 시 h2 포커스 + aria-live 이중 읽기 제거.
 
@@ -1284,6 +1285,42 @@ grep -rn "motion-safe:animate-.*motion-reduce:animate-none" \
 
 ---
 
+### Step 38: AlertBanner severity → ARIA role 분기 패턴 준수 (2026-04-27 추가)
+
+`AlertBanner.tsx`는 severity에 따라 `role="alert"` (assertive) 또는 `role="status"` (polite)를 동적으로 선택한다.
+WCAG SC 4.1.3 Status Messages: 긴급 상태(critical/warning)는 assertive, 정보성(info/none)은 polite.
+
+**규칙:**
+```
+severity === 'critical' | 'warning' → role="alert"   (스크린리더 즉시 읽기, assertive)
+severity === 'info'     | 'none'    → role="status"   (스크린리더 순서 읽기, polite)
+```
+
+```bash
+# AlertBanner에 정적 role="status" 고정(severity 분기 미적용) 탐지
+grep -n 'role="status"' apps/frontend/components/dashboard/AlertBanner.tsx \
+  | grep -v "ariaRole\|severity"
+# 결과: 0건 → 조건부 분기 사용 중 (PASS)
+# role이 인라인 정적 문자열이면 severity-conditional 패턴으로 교체 필요
+
+# 분기 로직 존재 여부 확인
+grep -n "ariaRole\|severity.*alert\|alert.*severity" \
+  apps/frontend/components/dashboard/AlertBanner.tsx | head -5
+```
+
+**PASS:** `const ariaRole = severity === 'info' || severity === 'none' ? 'status' : 'alert'` 형태의 분기 존재.
+**FAIL:** 정적 `role="status"` 또는 `role="alert"` 하드코딩 → severity 기반 조건부 분기로 교체.
+
+**예외:**
+- Step 31의 GuidanceCallout, NCGuidanceCallout 등 정적 안내 패널 — 항상 `role="status"` 유지 (이 Step 대상 아님).
+
+**배경:** 대시보드 AlertBanner가 `role="status"` 고정 → critical 경보도 스크린리더가 순서 읽기로 처리하는 접근성 버그 발견. severity 분기 패턴으로 수정 (2026-04-27).
+
+**Related Files:**
+- `apps/frontend/components/dashboard/AlertBanner.tsx` — severity-conditional ariaRole 소비처
+
+---
+
 ## Output Format
 
 ```markdown
@@ -1339,6 +1376,8 @@ grep -rn "motion-safe:animate-.*motion-reduce:animate-none" \
 | 34  | WAI-ARIA grid 3단계: `role="grid" > row > gridcell` 일관성 | PASS/FAIL | role="row"/"gridcell" 누락 컴포넌트 |
 | 35  | `CHECKOUT_ITEM_ROW_TOKENS` zone key `satisfies { ... [key: string]: unknown }` | PASS/FAIL | satisfies 미존재 또는 zone key 누락 위치 |
 | 36  | `WORKFLOW_PANEL_TOKENS.variant/.actor` `satisfies Record` + `WorkflowPanelActorVariant` export | PASS/FAIL | satisfies 누락 또는 타입 미export 위치 |
+| 37  | Layer 3 토큰 파일 내 ANIMATION_PRESETS 인라인 우회 금지 | PASS/FAIL | motion-safe+motion-reduce 페어 인라인 위치 |
+| 38  | AlertBanner severity → ARIA role 분기 (critical/warning=alert, info/none=status) | PASS/FAIL | 정적 role 하드코딩 또는 분기 로직 누락 위치 |
 ```
 
 ## Exceptions

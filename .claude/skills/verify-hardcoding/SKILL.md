@@ -469,6 +469,43 @@ if (f.entityType) parts.push(`대상=${getEntityTypeLabel(f.entityType)}`);
 if (f.entityType) parts.push(t('report.filterEntry.entityType', { value: getEntityTypeLabel(f.entityType) }));
 ```
 
+### Step 27: SelectItem `value` 속성 enum SSOT 강제 — 도메인 리터럴 인라인 금지 (2026-04-27 추가)
+
+`<SelectItem value="calibration">` 같이 shadcn/ui `SelectItem`의 `value` 속성에 도메인 enum 값을 raw 문자열로 인라인 사용하면, enum 값 변경 시 TypeScript 컴파일러가 drift를 감지할 수 없다.
+
+**규칙:** 도메인 enum(CheckoutPurpose, CheckoutStatus, UserRole 등) 값을 `value` prop으로 전달할 때 반드시 SSOT 상수(CPVal.CALIBRATION, 등)를 경유해야 한다.
+
+```bash
+# SelectItem에 checkout purpose 리터럴 직접 사용 탐지
+grep -rn 'value="calibration"\|value="repair"\|value="rental"' \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" \
+  | grep -v "node_modules\|// "
+
+# SelectItem에 상태 리터럴 직접 사용 탐지 (일반화)
+grep -rn '<SelectItem value="[a-z_]*"' \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" \
+  | grep -v "node_modules\|// "
+```
+
+**PASS:** 0건 (enum SSOT 상수 경유). **FAIL:** raw 리터럴 발견 → `value={CPVal.CALIBRATION}` 등 상수로 교체.
+
+**올바른 패턴:**
+```tsx
+// ❌ enum drift 위험 — 컴파일 타임 감지 불가
+<SelectItem value="calibration">
+
+// ✅ SSOT 경유 — 컴파일 타임 보호
+<SelectItem value={CPVal.CALIBRATION}>
+```
+
+**배경:** `CreateCheckoutContent.tsx`의 purpose SelectItem 3건이 `value="calibration"|"repair"|"rental"` 리터럴 직접 사용 → `CPVal.CALIBRATION|REPAIR|RENTAL` 교체. 2026-04-27 verify-hardcoding Step 26에서 탐지됨.
+
+**예외:**
+- shadcn/ui 기본 예시나 UI 표시 전용(aria 레이블, 비도메인 옵션) — SITE_OPTIONS `value="gangnam"` 등은 로컬 정의 허용.
+- 비도메인 enum 값 — 정렬 방향(`"asc"/"desc"`), 뷰 타입(`"grid"/"list"`) 등 프레젠테이션 값.
+
 ## Exceptions
 
 1. **프론트엔드 UI 표시용 옵션 객체** — `SITE_OPTIONS` 등 레이블+값 쌍은 로컬 정의 허용
