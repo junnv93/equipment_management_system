@@ -19,6 +19,7 @@ import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import {
   getElapsedDaysClasses,
   APPROVAL_MOTION,
+  APPROVAL_ACTION_BUTTON_TOKENS,
   APPROVAL_ROW_TOKENS,
   FONT,
   MENU_ITEM_TOKENS,
@@ -70,6 +71,7 @@ export function ApprovalRow({
   return (
     <TableRow
       className={cn(
+        'group',
         APPROVAL_ROW_TOKENS.urgencyBg[urgency],
         isMutating && APPROVAL_MOTION.processing,
         isExiting === 'success' && APPROVAL_MOTION.exitingSuccess,
@@ -132,36 +134,67 @@ export function ApprovalRow({
         </span>
       </TableCell>
 
-      {/* 액션 — DropdownMenu */}
+      {/* 액션 — hover-inline 버튼 + DropdownMenu (overflow/keyboard/mobile용) */}
       <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              disabled={isMutating || !!isExiting}
-              aria-label={t('row.menuAriaLabel', { summary: localizedSummary })}
-            >
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onViewDetail}>
-              <Eye className="h-4 w-4 mr-2" />
-              {t('row.tooltipDetail')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onApprove}>
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {actionLabel}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onReject} className={MENU_ITEM_TOKENS.destructive}>
-              <XCircle className="h-4 w-4 mr-2" />
-              {t('item.reject')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center justify-end gap-0.5">
+          {/* hover 시 표시되는 인라인 승인/반려 버튼 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-7 w-7 hidden group-hover:inline-flex',
+              APPROVAL_ACTION_BUTTON_TOKENS.approveIcon
+            )}
+            disabled={isMutating || !!isExiting}
+            onClick={onApprove}
+            aria-label={t('row.hoverApprove')}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-7 w-7 hidden group-hover:inline-flex',
+              APPROVAL_ACTION_BUTTON_TOKENS.rejectIcon
+            )}
+            disabled={isMutating || !!isExiting}
+            onClick={onReject}
+            aria-label={t('row.hoverReject')}
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+
+          {/* Dropdown — 항상 노출 (상세 보기 + keyboard/mobile 접근) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={isMutating || !!isExiting}
+                aria-label={t('row.menuAriaLabel', { summary: localizedSummary })}
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onViewDetail}>
+                <Eye className="h-4 w-4 mr-2" />
+                {t('row.tooltipDetail')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onApprove}>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                {actionLabel}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onReject} className={MENU_ITEM_TOKENS.destructive}>
+                <XCircle className="h-4 w-4 mr-2" />
+                {t('item.reject')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </TableCell>
     </TableRow>
   );
