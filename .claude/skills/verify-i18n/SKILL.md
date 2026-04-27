@@ -243,6 +243,55 @@ if (badKo.length === 0 && badEn.length === 0) {
 
 > **범위**: `checkouts.emptyState.*`에만 적용. `onboarding.description` 등 상위 레벨 description은 별도 컨벤션.
 
+### Step 15: TAB_META commentRequired=true ↔ commentDialogTitleKey/commentPlaceholderKey i18n 존재 (2026-04-27 추가)
+
+**배경**: `approvals-api.ts` TAB_META에 `commentRequired: true`인 카테고리는 `commentDialogTitleKey`와 `commentPlaceholderKey`가 정의되어 있고, 이 키 값이 ko/en approvals.json에 **실제 존재해야** 런타임 번역 누락이 없다.
+반대로 `commentRequired: false` 카테고리의 `commentDialogTitleKey` 키는 사전 정의(pre-defined)만 되고 런타임 미사용 — 이는 허용된 패턴 (AR-14 롤백으로 확립).
+
+```bash
+# commentRequired: true 카테고리의 commentDialogTitleKey 값 추출
+node -e "
+const fs = require('fs');
+const content = fs.readFileSync('apps/frontend/lib/api/approvals-api.ts', 'utf8');
+
+// commentRequired: true 블록에서 commentDialogTitleKey 값 파싱
+const blocks = content.match(/commentRequired:\s*true[\s\S]*?(?=\n  [a-z_]+:|$)/g) || [];
+const keys = [];
+blocks.forEach(b => {
+  const m = b.match(/commentDialogTitleKey:\s*'([^']+)'/);
+  if (m) keys.push(m[1]);
+  const p = b.match(/commentPlaceholderKey:\s*'([^']+)'/);
+  if (p) keys.push(p[1]);
+});
+
+const ko = JSON.parse(fs.readFileSync('apps/frontend/messages/ko/approvals.json', 'utf8'));
+const en = JSON.parse(fs.readFileSync('apps/frontend/messages/en/approvals.json', 'utf8'));
+
+function getNestedKey(obj, path) {
+  return path.split('.').reduce((o, k) => o?.[k], obj);
+}
+
+let allPass = true;
+keys.forEach(k => {
+  // TAB_META key format: 'tabMeta.software_validation.commentDialogTitle'
+  // JSON 구조: ko.tabMeta.software_validation.commentDialogTitle → getNestedKey(ko, k) 전체 경로 사용
+  const koVal = getNestedKey(ko, k);
+  const enVal = getNestedKey(en, k);
+  if (!koVal) { console.log('FAIL: ko/approvals.json 누락 키:', k); allPass = false; }
+  if (!enVal) { console.log('FAIL: en/approvals.json 누락 키:', k); allPass = false; }
+});
+if (allPass) console.log('PASS: commentRequired=true 카테고리 i18n 키 모두 존재 (' + keys.length + '개 확인)');
+" 2>/dev/null
+```
+
+**PASS:** `commentRequired: true` 카테고리의 모든 i18n 키가 ko/en approvals.json에 존재.
+**FAIL:** 누락 키 → ko/en approvals.json에 해당 번역값 추가. (반대로 `commentRequired: false` 카테고리의 키가 pre-defined된 것은 허용 — 단순 미사용 키, 런타임 에러 없음)
+
+**관련 파일:**
+- `apps/frontend/lib/api/approvals-api.ts` — TAB_META commentRequired + commentDialogTitleKey SSOT
+- `apps/frontend/messages/ko/approvals.json` — tabMeta 섹션 번역
+- `apps/frontend/messages/en/approvals.json` — tabMeta 섹션 번역
+
 ## Output Format
 
 ```markdown
@@ -262,6 +311,7 @@ if (badKo.length === 0 && badEn.length === 0) {
 | 12  | NCGuidanceKey ↔ non-conformances.json 동기화 | PASS/FAIL | en/ko 누락 guidance 키, ctaHint 잔재 목록 |
 | 13  | checkouts v2 네임스페이스 107개 필수 키 존재 | PASS/FAIL | 누락 키 경로 목록 |
 | 14  | checkouts.emptyState.*.description 마침표 없음 | PASS/FAIL | 마침표 잔존 키 목록 |
+| 15  | commentRequired=true ↔ commentDialogTitleKey/commentPlaceholderKey i18n 존재 | PASS/FAIL | ko/en approvals.json 누락 키 목록 |
 ```
 
 ## Exceptions

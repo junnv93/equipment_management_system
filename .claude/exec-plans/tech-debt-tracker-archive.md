@@ -501,3 +501,4 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 - [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approvals-mini-stepper-e2e-spec** — `wf-ap01-approvals-mini-stepper.spec.ts` 생성. `role="progressbar"` 균일 렌더 + `aria-valuemax` + 단일단계 분수레이블 미노출 E2E 커버. (2026-04-27 harness: approvals-ar7-ar6-e2e)
 - [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approvals-bulk-reject-e2e-spec** — `wf-ap02-approvals-bulk-reject.spec.ts` 생성. `BulkActionBar` aria-hidden 토글 + `RejectModal` bulk 모드 + 일괄 반려 완료 + 선택 해제 시퀀스 커버. (2026-04-27 harness: approvals-ar7-ar6-e2e)
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approval-card-border-tokens-dead-code** — card-view 미도입 확정으로 `APPROVAL_CARD_BORDER_TOKENS` + `getApprovalCardBorderClasses()` 삭제. `design-tokens/components/approval.ts` + `design-tokens/index.ts`. tsc PASS. (2026-04-27 verify-implementation 세션)

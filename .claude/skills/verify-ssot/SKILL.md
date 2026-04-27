@@ -700,6 +700,56 @@ grep -n "totalSteps\s*[?:]\s*boolean\|stepCount\s*[?:]\s*boolean\|hasMultipleSte
 - `apps/frontend/components/approvals/ApprovalRow.tsx` — `meta.totalApprovalSteps` 소비
 - `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — `meta.totalApprovalSteps > 1`
 
+### Step 33: TAB_META capability guard 완전성 — canReject !== false 4-path 패턴 (2026-04-27 추가)
+
+`TabMeta`에 `canX?: boolean` capability flag가 추가되면, **부모 컨테이너(ApprovalsClient)가 모든 하위 경로에 `undefined`를 전달**해야 한다. 하나의 경로라도 가드 누락 시 disabled 카테고리에서 액션 버튼이 노출된다.
+
+**3단계 완전성 패턴 (AR-8에서 확립):**
+
+```typescript
+// ① 부모: TAB_META 단일 출처 → 모든 경로 동시 가드
+onReject={TAB_META[activeTab].canReject !== false ? handler : undefined}
+onBulkReject={TAB_META[activeTab].canReject !== false ? bulkHandler : undefined}
+
+// ② 컴포넌트 prop: optional로 선언
+onReject?: () => void;
+onBulkReject?: () => void;
+
+// ③ 렌더: optional 존재 여부로만 분기
+{onReject && <Button onClick={onReject}>반려</Button>}
+{onBulkReject && <Button onClick={onBulkReject}>일괄 반려</Button>}
+```
+
+**탐지 — ApprovalsClient canReject 4-path guard:**
+```bash
+# 양성 탐지(positive detection): canReject !== false 경유 건수 — 3건 미만이면 누락 경로 존재
+GUARD_COUNT=$(grep -c "canReject !== false" apps/frontend/components/approvals/ApprovalsClient.tsx)
+if [ "$GUARD_COUNT" -ge 3 ]; then
+  echo "PASS: canReject !== false 가드 ${GUARD_COUNT}건 (onReject×2 + onBulkReject×1 이상)"
+else
+  echo "FAIL: canReject !== false 가드 ${GUARD_COUNT}건 — 3건 필요 (onReject×2 + onBulkReject)"
+  grep -n "onReject=\|onBulkReject=" apps/frontend/components/approvals/ApprovalsClient.tsx
+fi
+
+# 보조 확인: onBulkReject 가드 존재 여부 (BulkActionBar 경로는 별도 세심히 확인)
+grep -n "onBulkReject" apps/frontend/components/approvals/ApprovalsClient.tsx | grep "canReject"
+```
+
+> **탐지 전략**: 멀티라인 삼항(`onReject={\n  canReject !== false ? ...\n}`) 패턴에서 부재 탐지는 false positive 위험. PASS 기준을 `canReject !== false` 최소 3건 존재로 반전(positive detection) — 부재 경로는 건수 부족으로 자동 검출.
+> **이유**: `onReject` 경로 2개 (ApprovalList + ApprovalDetailModal) + `onBulkReject` 경로 1개 = 최소 3건.
+
+**PASS:** `canReject !== false` 경유 3건 이상.
+**FAIL:** 3건 미만 → 누락 경로 수동 확인 후 `TAB_META[...].canReject !== false ? handler : undefined` 패턴 추가.
+
+> **Step 32 vs Step 33 구분**: Step 32는 "수치에서 파생 가능한 boolean 필드 금지" (중복 표현 탐지). Step 33은 "독립 capability flag 사용 시 하위 경로 완전 가드 요구" (누락 경로 탐지). `canReject`는 어떤 수치에서도 파생 불가한 카테고리 도메인 결정이므로 Step 32 대상 아님.
+
+**관련 파일:**
+- `apps/frontend/lib/api/approvals-api.ts` — `TabMeta.canReject?: boolean` SSOT (2026-04-27)
+- `apps/frontend/components/approvals/ApprovalsClient.tsx` — 4-path guard 구현체
+- `apps/frontend/components/approvals/ApprovalRow.tsx` — `onReject?` optional prop
+- `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — `onReject?` optional prop
+- `apps/frontend/components/approvals/BulkActionBar.tsx` — `onBulkReject?` optional prop
+
 ## Output Format
 
 ```markdown
@@ -739,6 +789,7 @@ grep -n "totalSteps\s*[?:]\s*boolean\|stepCount\s*[?:]\s*boolean\|hasMultipleSte
 | 27  | UserSelectableCheckoutPurpose SSOT — CreateCheckoutDto.purpose | PASS/FAIL | `purpose: string` 또는 `purpose: CheckoutPurpose` 잔존 위치 |
 | 29  | prebuild guard 스크립트 존재 + package.json 연결 | PASS/FAIL | check-role-config-sync.mjs·check-css-vars.mjs 파일 누락 또는 prebuild 훅 미연결 |
 | 30  | 상태 순서 매핑 키 enum Computed Property Name 경유 | PASS/FAIL | `STATUS_ORDER`/`PRIORITY_MAP` 등에서 문자열 리터럴 키 또는 `Record<string, N>` 타입 위치 |
+| 33  | TAB_META capability guard 완전성 — canReject 4-path | PASS/FAIL | 미가드 onReject/onBulkReject 직접 전달 위치 |
 ```
 
 ## Exceptions
