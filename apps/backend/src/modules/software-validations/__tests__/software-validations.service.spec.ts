@@ -40,6 +40,7 @@ const MOCK_VALIDATION = {
   submittedBy: null,
   technicalApproverId: null,
   technicalApprovedAt: null,
+  approvalComment: null,
   qualityApproverId: null,
   qualityApprovedAt: null,
   rejectedBy: null,
@@ -243,6 +244,98 @@ describe('SoftwareValidationsService', () => {
 
       await expect(service.approve('val-uuid-1', 1, 'user-uuid-self')).rejects.toThrow(
         ForbiddenException
+      );
+    });
+
+    // ISO/IEC 17025 §6.2.2 audit trail — approvalComment persistence (silent loss regression guard)
+    // 직전 commit f981e0e9는 _approvalComment underscore prefix 임시방편. 본 fix는 컬럼 + persist.
+    it('approvalComment가 제공되면 UPDATE SET 에 포함된다', async () => {
+      const submittedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'submitter-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([submittedValidation]));
+      const updateChain = mockUpdateChain({
+        ...submittedValidation,
+        status: ValidationStatusValues.APPROVED,
+        approvalComment: '검토 완료 — 모든 항목 통과',
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.approve('val-uuid-1', 1, 'approver-uuid-1', '검토 완료 — 모든 항목 통과');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ approvalComment: '검토 완료 — 모든 항목 통과' })
+      );
+    });
+
+    it('approvalComment가 undefined이면 NULL로 persist된다', async () => {
+      const submittedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'submitter-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([submittedValidation]));
+      const updateChain = mockUpdateChain({
+        ...submittedValidation,
+        status: ValidationStatusValues.APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.approve('val-uuid-1', 1, 'approver-uuid-1');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ approvalComment: null })
+      );
+    });
+
+    it('approvalComment가 빈 문자열이면 NULL로 persist된다 (DTO trim 후 empty 케이스)', async () => {
+      const submittedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'submitter-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([submittedValidation]));
+      const updateChain = mockUpdateChain({
+        ...submittedValidation,
+        status: ValidationStatusValues.APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.approve('val-uuid-1', 1, 'approver-uuid-1', '');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ approvalComment: null })
+      );
+    });
+
+    it('status / technicalApproverId / technicalApprovedAt 기존 필드가 보존된다 (regression guard)', async () => {
+      const submittedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'submitter-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([submittedValidation]));
+      const updateChain = mockUpdateChain({
+        ...submittedValidation,
+        status: ValidationStatusValues.APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.approve('val-uuid-1', 1, 'approver-uuid-1', '코멘트');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ValidationStatusValues.APPROVED,
+          technicalApproverId: 'approver-uuid-1',
+          technicalApprovedAt: expect.any(Date),
+          approvalComment: '코멘트',
+        })
       );
     });
   });

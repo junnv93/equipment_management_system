@@ -385,9 +385,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     id: string,
     version: number,
     approverId: string,
-    // TODO(tech-debt 2026-04-28): silent loss — DTO/controller 전달 OK, audit metadata 또는
-    // software_validations.approval_comment 컬럼 신설 후 저장 필요. 임시로 underscore prefix.
-    _approvalComment?: string
+    approvalComment?: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -409,6 +407,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
         status: ValidationStatusValues.APPROVED,
         technicalApproverId: approverId,
         technicalApprovedAt: new Date(),
+        approvalComment: approvalComment || null,
       },
       '소프트웨어 유효성 확인',
       undefined,
