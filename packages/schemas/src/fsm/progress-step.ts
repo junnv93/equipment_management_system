@@ -30,13 +30,29 @@ import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '../enums/checkout';
 
 /**
  * 단계의 시각적 상태.
- *  - 'done'    : 완료된 과거 단계 (✓ 표시 + ok 색상)
- *  - 'current' : 현재 진행 중인 단계 (브랜드 info 강조 + box-shadow ring)
- *  - 'late'    : current이지만 dueAt 초과 — critical 경고 (REVIEW §1.5 기반 audit 데이터 활용)
- *  - 'future'  : 아직 도달하지 않은 미래 단계 (border + 회색 텍스트)
+ *  - 'done'       : 완료된 과거 단계 (✓ 표시 + ok 색상)
+ *  - 'current'    : 현재 진행 중인 단계 (브랜드 info 강조 + box-shadow ring)
+ *  - 'late'       : current이지만 dueAt 초과 — critical 경고 (REVIEW §1.5 audit 데이터 활용)
+ *  - 'future'     : 아직 도달하지 않은 미래 단계 (border + 회색 텍스트)
+ *  - 'terminated' : 반려/취소된 reachedStep — "X단계에서 종료" 의미 (회색 strike + sr-only state)
+ *
+ * `terminated`는 NextStepDescriptor의 `reachedStepIndex` 와 짝을 이룬다.
+ * checkout.status ∈ {rejected, canceled} 일 때 reachedStep 위치만 'terminated', 그 이후는 'future'.
  */
-export const PROGRESS_STEP_STATES = ['done', 'current', 'late', 'future'] as const;
+export const PROGRESS_STEP_STATES = [
+  'done',
+  'current',
+  'late',
+  'future',
+  'terminated',
+] as const;
 export type ProgressStepState = (typeof PROGRESS_STEP_STATES)[number];
+
+/**
+ * Terminal 종료 종류 — null = 비-terminal.
+ * 향후 stepper 컴포넌트가 'rejected' vs 'canceled' 시각 차이가 필요해지면 prop으로 별도 전파.
+ */
+export type TerminationKind = 'rejected' | 'canceled' | null;
 
 // ============================================================================
 // ProgressStepDescriptor — REVIEW §4.2 prop 정식화
@@ -99,19 +115,26 @@ export const ProgressStepDescriptorSchema: z.ZodType<ProgressStepDescriptor> = z
 });
 
 /**
- * 헬퍼: 인덱스/현재 인덱스 + dueAt으로 state 결정.
+ * 헬퍼: 인덱스/현재 인덱스 + dueAt + terminal 정보로 state 결정.
  * 비즈니스 로직 단일 출처 — `use-checkout-progress-steps.ts` 등 여러 어댑터에서 재사용.
  *
  * @param stepIndex 결정 대상 step 인덱스 (0-based)
- * @param currentStepIndex FSM이 판단한 현재 step 인덱스 (0-based) — `NextStepDescriptor.currentStepIndex - 1`로 변환된 값
- * @param isOverdue 현재 단계가 due 초과 상태인지 (dueAt < now)
+ * @param currentStepIndex FSM이 판단한 현재 step 인덱스 (0-based) — `NextStepDescriptor.currentStepIndex - 1`
+ *                         혹은 terminal 시 `reachedStepIndex - 1`로 변환된 값.
+ * @param isOverdue 현재 단계가 due 초과 상태인지 (dueAt < now). terminal일 때는 무시.
+ * @param termination terminal 종류 (rejected/canceled). null = 비-terminal.
+ *                    terminal일 때 currentStepIndex 위치는 'terminated', 이후는 'future', 이전은 'done'.
  */
 export function deriveProgressStepState(
   stepIndex: number,
   currentStepIndex: number,
-  isOverdue: boolean = false
+  isOverdue: boolean = false,
+  termination: TerminationKind = null
 ): ProgressStepState {
   if (stepIndex < currentStepIndex) return 'done';
-  if (stepIndex === currentStepIndex) return isOverdue ? 'late' : 'current';
+  if (stepIndex === currentStepIndex) {
+    if (termination !== null) return 'terminated';
+    return isOverdue ? 'late' : 'current';
+  }
   return 'future';
 }

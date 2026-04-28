@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, X } from 'lucide-react';
 import { useTranslations, useFormatter } from 'next-intl';
 
 import { cn } from '@/lib/utils';
@@ -32,8 +32,10 @@ const STEP_CIRCLE_BY_STATE: Record<ProgressStepState, string> = {
     'bg-brand-critical text-white border-brand-critical ' +
     'shadow-[0_0_0_4px_hsl(var(--brand-color-critical)/0.18)] ' +
     'motion-safe:animate-pulse',
-  future:
-    'bg-card text-muted-foreground border-brand-border-strong',
+  future: 'bg-card text-muted-foreground border-brand-border-strong',
+  // terminated — 반려/취소된 reachedStep. 회색 strike + 비활성 시각.
+  terminated:
+    'bg-muted text-muted-foreground border-brand-border-strong opacity-60',
 };
 
 const STEP_LABEL_BY_STATE: Record<ProgressStepState, string> = {
@@ -41,6 +43,7 @@ const STEP_LABEL_BY_STATE: Record<ProgressStepState, string> = {
   current: 'text-brand-info font-bold',
   late: 'text-brand-critical font-bold',
   future: 'text-foreground font-semibold',
+  terminated: 'text-muted-foreground font-semibold line-through',
 };
 
 const CONNECTOR_BY_STATE: Record<'done' | 'pending', string> = {
@@ -80,10 +83,11 @@ const StepNode = memo(function StepNode({
   const format = useFormatter();
   const { state, labelKey, actor, actorRole, timestamp, scheduledAt, isYourTurn, index } = step;
 
-  // 원 안의 표기 — done은 ✓, late는 ⚠, current/future는 1-based 인덱스 (와이어프레임 02 line 274-289)
+  // 원 안의 표기 — done ✓ / late ⚠ / terminated ✕ / current·future 1-based 인덱스 (와이어프레임 02 line 274-289)
   const circleContent = (() => {
     if (state === 'done') return <Check className="h-3.5 w-3.5" aria-hidden />;
     if (state === 'late') return <AlertTriangle className="h-3.5 w-3.5" aria-hidden />;
+    if (state === 'terminated') return <X className="h-3.5 w-3.5" aria-hidden />;
     return <span aria-hidden>{index + 1}</span>;
   })();
 
@@ -119,11 +123,12 @@ const StepNode = memo(function StepNode({
     return null;
   })();
 
-  // 상태별 sr-only 텍스트 — 스크린리더 전용 (시각 라벨과 별도)
+  // 상태별 sr-only 텍스트 — 스크린리더 전용 (시각 라벨과 별도).
+  // current/late는 aria-current="step"이 발화되므로 sr-only 중복 방지 위해 빈 문자열.
   const srState = (() => {
+    if (state === 'current' || state === 'late') return '';
     if (state === 'done') return t('progressStep.stateDone');
-    if (state === 'current') return t('progressStep.stateCurrent');
-    if (state === 'late') return t('progressStep.stateLate');
+    if (state === 'terminated') return t('progressStep.stateTerminated');
     return t('progressStep.stateFuture');
   })();
 
@@ -211,18 +216,13 @@ function CheckoutProgressStepper({ steps, className }: CheckoutProgressStepperPr
   const t = useTranslations('checkouts');
   if (steps.length === 0) return null;
 
-  // grid-cols 동적 — 5/8 step 모두 지원
-  const gridCols = `grid-cols-${steps.length}`;
-
+  // grid-cols 는 동적이므로 Tailwind JIT 안전망으로 inline style 사용 (`grid-cols-${N}` 클래스
+  // 문자열은 JIT 스캐너가 못 찾음). N=5/8 양쪽 지원.
   return (
     <ol
       role="list"
       aria-label={t('progressStep.ariaLabel')}
-      className={cn(
-        'grid gap-0 relative px-1 pt-1 pb-1.5',
-        // tailwind safelist 회피 — 동적 grid-cols-N 은 inline style 경유
-        className
-      )}
+      className={cn('grid gap-0 relative px-1 pt-1 pb-1.5', className)}
       style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
     >
       {steps.map((step, idx) => {
@@ -237,8 +237,6 @@ function CheckoutProgressStepper({ steps, className }: CheckoutProgressStepperPr
           />
         );
       })}
-      {/* gridCols 변수는 SSR 검증용 (런타임 미사용) — eslint unused 회피 */}
-      <span className="hidden" aria-hidden data-grid-cols={gridCols} />
     </ol>
   );
 }

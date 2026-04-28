@@ -8,7 +8,6 @@ import {
   type CheckoutStatus,
   type CheckoutPurpose,
   type NextStepDescriptor,
-  CheckoutStatusValues as CSVal,
 } from '@equipment-management/schemas';
 
 import { useCheckoutProgressSteps } from '@/hooks/use-checkout-progress-steps';
@@ -49,29 +48,24 @@ interface ProgressFlowSectionProps {
 function ProgressFlowSection({ checkout, descriptor }: ProgressFlowSectionProps) {
   const t = useTranslations('checkouts');
 
-  // late 판정 — 서버 descriptor.urgency 가 'critical' 이거나 status === overdue
-  const isOverdue =
-    descriptor.urgency === 'critical' || checkout.status === CSVal.OVERDUE;
-
+  // hook이 isOverdue/currentUserCanAct/termination 모두 descriptor에서 직접 도출 — SSOT 강화.
   const steps = useCheckoutProgressSteps({
     status: checkout.status,
     purpose: checkout.purpose,
     descriptor,
-    // requester.role 은 의미상 신청자 본인의 역할(시험실무자/시험책임자 등)이어야 함.
-    // 현재 viewer role(`role` prop)은 신청자 role과 다를 수 있으므로 매핑하지 않음.
-    // 정확한 신청자 역할은 Phase 11 audit log endpoint(`auditEvents[].actorRole`)에서 인입.
+    // requester.role 은 신청자 본인의 역할이어야 함 (viewer role과 다름). 정확한 role은 Phase 11
+    // audit log endpoint(`auditEvents[].actorRole`)에서 인입. 그 전까지는 null.
     requester: checkout.user ? { name: checkout.user.name, role: null } : null,
     requestedAt: checkout.createdAt,
     checkoutDate: checkout.checkoutDate,
     expectedReturnDate: checkout.expectedReturnDate,
-    // Phase 11 에서 audit timeline endpoint 합류 시 여기에 events 주입
     auditEvents: undefined,
-    currentUserCanAct: descriptor.availableToCurrentUser,
-    isOverdue,
   });
 
-  // current/late 단계 인덱스 — 서버 권위 사용 (1-based → 0-based). 단순 산술이라 메모 불필요.
-  const currentIndex0 = Math.max(0, descriptor.currentStepIndex - 1);
+  // 표시용 current/total — descriptor.currentStepIndex 1-based 그대로 + 클램프.
+  // hook과 동일 클램프 정책으로 헤더와 stepper 인덱스 일치 보장.
+  const totalSteps = Math.max(1, descriptor.totalSteps);
+  const displayCurrent = Math.min(totalSteps, Math.max(1, descriptor.currentStepIndex));
 
   return (
     <Card>
@@ -83,8 +77,8 @@ function ProgressFlowSection({ checkout, descriptor }: ProgressFlowSectionProps)
         </div>
         <p className="text-xs text-muted-foreground tabular-nums shrink-0">
           {t('detail.progressFlowSubtitle', {
-            current: currentIndex0 + 1,
-            total: descriptor.totalSteps,
+            current: displayCurrent,
+            total: totalSteps,
           })}
         </p>
       </CardHeader>

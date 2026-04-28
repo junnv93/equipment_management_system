@@ -74,6 +74,7 @@ import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge'
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { NextStepPanelError } from '@/components/checkouts/NextStepPanelError';
+import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineError';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
@@ -520,8 +521,11 @@ export default function CheckoutDetailClient({
       </ErrorBoundary>
 
       {/* 진행 흐름 — REVIEW_RESULT.md P0-1 통합: 기존 진행 상태 stepper + 워크플로 타임라인 두 카드를
-          단일 통합 stepper로. 각 step 하단에 actor + timestamp + ⚡당신 마커. P0-2 라벨 줄바꿈은 .label-ko 적용. */}
-      <ProgressFlowSection checkout={checkout} descriptor={nextStepDescriptor} />
+          단일 통합 stepper로. 각 step 하단에 actor + timestamp + ⚡당신 마커. P0-2 라벨 줄바꿈은 .label-ko 적용.
+          ErrorBoundary로 보호 — descriptor 비정상 / next-intl format throw 시 페이지 전체 크래시 방지. */}
+      <ErrorBoundary fallback={(_, reset) => <WorkflowTimelineError onRetry={reset} />}>
+        <ProgressFlowSection checkout={checkout} descriptor={nextStepDescriptor} />
+      </ErrorBoundary>
 
 
       {/* 기본 정보 */}

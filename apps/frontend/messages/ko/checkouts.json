@@ -187,6 +187,7 @@
     "stateCurrent": "진행 중",
     "stateLate": "지연 — 즉시 조치 필요",
     "stateFuture": "예정",
+    "stateTerminated": "이 단계에서 종료됨",
     "metaScheduled": "예정 {date}",
     "metaPending": "대기 중",
     "actorYou": "⚡ 당신",

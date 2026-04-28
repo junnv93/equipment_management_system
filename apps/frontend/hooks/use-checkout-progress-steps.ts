@@ -7,6 +7,7 @@ import {
   type CheckoutPurpose,
   type NextStepDescriptor,
   type ProgressStepDescriptor,
+  type TerminationKind,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   deriveProgressStepState,
@@ -39,7 +40,11 @@ interface UseCheckoutProgressStepsInput {
   readonly status: CheckoutStatus;
   /** 반출 유형 — purpose === CPVal.RENTAL 시 8-step, 그 외 5-step */
   readonly purpose: CheckoutPurpose;
-  /** 서버 응답의 NextStepDescriptor — currentStepIndex 정확도 위해 권장 */
+  /**
+   * 서버 응답의 NextStepDescriptor — `currentStepIndex` / `urgency` / `availableToCurrentUser` /
+   * `reachedStepIndex` 모두 권위 출처. 본 hook은 descriptor를 단일 입력으로 보고 isOverdue/currentUserCanAct/
+   * termination을 직접 도출 — 호출처에서 같은 값을 두 번 계산하지 않도록 SSOT 강화.
+   */
   readonly descriptor?: NextStepDescriptor | null;
   /** 신청자 (요청 단계 actor) */
   readonly requester?: { readonly name?: string | null; readonly role?: string | null } | null;
@@ -51,10 +56,15 @@ interface UseCheckoutProgressStepsInput {
   readonly expectedReturnDate?: string | Date | null;
   /** Audit log 이벤트 (Phase 11에서 인입) */
   readonly auditEvents?: ReadonlyArray<CheckoutAuditEventSlice>;
-  /** 현재 사용자가 처리할 차례인 단계의 step index — descriptor.availableToCurrentUser 기반 */
-  readonly currentUserCanAct?: boolean;
-  /** dueAt 초과 여부 — late 상태 판정 */
-  readonly isOverdue?: boolean;
+}
+
+/**
+ * status → TerminationKind 추론 (rejected/canceled). 그 외는 null.
+ */
+function deriveTermination(status: CheckoutStatus): TerminationKind {
+  if (status === CSVal.REJECTED) return 'rejected';
+  if (status === CSVal.CANCELED) return 'canceled';
+  return null;
 }
 
 // ============================================================================
@@ -129,17 +139,34 @@ export function useCheckoutProgressSteps(
 ): ProgressStepDescriptor[] {
   return useMemo(() => {
     const steps =
-      input.purpose === CPVal.RENTAL ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
+      input.purpose === CPVal.RENTAL
+        ? CHECKOUT_DISPLAY_STEPS.rental
+        : CHECKOUT_DISPLAY_STEPS.nonRental;
 
-    // descriptor.currentStepIndex 는 1-based — UI 인덱스(0-based)로 정규화
-    // descriptor 부재 시 status 의 step list 위치를 fallback
-    const currentIndex0 = (() => {
-      if (input.descriptor && input.descriptor.currentStepIndex > 0) {
-        return input.descriptor.currentStepIndex - 1;
+    const termination = deriveTermination(input.status);
+
+    // descriptor.currentStepIndex 는 1-based — UI 인덱스(0-based)로 정규화 + [0, steps.length-1] 클램프.
+    // 클램프 이유: server schema는 `.positive()`만 강제하므로 N+1 같은 비정상 값 silent 통과 가능.
+    // descriptor 부재 시 status 의 step list 위치를 fallback. terminal 상태는 reachedStepIndex 우선.
+    const rawCurrent = (() => {
+      if (input.descriptor) {
+        // terminal일 때 reachedStepIndex 가 의미 있는 마지막 도달 단계
+        if (termination !== null && input.descriptor.reachedStepIndex > 0) {
+          return input.descriptor.reachedStepIndex - 1;
+        }
+        if (input.descriptor.currentStepIndex > 0) {
+          return input.descriptor.currentStepIndex - 1;
+        }
       }
       const idx = steps.indexOf(input.status);
       return idx >= 0 ? idx : 0;
     })();
+    const currentIndex0 = Math.min(steps.length - 1, Math.max(0, rawCurrent));
+
+    // SSOT: isOverdue / currentUserCanAct 모두 descriptor 직접 도출 (호출처 중복 제거).
+    const isOverdue =
+      input.descriptor?.urgency === 'critical' || input.status === CSVal.OVERDUE;
+    const currentUserCanAct = Boolean(input.descriptor?.availableToCurrentUser);
 
     const eventByStatus = new Map<CheckoutStatus, CheckoutAuditEventSlice>();
     for (const ev of input.auditEvents ?? []) {
@@ -154,7 +181,8 @@ export function useCheckoutProgressSteps(
       const baseState = deriveProgressStepState(
         index,
         currentIndex0,
-        Boolean(input.isOverdue) && index === currentIndex0
+        isOverdue && index === currentIndex0,
+        termination
       );
 
       const meta = buildStepMeta(status, input, eventByStatus);
@@ -162,9 +190,7 @@ export function useCheckoutProgressSteps(
       const labelKey = `stepper.${CHECKOUT_STEP_LABELS[status] ?? status}`;
 
       const isYourTurn =
-        baseState === 'current' || baseState === 'late'
-          ? Boolean(input.currentUserCanAct)
-          : false;
+        baseState === 'current' || baseState === 'late' ? currentUserCanAct : false;
 
       return {
         status,
@@ -187,7 +213,5 @@ export function useCheckoutProgressSteps(
     input.checkoutDate,
     input.expectedReturnDate,
     input.auditEvents,
-    input.currentUserCanAct,
-    input.isOverdue,
   ]);
 }

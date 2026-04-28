@@ -187,6 +187,7 @@
     "stateCurrent": "In progress",
     "stateLate": "Late — immediate action required",
     "stateFuture": "Upcoming",
+    "stateTerminated": "Terminated at this step",
     "metaScheduled": "Scheduled {date}",
     "metaPending": "Pending",
     "actorYou": "⚡ You",
