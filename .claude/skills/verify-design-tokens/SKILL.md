@@ -1651,3 +1651,62 @@ ls apps/frontend/components/dashboard/skeletons/*.tsx
 - 검증: `grep -rn 'role="alert"' apps/frontend/components/dashboard/` 결과가 EmptyState 내부 또는 AlertBanner critical 외에 없어야 함.
 
 **발생 이력 (2026-04-28)**: DashboardRow4의 RecentActivities/TeamEquipmentDistribution/MiniCalendar dynamic loading이 generic `<Skeleton className={SK.lg}>` 사용 → 실제 카드 구조(탭+행/막대+달력 grid)와 layout 불일치로 CLS 발생. 3개 전용 Skeleton 신설로 해결.
+
+### Step 44: SURFACE_INLINE_ACTION_TOKENS 4-way 동기화 + label-ko/label-mono utility 사용 (2026-04-28 추가, REVIEW_RESULT.md §4.1·§4.4)
+
+소프트 틴트 inline action 패턴(REVIEW_RESULT.md §4.1)과 한국어 줄바꿈 정책(§4.4)이 4계층에 정확히 동기화되어야 함. alpha를 utility 단계가 아닌 토큰 단계에서 고정하는 SSOT 강화.
+
+**`SURFACE_INLINE_ACTION_TOKENS` 4-way sync (info/ok/warning/danger × bg/bg-hover/border/fg = 16 토큰)**:
+1. `globals.css :root` 16개 CSS 변수 (`--surface-inline-action-{variant}-{slot}: hsl(var(--brand-color-X) / alpha)`) — Light alpha 고정.
+2. `globals.css .dark` 16개 동일 변수 — Dark도 같은 alpha (brand-color-* 가 다크 변형 자동 제공).
+3. `globals.css @theme inline` 16개 utility bridge (`--color-surface-inline-action-{variant}-{slot}: var(--surface-inline-action-{variant}-{slot})`) — Tailwind utility 노출.
+4. `lib/design-tokens/semantic.ts SURFACE_INLINE_ACTION_TOKENS` (base + variant 4) — 컴포넌트 합성용 className SSOT.
+
+**`label-ko` / `label-mono` utility**:
+- `label-ko`: `word-break: keep-all + overflow-wrap: break-word + line-height: 1.45` — 한국어 어절 단위 줄바꿈.
+- `label-mono`: `font-mono + white-space: nowrap + overflow: hidden + text-overflow: ellipsis + font-feature-settings: tnum` — 영문 vendor/관리번호 truncate.
+
+```bash
+# :root 16 변수 존재 (Light + Dark 합 ≥ 32)
+grep -c "^\s*--surface-inline-action-" apps/frontend/styles/globals.css
+# 기대: ≥ 32
+
+# @theme inline bridge 16 변수
+grep -c "^\s*--color-surface-inline-action-" apps/frontend/styles/globals.css
+# 기대: 16
+
+# semantic.ts SURFACE_INLINE_ACTION_TOKENS 정의
+grep -n "SURFACE_INLINE_ACTION_TOKENS" apps/frontend/lib/design-tokens/semantic.ts
+# 기대: export const + 4 variant (info/ok/warning/danger)
+
+# barrel re-export
+grep -n "SURFACE_INLINE_ACTION_TOKENS\|getSurfaceInlineActionClasses" apps/frontend/lib/design-tokens/index.ts
+# 기대: 1건 이상
+
+# label-ko / label-mono 정의
+grep -n "@utility label-ko\|@utility label-mono" apps/frontend/styles/globals.css
+# 기대: 양쪽 정의
+
+# 한국어 라벨에 truncate 적용 — label-ko 우회 가능성
+grep -rn "className=.*\btruncate\b" apps/frontend/components/checkouts/ | grep -v "label-mono\|managementNumber\|관리번호\|font-mono"
+# 기대: 모든 결과 검토 — 한국어 라벨이면 label-ko로 교체 권장
+```
+
+**PASS:**
+1. 16개 `--surface-inline-action-*` 변수 :root + .dark + @theme inline 3곳 동기화
+2. `SURFACE_INLINE_ACTION_TOKENS.base + variant.{info|ok|warning|danger}` semantic 토큰 export + barrel re-export
+3. `getSurfaceInlineActionClasses(variant)` 헬퍼 또는 base+variant 합성으로 컴포넌트 사용
+4. `label-ko` (한국어 줄바꿈), `label-mono` (영문 truncate) utility 양쪽 정의
+5. stepper 단계명/FSM 액션 라벨/상태 배지에 `label-ko` 적용, 관리번호(SUW-E0007 등)에 `label-mono` 적용
+
+**FAIL:**
+- :root 또는 .dark 16개 누락 → 다크 모드 색상 불일치
+- `@theme inline` bridge 누락 → Tailwind utility 미노출 (`bg-surface-inline-action-info-bg` 작동 안 함)
+- semantic 토큰 정의 없이 `bg-brand-info/10` 같은 직접 utility 합성 → SSOT 분산
+- `label-ko` 없이 한국어 라벨에 `truncate` 적용 → 1024px wrap 잘림 (REVIEW_RESULT.md P0-2 회귀)
+
+**관련 파일:**
+- `apps/frontend/styles/globals.css` — `:root`/.dark/@theme inline + utility 정의
+- `apps/frontend/lib/design-tokens/semantic.ts` — `SURFACE_INLINE_ACTION_TOKENS` export
+- `apps/frontend/lib/design-tokens/index.ts` — barrel re-export
+- 향후 `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom (P0-3 마이그레이션)

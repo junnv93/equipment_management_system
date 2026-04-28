@@ -891,3 +891,73 @@ grep -rn '\(length\|count\) *[<>]=\?\s*\(5\|6\|8\)\b' \
 - 페이지네이션 limit (`DASHBOARD_ITEM_LIMIT`은 별도 SSOT)
 
 **발생 이력 (2026-04-28)**: 대시보드 영역에 50/60/65/80/90/100/300/500/1500 등 임계값이 frontend dday-tone + backend dashboard.service 2곳에 중복 인라인. `getMyQuickSummary` 30 day window + `getRecentActivities` 7 day window도 매직 넘버. SSOT 모듈 신설 + 일괄 교체.
+
+### Step 36: 반출 도메인 D-day 임계값 SSOT — `checkout-thresholds.ts` 우회 금지 (2026-04-28 추가, REVIEW_RESULT.md §4.3)
+
+**규칙**: 반출 도메인의 D-day 4-tier 임계값(overdue/warning/ok/neutral)은 반드시 `@equipment-management/shared-constants/checkout-thresholds`에서 import. 대시보드 임계값(`dashboard-thresholds.ts`)과 의도적으로 분리되어 있으므로 **두 도메인 임계값을 교차 사용 금지**.
+
+**도메인 분리 근거 (검증 시 참고)**:
+| 도메인 | 모듈 | 의미 | 부호 규약 |
+|---|---|---|---|
+| 대시보드 | `dashboard-thresholds.ts` | 30일 horizon 가동률/배치 모니터링 | `days` 양수=초과, 음수=남음 |
+| 반출 | `checkout-thresholds.ts` | 단기 워크플로 SLA — 즉시 조치 | `daysRemaining` 양수=미래, 음수=overdue |
+
+**커버리지 (3개 SSOT export)**:
+- `CHECKOUT_DDAY_THRESHOLDS` (overdue=0, warning=2, ok=14)
+- `getCheckoutDdayTier(daysRemaining): CheckoutDdayTier` — `'danger' | 'warning' | 'ok' | 'neutral'`
+- `CheckoutDdayTier` 타입
+
+**검증 명령**:
+```bash
+# 1. 반출 컴포넌트/hook이 임계값 매직 넘버 직접 사용
+grep -rn '\b\(daysRemaining\|days\)\s*[<>]=\?\s*\(0\|2\|14\)\b' \
+  apps/frontend/components/checkouts/ \
+  apps/frontend/hooks/use-checkout-*.ts \
+  apps/frontend/lib/design-tokens/components/dday-colors.ts 2>/dev/null \
+  | grep -v 'CHECKOUT_DDAY_THRESHOLDS\|getCheckoutDdayTier\|//'
+
+# 2. dday-colors.ts 신규 4-tier 함수가 shared-constants 위임 패턴
+grep -n "getCheckoutDdayTier\|CHECKOUT_DDAY_THRESHOLDS" \
+  apps/frontend/lib/design-tokens/components/dday-colors.ts
+# 기대: import + getCheckoutDday4Tier 내부 위임
+
+# 3. 반출 컴포넌트가 대시보드 임계값(DDAY_THRESHOLDS) 잘못 사용 검출
+grep -rn "DDAY_THRESHOLDS\b" apps/frontend/components/checkouts/ apps/frontend/hooks/use-checkout-*.ts
+# 기대: 0건 (반출 도메인은 CHECKOUT_DDAY_THRESHOLDS 사용 — 대시보드 모듈 우회 금지)
+
+# 4. 백엔드 checkouts.service.ts 가 반출 임계값 사용 시 SSOT 경유
+grep -n "CHECKOUT_DDAY_THRESHOLDS\|getCheckoutDdayTier" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: 향후 priority 정렬/overdue 필터 인입 시 1건 이상 (현재는 frontend-only OK)
+
+# 5. 6-tier legacy 회귀 방지 (dday-colors.ts에서 제거됨)
+grep -n "DDAY_TIERS\b\|DDAY_TIER_CLASSES\b\|farFuture\|upcoming\|overdueShort\|overdueLong" \
+  apps/frontend/lib/design-tokens/components/dday-colors.ts
+# 기대: 0건 (정리 완료, 회귀 시 FAIL)
+```
+
+**PASS:**
+1. 반출 컴포넌트/hook의 D-day 비교는 모두 `getCheckoutDdayTier()` 또는 그 결과(`tier === 'danger'`)로 평가
+2. `dday-colors.ts`의 4-tier 함수는 shared-constants `getCheckoutDdayTier` 위임
+3. 반출 컴포넌트가 대시보드 `DDAY_THRESHOLDS.urgent/soon` 사용하지 않음 (의미 다른 도메인)
+4. 백엔드 인입 시 frontend와 동일 모듈 import (frontend/backend 일관성)
+5. 6-tier legacy 임계값(7/4/1/0/-3) 잔존 0건
+
+**FAIL:**
+- 반출 컴포넌트/hook에 `daysRemaining < 0`, `daysRemaining <= 2`, `daysRemaining <= 14` 인라인
+- 반출 컴포넌트가 `DDAY_THRESHOLDS` (대시보드 모듈) import — 도메인 의미 충돌
+- 6-tier legacy 함수/상수 회귀 (DDAY_TIERS, DDAY_TIER_CLASSES, farFuture/upcoming/overdueShort/overdueLong)
+
+**예외**:
+- `checkout-thresholds.ts` 내부 임계값 정의 (SSOT 자체)
+- `dday-colors.ts`의 `getCheckoutDday4Tier` (shared-constants 위임)
+- `DdayBadge.tsx` 내부의 tier 비교(`tier === 'danger'` 등) — tier가 SSOT 결과이므로 OK
+
+**관련 파일**:
+- `packages/shared-constants/src/checkout-thresholds.ts` — SSOT 정의
+- `packages/shared-constants/src/index.ts` — re-export
+- `apps/frontend/lib/design-tokens/components/dday-colors.ts` — 4-tier 위임 (6-tier 정리됨)
+- `apps/frontend/components/checkouts/DdayBadge.tsx` — 호출처
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — 호출처
+
+**발생 이력 (2026-04-28)**: REVIEW_RESULT.md §4.3 명세에 따라 반출 도메인 D-day pill 색상(`dday-ok / dday-warn / dday-danger`)을 4-tier로 표준화. 기존 6-tier는 의미 단계가 너무 많아 와이어프레임 시각 어휘와 불일치 → 4-tier 단일화 + 대시보드와 분리된 도메인 임계값 SSOT 신설. frontend/backend 양쪽 동일 모듈 사용으로 시각·로직 일관성 보장.

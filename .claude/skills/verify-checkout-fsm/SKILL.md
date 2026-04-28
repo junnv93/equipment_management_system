@@ -1199,3 +1199,55 @@ grep -n "action\.\${descriptor\.labelKey}" apps/frontend/components/shared/NextS
 **관련 파일:**
 - `apps/frontend/components/shared/NextStepPanel.tsx` — compact 분기 (~라인 305-330)
 - `apps/frontend/components/shared/NextStepPanel.stories.tsx` — CompactVariantCanAct(canAct=true) + CompactVariantNoAct(canAct=false)
+
+### Step 41: `ProgressStepDescriptor` SSOT + `deriveProgressStepState` 5-state exhaustive (2026-04-28 추가, REVIEW_RESULT.md P0-1)
+
+상세 페이지 통합 stepper(`CheckoutProgressStepper`)를 위해 `NextStepDescriptor`와 보완 관계로 도입된 **`ProgressStepDescriptor[]`** 타입과 **`deriveProgressStepState`** 함수의 정합성을 강제:
+
+1. **타입 분리 — NextStep(현재 1점) vs Progress[](전체 N점)**: 두 타입의 필드 중복 0 보장. `ProgressStepDescriptor`는 schemas/fsm/progress-step.ts 단일 정의.
+2. **5-state exhaustive**: `PROGRESS_STEP_STATES = ['done', 'current', 'late', 'future', 'terminated']` const tuple + `as const` + `(typeof ...)[number]` 패턴. terminal 상태(rejected/canceled) 표현 누락 시 reachedStepIndex가 silent break.
+3. **`deriveProgressStepState` 4-arg signature**: `(stepIndex, currentStepIndex, isOverdue, termination)`. terminal일 때 currentStepIndex 위치 'terminated', 이전 'done', 이후 'future'.
+4. **`TerminationKind` 매핑**: `'rejected' | 'canceled' | null`. hook 측 `deriveTermination(status)` 헬퍼로 status → TerminationKind 변환.
+5. **descriptor 클램프 강제**: `Math.min(steps.length - 1, Math.max(0, currentStepIndex - 1))` — schema `.positive()` 만으로는 N+1 silent 통과.
+
+```bash
+# ProgressStepState 5-state 정의 확인
+grep -n "PROGRESS_STEP_STATES" packages/schemas/src/fsm/progress-step.ts
+# 기대: 'done', 'current', 'late', 'future', 'terminated' 5개 (PASS)
+
+# deriveProgressStepState 4-arg 시그니처 확인
+grep -A4 "export function deriveProgressStepState" packages/schemas/src/fsm/progress-step.ts
+# 기대: termination?: TerminationKind 4번째 인자 존재
+
+# TerminationKind 정의 확인
+grep -n "type TerminationKind" packages/schemas/src/fsm/progress-step.ts
+# 기대: 'rejected' | 'canceled' | null
+
+# Hook이 reachedStepIndex 우선 + currentStepIndex fallback 패턴 사용하는지
+grep -n "reachedStepIndex\|currentStepIndex" apps/frontend/hooks/use-checkout-progress-steps.ts
+# 기대: termination !== null && reachedStepIndex > 0 → reachedStepIndex - 1 분기 존재
+
+# 클램프 보장
+grep -n "Math.min.*steps.length\|Math.max(0," apps/frontend/hooks/use-checkout-progress-steps.ts
+# 기대: descriptor.currentStepIndex 비정상 값 양쪽 클램프
+```
+
+**PASS:**
+1. `PROGRESS_STEP_STATES` 5-tuple + `ProgressStepState` 타입 동기화
+2. `ProgressStepDescriptorSchema` Zod로 wire-level 검증 통로 확보 (향후 backend emit)
+3. `deriveProgressStepState` termination 인자 + terminal 분기
+4. Hook이 termination 추론 후 reachedStepIndex 사용 (terminal일 때) / currentStepIndex 사용 (비-terminal일 때)
+5. `[0, steps.length-1]` 양쪽 클램프
+
+**FAIL:**
+- 4-state(terminated 누락) → 반려/취소 stepper "X단계에서 종료" 표현 불가, current처럼 보임
+- termination 미전달 → terminal 상태도 'current' 반환 → 시각적 오인식
+- 클램프 부재 → descriptor.currentStepIndex=99 시 모든 step이 'done' 잘못 렌더
+- ProgressStepDescriptor 필드를 NextStepDescriptor에서 중복 정의 → 보완 관계 깨짐
+
+**관련 파일:**
+- `packages/schemas/src/fsm/progress-step.ts` — 단일 정의
+- `packages/schemas/src/fsm/index.ts` — re-export
+- `apps/frontend/hooks/use-checkout-progress-steps.ts` — descriptor 클램프 + termination 추론
+- `apps/frontend/components/checkouts/CheckoutProgressStepper.tsx` — 5-state 시각 (terminated: opacity-60 + line-through + X 아이콘)
+- `apps/frontend/components/checkouts/ProgressFlowSection.tsx` — ErrorBoundary 보호 + displayCurrent 클램프
