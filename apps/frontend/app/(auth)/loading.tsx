@@ -1,13 +1,12 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
-/**
- * 인증 라우트 로딩 상태
- * - 라우트 전환 시 자동으로 표시됨 (Next.js Suspense 기반)
- * - 스플릿 레이아웃 유지하며 스켈레톤 UI 표시
- */
-export default function AuthLoading() {
+export default async function AuthLoading() {
+  const t = await getTranslations();
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full" role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{t(FEEDBACK_KEYS.loadingPage)}</span>
       {/* 좌측: 브랜딩 섹션 스켈레톤 (lg 이상에서만 표시) */}
       <div
         className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-ul-midnight"
@@ -68,12 +67,7 @@ export default function AuthLoading() {
         </div>
 
         {/* 로그인 폼 컨테이너 스켈레톤 */}
-        <div
-          className="flex-1 flex items-center justify-center p-6 lg:p-12"
-          role="main"
-          aria-busy="true"
-          aria-label="로그인 페이지 로딩 중"
-        >
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
           <div className="w-full max-w-md">
             {/* 카드 스켈레톤 */}
             <div className="bg-card rounded-2xl shadow-lg border border-border p-8">

@@ -115,7 +115,10 @@ export function HandoverQRDisplay({
         <div className="flex flex-col items-center gap-3 py-2">
           {phase === 'loading' && (
             <div className="flex flex-col items-center gap-2 py-8" role="status" aria-live="polite">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+              <Loader2
+                className="h-8 w-8 motion-safe:animate-spin text-muted-foreground"
+                aria-hidden="true"
+              />
               <p className="text-sm text-muted-foreground">{t('issuing')}</p>
             </div>
           )}

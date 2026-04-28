@@ -122,7 +122,7 @@ export function BulkLabelPrintButton({
         aria-label={t('buttonAriaLabel', { count })}
       >
         {phase === 'generating' ? (
-          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+          <Loader2 className="mr-1.5 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
         ) : (
           <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
         )}

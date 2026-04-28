@@ -1,6 +1,8 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 /**
  * 장비 상세 라우트 로딩 UI
@@ -10,9 +12,11 @@ import { getPageContainerClasses } from '@/lib/design-tokens';
  * - equipment/[id]/* 하위 모든 라우트에서 공유
  * - Server Component로 작성 (상태 불필요)
  */
-export default function EquipmentDetailLoading() {
+export default async function EquipmentDetailLoading() {
+  const t = await getTranslations();
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses()} role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{t(FEEDBACK_KEYS.loadingDetail)}</span>
       {/* 헤더 스켈레톤 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

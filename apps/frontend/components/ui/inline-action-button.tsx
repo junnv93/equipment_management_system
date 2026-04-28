@@ -89,7 +89,7 @@ const InlineActionButtonImpl = React.forwardRef<HTMLButtonElement, InlineActionB
         {loading ? (
           <>
             <Loader2
-              className={cn(SURFACE_INLINE_ACTION_TOKENS.iconSize, 'animate-spin')}
+              className={cn(SURFACE_INLINE_ACTION_TOKENS.iconSize, 'motion-safe:animate-spin')}
               aria-hidden="true"
             />
             <span className="sr-only">{loadingLabel}</span>

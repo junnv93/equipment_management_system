@@ -2,8 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation, UseMutationOptions } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 import { safeCallback } from './lib/safe-callback';
 
 interface MutationWithRefreshOptions<TData, TVariables, TContext> extends Omit<
@@ -145,15 +147,16 @@ export function useDeleteMutation<TVariables = string>({
   refreshServerCache?: boolean;
   onSuccessCallback?: () => void;
 }) {
+  const t = useTranslations();
   return useMutationWithRefresh<void, TVariables>({
     mutationFn,
     invalidateKeys,
     refreshServerCache,
     successMessage: {
-      title: '삭제 완료',
-      description: `${resourceName}이(가) 삭제되었습니다.`,
+      title: t(FEEDBACK_KEYS.deleted),
+      description: resourceName,
     },
-    errorTitle: `${resourceName} 삭제 실패`,
+    errorTitle: t(FEEDBACK_KEYS.failed),
     onSuccessCallback,
   });
 }

@@ -452,7 +452,7 @@ export function AuditTimelineFeed({
         {isFetchingNextPage && (
           <div className="flex justify-center py-4" aria-live="polite">
             <Loader2
-              className="h-5 w-5 animate-spin text-muted-foreground"
+              className="h-5 w-5 motion-safe:animate-spin text-muted-foreground"
               aria-label={t('timeline.loading')}
             />
           </div>

@@ -8,8 +8,10 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { createApiError } from '@/lib/api/utils/response-transformers';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 export interface UseFormSubmissionOptions<TData, TVariables> {
   /** Mutation 함수 */
@@ -34,18 +36,22 @@ export function useFormSubmission<TData, TVariables>({
   mutationFn,
   invalidateQueries = [],
   redirectPath,
-  successMessage = {
-    title: '처리 완료',
-    description: '요청이 성공적으로 처리되었습니다.',
-  },
-  errorMessage = {
-    title: '처리 실패',
-    description: '요청 처리 중 오류가 발생했습니다.',
-  },
+  successMessage,
+  errorMessage,
 }: UseFormSubmissionOptions<TData, TVariables>) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations();
+
+  const resolvedSuccessMessage = successMessage ?? {
+    title: t(FEEDBACK_KEYS.success),
+    description: '',
+  };
+  const resolvedErrorMessage = errorMessage ?? {
+    title: t(FEEDBACK_KEYS.failed),
+    description: '',
+  };
 
   const mutation = useMutation({
     mutationFn,
@@ -57,8 +63,8 @@ export function useFormSubmission<TData, TVariables>({
 
       // 성공 메시지
       toast({
-        title: successMessage.title,
-        description: successMessage.description,
+        title: resolvedSuccessMessage.title,
+        description: resolvedSuccessMessage.description,
       });
 
       // 리다이렉트
@@ -79,8 +85,8 @@ export function useFormSubmission<TData, TVariables>({
       const apiError = createApiError(error);
 
       toast({
-        title: errorMessage.title,
-        description: apiError.message || errorMessage.description,
+        title: resolvedErrorMessage.title,
+        description: apiError.message || resolvedErrorMessage.description,
         variant: 'destructive',
       });
 
