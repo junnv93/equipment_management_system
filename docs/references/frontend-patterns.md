@@ -193,3 +193,189 @@ const item = await apiClient.get(endpoint).then(transformSingleResponse<FormTemp
 | 새 엔드포인트 개발           | 반드시 `{ data: T }` envelope 방식 채택              |
 
 > **anti-pattern:** 레거시 비-envelope 엔드포인트에 `apiClient.get<T[]>()` 를 그대로 사용하면 타입은 통과해도 런타임에서 배열 대신 응답 객체를 받게 된다.
+
+### Atom-level i18n 금지 원칙
+
+**원자 컴포넌트(`components/shared/`, `components/ui/`)는 `useTranslations` / `getTranslations`를 cross-cutting flat top-level 키에 사용하지 않는다.** 단, **atom-owned sub-namespace**(예: `common.fileUpload.*`, `common.equipmentCombobox.*`)는 허용 — atom 본인이 소유하는 i18n 영역이므로 캡슐화 위반 아님.
+
+**Why:** atom은 가장 작은 재사용 단위로, **공유되는** flat top-level 키(예: `common.loading`)를 호출하면 도메인 결합이 발생하고 회귀 시 1줄짜리 silent break가 페이지 전체를 폭주시킨다. 반면 atom-owned sub-namespace는 atom 자체의 i18n 영역이므로 결합 우려 없음.
+
+**위반 예시 (자기-모순):**
+
+```tsx
+// ❌ atom이 cross-cutting flat top-level 키 호출 — common.loading 누락 시 페이지 폭주
+function NextStepPanel(props) {
+  const tCommon = useTranslations('common');
+  const loadingLabel = tCommon('loading'); // ← flat top-level 키 의존 (위험)
+  // ...
+}
+```
+
+**권장 1 (caller 주입 — cross-cutting 라벨):**
+
+```tsx
+// ✅ atom은 cross-cutting 라벨을 props로 받음
+interface NextStepPanelProps {
+  /** sr-only loading label injected by caller (e.g. tCommon('status.loading')). */
+  loadingLabel: string; // required — TS 컴파일 게이트로 누락 차단
+}
+
+// caller (도메인 컴포넌트)
+const tCommon = useTranslations('common');
+<NextStepPanel loadingLabel={tCommon('status.loading')} />;
+```
+
+**권장 2 (atom-owned sub-namespace — atom 전용 라벨):**
+
+```tsx
+// ✅ atom 전용 i18n 영역 — common.fileUpload.* 는 FileUpload atom이 소유
+function FileUpload(props) {
+  const t = useTranslations('common.fileUpload');
+  return <div>{t('dropHere')}</div>;
+  // 또는 sub-namespace를 root에서 접근:
+  // const t = useTranslations('common');
+  // {t('fileUpload.dropHere')}
+}
+```
+
+이 패턴은 안전하다 — `common.fileUpload`는 다른 atom과 공유되지 않는 *atom-owned 영역*이므로 결합 우려 없음.
+
+**예외:** 도메인-결합이 명시적인 전용 컴포넌트(예: `NextStepPanel`이 `checkouts.fsm` namespace를 사용하는 부분)는 `useTranslations('checkouts.fsm')` 직접 호출 가능. 다만 이 경우 컴포넌트 위치는 `components/checkouts/`에 두는 것이 SSOT 위반이 아니나, `components/shared/`에 둘 때는 namespace 결합을 props으로 끌어올리는 것이 일관적이다.
+
+**위반 적발 (다층 게이트):**
+
+```bash
+# (1) 호출지 ↔ messages JSON parity
+node scripts/check-i18n-call-sites.mjs --all
+# (2) common.json 구조 — flat top-level key 금지 (회귀 메커니즘 차단)
+#     동일 스크립트가 root level에 string/array 발견 시 exit 1
+```
+
+**구조적 차단**: `messages/{ko,en}/common.json`의 root level은 sub-namespace(object) 만 허용. flat string/array가 추가되면 빌드 실패. 본 회귀(`tCommon('loading')`이 flat key 호출)의 메커니즘이 빌드 타임에 _애초에 만들어질 수 없도록_ 차단됨.
+
+### `loading.tsx` Server Component i18n 패턴
+
+Next.js 16 App Router의 `loading.tsx`는 **Server Component**이므로 `useTranslations` 사용 불가. **반드시 `getTranslations()` async 사용.**
+
+```tsx
+// ✅ 올바른 패턴
+import { getTranslations } from 'next-intl/server';
+
+export default async function Loading() {
+  const t = await getTranslations('common');
+  return (
+    <div role="status" aria-label={t('status.loading')}>
+      {/* skeleton */}
+    </div>
+  );
+}
+```
+
+**금지 사항:**
+
+- 하드코딩 sr-only 텍스트 (예: `aria-label="로딩 중"`) — 로케일 무관 한국어 노출
+- `aria-label={t('key', { name: '' })}` 패턴 — 빈 문자열로 ICU 변수를 채우면 SR이 "님의 …" 같은 깨진 라벨을 읽음
+
+### i18n namespace SSOT
+
+**SSOT:** `apps/frontend/i18n.ts`의 `namespaces` 배열이 단일 소스. 추가/제거 시 5단계 체크리스트:
+
+1. `apps/frontend/messages/{ko,en}/<ns>.json` 양쪽 생성 (parity 필수)
+2. `apps/frontend/i18n.ts`의 `namespaces` 배열에 추가
+3. 호출지에서 `useTranslations('<ns>')` 사용
+4. `node scripts/check-i18n-call-sites.mjs --all` PASS 확인
+5. 한 라우트에서 직접 렌더링하여 `MISSING_MESSAGE` 0건 확인
+
+**filesystem 자동 도출은 채택하지 않음:**
+
+- 의도적 미존재 ns(점진 도입 중인 ns)를 명시적으로 표현 어려움
+- Turbopack/webpack의 dynamic import codegen이 명시 배열에서 더 안정적
+- namespace 추가는 빈도가 낮아 자동화 ROI가 낮음
+
+**검증:**
+
+```bash
+node scripts/check-i18n-call-sites.mjs --all   # 호출지 ↔ 메시지 parity
+node scripts/check-i18n-keys.mjs --all         # 필수 키 contract (FSM 등)
+```
+
+두 스크립트는 책임이 다르므로 공존한다 — `check-i18n-keys.mjs`는 known-critical 키의 부재를 강하게 보장, `check-i18n-call-sites.mjs`는 호출지에서 사용한 모든 키를 자동 검증.
+
+### Row with Secondary Action Pattern
+
+**문제:** 한 행(row)에 (a) 행 전체 클릭 → 메인 라우트, (b) 보조 영역 클릭 → 필터 뷰/세부 액션 두 동선이 모두 필요할 때, 부모 `<a>` 안에 자식 `<a>`(또는 `<button onClick=router.push>`)를 넣으면 다음이 깨진다.
+
+- HTML Interactive Content Model 위반 — `<a>`/`<button>`은 다른 interactive content를 자손으로 가질 수 없음 (W3C HTML5 §4.5)
+- React 19 hydration error: `In HTML, <a> cannot be a descendant of <a>` 콘솔 폭주
+- Tab 순서/SR 안내가 비결정적 (브라우저가 자동 교정한 DOM과 SSR 마크업이 달라짐)
+
+**해결 패턴 (업계 표준 — GitHub Inbox row, Stripe Dashboard, Linear Issue row):**
+
+행 컨테이너(`<div>` 또는 `<li>`) 안에 **형제 anchor 2개**를 둔다.
+
+```tsx
+// ✅ NavRowWithSecondaryAction.tsx 의 expanded + secondaryAction 분기
+<div className={SIDEBAR_ROW_TOKENS.container}>
+  <Link
+    href={href} // 메인 라우트
+    className={getSidebarRowPrimaryClasses(isActive)}
+    aria-current={isActive ? 'page' : undefined}
+  >
+    <Icon /> <span>{label}</span>
+  </Link>
+  <Link
+    href={secondaryAction.href} // 보조 라우트 (필터 뷰 등)
+    className={getSidebarRowSecondaryClasses()}
+    aria-label={secondaryAriaLabel} // 명시적 SR 안내
+  >
+    <NavBadge count={badge} srLabel={secondaryAriaLabel} />
+  </Link>
+</div>
+```
+
+```tsx
+// ❌ 안티패턴 — Link 안 Link
+<Link href={href}>
+  <Icon /> <span>{label}</span>
+  <Link href={secondaryHref}>{badge}</Link>     // hydration error
+</Link>
+
+// ❌ 안티패턴 — Link 안 button(onClick=router.push)
+<Link href={href}>
+  <Icon /> <span>{label}</span>
+  <button onClick={() => router.push(secondaryHref)}>{badge}</button>
+  // WCAG 4.1.1 Parsing 위반 + 우클릭 새 탭 손실 + URL 공유 손실
+</Link>
+```
+
+**데이터 모델: optional prop 분기 → discriminated union**
+
+caller가 `secondaryHref?: string` 같은 optional prop을 받아 분기하는 패턴은 silent break 위험 (메모리 교훈: GuidanceCallout `ctaKind` 사례). 명시적 union으로 강제:
+
+```ts
+// nav-config.ts
+export type NavItemBadgeConfig =
+  | { kind: 'count'; sourceKey: BadgeSourceKey }
+  | {
+      kind: 'count-with-action';
+      sourceKey: BadgeSourceKey;
+      action: { queryParam: string; queryValue: string; ariaKey: string };
+    };
+```
+
+`queryParam`/`queryValue`는 SSOT 상수(`CHECKOUT_QUERY_PARAMS` 등)에서 온다 — 하드코딩 0.
+
+**접근성 (WCAG 2.1 AA):**
+
+- 2.4.3 Focus Order: DOM 순서 = Tab 순서 (메인 → 보조 → 다음 row item)
+- 4.1.2 Name, Role, Value: 메인은 label 텍스트, 보조는 명시 `aria-label` (i18n 키 경유)
+- NavBadge는 시각만 담당 (`<span>`만 렌더). 링크 의미는 caller가 부모 anchor 클래스 + aria-label로 부여 → 단일 책임 원칙
+
+**회귀 차단:**
+
+- ESLint `no-restricted-syntax` `NESTED_LINK_RULE` / `NESTED_ANCHOR_RULE` (apps/frontend/eslint.config.mjs)
+- Playwright e2e: `tests/e2e/features/layout/sidebar-nav-action.spec.ts` — 콘솔 hydration 에러 0건 + DOM `a > a` 0건 + Tab 순서 검증
+
+**적용 사례:**
+
+- `apps/frontend/components/layout/NavRowWithSecondaryAction.tsx` — 사이드바 nav 행 (메인 라우트 + 선택적 yourTurn 필터 동선)

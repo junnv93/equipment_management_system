@@ -195,10 +195,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   if (isError) {
     return (
       <div className={getPageContainerClasses()}>
-        <ErrorState
-          title={t('calibrationFactorsClient.loadError')}
-          onRetry={() => void refetch()}
-        />
+        <ErrorState title={t('loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

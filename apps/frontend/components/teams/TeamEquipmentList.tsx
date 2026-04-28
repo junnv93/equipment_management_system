@@ -210,7 +210,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         </td>
                         <td className="p-4 text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/equipment/${item.id}`}>{t('viewDetailShort')}</Link>
+                            <Link href={`/equipment/${item.id}`}>
+                              {t('detail.viewDetailShort')}
+                            </Link>
                           </Button>
                         </td>
                       </tr>

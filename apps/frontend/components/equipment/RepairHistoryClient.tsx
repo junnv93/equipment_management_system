@@ -338,7 +338,7 @@ export function RepairHistoryClient({
   if (isError) {
     return (
       <div className={getPageContainerClasses()}>
-        <ErrorState title={t('repairHistoryClient.loadError')} onRetry={() => void refetch()} />
+        <ErrorState title={t('loadError')} onRetry={() => void refetch()} />
       </div>
     );
   }

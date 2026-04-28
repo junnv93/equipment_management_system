@@ -350,7 +350,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   {/* Last Calibration Date */}
                   <div className="space-y-2">
                     <Label htmlFor="lastCalibrationDate">
-                      {t('fieldLabels.lastCalibrationDate')}{' '}
+                      {t('form.fieldLabels.lastCalibrationDate')}{' '}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
@@ -370,7 +370,8 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                 {/* Calibration Agency */}
                 <div className="space-y-2">
                   <Label htmlFor="calibrationAgency">
-                    {t('fieldLabels.calibrationAgency')} <span className="text-destructive">*</span>
+                    {t('form.fieldLabels.calibrationAgency')}{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="calibrationAgency"

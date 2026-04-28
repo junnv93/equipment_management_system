@@ -52,6 +52,15 @@ interface NextStepPanelProps {
   overflowActions?: OverflowAction[];
   className?: string;
   'data-testid'?: string;
+  /**
+   * sr-only loading label injected by caller.
+   *
+   * 이 컴포넌트는 `checkouts.fsm` 도메인에 결합되어 있으나, cross-cutting
+   * `common.*` 네임스페이스(예: `status.loading`)는 caller에서 명시 주입한다.
+   * 빈 문자열 fallback 금지 — 스크린리더가 "님의 ..." 같은 깨진 라벨을 노출.
+   * caller는 `useTranslations('common')` 컨텍스트에서 `t('status.loading')`을 전달.
+   */
+  loadingLabel: string;
 }
 
 // ============================================================================
@@ -120,9 +129,9 @@ export function NextStepPanel({
   overflowActions,
   className,
   'data-testid': testId,
+  loadingLabel,
 }: NextStepPanelProps) {
   const t = useTranslations('checkouts.fsm');
-  const tCommon = useTranslations('common');
   const urgency = descriptor.urgency;
   const actorVariant = resolveActorVariant(descriptor.nextActor);
   const { isVisible: shouldPulse, dismiss: markDone } = useOnboardingHint('checkout-next-step');
@@ -156,8 +165,6 @@ export function NextStepPanel({
     },
     [markDone, nextAction, onActionClick]
   );
-  // sr-only loading 라벨 — atom의 도메인 중립성 보장 (atom은 i18n 모름)
-  const loadingLabel = tCommon('loading');
 
   // ── Terminal state ─────────────────────────────────────────────────────────
   if (descriptor.nextAction === null) {

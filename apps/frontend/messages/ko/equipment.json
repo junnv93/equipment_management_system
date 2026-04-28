@@ -164,6 +164,8 @@
     "normalEquipment": "일반장비",
     "allTeams": "모든 팀",
     "unknownTeam": "알 수 없는 팀",
+    "teamReconcileTitle": "팀 필터가 해제되었습니다",
+    "teamReconcileDesc": "선택한 사이트에 해당 팀이 없어 팀 필터를 자동으로 해제했습니다.",
     "loading": "로딩 중...",
     "site": "사이트",
     "status": "상태",
@@ -731,7 +733,7 @@
   "attachmentsTab": {
     "title": "첨부파일",
     "error": "첨부파일을 불러오지 못했습니다.",
-    "revisionError": "개정 이력을 불러오지 못했습니다.",
+    "revisionError": "버전 업로드에 실패했습니다.",
     "empty": "등록된 첨부파일이 없습니다.",
     "download": "다운로드",
     "delete": "삭제",
@@ -771,7 +773,6 @@
     "rotate": "회전",
     "retry": "다시 시도",
     "revisionSuccess": "새 버전이 업로드되었습니다.",
-    "revisionError": "버전 업로드에 실패했습니다.",
     "revision": {
       "version": "버전",
       "fileName": "파일명",
@@ -781,7 +782,8 @@
       "status": "상태",
       "empty": "개정 이력이 없습니다.",
       "latest": "최신",
-      "previous": "이전"
+      "previous": "이전",
+      "error": "개정 이력을 불러오지 못했습니다."
     }
   },
   "calibrationFactorsTab": {
@@ -1093,7 +1095,8 @@
       "errorDesc": "반출 신청 중 오류가 발생했습니다.",
       "rentalNotAllowed": "반출 불가",
       "rentalNotAllowedDesc": "부적합 또는 교정기한 초과 장비는 외부 대여가 불가능합니다. 교정 또는 수리 목적으로만 반출할 수 있습니다."
-    }
+    },
+    "error": "반출 이력을 불러오는 중 오류가 발생했습니다."
   },
   "repairHistory": {
     "empty": "수리 이력 없음",
@@ -1147,7 +1150,8 @@
     "toastDeleteSuccess": "수리 이력이 삭제되었습니다.",
     "toastCreateError": "수리 이력 등록 중 오류가 발생했습니다.",
     "toastUpdateError": "수리 이력 수정 중 오류가 발생했습니다.",
-    "toastDeleteError": "수리 이력 삭제 중 오류가 발생했습니다."
+    "toastDeleteError": "수리 이력 삭제 중 오류가 발생했습니다.",
+    "loadError": "수리 이력을 불러오지 못했습니다."
   },
   "common": {
     "cancel": "취소",
@@ -1349,9 +1353,6 @@
     "delete": "삭제",
     "deleting": "삭제 중..."
   },
-  "repairHistoryClient": {
-    "loadError": "수리 이력을 불러오지 못했습니다."
-  },
   "calibrationFactorsClient": {
     "title": "보정계수 관리",
     "loadError": "보정계수 정보를 불러오지 못했습니다.",
@@ -1506,7 +1507,8 @@
       "success": "수령 확인이 완료되었습니다.",
       "successDesc": "장비가 자동으로 등록되었습니다.",
       "error": "수령 확인 실패"
-    }
+    },
+    "loadError": "반입 정보를 불러오지 못했습니다."
   },
   "kpiStrip": {
     "nextCalibration": "다음 교정일",

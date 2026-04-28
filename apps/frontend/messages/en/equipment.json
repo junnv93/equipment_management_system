@@ -164,6 +164,8 @@
     "normalEquipment": "Standard Equipment",
     "allTeams": "All Teams",
     "unknownTeam": "Unknown Team",
+    "teamReconcileTitle": "Team filter cleared",
+    "teamReconcileDesc": "The selected site does not contain that team, so the team filter was removed automatically.",
     "loading": "Loading...",
     "site": "Site",
     "status": "Status",
@@ -731,7 +733,7 @@
   "attachmentsTab": {
     "title": "Attachments",
     "error": "Failed to load attachments.",
-    "revisionError": "Failed to load revision history.",
+    "revisionError": "Failed to upload new version.",
     "empty": "No attachments registered.",
     "download": "Download",
     "delete": "Delete",
@@ -771,7 +773,6 @@
     "rotate": "Rotate",
     "retry": "Retry",
     "revisionSuccess": "New version has been uploaded.",
-    "revisionError": "Failed to upload new version.",
     "revision": {
       "version": "Version",
       "fileName": "File Name",
@@ -781,7 +782,8 @@
       "status": "Status",
       "empty": "No revision history.",
       "latest": "Latest",
-      "previous": "Previous"
+      "previous": "Previous",
+      "error": "Failed to load revision history."
     }
   },
   "calibrationFactorsTab": {
@@ -1093,7 +1095,8 @@
       "errorDesc": "An error occurred while submitting checkout request.",
       "rentalNotAllowed": "Checkout Not Allowed",
       "rentalNotAllowedDesc": "Non-conforming or overdue equipment cannot be rented externally. Checkout is only available for calibration or repair."
-    }
+    },
+    "error": "An error occurred while loading checkout history."
   },
   "repairHistory": {
     "empty": "No Repair History",
@@ -1147,7 +1150,8 @@
     "toastDeleteSuccess": "Repair history has been deleted.",
     "toastCreateError": "An error occurred while registering repair history.",
     "toastUpdateError": "An error occurred while updating repair history.",
-    "toastDeleteError": "An error occurred while deleting repair history."
+    "toastDeleteError": "An error occurred while deleting repair history.",
+    "loadError": "Failed to load repair history."
   },
   "common": {
     "cancel": "Cancel",
@@ -1349,9 +1353,6 @@
     "delete": "Delete",
     "deleting": "Deleting..."
   },
-  "repairHistoryClient": {
-    "loadError": "Failed to load repair history."
-  },
   "calibrationFactorsClient": {
     "title": "Calibration Factor Management",
     "loadError": "Failed to load calibration factors.",
@@ -1506,7 +1507,8 @@
       "success": "Receive confirmation completed.",
       "successDesc": "Equipment has been automatically registered.",
       "error": "Receive Confirmation Failed"
-    }
+    },
+    "loadError": "Failed to load import data."
   },
   "kpiStrip": {
     "nextCalibration": "Next Calibration",

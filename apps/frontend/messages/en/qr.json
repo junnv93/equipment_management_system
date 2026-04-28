@@ -73,7 +73,8 @@
       "qrOnly": "QR only"
     },
     "downloadPdf": "Download PDF",
-    "downloadFailed": "Failed to generate PDF. Please try again later."
+    "downloadFailed": "Failed to generate PDF. Please try again later.",
+    "error": "Failed to generate QR code."
   },
   "landing": {
     "loadingLabel": "Loading equipment...",

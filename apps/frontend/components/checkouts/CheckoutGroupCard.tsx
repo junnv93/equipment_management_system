@@ -98,6 +98,7 @@ function CheckoutGroupCard({
   isOverdueGroup = false,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup);
@@ -328,6 +329,7 @@ function CheckoutGroupCard({
                       variant="compact"
                       descriptor={rentalDescriptor}
                       currentUserRole={role}
+                      loadingLabel={tCommon('status.loading')}
                     />
                   </div>
                 )}
@@ -490,6 +492,7 @@ function CheckoutGroupCard({
                             onActionClick={handleRowAction(row.checkoutId, row.equipmentName)}
                             isPending={approveMutation.isPending}
                             overflowActions={buildRowOverflowActions(row)}
+                            loadingLabel={tCommon('status.loading')}
                           />
                         )}
                         <CheckoutMiniProgress

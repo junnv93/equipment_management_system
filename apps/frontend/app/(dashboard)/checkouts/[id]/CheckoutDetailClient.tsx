@@ -97,6 +97,7 @@ export default function CheckoutDetailClient({
 }: CheckoutDetailClientProps) {
   const t = useTranslations('checkouts');
   const tEquipment = useTranslations('equipment');
+  const tCommon = useTranslations('common');
   const { fmtDate, fmtDateTime } = useDateFormatter();
   const router = useRouter();
   const { can } = useAuth();
@@ -515,6 +516,7 @@ export default function CheckoutDetailClient({
           currentUserRole={role}
           onActionClick={handleNextStepAction}
           isPending={isAnyNextStepMutationPending}
+          loadingLabel={tCommon('status.loading')}
         />
       </ErrorBoundary>
 
@@ -1117,6 +1119,7 @@ export default function CheckoutDetailClient({
                   descriptor={nextStepDescriptor}
                   onActionClick={handleNextStepAction}
                   isPending={isAnyNextStepMutationPending}
+                  loadingLabel={tCommon('status.loading')}
                 />
               </div>
             </DrawerContent>

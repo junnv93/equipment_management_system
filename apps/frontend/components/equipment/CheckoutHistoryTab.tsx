@@ -438,11 +438,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         <CardContent>
           <div className={TIMELINE_TOKENS.empty.container}>
             <AlertTriangle className="h-8 w-8 text-brand-warning" />
-            <p className={TIMELINE_TOKENS.empty.text}>
-              {t('checkoutHistoryTab.error', {
-                defaultMessage: '반출 이력을 불러오는 중 오류가 발생했습니다.',
-              })}
-            </p>
+            <p className={TIMELINE_TOKENS.empty.text}>{t('checkoutHistoryTab.error')}</p>
           </div>
         </CardContent>
       </Card>

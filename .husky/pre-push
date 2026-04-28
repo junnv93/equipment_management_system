@@ -37,6 +37,9 @@ fi
 echo "▶ pre-push: TypeScript check..."
 pnpm tsc --noEmit
 
+echo "▶ pre-push: i18n call-sites parity..."
+node scripts/check-i18n-call-sites.mjs --all --quiet
+
 echo "▶ pre-push: backend tests..."
 pnpm --filter backend run test --silent --passWithNoTests
 

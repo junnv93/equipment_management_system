@@ -38,3 +38,6 @@ node scripts/self-audit.mjs --staged
 
 # 5. i18n 키 무결성 검증 — checkouts.json 변경 시 필수 키 누락 차단
 node scripts/check-i18n-keys.mjs --changed
+
+# 6. i18n 호출지 ↔ messages JSON parity (호출 키 존재 여부 정적 검증)
+node scripts/check-i18n-call-sites.mjs --changed --quiet

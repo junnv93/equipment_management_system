@@ -29,7 +29,7 @@ function daysSince(date: string | Date): number {
 }
 
 function CompactBanner({ nonConformances }: { nonConformances: NonConformance[] }) {
-  const t = useTranslations('non-conformances');
+  const tNc = useTranslations('non-conformances');
   const longestOverdueDays = useMemo(
     () => Math.max(0, ...nonConformances.map((nc) => daysSince(nc.discoveryDate))),
     [nonConformances]
@@ -40,16 +40,16 @@ function CompactBanner({ nonConformances }: { nonConformances: NonConformance[] 
       <AlertTriangle className={NC_BANNER_TOKENS.iconCompact} aria-hidden="true" />
       <div className="text-sm flex-1">
         <strong className={NC_BANNER_TOKENS.titleCompact}>
-          {t('banner.compactTitle', { count: nonConformances.length })}
+          {tNc('banner.compactTitle', { count: nonConformances.length })}
         </strong>
         {longestOverdueDays > 0 && (
           <span className={NC_BANNER_TOKENS.compactOverdue}>
-            · {t('banner.compactOverdue', { days: longestOverdueDays })}
+            · {tNc('banner.compactOverdue', { days: longestOverdueDays })}
           </span>
         )}
       </div>
       <Link href="#non-conformances" className={NC_BANNER_TOKENS.compactCta}>
-        {t('banner.compactCta')} →
+        {tNc('banner.compactCta')} →
       </Link>
     </Alert>
   );
@@ -64,16 +64,16 @@ function FullBanner({
   nonConformances: NonConformance[];
   showDetails: boolean;
 }) {
-  const t = useTranslations('equipment.nonConformanceBanner');
+  const tBanner = useTranslations('equipment.nonConformanceBanner');
 
   return (
     <Alert variant="destructive" className={NC_BANNER_TOKENS.alert}>
       <AlertTriangle className={NC_BANNER_TOKENS.icon} />
       <AlertTitle className={NC_BANNER_TOKENS.title}>
-        {t('title', { count: nonConformances.length })}
+        {tBanner('title', { count: nonConformances.length })}
       </AlertTitle>
       <AlertDescription className="space-y-3">
-        <p className={NC_BANNER_TOKENS.desc}>{t('description')}</p>
+        <p className={NC_BANNER_TOKENS.desc}>{tBanner('description')}</p>
         {showDetails && (
           <div className="space-y-2">
             {nonConformances.map((nc) => (
@@ -81,7 +81,9 @@ function FullBanner({
                 <div className={NC_BANNER_TOKENS.detailCardLink}>
                   <p className={NC_BANNER_TOKENS.detailText}>{nc.cause}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {t('discoveryDate', { date: new Date(nc.discoveryDate).toLocaleDateString() })}
+                    {tBanner('discoveryDate', {
+                      date: new Date(nc.discoveryDate).toLocaleDateString(),
+                    })}
                   </p>
                 </div>
               </Link>
@@ -91,7 +93,7 @@ function FullBanner({
         <div className="flex items-center gap-2 mt-2">
           <Link href={`/non-conformances?equipmentId=${equipmentId}`}>
             <Button variant="default" size="sm">
-              {t('manage')}
+              {tBanner('manage')}
             </Button>
           </Link>
         </div>

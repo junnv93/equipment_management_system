@@ -267,7 +267,7 @@ export function StatusLocationSection({
                 </FormDescription>
                 {managersError && (
                   <p className="text-xs text-destructive mt-1">
-                    {t('form.statusLocation.managersLoadError')}
+                    {t('form.statusLocation.managerLoadError')}
                   </p>
                 )}
                 <FormMessage />
