@@ -1646,11 +1646,23 @@ ls apps/frontend/components/dashboard/skeletons/*.tsx
 - `<span className="sr-only">{t('<name>')}</span>` SR-only 메시지 (i18n 키)
 - 실제 카드와 **동일한 컨테이너 + 헤더 + 콘텐츠 골격**으로 layout shift 방지
 
-**ErrorBoundary fallback 별도 규칙**:
+**ErrorBoundary fallback 별도 규칙 (2026-04-28 보강)**:
 - 카드 단위 ErrorBoundary fallback은 `EmptyState variant="error"` 경유. 인라인 div + role="alert" 직접 작성 금지.
-- 검증: `grep -rn 'role="alert"' apps/frontend/components/dashboard/` 결과가 EmptyState 내부 또는 AlertBanner critical 외에 없어야 함.
+- `getDerivedStateFromError`가 있는 ErrorBoundary 클래스는 화이트리스트(`DashboardCardErrorBoundary`, `GlobalErrorBoundary`, `RouteErrorBoundary`)에 한정. 그 외 컴포넌트가 직접 ErrorBoundary 구현 시 fallback이 EmptyState 미경유 가능 → 일관성 깨짐.
 
-**발생 이력 (2026-04-28)**: DashboardRow4의 RecentActivities/TeamEquipmentDistribution/MiniCalendar dynamic loading이 generic `<Skeleton className={SK.lg}>` 사용 → 실제 카드 구조(탭+행/막대+달력 grid)와 layout 불일치로 CLS 발생. 3개 전용 Skeleton 신설로 해결.
+**검증 명령 (확장)**:
+```bash
+# 1. role="alert" 인라인 사용 — EmptyState/AlertBanner 외 위치
+grep -rn 'role="alert"' apps/frontend/components/dashboard/
+# 기대: EmptyState/AlertBanner 외 0건
+
+# 2. ErrorBoundary 화이트리스트 외 직접 구현 탐지
+grep -rEn "getDerivedStateFromError" apps/frontend/components --include='*.tsx' \
+  | grep -vE "(DashboardCardErrorBoundary|GlobalErrorBoundary|RouteErrorBoundary)"
+# 기대: 0건 (화이트리스트 외 직접 ErrorBoundary 클래스 작성 금지)
+```
+
+**발생 이력 (2026-04-28)**: DashboardRow4의 RecentActivities/TeamEquipmentDistribution/MiniCalendar dynamic loading이 generic `<Skeleton className={SK.lg}>` 사용 → 실제 카드 구조(탭+행/막대+달력 grid)와 layout 불일치로 CLS 발생. 3개 전용 Skeleton 신설로 해결. ErrorBoundary fallback 규칙은 `EmptyState variant="error"`로 표준화 — 인라인 alert div 분산 방지.
 
 ### Step 44: SURFACE_INLINE_ACTION_TOKENS 4-way 동기화 + label-ko/label-mono utility 사용 (2026-04-28 추가, REVIEW_RESULT.md §4.1·§4.4)
 
@@ -1692,21 +1704,51 @@ grep -rn "className=.*\btruncate\b" apps/frontend/components/checkouts/ | grep -
 # 기대: 모든 결과 검토 — 한국어 라벨이면 label-ko로 교체 권장
 ```
 
+**Phase 3 (2026-04-28 갱신) — atom 경유 강제 게이트**:
+
+`bg-surface-inline-action-*` / `text-surface-inline-action-*` / `border-surface-inline-action-*` Tailwind utility는
+`InlineActionButton` atom(`apps/frontend/components/ui/inline-action-button.tsx`) 외부에서 직접 className으로
+사용 금지. 호출처는 항상 `<InlineActionButton variant={resolveInlineActionVariant({...})}>` 형태로 atom 경유.
+SSOT 헬퍼 `resolveInlineActionVariant`는 `@equipment-management/shared-constants`(checkout-thresholds.ts)에 정의.
+
+```bash
+# 행 단위 inline action utility — atom 외부 직접 사용 0건 검증
+grep -rn --include="*.tsx" --include="*.ts" \
+  "\(bg\|text\|border\)-surface-inline-action-" \
+  apps/frontend/components apps/frontend/app \
+  | grep -v "components/ui/inline-action-button.tsx" \
+  | grep -v "__tests__/" # 테스트는 className 검증 목적으로 토큰 명을 문자열 참조 가능
+# 기대: 0 hits (atom 외부 production 호출처 0)
+
+# resolveInlineActionVariant SSOT 사용 확인
+grep -rn "resolveInlineActionVariant" apps/frontend/components apps/frontend/app
+# 기대: 호출처 ≥ 1 (예: NextStepPanel.tsx)
+
+# WORKFLOW_PANEL_TOKENS.variant.{compact,hero}.actionButton 잔존 호출 — 회귀 방지
+grep -rn "WORKFLOW_PANEL_TOKENS\.variant\.\(compact\|hero\)\.actionButton" \
+  apps/frontend packages/
+# 기대: 0 hits (Phase 3에서 토큰 삭제됨)
+```
+
 **PASS:**
 1. 16개 `--surface-inline-action-*` 변수 :root + .dark + @theme inline 3곳 동기화
 2. `SURFACE_INLINE_ACTION_TOKENS.base + variant.{info|ok|warning|danger}` semantic 토큰 export + barrel re-export
 3. `getSurfaceInlineActionClasses(variant)` 헬퍼 또는 base+variant 합성으로 컴포넌트 사용
 4. `label-ko` (한국어 줄바꿈), `label-mono` (영문 truncate) utility 양쪽 정의
 5. stepper 단계명/FSM 액션 라벨/상태 배지에 `label-ko` 적용, 관리번호(SUW-E0007 등)에 `label-mono` 적용
+6. **(Phase 3)** `bg/text/border-surface-inline-action-*` 직접 className 호출은 `inline-action-button.tsx`(atom 정의)와 atom 테스트 외 0건 — atom 경유 강제
 
 **FAIL:**
 - :root 또는 .dark 16개 누락 → 다크 모드 색상 불일치
 - `@theme inline` bridge 누락 → Tailwind utility 미노출 (`bg-surface-inline-action-info-bg` 작동 안 함)
 - semantic 토큰 정의 없이 `bg-brand-info/10` 같은 직접 utility 합성 → SSOT 분산
 - `label-ko` 없이 한국어 라벨에 `truncate` 적용 → 1024px wrap 잘림 (REVIEW_RESULT.md P0-2 회귀)
+- **(Phase 3)** atom 외부에서 raw `bg/text/border-surface-inline-action-*` 직접 사용 → variant 매핑 SSOT 우회, 회귀 위험
 
 **관련 파일:**
 - `apps/frontend/styles/globals.css` — `:root`/.dark/@theme inline + utility 정의
 - `apps/frontend/lib/design-tokens/semantic.ts` — `SURFACE_INLINE_ACTION_TOKENS` export
 - `apps/frontend/lib/design-tokens/index.ts` — barrel re-export
-- 향후 `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom (P0-3 마이그레이션)
+- `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom (P0-3 완료, 2026-04-28)
+- `packages/shared-constants/src/checkout-thresholds.ts` — `resolveInlineActionVariant` 매핑 SSOT
+- `apps/frontend/components/shared/NextStepPanel.tsx` — compact + hero variant 마이그레이션 호출처

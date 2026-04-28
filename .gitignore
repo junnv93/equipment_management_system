@@ -80,6 +80,10 @@ apps/frontend/tests/e2e/output/
 !apps/frontend/public/**/*.png
 !docs/**/*.png
 
+# Visual regression baseline output (env var SCREENSHOT_OUTPUT_DIR로 override 가능)
+apps/frontend/__screenshots__/
+apps/frontend/tests/e2e/__screenshots__/
+
 # Temporary shell scripts at root
 /*.sh
 

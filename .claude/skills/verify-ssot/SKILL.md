@@ -961,3 +961,43 @@ grep -n "DDAY_TIERS\b\|DDAY_TIER_CLASSES\b\|farFuture\|upcoming\|overdueShort\|o
 - `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — 호출처
 
 **발생 이력 (2026-04-28)**: REVIEW_RESULT.md §4.3 명세에 따라 반출 도메인 D-day pill 색상(`dday-ok / dday-warn / dday-danger`)을 4-tier로 표준화. 기존 6-tier는 의미 단계가 너무 많아 와이어프레임 시각 어휘와 불일치 → 4-tier 단일화 + 대시보드와 분리된 도메인 임계값 SSOT 신설. frontend/backend 양쪽 동일 모듈 사용으로 시각·로직 일관성 보장.
+
+---
+
+### Step 37: `useEffectiveRole` SSOT — 클라이언트 컴포넌트의 `session.user.role` 직접 참조 금지 (2026-04-28 추가)
+
+**규칙**: 대시보드 + 모든 클라이언트 컴포넌트/hook에서 역할 기반 UI 분기 시 반드시 `useEffectiveRole().effectiveRole`을 경유. `useSession().data.user.role` 또는 `session.user.role` 직접 참조는 시뮬레이션 모드(`?simulateRole=`)를 우회하여 SYSTEM_ADMIN의 역할 미리보기 기능을 무력화시킨다.
+
+**근거**: `useEffectiveRole`은 SYSTEM_ADMIN이 `?simulateRole=...` 쿼리 파라미터로 다른 역할 UI를 미리볼 수 있게 한다. 백엔드 권한은 항상 JWT의 `actualRole` 기준이지만 UI는 `effectiveRole`로 분기. 컴포넌트가 raw `session.user.role`을 읽으면 시뮬 의도가 깨진다.
+
+**검증 명령**:
+```bash
+# 클라이언트 컴포넌트/hook에서 session.user.role 직접 참조 탐지 (Server Component는 예외)
+grep -rEn "session\??\.user\??\.role" \
+  apps/frontend/components apps/frontend/hooks \
+  --include='*.ts' --include='*.tsx' \
+  | grep -v "use-effective-role" \
+  | grep -v "// allow:" \
+  | grep -v "node_modules"
+# 기대: 0건 (모든 사용처는 useEffectiveRole 경유 또는 명시적 // allow: 주석)
+```
+
+**PASS**:
+1. `useEffectiveRole` 외 컴포넌트/hook이 `session.user.role`을 읽지 않음
+2. SYSTEM_ADMIN의 `?simulateRole=test_engineer` 쿼리가 dashboard layout/cards 모두에 일관 적용됨
+3. 백엔드 API 호출은 항상 JWT actualRole 기준 (RoleGate JSDoc 명시)
+
+**FAIL**:
+- 컴포넌트에서 `useSession()`으로 `session.user.role` 추출 후 분기 — 시뮬 우회
+- 새 hook이 raw role을 받아 분기하면서 useEffectiveRole 호출 누락
+
+**예외**:
+- `apps/frontend/app/**/page.tsx` (Server Component) — NextAuth session 사용, 시뮬 미적용 의도
+- `hooks/use-effective-role.ts` 자체 — SSOT 정의
+
+**관련 파일**:
+- `apps/frontend/hooks/use-effective-role.ts` — SSOT
+- `apps/frontend/components/auth/RoleGate.tsx` — UI 게이트 (UI-only 명시)
+- `apps/frontend/components/dashboard/DashboardClient.tsx` — 다중 useQuery enabled 분기
+
+**발생 이력 (2026-04-28)**: dashboard redesign에서 SYSTEM_ADMIN simulateRole 기능 도입. 컴포넌트가 raw role 사용 시 시뮬 깨짐 → SSOT 경유 강제 룰 추가.

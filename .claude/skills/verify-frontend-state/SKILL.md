@@ -764,3 +764,55 @@ grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
 19. **StorageImage.tsx의 useRef+useEffect blob URL revoke** — TanStack Query(gcTime=SHORT) 캐시 만료 후 blob URL 메모리 해제를 위한 의도적 패턴. `data.isBlob` 조건부 revoke + 언마운트 클린업이 정상.
 20. **DocumentPreviewDialog.tsx의 blobUrlRef+useEffect cleanup** — presigned/blob URL 미리보기용. `blobUrlRef.current`에 현재 blob URL 추적, cleanup에서 `revokeObjectURL` 호출. deps: `[open, doc?.id]`. 이 패턴은 stale closure 방지를 위한 ref 기반 cleanup으로 정상.
 21. **`staleTime: Infinity` (런타임 불변 서버 설정값)** — `QUERY_CONFIG` 프리셋이 없는 값이지만, 앱 재시작 없이 변경되지 않는 서버 설정(NextAuth 인증 제공자 목록, 기능 플래그 등)에 대해 `staleTime: Infinity`를 주석과 함께 직접 사용하는 것은 정상. 예: `AuthProviders.tsx`의 `useQuery({ queryFn: getProviders, staleTime: Infinity })`. 주석 없이 사용하면 QUERY_CONFIG 프리셋 누락으로 보고.
+
+---
+
+### Step 21 확장: `useOnlineStatus` SSOT 훅 — 클라이언트 컴포넌트의 `navigator.onLine` 직접 사용 금지 (2026-04-28 추가)
+
+**규칙**: 오프라인/온라인 상태 감지가 필요한 컴포넌트는 반드시 `hooks/use-online-status.ts`의 `useOnlineStatus()` 훅을 경유. `navigator.onLine`, `'online'/'offline'` 이벤트 리스너 직접 등록 금지.
+
+**근거**: `useOnboardingHint`와 동일한 SSOT 훅 패턴. 다른 페이지에서 독자적인 오프라인 감지 로직이 생기면 (1) `navigator.onLine` false positive 처리 분산, (2) 이벤트 리스너 cleanup 누락, (3) `lastOnlineAt` 추적 일관성 깨짐.
+
+**검증 명령**:
+```bash
+grep -rEn "navigator\.onLine|addEventListener\(['\"](online|offline)['\"]" \
+  apps/frontend/components apps/frontend/app apps/frontend/hooks \
+  --include='*.ts' --include='*.tsx' \
+  | grep -v "use-online-status\|//\|node_modules"
+# 기대: 0건
+```
+
+**PASS**: 모든 사용처가 `useOnlineStatus()` 훅 경유.
+**FAIL**: 컴포넌트에서 `addEventListener('online'|'offline', ...)` 직접 등록 또는 `useState(navigator.onLine)` 초기값.
+**예외**: `hooks/use-online-status.ts` 자체.
+
+**관련 파일**:
+- `apps/frontend/hooks/use-online-status.ts` — SSOT
+- `apps/frontend/components/dashboard/OfflineBanner.tsx` — 소비처
+
+---
+
+### Step 24: Dual-Mode 비대칭 props — controlled/uncontrolled 절반 주입 silent bug 탐지 (2026-04-28 추가)
+
+**규칙**: 컴포넌트가 `isControlled = propA !== undefined && propB !== undefined` 패턴으로 모드를 결정할 때, 호출처가 propA만 전달하고 propB를 누락하면 `isControlled=false`로 평가되어 자체 fetch 분기 활성화 → props + fetch 혼용 silent bug.
+
+**근거 (사례)**: `CheckoutCard.tsx`는 `upcomingCheckouts`+`overdueCheckouts` 양쪽 주입 시 controlled. 한쪽만 주입하면 `isControlled=false` → 자체 useQuery + 누락 prop 무시.
+
+**검증 명령**:
+```bash
+# 1. dual-mode 패턴 정의 위치 확인
+grep -rEn "isControlled\s*=" apps/frontend/components --include='*.tsx'
+
+# 2. 각 컴포넌트 호출처에서 양측 prop 모두 주입 확인 (수동 검토)
+grep -rn "<CheckoutCard\b" apps/frontend --include='*.tsx' | grep -v "//"
+```
+
+**PASS**: dual-mode 컴포넌트의 controlled props 양측을 모두 주입하거나 모두 omit.
+**FAIL**: prop 절반만 전달 — silent fetch 활성화.
+**개선 방안 (권장)**: discriminated union 타입으로 시그니처 강제.
+```ts
+type Props = { mode: 'controlled'; data: Data } | { mode: 'uncontrolled' };
+```
+
+**관련 파일**:
+- `apps/frontend/components/dashboard/cards/CheckoutCard.tsx` — dual-mode 정의
