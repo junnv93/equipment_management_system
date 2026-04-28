@@ -53,7 +53,11 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
-import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  NON_CONFORMANCE_DATA_SCOPE,
+  EQUIPMENT_DATA_SCOPE,
+} from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
@@ -143,7 +147,9 @@ export class NonConformancesController {
   ): Promise<NonConformance[]> {
     const { site: equipSite, teamId: equipTeamId } =
       await this.nonConformancesService.getEquipmentSiteAndTeam(equipmentUuid);
-    enforceSiteAccess(req, equipSite, NON_CONFORMANCE_DATA_SCOPE, equipTeamId);
+    // 장비 컨텍스트 read-only: 장비 자체가 cross-site 조회 가능(EQUIPMENT_DATA_SCOPE='all' for TE/TM)
+    // 이므로 그 장비의 부적합 read도 동일 정책. write 엔드포인트는 NON_CONFORMANCE_DATA_SCOPE 유지.
+    enforceSiteAccess(req, equipSite, EQUIPMENT_DATA_SCOPE, equipTeamId);
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
   }
 
