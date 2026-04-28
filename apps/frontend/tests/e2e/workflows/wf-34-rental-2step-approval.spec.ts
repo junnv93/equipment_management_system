@@ -5,7 +5,7 @@
  *   T1  사용 부서 TE가 rental 반출 신청 → PENDING
  *   T2  사용 부서 TM이 borrower-approve → BORROWER_APPROVED
  *   T4  사용 부서 TM이 lender /approve 시도 → 403 (cross-site scope 실패)
- *   T3  대출팀 TM(techManagerPage)이 /approve → APPROVED
+ *   T3  관리 부서 TM(techManagerPage)이 /approve → APPROVED
  *   T5  동일 사이트 타 팀 TM이 borrower-approve 시도 → 403 CHECKOUT_BORROWER_TEAM_ONLY
  *   T6  calibration 반출에 borrower-approve 시도 → 400 CHECKOUT_BORROWER_APPROVE_RENTAL_ONLY
  *
@@ -13,7 +13,7 @@
  *   사용 부서(borrower): uiwang-general-rf (다른 사이트)
  *     TE  — BORROWER_TE_EMAIL  (신청자)
  *     TM  — BORROWER_TM_EMAIL  (1차 승인권자)
- *   대출팀(lender): suwon-fcc-emc-rf (장비 소속팀)
+ *   관리 부서(lender): suwon-fcc-emc-rf (장비 소속팀)
  *     TM  — techManagerPage  (2차 최종 승인자)
  *   동일사이트 타팀 TM (T5): SUWON_SAR_TM_EMAIL — suwon-sar (scope는 통과, teamId 불일치)
  *   장비:
@@ -194,10 +194,10 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
   });
 
   // --------------------------------------------------------------------------
-  // T3: 대출팀 TM /approve → APPROVED (lender 2차 최종 승인)
+  // T3: 관리 부서 TM /approve → APPROVED (lender 2차 최종 승인)
   // --------------------------------------------------------------------------
 
-  test('T3: 대출팀 TM /approve → APPROVED', async ({ techManagerPage: page }) => {
+  test('T3: 관리 부서 TM /approve → APPROVED', async ({ techManagerPage: page }) => {
     await clearBackendCache();
 
     const body = await approveCheckout(page, checkoutId);

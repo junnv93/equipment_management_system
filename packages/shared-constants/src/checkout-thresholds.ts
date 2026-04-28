@@ -98,7 +98,7 @@ export type InlineActionVariantKey = 'info' | 'ok' | 'warning' | 'danger';
  *   - `ok`:      정상 진행 액션 (반환·수령·반입·사용 시작). 컬러 변경 없이 ok로 안정 표시.
  *   - `negative`:거절·취소 류. inline action에선 일반적으로 overflow menu로 분리되므로
  *                inline 컬러 매핑 자체가 호출처에서 발생할 일 적음. 'info' fallback.
- *   - `lender`:  대여팀 검수·반입 (외부 렌탈 워크플로). 'info' fallback (스코프 외 강조 없음).
+ *   - `lender`:  관리 부서 검수·반입 (외부 렌탈 워크플로). 'info' fallback (스코프 외 강조 없음).
  *   - `neutral`: 시작·기본 진행 (start). 'info' fallback.
  */
 type InlineActionClass = 'approve' | 'ok' | 'negative' | 'lender' | 'neutral';

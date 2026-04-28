@@ -25,7 +25,7 @@ interface HandoverQRDisplayProps {
 }
 
 /**
- * 대여자 측 인수인계 QR 표시 다이얼로그.
+ * 관리 부서 측 인수인계 QR 표시 다이얼로그.
  *
  * 플로우:
  * 1. 다이얼로그 오픈 시 `issueHandoverToken()` 호출

@@ -72,8 +72,8 @@
     "read": "조회",
     "link": "연결",
     "unlink": "연결 해제",
-    "borrower_approve": "대여자 승인",
-    "borrower_reject": "대여자 반려"
+    "borrower_approve": "사용 부서 승인",
+    "borrower_reject": "사용 부서 반려"
   },
   "entityTypes": {
     "equipment": "장비",

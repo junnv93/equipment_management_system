@@ -1458,7 +1458,7 @@ await resetRentalCheckoutToApproved(CHECKOUT_011_ID);
 // 027, 030, 033, 036 are pre-seeded at specific states
 ```
 
-#### TEST-10-01: Step 1 - 대여자 반출 전 확인 (approved → lender_checked) (P1)
+#### TEST-10-01: Step 1 - 관리 부서 담당자 반출 전 확인 (approved → lender_checked) (P1)
 
 **Priority**: P1
 **Role**: technical_manager
@@ -1582,7 +1582,7 @@ expect(checks[0].step).toBe('lender_checkout');
 
 ---
 
-#### TEST-10-04: Step 4 - 대여자 최종 확인 (borrower_returned → lender_received) (P1)
+#### TEST-10-04: Step 4 - 관리 부서 담당자 최종 확인 (borrower_returned → lender_received) (P1)
 
 **Priority**: P1
 **Role**: technical_manager

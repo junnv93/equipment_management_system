@@ -494,7 +494,7 @@ export async function lenderPreCheckout(page: Page, checkoutId: string): Promise
   await page.goto(`/checkouts/${checkoutId}`);
   await page.waitForLoadState('domcontentloaded');
 
-  await page.getByRole('button', { name: '반출 전 확인 (대여자)' }).click();
+  await page.getByRole('button', { name: '반출 전 확인 (관리 부서 담당자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
   await page.waitForLoadState('domcontentloaded');
@@ -542,7 +542,7 @@ export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<
   await page.goto(`/checkouts/${checkoutId}`);
   await page.waitForLoadState('domcontentloaded');
 
-  await page.getByRole('button', { name: '반입 최종 확인 (대여자)' }).click();
+  await page.getByRole('button', { name: '반입 최종 확인 (관리 부서 담당자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
   await page.waitForLoadState('domcontentloaded');

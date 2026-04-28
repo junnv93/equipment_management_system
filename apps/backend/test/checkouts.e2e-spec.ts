@@ -174,7 +174,7 @@ describe('CheckoutsController (e2e)', () => {
         .send({
           equipmentIds: [testEquipmentUuid],
           purpose: 'rental',
-          destination: 'E2E 테스트 외부 대여처',
+          destination: 'E2E 테스트 외부 장소',
           reason: 'E2E 2단계 승인 테스트',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         });
@@ -202,7 +202,7 @@ describe('CheckoutsController (e2e)', () => {
         .send({
           equipmentIds: [testEquipmentUuid],
           purpose: 'rental',
-          destination: 'E2E 테스트 외부 대여처',
+          destination: 'E2E 테스트 외부 장소',
           reason: 'E2E 최종 승인 테스트',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         });

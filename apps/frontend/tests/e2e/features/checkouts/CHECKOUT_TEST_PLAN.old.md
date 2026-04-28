@@ -692,20 +692,20 @@
 
 **Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
 
-#### 10.1. S10-01: 대여자 반출 전 확인 (Step ①)
+#### 10.1. S10-01: 관리 부서 담당자 반출 전 확인 (Step ①)
 
 **File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
 
 **Steps:**
 
 1. 적절한 역할 페이지로 /checkouts/CHECKOUT_027_ID 네비게이션
-2. 반출 전 확인 (대여자) 버튼 클릭 → 확인
+2. 반출 전 확인 (관리 부서 담당자) 버튼 클릭 → 확인
 3. API: 상태 전이 확인
 4. CheckoutStatusStepper에서 Step ① 완료 표시
 
 **Expected Results:**
 
-- 대여자 반출 전 확인 완료
+- 관리 부서 담당자 반출 전 확인 완료
 - 상태 전이 정확
 
 #### 10.2. S10-02: 사용 부서 담당자 수령 확인 (Step ②)
@@ -736,14 +736,14 @@
 
 - 사용 부서 담당자 반입 전 확인 완료
 
-#### 10.4. S10-04: 대여자 최종 확인 (Step ④)
+#### 10.4. S10-04: 관리 부서 담당자 최종 확인 (Step ④)
 
 **File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
 
 **Steps:**
 
 1. /checkouts/CHECKOUT_036_ID (borrower_returned) 네비게이션
-2. 반입 최종 확인 (대여자) 버튼 클릭 → 확인
+2. 반입 최종 확인 (관리 부서 담당자) 버튼 클릭 → 확인
 3. API: status=lender_received 확인
 4. Stepper 모든 4단계 완료 표시
 
