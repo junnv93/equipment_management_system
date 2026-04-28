@@ -85,6 +85,9 @@ export {
 // API 엔드포인트
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
 
+// Dashboard scope (BE Zod enum + FE 타입 SSOT)
+export { DASHBOARD_SCOPES, type DashboardScope } from './dashboard-scope';
+
 // 프론트엔드 라우트 + URL intent 상수
 export {
   FRONTEND_ROUTES,
@@ -344,5 +347,7 @@ export {
 export {
   CHECKOUT_DDAY_THRESHOLDS,
   getCheckoutDdayTier,
+  resolveInlineActionVariant,
   type CheckoutDdayTier,
+  type InlineActionVariantKey,
 } from './checkout-thresholds';

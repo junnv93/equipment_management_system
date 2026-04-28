@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { DashboardService } from '../dashboard.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { ApprovalsService } from '../../approvals/approvals.service';
@@ -79,6 +80,17 @@ describe('DashboardService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
         { provide: ApprovalsService, useValue: mockApprovalsService },
+        {
+          // AP-03: getSystemHealth가 ConfigService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') 호출.
+          // env.validation.ts 기본값(100 GiB)을 mock으로 반환.
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'DASHBOARD_STORAGE_CAPACITY_BYTES') return 100 * 1024 * 1024 * 1024;
+              return undefined;
+            }),
+          },
+        },
       ],
     }).compile();
 

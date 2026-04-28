@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   ForbiddenException,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -17,7 +18,9 @@ import {
   DASHBOARD_DATA_SCOPE,
   resolveDataScope,
   type UserScopeContext,
+  type DashboardScope,
 } from '@equipment-management/shared-constants';
+import { DashboardScopeValidationPipe } from './dto/dashboard-scope.dto';
 import { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import {
@@ -348,9 +351,10 @@ export class DashboardController {
     description: '반출 데이터 범위',
   })
   @ApiResponse({ status: 200, type: DashboardCheckoutsScopeDto })
+  @UsePipes(DashboardScopeValidationPipe)
   async getCheckoutsByScope(
     @Req() req: AuthenticatedRequest,
-    @Query('scope') scope: 'me' | 'team' | 'lab' | 'all'
+    @Query('scope') scope: DashboardScope
   ): Promise<DashboardCheckoutsScopeDto> {
     const userRole = req.user.roles?.[0] as UserRole;
     const userId = req.user.userId;

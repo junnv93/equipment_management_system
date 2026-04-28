@@ -30,9 +30,9 @@ import {
   type DashboardCheckoutsScope,
 } from '@/lib/api/dashboard-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, type DashboardScope } from '@equipment-management/shared-constants';
 
-export type CheckoutCardScope = 'me' | 'team' | 'lab' | 'all';
+export type CheckoutCardScope = DashboardScope;
 
 interface CheckoutCardProps {
   scope: CheckoutCardScope;

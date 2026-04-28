@@ -15,7 +15,7 @@
  */
 
 import type { Site } from '@equipment-management/schemas';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, type DashboardScope } from '@equipment-management/shared-constants';
 
 /**
  * 캐시 시간 상수 (밀리초)
@@ -487,7 +487,7 @@ export const queryKeys = {
     /** §3.9 — 시스템관리자 전용 시스템 상태 메트릭 (백엔드 /api/system/health). */
     systemHealth: () => [...queryKeys.dashboard.all, 'systemHealth'] as const,
     /** §A.7 — 반출 현황 (scope: me/team/lab/all). */
-    checkouts: (scope: 'me' | 'team' | 'lab' | 'all', teamId?: string) =>
+    checkouts: (scope: DashboardScope, teamId?: string) =>
       [...queryKeys.dashboard.all, 'checkouts', scope, teamId] as const,
     /** §4.3 — 품질책임자 검토 대기 hero. */
     qualityReviewPending: () => [...queryKeys.dashboard.all, 'qualityReviewPending'] as const,

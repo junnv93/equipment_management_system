@@ -1,5 +1,9 @@
 import { apiClient } from './api-client';
-import { API_ENDPOINTS, DASHBOARD_ACTIVITIES_LIMIT } from '@equipment-management/shared-constants';
+import {
+  API_ENDPOINTS,
+  DASHBOARD_ACTIVITIES_LIMIT,
+  type DashboardScope,
+} from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
 
@@ -140,7 +144,8 @@ export interface DashboardCheckoutsScope {
   pendingRequests?: number;
 }
 
-export type DashboardCheckoutScope = 'me' | 'team' | 'lab' | 'all';
+/** @deprecated `DashboardScope` from '@equipment-management/shared-constants' 사용. 별칭 유지 (호환성). */
+export type DashboardCheckoutScope = DashboardScope;
 
 /** §4.3 — 검토 대기 hero 응답. */
 export interface QualityReviewPending {

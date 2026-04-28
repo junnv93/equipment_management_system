@@ -77,6 +77,14 @@ export const envSchema = z
     S3_ACCESS_KEY: z.string().min(1).optional(),
     S3_SECRET_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().default('equipment-files'),
+
+    // 대시보드 시스템 상태 — DB 스토리지 capacity (bytes). 기본 100 GiB.
+    // dashboard.service.ts:getSystemHealth가 pg_database_size / 본 값으로 storagePct 계산.
+    DASHBOARD_STORAGE_CAPACITY_BYTES: z.coerce
+      .number()
+      .positive()
+      .optional()
+      .default(100 * 1024 * 1024 * 1024),
   })
   .refine(
     (data) =>

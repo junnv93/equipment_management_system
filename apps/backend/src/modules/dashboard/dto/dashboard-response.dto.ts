@@ -237,7 +237,8 @@ export class CheckoutScopeItemDto {
 
 /**
  * §A.7 — 반출 현황 응답 (scope 통합).
- * scope = 'me' | 'team' | 'lab' | 'all' — 권한 가드는 컨트롤러에서.
+ * scope SSOT: `DASHBOARD_SCOPES` from '@equipment-management/shared-constants'.
+ * 권한 가드는 컨트롤러에서 수행.
  */
 export class DashboardCheckoutsScopeDto {
   @ApiProperty({ description: '반납 예정 (오늘~30일)', type: () => [CheckoutScopeItemDto] })

@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, count, gte, lte, desc, inArray, notInArray, sql, SQL } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
@@ -25,6 +26,7 @@ import {
   DASHBOARD_ACTIVITIES_LIMIT,
   SYSTEM_HEALTH_OVERALL_THRESHOLDS,
   DASHBOARD_TIME_WINDOWS,
+  type DashboardScope,
 } from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
@@ -62,7 +64,8 @@ export class DashboardService {
   constructor(
     @Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
-    private readonly approvalsService: ApprovalsService
+    private readonly approvalsService: ApprovalsService,
+    private readonly configService: ConfigService
   ) {}
 
   /**
@@ -623,7 +626,7 @@ export class DashboardService {
    * 순수 데이터 조회만 수행한다.
    */
   async getCheckoutsByScope(params: {
-    scope: 'me' | 'team' | 'lab' | 'all';
+    scope: DashboardScope;
     userId: string;
     teamId?: string;
     site?: string;
@@ -766,9 +769,11 @@ export class DashboardService {
           .where(eq(schema.users.isActive, true));
         const maxUsers = maxRow?.count ?? 0;
 
-        // 스토리지 사용률: pg_database_size / 환경변수로 지정한 capacity.
+        // 스토리지 사용률: pg_database_size / ConfigService 경유 capacity.
+        // env.validation.ts에서 z.coerce.number().positive().default(100 GiB) 적용.
         const storageCapacityBytes =
-          Number(process.env.DASHBOARD_STORAGE_CAPACITY_BYTES) || 100 * 1024 * 1024 * 1024;
+          this.configService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') ??
+          100 * 1024 * 1024 * 1024;
         const sizeRow = await this.db.execute<{ size: string }>(
           sql`SELECT pg_database_size(current_database()) AS size`
         );
