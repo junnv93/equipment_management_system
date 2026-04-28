@@ -331,7 +331,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           {/* 사이드바 하단 — 자체 회사 로고 (대시보드 개선안 §3.1, C1) */}
           {!isCollapsed && (
             <div className={cn('mt-auto p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
-              <UlLogo className="h-10 w-auto" />
+              <UlLogo className="h-10 w-auto" ariaHidden />
             </div>
           )}
         </aside>
@@ -425,7 +425,7 @@ export function DashboardShellSkeleton() {
         </nav>
 
         <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
-          <UlLogo className="h-10 w-auto" />
+          <UlLogo className="h-10 w-auto" ariaHidden />
         </div>
       </aside>
 

@@ -96,6 +96,17 @@ export function MiniCalendar({
     return map;
   }, [holidayYear]);
 
+  // 현재 표시 중인 월의 공휴일 개수 — 범례 카운트 표시용 (명세서 §A.3.1).
+  // holidayMap.size는 연도 전체이므로 월 단위 prefix 필터로 도출.
+  const currentMonthHolidayCount = useMemo(() => {
+    const monthPrefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-`;
+    let n = 0;
+    holidayMap.forEach((_, key) => {
+      if (key.startsWith(monthPrefix)) n += 1;
+    });
+    return n;
+  }, [currentMonth, holidayMap]);
+
   // 달력 그리드 생성
   const calendarCells = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -276,14 +287,15 @@ export function MiniCalendar({
         </div>
 
         {/* 범례 — 명세서 §A.3.1: 4 항목 모두 동일한 도트 + 라벨 패턴.
-           공휴일은 도트(brand-critical, holiday cell의 cellNumberHoliday 색상과 일치) +
-           현재 월 공휴일 카운트(0보다 클 때만 ` N` 형식). hardcoded 숫자 금지. */}
+           공휴일 도트는 cellNumberHoliday(`text-brand-critical`)와 동일한 brand-critical으로
+           셀 표시와 시각 일관성을 보장. overdue와 도트 색이 같으나 라벨 텍스트로 의미 구분.
+           카운트는 holidayMap.size(연도 전체)가 아닌 현재 월 prefix 필터링 결과 사용. */}
         <div className={T.legend}>
           <div className={T.legendItem}>
-            <span className={cn(T.legendDot, 'bg-brand-neutral')} />
+            <span className={cn(T.legendDot, 'bg-brand-critical')} />
             <span className={T.legendText}>
               {t('legendHoliday')}
-              {holidayMap.size > 0 ? ` ${holidayMap.size}` : ''}
+              {currentMonthHolidayCount > 0 ? ` ${currentMonthHolidayCount}` : ''}
             </span>
           </div>
           <div className={T.legendItem}>
