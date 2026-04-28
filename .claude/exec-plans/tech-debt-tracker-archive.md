@@ -5,6 +5,28 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-28 — tech-debt-residual 완료 (Phase 1: 2건 SSOT/하드코딩 + Phase 2: 5건 SSOT/문서/스킬)
+
+### 2026-04-28 harness: tech-debt-residual Phase 2 (재평가 후 추가 처리)
+
+- [x] **[2026-04-27 sprint-4.1] 🟢 LOW group-header-currentUserRole-parity** — ✅ 2026-04-28 완료. `CheckoutGroupCard.tsx:327` group header `NextStepPanel variant="compact"`에 `currentUserRole={role}` prop 추가. row zone 4 (line 482-485) 패턴과 parity 달성. 컴포넌트 스코프 `role` 변수(line 106) 재사용, 추가 prop drilling 불필요. tsc 0 error.
+- [x] **[2026-04-24 sprint-1.2] 🟢 LOW non-rental purpose phase 개념 확장 설계 미문서화** — ✅ 2026-04-28 완료. `packages/schemas/src/fsm/rental-phase.ts:62 getRentalPhase()`에 `@design` JSDoc 블록 추가. non-rental(calibration/repair) phase 확장 시 재설계 영향 범위(`RentalPhase` 타입, `RENTAL_STATUS_TO_PHASE` 구조, `CheckoutPhaseIndicator` 호출부) 명시. tsc 0 error.
+- [x] **[2026-04-24 86th-session] 🟢 LOW verify-design-tokens NEXT_STEP_PANEL_TOKENS 명시적 검증 단계 미포함** — ✅ 2026-04-28 완료. `.claude/skills/verify-design-tokens/SKILL.md`에 Step 42 추가: `workflow-panel.ts → index.ts re-export → NextStepPanel.tsx 소비` 토큰 체인 검증. grep 패턴 3종(re-export 확인, 소비처 SSOT 경유, satisfies 가드) + PASS/FAIL 기준 명시. Output Format 표에 Row 42 추가.
+- [x] **[2026-04-24 pr-17] 🟢 LOW E2E global-setup trigger-overdue-check 역할 문서화** — ✅ 2026-04-28 완료. `docs/references/e2e-patterns.md` Anti-Patterns 섹션 다음에 "global-setup System Trigger API — 역할 선택 가이드" 섹션 추가. `technical_manager` 사용 근거(`UPDATE_EQUIPMENT` 권한 보유 + audit 잡음 회피 + 운영자 페르소나) 명시 + ✅/❌ 코드 예시.
+- [x] **[2026-04-24 sprint-1.5] 🟢 LOW design-tokens-partial-audit** — ✅ 2026-04-28 완료 (audit only — fix 불필요). `apps/frontend/lib/design-tokens/components/` 전수 스캔 결과 `Partial<Record<...>>` **0건**. 이미 모든 design token 파일이 `as const satisfies Record<...>` 강제 패턴 준수. 트래커 항목 정리 목적 archive 이동.
+
+### 2026-04-28 harness: tech-debt-residual Phase 1
+
+- [x] **[2026-04-27 verify-auth] 🟢 LOW self-inspections-role-literal-ssot** — ✅ 2026-04-28 완료. `self-inspections.controller.ts:286` role 리터럴(`'system_admin'`, `'technical_manager'`) → `UserRoleValues.SYSTEM_ADMIN` / `UserRoleValues.TECHNICAL_MANAGER` SSOT 경유 교체. line 28 `import { UserRoleValues } from '@equipment-management/schemas'` 추가. tsc 0 error.
+- [x] **[2026-04-27 verify-hardcoding] 🟢 LOW revocation-error-message-dynamic** — ✅ 2026-04-28 완료. `checkouts.service.ts:3209` 하드코딩 `'within 5 minutes'` → template literal `` `within ${APPROVAL_REVOCATION_WINDOW_MS / 60_000} minutes` `` 동적 계산. line 54 기존 import 재사용 (중복 import 0건). tsc 0 error.
+
+#### 분리/보류 결정 (트래커 잔류)
+
+- `approvals-api-module-split` (1507줄) — `bulkApprove`/`bulkReject`가 `fetchItemsMapIfNeeded` 등 3개 private helper에 직접 결합된 단일 class 구조. 단순 파일 분리 시 캡슐화 파괴 → 인터페이스 재설계 선행 필요. 트리거 조건("파일 크기가 개발 마찰 원인이 될 때") 미충족으로 보류 확정.
+- 조건부 항목 28건 — Sentry SDK 미도입, BFF 1주 무결 미충족, DB-backed 설정 타당성 미검증, TTY 세션 필요 등 트리거 조건 미충족. 선제 구현 시 YAGNI 위반 + 유지보수 부채 가중 위험.
+
+---
+
 ## 2026-04-27 — tech-debt-0427-open 완료 (10건 수정 + 4건 기존 archive 이동)
 
 ### 2026-04-27 harness: tech-debt-0427-open

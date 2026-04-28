@@ -187,3 +187,6 @@ equipment_management_system/ .kombai/
 # 실제 양식 원본 (바이너리, 참조용만)
 docs/procedure/실제양식/
 init-postgres.sql
+
+# .claude scheduled tasks lock (런타임)
+.claude/scheduled_tasks.lock

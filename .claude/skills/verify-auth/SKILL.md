@@ -243,7 +243,7 @@ grep -B5 "FileInterceptor\b" \
 백엔드 컨트롤러 내에서 `req.user?.roles?.some((r) => r === 'system_admin')` 형태의 role 리터럴 비교는
 `UserRoleValues.SYSTEM_ADMIN` SSOT 상수를 우회한다. UserRole rename 시 silent break 발생.
 
-**배경:** `self-inspections.controller.ts:284`에서 발견 — `r === 'system_admin' || r === 'technical_manager'` 리터럴 직접 비교.
+**배경:** `self-inspections.controller.ts:284`에서 발견 (✅ 2026-04-28 수정 완료 — line 286 `UserRoleValues.SYSTEM_ADMIN` / `UserRoleValues.TECHNICAL_MANAGER` 교체).
 `UserRoleValues`는 `packages/schemas`에서 import 가능하며 `schemas` 패키지는 backend에서 항상 사용 가능.
 
 ```bash

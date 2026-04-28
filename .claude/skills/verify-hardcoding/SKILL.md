@@ -573,40 +573,53 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 이 패턴은 동일 제약 조건이 여러 곳에서 재정의될 때 drift를 막지 못한다.
 
 **현재 알려진 tech-debt 항목:**
-- `checkouts.service.ts` L3177: `const REVOCATION_WINDOW_MS = 300_000` — 5분 취소 윈도우 (2026-04-27 확인)
+- ✅ 2026-04-27 완료: `checkouts.service.ts` 로컬 `const REVOCATION_WINDOW_MS = 300_000` → `APPROVAL_REVOCATION_WINDOW_MS` SSOT 승격 (`packages/shared-constants/src/business-rules.ts`)
+- ✅ 2026-04-28 완료: `checkouts.service.ts:3209` 에러 메시지 `'within 5 minutes'` 하드코딩 → `` `within ${APPROVAL_REVOCATION_WINDOW_MS / 60_000} minutes` `` 동적 계산. 상수 변경 시 메시지 자동 동기화.
 
 ```bash
 # 백엔드 서비스 내 시간 윈도우/TTL 로컬 상수 탐지
 grep -rn "const [A-Z_]*WINDOW_MS\|const [A-Z_]*TTL_MS\|const [A-Z_]*TIMEOUT_MS" \
   apps/backend/src/modules --include="*.service.ts" \
   | grep -v "//\|test\|spec"
-# 결과: 기대는 0건 (shared-constants로 승격)
-# 현재 알려진 위반: checkouts.service.ts (REVOCATION_WINDOW_MS = 300_000)
+# 결과: 기대 0건 (shared-constants로 승격 완료) — 2026-04-28 기준 0건 확인
 
 # shared-constants 파일에 대응 상수 존재 확인
 grep -n "REVOCATION_WINDOW_MS\|APPROVAL_REVOCATION_WINDOW" \
   packages/shared-constants/src/business-rules.ts
-# 결과: 승격 완료 시 1건 이상
+# 결과: 1건 (APPROVAL_REVOCATION_WINDOW_MS = 300_000 정의)
+
+# 에러 메시지 등에 시간 값 문자열 하드코딩 탐지 (2026-04-28 추가)
+grep -rn "'within [0-9]\+ minute\|'[0-9]\+ minute\|\"[0-9]\+ minute" \
+  apps/backend/src/modules --include="*.ts" \
+  | grep -v "//\|test\|spec"
+# 결과: 기대 0건 — template literal로 상수에서 동적 계산해야 함
 ```
 
 **올바른 패턴:**
 ```typescript
-// ✅ CORRECT — shared-constants SSOT
+// ✅ CORRECT — shared-constants SSOT + 동적 계산 메시지
 import { APPROVAL_REVOCATION_WINDOW_MS } from '@equipment-management/shared-constants';
 
-if (Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) { ... }
+if (Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) {
+  throw new ForbiddenException({
+    message: `Approval can only be revoked within ${APPROVAL_REVOCATION_WINDOW_MS / 60_000} minutes of approval`,
+  });
+}
 
 // ❌ WRONG — 로컬 상수 (서비스 내 하드코딩)
 const REVOCATION_WINDOW_MS = 300_000; // 승격 전 패턴
+
+// ❌ WRONG — 메시지 시간 값 하드코딩 (상수 변경 시 메시지 stale)
+message: 'Approval can only be revoked within 5 minutes of approval',
 ```
 
-**PASS:** 서비스 내 `*_WINDOW_MS` 로컬 선언 0건 (shared-constants 경유).
-**WARN:** 로컬 선언 존재 + tech-debt 등록 완료 시 (이 세션에서 확인된 REVOCATION_WINDOW_MS).
+**PASS:** 서비스 내 `*_WINDOW_MS` 로컬 선언 0건 + 에러 메시지 시간 값 문자열 0건 (모두 SSOT 경유).
+**WARN:** 로컬 선언 존재 + tech-debt 등록 완료 시.
 **FAIL:** 로컬 선언 존재 + tech-debt 미등록 시.
 
 **관련 파일:**
-- `packages/shared-constants/src/business-rules.ts` — 비즈니스 규칙 상수 SSOT
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — REVOCATION_WINDOW_MS 승격 대상
+- `packages/shared-constants/src/business-rules.ts` — 비즈니스 규칙 상수 SSOT (APPROVAL_REVOCATION_WINDOW_MS = 300_000)
+- `apps/backend/src/modules/checkouts/checkouts.service.ts:3204-3209` — SSOT 경유 + 동적 메시지 패턴 모범 사례
 
 ---
 

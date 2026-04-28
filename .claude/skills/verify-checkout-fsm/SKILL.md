@@ -1165,39 +1165,56 @@ grep -A 10 "useMemo" apps/frontend/hooks/use-checkout-next-step.ts | grep "termi
 - `apps/frontend/hooks/use-checkout-next-step.ts` — `UseCheckoutNextStepInput`, `getNextStep` 호출부
 - `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex` (Step 36 연동)
 
-### Step 40: compact variant `canAct` 분기 — span/button 이중 렌더 금지 (2026-04-27 추가)
+### Step 40: compact variant `canAct` 분기 — span/button 이중 렌더 금지 (2026-04-27 추가, 2026-04-28 atom 갱신)
 
-`NextStepPanel.tsx` compact 분기에서 `canAct` 값에 따라 span과 button을 **상호 배타적**으로 렌더해야 한다:
+`NextStepPanel.tsx` compact 분기에서 `canAct` 값에 따라 span과 액션 버튼을 **상호 배타적**으로 렌더해야 한다:
 - `canAct=false`: `{!canAct && <span>}` — 텍스트 레이블만 (버튼 없음)
-- `canAct=true`: `{canAct && <button>}` — 액션 버튼만 (레이블 중복 없음)
+- `canAct=true`: `{canAct && <InlineActionButton>}` — 액션 atom만 (레이블 중복 없음)
 
 span이 조건 없이 항상 렌더되면 `canAct=true` 시 동일 텍스트가 span + button 두 곳에 노출되어 스크린리더가 두 번 읽는다.
+
+**Phase 3 (2026-04-28)**: 기존 raw `<button className={WORKFLOW_PANEL_TOKENS.variant.compact.actionButton}>` 패턴은 와이어프레임 04 spec(soft-tint inline action)에 따라 `<InlineActionButton variant={resolveInlineActionVariant({...})}>` atom으로 마이그레이션. 분기 *구조*(`!canAct &&` / `canAct &&`)는 절대 변경하지 않고 element만 swap. 이는 Step 40의 핵심 보호 대상.
 
 ```bash
 # !canAct span 조건부 렌더 확인
 grep -n "!canAct" apps/frontend/components/shared/NextStepPanel.tsx
 # 기대: 1건 이상 (PASS)
 
-# canAct button 조건부 렌더 확인
+# canAct InlineActionButton 조건부 렌더 확인
 grep -n "canAct &&" apps/frontend/components/shared/NextStepPanel.tsx
 # 기대: 1건 이상 (PASS)
 
-# span이 canAct 조건 없이 무조건 렌더되는 패턴 탐지 (FAIL 조건)
-grep -n "action\.\${descriptor\.labelKey}" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: compact 분기 내 span은 !canAct 블록 내에만 존재, button은 canAct 블록 내에만 존재
+# atom 사용 확인 — Phase 3 마이그레이션 후
+grep -n "InlineActionButton" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: import + canAct=true 분기 사용 (compact + hero 양쪽)
+
+# raw <button>이 canAct=true 분기에 잔존하지 않는지 (회귀 방지)
+grep -n "WORKFLOW_PANEL_TOKENS\.variant\.\(compact\|hero\)\.actionButton" \
+  apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: 0 hits (Phase 3에서 토큰 삭제됨)
+
+# stopPropagation 보존 — 행 클릭 충돌 회피
+grep -n "stopPropagation" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: ≥ 2 hits (compact action onClick + DropdownMenuTrigger overflow + DropdownMenuItem)
 ```
 
 **PASS:**
 1. `{!canAct && <span>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
-2. `{canAct && <button>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
+2. `{canAct && <InlineActionButton>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
 3. 두 분기가 상호 배타적 — 동일 조건 블록 내 동시 렌더 없음
+4. **(Phase 3)** action onClick 핸들러 내부에 `e.stopPropagation()` 보존 — 행 클릭과 충돌 회피
+5. **(Phase 3)** atom variant 결정은 `resolveInlineActionVariant({ urgency, nextAction, isMyTurn })` SSOT 헬퍼 경유
 
 **FAIL:**
 - span이 `!canAct` 없이 compact 분기 최상위에서 무조건 렌더 → `canAct=true` 시 이중 텍스트
 - button이 `canAct` 조건 없이 항상 렌더 → 권한 없는 사용자에게 버튼 노출
+- **(Phase 3)** raw `<button className={WORKFLOW_PANEL_TOKENS.variant.compact.actionButton}>` 잔존 → soft-tint 미적용 시각 회귀
+- **(Phase 3)** `e.stopPropagation()` 누락 → 행 클릭 vs 버튼 클릭 충돌 (이중 navigation)
 
 **관련 파일:**
-- `apps/frontend/components/shared/NextStepPanel.tsx` — compact 분기 (~라인 305-330)
+- `apps/frontend/components/shared/NextStepPanel.tsx` — compact 분기 (~라인 305-330) + hero canAct true/false (~라인 224-260)
+- `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom
+- `packages/shared-constants/src/checkout-thresholds.ts` — `resolveInlineActionVariant` 매핑 SSOT
 - `apps/frontend/components/shared/NextStepPanel.stories.tsx` — CompactVariantCanAct(canAct=true) + CompactVariantNoAct(canAct=false)
 
 ### Step 41: `ProgressStepDescriptor` SSOT + `deriveProgressStepState` 5-state exhaustive (2026-04-28 추가, REVIEW_RESULT.md P0-1)
