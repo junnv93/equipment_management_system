@@ -10,6 +10,8 @@ import { DEFAULT_LOCALE } from '@equipment-management/schemas';
 import { BRAND_THEME_META_COLORS } from '@/lib/design-tokens';
 import { LocaleHtmlSync } from '@/components/i18n/LocaleHtmlSync';
 import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
+import { NavigationPendingProvider } from '@/hooks/use-navigation-pending';
+import { GlobalProgressBar } from '@/components/layout/global-progress-bar';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -110,11 +112,14 @@ async function IntlProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
       <LocaleHtmlSync />
-      <Providers>
-        <div className="min-h-screen bg-background flex flex-col">{children}</div>
-        <Toaster />
-        <PWAInstallBanner />
-      </Providers>
+      <NavigationPendingProvider>
+        <GlobalProgressBar />
+        <Providers>
+          <div className="min-h-screen bg-background flex flex-col">{children}</div>
+          <Toaster />
+          <PWAInstallBanner />
+        </Providers>
+      </NavigationPendingProvider>
     </NextIntlClientProvider>
   );
 }
