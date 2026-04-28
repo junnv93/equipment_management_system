@@ -25,6 +25,7 @@ import {
 } from '@equipment-management/shared-constants';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
+import { UserRoleValues } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -281,7 +282,9 @@ export class SelfInspectionsController {
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     // 관리자·기술책임자는 approved 건도 삭제 가능
     const allowApproved =
-      req.user?.roles?.some((r) => r === 'system_admin' || r === 'technical_manager') ?? false;
+      req.user?.roles?.some(
+        (r) => r === UserRoleValues.SYSTEM_ADMIN || r === UserRoleValues.TECHNICAL_MANAGER
+      ) ?? false;
     await this.selfInspectionsService.delete(uuid, allowApproved);
     return { success: true };
   }

@@ -3206,7 +3206,7 @@ export class CheckoutsService extends VersionedBaseService {
     if (!approvedAt || Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) {
       throw new ForbiddenException({
         code: ErrorCode.RevocationWindowExpired,
-        message: 'Approval can only be revoked within 5 minutes of approval',
+        message: `Approval can only be revoked within ${APPROVAL_REVOCATION_WINDOW_MS / 60_000} minutes of approval`,
       });
     }
 

@@ -59,19 +59,18 @@ export const WORKFLOW_PANEL_TOKENS = {
   terminal: 'text-sm text-muted-foreground text-center py-4',
 
   /**
-   * variant 서브트리 — compact(행 Zone 4 용) / hero(상세 Hero 용)
-   * Sprint 4.1: NextStepPanel variant prop의 UI 차별화 토큰
+   * variant 서브트리 — compact(행 Zone 4 용) / hero(상세 Hero 용).
+   *
+   * Sprint 4.1: NextStepPanel variant prop의 UI 차별화 토큰.
+   * Phase 3 (P0-3, 2026-04-28): 액션 버튼은 `InlineActionButton` atom으로 통일.
+   *   기존 `actionButton` 토큰(solid primary)은 와이어프레임 04 spec(soft-tint)과 충돌하여 삭제됨.
+   *   호출처는 `<InlineActionButton variant={resolveInlineActionVariant({...})}>`를 사용.
+   *   container/heading은 패널 레이아웃 토큰으로 잔존.
    */
   variant: {
     compact: {
       container: 'flex items-center gap-1.5 px-1.5 py-1 rounded',
       heading: 'sr-only',
-      actionButton: [
-        'h-6 px-2 text-xs rounded inline-flex items-center gap-1 shrink-0',
-        'bg-primary text-primary-foreground hover:bg-primary/90',
-        TRANSITION_PRESETS.fastBg,
-        FOCUS_TOKENS.classes.default,
-      ].join(' '),
     },
     hero: {
       container: [
@@ -80,17 +79,8 @@ export const WORKFLOW_PANEL_TOKENS = {
         SPACING_RHYTHM_TOKENS.comfortable.padding,
       ].join(' '),
       heading: 'text-lg font-semibold text-foreground',
-      actionButton: [
-        'mt-4 w-full h-10 px-4 text-sm rounded-md inline-flex items-center justify-center gap-2',
-        'bg-primary text-primary-foreground hover:bg-primary/90',
-        TRANSITION_PRESETS.fastBg,
-        FOCUS_TOKENS.classes.default,
-      ].join(' '),
     },
-  } satisfies Record<
-    'compact' | 'hero',
-    { container: string; heading: string; actionButton: string }
-  >,
+  } satisfies Record<'compact' | 'hero', { container: string; heading: string }>,
 
   /**
    * actor 서브트리 — FSM nextActor → 3-way 색 분기 (requester / approver / receiver)

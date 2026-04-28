@@ -62,3 +62,86 @@ export function getCheckoutDdayTier(daysRemaining: number): CheckoutDdayTier {
   if (daysRemaining <= CHECKOUT_DDAY_THRESHOLDS.ok) return 'ok';
   return 'neutral';
 }
+
+// ============================================================================
+// Inline Action variant 매핑 SSOT (REVIEW_RESULT.md §4.1 + 와이어프레임 04 spec)
+// ============================================================================
+//
+// 행 단위 inline action 버튼의 색상 variant를 결정하는 단일 함수.
+// frontend `SURFACE_INLINE_ACTION_TOKENS.variant`(`info`|`ok`|`warning`|`danger`)
+// 키와 1:1 대응. 여기서는 string literal type으로 mirror — frontend SemanticColor
+// 어휘를 import하지 않음 (역방향 의존 회피, schemas → shared-constants 단방향 유지).
+//
+// **권위 결정 규칙 (Q1 — descriptor.urgency를 1차 권위로)**:
+//   1) urgency='critical'                                     → 'danger'
+//   2) urgency='warning'                                      → 'warning'
+//   3) urgency='normal' + isMyTurn + (approve|borrower_approve)  → 'warning' (내 차례 강조)
+//   4) urgency='normal' + ok-class action (반환·수령·반입)        → 'ok'
+//   5) 그 외 (terminal, 기본 진행)                              → 'info'
+//
+// 의도: FSM이 종합 판정한 urgency가 항상 우선. 회귀 시 안전 방향(과강조)로 fail.
+// 와이어프레임 04 spec "D-day 의미 매핑"은 urgency가 dueAt 기반으로 계산되므로
+// 자연 만족 (overdue → urgency='critical' → 'danger').
+
+import type { CheckoutAction } from '@equipment-management/schemas';
+
+/**
+ * Inline action variant 키 — frontend `SurfaceInlineActionVariant` 미러.
+ * 변경 시 `apps/frontend/lib/design-tokens/semantic.ts`의 동일 enum과 동기 필수.
+ */
+export type InlineActionVariantKey = 'info' | 'ok' | 'warning' | 'danger';
+
+/**
+ * `urgency='normal'` 정상 흐름에서 'ok'로 매핑되는 액션 (반환·수령·반입 류).
+ * 와이어프레임 04: "정상 진행 액션은 ok variant" + 핸드오프 "반입 처리/수령 확인 → ok".
+ */
+const OK_INLINE_ACTIONS: ReadonlySet<CheckoutAction> = new Set([
+  'submit_return',
+  'lender_receive',
+  'borrower_receive',
+  'approve_return',
+  'mark_in_use',
+]);
+
+/**
+ * `urgency='normal'`에서 `isMyTurn`일 때 'warning'으로 강조되는 승인 액션.
+ * 핸드오프: "1차 승인 → info; 2차 승인(내 차례 시) → warning".
+ * 단 urgency가 이미 critical/warning이면 그쪽이 우선.
+ */
+const APPROVE_INLINE_ACTIONS: ReadonlySet<CheckoutAction> = new Set([
+  'approve',
+  'borrower_approve',
+]);
+
+/**
+ * Inline action variant 결정 함수 — 행 단위 액션 버튼 색상 SSOT.
+ *
+ * @example
+ *   resolveInlineActionVariant({ urgency: 'critical', nextAction: 'approve', isMyTurn: true })
+ *     // 'danger' (urgency 권위)
+ *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'approve', isMyTurn: true })
+ *     // 'warning' (내 차례 강조)
+ *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'submit_return', isMyTurn: true })
+ *     // 'ok'
+ *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'approve', isMyTurn: false })
+ *     // 'info' (기본 진행, 남의 차례)
+ *   resolveInlineActionVariant({ urgency: 'normal', nextAction: null, isMyTurn: false })
+ *     // 'info' (terminal — 실제 도달 0%, 방어)
+ */
+export function resolveInlineActionVariant(input: {
+  urgency: 'normal' | 'warning' | 'critical';
+  nextAction: CheckoutAction | null;
+  isMyTurn: boolean;
+}): InlineActionVariantKey {
+  const { urgency, nextAction, isMyTurn } = input;
+
+  if (urgency === 'critical') return 'danger';
+  if (urgency === 'warning') return 'warning';
+
+  if (nextAction === null) return 'info';
+
+  if (isMyTurn && APPROVE_INLINE_ACTIONS.has(nextAction)) return 'warning';
+  if (OK_INLINE_ACTIONS.has(nextAction)) return 'ok';
+
+  return 'info';
+}

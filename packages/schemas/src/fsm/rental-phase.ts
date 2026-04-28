@@ -58,6 +58,13 @@ const PHASE_TO_INDEX = {
 /**
  * 주어진 상태의 RentalPhase를 반환.
  * purpose가 'rental'이 아니면 항상 null.
+ *
+ * @design Non-rental purpose(calibration/repair)에 phase 개념을 확장하려면
+ *   현재 `RentalPhase`/`RENTAL_STATUS_TO_PHASE`를 purpose-aware 구조로 재설계해야 한다.
+ *   예: `Record<CheckoutPurpose, Record<CheckoutStatus, Phase | null>>`.
+ *   현재는 calibration/repair가 단일 phase 워크플로(요청 → 반출 → 반입)이므로 phase 분할 불필요.
+ *   non-rental 워크플로 세분화 요구가 발생하면 이 함수와 호출부 (`CheckoutPhaseIndicator`,
+ *   `getPhaseIndex`) 시그니처를 함께 변경해야 한다.
  */
 export function getRentalPhase(
   status: CheckoutStatus,

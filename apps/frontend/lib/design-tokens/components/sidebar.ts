@@ -140,9 +140,10 @@ const _iconW = toTailwindSize(INTERACTIVE_TOKENS.icon.standard, 'w');
  */
 export const SIDEBAR_ITEM_TOKENS = {
   active: {
-    base: 'text-white bg-white/15 font-medium',
-    /** border-l-[3px] 보상: px-3(12px) - 3px = 9px */
-    indicator: 'border-l-[3px] border-white pl-[9px]',
+    /** 대시보드 개선안 §3.1 — 활성 항목 강조 (배경 + brand 좌측 액센트) */
+    base: 'text-white bg-ul-info/20 font-semibold',
+    /** border-l-[3px] 보상: px-3(12px) - 3px = 9px. 액센트 컬러는 brand info(#4f8cff 계열). */
+    indicator: 'border-l-[3px] border-ul-info pl-[9px]',
   },
   inactive: {
     base: 'text-white/70 hover:text-white hover:bg-white/10',
@@ -182,7 +183,7 @@ export function getSidebarItemClasses(isActive: boolean, isCollapsed = false): s
 
   if (isCollapsed) {
     const collapsedIndicator = isActive
-      ? 'border-l-[3px] border-white'
+      ? 'border-l-[3px] border-ul-info'
       : 'border-l-[3px] border-transparent';
     return [
       'flex items-center justify-center rounded-lg py-2 relative w-full',

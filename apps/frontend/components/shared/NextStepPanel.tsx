@@ -12,6 +12,7 @@ import type {
   UserRole,
 } from '@equipment-management/schemas';
 import { roleToActorVariant, UserRoleValues } from '@equipment-management/schemas';
+import { resolveInlineActionVariant } from '@equipment-management/shared-constants';
 
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { InlineActionButton } from '@/components/ui/inline-action-button';
 import {
   NEXT_STEP_PANEL_TOKENS,
   WORKFLOW_PANEL_TOKENS,
@@ -222,34 +224,35 @@ export function NextStepPanel({
         </p>
 
         {canAct ? (
-          <button
-            type="button"
-            className={cn(WORKFLOW_PANEL_TOKENS.variant.hero.actionButton, pulseClass)}
+          <InlineActionButton
+            variant={resolveInlineActionVariant({
+              urgency,
+              nextAction: descriptor.nextAction,
+              isMyTurn,
+            })}
+            loading={isPending}
             aria-label={stepLabel}
-            disabled={isPending}
-            aria-disabled={isPending}
+            className={cn('mt-4', pulseClass)}
             onClick={() => {
               markDone();
               onActionClick?.(descriptor.nextAction!);
             }}
             data-testid={testId ? `${testId}-action` : undefined}
           >
-            {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {t(`action.${descriptor.labelKey}`)}
-          </button>
+          </InlineActionButton>
         ) : (
           <div className="mt-4">
-            <button
-              type="button"
-              className={cn(
-                WORKFLOW_PANEL_TOKENS.variant.hero.actionButton,
-                'opacity-50 cursor-not-allowed'
-              )}
+            <InlineActionButton
+              variant={resolveInlineActionVariant({
+                urgency,
+                nextAction: descriptor.nextAction,
+                isMyTurn,
+              })}
               disabled
-              aria-disabled="true"
             >
               {t(`action.${descriptor.labelKey}`)}
-            </button>
+            </InlineActionButton>
             {descriptor.blockingReason && (
               <p className={cn(NEXT_STEP_PANEL_TOKENS.labels.hint, 'mt-1.5 italic')}>
                 {t(`blocked.${descriptor.blockingReason}`)}
@@ -309,11 +312,14 @@ export function NextStepPanel({
           )}
 
           {canAct && (
-            <button
-              type="button"
-              className={WORKFLOW_PANEL_TOKENS.variant.compact.actionButton}
+            <InlineActionButton
+              variant={resolveInlineActionVariant({
+                urgency,
+                nextAction: descriptor.nextAction,
+                isMyTurn,
+              })}
+              loading={isPending}
               aria-label={stepLabel}
-              disabled={isPending}
               onClick={(e) => {
                 e.stopPropagation();
                 markDone();
@@ -321,12 +327,8 @@ export function NextStepPanel({
               }}
               data-testid={testId ? `${testId}-action` : undefined}
             >
-              {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-              ) : (
-                t(`action.${descriptor.labelKey}`)
-              )}
-            </button>
+              {t(`action.${descriptor.labelKey}`)}
+            </InlineActionButton>
           )}
 
           {overflowActions && overflowActions.length > 0 && (

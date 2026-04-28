@@ -327,16 +327,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
             ))}
           </nav>
 
-          {/* 사이드바 하단 — 브랜딩 (mt-auto로 항상 하단 고정) */}
+          {/* 사이드바 하단 — 자체 브랜드 마크 (대시보드 개선안 §3.1, C1) */}
           {!isCollapsed && (
             <div className={cn('mt-auto p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
               <div className="flex items-center gap-2">
-                <span className={cn('font-bold text-xs', SIDEBAR_COLORS.brandPrimary)}>
-                  UL Solutions
+                <span
+                  className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-ul-info to-ul-blue text-white font-bold text-[11px] tracking-tight"
+                  aria-hidden="true"
+                >
+                  EQ
                 </span>
-                <span className="text-white/30 text-xs">|</span>
-                <span className={cn('text-xs', SIDEBAR_COLORS.brandSecondary)}>
-                  Working for a safer world.
+                <span className={cn('font-semibold text-xs', SIDEBAR_COLORS.brandPrimary)}>
+                  {t('layout.systemName')}
                 </span>
               </div>
             </div>
@@ -433,12 +435,14 @@ export function DashboardShellSkeleton() {
 
         <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
           <div className="flex items-center gap-2">
-            <span className={cn('font-bold text-xs', SIDEBAR_COLORS.brandPrimary)}>
-              UL Solutions
+            <span
+              className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-ul-info to-ul-blue text-white font-bold text-[11px] tracking-tight"
+              aria-hidden="true"
+            >
+              EQ
             </span>
-            <span className="text-white/30 text-xs">|</span>
-            <span className={cn('text-xs', SIDEBAR_COLORS.brandSecondary)}>
-              Working for a safer world.
+            <span className={cn('font-semibold text-xs', SIDEBAR_COLORS.brandPrimary)}>
+              {t('layout.systemName')}
             </span>
           </div>
         </div>
