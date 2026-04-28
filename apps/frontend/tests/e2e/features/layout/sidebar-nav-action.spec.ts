@@ -72,15 +72,18 @@ test.describe('Sidebar — nested anchor / hydration regression', () => {
     });
 
     // /checkouts: yourTurn 보조 anchor가 활성화될 가능성이 높은 라우트
-    await page.goto('/checkouts', { waitUntil: 'networkidle' });
+    await page.goto('/checkouts', { waitUntil: 'domcontentloaded' });
 
     // 사이드바 nav item hover/focus — pseudo class 진입에 따른 추가 렌더 트리거
     const checkoutsLink = page.locator('aside#desktop-sidebar a[href="/checkouts"]').first();
     await checkoutsLink.hover();
     await checkoutsLink.focus();
 
-    // hydration 안정화 대기
-    await page.waitForLoadState('networkidle');
+    // hydration 안정화 대기 — 사이드바 nav 첫 항목 렌더 완료까지 (dev mode HMR/SSE 무관)
+    await page
+      .locator('aside#desktop-sidebar nav a[href="/"]')
+      .first()
+      .waitFor({ state: 'visible' });
 
     expect(
       violations,
@@ -91,7 +94,12 @@ test.describe('Sidebar — nested anchor / hydration regression', () => {
   });
 
   test('사이드바 DOM에 nested anchor (a > a) 0건', async ({ page }) => {
-    await page.goto('/checkouts', { waitUntil: 'networkidle' });
+    await page.goto('/checkouts', { waitUntil: 'domcontentloaded' });
+    // hydration 안정화 — sidebar element가 attach되고 nav 첫 항목이 렌더될 때까지
+    await page
+      .locator('aside#desktop-sidebar nav a[href="/"]')
+      .first()
+      .waitFor({ state: 'visible' });
 
     const nestedCount = await page.evaluate(() => {
       const sidebar = document.getElementById('desktop-sidebar');
@@ -103,7 +111,7 @@ test.describe('Sidebar — nested anchor / hydration regression', () => {
   });
 
   test('보조 anchor 렌더 시 Tab 순서: 메인 anchor → 보조 anchor', async ({ page }) => {
-    await page.goto('/checkouts', { waitUntil: 'networkidle' });
+    await page.goto('/checkouts', { waitUntil: 'domcontentloaded' });
 
     const secondaryAnchor = page.locator('aside#desktop-sidebar a[href*="view=yourTurn"]');
     const secondaryCount = await secondaryAnchor.count();

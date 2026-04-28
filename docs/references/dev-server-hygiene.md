@@ -148,6 +148,21 @@ pnpm dev
 
 ---
 
+## 6. 다른 복구 스크립트와의 경계
+
+이 시스템과 혼동하기 쉬운 다른 복구 명령들 — 진짜 원인에 맞는 도구 선택:
+
+| 증상                                                  | 도구                                                             | 이유                                                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `/login` 404, `/api/auth/*` 404, ClientFetchError     | **`pnpm dev:fresh`**                                             | Next.js dev 서버 매니페스트 desync — 본 문서 대상                                             |
+| DB 연결 실패, `relation "..." does not exist`         | **`pnpm --filter backend run db:reset`**                         | Drizzle 마이그레이션 / 시드 데이터 꼬임 — DB 컨테이너 재구축 (CLAUDE.md L43)                  |
+| Redis "Can't handle RDB format version" / Docker 꼬임 | **`pnpm predev:reset`**                                          | infra 컨테이너 매직바이트/스냅샷 불일치 — `infra/scripts/predev-guard.sh --confirm` 자동 수복 |
+| 멀티 PC 이동 후 전체 재기동                           | **`git pull && pnpm --filter backend run db:reset && pnpm dev`** | DB는 ephemeral (CLAUDE.md L155). dev 서버 좀비 따로 발견되면 추가로 `pnpm dev:fresh`          |
+
+`dev:fresh`는 dev 서버 프로세스/캐시 레이어만, `db:reset`은 DB 레이어, `predev:reset`은 컨테이너 레이어 — 책임 분리되어 있어 동시 사용 가능.
+
+---
+
 ## 참고
 
 - Next.js 16 cacheComponents (PPR 후속): https://nextjs.org/docs (라우트 매니페스트 lazy-compile 동작)

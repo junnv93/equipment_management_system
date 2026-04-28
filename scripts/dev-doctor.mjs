@@ -78,10 +78,11 @@ function parsePsLine(line) {
 }
 
 /**
- * 현재 사용자의 dev 관련 프로세스 전체 발견.
- * pgid를 함께 캡처해 같은 커맨드 invocation 그룹화에 사용.
+ * 현재 사용자의 ps 스냅샷 1회 캡처. 같은 진단 호출 내 다른 함수가 재사용하기 위한 캐시 형태.
+ *
+ * 성능: 한 번의 진단 흐름(runDiagnosis) 안에 ps를 두 번 fork하지 않도록 호출자가 결과를 공유한다.
  */
-export function findDevProcesses() {
+export function snapshotProcesses() {
   let out = '';
   try {
     out = execSync('ps -u "$USER" -o pid,ppid,pgid,sid,etime,cmd --no-headers', {
@@ -91,8 +92,15 @@ export function findDevProcesses() {
   } catch {
     return [];
   }
+  return out.split('\n').map(parsePsLine).filter(Boolean);
+}
 
-  const all = out.split('\n').map(parsePsLine).filter(Boolean);
+/**
+ * dev 시그니처에 매칭되는 프로세스만 추출.
+ * 인자로 ps 스냅샷을 받으면 재사용 (없으면 즉시 캡처).
+ */
+export function findDevProcesses(snapshot) {
+  const all = snapshot ?? snapshotProcesses();
   const matches = [];
   for (const p of all) {
     for (const sig of DEV_PROCESS_SIGNATURES) {
@@ -221,25 +229,16 @@ export function checkManifestSync(repoRoot = REPO_ROOT) {
 /**
  * dev 프로세스가 listening 중인 TCP 포트 발견.
  * ss -tlnp 출력에서 PID 추출, dev 프로세스 set과 교집합.
+ *
+ * `snapshot`은 snapshotProcesses()의 결과 — runDiagnosis()가 ps 호출을 1회로 묶기 위한 cache.
  */
-export function findDevPorts(devProcesses) {
+export function findDevPorts(devProcesses, snapshot) {
   const devPids = new Set(devProcesses.map((p) => p.pid));
   // dev 프로세스 자식 중에 실제 server를 띄우는 PID(next-server, NestFactory 등)도 listening할 수 있어
   // ppid 그래프 전체로 확장.
-  let psOut = '';
-  try {
-    psOut = execSync('ps -u "$USER" -o pid,ppid --no-headers', {
-      stdio: ['ignore', 'pipe', 'ignore'],
-      encoding: 'utf8',
-    });
-  } catch {
-    return [];
-  }
+  const all = snapshot ?? snapshotProcesses();
   const ppidByPid = new Map();
-  for (const line of psOut.split('\n')) {
-    const m = line.trim().match(/^(\d+)\s+(\d+)$/);
-    if (m) ppidByPid.set(Number(m[1]), Number(m[2]));
-  }
+  for (const p of all) ppidByPid.set(p.pid, p.ppid);
   const inDevTree = (pid) => {
     let cur = pid;
     let hops = 0;
@@ -280,12 +279,15 @@ export function findDevPorts(devProcesses) {
 /**
  * 모든 점검 수행 후 통합 리포트 반환.
  * level: 'ok' | 'warn' | 'fail'
+ *
+ * 성능: ps 1회 캡처 후 findDevProcesses + findDevPorts가 공유 — fork 비용 절반.
  */
 export function runDiagnosis(repoRoot = REPO_ROOT) {
-  const procs = findDevProcesses();
+  const snapshot = snapshotProcesses();
+  const procs = findDevProcesses(snapshot);
   const { active, zombies } = groupZombies(procs);
   const manifest = checkManifestSync(repoRoot);
-  const ports = findDevPorts(procs);
+  const ports = findDevPorts(procs, snapshot);
 
   const issues = [];
   if (zombies.length > 0) {
