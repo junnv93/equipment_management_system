@@ -1486,6 +1486,55 @@ grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null
 **예외:**
 - 완전히 독립된 별개의 tab UI가 한 컴포넌트에 존재하는 경우 (예: 상단/하단 별개 탭) — 의도적 복수 tablist 허용. 주석 필수.
 
+### Step 42: NEXT_STEP_PANEL_TOKENS 토큰 체인 — workflow-panel.ts → index re-export → NextStepPanel.tsx 소비 (2026-04-28 추가)
+
+`NextStepPanel.tsx`(FSM 다음 단계 안내 패널)가 `workflow-panel.ts`의 `NEXT_STEP_PANEL_TOKENS`를 통해 container variant·urgency 색상을 일관 적용하는지 검증.
+
+**배경:** PR-4 Step 토큰 분리에서 NextStepPanel 전용 토큰을 `workflow-panel.ts`에 격리. variant=`hero`/`floating`/`compact`/`inline`별 container 클래스, urgency(`info`/`warning`/`alert`/`success`)별 색상이 토큰 SSOT 경유 — 컴포넌트 인라인 클래스 0건이어야 함.
+
+**탐지 — index re-export:**
+```bash
+# index.ts에서 NEXT_STEP_PANEL_TOKENS / NextStepPanelUrgency / NextStepPanelContainer re-export 확인
+grep -n "NEXT_STEP_PANEL_TOKENS\|NextStepPanelUrgency\|NextStepPanelContainer\|workflow-panel" \
+  apps/frontend/lib/design-tokens/index.ts
+```
+
+**탐지 — 소비처 SSOT 경유:**
+```bash
+# NextStepPanel.tsx에서 design-tokens index 경유 import 확인
+grep -n "design-tokens\|NEXT_STEP_PANEL_TOKENS" \
+  apps/frontend/components/shared/NextStepPanel.tsx
+
+# NextStepPanel.tsx에서 container variant 인라인 클래스 하드코딩 탐지
+grep -n "rounded-\|border-\|bg-\|p-[0-9]" \
+  apps/frontend/components/shared/NextStepPanel.tsx | grep -v "NEXT_STEP_PANEL_TOKENS\|//\|/\*"
+```
+
+**탐지 — workflow-panel.ts satisfies 가드:**
+```bash
+# NEXT_STEP_PANEL_TOKENS 정의에 satisfies 강제 + Urgency/Container 타입 export
+grep -n "satisfies Record\|export type NextStepPanel\|NEXT_STEP_PANEL_TOKENS = {" \
+  apps/frontend/lib/design-tokens/components/workflow-panel.ts
+```
+
+**PASS 기준:**
+- `lib/design-tokens/index.ts`에서 `NEXT_STEP_PANEL_TOKENS`, `NextStepPanelUrgency`, `NextStepPanelContainer` 모두 re-export 확인
+- `NextStepPanel.tsx`가 `@/lib/design-tokens` index 경유 import (직접 경로 `components/workflow-panel` 금지)
+- `NextStepPanel.tsx`에서 variant별 container 클래스 인라인 하드코딩 0건 — `NEXT_STEP_PANEL_TOKENS.container[variant]` 경유
+- `workflow-panel.ts`에서 `NEXT_STEP_PANEL_TOKENS` 정의에 `satisfies` 가드 (urgency / container 모두 4개 키 완전성 보장)
+
+**FAIL 기준:**
+- index.ts re-export 누락 → `lib/design-tokens/index.ts`에 추가 필요
+- `NextStepPanel.tsx`에서 `rounded-xl border bg-blue-50/50 px-4 py-3` 같은 variant 인라인 클래스 → `NEXT_STEP_PANEL_TOKENS.container.hero` 등 토큰 경유로 전환
+- `NEXT_STEP_PANEL_TOKENS` 정의에 `satisfies Record<NextStepPanelUrgency, string>` 등 가드 누락 → satisfies 추가
+- `NextStepPanel.tsx`에서 직접 `from '@/lib/design-tokens/components/workflow-panel'` import → index 경유로 수정
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `NEXT_STEP_PANEL_TOKENS` SSOT 정의
+- `apps/frontend/lib/design-tokens/index.ts` — re-export 진입점
+- `apps/frontend/components/shared/NextStepPanel.tsx` — 소비처 (variant + urgency 적용)
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — NextStepPanel `variant="compact"` 사용처 (group header + row zone 4)
+
 ---
 
 ## Output Format
@@ -1548,6 +1597,7 @@ grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null
 | 39  | `getPageContainerClasses()` variant 필수 인수 — 빈 호출 금지 | PASS/FAIL | variant 미지정 빈 호출 위치 |
 | 40  | hover-inline 버튼 `approveIcon`/`rejectIcon` 토큰 경유 | PASS/FAIL | raw text-green-*/text-red-* 직접 사용 위치 |
 | 41  | 단일 `role="tablist"` + `className="contents"` ARIA tablist 패턴 | PASS/FAIL | 컴포넌트 당 tablist 2+ 발견 위치 |
+| 42  | `NEXT_STEP_PANEL_TOKENS` 토큰 체인 (workflow-panel.ts → index → NextStepPanel.tsx) | PASS/FAIL | re-export 누락 / 인라인 variant 클래스 위치 |
 ```
 
 ## Exceptions
@@ -1565,3 +1615,39 @@ grep -n 'role="tablist"' apps/frontend/components/**/*.tsx 2>/dev/null
 9. **not-found.tsx / error.tsx** — 비정상 상태 표시, 독립 디자인
 10. **SETTINGS_PAGE_HEADER_TOKENS** — 아이콘+border-b 포함 독립 헤더 디자인
 11. **`page-layout.ts`의 Layer 3 내부 import** — cross-component SSOT 참조
+
+---
+
+### Step 43: 대시보드 dynamic() loading skeleton 커버리지 (2026-04-28 추가)
+
+**규칙**: `next/dynamic`으로 import한 대시보드 위젯의 `loading` 옵션은 **카드별 전용 Skeleton 컴포넌트**를 사용해야 한다. 제네릭 `<Skeleton className="..." />` 직접 사용 금지 — CLS(Cumulative Layout Shift) + 시각 일관성 깨짐.
+
+**커버 대상**:
+- `apps/frontend/components/dashboard/layout/DashboardRow{0..4}.tsx`의 `dynamic(...)` 호출
+- 각 위젯에 매칭되는 `apps/frontend/components/dashboard/skeletons/*Skeleton.tsx` 존재
+
+**검증 명령**:
+```bash
+# 1. dynamic() loading에 generic Skeleton 직접 사용 검색
+grep -rn "loading: () =>" apps/frontend/components/dashboard/layout/ \
+  | grep "<Skeleton " \
+  | grep -v "Skeleton />"  # 명명된 *Skeleton 컴포넌트는 OK
+
+# 2. skeleton 파일과 사용처 매핑 (선택)
+ls apps/frontend/components/dashboard/skeletons/*.tsx
+```
+
+**PASS:** grep 결과 0줄 (모든 dynamic loading이 명명된 *Skeleton 컴포넌트 사용).
+**FAIL:** generic `<Skeleton className=...>` 발견 → 전용 *Skeleton 컴포넌트 신규 + replace.
+
+**Skeleton 컴포넌트 구조 요건**:
+- `'use client'` + `useTranslations('dashboard.skeleton')`
+- `role="status"`, `aria-busy="true"`, `aria-live="polite"` 속성 모두 적용
+- `<span className="sr-only">{t('<name>')}</span>` SR-only 메시지 (i18n 키)
+- 실제 카드와 **동일한 컨테이너 + 헤더 + 콘텐츠 골격**으로 layout shift 방지
+
+**ErrorBoundary fallback 별도 규칙**:
+- 카드 단위 ErrorBoundary fallback은 `EmptyState variant="error"` 경유. 인라인 div + role="alert" 직접 작성 금지.
+- 검증: `grep -rn 'role="alert"' apps/frontend/components/dashboard/` 결과가 EmptyState 내부 또는 AlertBanner critical 외에 없어야 함.
+
+**발생 이력 (2026-04-28)**: DashboardRow4의 RecentActivities/TeamEquipmentDistribution/MiniCalendar dynamic loading이 generic `<Skeleton className={SK.lg}>` 사용 → 실제 카드 구조(탭+행/막대+달력 grid)와 layout 불일치로 CLS 발생. 3개 전용 Skeleton 신설로 해결.

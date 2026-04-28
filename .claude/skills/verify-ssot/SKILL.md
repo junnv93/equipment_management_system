@@ -845,3 +845,49 @@ comm -12 /tmp/schema_types.txt /tmp/local_interfaces.txt
 **관련 파일:**
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — `CheckoutEquipmentSummary` (이름 변경 이력)
 - `packages/schemas/src/checkout.ts` — `CheckoutEquipment` 행 타입 SSOT
+
+### Step 35: 대시보드 임계값 SSOT — `dashboard-thresholds.ts` 우회 금지 (2026-04-28 추가)
+
+**규칙**: 대시보드 임계값(D-day 단계, 가동률, 분포 막대, 시스템 상태, 처리율, 시간 윈도우, 카드 표시 행수)은 반드시 `@equipment-management/shared-constants/dashboard-thresholds`에서 import. 컴포넌트/서비스에 인라인 매직 넘버 금지.
+
+**커버리지 (9개 SSOT 상수)**:
+- `DDAY_THRESHOLDS` (urgent=7, soon=30)
+- `UTILIZATION_GAUGE_THRESHOLDS` (ok=60, warn=40)
+- `DISTRIBUTION_BAR_THRESHOLDS` (danger=50, warn=60)
+- `SYSTEM_HEALTH_THRESHOLDS` (DB ms / storage / queue 임계값)
+- `SYSTEM_HEALTH_GAUGE_CAPS` (게이지 정규화 capacity)
+- `SYSTEM_HEALTH_OVERALL_THRESHOLDS` (overallStatus 판정)
+- `REVIEW_PROCESSING_RATE_THRESHOLDS` (green=90, amber=60)
+- `DASHBOARD_TIME_WINDOWS` (recentActivityDays=7, upcomingCalibrationDays=30)
+- `DASHBOARD_CARD_DISPLAY_LIMITS` (calibrationDday=8, approvalHeavyMinCount=5)
+- `TEAM_DISTRIBUTION_DEFAULT_VISIBLE_ROWS` (=6)
+
+**검증 명령**:
+```bash
+# 1. 대시보드 영역에서 임계값 매직 넘버 직접 사용
+grep -rn '\b(60|40|50|65|80|90|100|300|500|1500)\b' \
+  apps/frontend/components/dashboard/ \
+  apps/frontend/lib/design-tokens/components/dday-tone.ts \
+  apps/backend/src/modules/dashboard/dashboard.service.ts 2>/dev/null \
+  | grep -v '//\|shared-constants\|UTILIZATION_THRESHOLDS\|DASHBOARD_TIME_WINDOWS'
+
+# 2. setDate 인라인 day window
+grep -n 'setDate.*[+-] *\(7\|30\)\b' apps/backend/src/modules/dashboard/dashboard.service.ts \
+  | grep -v 'DASHBOARD_TIME_WINDOWS\|CALIBRATION_THRESHOLDS'
+
+# 3. 표시 행수 매직 넘버
+grep -rn '\(length\|count\) *[<>]=\?\s*\(5\|6\|8\)\b' \
+  apps/frontend/components/dashboard/ \
+  | grep -v 'DISPLAY_LIMITS\|DASHBOARD_CARD_DISPLAY_LIMITS\|TEAM_DISTRIBUTION_DEFAULT_VISIBLE_ROWS'
+```
+
+**PASS:** 모든 grep 결과 0줄 (주석/SSOT import 제외).
+**FAIL:** 매직 넘버 발견 → SSOT 상수 import로 교체.
+
+**예외**:
+- `dashboard-thresholds.ts` 내부 임계값 정의 (SSOT 자체)
+- `dday-tone.ts` 내부 헬퍼 (SSOT import 후 비교)
+- `business-rules.ts`의 `CALIBRATION_THRESHOLDS.WARNING_DAYS` (별도 SSOT)
+- 페이지네이션 limit (`DASHBOARD_ITEM_LIMIT`은 별도 SSOT)
+
+**발생 이력 (2026-04-28)**: 대시보드 영역에 50/60/65/80/90/100/300/500/1500 등 임계값이 frontend dday-tone + backend dashboard.service 2곳에 중복 인라인. `getMyQuickSummary` 30 day window + `getRecentActivities` 7 day window도 매직 넘버. SSOT 모듈 신설 + 일괄 교체.
