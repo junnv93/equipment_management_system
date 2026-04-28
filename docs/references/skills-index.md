@@ -16,6 +16,7 @@
 - **verify-ssot** — SSOT import source (package imports, no local redefinitions, lucide-react). Step 44: Supply-Chain SSOT — raw uuid import 금지 (IdentifierService 경유) + pnpm.overrides caret 잠금 (`>=` 패턴 0건)
 - **verify-hardcoding** — 하드코딩 탐지 (API paths, queryKeys, env, cache keys, token TTL, ErrorCode, Korean UI)
 - **verify-frontend-state** — TanStack Query (no onSuccess setQueryData, dynamic imports)
+- **verify-click-feedback** — Click-Feedback 5-Layer (FEEDBACK_KEYS SSOT, loading.tsx a11y I3, 409 retry, useDebouncedSearch/useAutoSave/useExportAction 패턴, motion-safe:animate-spin)
 - **verify-nextjs** — Next.js 16 패턴 (await params, useActionState, Server Components)
 - **verify-design-tokens** — Design Token 3-Layer (no transition-all, focus-visible, import paths)
 - **verify-security** — OWASP Top 10 (access control, injection, CSP, auth, logging, SSRF)
