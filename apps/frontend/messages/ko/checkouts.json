@@ -493,6 +493,8 @@
     "overdue": "기한 초과",
     "returnToday": "반입 완료",
     "inProgress": "반출 중",
+    "priorityBadge": "우선",
+    "priorityHeroAriaLabel": "{label}, 우선 항목",
     "totalSub": "이번 달 누적",
     "pendingSub": "즉시 처리 필요",
     "inProgressSub": "현재 외부 보유",

@@ -151,25 +151,36 @@ export default function OutboundCheckoutsTab({
 
   const statCards = useStatCards(summary);
 
-  // URL 페이지 변경 핸들러
-  const handlePageChange = (newPage: number) => {
-    const params = filtersToSearchParams({ ...filters, page: newPage });
-    const qs = params.toString();
-    router.replace(
-      qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
-      { scroll: false }
-    );
-  };
+  // URL 페이지 변경 핸들러 — useCallback으로 referential stability (Phase 4.5 SHOULD-2 방어적 적용)
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      const params = filtersToSearchParams({ ...filters, page: newPage });
+      const qs = params.toString();
+      router.replace(
+        qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
+        { scroll: false }
+      );
+    },
+    [filters, router]
+  );
 
   // 서브탭 전환: status + page 리셋 — filtersToSearchParams가 기본값(inProgress/all/1)을 자동 생략
-  const handleSubTabChange = (newSubTab: CheckoutSubTab) => {
-    const params = filtersToSearchParams({ ...filters, subTab: newSubTab, status: 'all', page: 1 });
-    const qs = params.toString();
-    router.replace(
-      qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
-      { scroll: false }
-    );
-  };
+  const handleSubTabChange = useCallback(
+    (newSubTab: CheckoutSubTab) => {
+      const params = filtersToSearchParams({
+        ...filters,
+        subTab: newSubTab,
+        status: 'all',
+        page: 1,
+      });
+      const qs = params.toString();
+      router.replace(
+        qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
+        { scroll: false }
+      );
+    },
+    [filters, router]
+  );
 
   // ──────────────────────────────────────────────
   // 반출 목록 조회
@@ -284,6 +295,16 @@ export default function OutboundCheckoutsTab({
           ]
             .filter(Boolean)
             .join(' ');
+          // GAP-3: 우상단 우선 배지 — 시각 강조용. SR은 wrapper aria-label에 priority 의미 합성으로 전달.
+          const priorityBadgeNode = isAlert ? (
+            <span className={heroTokens.priorityBadge} aria-hidden="true">
+              {t('outbound.priorityBadge')}
+            </span>
+          ) : null;
+          // SR aria-label — isAlert 시 "{label}, 우선 항목" 합성 (시각 배지와 SR 정보 대칭)
+          const heroAriaLabel = isAlert
+            ? t('outbound.priorityHeroAriaLabel', { label: t(card.labelKey) })
+            : t(card.labelKey);
           return (
             <div
               key={card.variantKey}
@@ -291,7 +312,7 @@ export default function OutboundCheckoutsTab({
               role="button"
               tabIndex={0}
               aria-pressed={isActive}
-              aria-label={t(card.labelKey)}
+              aria-label={heroAriaLabel}
               onClick={onActivate}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -300,7 +321,12 @@ export default function OutboundCheckoutsTab({
                 }
               }}
             >
-              <HeroKPI label={t(card.labelKey)} value={card.value} variant="critical" />
+              <HeroKPI
+                label={t(card.labelKey)}
+                value={card.value}
+                variant="critical"
+                badge={priorityBadgeNode}
+              />
             </div>
           );
         }

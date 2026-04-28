@@ -25,6 +25,7 @@ import {
   getSemanticSolidBgClasses,
   getSemanticLeftBorderClasses,
   getSemanticContainerTextClasses,
+  type SemanticColorKey,
 } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 import {
@@ -62,7 +63,7 @@ export const CHECKOUT_STATUS_BADGE_TOKENS = {
   pending: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
   // 승인 (info)
   approved: 'bg-brand-info/10 text-brand-info border-brand-info/20',
-  // 렌탈 1차 승인 — 차용팀 TM 승인 완료, 대여팀 TM 승인 대기 (warning)
+  // 렌탈 1차 승인 — 사용 부서 TM 승인 완료, 관리 부서 TM 승인 대기 (warning)
   borrower_approved: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
   // 반출중 (purple)
   checked_out: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
@@ -449,16 +450,30 @@ export const CHECKOUT_STATS_VARIANTS = {
    * Hero KPI 카드 — 페이지당 1개, overdue>0 시 동적 선택 (Phase 4: P1-1)
    *
    * container        : 레거시 alias — 신규 코드는 containerInGrid 사용 권장 (의미명 명확)
-   * containerInGrid  : 6-col grid에서 hero 카드 cell 점유 (sm 3 / lg 2)
-   * surface          : floating(raised보다 한 층 위) — 시각적 계층 강조
+   * containerInGrid  : grid에서 hero 카드 cell 점유 — Phase 4.5에서 col-span-2 통일
+   *                    (sm/lg 모두 6칸 grid에서 mini 4개와 합쳐 6칸 정확 정렬, GAP-4)
+   * surface          : 기본 표면 (variant 없을 때 또는 fallback)
+   * surfaceVariant   : variant별 표면 오버라이드 — alert 강조용 그라디언트 (GAP-1)
+   * elevation        : floating(raised보다 한 층 위) — 시각적 계층 강조 (surface와 분리)
+   * label            : 기본 label 타이포 (variant 없을 때)
+   * labelVariant     : variant별 label 색상 오버라이드 (GAP-2)
+   * priorityBadge    : 우상단 "우선" 배지 스타일 (host에서 i18n 텍스트 주입, GAP-3)
    * alertRing        : 색상 단독 의존 회피 — ring weight + brand-critical 동시 신호
    */
   hero: {
-    container: 'col-span-2 sm:col-span-3 lg:col-span-2 row-span-1',
-    containerInGrid: 'col-span-2 sm:col-span-3 lg:col-span-2',
-    surface: `bg-card ${ELEVATION_TOKENS.surface.floating}`,
+    container: 'col-span-2 row-span-1',
+    containerInGrid: 'col-span-2',
+    surface: 'bg-card',
+    surfaceVariant: {
+      critical: 'bg-gradient-to-b from-brand-critical/[0.04] to-brand-critical/[0.02]',
+    } as Partial<Record<SemanticColorKey, string>>,
+    elevation: ELEVATION_TOKENS.surface.floating,
     kpi: `${TYPOGRAPHY_TOKENS.kpi} text-5xl`,
     label: TYPOGRAPHY_TOKENS.kpiLabel,
+    labelVariant: {
+      critical: getSemanticContainerTextClasses('critical'),
+    } as Partial<Record<SemanticColorKey, string>>,
+    priorityBadge: `${MICRO_TYPO.badge} px-1.5 py-0.5 rounded font-semibold uppercase bg-brand-critical/15 text-brand-critical`,
     hoverBorder: 'hover:border-brand-critical/30',
     activeBorder: 'border-brand-critical',
     activeBg: 'bg-brand-critical/10',

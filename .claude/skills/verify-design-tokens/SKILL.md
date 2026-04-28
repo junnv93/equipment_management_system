@@ -1774,9 +1774,19 @@ grep -nE '\b(col-span|grid-cols)-\d' \
 # 기대: 0 hits (모두 getStatsGridClass / containerInGrid 토큰 경유)
 
 # hero alertRing 토큰 정의 후 미사용 (dead token)
-grep -rn "CHECKOUT_STATS_VARIANTS\.hero\.alertRing" \
+# alias 패턴(`heroTokens.alertRing` 등)도 포함 — 호출처가 const heroTokens = ... 형태일 때 false negative 방지
+grep -rn "CHECKOUT_STATS_VARIANTS\.hero\.alertRing\|heroTokens\.alertRing" \
   apps/frontend/app apps/frontend/components
 # 기대: ≥ 1 hit (host wrapper에서 isAlert 시 합성)
+
+# Phase 4.5 신규 hero 토큰 — surfaceVariant / labelVariant / priorityBadge dead-token 검사
+# (atom 또는 host 어디든 호출처 ≥ 1)
+for token in "surfaceVariant" "labelVariant" "priorityBadge"; do
+  hits=$(grep -rn "tokens\.${token}\|hero\.${token}\|heroTokens\.${token}" \
+    apps/frontend/app apps/frontend/components | wc -l)
+  echo "${token}: ${hits} hits (expected ≥ 1)"
+done
+# 기대: 각 토큰별 ≥ 1 hit (HeroKPI atom 또는 OutboundCheckoutsTab host 소비)
 
 # raw ring-1 ring-brand-critical/N hero 외부 직접 사용 (FAIL 패턴) — checkouts 도메인 한정
 # (dashboard PendingApprovalCard 등 다른 도메인은 별도 토큰 정합화 PR로 추적 — tech-debt-tracker)
@@ -1798,11 +1808,13 @@ grep -n "getStatsGridClass\|CHECKOUT_STATS_GRID_TOKENS" \
 - 두 파일 모두 `getStatsGridClass(hasHero)` 호출 + hero 분기는 `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 사용
 - hero `alertRing` 토큰이 host wrapper에 적용 (isAlert 분기 합성)
 - raw `ring-1 ring-brand-critical/N` hero 외부 직접 사용 0건
+- (Phase 4.5) `surfaceVariant`, `labelVariant`, `priorityBadge` 각 ≥ 1 호출처
 
 **FAIL:**
 - raw grid/col-span 잔존 → host와 skeleton grid 비동기 회귀 시 CLS
 - `alertRing` 토큰 정의만 + 호출 0건 → dead token (저시력 강조 누락)
 - raw `ring-*` 직접 합성 → 토큰 변경 시 회귀 위험
+- (Phase 4.5) `surfaceVariant` / `labelVariant` / `priorityBadge` 정의만 + 호출 0건 → dead token (wireframe gradient/label/badge 시각 회귀)
 
 **관련 파일:**
 - `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_STATS_GRID_TOKENS`, `getStatsGridClass`, `CHECKOUT_STATS_VARIANTS.hero.containerInGrid`/`alertRing`
@@ -1810,3 +1822,98 @@ grep -n "getStatsGridClass\|CHECKOUT_STATS_GRID_TOKENS" \
 - `apps/frontend/components/checkouts/HeroKPISkeleton.tsx` — skeleton (host와 동일 토큰 미러링)
 
 **발생 이력 (2026-04-28)**: Phase 4 P1-1에서 `CHECKOUT_STATS_VARIANTS.hero.container` / `.alertRing` 토큰이 PR-7 단계에 정의되었으나 host에서 raw `col-span-2` + 미적용 상태로 잔존 — Phase 4 통합 마이그레이션으로 해소.
+
+---
+
+### Step 46: Button base cva `focus-visible:outline-*` 패턴 — ring-offset 회귀 방지 (2026-04-28 추가)
+
+`apps/frontend/components/ui/button.tsx`의 base cva는 shadcn/ui 기본 패턴(`focus-visible:ring-2 ring-offset-2`)에서
+outline 기반(`focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring`)으로 전환됨.
+이 파일은 `components/ui/` 예외로 Step 2 탐지에서 제외되므로, 별도 게이트로 보호.
+
+**왜 보호가 필요한가**:
+- shadcn/ui CLI 업데이트 또는 다른 세션에서 button.tsx를 덮어쓰면 base cva가 shadcn 기본 패턴으로 원복 → 시스템 전체 focus indicator 정합성 깨짐.
+- `SURFACE_INLINE_ACTION_TOKENS.base`도 `focus-visible:outline-*` 통일 — 두 곳이 동일 패턴이어야 inline action button과 일반 button의 focus 링 두께/색상이 일치.
+- ring(box-shadow) 기반은 dashed/radius 조합과 충돌 — outline이 표준.
+
+```bash
+# button base cva에 ring-2 ring-offset-2 패턴 잔존 탐지 (FAIL 패턴)
+grep -n "focus-visible:ring-2\|ring-offset-2\|focus-visible:ring-offset" \
+  apps/frontend/components/ui/button.tsx
+# 기대: 0 hits (outline 패턴으로 전환됨)
+
+# 현재 button base cva에 outline 패턴 존재 확인 (PASS 양성 검증)
+grep -n "focus-visible:outline-2.*outline-offset-2.*outline-ring" \
+  apps/frontend/components/ui/button.tsx
+# 기대: 1 hit (base cva string 내 존재)
+```
+
+**PASS:**
+- `focus-visible:ring-2` / `ring-offset-2` / `focus-visible:ring-offset` 0건
+- `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring` 1건 이상
+
+**FAIL:**
+- `focus-visible:ring-2 ring-offset-2` 재도입 → 시스템 focus 링 불일치 (inline action button과 톤 차이 발생). outline 패턴으로 교체.
+
+**예외:**
+- `buttonVariants`의 개별 `variant` 문자열(outline variant, ghost variant 등) — base cva가 아닌 variant별 추가 스타일. base만 검사.
+- `ring-offset-ul-midnight` 등 특수 목적 offset override (다른 파일에서 `asChild` 조합 시) — button.tsx 자체만 대상.
+
+**관련 파일:**
+- `apps/frontend/components/ui/button.tsx` — base cva (outline focus 전환 파일)
+- `apps/frontend/lib/design-tokens/semantic.ts` — `SURFACE_INLINE_ACTION_TOKENS.base` (동일 패턴 SSOT)
+
+**발생 이력 (2026-04-28)**: NextStepPanel compact 영역에서 button focus 링이 행 외곽으로 새는 glow를 만들었던 사건의 근본 수정 — base cva ring → outline 전환. 회귀 시 동일 시각 결함 재발 가능.
+
+---
+
+### Step 47: `compact` 컨테이너 토큰 — elevation/shadow/rounded/padding 0 원칙 (2026-04-28 추가)
+
+**원칙:** `variant="compact"` (행 Zone 4 등 행 평면 통합) 컨테이너 토큰에는
+`ELEVATION_TOKENS.*`, `shadow-*`, `rounded-*`, `p-N` (layout spacing이 아닌 surface padding) 이 포함되어서는 안 됨.
+행 안 컴포넌트는 host row의 bounding box를 존중해야 하며, 독립 elevation을 만들면 행 평면이 깨지면서
+"행 안에 사각형 glow"가 시각적으로 표면화.
+
+**탐지 대상:** `workflow-panel.ts`의 `container.compact` 토큰 정의.
+(향후 다른 도메인 토큰 파일에 `compact` 키 추가 시 동일 기준 적용)
+
+```bash
+# workflow-panel.ts container.compact 라인 추출 후 금지 클래스 검색
+# word boundary(\b) 사용 — gap-0.5의 'p-0' substring false positive 방지
+grep -nE "compact:\s*['\"\`]" apps/frontend/lib/design-tokens/components/workflow-panel.ts \
+  | grep -E "\brounded-[a-z]|\bshadow-[a-z]|\bp-[0-9]|ELEVATION_TOKENS"
+# 기대: 0 hits (layout-only: inline-flex flex-col gap-0.5 만 허용)
+
+# 다른 Layer 3 파일에도 compact 키 확인 (일반화 대비)
+grep -rnE "compact:.*ELEVATION_TOKENS|compact:.*\brounded-[a-z]|compact:.*\bshadow-[a-z]|compact:.*\bp-[0-9]" \
+  apps/frontend/lib/design-tokens/components/ --include="*.ts"
+# 기대: 0 hits
+
+# container.compact 정의 라인의 실제 값 확인 (PASS 양성 검증)
+grep -nE "compact:\s*['\"\`].*inline-flex|compact:\s*['\"\`].*flex-col" apps/frontend/lib/design-tokens/components/workflow-panel.ts
+# 기대: 1 hit (현재 정의: 'inline-flex flex-col gap-0.5')
+```
+
+**PASS:**
+- `container.compact` 토큰 값에 elevation/shadow/rounded/surface-padding 클래스 0건
+- layout 전용 클래스(`inline-flex`, `flex-col`, `flex`, `items-*`, `gap-*`)만 포함
+- 다른 도메인 토큰 파일에도 `compact:` 키에 금지 클래스 0건
+
+**FAIL:**
+- `container.compact`에 `ELEVATION_TOKENS.surface.*` 추가 → 행 평면 이탈 (시각 회귀: "행 안 사각형 glow")
+- `rounded-*` 추가 → host row와 중첩 radius 발생
+- `shadow-*` 직접 추가 → 행 안에서 부유 효과 (host elevation 무시)
+- `p-N` (surface padding, `gap-`이 아닌 padding) 추가 → Zone 4 내부 공간 충돌
+
+**예외:**
+- `gap-*` (자식 요소 간 간격) — layout 목적, 허용
+- `w-*` / `h-*` / `min-w-*` — 폭/높이 제약, 허용
+- `overflow-*` / `text-*` / `font-*` — 텍스트 정책, 허용
+- `WORKFLOW_PANEL_TOKENS.variant.compact.container`는 별도 토큰(미사용 dead 가능) — 본 Step 대상 아님. NextStepPanel이 실제 소비하는 `NEXT_STEP_PANEL_TOKENS.container.compact`가 대상.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `NEXT_STEP_PANEL_TOKENS.container.compact` 정의
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — `NextStepPanel variant="compact"` 사용처
+- `apps/frontend/components/shared/NextStepPanel.tsx` — compact container 소비처
+
+**발생 이력 (2026-04-28)**: NextStepPanel compact가 padding/shadow를 가진 채 행 안에 들어가 "외곽 사각형 glow"로 표면화 → `inline-flex flex-col gap-0.5` layout-only 토큰으로 교체. 본 Step이 회귀 차단 게이트.

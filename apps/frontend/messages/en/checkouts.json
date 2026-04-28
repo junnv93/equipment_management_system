@@ -493,6 +493,8 @@
     "overdue": "Overdue",
     "returnToday": "Returned",
     "inProgress": "Checked Out",
+    "priorityBadge": "Priority",
+    "priorityHeroAriaLabel": "{label}, priority item",
     "totalSub": "This month",
     "pendingSub": "Needs immediate action",
     "inProgressSub": "Currently off-site",
