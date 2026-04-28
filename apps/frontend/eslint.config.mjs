@@ -141,13 +141,17 @@ const eslintConfig = [
   },
   // 글로벌 룰 예외: 디자인 토큰 정의 / 외부 브랜드 자산 / API 메타데이터 /
   // Canvas-PDF 워커는 hex/dday tone 리터럴이 데이터 자체이므로 룰을 status-only로 재정의한다.
+  //
+  // 패턴 주의: lint-staged는 root cwd에서 절대 경로 인자로 실행 →
+  // `lib/design-tokens/**` 같은 상대 패턴은 cwd=root일 때 매칭 실패.
+  // `**/lib/design-tokens/**` globstar 패턴은 cwd=root / cwd=apps/frontend 양쪽 호환.
   {
     files: [
-      'lib/design-tokens/**/*.{ts,tsx}',
-      'lib/brand-assets/**/*.{ts,tsx}',
-      'lib/api/teams-api.ts',
-      'lib/api/sites-api.ts',
-      'lib/qr/**/*.ts',
+      '**/lib/design-tokens/**/*.{ts,tsx}',
+      '**/lib/brand-assets/**/*.{ts,tsx}',
+      '**/lib/api/teams-api.ts',
+      '**/lib/api/sites-api.ts',
+      '**/lib/qr/**/*.ts',
       '**/*.worker.ts',
     ],
     rules: {
@@ -156,7 +160,7 @@ const eslintConfig = [
   },
   // 대시보드 컴포넌트 — 글로벌 룰 + 한글 JSXText 금지 (i18n 강제)
   {
-    files: ['components/dashboard/**/*.{ts,tsx}'],
+    files: ['**/components/dashboard/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -165,6 +169,13 @@ const eslintConfig = [
         DDAY_TONE_RULE,
         DASHBOARD_KO_JSX_RULE,
       ],
+    },
+  },
+  // 테스트 파일 — Playwright/Vitest 진행 로그 console 허용
+  {
+    files: ['**/tests/**/*.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/*.test.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
     },
   },
   // @deprecated 토큰 회귀 방지 가드 (typed linting — 점진 확장)

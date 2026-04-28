@@ -31,7 +31,6 @@ export function assertNoHighImpact(results: Awaited<ReturnType<typeof runAxe>>) 
       nodes: v.nodes.length,
       sample: v.nodes[0]?.target,
     }));
-    // eslint-disable-next-line no-console -- self-audit-exception: a11y 위반 디버깅 출력 (테스트 헬퍼)
     console.error('a11y high-impact violations:', JSON.stringify(summary, null, 2));
   }
   expect(high).toHaveLength(0);

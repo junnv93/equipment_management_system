@@ -125,7 +125,6 @@ for (const { label, file, dir, tabs } of ROLES) {
       const results = await runAxe(page);
       assertNoHighImpact(results);
 
-      // eslint-disable-next-line no-console -- 테스트 진행 로그
       console.log(`✅ [${label}] ${tabs.length + 5} screenshots + 2 dark + axe scan → ${outDir}`);
     });
   });

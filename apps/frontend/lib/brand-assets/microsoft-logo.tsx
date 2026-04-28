@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- self-audit-exception: 외부 Microsoft 공식 브랜드 자산, 4-square 로고 hex는 Microsoft 정의 */
 /**
  * Microsoft 4-square logo (Official brand asset)
  *

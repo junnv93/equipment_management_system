@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- self-audit-exception: design tokens SSOT 정의 위치 (no-hardcoded-colors 룰 예외) */
 /**
  * Dashboard Component Tokens (Layer 3: Component-Specific)
  *

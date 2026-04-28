@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- self-audit-exception: design tokens SSOT 정의 위치 (no-hardcoded-colors 룰 예외) */
 /**
  * Brand Design Tokens - UL-QP-18 Equipment Management System
  *
