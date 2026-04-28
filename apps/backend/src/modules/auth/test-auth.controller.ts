@@ -2,8 +2,8 @@ import { Controller, Get, Post, Body, Query, ForbiddenException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
-import { randomUUID } from 'crypto';
 import { DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS } from '@equipment-management/shared-constants';
+import { IdentifierService } from '../../common/identifiers/identifier.service';
 import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { AuthService, AuthResponse } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -24,7 +24,8 @@ export class TestAuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly cacheService: SimpleCacheService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly identifiers: IdentifierService
   ) {}
 
   /**
@@ -147,7 +148,7 @@ export class TestAuthController {
     const expiredPayload = {
       checkoutId,
       purpose: 'borrower_receive' as const,
-      jti: randomUUID(),
+      jti: this.identifiers.generateJti(),
       iss: 'test-auth-forge',
       iat: nowSec - expSecondsAgo - 10,
       exp: nowSec - expSecondsAgo, // 과거 exp → jwt.verify가 TokenExpiredError

@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'node:crypto';
 import type Redis from 'ioredis';
 import { ErrorCode } from '@equipment-management/schemas';
+import { generateJti } from '../identifiers/identifier.service';
 
 export interface OneTimeTokenOptions {
   /** HS256 서명 키 */
@@ -66,7 +66,7 @@ export class OneTimeTokenService<T extends object> {
   }
 
   async issue(data: T, issuerId: string): Promise<OneTimeTokenResult> {
-    const jti = randomUUID();
+    const jti = generateJti();
     const { ttlSeconds, redisKeyPrefix, redisClient } = this.options;
 
     const payload: OneTimeTokenJwtPayload<T> = { data, jti, iss: issuerId };

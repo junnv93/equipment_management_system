@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { TestAuthController } from '../test-auth.controller';
 import { AuthService } from '../auth.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { IdentifierService } from '../../../common/identifiers/identifier.service';
 
 /**
  * forge-handover-token 엔드포인트 보안 가드 테스트.
@@ -40,6 +41,10 @@ describe('TestAuthController — forgeHandoverToken', () => {
               return undefined;
             }),
           },
+        },
+        {
+          provide: IdentifierService,
+          useValue: { generateJti: jest.fn(() => 'test-jti-uuid') },
         },
       ],
     }).compile();

@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { IdentifierService } from './identifier.service';
+import {
+  IdentifierService,
+  generateAttachmentId,
+  generateJti,
+  generateMigrationBatchId,
+  generateOpaqueId,
+} from './identifier.service';
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -36,6 +42,13 @@ describe('IdentifierService', () => {
     });
   });
 
+  describe('generateJti', () => {
+    it('returns a v4 UUID for JWT jti claim', () => {
+      const jti = service.generateJti();
+      expect(UUID_V4_REGEX.test(jti)).toBe(true);
+    });
+  });
+
   describe('generateOpaqueId', () => {
     it('returns a raw v4 UUID when no prefix is provided', () => {
       const id = service.generateOpaqueId();
@@ -52,5 +65,34 @@ describe('IdentifierService', () => {
       const id = service.generateOpaqueId('');
       expect(UUID_V4_REGEX.test(id)).toBe(true);
     });
+  });
+});
+
+describe('Identifier module functions (plain class / util 진입점)', () => {
+  it('generateAttachmentId returns v4 UUID', () => {
+    expect(UUID_V4_REGEX.test(generateAttachmentId())).toBe(true);
+  });
+
+  it('generateMigrationBatchId returns v4 UUID', () => {
+    expect(UUID_V4_REGEX.test(generateMigrationBatchId())).toBe(true);
+  });
+
+  it('generateJti returns v4 UUID', () => {
+    expect(UUID_V4_REGEX.test(generateJti())).toBe(true);
+  });
+
+  it('generateOpaqueId honours prefix without DI', () => {
+    const id = generateOpaqueId('jti');
+    expect(id.startsWith('jti-')).toBe(true);
+  });
+
+  it('class methods and module functions return interchangeable IDs (SSOT 동등)', async () => {
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      providers: [IdentifierService],
+    }).compile();
+    const svc = moduleRef.get(IdentifierService);
+    // 동일 형식 보장 — 호출 경로 차이가 식별자 형식에 영향 주지 않음
+    expect(UUID_V4_REGEX.test(svc.generateJti())).toBe(true);
+    expect(UUID_V4_REGEX.test(generateJti())).toBe(true);
   });
 });

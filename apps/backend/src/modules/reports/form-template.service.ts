@@ -6,8 +6,8 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { eq, and, desc, isNull, isNotNull, sql } from 'drizzle-orm';
+import { IdentifierService } from '../../common/identifiers/identifier.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { AppDatabase } from '@equipment-management/db';
@@ -73,7 +73,8 @@ export class FormTemplateService {
     @Inject(STORAGE_PROVIDER)
     private readonly storage: IStorageProvider,
     @Inject(CACHE_SERVICE)
-    private readonly cache: ICacheService
+    private readonly cache: ICacheService,
+    private readonly identifiers: IdentifierService
   ) {}
 
   // ── 조회 ──────────────────────────────────────────────────────────────────
@@ -657,7 +658,7 @@ export class FormTemplateService {
    * - UUID 파일명으로 replace 시 덮어쓰기/캐시 이슈 회피
    */
   private buildStorageKey(formNumber: string, ext: string): string {
-    return `form-templates/${formNumber}/${randomUUID()}${ext}`;
+    return `form-templates/${formNumber}/${this.identifiers.generateAttachmentId()}${ext}`;
   }
 
   /** 스토리지 삭제 실패를 warn 레벨로 로깅하고 삼킴 (상위 로직 차단 금지) */
