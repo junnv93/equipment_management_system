@@ -3,7 +3,7 @@ import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import DashboardLoading from './loading';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { getDashboardAggregate } from '@/lib/api/dashboard-api-server';
-import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
+import { resolveDashboardScopeContext } from '@/lib/utils/dashboard-scope';
 import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
 
 /**
@@ -16,7 +16,7 @@ import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
  *
  * 데이터 전략:
  * - 서버에서 단일 /api/dashboard/aggregate 호출로 8개 데이터 일괄 프리페치
- * - resolveDashboardScope()로 SSR 스코프를 결정하여 클라이언트와 동일한 범위 보장
+ * - resolveDashboardScopeContext()로 SSR 스코프를 결정하여 클라이언트와 동일한 범위 보장
  * - 백엔드가 Promise.allSettled로 병렬 처리 → 부분 실패 허용
  */
 export default function DashboardPage(props: { searchParams: Promise<{ teamId?: string }> }) {
@@ -41,7 +41,7 @@ async function DashboardAsync({
 
   // SSR도 클라이언트와 동일한 scope 결정 로직 적용
   const { config: roleConfig } = resolveDashboardRoleConfig(session.user.role);
-  const scope = resolveDashboardScope(
+  const scope = resolveDashboardScopeContext(
     roleConfig.controlCenter.kpiDisplay,
     roleConfig.controlCenter.requiresTeamScope,
     session.user.site,

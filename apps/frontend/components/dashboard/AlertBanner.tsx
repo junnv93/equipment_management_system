@@ -23,7 +23,7 @@ import { EquipmentStatusValues } from '@equipment-management/schemas';
 import {
   buildScopedEquipmentUrl,
   buildScopedUrl,
-  type DashboardScope,
+  type DashboardScopeContext,
 } from '@/lib/utils/dashboard-scope';
 
 type Severity = 'critical' | 'warning' | 'info' | 'none';
@@ -34,7 +34,7 @@ interface AlertBannerProps {
   nonConformingCount: number;
   upcomingCalibrationCount?: number;
   upcomingCheckoutReturnCount?: number;
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   variant?: 'auto' | 'inline' | 'stacked';
   trailingAction?: React.ReactNode;
 }
@@ -71,7 +71,7 @@ function InlineVariant({
   nonConformingCount: number;
   upcomingCalibrationCount: number;
   upcomingCheckoutReturnCount: number;
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   trailingAction?: React.ReactNode;
   t: ReturnType<typeof useTranslations<'dashboard.alertBanner'>>;
 }) {
@@ -163,7 +163,7 @@ function StackedVariant({
   upcomingCalibrationCount: number;
   upcomingCheckoutReturnCount: number;
   totalCount: number;
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   trailingAction?: React.ReactNode;
   t: ReturnType<typeof useTranslations<'dashboard.alertBanner'>>;
 }) {

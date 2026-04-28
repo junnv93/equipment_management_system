@@ -106,11 +106,14 @@ type InlineActionClass = 'approve' | 'ok' | 'negative' | 'lender' | 'neutral';
 /**
  * **CheckoutAction × InlineActionClass exhaustive map (SSOT)**.
  *
- * `satisfies Record<CheckoutAction, InlineActionClass>`로 컴파일러가 다음을 강제:
- *   1. CheckoutAction enum에 새 멤버 추가 시 본 map에 분류 추가 누락 → 빌드 실패.
- *   2. CheckoutAction enum에서 멤버 제거 시 본 map의 dead key → eslint/tsc 경고.
+ * `satisfies Record<CheckoutAction, InlineActionClass>` 효과:
+ *   1. CheckoutAction enum에 새 멤버 추가 시 본 map에 키 누락 → 빌드 실패 (forward-coverage).
+ *   2. CheckoutAction enum에서 멤버 제거 시 dead key는 TypeScript가 경고하지 않음 —
+ *      ESLint `@typescript-eslint/no-unused-vars`도 객체 리터럴 키에는 적용 안 됨.
+ *      이 dead key 탐지는 별도 `verify-ssot` Step으로 보강 (정적 grep 매칭).
  *
- * 단순 `Set<CheckoutAction>` 패턴은 enum 확장 시 silent fail 가능 — Record 권장.
+ * 단순 `Set<CheckoutAction>` 패턴은 enum 확장 시 silent fail 가능 (멤버 추가가 컴파일 OK).
+ * Record + satisfies는 *추가* 방향 누락을 잡는 것이 핵심 — *제거* 방향은 dead-key 정리 정책 별도.
  */
 const CHECKOUT_ACTION_INLINE_CLASS = {
   // approve 클래스 — isMyTurn일 때 'warning' 강조

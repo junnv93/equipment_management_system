@@ -9,7 +9,7 @@ import { DASHBOARD_KPI_TOKENS as T, DASHBOARD_KPI_TREND_TOKENS as TR } from '@/l
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { EquipmentStatusValues } from '@equipment-management/schemas';
-import { buildScopedEquipmentUrl, type DashboardScope } from '@/lib/utils/dashboard-scope';
+import { buildScopedEquipmentUrl, type DashboardScopeContext } from '@/lib/utils/dashboard-scope';
 import { DASHBOARD_GRID, UTILIZATION_THRESHOLDS } from '@/lib/config/dashboard-config';
 import { computeUtilizationState, type UtilizationState } from '@/lib/utils/utilization-state';
 import { useCountUp } from '@/lib/utils/use-count-up';
@@ -30,7 +30,7 @@ interface KpiStatusGridProps {
   equipmentStatusStats: Record<string, number>;
   summary: DashboardSummary;
   loading?: boolean;
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   trends?: KpiTrends;
 }
 

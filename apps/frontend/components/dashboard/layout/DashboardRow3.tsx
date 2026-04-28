@@ -21,7 +21,7 @@ import type {
   RecentActivity,
   SystemHealthMetrics,
 } from '@/lib/api/dashboard-api';
-import type { DashboardScope } from '@/lib/utils/dashboard-scope';
+import type { DashboardScopeContext } from '@/lib/utils/dashboard-scope';
 
 // AP-16 + 명세서 §A.17.1: Row 3 위젯 동적 import + 카드별 Skeleton fallback (CLS 방지)
 const PendingApprovalCard = dynamic(
@@ -63,7 +63,7 @@ export interface DashboardRow3Props {
   overdueCheckouts: OverdueCheckout[];
   upcomingCheckoutReturns: UpcomingCheckoutReturn[];
   recentActivities: RecentActivity[];
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   loading: boolean;
   userId?: string;
   userName?: string;

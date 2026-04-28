@@ -770,10 +770,11 @@ export class DashboardService {
         const maxUsers = maxRow?.count ?? 0;
 
         // 스토리지 사용률: pg_database_size / ConfigService 경유 capacity.
-        // env.validation.ts에서 z.coerce.number().positive().default(100 GiB) 적용.
-        const storageCapacityBytes =
-          this.configService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') ??
-          100 * 1024 * 1024 * 1024;
+        // env.validation.ts에서 z.coerce.number().positive().default(100 GiB) 적용 → ConfigService.get는
+        // 항상 number 반환. 별도 fallback 불필요(SSOT 분산 방지).
+        const storageCapacityBytes = this.configService.get<number>(
+          'DASHBOARD_STORAGE_CAPACITY_BYTES'
+        ) as number;
         const sizeRow = await this.db.execute<{ size: string }>(
           sql`SELECT pg_database_size(current_database()) AS size`
         );
@@ -818,7 +819,9 @@ export class DashboardService {
           measuredAt: now.toISOString(),
         };
       },
-      CACHE_TTL.SHORT
+      // MEDIUM(5min) — frontend MONITORING refetchInterval과 일치하여 매 폴링이 fresh DB hit가 되지 않도록.
+      // SHORT(30s)였을 때 frontend 5min 폴링이 매번 cache miss → pg_database_size + audit COUNT 재실행.
+      CACHE_TTL.MEDIUM
     );
   }
 

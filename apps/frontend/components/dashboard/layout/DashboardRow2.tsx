@@ -4,13 +4,13 @@ import { KpiStatusGrid } from '@/components/dashboard/KpiStatusGrid';
 import { DASHBOARD_ENTRANCE as E } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
-import type { DashboardScope } from '@/lib/utils/dashboard-scope';
+import type { DashboardScopeContext } from '@/lib/utils/dashboard-scope';
 
 export interface DashboardRow2Props {
   summary: DashboardSummary;
   equipmentStatusStats: Record<string, number>;
   loading: boolean;
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
 }
 
 export function DashboardRow2({

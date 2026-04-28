@@ -3,7 +3,7 @@
  *
  * 리디자인(99a7c59b) 이후 대시보드 팀 필터링은 URL ?teamId= 파라미터 기반.
  * - 탭 UI 제거됨 → Command Center 단일 뷰
- * - resolveDashboardScope()가 URL teamId → API scope 결정
+ * - resolveDashboardScopeContext()가 URL teamId → API scope 결정
  * - KPI 카드 링크에 teamId 자동 포함 (buildScopedEquipmentUrl)
  *
  * 역할별 동작:

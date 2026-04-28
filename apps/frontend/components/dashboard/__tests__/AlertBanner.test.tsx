@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen } from '@testing-library/react';
 import { AlertBanner } from '../AlertBanner';
-import type { DashboardScope } from '@/lib/utils/dashboard-scope';
+import type { DashboardScopeContext } from '@/lib/utils/dashboard-scope';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ jest.mock('@/lib/utils/dashboard-scope', () => ({
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const SCOPE: DashboardScope = {
+const SCOPE: DashboardScopeContext = {
   teamId: undefined,
   displayMode: 'all',
   site: undefined,

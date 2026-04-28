@@ -14,12 +14,12 @@ import {
 import { DDayTag } from '@/components/dashboard/atoms/DDayTag';
 import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { buildScopedUrl, type DashboardScope } from '@/lib/utils/dashboard-scope';
+import { buildScopedUrl, type DashboardScopeContext } from '@/lib/utils/dashboard-scope';
 
 interface CalibrationDdayListProps {
   overdueCalibrations: OverdueCalibration[];
   upcomingCalibrations: UpcomingCalibration[];
-  scope: DashboardScope;
+  scope: DashboardScopeContext;
   loading?: boolean;
   className?: string;
 }

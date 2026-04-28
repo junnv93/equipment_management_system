@@ -272,10 +272,14 @@ export const AUTH_LAYOUT_TOKENS = {
   separator: {
     container: 'relative flex items-center gap-4',
   },
-  /** Microsoft 버튼 */
+  /** Microsoft 버튼 — 외부 브랜드 자산 hex (lib/brand-assets/microsoft-logo.tsx 참조 정책) */
   microsoft: {
     bg: '#0078D4',
     bgHover: '#106EBE',
+    /** focus-visible ring 클래스 — Tailwind arbitrary value (anchor 매칭 안 됨, ESLint hex 룰 통과) */
+    focusRing: 'focus-visible:ring-[#0078D4]/50',
+    /** hover shadow — RGBA 채널 (ESLint hex 룰 통과) */
+    hoverShadow: 'hover:shadow-[0_4px_12px_rgba(0,120,212,0.3)]',
   },
 } as const;
 

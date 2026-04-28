@@ -392,6 +392,7 @@ grep -rn "\.slice(0,\s*[2-9][^0-9]\|\.slice(0,\s*[3-9][0-9]" \
 | 27  | SelectItem value 속성 enum SSOT    | PASS/FAIL | 도메인 리터럴 인라인 value 위치 |
 | 28  | href 인라인 도메인 경로            | PASS/FAIL | FRONTEND_ROUTES 미경유 위치 |
 | 29  | 백엔드 시간 윈도우 상수 로컬 선언  | PASS/WARN | `*_WINDOW_MS` 로컬 const 위치 (tech-debt 여부 포함) |
+| 30  | 외부 브랜드 자산 `lib/brand-assets/` 분리 강제 | PASS/FAIL | 컴포넌트 내 외부 브랜드 SVG hex 컬러 인라인 위치 |
 ```
 
 ### Step 24: Design Token Layer 3 arbitrary 픽셀 타이포 탐지 (2026-04-21 추가)
@@ -566,6 +567,68 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 - `href="/"` (홈 루트), `href="/login"`, `href="/handover"` — 단일 depth 또는 인증 전용 경로는 `FRONTEND_ROUTES` 미등록 허용.
 - 동적 빌더 함수 (`FRONTEND_ROUTES.EQUIPMENT.DETAIL(id)`) 결과 인라인 저장 후 전달 — 허용.
 
+### Step 30: 외부 브랜드 자산 `lib/brand-assets/` 모듈 분리 강제 (2026-04-28 추가)
+
+Microsoft, Google, Naver 등 외부 회사의 브랜드 자산(로고 SVG 등)은 반드시 `apps/frontend/lib/brand-assets/` 디렉토리에 독립 파일로 분리해야 한다. 컴포넌트 내부에 인라인 SVG로 직접 삽입하면 (1) 라이선스 코멘트 누락 (2) ESLint HEX_COLOR_RULE이 외부 브랜드 hex 컬러를 잘못 차단 (3) 브랜드 가이드라인 준수 여부 추적 불가.
+
+**규칙:**
+- 외부 브랜드 로고/아이콘 SVG는 `apps/frontend/lib/brand-assets/<vendor>-logo.tsx` 형태로 분리
+- 파일 상단에 공식 브랜드 라이선스 참조 주석 필수 (`// 참조: https://...`)
+- `apps/frontend/eslint.config.mjs`의 HEX_COLOR_RULE ignores에 `**/lib/brand-assets/**` 등록
+- 컴포넌트는 분리된 파일에서 import해서 사용
+
+**탐지 — 컴포넌트 내 외부 브랜드 SVG 인라인 삽입:**
+```bash
+# SVG viewBox + 외부 브랜드 hex 컬러 조합이 있는 컴포넌트 파일 탐지
+# brand-assets 디렉토리 제외
+grep -rn "viewBox.*fill.*#[0-9a-fA-F]\|fill=\"#[0-9a-fA-F]" \
+  apps/frontend/components/ \
+  --include="*.tsx" \
+  | grep -v "lib/brand-assets\|node_modules\|// "
+
+# brand-assets 외 위치의 외부 브랜드 로고 패턴
+grep -rn "MicrosoftLogo\|GoogleLogo\|NaverLogo" \
+  apps/frontend/components/ \
+  --include="*.tsx" \
+  | grep -v "import\|node_modules"
+# 기대: import 라인만 (컴포넌트 정의는 lib/brand-assets 내부)
+```
+
+**PASS:** 컴포넌트 파일에 외부 브랜드 hex 컬러가 직접 사용된 SVG 0건.
+**FAIL:** 컴포넌트 내 `fill="#f25022"` 등 외부 브랜드 hex → `lib/brand-assets/` 분리 필요.
+
+**올바른 패턴:**
+```typescript
+// ✅ lib/brand-assets/microsoft-logo.tsx — 분리된 파일
+/**
+ * Microsoft 4-square logo (Official brand asset)
+ * 참조: https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general
+ */
+export function MicrosoftLogo({ className }: MicrosoftLogoProps) {
+  return <svg ... fill="#f25022" ... />; // 브랜드 hex 허용 (ESLint ignores 등록됨)
+}
+
+// ✅ AzureAdButton.tsx — 컴포넌트에서 import
+import { MicrosoftLogo } from '@/lib/brand-assets/microsoft-logo';
+<MicrosoftLogo className="size-4" />
+
+// ❌ AzureAdButton.tsx 인라인 — 라이선스 누락 + ESLint 충돌
+<svg viewBox="0 0 21 21" fill="#f25022">...</svg>
+```
+
+**예외:**
+- `apps/frontend/lib/brand-assets/` 내부 파일 — SSOT 정의 위치이므로 제외
+- 프로젝트 자체 디자인 아이콘 (도메인 UI 아이콘) — 외부 브랜드 아닌 경우
+
+**관련 파일:**
+- `apps/frontend/lib/brand-assets/microsoft-logo.tsx` — 모범 사례 (2026-04-28)
+- `apps/frontend/components/auth/AzureAdButton.tsx` — 소비처 (import 패턴)
+- `apps/frontend/eslint.config.mjs` — `**/lib/brand-assets/**` HEX_COLOR_RULE ignores 등록
+
+**발생 이력 (2026-04-28)**: `AzureAdButton.tsx` 내 Microsoft 4-square 로고 SVG를 `lib/brand-assets/microsoft-logo.tsx`로 분리. ESLint HEX_COLOR_RULE이 외부 브랜드 컬러를 차단하는 문제 해결 + 라이선스 주석 추가.
+
+---
+
 ### Step 29: 백엔드 시간 윈도우 상수 `shared-constants` SSOT 승격 요구 (2026-04-27 추가)
 
 서비스 메서드 내부에서만 사용되는 시간 윈도우 상수(`*_WINDOW_MS`, `*_TTL_MS` 등)가
@@ -633,3 +696,33 @@ message: 'Approval can only be revoked within 5 minutes of approval',
 6. **`primitives.ts`의 JSDoc 주석** — easing SSOT 정의 문서 면제
 7. **`.limit(1)` 단일 레코드 조회** — 페이지네이션이 아닌 단건 조회 면제
 8. **백엔드 서비스 서버사이드 역할 레이블** — `audit.service.ts formatLogMessage()` 및 `reports.service.ts` 보고서 행 생성에서 `AuditLogUserRole` 특수값(`'system'`, `'unknown'`)에 대한 `'시스템'`, `'알 수 없음'` 한국어 레이블 직접 사용은 허용. 백엔드 텍스트 생성 전용이며 브라우저 i18n 시스템을 경유할 수 없음. `USER_ROLE_LABELS`가 커버하지 않는 특수값이므로 인라인 처리가 정상 설계.
+
+---
+
+### Step 30: Atom 내부 사이즈 클래스 토큰 경유 — `h-3 w-3` 등 raw Tailwind 사이즈 직접 사용 금지 (2026-04-28 추가, REVIEW_RESULT.md §4.1 후속)
+
+`components/ui/` 아래의 design-token 결합 atom(예: `inline-action-button.tsx`)이 내부에서 raw Tailwind 사이즈 클래스(`h-3 w-3` / `h-3.5 w-3.5` 등)를 직접 사용하면, 디자인 토큰 변경 시 atom이 자동으로 따라가지 않는다. 모든 사이즈는 해당 토큰 그룹의 필드(예: `SURFACE_INLINE_ACTION_TOKENS.iconSize`)를 경유해야 한다.
+
+```bash
+# atom 내부 raw 사이즈 클래스 탐지 (FAIL 패턴)
+grep -nE 'className.*"h-[0-9]|w-[0-9]' \
+  apps/frontend/components/ui/inline-action-button.tsx
+# 기대: 모든 매치가 토큰 변수(SURFACE_INLINE_ACTION_TOKENS.*) 합성 결과여야 함
+
+# 토큰 정의 확인
+grep -n "iconSize" apps/frontend/lib/design-tokens/semantic.ts
+# 기대: 1건 이상 (atom이 의존하는 토큰)
+```
+
+**PASS:**
+- atom의 모든 사이즈 클래스가 토큰 그룹 필드 경유 (`SURFACE_INLINE_ACTION_TOKENS.iconSize`)
+- raw `h-N w-N` className 직접 합성 0건
+
+**FAIL:**
+- atom 내부 `<Loader2 className="h-3.5 w-3.5"/>` 같은 raw 사이즈 — 토큰 변경 시 회귀 위험
+
+**관련 파일:**
+- `apps/frontend/components/ui/inline-action-button.tsx`
+- `apps/frontend/lib/design-tokens/semantic.ts` — `SURFACE_INLINE_ACTION_TOKENS.iconSize`
+
+**발생 이력 (2026-04-28)**: Phase 3 P0-3에서 NextStepPanel floating/inline의 Loader2 `h-3.5 w-3.5` 토큰 미경유 잔존 — review-architecture FAIL-3로 검출 후 atom 통합으로 해소.

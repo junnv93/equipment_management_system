@@ -816,3 +816,45 @@ type Props = { mode: 'controlled'; data: Data } | { mode: 'uncontrolled' };
 
 **관련 파일**:
 - `apps/frontend/components/dashboard/cards/CheckoutCard.tsx` — dual-mode 정의
+
+---
+
+### Step 25: `React.memo` atom 부모는 함수 prop을 `useCallback`으로 안정화 (2026-04-28 추가, REVIEW_RESULT.md §4.1 후속)
+
+`React.memo`로 wrap된 atom(예: `InlineActionButton`)을 호출하는 부모 컴포넌트가 `onClick` 등 함수 prop을 *inline arrow* `(e) => {...}`로 전달하면 매 렌더 새 함수 → memo가 매번 props mismatch 판정 → 리렌더 발생 → memo overhead만 누적 (가짜 최적화).
+
+부모가 atom의 memo 효과를 얻으려면:
+1. **함수 prop은 `useCallback`** — 의존성 배열 명시
+2. **객체 prop은 `useMemo`** (atom이 객체 prop을 받는 경우)
+3. **부모 자체가 React.memo** — 그래야 부모 위 변경이 자식까지 캐스케이드되지 않음
+
+```bash
+# memo'd atom 호출처에 inline arrow 탐지 (FAIL 패턴)
+# 1) memo'd atom 목록
+grep -rn "React.memo(\|export const \w\+ = React\.memo" apps/frontend/components/ui
+# 2) 각 atom 호출처에서 inline arrow onClick 찾기
+grep -rnE "<InlineActionButton[^>]*onClick=\\{?\\(e?\\) ?=>" apps/frontend/components apps/frontend/app
+# 기대: 0 hits (모두 useCallback 변수 또는 hoisted 함수 사용)
+
+# useCallback 사용 확인
+grep -n "useCallback" apps/frontend/components/shared/NextStepPanel.tsx
+# 기대: ≥ 1건 (handler가 stabilize됨)
+```
+
+**PASS:**
+- memo'd atom의 함수 prop은 모두 `useCallback` 결과 또는 module-level 함수
+- inline arrow 0건
+
+**FAIL:**
+- `<InlineActionButton onClick={() => doSomething()}>` 같은 inline arrow — 매 렌더 새 함수, memo 무력화
+- `<InlineActionButton onClick={(e) => { e.stopPropagation(); ... }}>` — 동일 문제
+- atom prop 객체 전달 시 inline literal `{...}` — referential identity 매 렌더 변경
+
+**예외:**
+- 부모가 자체 memo 안 된 경우, atom memo 자체의 효과는 *제한적*. 그래도 useCallback은 추가하는 게 좋다 (부모가 추후 memo로 wrap될 때 자동으로 효과 발생).
+
+**관련 파일:**
+- `apps/frontend/components/ui/inline-action-button.tsx` — `React.memo` atom
+- `apps/frontend/components/shared/NextStepPanel.tsx` — `handlePanelClick` / `handleCompactClick` `useCallback` 모범 사례
+
+**발생 이력 (2026-04-28)**: Phase 3 P0-3 마이그레이션 1차에서 NextStepPanel가 atom에 inline arrow `onClick={(e) => {...}}` 전달 → memo 무력화 → review-architecture/verify-implementation FAIL. useCallback로 stabilize 후 PASS.

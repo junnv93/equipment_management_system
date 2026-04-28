@@ -41,9 +41,11 @@ export function AzureAdButton({
       disabled={disabled || isPending}
       className={cn(
         'w-full h-12 text-base font-medium text-white',
-        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0078D4]/50',
+        'focus-visible:ring-2 focus-visible:ring-offset-2',
+        AUTH_LAYOUT_TOKENS.microsoft.focusRing,
         TRANSITION_PRESETS.instantBgShadowTransform,
-        'hover:scale-[1.01] hover:shadow-[0_4px_12px_rgba(0,120,212,0.3)] active:scale-[0.99]',
+        'hover:scale-[1.01] active:scale-[0.99]',
+        AUTH_LAYOUT_TOKENS.microsoft.hoverShadow,
         className
       )}
       style={{

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Bell, CheckCircle2, Loader2, MoreHorizontal } from 'lucide-react';
+import { Bell, CheckCircle2, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type {
@@ -141,8 +141,10 @@ export function NextStepPanel({
 
   // ── Stable click handlers — InlineActionButton의 React.memo 효과 보존 ────────
   // 호출처가 inline arrow를 전달하면 매 렌더 새 함수 → memo 무력화. useCallback으로 stabilize.
+  // panel:  hero / floating / inline 공용 (행 외부 컨텍스트 — stopPropagation 불필요)
+  // compact: 행 Zone 4 (행 클릭과 충돌 회피 — stopPropagation 필수)
   const nextAction = descriptor.nextAction;
-  const handleHeroClick = useCallback(() => {
+  const handlePanelClick = useCallback(() => {
     markDone();
     if (nextAction) onActionClick?.(nextAction);
   }, [markDone, nextAction, onActionClick]);
@@ -254,7 +256,7 @@ export function NextStepPanel({
             loadingLabel={loadingLabel}
             aria-label={stepLabel}
             className={cn('mt-4', pulseClass)}
-            onClick={handleHeroClick}
+            onClick={handlePanelClick}
             data-testid={testId ? `${testId}-action` : undefined}
           >
             {t(`action.${descriptor.labelKey}`)}
@@ -410,21 +412,21 @@ export function NextStepPanel({
       </p>
 
       {canAct ? (
-        <button
-          type="button"
-          className={cn(NEXT_STEP_PANEL_TOKENS.actionButton.primary, 'mt-2', pulseClass)}
+        <InlineActionButton
+          variant={resolveInlineActionVariant({
+            urgency,
+            nextAction: descriptor.nextAction,
+            isMyTurn,
+          })}
+          loading={isPending}
+          loadingLabel={loadingLabel}
           aria-label={stepLabel}
-          disabled={isPending}
-          aria-disabled={isPending}
-          onClick={() => {
-            markDone();
-            onActionClick?.(descriptor.nextAction!);
-          }}
+          className={cn('mt-2', pulseClass)}
+          onClick={handlePanelClick}
           data-testid={testId ? `${testId}-action` : undefined}
         >
-          {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
           {t(`action.${descriptor.labelKey}`)}
-        </button>
+        </InlineActionButton>
       ) : (
         <p className={cn(NEXT_STEP_PANEL_TOKENS.labels.actor, 'mt-2 not-italic')}>
           {descriptor.nextActor !== 'none' && t(`actor.${descriptor.nextActor}`)}

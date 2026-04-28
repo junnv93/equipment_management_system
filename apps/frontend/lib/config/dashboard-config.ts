@@ -255,7 +255,7 @@ export interface ControlCenterConfig {
    * true  → session.user.teamId를 API와 링크에 자동 포함 (시험실무자, 기술책임자)
    * false → 팀 필터 없음, 사이트 전체 조회 (품질책임자, 시험소장, 시스템관리자)
    *
-   * 이 플래그가 결정 주체 — resolveDashboardScope()는 이것을 그대로 따름.
+   * 이 플래그가 결정 주체 — resolveDashboardScopeContext()는 이것을 그대로 따름.
    */
   requiresTeamScope: boolean;
   /**

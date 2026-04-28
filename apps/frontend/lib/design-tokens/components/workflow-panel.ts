@@ -41,19 +41,8 @@ export const WORKFLOW_PANEL_TOKENS = {
   hint: 'text-sm text-muted-foreground leading-relaxed',
   actorLabel: `${MICRO_TYPO.label} text-muted-foreground mt-2`,
 
-  action: {
-    primary: [
-      'mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md',
-      'bg-primary text-primary-foreground hover:bg-primary/90',
-      TRANSITION_PRESETS.fastBgColor,
-      FOCUS_TOKENS.classes.default,
-    ].join(' '),
-    blocked: [
-      'mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md',
-      'bg-muted text-muted-foreground cursor-not-allowed',
-      FOCUS_TOKENS.classes.default,
-    ].join(' '),
-  },
+  // Phase 3 (P0-3, 2026-04-28): `action.primary` / `action.blocked` 토큰 cut.
+  //   콜사이트 0건 dead code였으며 InlineActionButton atom으로 일원화.
 
   blockedReason: 'text-xs text-muted-foreground italic mt-1',
   terminal: 'text-sm text-muted-foreground text-center py-4',
@@ -158,22 +147,8 @@ export const NEXT_STEP_PANEL_TOKENS = {
     critical: `border-l-4 border-l-brand-critical bg-brand-critical/5 ${ANIMATION_PRESETS.pulseSoft}`,
   },
 
-  actionButton: {
-    primary: [
-      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium',
-      'bg-brand-info text-white hover:bg-brand-info/90',
-      TRANSITION_PRESETS.fastBg,
-      FOCUS_TOKENS.classes.brand,
-    ].join(' '),
-    secondary: [
-      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm',
-      'border border-border hover:bg-muted',
-      TRANSITION_PRESETS.fastBg,
-      FOCUS_TOKENS.classes.default,
-    ].join(' '),
-    ghost:
-      'inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground',
-  },
+  // Phase 3 (P0-3, 2026-04-28): `actionButton.{primary,secondary,ghost}` cut.
+  //   floating/inline 마이그레이션 완료 후 콜사이트 0건. InlineActionButton 일원화.
 
   terminal: {
     badge:

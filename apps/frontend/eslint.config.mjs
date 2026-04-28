@@ -182,13 +182,14 @@ const eslintConfig = [
   // 스코프 1: design-tokens 내부 — 토큰 간 상호 deprecated 참조 방지
   // 스코프 2: checkout 컴포넌트/페이지 — deprecated checkout 토큰 소비처 방지
   // index.ts 제외: 배럴 파일은 하위호환 유지를 위해 의도적으로 deprecated 심볼을 re-export
+  // globstar 패턴: lint-staged root cwd + 일반 lint apps/frontend cwd 양쪽 호환 (F1 동일 정책).
   {
     files: [
-      'lib/design-tokens/**/*.ts',
-      'components/checkouts/**/*.{ts,tsx}',
-      'app/(dashboard)/checkouts/**/*.{ts,tsx}',
+      '**/lib/design-tokens/**/*.ts',
+      '**/components/checkouts/**/*.{ts,tsx}',
+      '**/app/(dashboard)/checkouts/**/*.{ts,tsx}',
     ],
-    ignores: ['lib/design-tokens/index.ts'],
+    ignores: ['**/lib/design-tokens/index.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

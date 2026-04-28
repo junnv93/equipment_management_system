@@ -6,6 +6,13 @@ import { Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SURFACE_INLINE_ACTION_TOKENS, type SurfaceInlineActionVariant } from '@/lib/design-tokens';
 
+// ── 미러 타입 동기 — 구조적 type checking이 호출처에서 자동 enforce ──
+// `InlineActionVariantKey`(shared-constants, backend도 import 가능한 string literal mirror)와
+// `SurfaceInlineActionVariant`(design-tokens, frontend 토큰 어휘)는 동일 union이어야 한다.
+// 호출처 NextStepPanel에서 `variant={resolveInlineActionVariant(...)}` 형태로 미러 타입의
+// 결과를 atom의 `variant: SurfaceInlineActionVariant` prop에 전달 — 두 타입이 구조적으로
+// 호환되지 않으면 TypeScript가 호출처에서 즉시 빌드 에러. 별도 bridge assertion 불필요.
+
 /**
  * Inline Action Button — 행 단위 soft-tint 액션 atom (REVIEW_RESULT.md §4.1, 와이어프레임 04).
  *

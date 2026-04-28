@@ -391,9 +391,12 @@ export class DashboardController {
 
   /**
    * §3.9 — 시스템관리자 시스템 상태 메트릭.
+   *
+   * Permission: `VIEW_SYSTEM_SETTINGS` — pg_database_size + audit_logs 시스템 메트릭이므로
+   * VIEW_EQUIPMENT(장비 도메인)보다 의미론적으로 정확. SYSTEM_ADMIN role 가드와 이중 방어.
    */
   @Get('system-health')
-  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @ApiOperation({
     summary: '시스템 상태 메트릭 (시스템관리자 전용)',
     description:

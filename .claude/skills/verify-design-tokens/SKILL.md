@@ -1737,6 +1737,9 @@ grep -rn "WORKFLOW_PANEL_TOKENS\.variant\.\(compact\|hero\)\.actionButton" \
 4. `label-ko` (한국어 줄바꿈), `label-mono` (영문 truncate) utility 양쪽 정의
 5. stepper 단계명/FSM 액션 라벨/상태 배지에 `label-ko` 적용, 관리번호(SUW-E0007 등)에 `label-mono` 적용
 6. **(Phase 3)** `bg/text/border-surface-inline-action-*` 직접 className 호출은 `inline-action-button.tsx`(atom 정의)와 atom 테스트 외 0건 — atom 경유 강제
+7. **(Phase 3 — 2026-04-28 보강)** `SURFACE_INLINE_ACTION_TOKENS.iconSize` 토큰 3점 동기화:
+   - `semantic.ts` 정의 + atom 내부 소비(`<Loader2 className={cn(SURFACE_INLINE_ACTION_TOKENS.iconSize, 'animate-spin')}>`) + atom 외 직접 raw 사이즈(h-3 w-3 등) 0건
+   - 검증: `grep -nE 'className.*"h-[0-9]|w-[0-9]"' apps/frontend/components/ui/inline-action-button.tsx` → 0 hits
 
 **FAIL:**
 - :root 또는 .dark 16개 누락 → 다크 모드 색상 불일치

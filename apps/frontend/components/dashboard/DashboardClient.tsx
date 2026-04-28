@@ -38,7 +38,7 @@ import type {
   MyQuickSummary,
 } from '@/lib/api/dashboard-api';
 import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
-import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
+import { resolveDashboardScopeContext } from '@/lib/utils/dashboard-scope';
 import { getPageContainerClasses, DASHBOARD_MOTION } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -86,7 +86,7 @@ function DashboardClientComponent({
 
   const scope = useMemo(
     () =>
-      resolveDashboardScope(
+      resolveDashboardScopeContext(
         controlCenter.kpiDisplay,
         controlCenter.requiresTeamScope,
         session?.user?.site,

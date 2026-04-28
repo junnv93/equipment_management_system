@@ -5,7 +5,7 @@
  *   대시보드 KPI 숫자와 클릭 후 장비 목록이 서로 다른 범위를 참조하는 일관성 결함.
  *
  * 설계 원칙:
- *   - DashboardScope 단일 객체가 API 호출, queryKey, 링크 URL 세 곳의 범위를 결정
+ *   - DashboardScopeContext 단일 객체가 API 호출, queryKey, 링크 URL 세 곳의 범위를 결정
  *   - 범위 결정 로직(requiresTeamScope)은 dashboard-config.ts(SSOT)가 담당
  *   - 이 파일은 config를 그대로 따르는 파생자(derive) 역할만 수행
  *
@@ -26,7 +26,7 @@ import type { ControlCenterConfig } from '@/lib/config/dashboard-config';
  *
  * API queryKey, queryFn, 장비 목록 링크 URL이 모두 이 객체에서 파생된다.
  */
-export interface DashboardScope {
+export interface DashboardScopeContext {
   /**
    * 해결된 팀 필터 ID.
    * undefined = 팀 필터 없음 (site 전체, 백엔드 JWT site 격리 적용)
@@ -54,13 +54,13 @@ export interface DashboardScope {
  *   2. requiresTeamScope === true → session.user.teamId 자동 적용
  *   3. requiresTeamScope === false → teamId 없음 (사이트 전체)
  */
-export function resolveDashboardScope(
+export function resolveDashboardScopeContext(
   kpiDisplay: ControlCenterConfig['kpiDisplay'],
   requiresTeamScope: boolean,
   userSite: string | undefined,
   userTeamId: string | undefined,
   urlTeamId?: string | null
-): DashboardScope {
+): DashboardScopeContext {
   // 1. URL override — 명시적 팀 선택이 항상 우선
   if (urlTeamId) {
     return { teamId: urlTeamId, site: userSite, displayMode: kpiDisplay };
@@ -83,7 +83,7 @@ export function resolveDashboardScope(
  * - scope.teamId / scope.site: 자동 포함 (falsy 시 생략)
  */
 export function buildScopedUrl(
-  scope: DashboardScope,
+  scope: DashboardScopeContext,
   basePath: string,
   extraParams?: Record<string, string>
 ): string {
@@ -106,7 +106,7 @@ export function buildScopedUrl(
  * - teamId/site: buildScopedUrl()에 위임
  */
 export function buildScopedEquipmentUrl(
-  scope: DashboardScope,
+  scope: DashboardScopeContext,
   basePath: string,
   status?: EquipmentStatus | string
 ): string {

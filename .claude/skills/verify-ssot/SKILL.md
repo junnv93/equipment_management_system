@@ -1001,3 +1001,155 @@ grep -rEn "session\??\.user\??\.role" \
 - `apps/frontend/components/dashboard/DashboardClient.tsx` — 다중 useQuery enabled 분기
 
 **발생 이력 (2026-04-28)**: dashboard redesign에서 SYSTEM_ADMIN simulateRole 기능 도입. 컴포넌트가 raw role 사용 시 시뮬 깨짐 → SSOT 경유 강제 룰 추가.
+
+### Step 38: BackendService ConfigService SSOT — `process.env` 직접 접근 금지 (2026-04-28 추가)
+
+**규칙**: NestJS 서비스 클래스 내부에서 환경변수를 읽을 때 `process.env.*` 직접 접근 금지.
+반드시 `ConfigService`를 생성자 주입 + `configService.get<T>('KEY')` 경유.
+이를 통해 (1) `apps/backend/src/config/env.validation.ts`의 Zod schema 타입 보장 (2) 단위 테스트 시 ConfigService mock 주입 가능 (3) 런타임 undefined 발생 전 Zod 유효성 검증.
+
+**탐지 — 서비스 클래스 내 process.env 직접 접근:**
+```bash
+# 서비스 파일에서 process.env 직접 접근 (configService 미경유)
+grep -rn "process\.env\." \
+  apps/backend/src/modules --include="*.service.ts" \
+  | grep -v "//\|spec\.\|test\."
+# 기대: 0건 (ConfigService 경유 또는 env.validation.ts Zod 보장)
+```
+
+**PASS:** 모든 서비스 파일에서 `process.env.*` 직접 접근 0건.
+**FAIL:** `process.env.MY_VAR` 직접 사용 발견 → ConfigService 주입 + `env.validation.ts` Zod schema 추가 후 `configService.get<T>('MY_VAR')` 전환.
+
+**올바른 패턴:**
+```typescript
+// ✅ ConfigService 주입 + env.validation.ts Zod schema 등록
+// apps/backend/src/config/env.validation.ts
+const envSchema = z.object({
+  DASHBOARD_STORAGE_CAPACITY_BYTES: z.coerce.number().positive().optional()
+    .default(100 * 1024 * 1024 * 1024),
+});
+
+// service.ts
+constructor(
+  private readonly db: AppDatabase,
+  private readonly configService: ConfigService,
+) {}
+
+const capacityBytes =
+  this.configService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') ??
+  100 * 1024 * 1024 * 1024;
+
+// ❌ 직접 접근 — Zod 우회 + 테스트 불가
+const capacityBytes = Number(process.env.DASHBOARD_STORAGE_CAPACITY_BYTES) || 100 * 1024 * 1024 * 1024;
+```
+
+**예외:**
+- `apps/backend/src/config/env.validation.ts` 자체 — Zod schema 정의 파일
+- `apps/backend/src/main.ts` / `app.module.ts` — 앱 부트스트랩, ConfigModule 설정 전
+- E2E/spec 테스트 파일 — 환경변수 오버라이드가 테스트 목적
+- `process.env.NODE_ENV` — NestJS 내부 표준 관례 (`'test'`/`'production'` 분기); env.validation.ts 등록 불필요
+- `monitoring.service.ts` 내 `process.env.NODE_ENV` — 시스템 모니터링 정보 수집용, ConfigModule 이전 시점 가능
+- `auth.service.ts` 내 `process.env.DEV_*_PASSWORD` — 개발/테스트 전용 패스워드 환경변수; 기존 tech-debt LOW 등재
+
+**관련 파일:**
+- `apps/backend/src/config/env.validation.ts` — Zod 환경변수 schema SSOT
+- `apps/backend/src/modules/dashboard/dashboard.service.ts` — ConfigService 도입 모범 사례 (2026-04-28)
+
+**발생 이력 (2026-04-28)**: `dashboard.service.ts:getSystemHealth()`에서 `Number(process.env.DASHBOARD_STORAGE_CAPACITY_BYTES)` 직접 접근 → ConfigService 주입 + `env.validation.ts` Zod schema(`z.coerce.number().positive().optional().default(100GiB)`) 등록으로 교체.
+
+---
+
+### Step 39: shared-constants const array → `z.enum()` SSOT 패턴 (2026-04-28 추가)
+
+**규칙**: 백엔드 Query DTO에서 enum 값을 Zod로 검증할 때, `z.enum(['me','team','lab','all'])` 인라인 배열 직접 정의 금지.
+반드시 `packages/shared-constants`에 `as const` 배열을 정의하고 `z.enum(MY_CONST_ARRAY)`로 참조해야 한다.
+프론트엔드는 해당 패키지에서 타입만 import (`type MyType = (typeof MY_CONST_ARRAY)[number]`).
+
+**근거**: 인라인 enum 배열은 (1) FE/BE 드리프트 위험 (2) 허용 값 변경 시 두 곳 수정 필요 (3) TypeScript 타입과 Zod 검증이 별도 소스 의존.
+
+**탐지 — z.enum 인라인 배열 직접 정의:**
+```bash
+# DTO 파일에서 z.enum에 인라인 배열 직접 전달 (shared-constants 미경유)
+grep -rn "z\.enum(\['" \
+  apps/backend/src/modules --include="*.dto.ts" \
+  | grep -v "//\|spec\."
+# 기대: 0건 (모두 z.enum(SSOT_CONST_ARRAY) 패턴)
+
+# shared-constants에서 as const 배열 SSOT 정의 확인
+grep -rn "as const$" \
+  packages/shared-constants/src/ --include="*.ts" \
+  | grep -v "//\|node_modules"
+# 결과: DASHBOARD_SCOPES, CHECKOUT_TYPES 등 도메인 enum 배열 목록 확인
+```
+
+**올바른 패턴:**
+```typescript
+// ✅ shared-constants SSOT — packages/shared-constants/src/dashboard-scope.ts
+export const DASHBOARD_SCOPES = ['me', 'team', 'lab', 'all'] as const;
+export type DashboardScope = (typeof DASHBOARD_SCOPES)[number];
+
+// ✅ 백엔드 DTO — z.enum에 SSOT 배열 직접 참조
+import { DASHBOARD_SCOPES } from '@equipment-management/shared-constants';
+const dashboardScopeSchema = z.object({ scope: z.enum(DASHBOARD_SCOPES) });
+
+// ✅ 프론트엔드 — 타입만 import
+import type { DashboardScope } from '@equipment-management/shared-constants';
+
+// ❌ 인라인 배열 — 드리프트 위험
+const schema = z.object({ scope: z.enum(['me', 'team', 'lab', 'all']) });
+```
+
+**PASS:** `z.enum([` 인라인 배열 0건. shared-constants SSOT 배열 경유 확인.
+**FAIL:** 인라인 배열 발견 → shared-constants에 `as const` 배열 이관 + `z.enum(SSOT_ARRAY)` 교체.
+
+**알려진 기존 tech-debt (2026-04-28 기준, 탐지 시 WARN 처리):**
+- `pending-checks-query.dto.ts:8` `z.enum(['lender', 'borrower'])` — CheckoutRole을 shared-constants로 이관 대상
+- `calibration-query.dto.ts:23` `CalibrationDueStatusEnum = z.enum(['overdue', 'upcoming', 'normal'])` — CalibrationDueStatus를 shared-constants로 이관 대상
+
+**예외:**
+- 단일 사용처 enum (`z.enum(['asc', 'desc'])` 정렬 방향) — 도메인 의미 없는 프레젠테이션 값은 로컬 허용
+- `z.enum([z.literal(...)])` 패턴 — Zod union 내부 literal 선언이므로 별도 룰
+
+**관련 파일:**
+- `packages/shared-constants/src/dashboard-scope.ts` — SSOT 패턴 모범 사례 (2026-04-28)
+- `apps/backend/src/modules/dashboard/dto/dashboard-scope.dto.ts` — 소비처 모범 사례
+
+**발생 이력 (2026-04-28)**: `dashboard.controller.ts`의 `getCheckoutsByScope`가 `scope: z.enum(['me','team','lab','all'])` 인라인 정의 → `DASHBOARD_SCOPES as const` 배열을 shared-constants로 이관 + FE `DashboardScope` 타입도 동일 패키지에서 import로 전환. BE+FE 인라인 union 0건 확인.
+
+---
+
+### Step 40: domain enum 분류 매핑은 `as const satisfies Record<EnumType, X>` 강제 — `Set<EnumType>` 약타입 금지 (2026-04-28 추가, REVIEW_RESULT.md §4.1 후속)
+
+domain enum(예: `CheckoutAction`)을 키로 하는 분류 맵은 `as const satisfies Record<EnumType, X>` 패턴 사용 강제. `Set<EnumType>` 또는 `Record<string, X>` 같은 약타입 대체는 enum 확장 시 silent fail을 만든다.
+
+**왜 Set보다 Record가 우월한가**:
+- `Set<CheckoutAction>` 패턴: enum에 새 멤버 추가 → Set 갱신 누락이 컴파일러에 보이지 않음 → 런타임에 default fallback (silent fail).
+- `Record<CheckoutAction, Class> + satisfies`: enum 확장 시 누락 키가 즉시 빌드 에러 — forward-coverage 보장.
+
+```bash
+# domain enum 분류에 ReadonlySet/Set 사용 탐지 (FAIL 패턴)
+grep -rn "ReadonlySet<\(CheckoutAction\|EquipmentStatus\|CheckoutStatus\|UserRole\)>" packages/ apps/
+# 기대: 0 hits (Record로 대체)
+
+# satisfies Record 패턴 사용 확인
+grep -rn "as const satisfies Record<" packages/shared-constants/src
+# 기대: 분류 맵 ≥ 1건 (예: CHECKOUT_ACTION_INLINE_CLASS)
+```
+
+**PASS:**
+- enum × 분류 매핑이 `as const satisfies Record<EnumType, X>` 패턴
+- 새 enum 멤버 추가 시 누락 키가 빌드 에러로 즉시 노출
+
+**FAIL:**
+- `ReadonlySet<EnumType>` / plain `Set<EnumType>`로 분류 — silent fail
+- `Record<string, X>` 약타입 — enum 변경 추적 불가
+
+**예외:**
+- 단순 *멤버십* 체크가 목적이고 분류 의미 없음 (예: "이 액션은 admin only?" boolean) → Set 허용
+
+**한계:** TypeScript `satisfies Record<>`는 *추가* 누락은 잡지만 enum *제거* 시 dead key는 경고하지 않음. dead key 정리는 review-architecture에서 발견 시 별도 cleanup PR.
+
+**관련 파일:**
+- `packages/shared-constants/src/checkout-thresholds.ts` — `CHECKOUT_ACTION_INLINE_CLASS` 모범 사례
+
+**발생 이력 (2026-04-28)**: Phase 3 P0-3에서 `OK_INLINE_ACTIONS`/`APPROVE_INLINE_ACTIONS` `ReadonlySet<CheckoutAction>` 패턴 → `CHECKOUT_ACTION_INLINE_CLASS as const satisfies Record<CheckoutAction, InlineActionClass>`로 전환. 14개 액션 분류 enum 확장 시 컴파일러가 강제.
