@@ -44,8 +44,9 @@
   - `tabIndex={0}`
   - `aria-label={t(card.labelKey)}`
   - `aria-pressed={isActive}` (필터 활성 여부)
-  - `aria-current={isHero ? 'true' : undefined}` (현재 강조 카드 식별)
   - `onKeyDown` Enter/Space 처리
+- Hero 강조 신호: alertRing(시각) + label "기한 초과"(텍스트) + aria-pressed(SR 토글 상태)
+  ※ `aria-current`는 ARIA 표준에서 navigation 위치 식별 속성. 토글 강조 카드에 부착하면 일부 SR(VoiceOver)에서 이중 발화 — 시각 강조는 alertRing이 충분하므로 미사용
 - alertRing 클래스가 색상 외에 위계 신호(ring weight)도 포함 — 색상 단독 의존 회피
 
 ### M-7. 도메인 토큰화 — alertRing 토큰 적용 (checkouts 도메인 한정)

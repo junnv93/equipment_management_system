@@ -134,7 +134,8 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
  * - hero 선택 → selectHeroVariant SSOT 헬퍼 (priority 모델, 향후 확장 가능)
  * - grid className → getStatsGridClass(hasHero) 토큰
  * - hero wrapper → CHECKOUT_STATS_VARIANTS.hero.containerInGrid + alertRing
- * - aria-current 추가 (SR에 hero 강조 카드 식별)
+ * - hero 강조 신호: alertRing(시각) + label "기한 초과"(텍스트) + aria-pressed(SR 토글 상태)
+ *   — aria-current는 ARIA 표준 의미(navigation 위치)와 어긋나므로 미사용
  */
 export default function OutboundCheckoutsTab({
   teamId,
@@ -290,7 +291,6 @@ export default function OutboundCheckoutsTab({
               role="button"
               tabIndex={0}
               aria-pressed={isActive}
-              aria-current={isHero ? 'true' : undefined}
               aria-label={t(card.labelKey)}
               onClick={onActivate}
               onKeyDown={(e) => {
