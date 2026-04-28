@@ -160,9 +160,9 @@ const StepNode = memo(function StepNode({
         {t(labelKey as never)}
       </span>
 
-      {/* 메타 (타임스탬프 + 액터 / 예정일 / 대기) */}
+      {/* 메타 (타임스탬프 + 액터 / 예정일 / 대기). text-xs-tight = 11px (MICRO_TYPO SSOT) */}
       {metaLine ? (
-        <span className="text-[10.5px] leading-snug text-muted-foreground mt-1 font-mono">
+        <span className="text-xs-tight leading-snug text-muted-foreground mt-1 font-mono">
           {metaLine}
         </span>
       ) : null}

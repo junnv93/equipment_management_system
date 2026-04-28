@@ -1,15 +1,13 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useSession } from 'next-auth/react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   type CheckoutStatus,
   type CheckoutPurpose,
   type NextStepDescriptor,
-  type UserRole,
   CheckoutStatusValues as CSVal,
 } from '@equipment-management/schemas';
 
@@ -36,20 +34,20 @@ interface CheckoutLike {
 
 interface ProgressFlowSectionProps {
   readonly checkout: CheckoutLike;
-  /** server-resolved NextStepDescriptor — currentStepIndex/availableToCurrentUser 권위 */
+  /**
+   * server-resolved NextStepDescriptor — currentStepIndex / availableToCurrentUser 권위.
+   * "내 차례" 판정은 본 descriptor.availableToCurrentUser 단일 출처. viewer role을 별도 prop으로 받지 않음
+   * (받아도 신청자 role과 의미가 다르고, descriptor가 이미 server-side 권한 평가 결과를 포함).
+   */
   readonly descriptor: NextStepDescriptor;
-  /** 현재 사용자 role — descriptor.availableToCurrentUser 와 함께 isYourTurn 결정 */
-  readonly role?: UserRole;
 }
 
 // ============================================================================
 // 컴포넌트
 // ============================================================================
 
-function ProgressFlowSection({ checkout, descriptor, role }: ProgressFlowSectionProps) {
+function ProgressFlowSection({ checkout, descriptor }: ProgressFlowSectionProps) {
   const t = useTranslations('checkouts');
-  const { data: session } = useSession();
-  const sessionUserId = session?.user?.id;
 
   // late 판정 — 서버 descriptor.urgency 가 'critical' 이거나 status === overdue
   const isOverdue =
@@ -59,9 +57,10 @@ function ProgressFlowSection({ checkout, descriptor, role }: ProgressFlowSection
     status: checkout.status,
     purpose: checkout.purpose,
     descriptor,
-    requester: checkout.user
-      ? { name: checkout.user.name, role: role ?? null }
-      : null,
+    // requester.role 은 의미상 신청자 본인의 역할(시험실무자/시험책임자 등)이어야 함.
+    // 현재 viewer role(`role` prop)은 신청자 role과 다를 수 있으므로 매핑하지 않음.
+    // 정확한 신청자 역할은 Phase 11 audit log endpoint(`auditEvents[].actorRole`)에서 인입.
+    requester: checkout.user ? { name: checkout.user.name, role: null } : null,
     requestedAt: checkout.createdAt,
     checkoutDate: checkout.checkoutDate,
     expectedReturnDate: checkout.expectedReturnDate,
@@ -71,14 +70,8 @@ function ProgressFlowSection({ checkout, descriptor, role }: ProgressFlowSection
     isOverdue,
   });
 
-  // current/late 단계 인덱스 — 서버 권위 사용 (1-based → 0-based)
-  const currentIndex0 = useMemo(
-    () => Math.max(0, descriptor.currentStepIndex - 1),
-    [descriptor.currentStepIndex]
-  );
-
-  // sessionUserId 는 향후 ApprovalLineList(Phase 9) 와 함께 isYourTurn 정밀화에 활용 — 현재는 useQuery 안정화 핵 fallback
-  void sessionUserId;
+  // current/late 단계 인덱스 — 서버 권위 사용 (1-based → 0-based). 단순 산술이라 메모 불필요.
+  const currentIndex0 = Math.max(0, descriptor.currentStepIndex - 1);
 
   return (
     <Card>

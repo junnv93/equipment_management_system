@@ -8,6 +8,7 @@ import {
   type NextStepDescriptor,
   type ProgressStepDescriptor,
   CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
   deriveProgressStepState,
 } from '@equipment-management/schemas';
 
@@ -36,7 +37,7 @@ export interface CheckoutAuditEventSlice {
 interface UseCheckoutProgressStepsInput {
   /** 현재 status (FSM authoritative) */
   readonly status: CheckoutStatus;
-  /** 반출 유형 — purpose === 'rental' 시 8-step, 그 외 5-step */
+  /** 반출 유형 — purpose === CPVal.RENTAL 시 8-step, 그 외 5-step */
   readonly purpose: CheckoutPurpose;
   /** 서버 응답의 NextStepDescriptor — currentStepIndex 정확도 위해 권장 */
   readonly descriptor?: NextStepDescriptor | null;
@@ -128,7 +129,7 @@ export function useCheckoutProgressSteps(
 ): ProgressStepDescriptor[] {
   return useMemo(() => {
     const steps =
-      input.purpose === 'rental' ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
+      input.purpose === CPVal.RENTAL ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
 
     // descriptor.currentStepIndex 는 1-based — UI 인덱스(0-based)로 정규화
     // descriptor 부재 시 status 의 step list 위치를 fallback
