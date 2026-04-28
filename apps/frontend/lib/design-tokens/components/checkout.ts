@@ -27,7 +27,6 @@ import {
   getSemanticContainerTextClasses,
 } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
-import { getDdayBadgeClasses as _getDdayBadgeClasses } from './dday-colors';
 import {
   CheckoutStatusValues,
   type CheckoutStatus,
@@ -652,14 +651,6 @@ export const CHECKOUT_DDAY_TOKENS = {
 } as const;
 
 export type DdayVariant = keyof typeof CHECKOUT_DDAY_TOKENS;
-
-/**
- * @deprecated dday-colors.ts의 getDdayBadgeClasses를 사용하세요 — 6단계 색온도 SSOT.
- * 하위 호환성 유지용 wrapper (신규 코드에서 직접 호출 금지).
- */
-export function getDdayClasses(daysRemaining: number): string {
-  return _getDdayBadgeClasses(daysRemaining);
-}
 
 /**
  * D-day 텍스트 생성

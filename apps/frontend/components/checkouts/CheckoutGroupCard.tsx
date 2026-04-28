@@ -40,7 +40,7 @@ import {
   CHECKOUT_INTERACTION_TOKENS,
   CHECKOUT_YOUR_TURN_BADGE_TOKENS,
   getPurposeBarClass,
-  getDdayBadgeClasses,
+  getCheckoutDday4TierClasses,
   formatDday,
   FONT,
   getManagementNumberClasses,
@@ -324,7 +324,11 @@ function CheckoutGroupCard({
                 {isRentalGroup && rentalStatus && rentalDescriptor && (
                   <div className="flex items-center gap-2 flex-wrap">
                     <CheckoutPhaseIndicator descriptor={rentalDescriptor} variant="compact" />
-                    <NextStepPanel variant="compact" descriptor={rentalDescriptor} />
+                    <NextStepPanel
+                      variant="compact"
+                      descriptor={rentalDescriptor}
+                      currentUserRole={role}
+                    />
                   </div>
                 )}
               </button>
@@ -443,7 +447,7 @@ function CheckoutGroupCard({
                         />
                         {daysRemaining !== null && (
                           <span
-                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getDdayBadgeClasses(daysRemaining)}`}
+                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getCheckoutDday4TierClasses(daysRemaining)}`}
                           >
                             {formatDday(daysRemaining)}
                           </span>

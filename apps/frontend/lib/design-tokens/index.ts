@@ -42,6 +42,7 @@ export {
 
 export {
   BRAND_COLORS_HEX,
+  BRAND_THEME_META_COLORS,
   FONT,
   BRAND_LAYOUT,
   getBrandCardClasses,
@@ -464,7 +465,6 @@ export {
   // v2 redesign tokens
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_DDAY_TOKENS,
-  getDdayClasses,
   formatDday,
   CHECKOUT_ALERT_TOKENS,
   CHECKOUT_INBOUND_SECTION_TOKENS,
@@ -495,17 +495,6 @@ export {
   getCheckoutDday4Tier,
   getCheckoutDday4TierClasses,
   getCheckoutDday4TierIconKey,
-} from './components/dday-colors';
-
-// D-day 6단계 색온도 (legacy — @deprecated, 다음 마이너에서 제거)
-export {
-  DDAY_TIERS,
-  DDAY_TIER_CLASSES,
-  DDAY_TIER_ICON_KEY,
-  getDdayTier,
-  getDdayBadgeClasses,
-  getDdayIconKey,
-  type DdayTier,
 } from './components/dday-colors';
 
 // D-day 4단계 의미론 톤 (대시보드 개선안 v1 — overdue/urgent/soon/normal)

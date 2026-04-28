@@ -2,8 +2,12 @@
 
 import { AlertTriangle, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getDdayBadgeClasses, getDdayTier, getDdayIconKey } from '@/lib/design-tokens';
-import { formatDday } from '@/lib/design-tokens';
+import {
+  DDAY_4TIER_ICON_KEY,
+  formatDday,
+  getCheckoutDday4Tier,
+  getCheckoutDday4TierClasses,
+} from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
 interface DdayBadgeProps {
@@ -21,9 +25,9 @@ export function DdayBadge({ daysRemaining, variant = 'compact', className }: Dda
 
   if (daysRemaining === null) return null;
 
-  const tier = getDdayTier(daysRemaining);
-  const iconKey = getDdayIconKey(tier);
-  const badgeClasses = getDdayBadgeClasses(daysRemaining);
+  const tier = getCheckoutDday4Tier(daysRemaining);
+  const iconKey = DDAY_4TIER_ICON_KEY[tier];
+  const badgeClasses = getCheckoutDday4TierClasses(daysRemaining);
   const label = formatDday(daysRemaining);
 
   return (
