@@ -286,6 +286,13 @@
     0% { transform: translateX(-100%); }
     100% { transform: translateX(400%); }
   }
+  /* Reduced-motion fallback for L3 GlobalProgressBar — opacity pulse 대체.
+   * `prefers-reduced-motion: reduce` 시 translate 대신 opacity 변화만 발생.
+   * @see lib/design-tokens/feedback-pending.ts PENDING_ANIMATIONS.progressPulse */
+  @keyframes progress-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
   @keyframes approval-exit-success {
     0% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }
     40% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }

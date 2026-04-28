@@ -1,12 +1,25 @@
-import { cn } from '@/lib/utils';
+/**
+ * BC re-export — 기존 호출자(`from '@/components/ui/skeleton'`)는 동작 100% 보존.
+ *
+ * 신규 코드는 부품집 활용을 권장:
+ *   import { SkeletonText, SkeletonCard, SkeletonTableRow, SkeletonHero, SkeletonForm }
+ *     from '@/components/ui/skeleton';
+ *
+ * @see components/ui/skeleton/index.ts
+ */
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  SkeletonTableRow,
+  SkeletonHero,
+  SkeletonForm,
+} from './skeleton/index';
 
-function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn('motion-safe:animate-pulse rounded-md bg-primary/10', className)}
-      {...props}
-    />
-  );
-}
-
-export { Skeleton };
+export type {
+  SkeletonTextProps,
+  SkeletonCardProps,
+  SkeletonTableRowProps,
+  SkeletonHeroProps,
+  SkeletonFormProps,
+} from './skeleton/index';

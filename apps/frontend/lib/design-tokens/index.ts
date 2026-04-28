@@ -147,6 +147,23 @@ export {
 } from './visual-feedback';
 
 // ============================================================================
+// Pending Feedback System (Click → Render 신호 — visual-feedback와 scope 분리)
+// ============================================================================
+// `visual-feedback.ts` = 비즈니스 긴급도(count/time/status → urgency)
+// `feedback-pending.ts` = 시간 축에서의 "현재 처리 중" 표현(navigation/action/skeleton)
+// 두 시스템은 명명/역할 모두 분리 — 호출자는 상황에 맞는 한쪽만 선택.
+
+export {
+  PENDING_DIMENSIONS,
+  SPINNER_SIZES,
+  PENDING_COLORS,
+  PENDING_Z_INDEX,
+  PENDING_ANIMATIONS,
+  REDUCED_MOTION_POLICY,
+  type SpinnerSize,
+} from './feedback-pending';
+
+// ============================================================================
 // Layer 2: Form Field (폼 필드 공통 SSOT — 전 도메인 재사용)
 // ============================================================================
 
