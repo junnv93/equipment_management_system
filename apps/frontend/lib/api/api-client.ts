@@ -58,18 +58,31 @@ import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 // 개발 모드에서 잘못된 API 경로 감지
 const validateApiPath = (path: string): void => {
   if (process.env.NODE_ENV === 'development') {
+    if (!path) return;
+
+    // 절대 URL 사용 금지 — Same-Origin Reverse-Proxy 모델(ADR-0006) 위반
+    // 호출 코드가 backend port를 직접 가리키면 NextAuth/CORS/CSP 정합성이 깨진다.
+    if (/^https?:\/\//.test(path)) {
+      console.error(
+        `[API Client Error] 절대 URL이 path로 전달되었습니다: "${path}"\n` +
+          'Same-Origin 모델에서는 상대 경로만 사용해야 합니다. ' +
+          'server-side에서 backend를 직접 호출해야 한다면 INTERNAL_BACKEND_URL과 fetch을 사용하세요.'
+      );
+      return;
+    }
+
     // /api로 시작하지 않는 경우 경고
-    if (path && !path.startsWith('/api/') && !path.startsWith('/api?')) {
+    if (!path.startsWith('/api/') && !path.startsWith('/api?')) {
       console.warn(
         `[API Client Warning] API 경로가 '/api/'로 시작하지 않습니다: "${path}"\n` +
           `올바른 형식: '/api/endpoint' (예: '/api/equipment', '/api/calibration')`
       );
     }
-    // /api/api 중복 감지
-    if (path && path.includes('/api/api')) {
+    // /api/api 중복 감지 — baseURL에 절대 URL + /api가 중복되는 패턴
+    if (path.includes('/api/api')) {
       console.error(
         `[API Client Error] API 경로에 '/api/api' 중복이 감지되었습니다: "${path}"\n` +
-          `환경변수 NEXT_PUBLIC_API_URL에 '/api'가 포함되어 있지 않은지 확인하세요.`
+          `NEXT_PUBLIC_API_URL이 빈 값(또는 상대경로)인지 확인하세요. 절대 URL은 ADR-0006 위반입니다.`
       );
     }
   }

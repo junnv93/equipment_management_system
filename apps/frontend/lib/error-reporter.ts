@@ -17,7 +17,8 @@
  * ```
  */
 
-import { API_BASE_URL } from '@/lib/config/api-config';
+// Same-Origin 모델(ADR-0006): 클라이언트는 상대 경로로 호출.
+// 본 함수는 production 분기에서 항상 client에서 실행되므로 baseURL import 불필요.
 
 export type ErrorSeverity = 'error' | 'warning' | 'info';
 
@@ -104,7 +105,8 @@ export function reportError(error: Error, context?: ErrorContext): void {
     timestamp: new Date().toISOString(),
   });
 
-  const backendUrl = `${API_BASE_URL}/api/monitoring/client-errors`;
+  // Same-Origin 모델: 상대 경로 → 호출자 origin(브라우저 location) 기준으로 해석
+  const backendUrl = '/api/monitoring/client-errors';
 
   if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
     navigator.sendBeacon(backendUrl, new Blob([payload], { type: 'application/json' }));

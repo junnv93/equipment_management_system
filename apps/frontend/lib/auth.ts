@@ -63,8 +63,13 @@ import {
   REFRESH_BUFFER_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '@equipment-management/shared-constants';
-import { API_BASE_URL } from './config/api-config';
+import { INTERNAL_BACKEND_URL } from './config/api-config';
 import { getInternalApiKeyHeaders } from './config/internal-headers';
+
+/**
+ * NextAuth 콜백은 server-side에서만 실행되므로 backend를 직접 호출 (Same-Origin 모델 ADR-0006).
+ * 클라이언트 same-origin 상대 경로 모델과 분리된 server-only 진입점을 명시한다.
+ */
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -111,7 +116,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
   const refreshPromise = (async (): Promise<JWT> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      const response = await fetch(`${INTERNAL_BACKEND_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getInternalApiKeyHeaders() },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -191,7 +196,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
               try {
                 // 백엔드 인증 API 호출
-                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                const response = await fetch(`${INTERNAL_BACKEND_URL}/api/auth/login`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -291,7 +296,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               params.set('role', role as string);
             }
 
-            const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
+            const url = `${INTERNAL_BACKEND_URL}/api/auth/test-login?${params.toString()}`;
             console.log('[Test Auth] Calling backend test-login:', url);
 
             // 백엔드 테스트 로그인 엔드포인트 호출
@@ -301,7 +306,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               const text = await response.text();
               console.error('[Test Auth] Backend test-login failed:', response.status, text);
               console.error('[Test Auth] URL:', url);
-              console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
+              console.error('[Test Auth] INTERNAL_BACKEND_URL:', INTERNAL_BACKEND_URL);
               return null;
             }
 
@@ -326,7 +331,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             };
           } catch (error) {
             console.error('[Test Auth] Error during test login:', error);
-            console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
+            console.error('[Test Auth] INTERNAL_BACKEND_URL:', INTERNAL_BACKEND_URL);
             throw new ServerUnavailableError();
           }
         },
@@ -393,7 +398,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           return true;
         }
 
-        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USERS.SYNC}`, {
+        const response = await fetch(`${INTERNAL_BACKEND_URL}${API_ENDPOINTS.USERS.SYNC}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

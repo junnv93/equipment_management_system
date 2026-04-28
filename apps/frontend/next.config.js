@@ -59,15 +59,43 @@ const nextConfig = {
   },
 
   async rewrites() {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Same-Origin Reverse-Proxy (ADR-0006)
+    //
+    // dev에서 frontend(:3000)가 받은 `/api/*` 요청을 backend(:3001)로 프록시한다.
+    // production은 nginx가 동일 분기를 처리하므로 본 rewrites는 dev/standalone build에서만 유효.
+    //
+    // 분기 규칙:
+    //   - `/api/auth/(csrf|session|providers|signin|signout|callback|error|verify-request)`
+    //     → frontend NextAuth route handler(`app/api/auth/[...nextauth]/route.ts`)가 처리
+    //   - 그 외 `/api/*` (backend auth 경로 `/api/auth/login`, `/refresh`, `/logout`,
+    //     `/profile`, `/test-login` 등 포함) → backend로 forward
+    //
+    // ⚠️ SSOT 동기화 의무: 아래 NEXTAUTH_HANDLER_REGEX_GROUP은
+    //   `packages/shared-constants/src/api-routing.ts`의 `NEXTAUTH_HANDLER_PATHS`와
+    //   동일해야 한다. verify-routing-origin 스킬이 두 파일을 grep으로 검증한다.
+    //
+    // ⚠️ path-to-regexp(Next.js 16) 제약:
+    //   capturing group은 source에서 금지 → 반드시 non-capturing group `(?:...)` 사용.
+    //   이 제약을 어기면 dev 부팅 시 `Capturing groups are not allowed` 에러로 즉시 실패.
+    // ─────────────────────────────────────────────────────────────────────────
+    const NEXTAUTH_HANDLER_REGEX_GROUP =
+      '(?:csrf|session|providers|signin|signout|callback|error|verify-request)';
+
+    // server-side에서 backend를 직접 호출 — NEXT_PUBLIC_API_URL은 client용이므로 사용 금지
+    const internalBackendUrl = process.env.INTERNAL_BACKEND_URL || 'http://localhost:3001';
+
     return {
       // beforeFiles: Next.js 파일 라우팅 전에 실행
       // afterFiles: Next.js 파일 라우팅 후, 동적 라우트 전에 실행
       // fallback: Next.js 파일 라우팅과 동적 라우트 후에 실행 (404 전)
       fallback: [
         {
-          // NextAuth 경로를 제외한 나머지 API만 백엔드로 프록시
-          source: '/api/:path((?!auth).*)',
-          destination: (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/:path*',
+          // path-to-regexp lookahead로 NextAuth 핸들러 경로만 제외하고 fallback에서 처리.
+          // path 변수는 capture한 segment 전체 (예: `equipment`, `auth/login`).
+          source: `/api/:path((?!auth/${NEXTAUTH_HANDLER_REGEX_GROUP}).*)`,
+          // destination에 `/api` prefix 보존 — backend는 setGlobalPrefix('api') 사용
+          destination: `${internalBackendUrl}/api/:path*`,
         },
       ],
     };

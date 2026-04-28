@@ -70,7 +70,8 @@ function buildCspHeader(nonce: string, isDev: boolean, reportEndpointPath: strin
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `media-src 'self' blob: mediastream:`, // QR scanner MediaStream + blob PDF/QR
-    isDev ? `connect-src 'self' ws: wss: http://localhost:*` : `connect-src 'self'`,
+    // Same-Origin 모델(ADR-0006): connect-src 'self'면 충분. dev는 HMR/Turbopack ws만 추가 허용.
+    isDev ? `connect-src 'self' ws: wss:` : `connect-src 'self'`,
     `worker-src 'self' blob:`, // PWA SW + future pdf.js worker
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
@@ -165,15 +166,26 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * Proxy 적용 경로
+ * Proxy 적용 경로 — Same-Origin Reverse-Proxy 모델 (ADR-0006)
  *
  * /(dashboard)/* 하위 모든 라우트를 보호.
- * 제외: /login, /api/*, /_next/*, /favicon.ico 등 (matcher에 포함되지 않음)
+ *
+ * 명시적 제외 카테고리:
+ *  - 인증 페이지: `login`
+ *  - 모든 API 라우트: `api/*` (NextAuth + backend forward + Next.js route handlers)
+ *  - Next.js 내부 자산: `_next/static`, `_next/image`, `_next/data`
+ *  - 정적 자산: `images`, `icons`, `favicon.ico`
+ *  - PWA 메타: `manifest.json`, `manifest.webmanifest`, `sw.js`, `workbox-*`
+ *  - 크롤러/표준 자산: `robots.txt`, `sitemap.xml`, `.well-known/*`
+ *  - PWA 오프라인 fallback: `~offline`
+ *
+ * 이 자산들이 인증 가드에 걸리면 PWA install banner, 브라우저 manifest 파싱, 검색엔진 indexing이 모두 실패한다.
+ * 특히 `manifest.json`이 인증 redirect되면 `frontend:dev: GET /login?callbackUrl=%2Fmanifest.json` 로그가 발생.
  */
 export const config = {
   matcher: [
     // (dashboard) 그룹의 모든 라우트
     // Next.js route group은 URL에 나타나지 않으므로 실제 경로 패턴 매칭
-    '/((?!login|api|_next/static|_next/image|images|favicon.ico).*)',
+    '/((?!login|api|_next/static|_next/image|_next/data|images|icons|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|sw\\.js|workbox-.*|robots\\.txt|sitemap\\.xml|~offline|\\.well-known).*)',
   ],
 };

@@ -85,6 +85,22 @@ export {
 // API 엔드포인트
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
 
+// API 라우팅 SSOT — Same-Origin Reverse-Proxy 모델 (ADR-0006)
+// next.config.js rewrites + nginx 분기 + proxy.ts matcher + auth.ts 호출이 모두 같은 SSOT 사용
+export {
+  RELATIVE_API_BASE,
+  NEXTAUTH_PATH_PREFIX,
+  BACKEND_AUTH_PATHS,
+  type BackendAuthPath,
+  NEXTAUTH_HANDLER_PATHS,
+  type NextAuthHandlerPath,
+  NEXTAUTH_HANDLER_PATH_REGEX,
+  BACKEND_AUTH_PATH_REGEX,
+  isNextAuthHandlerPath,
+  isBackendAuthPath,
+  API_ROUTING_ENV,
+} from './api-routing';
+
 // Dashboard scope (BE Zod enum + FE 타입 SSOT)
 export { DASHBOARD_SCOPES, type DashboardScope } from './dashboard-scope';
 

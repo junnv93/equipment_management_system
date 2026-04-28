@@ -18,6 +18,7 @@ import {
 } from '@equipment-management/shared-constants';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
 import { IdleTimeoutDialog } from '@/components/auth/IdleTimeoutDialog';
+import { LegacyServiceWorkerCleanup } from '@/components/pwa/LegacyServiceWorkerCleanup';
 
 // 탭 복귀 후 쿼리 갱신 임계값: 5분 이상 자리를 비웠으면 세션+쿼리 함께 갱신
 const TAB_AWAY_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
@@ -212,6 +213,8 @@ export function Providers({ children }: ProvidersProps) {
     <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={false}>
       <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
+          {/* dev에서 stale production SW가 fetch을 가로채는 것 차단 (ADR-0006) */}
+          <LegacyServiceWorkerCleanup />
           {/* ✅ Best Practice: SessionProvider 내부에서 useSession() 사용 */}
           <AuthenticatedClientProvider>
             <AuthSync>{children}</AuthSync>

@@ -4,6 +4,8 @@
 
 이 문서는 증상 → 원인 → 복구 → 예방 4단계로 구성됩니다. 단편 fix가 아닌 워크플로 차원의 SSOT입니다.
 
+> **2026-04-28 업데이트 (ADR-0006 정착)**: backend 콘솔의 `Cannot GET /api/auth/csrf|session|providers|signin|signout|callback` 404 증상은 ADR-0006 (Same-Origin Reverse-Proxy 모델)로 종결되었습니다. 본 증상이 재발하면 라우팅 모델 회귀이며, [docs/references/api-routing-architecture.md §6 트러블슈팅](api-routing-architecture.md#6-트러블슈팅)을 우선 점검하세요.
+
 ---
 
 ## 1. 증상 (Symptoms)

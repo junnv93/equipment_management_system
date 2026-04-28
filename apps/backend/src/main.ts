@@ -93,7 +93,16 @@ async function bootstrap(): Promise<void> {
   // 글로벌 예외 필터 등록
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // CORS 설정
+  // CORS 설정 — Same-Origin Reverse-Proxy 모델 (ADR-0006)
+  //
+  // Frontend(:3000) → Next.js rewrites/nginx → Backend(:3001)는 same-origin이므로
+  // production/lan 환경에서는 cross-origin 호출이 발생하지 않는다. 따라서 production은
+  // 명시적으로 FRONTEND_URL만 허용하고 그 외는 거부 (보안 안티-디폴트).
+  //
+  // dev에서는 다음 시나리오를 위해 localhost:3000 origin을 허용:
+  //   - 개발자가 frontend 없이 backend만 띄우고 curl/Swagger UI에서 직접 호출
+  //   - E2E 테스트 일부가 backend를 직접 호출
+  //   - Storybook 등 별도 dev 서버가 backend를 사용
   const nodeEnv = configService.get('NODE_ENV');
   const frontendUrl = configService.get('FRONTEND_URL');
 
@@ -102,7 +111,9 @@ async function bootstrap(): Promise<void> {
   }
 
   app.enableCors({
-    origin: frontendUrl || 'http://localhost:3000',
+    // production: FRONTEND_URL만 허용 (same-origin이라 일반 흐름은 안 거치지만 fallback 안전망)
+    // dev: localhost:3000 명시 + FRONTEND_URL override 허용
+    origin: frontendUrl || (nodeEnv === 'development' ? 'http://localhost:3000' : false),
     credentials: true,
     // 파일 다운로드 시 클라이언트(axios)가 서버 SSOT 파일명/타입을 읽을 수 있도록 노출.
     exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
