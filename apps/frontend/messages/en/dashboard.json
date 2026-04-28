@@ -324,10 +324,15 @@
   },
   "teamDistribution": {
     "title": "Equipment by Team",
+    "subtitleAll": "Highlighting teams below 60% utilization target",
     "total": "Total {total} units",
     "count": "{count} units",
     "empty": "No team data",
-    "ariaLabel": "Equipment distribution by team bar chart"
+    "ariaLabel": "Equipment distribution by team bar chart",
+    "ariaUtilization": ", utilization {pct}%",
+    "showMore": "+{count} more teams",
+    "showLess": "Collapse",
+    "legendUnderUtilized": "Under-utilized teams (<50%)"
   },
   "kpi": {
     "total": "Total Equipment",
@@ -336,6 +341,7 @@
     "heroBarLabel": "{percent}% in use",
     "utilization": "Utilization",
     "utilizationSub": "{count} available",
+    "utilizationTarget": "Target {pct}%",
     "activeCheckouts": "Checked Out",
     "activeCheckoutsSub": "{percent}% of total",
     "nonConforming": "Non-Conforming",
@@ -371,15 +377,100 @@
   "aggregate": {
     "error": "Some dashboard data could not be loaded."
   },
+  "cardError": {
+    "title": "Could not load data",
+    "description": "Please try again in a moment.",
+    "retry": "Retry"
+  },
+  "offline": {
+    "label": "Offline",
+    "description": "Showing data from the last sync."
+  },
+  "simulation": {
+    "label": "Simulating {role} view",
+    "exit": "Exit"
+  },
+  "checkoutCard": {
+    "title": {
+      "me": "My Checkouts",
+      "team": "Team Checkouts",
+      "lab": "Lab Checkouts",
+      "all": "All Checkouts"
+    },
+    "sub": {
+      "me": "Equipment I checked out",
+      "team": "Equipment my team checked out",
+      "lab": "Across the lab",
+      "all": "Across the company"
+    },
+    "tab": {
+      "upcoming": "Due soon",
+      "overdue": "Overdue"
+    },
+    "activeBadge": "Active {count}",
+    "viewAll": "View all →",
+    "upcomingEmptyTitle": "No upcoming returns",
+    "upcomingEmptyDescription": "No scheduled returns at this time.",
+    "overdueEmptyTitle": "No overdue checkouts",
+    "overdueEmptyDescription": "All checkouts are progressing normally.",
+    "pendingRequestsLabel": "Pending requests",
+    "countSuffix": "{count}"
+  },
+  "priorityRow": {
+    "defaultCta": "Review",
+    "fallbackCta": "View",
+    "ariaLabelWithCount": "{name} {count} pending, {action}",
+    "ariaLabelWithoutCount": "{name}, {action}"
+  },
+  "skeleton": {
+    "checkoutCard": "Loading checkout overview…",
+    "pendingApproval": "Loading pending approvals…",
+    "reviewPendingHero": "Loading review pending summary…",
+    "myQuickSummary": "Loading your summary…",
+    "systemHealth": "Loading system health…",
+    "ddayList": "Loading calibration D-day list…",
+    "myActivity": "Loading recent activity…",
+    "recentActivities": "Loading recent activities…",
+    "teamDistribution": "Loading team equipment distribution…",
+    "miniCalendar": "Loading this month's schedule…"
+  },
+  "reviewPendingHero": {
+    "title": "Pending Review",
+    "subtitle": "Items needing review",
+    "iconLabel": "Calibration plan review",
+    "pendingCountSuffix": "pending",
+    "avgWaitDays": "Avg. wait {days}d",
+    "maxWaitDays": "Max {days}d",
+    "ctaStart": "Start review",
+    "thisWeekProcessed": "Processed this week",
+    "processingRate": "Processing rate (7d)"
+  },
+  "myQuickSummary": {
+    "title": "My Quick Summary",
+    "subtitle": "This week",
+    "pendingCheckoutRequests": "Pending checkout requests",
+    "upcomingCalibrations": "Upcoming calibrations",
+    "nonconformanceItems": "Non-conformance items"
+  },
+  "ddayTag": {
+    "ariaOverdue": "{days} days overdue",
+    "ariaToday": "Due today",
+    "ariaRemaining": "{days} days remaining"
+  },
   "systemHealth": {
     "title": "System Health",
+    "subtitle": "Live",
     "ariaLabel": "System status summary",
-    "totalEquipment": "Total Equipment",
-    "activeCheckouts": "Active Checkouts",
-    "calibrationOverdue": "Calibration Overdue",
-    "nonConforming": "Non-Conforming",
-    "recentActivity": "Activity (7 days)",
-    "healthy": "Healthy",
-    "issues": "Issues Found"
+    "activeUsers": "Active users",
+    "dbResponseMs": "DB response time",
+    "storage": "Storage",
+    "queue": "Queue depth",
+    "unitMs": "ms",
+    "unitPct": "%",
+    "errorsLast24h": "Errors (24h)",
+    "errorsValue": "{count}",
+    "statusHealthy": "Healthy",
+    "statusDegraded": "Degraded",
+    "statusDown": "Down"
   }
 }

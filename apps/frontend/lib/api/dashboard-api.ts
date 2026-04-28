@@ -14,6 +14,11 @@ export type EquipmentByTeam = {
   id: string;
   name: string;
   count: number;
+  /**
+   * 가동률 % (0-100) — 대시보드 개선안 §3.6 강조 색상용.
+   * 백엔드 미제공 시 undefined → 막대 강조 색상 비활성 (기본 색상 유지).
+   */
+  utilizationPct?: number;
 };
 
 export type OverdueCalibration = {
@@ -98,6 +103,61 @@ export interface RecentActivity {
 
 // UserRole은 @equipment-management/schemas에서 import (SSOT)
 export type { UserRole };
+
+/**
+ * 시스템 상태 메트릭 (시스템관리자 전용, 명세서 §3.9 + §A.7).
+ *
+ * 백엔드 `GET /api/dashboard/system-health` 응답 스키마.
+ * `overallStatus`는 backend에서 4개 메트릭의 임계값을 종합 평가.
+ */
+export interface SystemHealthMetrics {
+  overallStatus: 'healthy' | 'degraded' | 'down';
+  activeUsers: number;
+  maxUsers: number;
+  dbResponseMs: number;
+  storagePct: number;
+  queueSize: number;
+  errorCount24h: number;
+  /** 마지막 측정 시각 (ISO). 클라이언트 stale 판단용. */
+  measuredAt?: string;
+}
+
+/** §A.7 — 반출 현황 카드 항목. */
+export interface DashboardCheckoutScopeItem {
+  id: string;
+  checkoutItemId: string;
+  equipmentName: string;
+  managementNumber?: string;
+  expectedReturnDate: string;
+  daysUntilDue: number;
+}
+
+/** §A.7 — 반출 현황 응답 (scope 통합). */
+export interface DashboardCheckoutsScope {
+  pendingReturns: DashboardCheckoutScopeItem[];
+  overdueCount: number;
+  /** scope=me 한정. */
+  pendingRequests?: number;
+}
+
+export type DashboardCheckoutScope = 'me' | 'team' | 'lab' | 'all';
+
+/** §4.3 — 검토 대기 hero 응답. */
+export interface QualityReviewPending {
+  pendingCount: number;
+  avgWaitDays: number;
+  maxWaitDays: number;
+  thisWeekProcessed: number;
+  thisWeekTotal: number;
+  processingRate: number;
+}
+
+/** §A.4 — 시험실무자 빠른 요약 응답. */
+export interface MyQuickSummary {
+  pendingCheckoutRequests: number;
+  upcomingCalibrations?: { count: number; nearestDays: number };
+  nonconformanceItems: number;
+}
 
 /**
  * 대시보드 전체 집계 응답 타입
@@ -222,6 +282,32 @@ class DashboardApi {
     } catch {
       return [];
     }
+  }
+
+  // ========================================================================
+  // 대시보드 개선안 v1 — 신규 엔드포인트 (§3.9, §4.3, §A.4, §A.7)
+  // ========================================================================
+
+  async getCheckoutsByScope(scope: DashboardCheckoutScope): Promise<DashboardCheckoutsScope> {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.CHECKOUTS, {
+      params: { scope },
+    });
+    return transformSingleResponse<DashboardCheckoutsScope>(response);
+  }
+
+  async getSystemHealth(): Promise<SystemHealthMetrics> {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SYSTEM_HEALTH);
+    return transformSingleResponse<SystemHealthMetrics>(response);
+  }
+
+  async getQualityReviewPending(): Promise<QualityReviewPending> {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.QUALITY_REVIEW_PENDING);
+    return transformSingleResponse<QualityReviewPending>(response);
+  }
+
+  async getMyQuickSummary(): Promise<MyQuickSummary> {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.ME_QUICK_SUMMARY);
+    return transformSingleResponse<MyQuickSummary>(response);
   }
 }
 

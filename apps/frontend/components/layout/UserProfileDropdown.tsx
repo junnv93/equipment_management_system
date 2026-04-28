@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   getHeaderSizeClasses,
   HEADER_INTERACTIVE_STYLES,
@@ -83,35 +84,56 @@ export function UserProfileDropdown() {
     await logout();
   };
 
+  // 명세서 §A.1.1 — 사용자 chip truncate + Tooltip overflow 보호.
+  // 표시 우선순위: displayName > email > role. Tooltip은 항상 full text 노출.
+  const displayName = user.name || t('layout.user');
+  const tooltipText = user.email
+    ? `${displayName} (${user.email})`
+    : `${displayName} · ${roleDisplayName}`;
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className={cn(
-            'flex items-center gap-2 px-2',
-            HEADER_INTERACTIVE_STYLES.hover,
-            HEADER_INTERACTIVE_STYLES.focus,
-            HEADER_INTERACTIVE_STYLES.transition
-          )}
-          aria-label={t('layout.userMenu')}
-        >
-          <Avatar
-            className={cn(
-              'border-2 border-ul-midnight/20 dark:border-white/20',
-              getHeaderSizeClasses('avatar')
-            )}
-          >
-            <AvatarFallback className={`${getSemanticSolidBgClasses('info')} text-xs font-medium`}>
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden sm:block text-sm font-medium truncate max-w-[120px]">
-            {user.name || t('layout.user')}
-          </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
+      <TooltipProvider delayDuration={400}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  'flex items-center gap-2 px-2',
+                  HEADER_INTERACTIVE_STYLES.hover,
+                  HEADER_INTERACTIVE_STYLES.focus,
+                  HEADER_INTERACTIVE_STYLES.transition
+                )}
+                aria-label={t('layout.userMenu')}
+              >
+                <Avatar
+                  className={cn(
+                    'border-2 border-ul-midnight/20 dark:border-white/20',
+                    getHeaderSizeClasses('avatar')
+                  )}
+                >
+                  <AvatarFallback
+                    className={`${getSemanticSolidBgClasses('info')} text-xs font-medium`}
+                  >
+                    {getInitials(user.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span
+                  className="hidden sm:block text-sm font-medium truncate max-w-[140px] md:max-w-[180px] lg:max-w-[220px]"
+                  title={tooltipText}
+                >
+                  {displayName}
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="end" className="max-w-xs break-words">
+            {tooltipText}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <DropdownMenuContent align="end" className="w-56">
         {/* 사용자 정보 헤더 */}

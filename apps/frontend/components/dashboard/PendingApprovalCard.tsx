@@ -32,6 +32,8 @@ import {
   getCountBasedUrgency,
   getUrgencyFeedbackClasses,
 } from '@/lib/design-tokens';
+import { PriorityRow } from '@/components/dashboard/atoms/PriorityRow';
+import type { PriorityIconTone } from '@/components/dashboard/atoms/PriorityRow';
 import type {
   ApprovalCategoryPriority,
   PendingApprovalLayoutHint,
@@ -46,7 +48,10 @@ import {
   computeApprovalTotal,
   getDashboardApprovalCategories,
 } from '@/lib/utils/approval-count-utils';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  DASHBOARD_CARD_DISPLAY_LIMITS,
+} from '@equipment-management/shared-constants';
 
 /**
  * 모듈 레벨 빈 우선순위 상수 — `priorities = {}` 기본값 대신 사용
@@ -84,6 +89,22 @@ import { TAB_META } from '@/lib/api/approvals-api';
 function getCategoryIcon(category: ApprovalCategory): React.ElementType {
   const iconName = TAB_META[category]?.icon;
   return ICONS[iconName] || Package;
+}
+
+/**
+ * 카테고리 → PriorityRow 아이콘 톤.
+ * 대시보드 개선안 §3.3 priority-list에서 사용.
+ */
+function mapCategoryIconTone(category: ApprovalCategory): PriorityIconTone {
+  // 위험·폐기 류 → 빨강
+  if (category.includes('disposal')) return 'danger';
+  // 반출/반입 → 정보(파랑)
+  if (category === 'incoming' || category === 'outgoing') return 'info';
+  // 부적합 → 주황
+  if (category.includes('nonconform')) return 'warn';
+  // 소프트웨어/검토 류 → 보라
+  if (category.includes('software') || category.includes('validation')) return 'purple';
+  return 'muted';
 }
 
 interface PendingApprovalCardProps {
@@ -230,6 +251,89 @@ export function PendingApprovalCard({
       </div>
     </div>
   );
+
+  // priority-list: 대시보드 개선안 §3.3 — heavy/default/muted variant + 0건 통합 row
+  if (layoutHint === 'priority-list') {
+    // 카테고리 정렬 (count 내림차순)
+    const sortedEntries = dashboardCategories
+      .map((category) => ({
+        category,
+        count: counts?.[category.key] || 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const heavyThreshold = sortedEntries[0]?.count ?? 0;
+    // §A.8.1 — heavy variant는 count ≥ heavyMinCount일 때만 강조 (SSOT).
+    const HEAVY_MIN_COUNT = DASHBOARD_CARD_DISPLAY_LIMITS.approvalHeavyMinCount;
+
+    const visibleRows = sortedEntries.filter((e) => e.count > 0);
+    const zeroEntries = sortedEntries.filter((e) => e.count === 0);
+
+    // 통합 row 표시 조건: 0건 항목 2개 이상
+    const shouldGroupZeros = zeroEntries.length >= 2;
+    const ungroupedZeroEntries = shouldGroupZeros ? [] : zeroEntries;
+
+    return (
+      <div
+        className={cn(
+          className,
+          DASHBOARD_PENDING_APPROVAL_TOKENS.elevation[elevate ? 'raised' : 'default']
+        )}
+        data-testid="pending-approval-card"
+        role="region"
+        aria-labelledby="pending-approval-title"
+        aria-describedby="pending-approval-description"
+      >
+        {cardHeader}
+        <div className="flex flex-col gap-1.5">
+          {visibleRows.map((entry, idx) => {
+            const Icon = getCategoryIcon(entry.category.key);
+            const isHeavy =
+              entry.count === heavyThreshold && entry.count >= HEAVY_MIN_COUNT && idx === 0;
+            return (
+              <PriorityRow
+                key={entry.category.key}
+                icon={<Icon className="h-4 w-4" aria-hidden="true" />}
+                iconTone={mapCategoryIconTone(entry.category.key)}
+                name={entry.category.label}
+                count={entry.count}
+                variant={isHeavy ? 'heavy' : 'default'}
+                href={entry.category.href}
+              />
+            );
+          })}
+          {ungroupedZeroEntries.map((entry) => {
+            const Icon = getCategoryIcon(entry.category.key);
+            return (
+              <PriorityRow
+                key={entry.category.key}
+                icon={<Icon className="h-4 w-4" aria-hidden="true" />}
+                iconTone="muted"
+                name={entry.category.label}
+                count={0}
+                variant="muted"
+                href={entry.category.href}
+              />
+            );
+          })}
+          {shouldGroupZeros && (
+            <PriorityRow
+              icon={<span className="text-muted-foreground">·</span>}
+              iconTone="muted"
+              name={zeroEntries
+                .slice(0, 4)
+                .map((e) => `${e.category.label} 0`)
+                .join(' · ')}
+              count={null}
+              variant="muted"
+              href={`${FRONTEND_ROUTES.ADMIN.APPROVALS}?filter=zero`}
+              ctaLabel={`+${zeroEntries.length}건`}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // single-focus: 1개 카테고리 풀폭 히어로 카드
   if (layoutHint === 'single-focus') {

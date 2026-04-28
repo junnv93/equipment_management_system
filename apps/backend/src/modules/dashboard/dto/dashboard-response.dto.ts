@@ -220,6 +220,87 @@ export class PendingApprovalCountsDto {
  */
 export type EquipmentStatusStatsDto = Record<string, number>;
 
+// ============================================================================
+// 대시보드 개선안 v1 — 신규 응답 DTO
+// ============================================================================
+
+/** §A.7 — 반출 현황 카드 항목 */
+export class CheckoutScopeItemDto {
+  @ApiProperty({ description: 'checkout ID (상세 링크)' }) id: string;
+  @ApiProperty({ description: 'checkout_item ID (행 식별)' }) checkoutItemId: string;
+  @ApiProperty({ description: '장비명' }) equipmentName: string;
+  @ApiProperty({ description: '관리번호', nullable: true }) managementNumber?: string;
+  @ApiProperty({ description: '반납 예정일 ISO' }) expectedReturnDate: string;
+  @ApiProperty({ description: '반납까지 남은 일수 (음수 허용 — 초과)' })
+  daysUntilDue: number;
+}
+
+/**
+ * §A.7 — 반출 현황 응답 (scope 통합).
+ * scope = 'me' | 'team' | 'lab' | 'all' — 권한 가드는 컨트롤러에서.
+ */
+export class DashboardCheckoutsScopeDto {
+  @ApiProperty({ description: '반납 예정 (오늘~30일)', type: () => [CheckoutScopeItemDto] })
+  pendingReturns: CheckoutScopeItemDto[];
+
+  @ApiProperty({ description: '기한 초과 건수' })
+  overdueCount: number;
+
+  @ApiProperty({
+    description: '대기 중인 반출 신청 건수 (scope=me 한정)',
+    required: false,
+    nullable: true,
+  })
+  pendingRequests?: number;
+}
+
+/**
+ * §3.9 — 시스템관리자 시스템 상태 응답.
+ */
+export class SystemHealthMetricsDto {
+  @ApiProperty({ enum: ['healthy', 'degraded', 'down'] as const })
+  overallStatus: 'healthy' | 'degraded' | 'down';
+
+  @ApiProperty() activeUsers: number;
+  @ApiProperty() maxUsers: number;
+  @ApiProperty({ description: 'DB 응답시간 (ms)' }) dbResponseMs: number;
+  @ApiProperty({ description: '스토리지 사용률 (%)' }) storagePct: number;
+  @ApiProperty({ description: '대기 큐 길이' }) queueSize: number;
+  @ApiProperty({ description: '최근 24시간 오류 수' }) errorCount24h: number;
+  @ApiProperty({ description: '측정 시각 ISO' }) measuredAt: string;
+}
+
+/**
+ * §4.3 — 품질책임자 검토 대기 hero 응답.
+ */
+export class QualityReviewPendingDto {
+  @ApiProperty() pendingCount: number;
+  @ApiProperty({ description: '평균 대기 일수' }) avgWaitDays: number;
+  @ApiProperty({ description: '최장 대기 일수' }) maxWaitDays: number;
+  @ApiProperty({ description: '이번 주 처리 완료' }) thisWeekProcessed: number;
+  @ApiProperty({ description: '이번 주 처리 대상 (carryover 포함)' }) thisWeekTotal: number;
+  @ApiProperty({ description: '처리율 % (소수점 반올림). 0건 분모일 때 100.' })
+  processingRate: number;
+}
+
+/**
+ * §A.4 — 시험실무자 빠른 요약 응답.
+ */
+export class MyQuickSummaryDto {
+  @ApiProperty({ description: '내가 신청한 반출 중 대기 상태 수' })
+  pendingCheckoutRequests: number;
+
+  @ApiProperty({
+    description: '교정 등록 임박 (없으면 undefined)',
+    required: false,
+    nullable: true,
+  })
+  upcomingCalibrations?: { count: number; nearestDays: number };
+
+  @ApiProperty({ description: '내가 다뤄야 할 부적합 항목 수' })
+  nonconformanceItems: number;
+}
+
 /**
  * 대시보드 집계 DTO (SSR 단일 요청용)
  *

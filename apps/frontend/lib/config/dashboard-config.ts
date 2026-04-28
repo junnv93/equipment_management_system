@@ -27,16 +27,27 @@ import {
 } from 'lucide-react';
 import type { StatsVariant } from '@/lib/design-tokens';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  UTILIZATION_GAUGE_THRESHOLDS,
+} from '@equipment-management/shared-constants';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import type { ApprovalCategory } from '@equipment-management/shared-constants';
 
 // ─── 임계값 SSOT ────────────────────────────────────────────────
 
-/** 가동률 상태 임계값 (UL-QP-18 기준) + Hysteresis */
+/**
+ * 가동률 상태 임계값 + Hysteresis (UL-QP-18 + 대시보드 개선안 §3.2).
+ *
+ * SSOT: `UTILIZATION_GAUGE_THRESHOLDS` (shared-constants/dashboard-thresholds.ts).
+ * 본 상수는 KPI 카드의 hysteresis 계산을 위한 로컬 alias + HYSTERESIS 값만 추가.
+ *  - HIGH   = ok 임계값 (목표 도달, 게이지 초록)
+ *  - MEDIUM = warn 임계값 (경계, 게이지 주황)
+ *  - HYSTERESIS = 경계값 진동 방지 ±2%p
+ */
 export const UTILIZATION_THRESHOLDS = {
-  HIGH: 70,
-  MEDIUM: 40,
+  HIGH: UTILIZATION_GAUGE_THRESHOLDS.ok,
+  MEDIUM: UTILIZATION_GAUGE_THRESHOLDS.warn,
   HYSTERESIS: 2,
 } as const;
 
@@ -51,9 +62,12 @@ export type ApprovalCategoryPriority = 'hero' | 'default' | 'compact';
 /**
  * 사이드바 위젯 식별자
  *
- * DashboardClient의 SIDEBAR_WIDGET_RENDERERS와 1:1 매핑됨
+ * DashboardClient의 SIDEBAR_WIDGET_RENDERERS와 1:1 매핑됨.
+ *
+ * 'myQuickSummary' (대시보드 개선안 §A.4): 시험실무자 Row4 우측 위젯.
+ *  반출 신청 대기 / 교정 등록 임박 / 부적합 처리를 한 카드에 요약.
  */
-export type SidebarWidget = 'teamDistribution' | 'miniCalendar' | 'systemHealth';
+export type SidebarWidget = 'teamDistribution' | 'miniCalendar' | 'systemHealth' | 'myQuickSummary';
 
 /**
  * 승인 대기 카드 레이아웃 힌트
@@ -61,8 +75,18 @@ export type SidebarWidget = 'teamDistribution' | 'miniCalendar' | 'systemHealth'
  * - 'single-focus': 1개 카테고리 — 풀폭 히어로 카드
  * - 'prioritized-grid': priority 계층화 그리드 (hero/default/compact)
  * - 'grid': 균등 그리드 (기존 동작)
+ * - 'priority-list': 대시보드 개선안 §3.3 — 우선순위 리스트 (heavy/default/muted, 0건 통합)
  */
-export type PendingApprovalLayoutHint = 'single-focus' | 'prioritized-grid' | 'grid';
+export type PendingApprovalLayoutHint =
+  | 'single-focus'
+  | 'prioritized-grid'
+  | 'grid'
+  | 'priority-list'
+  /**
+   * 'review-pending-hero': 대시보드 개선안 §4.3 — 가로형 hero 카드 + CTA + 평균 대기일.
+   * 품질책임자 검토 대기 1건 시 single-focus 대신 ReviewPendingHero로 렌더.
+   */
+  | 'review-pending-hero';
 
 /**
  * Row 3 레이아웃 변형
@@ -76,7 +100,27 @@ export type Row3Layout =
   | 'two-col-left-dominant'
   | 'three-col-action-first'
   | 'single-col-stretch'
-  | 'two-col-balanced';
+  | 'two-col-balanced'
+  /**
+   * 'three-col-system-health': 시스템관리자 Row3 신규 (대시보드 개선안 §3.8)
+   *
+   * [교정 현황 | 시스템 상태 | 전사 반출 현황] — 우측 빈 패널을 SystemHealth로 교체.
+   * sidebarWidgets에서 systemHealth가 빠지고 Row3 가운데로 이동.
+   */
+  | 'three-col-system-health'
+  /**
+   * 'three-col-test-engineer': 시험실무자 Row3 신규 (대시보드 개선안 §4.1)
+   *
+   * [내 교정 예정 1.2fr | 내 반출 현황(CheckoutCard scope=me) 1fr | 내 최근 활동 1fr]
+   * items-stretch.
+   */
+  | 'three-col-test-engineer'
+  /**
+   * 'two-col-review-hero': 품질책임자 Row3 (대시보드 개선안 §4.3)
+   *
+   * [검토 대기 hero(가로형 ReviewPendingHero) 1fr | 교정 현황 1.2fr]
+   */
+  | 'two-col-review-hero';
 
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
@@ -130,9 +174,31 @@ export const DASHBOARD_GRID = {
    * [승인대기 1.4fr | 교정현황 1.4fr | 반출현황 1.2fr]
    * lg: 2-col 중간 단계 → xl: 3-col 전체 펼침
    * quality_manager / technical_manager 전용.
+   *
+   * 대시보드 개선안 §3.7 — items-stretch로 동일 높이 정렬.
    */
   row3ThreeCol:
-    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.4fr_1.4fr_1.2fr] gap-4 items-start',
+    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.4fr_1.4fr_1.2fr] gap-4 items-stretch',
+  /**
+   * Row 3 three-col-system-health 그리드 (시스템관리자, 대시보드 개선안 §3.8)
+   *
+   * [교정 현황 1.2fr | 시스템 상태 1fr | 반출 현황 1fr]
+   */
+  row3ThreeColSysHealth:
+    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr] gap-4 items-stretch',
+  /**
+   * Row 3 three-col-test-engineer 그리드 (시험실무자, 대시보드 개선안 §4.1)
+   *
+   * [내 교정 예정 1.2fr | 내 반출 현황 1fr | 내 최근 활동 1fr]
+   */
+  row3ThreeColTestEngineer:
+    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr] gap-4 items-stretch',
+  /**
+   * Row 3 two-col-review-hero 그리드 (품질책임자, 대시보드 개선안 §4.3)
+   *
+   * [검토 대기 hero 1fr | 교정 현황 1.2fr]
+   */
+  row3TwoColReviewHero: 'grid grid-cols-1 xl:grid-cols-[1fr_1.2fr] gap-4 items-stretch',
   /**
    * 하단 행: 최근활동(2fr) | 사이드바(1fr)
    *
@@ -152,6 +218,12 @@ export const DASHBOARD_GRID = {
   row3SeverityRow: 'flex items-center gap-3 px-3 py-2',
   /** system_admin bottomRow — [1.5fr_1fr] (§04 Warning Gap-02) */
   bottomRowAdmin: 'grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4 items-stretch',
+  /**
+   * test_engineer bottomRow — [MiniCalendar 1.6fr | MyQuickSummary 1fr] (대시보드 개선안 §4.1).
+   * RecentActivities 영역이 없으므로 sidebar 단독 2-col로 구성.
+   */
+  bottomRowTestEngineer:
+    'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1.6fr_1fr] gap-4 items-stretch',
 } as const;
 
 // ─── Control Center 설정 ────────────────────────────────────────
@@ -224,6 +296,13 @@ export interface ControlCenterConfig {
   showRecentActivities?: boolean;
   /** AlertBanner trailing action 슬롯 타입 */
   alertBannerTrailingAction?: 'approval' | 'createCheckout' | null;
+  /**
+   * 팀별 장비 분포 카드(TeamEquipmentDistribution)의 표시 범위.
+   *  - `'lab'`: 시험소 내 팀 (시험소장)
+   *  - `'all'`: 전사 (시스템관리자) — 가동률 미달 범례 + 부제 노출
+   * 미지정 시 `'lab'`로 동작.
+   */
+  teamDistributionScope?: 'lab' | 'all';
 }
 
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
@@ -235,7 +314,7 @@ export interface DashboardRoleConfig {
   /** Control Center 3-Tier 레이아웃 설정 */
   controlCenter: ControlCenterConfig;
   /** 하단 행 그리드 템플릿 변형 (미지정 시 'default') */
-  bottomRowTemplate?: 'default' | 'admin';
+  bottomRowTemplate?: 'default' | 'admin' | 'testEngineer';
 }
 
 // ─── 재사용 가능한 Stats Card 팩토리 ────────────────────────────
@@ -391,9 +470,11 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     controlCenter: {
       showAlertBanner: true,
       showPendingApprovals: false,
+      // 대시보드 개선안 §4.1 — 시험실무자 Row3: [내 교정 예정 | 내 반출 현황 | 내 최근 활동]
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      sidebarWidgets: ['miniCalendar'],
+      // §4.1 Row4: [MiniCalendar 1.6fr | MyQuickSummary 1fr]
+      sidebarWidgets: ['miniCalendar', 'myQuickSummary'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.registerEquipment, priority: 'primary' as const },
@@ -405,10 +486,11 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       requiresTeamScope: true,
       pendingApprovalLayoutHint: 'grid',
       approvalCategoryPriorities: {},
-      row3Layout: 'single-col-stretch',
+      row3Layout: 'three-col-test-engineer',
       showMyActivity: true,
       showRecentActivities: false,
     },
+    bottomRowTemplate: 'testEngineer',
   },
 
   [URVal.TECHNICAL_MANAGER]: {
@@ -439,7 +521,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'team',
       requiresTeamScope: true,
-      pendingApprovalLayoutHint: 'grid',
+      pendingApprovalLayoutHint: 'priority-list',
       approvalCategoryPriorities: {},
       row3Layout: 'three-col-action-first',
       pendingApprovalElevated: true,
@@ -475,11 +557,12 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
-      pendingApprovalLayoutHint: 'single-focus',
+      // 대시보드 개선안 §4.3 — 검토 대기 1건 (가로형 hero) + 교정 현황
+      pendingApprovalLayoutHint: 'review-pending-hero',
       approvalCategoryPriorities: {
         plan_review: 'hero',
       },
-      row3Layout: 'three-col-action-first',
+      row3Layout: 'two-col-review-hero',
     },
   },
 
@@ -512,13 +595,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
-      pendingApprovalLayoutHint: 'prioritized-grid',
+      pendingApprovalLayoutHint: 'priority-list',
       approvalCategoryPriorities: {
         plan_final: 'hero',
         disposal_final: 'default',
         incoming: 'default',
       },
       alertBannerTrailingAction: 'approval',
+      teamDistributionScope: 'lab',
     },
   },
 
@@ -541,7 +625,8 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showPendingApprovals: false,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      sidebarWidgets: ['systemHealth', 'teamDistribution', 'miniCalendar'],
+      // 대시보드 개선안 §3.8 — systemHealth는 Row3 가운데로 이동 (sidebar에서 제거)
+      sidebarWidgets: ['teamDistribution', 'miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.userManagement, priority: 'primary' as const },
@@ -553,6 +638,9 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       requiresTeamScope: false,
       pendingApprovalLayoutHint: 'grid',
       approvalCategoryPriorities: {},
+      // 대시보드 개선안 §3.8 — Row3: [교정 | 시스템 상태 | 전사 반출 현황]
+      row3Layout: 'three-col-system-health',
+      teamDistributionScope: 'all',
     },
     bottomRowTemplate: 'admin',
   },

@@ -141,7 +141,7 @@ export function KpiStatusGrid({
           </div>
         </Link>
 
-        {/* 2. 가동률 */}
+        {/* 2. 가동률 — 대시보드 개선안 §3.2: 중립 텍스트 + 4단계 gauge + "목표 60%" foot */}
         <Link
           href={buildScopedEquipmentUrl(
             scope,
@@ -154,19 +154,33 @@ export function KpiStatusGrid({
             <span className={T.primaryLabel}>{t('kpi.utilization')}</span>
             <TrendBadge trend={trends?.utilization} />
           </div>
-          <span
-            className={cn(
-              T.primaryCount,
-              utilizationState === 'good'
-                ? T.statusColor.good
-                : utilizationState === 'warning'
-                  ? T.statusColor.warning
-                  : T.statusColor.danger
-            )}
+          {/* 중립색 (text-foreground) — "조치 필요" 의미가 아니므로 빨강 X */}
+          <span className={cn(T.primaryCount, 'text-foreground')}>{animatedPct}%</span>
+          {/* gauge (h-1.5) — 가동률 시각화 */}
+          <div
+            className="h-1.5 bg-muted rounded-full overflow-hidden"
+            role="meter"
+            aria-label={t('kpi.utilization')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={utilizationPct}
           >
-            {animatedPct}%
+            <div
+              className={cn(
+                'h-full rounded-full motion-safe:transition-[width] duration-500',
+                utilizationState === 'good'
+                  ? 'bg-brand-success'
+                  : utilizationState === 'warning'
+                    ? 'bg-brand-warning'
+                    : 'bg-brand-critical'
+              )}
+              style={{ width: `${utilizationPct}%` }}
+            />
+          </div>
+          <span className={T.primarySub}>
+            {t('kpi.utilizationSub', { count: available })} ·{' '}
+            {t('kpi.utilizationTarget', { pct: UTILIZATION_THRESHOLDS.HIGH })}
           </span>
-          <span className={T.primarySub}>{t('kpi.utilizationSub', { count: available })}</span>
         </Link>
 
         {/* 3. 반출 중 */}

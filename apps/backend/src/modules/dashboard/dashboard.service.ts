@@ -8,6 +8,7 @@ import {
   EquipmentStatusValues as ESVal,
   CheckoutStatusEnum,
   CalibrationRequiredEnum,
+  CalibrationPlanStatusValues,
   CheckoutPurposeValues as CPVal,
   AUDIT_TO_ACTIVITY_TYPE,
   RENTAL_ACTIVITY_TYPE_OVERRIDES,
@@ -22,6 +23,8 @@ import {
   CALIBRATION_THRESHOLDS,
   DASHBOARD_ITEM_LIMIT,
   DASHBOARD_ACTIVITIES_LIMIT,
+  SYSTEM_HEALTH_OVERALL_THRESHOLDS,
+  DASHBOARD_TIME_WINDOWS,
 } from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
@@ -73,7 +76,7 @@ export class DashboardService {
         // 3개 equipment COUNT → 1개 조건부 집계 + checkout COUNT 병렬 실행 (4쿼리 → 2쿼리)
         const today = new Date();
         const thirtyDaysLater = new Date(today);
-        thirtyDaysLater.setDate(today.getDate() + 30);
+        thirtyDaysLater.setDate(today.getDate() + DASHBOARD_TIME_WINDOWS.upcomingCalibrationDays);
 
         // retired/disposed 제외 — 장비 목록(showRetired=false 기본값)과 카운트 일치
         const siteTeamFilter = and(
@@ -440,7 +443,7 @@ export class DashboardService {
       cacheKey,
       async () => {
         const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - DASHBOARD_TIME_WINDOWS.recentActivityDays);
 
         // 스코프 조건: Controller에서 정책 해석 완료된 site/teamId 사용
         const scopeConditions: SQL[] = [];
@@ -605,6 +608,382 @@ export class DashboardService {
         });
 
         return stats;
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  // ============================================================================
+  // 대시보드 개선안 v1 — 신규 엔드포인트 서비스 메소드 (§3.9, §4.3, §A.4, §A.7)
+  // ============================================================================
+
+  /**
+   * §A.7 — 반출 현황 조회 (scope 통합 응답).
+   * 권한 가드는 컨트롤러에서 수행 — 서비스는 site/teamId/userId 파라미터에 따라
+   * 순수 데이터 조회만 수행한다.
+   */
+  async getCheckoutsByScope(params: {
+    scope: 'me' | 'team' | 'lab' | 'all';
+    userId: string;
+    teamId?: string;
+    site?: string;
+  }): Promise<import('./dto/dashboard-response.dto').DashboardCheckoutsScopeDto> {
+    const { scope, userId, teamId, site } = params;
+    // 캐시 키: scope + (me는 userId / team은 teamId / lab은 site / all은 'all').
+    // dashboard:* 패턴이 invalidateAllDashboard()로 일괄 무효화되므로 안전.
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}checkoutsScope:${scope}:${
+      scope === 'me'
+        ? userId
+        : scope === 'team'
+          ? (teamId ?? 'team')
+          : scope === 'lab'
+            ? (site ?? 'lab')
+            : 'all'
+    }`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + CALIBRATION_THRESHOLDS.WARNING_DAYS);
+
+        const baseConditions = [
+          eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
+          gte(schema.checkouts.expectedReturnDate, today),
+          lte(schema.checkouts.expectedReturnDate, futureDate),
+        ];
+        if (scope === 'me') baseConditions.push(eq(schema.checkouts.requesterId, userId));
+        if (teamId) baseConditions.push(eq(schema.equipment.teamId, teamId));
+        if (site) baseConditions.push(eq(schema.equipment.site, site));
+
+        const upcomingRows = await this.db
+          .select({
+            id: schema.checkouts.id,
+            checkoutItemId: schema.checkoutItems.id,
+            equipmentName: schema.equipment.name,
+            managementNumber: schema.equipment.managementNumber,
+            expectedReturnDate: schema.checkouts.expectedReturnDate,
+          })
+          .from(schema.checkouts)
+          .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
+          .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+          .where(and(...baseConditions))
+          .orderBy(schema.checkouts.expectedReturnDate)
+          .limit(DASHBOARD_ITEM_LIMIT);
+
+        // 기한 초과: 동일 scope 필터 + expectedReturnDate < today.
+        const overdueConditions = [
+          eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
+          lte(schema.checkouts.expectedReturnDate, today),
+        ];
+        if (scope === 'me') overdueConditions.push(eq(schema.checkouts.requesterId, userId));
+        if (teamId) overdueConditions.push(eq(schema.equipment.teamId, teamId));
+        if (site) overdueConditions.push(eq(schema.equipment.site, site));
+
+        const [overdueRow] = await this.db
+          .select({ count: count() })
+          .from(schema.checkouts)
+          .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
+          .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+          .where(and(...overdueConditions));
+
+        // scope='me' 한정: 본인 신청 중 pending 상태(승인 대기) 카운트.
+        let pendingRequests: number | undefined;
+        if (scope === 'me') {
+          const [pendingRow] = await this.db
+            .select({ count: count() })
+            .from(schema.checkouts)
+            .where(
+              and(
+                eq(schema.checkouts.requesterId, userId),
+                eq(schema.checkouts.status, CheckoutStatusEnum.enum.pending)
+              )
+            );
+          pendingRequests = pendingRow?.count ?? 0;
+        }
+
+        return {
+          pendingReturns: upcomingRows.map((r) => {
+            const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
+            const daysUntilDue = Math.floor(
+              (expectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            return {
+              id: r.id,
+              checkoutItemId: r.checkoutItemId,
+              equipmentName: r.equipmentName ?? '',
+              managementNumber: r.managementNumber ?? undefined,
+              expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
+              daysUntilDue,
+            };
+          }),
+          overdueCount: overdueRow?.count ?? 0,
+          pendingRequests,
+        };
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  /**
+   * §3.9 — 시스템관리자 시스템 상태 조회.
+   *
+   * 메트릭별 출처:
+   *  - activeUsers   : 최근 5분 audit 활동 사용자 unique count.
+   *  - maxUsers      : 시스템 활성 사용자(`is_active=true`) 카운트.
+   *  - dbResponseMs  : `SELECT 1` ping 측정.
+   *  - storagePct    : `pg_database_size()` / `DASHBOARD_STORAGE_CAPACITY_BYTES` (env, 기본 100 GiB).
+   *  - errorCount24h : audit_logs `action='reject'` 또는 `'cancel'` 24h 카운트
+   *                    (실제 시스템 에러 로그 테이블 도입 전까지 비즈니스 거절을 proxy로 사용).
+   *  - queueSize     : BullMQ 등 외부 큐 미연결 시 0 — 도입 시 별도 PR로 실측 연결.
+   */
+  async getSystemHealth(): Promise<import('./dto/dashboard-response.dto').SystemHealthMetricsDto> {
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}systemHealth`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // DB 응답시간 측정.
+        const dbStart = Date.now();
+        await this.db.execute(sql`SELECT 1`);
+        const dbResponseMs = Date.now() - dbStart;
+
+        // 활성 사용자: 최근 5분 audit 액티비티 unique userId.
+        const activeRows = await this.db
+          .select({ userId: schema.auditLogs.userId })
+          .from(schema.auditLogs)
+          .where(gte(schema.auditLogs.createdAt, fiveMinutesAgo))
+          .groupBy(schema.auditLogs.userId);
+        const activeUsers = activeRows.length;
+
+        // 최대 사용자: 시스템 등록된 활성 사용자 수.
+        const [maxRow] = await this.db
+          .select({ count: count() })
+          .from(schema.users)
+          .where(eq(schema.users.isActive, true));
+        const maxUsers = maxRow?.count ?? 0;
+
+        // 스토리지 사용률: pg_database_size / 환경변수로 지정한 capacity.
+        const storageCapacityBytes =
+          Number(process.env.DASHBOARD_STORAGE_CAPACITY_BYTES) || 100 * 1024 * 1024 * 1024;
+        const sizeRow = await this.db.execute<{ size: string }>(
+          sql`SELECT pg_database_size(current_database()) AS size`
+        );
+        const dbSizeBytes = Number(sizeRow.rows?.[0]?.size ?? 0);
+        const storagePct =
+          storageCapacityBytes > 0
+            ? Math.min(Math.round((dbSizeBytes / storageCapacityBytes) * 100), 100)
+            : 0;
+
+        // 24h 오류 proxy: 거절/취소 액션 카운트 (audit log에 시스템 에러 컬럼이 없을 때 비즈니스 거절을 대체 지표로).
+        const [errorRow] = await this.db
+          .select({ count: count() })
+          .from(schema.auditLogs)
+          .where(
+            and(
+              gte(schema.auditLogs.createdAt, twentyFourHoursAgo),
+              inArray(schema.auditLogs.action, ['reject', 'cancel'])
+            )
+          );
+        const errorCount24h = errorRow?.count ?? 0;
+
+        // queueSize: BullMQ 미연결 — 0 stub (`tech-debt-tracker`에 추적).
+        const queueSize = 0;
+
+        // SSOT: SYSTEM_HEALTH_OVERALL_THRESHOLDS — 프론트와 동일 임계값으로 판정 일관성 보장.
+        const overallStatus: 'healthy' | 'degraded' | 'down' =
+          dbResponseMs >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.down.dbMs
+            ? 'down'
+            : dbResponseMs >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.dbMs ||
+                storagePct >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.storagePct
+              ? 'degraded'
+              : 'healthy';
+
+        return {
+          overallStatus,
+          activeUsers,
+          maxUsers,
+          dbResponseMs,
+          storagePct,
+          queueSize,
+          errorCount24h,
+          measuredAt: now.toISOString(),
+        };
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  /**
+   * §4.3 — 품질책임자 검토 대기 hero.
+   *
+   * `plan_review` 단계의 calibration plans 카운트 + 평균/최장 대기 일수.
+   * 처리율(processingRate) = thisWeekProcessed / thisWeekTotal * 100.
+   */
+  async getQualityReviewPending(): Promise<
+    import('./dto/dashboard-response.dto').QualityReviewPendingDto
+  > {
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}qualityReviewPending`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - DASHBOARD_TIME_WINDOWS.recentActivityDays);
+
+        // 검토 대기 = calibrationPlans.status='pending_review' (품질책임자 검토 단계).
+        const pendingRows = await this.db
+          .select({
+            id: schema.calibrationPlans.id,
+            createdAt: schema.calibrationPlans.createdAt,
+          })
+          .from(schema.calibrationPlans)
+          .where(eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_REVIEW));
+
+        const pendingCount = pendingRows.length;
+        const waitDays = pendingRows.map((r) => {
+          const created = r.createdAt ? new Date(r.createdAt) : now;
+          return Math.max(
+            0,
+            Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+          );
+        });
+        const avgWaitDays =
+          waitDays.length === 0
+            ? 0
+            : Math.round((waitDays.reduce((s, d) => s + d, 0) / waitDays.length) * 10) / 10;
+        const maxWaitDays = waitDays.length === 0 ? 0 : Math.max(...waitDays);
+
+        // 이번 주 처리: 검토/승인을 거쳐 approved/rejected/pending_approval 단계로 전이된 plans.
+        const [processedRow] = await this.db
+          .select({ count: count() })
+          .from(schema.calibrationPlans)
+          .where(
+            and(
+              gte(schema.calibrationPlans.updatedAt, weekStart),
+              notInArray(schema.calibrationPlans.status, [
+                CalibrationPlanStatusValues.DRAFT,
+                CalibrationPlanStatusValues.PENDING_REVIEW,
+              ])
+            )
+          );
+        const thisWeekProcessed = processedRow?.count ?? 0;
+
+        // 이번 주 도착 + carryover.
+        const [arrivedRow] = await this.db
+          .select({ count: count() })
+          .from(schema.calibrationPlans)
+          .where(gte(schema.calibrationPlans.createdAt, weekStart));
+        const thisWeekTotal = (arrivedRow?.count ?? 0) + pendingCount;
+
+        const processingRate =
+          thisWeekTotal === 0 ? 100 : Math.round((thisWeekProcessed / thisWeekTotal) * 100);
+
+        return {
+          pendingCount,
+          avgWaitDays,
+          maxWaitDays,
+          thisWeekProcessed,
+          thisWeekTotal,
+          processingRate,
+        };
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  /**
+   * §A.4 — 시험실무자 빠른 요약.
+   *
+   * 시험실무자 본인 시점의 3가지 카운트:
+   *  1. 본인 반출 신청 중 pending 상태 카운트.
+   *  2. 본인 팀(teamId) 장비의 30일 이내 교정 임박 — 시험실무자는 본인 팀 장비를 다룸.
+   *  3. 본인 팀 장비 중 non_conforming 상태 카운트.
+   *
+   * equipment에는 user-level owner FK가 없으므로 teamId 기반 scope을 적용합니다.
+   * teamId가 없는 사용자(예외 케이스)에게는 0 fallback.
+   */
+  async getMyQuickSummary(
+    userId: string,
+    teamId?: string
+  ): Promise<import('./dto/dashboard-response.dto').MyQuickSummaryDto> {
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}myQuickSummary:${userId}:${teamId ?? 'none'}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [pendingRow] = await this.db
+          .select({ count: count() })
+          .from(schema.checkouts)
+          .where(
+            and(
+              eq(schema.checkouts.requesterId, userId),
+              eq(schema.checkouts.status, CheckoutStatusEnum.enum.pending)
+            )
+          );
+        const pendingCheckoutRequests = pendingRow?.count ?? 0;
+
+        // teamId 미지정 사용자는 임박 교정 + 부적합 카운트를 0으로 fallback.
+        if (!teamId) {
+          return {
+            pendingCheckoutRequests,
+            upcomingCalibrations: undefined,
+            nonconformanceItems: 0,
+          };
+        }
+
+        const today = new Date();
+        const upcomingWindow = new Date(today);
+        upcomingWindow.setDate(today.getDate() + DASHBOARD_TIME_WINDOWS.upcomingCalibrationDays);
+
+        const upcomingRows = await this.db
+          .select({
+            id: schema.equipment.id,
+            nextCalibrationDate: schema.equipment.nextCalibrationDate,
+          })
+          .from(schema.equipment)
+          .where(
+            and(
+              eq(schema.equipment.teamId, teamId),
+              gte(schema.equipment.nextCalibrationDate, today),
+              lte(schema.equipment.nextCalibrationDate, upcomingWindow)
+            )
+          )
+          .orderBy(schema.equipment.nextCalibrationDate);
+
+        const upcomingCalibrations =
+          upcomingRows.length === 0
+            ? undefined
+            : {
+                count: upcomingRows.length,
+                nearestDays: Math.max(
+                  0,
+                  Math.floor(
+                    ((upcomingRows[0].nextCalibrationDate?.getTime() ?? today.getTime()) -
+                      today.getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  )
+                ),
+              };
+
+        const [ncRow] = await this.db
+          .select({ count: count() })
+          .from(schema.equipment)
+          .where(
+            and(
+              eq(schema.equipment.teamId, teamId),
+              eq(schema.equipment.status, ESVal.NON_CONFORMING)
+            )
+          );
+        const nonconformanceItems = ncRow?.count ?? 0;
+
+        return {
+          pendingCheckoutRequests,
+          upcomingCalibrations,
+          nonconformanceItems,
+        };
       },
       CACHE_TTL.SHORT
     );

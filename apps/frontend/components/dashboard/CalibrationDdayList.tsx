@@ -11,6 +11,7 @@ import {
   getTimeBasedUrgency,
   type UrgencyLevel,
 } from '@/lib/design-tokens';
+import { DDayTag } from '@/components/dashboard/atoms/DDayTag';
 import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { buildScopedUrl, type DashboardScope } from '@/lib/utils/dashboard-scope';
@@ -36,13 +37,6 @@ const URGENCY_BAR: Record<UrgencyLevel, string> = {
   info: T.barOk,
 };
 
-const URGENCY_DDAY: Record<UrgencyLevel, string> = {
-  emergency: T.ddayOverdue,
-  critical: T.ddayUrgent,
-  warning: T.ddayWarning,
-  info: T.ddayOk,
-};
-
 function getItemUrgency(item: DdayItem): UrgencyLevel {
   if (item.kind === 'overdue') return 'emergency';
   return getTimeBasedUrgency(item.daysUntilDue);
@@ -51,6 +45,12 @@ function getItemUrgency(item: DdayItem): UrgencyLevel {
 function getDdayLabel(item: DdayItem): string {
   if (item.kind === 'overdue') return `D+${item.daysOverdue}`;
   return `D-${item.daysUntilDue}`;
+}
+
+// 대시보드 개선안 §1.1 — 음수=남은 일수, 양수=초과 일수
+function getDdayDays(item: DdayItem): number {
+  if (item.kind === 'overdue') return item.daysOverdue;
+  return -item.daysUntilDue;
 }
 
 export function CalibrationDdayList({
@@ -157,9 +157,8 @@ export function CalibrationDdayList({
                     className={cn(T.bar, URGENCY_BAR[getItemUrgency(item)])}
                     aria-hidden="true"
                   />
-                  <span className={cn(T.dday, URGENCY_DDAY[getItemUrgency(item)])}>
-                    {getDdayLabel(item)}
-                  </span>
+                  {/* 대시보드 개선안 §3.5 — 4단계 톤 DDayTag 사용 */}
+                  <DDayTag days={getDdayDays(item)} size="sm" />
                   <div className={T.info}>
                     {item.managementNumber && (
                       <div className={T.managementNumber}>{item.managementNumber}</div>
@@ -174,8 +173,9 @@ export function CalibrationDdayList({
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
             )}
           </div>
-          {/* 더보기 링크 */}
-          {(overdueCount > 8 || upcomingCount > 8) && (
+          {/* 더보기 링크 — DISPLAY_LIMITS.calibrationDday 초과 시에만 노출 */}
+          {(overdueCount > DISPLAY_LIMITS.calibrationDday ||
+            upcomingCount > DISPLAY_LIMITS.calibrationDday) && (
             <div className={T.footer}>
               <Link
                 href={buildScopedUrl(scope, FRONTEND_ROUTES.CALIBRATION.LIST)}

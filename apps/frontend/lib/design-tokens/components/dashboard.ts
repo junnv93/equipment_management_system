@@ -820,23 +820,47 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
 // ============================================================================
 
 /**
- * 시스템 상태 요약 카드 토큰 (system_admin 전용 사이드바 위젯)
+ * 시스템 상태 요약 카드 토큰 (system_admin 전용)
  *
- * SystemHealthCard에서 사용
- * - 신규 API 호출 없이 DashboardAggregate props 재사용
+ * SystemHealthCard 명세서 §3.9 v1 — 4메트릭 + 게이지 + 24h 오류 푸터.
+ * 사용처: DashboardRow3 (시스템관리자 가운데 패널) + DashboardRow4 (사이드바 위젯).
  */
 export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
   container: `bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
-  statusGrid: 'grid grid-cols-2 gap-2',
+  subtitle: 'text-[11px] text-muted-foreground',
+  /** 상단 meta pill ("● 정상" / "● 경고" / "● 점검 중"). */
+  statusPill: {
+    base: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full',
+    ok: 'bg-brand-success/15 text-brand-success',
+    warn: 'bg-brand-warning/15 text-brand-warning',
+    danger: 'bg-brand-critical/15 text-brand-critical',
+  },
+  statusGrid: 'grid grid-cols-2 gap-x-6 gap-y-3.5',
   statusItem: 'flex flex-col gap-0.5',
-  statusLabel: 'text-xs text-muted-foreground',
-  statusValue: 'font-mono tabular-nums font-semibold text-sm',
-  statusOk: 'text-brand-ok',
+  statusLabel: 'text-[11px] text-muted-foreground',
+  statusValue: 'font-mono tabular-nums font-bold text-lg leading-none flex items-baseline gap-1',
+  statusUnit: 'text-xs font-medium text-muted-foreground',
+  statusOk: 'text-brand-success',
   statusWarning: 'text-brand-warning',
   statusCritical: 'text-brand-critical',
   statusNeutral: 'text-foreground',
+  statusInfo: 'text-brand-info',
+  /** 게이지 바: 메트릭 행 하단 6px 막대. */
+  gauge: {
+    track: 'h-1.5 rounded-full bg-muted/60 mt-1.5 overflow-hidden',
+    fillBase: 'block h-full rounded-full transition-[width] duration-300',
+    fillOk: 'bg-brand-success',
+    fillWarn: 'bg-brand-warning',
+    fillDanger: 'bg-brand-critical',
+    fillInfo: 'bg-brand-info',
+  },
+  /** 푸터: 점선 구분 + 좌(라벨) 우(값). */
+  footer:
+    'mt-3 pt-2.5 border-t border-dashed border-border flex items-center justify-between text-[11px]',
+  footerLabel: 'text-muted-foreground',
+  footerValue: 'font-mono tabular-nums font-bold text-foreground',
 } as const;
 
 // ============================================================================

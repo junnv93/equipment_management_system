@@ -484,6 +484,15 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'equipmentStatusStats', role, teamId] as const,
     pendingApprovalCounts: (role?: string) =>
       [...queryKeys.dashboard.all, 'pendingApprovalCounts', role] as const,
+    /** §3.9 — 시스템관리자 전용 시스템 상태 메트릭 (백엔드 /api/system/health). */
+    systemHealth: () => [...queryKeys.dashboard.all, 'systemHealth'] as const,
+    /** §A.7 — 반출 현황 (scope: me/team/lab/all). */
+    checkouts: (scope: 'me' | 'team' | 'lab' | 'all', teamId?: string) =>
+      [...queryKeys.dashboard.all, 'checkouts', scope, teamId] as const,
+    /** §4.3 — 품질책임자 검토 대기 hero. */
+    qualityReviewPending: () => [...queryKeys.dashboard.all, 'qualityReviewPending'] as const,
+    /** §A.4 — 시험실무자 빠른 요약. */
+    myQuickSummary: () => [...queryKeys.dashboard.all, 'myQuickSummary'] as const,
   },
   teams: {
     all: ['teams'] as const,

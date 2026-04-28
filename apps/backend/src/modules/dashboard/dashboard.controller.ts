@@ -30,7 +30,12 @@ import {
   RecentActivityDto,
   PendingApprovalCountsDto,
   EquipmentStatusStatsDto,
+  DashboardCheckoutsScopeDto,
+  SystemHealthMetricsDto,
+  QualityReviewPendingDto,
+  MyQuickSummaryDto,
 } from './dto/dashboard-response.dto';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 /**
  * 대시보드 컨트롤러
@@ -317,5 +322,123 @@ export class DashboardController {
   ): Promise<EquipmentStatusStatsDto> {
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
     return this.dashboardService.getEquipmentStatusStats(resolvedTeamId, site);
+  }
+
+  // ============================================================================
+  // 대시보드 개선안 v1 — 신규 엔드포인트 (§3.9, §4.3, §A.4, §A.7)
+  // ============================================================================
+
+  /**
+   * §A.7 — 반출 현황 (scope=me|team|lab|all).
+   * 단일 컴포넌트 + scope prop으로 4가지 역할 모두 처리.
+   * 권한: scope=team(이상)은 TECH_MANAGER+, scope=lab(이상)은 LAB_MANAGER+, scope=all은 SYSTEM_ADMIN.
+   */
+  @Get('checkouts')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '반출 현황 조회 (scope 통합)',
+    description:
+      'scope=me|team|lab|all 별로 반납 예정/기한 초과/대기 신청을 통합 반환합니다. ' +
+      '권한 가드: 사용자 역할이 scope에 부합해야 합니다.',
+  })
+  @ApiQuery({
+    name: 'scope',
+    required: true,
+    enum: ['me', 'team', 'lab', 'all'],
+    description: '반출 데이터 범위',
+  })
+  @ApiResponse({ status: 200, type: DashboardCheckoutsScopeDto })
+  async getCheckoutsByScope(
+    @Req() req: AuthenticatedRequest,
+    @Query('scope') scope: 'me' | 'team' | 'lab' | 'all'
+  ): Promise<DashboardCheckoutsScopeDto> {
+    const userRole = req.user.roles?.[0] as UserRole;
+    const userId = req.user.userId;
+    const userTeamId = req.user.teamId;
+    const userSite = req.user.site;
+
+    // scope별 권한 가드 (계층적: 상위 scope 사용 시 상위 권한 필요).
+    if (scope === 'team') {
+      if (
+        userRole !== URVal.TECHNICAL_MANAGER &&
+        userRole !== URVal.QUALITY_MANAGER &&
+        userRole !== URVal.LAB_MANAGER &&
+        userRole !== URVal.SYSTEM_ADMIN
+      ) {
+        throw new ForbiddenException('팀 단위 반출 현황 조회 권한이 없습니다.');
+      }
+    } else if (scope === 'lab') {
+      if (userRole !== URVal.LAB_MANAGER && userRole !== URVal.SYSTEM_ADMIN) {
+        throw new ForbiddenException('시험소 단위 반출 현황 조회 권한이 없습니다.');
+      }
+    } else if (scope === 'all') {
+      if (userRole !== URVal.SYSTEM_ADMIN) {
+        throw new ForbiddenException('전사 반출 현황 조회 권한이 없습니다.');
+      }
+    }
+
+    return this.dashboardService.getCheckoutsByScope({
+      scope,
+      userId,
+      teamId: scope === 'team' ? userTeamId : undefined,
+      site: scope === 'lab' ? userSite : undefined,
+    });
+  }
+
+  /**
+   * §3.9 — 시스템관리자 시스템 상태 메트릭.
+   */
+  @Get('system-health')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @ApiOperation({
+    summary: '시스템 상태 메트릭 (시스템관리자 전용)',
+    description:
+      'activeUsers/dbResponseMs/storagePct/queueSize/errorCount24h를 포함한 실시간 시스템 상태.',
+  })
+  @ApiResponse({ status: 200, type: SystemHealthMetricsDto })
+  async getSystemHealth(@Req() req: AuthenticatedRequest): Promise<SystemHealthMetricsDto> {
+    const userRole = req.user.roles?.[0] as UserRole;
+    if (userRole !== URVal.SYSTEM_ADMIN) {
+      throw new ForbiddenException('시스템 상태 조회 권한이 없습니다.');
+    }
+    return this.dashboardService.getSystemHealth();
+  }
+
+  /**
+   * §4.3 — 품질책임자 검토 대기 hero 요약.
+   */
+  @Get('quality-review-pending')
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiOperation({
+    summary: '품질책임자 검토 대기 요약',
+    description: 'plan_review 단계 calibration plans 카운트 + 평균/최장 대기 + 처리율.',
+  })
+  @ApiResponse({ status: 200, type: QualityReviewPendingDto })
+  async getQualityReviewPending(
+    @Req() req: AuthenticatedRequest
+  ): Promise<QualityReviewPendingDto> {
+    const userRole = req.user.roles?.[0] as UserRole;
+    if (
+      userRole !== URVal.QUALITY_MANAGER &&
+      userRole !== URVal.LAB_MANAGER &&
+      userRole !== URVal.SYSTEM_ADMIN
+    ) {
+      throw new ForbiddenException('검토 대기 요약 조회 권한이 없습니다.');
+    }
+    return this.dashboardService.getQualityReviewPending();
+  }
+
+  /**
+   * §A.4 — 시험실무자 빠른 요약.
+   */
+  @Get('me/quick-summary')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @ApiOperation({
+    summary: '내 빠른 요약 (시험실무자)',
+    description: 'pendingCheckoutRequests / upcomingCalibrations / nonconformanceItems.',
+  })
+  @ApiResponse({ status: 200, type: MyQuickSummaryDto })
+  async getMyQuickSummary(@Req() req: AuthenticatedRequest): Promise<MyQuickSummaryDto> {
+    return this.dashboardService.getMyQuickSummary(req.user.userId, req.user.teamId);
   }
 }

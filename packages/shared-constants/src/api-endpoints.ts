@@ -373,6 +373,14 @@ export const API_ENDPOINTS = {
     OVERDUE_RENTALS: '/api/dashboard/overdue-rentals',
     RECENT_ACTIVITIES: '/api/dashboard/recent-activities',
     PENDING_APPROVAL_COUNTS: '/api/dashboard/pending-approval-counts',
+    /** §A.7 — 반출 현황 (scope 통합). */
+    CHECKOUTS: '/api/dashboard/checkouts',
+    /** §3.9 — 시스템 상태 (시스템관리자 전용). */
+    SYSTEM_HEALTH: '/api/dashboard/system-health',
+    /** §4.3 — 품질책임자 검토 대기 hero. */
+    QUALITY_REVIEW_PENDING: '/api/dashboard/quality-review-pending',
+    /** §A.4 — 시험실무자 빠른 요약. */
+    ME_QUICK_SUMMARY: '/api/dashboard/me/quick-summary',
   },
 
   // ============================================================================

@@ -324,10 +324,15 @@
   },
   "teamDistribution": {
     "title": "팀별 장비 분포",
+    "subtitleAll": "목표 가동률 60% 미달 팀 강조",
     "total": "총 {total}대",
     "count": "{count}대",
     "empty": "팀 데이터 없음",
-    "ariaLabel": "팀별 장비 분포 바 차트"
+    "ariaLabel": "팀별 장비 분포 바 차트",
+    "ariaUtilization": ", 가동률 {pct}%",
+    "showMore": "+{count}팀 더보기",
+    "showLess": "접기",
+    "legendUnderUtilized": "가동률 미달 팀 (50% 미만)"
   },
   "kpi": {
     "total": "전체 장비",
@@ -336,6 +341,7 @@
     "heroBarLabel": "{percent}% 가동",
     "utilization": "가동률",
     "utilizationSub": "가용 {count}대",
+    "utilizationTarget": "목표 {pct}%",
     "activeCheckouts": "반출 중",
     "activeCheckoutsSub": "전체의 {percent}%",
     "nonConforming": "부적합",
@@ -371,15 +377,100 @@
   "aggregate": {
     "error": "대시보드 데이터 일부를 불러오지 못했습니다."
   },
+  "cardError": {
+    "title": "데이터를 불러오지 못했습니다",
+    "description": "잠시 후 다시 시도해주세요.",
+    "retry": "다시 시도"
+  },
+  "offline": {
+    "label": "오프라인",
+    "description": "표시된 데이터는 마지막 동기화 시점입니다."
+  },
+  "simulation": {
+    "label": "{role} view 시뮬레이션 중",
+    "exit": "종료"
+  },
+  "checkoutCard": {
+    "title": {
+      "me": "내 반출 현황",
+      "team": "팀 반출 현황",
+      "lab": "시험소 반출 현황",
+      "all": "전사 반출 현황"
+    },
+    "sub": {
+      "me": "내가 반출한 장비",
+      "team": "팀이 반출한 장비",
+      "lab": "시험소 전체",
+      "all": "전사 전체"
+    },
+    "tab": {
+      "upcoming": "반납 예정",
+      "overdue": "기한 초과"
+    },
+    "activeBadge": "진행중 {count}",
+    "viewAll": "전체 보기 →",
+    "upcomingEmptyTitle": "반납 예정 없음",
+    "upcomingEmptyDescription": "예정된 반납이 없습니다.",
+    "overdueEmptyTitle": "기한 초과 없음",
+    "overdueEmptyDescription": "모든 반출이 정상 진행 중입니다.",
+    "pendingRequestsLabel": "대기 중인 반출 신청",
+    "countSuffix": "{count}건"
+  },
+  "priorityRow": {
+    "defaultCta": "검토",
+    "fallbackCta": "보기",
+    "ariaLabelWithCount": "{name} {count}건 {action}",
+    "ariaLabelWithoutCount": "{name} {action}"
+  },
+  "skeleton": {
+    "checkoutCard": "반출 현황을 불러오는 중입니다.",
+    "pendingApproval": "승인 대기 목록을 불러오는 중입니다.",
+    "reviewPendingHero": "검토 대기 요약을 불러오는 중입니다.",
+    "myQuickSummary": "내 빠른 요약을 불러오는 중입니다.",
+    "systemHealth": "시스템 상태를 불러오는 중입니다.",
+    "ddayList": "교정 D-day 목록을 불러오는 중입니다.",
+    "myActivity": "내 최근 활동을 불러오는 중입니다.",
+    "recentActivities": "최근 활동을 불러오는 중입니다.",
+    "teamDistribution": "팀별 장비 분포를 불러오는 중입니다.",
+    "miniCalendar": "이번 달 일정을 불러오는 중입니다."
+  },
+  "reviewPendingHero": {
+    "title": "검토 대기",
+    "subtitle": "검토가 필요한 항목",
+    "iconLabel": "교정계획서 검토",
+    "pendingCountSuffix": "건 대기",
+    "avgWaitDays": "평균 대기 {days}일",
+    "maxWaitDays": "최장 {days}일",
+    "ctaStart": "검토 시작",
+    "thisWeekProcessed": "이번 주 처리",
+    "processingRate": "처리율 (7d)"
+  },
+  "myQuickSummary": {
+    "title": "내 빠른 요약",
+    "subtitle": "이번 주",
+    "pendingCheckoutRequests": "반출 신청 대기",
+    "upcomingCalibrations": "교정 등록 임박",
+    "nonconformanceItems": "부적합 처리"
+  },
+  "ddayTag": {
+    "ariaOverdue": "{days}일 초과",
+    "ariaToday": "오늘 마감",
+    "ariaRemaining": "{days}일 남음"
+  },
   "systemHealth": {
     "title": "시스템 상태",
+    "subtitle": "실시간",
     "ariaLabel": "시스템 상태 요약",
-    "totalEquipment": "전체 장비",
-    "activeCheckouts": "반출 중",
-    "calibrationOverdue": "교정 초과",
-    "nonConforming": "부적합",
-    "recentActivity": "최근 7일 활동",
-    "healthy": "정상",
-    "issues": "이슈 있음"
+    "activeUsers": "활성 사용자",
+    "dbResponseMs": "DB 응답시간",
+    "storage": "스토리지",
+    "queue": "대기 큐",
+    "unitMs": "ms",
+    "unitPct": "%",
+    "errorsLast24h": "최근 24시간 오류",
+    "errorsValue": "{count}건",
+    "statusHealthy": "정상",
+    "statusDegraded": "경고",
+    "statusDown": "점검 중"
   }
 }

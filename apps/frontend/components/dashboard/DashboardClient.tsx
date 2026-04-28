@@ -19,7 +19,9 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api/dashboard-api';
+import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { UserRoleValues } from '@equipment-management/schemas';
 import type {
   DashboardSummary,
   DashboardPaginatedList,
@@ -30,6 +32,10 @@ import type {
   RecentActivity,
   UpcomingCheckoutReturn,
   DashboardAggregate,
+  SystemHealthMetrics,
+  DashboardCheckoutsScope,
+  QualityReviewPending,
+  MyQuickSummary,
 } from '@/lib/api/dashboard-api';
 import { resolveDashboardRoleConfig } from '@/lib/utils/dashboard-role';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
@@ -41,6 +47,9 @@ import { DashboardRow1 } from './layout/DashboardRow1';
 import { DashboardRow2 } from './layout/DashboardRow2';
 import { DashboardRow3 } from './layout/DashboardRow3';
 import { DashboardRow4 } from './layout/DashboardRow4';
+import { OfflineBanner } from './OfflineBanner';
+import { SimulationBanner } from './SimulationBanner';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 
 export interface DashboardClientProps {
   initialSummary?: DashboardSummary;
@@ -67,7 +76,12 @@ function DashboardClientComponent({
   const t = useTranslations('dashboard');
   const searchParams = useSearchParams();
 
-  const { role: userRole, config } = resolveDashboardRoleConfig(session?.user?.role);
+  // §A.19.3 — 시스템관리자 시뮬레이션 모드: effectiveRole이 시뮬 역할일 때 해당 config로 렌더.
+  // 권한 가드는 백엔드에서 actualRole 기준으로 별도 처리되므로 UI 전용.
+  const { effectiveRole } = useEffectiveRole();
+  const sessionRole = session?.user?.role;
+  const renderRole = effectiveRole ?? sessionRole;
+  const { role: userRole, config } = resolveDashboardRoleConfig(renderRole);
   const { controlCenter } = config;
 
   const scope = useMemo(
@@ -116,11 +130,94 @@ function DashboardClientComponent({
   };
   const equipmentByTeam = aggregate?.equipmentByTeam ?? [];
   const overdueCalibrations = aggregate?.overdueCalibrations?.items ?? [];
-  const upcomingCalibrations = aggregate?.upcomingCalibrations?.items ?? [];
+  // upcomingCalibrations/equipmentStatusStats는 useMemo dependency로 사용되므로
+  // identity 안정성을 위해 useMemo로 감싼다 (aggregate 미응답 시 매 렌더 새 [], {} 생성 방지).
+  const upcomingCalibrations = useMemo(
+    () => aggregate?.upcomingCalibrations?.items ?? [],
+    [aggregate?.upcomingCalibrations?.items]
+  );
   const overdueCheckouts = aggregate?.overdueCheckouts?.items ?? [];
   const recentActivities = aggregate?.recentActivities ?? [];
-  const equipmentStatusStats = aggregate?.equipmentStatusStats ?? {};
+  const equipmentStatusStats = useMemo(
+    () => aggregate?.equipmentStatusStats ?? {},
+    [aggregate?.equipmentStatusStats]
+  );
   const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns?.items ?? [];
+
+  // 대시보드 개선안 §A.4 + §4.3 — 신규 카드용 보조 데이터
+  // 검토 대기/승인 대기 카운트는 ApprovalsService에서 가져옴 (PendingApprovalCard와 동일한 query key 공유)
+  const { data: pendingCounts } = useQuery<PendingCountsByCategory>({
+    queryKey: queryKeys.approvals.counts(userRole),
+    queryFn: () => approvalsApi.getPendingCounts(),
+    enabled:
+      !!userRole &&
+      (userRole === UserRoleValues.QUALITY_MANAGER || userRole === UserRoleValues.TEST_ENGINEER),
+    ...QUERY_CONFIG.PENDING_APPROVALS,
+  });
+
+  // §4.3 — 품질책임자 검토 대기 hero (fallback: pendingCounts.plan_review).
+  // 백엔드 review-pending 엔드포인트 응답 우선 사용 (아래 useQuery), 미응답 시 이 fallback 사용.
+  const reviewPendingFallback = useMemo(() => {
+    if (userRole !== UserRoleValues.QUALITY_MANAGER) return undefined;
+    const planReview = pendingCounts?.plan_review ?? 0;
+    return { pendingCount: planReview };
+  }, [userRole, pendingCounts]);
+
+  // §3.9 — 시스템관리자 전용 시스템 상태. 백엔드 /api/dashboard/system-health 호출.
+  const { data: systemHealth } = useQuery<SystemHealthMetrics>({
+    queryKey: queryKeys.dashboard.systemHealth(),
+    queryFn: () => dashboardApi.getSystemHealth(),
+    enabled: userRole === UserRoleValues.SYSTEM_ADMIN,
+    ...QUERY_CONFIG.DASHBOARD,
+  });
+
+  // §A.7 — 시험실무자 본인 반출 현황 (CheckoutCard scope='me' 대기 신청 푸터용).
+  const { data: myCheckouts } = useQuery<DashboardCheckoutsScope>({
+    queryKey: queryKeys.dashboard.checkouts('me'),
+    queryFn: () => dashboardApi.getCheckoutsByScope('me'),
+    enabled: userRole === UserRoleValues.TEST_ENGINEER,
+    ...QUERY_CONFIG.DASHBOARD,
+  });
+  const pendingCheckoutRequests = myCheckouts?.pendingRequests;
+
+  // §4.3 — 품질책임자 검토 대기 hero. 백엔드 응답 우선, 미응답 시 fallback 사용.
+  const { data: reviewPendingData } = useQuery<QualityReviewPending>({
+    queryKey: queryKeys.dashboard.qualityReviewPending(),
+    queryFn: () => dashboardApi.getQualityReviewPending(),
+    enabled: userRole === UserRoleValues.QUALITY_MANAGER,
+    ...QUERY_CONFIG.DASHBOARD,
+  });
+  const reviewPending = reviewPendingData ?? reviewPendingFallback;
+
+  // §A.4 — 시험실무자 빠른 요약 (백엔드 응답 우선, fallback aggregate 데이터).
+  const { data: myQuickSummaryData } = useQuery<MyQuickSummary>({
+    queryKey: queryKeys.dashboard.myQuickSummary(),
+    queryFn: () => dashboardApi.getMyQuickSummary(),
+    enabled: userRole === UserRoleValues.TEST_ENGINEER,
+    ...QUERY_CONFIG.DASHBOARD,
+  });
+  const myQuickSummary = useMemo(() => {
+    if (userRole !== UserRoleValues.TEST_ENGINEER) return undefined;
+    if (myQuickSummaryData) return myQuickSummaryData;
+    // 백엔드 미응답 fallback — aggregate 데이터로 재구성.
+    const upcomingItems = upcomingCalibrations;
+    const upcomingCount = upcomingItems.length;
+    const nearestDays = upcomingItems[0]?.daysUntilDue ?? Infinity;
+    return {
+      pendingCheckoutRequests: pendingCheckoutRequests ?? 0,
+      upcomingCalibrations:
+        upcomingCount > 0
+          ? { count: upcomingCount, nearestDays: Number.isFinite(nearestDays) ? nearestDays : 0 }
+          : undefined,
+      nonconformanceItems: equipmentStatusStats.non_conforming ?? 0,
+    };
+  }, [
+    userRole,
+    myQuickSummaryData,
+    upcomingCalibrations,
+    equipmentStatusStats,
+    pendingCheckoutRequests,
+  ]);
 
   const alertTrailingAction =
     controlCenter.alertBannerTrailingAction === 'approval' ? (
@@ -137,6 +234,8 @@ function DashboardClientComponent({
 
   return (
     <div className={getPageContainerClasses('list')}>
+      <SimulationBanner />
+      <OfflineBanner />
       {isError && (
         <div className="mb-4">
           <Alert variant="destructive">
@@ -176,6 +275,9 @@ function DashboardClientComponent({
         loading={isLoading}
         userId={session?.user?.id}
         userName={session?.user?.name ?? undefined}
+        reviewPending={reviewPending}
+        systemHealth={systemHealth}
+        pendingCheckoutRequests={pendingCheckoutRequests}
       />
       <DashboardRow4
         controlCenter={controlCenter}
@@ -189,6 +291,8 @@ function DashboardClientComponent({
         recentActivities={recentActivities}
         loading={isLoading}
         recentActivityAriaLabel={t('srOnly.recentActivity')}
+        myQuickSummary={myQuickSummary}
+        systemHealth={systemHealth}
       />
     </div>
   );
