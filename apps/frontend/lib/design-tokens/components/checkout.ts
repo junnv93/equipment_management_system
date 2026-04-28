@@ -446,13 +446,16 @@ export const CHECKOUT_STATS_VARIANTS = {
     contentPadding: `${SPACING_RHYTHM_TOKENS.tight.paddingX} pb-3`,
   },
   /**
-   * Hero KPI 카드 — 페이지당 1개, overdue>0 시 동적 선택 (PR-7 grid 레이아웃에서 col-span-2 적용)
+   * Hero KPI 카드 — 페이지당 1개, overdue>0 시 동적 선택 (Phase 4: P1-1)
    *
-   * container: PR-7 grid-cols-6 레이아웃에서 col-span-2 적용 — 현재는 구조 토큰만 정의
-   * surface: floating(raised보다 한 층 위) — 시각적 계층 강조
+   * container        : 레거시 alias — 신규 코드는 containerInGrid 사용 권장 (의미명 명확)
+   * containerInGrid  : 6-col grid에서 hero 카드 cell 점유 (sm 3 / lg 2)
+   * surface          : floating(raised보다 한 층 위) — 시각적 계층 강조
+   * alertRing        : 색상 단독 의존 회피 — ring weight + brand-critical 동시 신호
    */
   hero: {
     container: 'col-span-2 sm:col-span-3 lg:col-span-2 row-span-1',
+    containerInGrid: 'col-span-2 sm:col-span-3 lg:col-span-2',
     surface: `bg-card ${ELEVATION_TOKENS.surface.floating}`,
     kpi: `${TYPOGRAPHY_TOKENS.kpi} text-5xl`,
     label: TYPOGRAPHY_TOKENS.kpiLabel,
@@ -465,6 +468,21 @@ export const CHECKOUT_STATS_VARIANTS = {
 } as const;
 
 export type CheckoutStatsVariant = keyof typeof CHECKOUT_STATS_VARIANTS;
+
+/**
+ * KPI 영역 grid 토큰 (Phase 4: P1-1)
+ *
+ * hero 활성/비활성 두 모드 grid className SSOT — host와 skeleton 양쪽 공유.
+ * 6-col grid (with hero) ↔ 5-col flat grid (without hero) 전환은 getStatsGridClass(hasHero) 경유.
+ */
+export const CHECKOUT_STATS_GRID_TOKENS = {
+  withHero: 'grid gap-3 grid-cols-4 sm:grid-cols-6 lg:grid-cols-6',
+  flat: 'grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+} as const;
+
+export function getStatsGridClass(hasHero: boolean): string {
+  return hasHero ? CHECKOUT_STATS_GRID_TOKENS.withHero : CHECKOUT_STATS_GRID_TOKENS.flat;
+}
 
 /**
  * 통계 카드 alert 임계값 (SSOT — 하드코딩 금지)

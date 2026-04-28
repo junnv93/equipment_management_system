@@ -726,3 +726,44 @@ grep -n "iconSize" apps/frontend/lib/design-tokens/semantic.ts
 - `apps/frontend/lib/design-tokens/semantic.ts` — `SURFACE_INLINE_ACTION_TOKENS.iconSize`
 
 **발생 이력 (2026-04-28)**: Phase 3 P0-3에서 NextStepPanel floating/inline의 Loader2 `h-3.5 w-3.5` 토큰 미경유 잔존 — review-architecture FAIL-3로 검출 후 atom 통합으로 해소.
+
+---
+
+### Step 31: checkouts KPI 영역 raw `grid-cols-N` / `col-span-N` 직접 사용 금지 (2026-04-28 추가, REVIEW_RESULT.md §P1-1)
+
+반출 KPI 영역(`apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` + `apps/frontend/components/checkouts/HeroKPISkeleton.tsx`)에서 grid 컬럼 클래스(`grid-cols-N`)와 hero 카드 cell 점유(`col-span-N`)를 raw className으로 합성하는 것을 금지. 모든 호출은 `getStatsGridClass(hasHero)` + `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 토큰 경유.
+
+**왜 raw 합성이 위험한가**:
+- host의 grid가 `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6`이고 skeleton이 `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6`로 따로 박혀 있으면, P1-1 grid 변경 시 두 곳을 동시에 수정해야 한다 — 누락 시 skeleton ↔ 실제 카드 사이즈 불일치로 CLS(Cumulative Layout Shift) 회귀.
+- hero col-span을 `col-span-2`로 직접 박으면 향후 `lg:col-span-3` 같은 breakpoint 정책 변경 시 모든 호출처를 추적해야 함.
+
+```bash
+# checkouts KPI 영역 raw grid/col-span 잔존 (FAIL 패턴)
+grep -nE '\b(col-span|grid-cols)-\d' \
+  'apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx' \
+  apps/frontend/components/checkouts/HeroKPISkeleton.tsx
+# 기대: 0 hits
+
+# 토큰 경유 정상 패턴 확인
+grep -n "getStatsGridClass\|containerInGrid" \
+  'apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx' \
+  apps/frontend/components/checkouts/HeroKPISkeleton.tsx
+# 기대: 양쪽 파일 모두 호출 (host + skeleton 동기화)
+```
+
+**PASS:**
+- `OutboundCheckoutsTab.tsx` + `HeroKPISkeleton.tsx`에서 raw `grid-cols-N` / `col-span-N` 0건
+- 두 파일 모두 `getStatsGridClass(hasHero)` 또는 `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 호출
+
+**FAIL:**
+- raw `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6` 또는 `col-span-2` 잔존 → P1-1 변경 시 host와 skeleton 비동기 회귀 위험
+
+**예외:**
+- 토큰 정의 파일 자체(`apps/frontend/lib/design-tokens/components/checkout.ts`)는 grid 클래스 string 정의 — 검증 대상 외.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_STATS_GRID_TOKENS`, `getStatsGridClass`, `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 정의
+- `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — host
+- `apps/frontend/components/checkouts/HeroKPISkeleton.tsx` — skeleton
+
+**발생 이력 (2026-04-28)**: Phase 4 P1-1 진입 시 host에 `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6` raw + `col-span-2` raw 잔존 — Phase 4.B/4.C 토큰 마이그레이션으로 해소.

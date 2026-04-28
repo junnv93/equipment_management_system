@@ -28,12 +28,14 @@ import {
   CHECKOUT_STATS_VARIANTS,
   CHECKOUT_STATS_ALERT_THRESHOLD,
   CHECKOUT_PAGINATION_TOKENS,
+  getStatsGridClass,
   MICRO_TYPO,
   SECTION_RHYTHM_TOKENS,
   TYPOGRAPHY_TOKENS,
   CHECKOUT_ICON_MAP,
   type CheckoutStatsVariant,
 } from '@/lib/design-tokens';
+import { selectHeroVariant } from '@/lib/utils/checkout-hero-selector';
 import { useAuth } from '@/hooks/use-auth';
 import {
   convertFiltersToApiParams,
@@ -62,55 +64,58 @@ interface OutboundCheckoutsTabProps {
   onResetFilters: () => void;
 }
 
-/** 반출 탭 통계 카드 데이터 정의 */
+/** 반출 탭 통계 카드 데이터 정의 — referential stability 보장 (Phase 4 P1-1) */
 function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
-  return [
-    {
-      variantKey: 'total' as CheckoutStatsVariant,
-      labelKey: 'outbound.totalCheckouts',
-      subKey: 'outbound.totalSub',
-      value: summary.total,
-      icon: ClipboardList,
-      filterStatus: 'all',
-      dotColor: 'bg-brand-info',
-    },
-    {
-      variantKey: 'pending' as CheckoutStatsVariant,
-      labelKey: 'outbound.pendingApproval',
-      subKey: 'outbound.pendingSub',
-      value: summary.pending,
-      icon: Clock,
-      filterStatus: 'pending',
-      dotColor: 'bg-brand-warning',
-    },
-    {
-      variantKey: 'checkedOut' as CheckoutStatsVariant,
-      labelKey: 'outbound.inProgress',
-      subKey: 'outbound.inProgressSub',
-      value: summary.approved,
-      icon: PackageOpen,
-      filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
-      dotColor: 'bg-brand-purple',
-    },
-    {
-      variantKey: 'overdue' as CheckoutStatsVariant,
-      labelKey: 'outbound.overdue',
-      subKey: 'outbound.overdueSub',
-      value: summary.overdue,
-      icon: AlertTriangle,
-      filterStatus: CSVal.OVERDUE,
-      dotColor: 'bg-brand-critical',
-    },
-    {
-      variantKey: 'returned' as CheckoutStatsVariant,
-      labelKey: 'outbound.returnToday',
-      subKey: 'outbound.returnedSub',
-      value: summary.returnedToday,
-      icon: PackageCheck,
-      filterStatus: getCheckoutStatusGroupFilterValue('completed'),
-      dotColor: 'bg-brand-ok',
-    },
-  ];
+  return useMemo(
+    () => [
+      {
+        variantKey: 'total' as CheckoutStatsVariant,
+        labelKey: 'outbound.totalCheckouts',
+        subKey: 'outbound.totalSub',
+        value: summary.total,
+        icon: ClipboardList,
+        filterStatus: 'all',
+        dotColor: 'bg-brand-info',
+      },
+      {
+        variantKey: 'pending' as CheckoutStatsVariant,
+        labelKey: 'outbound.pendingApproval',
+        subKey: 'outbound.pendingSub',
+        value: summary.pending,
+        icon: Clock,
+        filterStatus: 'pending',
+        dotColor: 'bg-brand-warning',
+      },
+      {
+        variantKey: 'checkedOut' as CheckoutStatsVariant,
+        labelKey: 'outbound.inProgress',
+        subKey: 'outbound.inProgressSub',
+        value: summary.approved,
+        icon: PackageOpen,
+        filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
+        dotColor: 'bg-brand-purple',
+      },
+      {
+        variantKey: 'overdue' as CheckoutStatsVariant,
+        labelKey: 'outbound.overdue',
+        subKey: 'outbound.overdueSub',
+        value: summary.overdue,
+        icon: AlertTriangle,
+        filterStatus: CSVal.OVERDUE,
+        dotColor: 'bg-brand-critical',
+      },
+      {
+        variantKey: 'returned' as CheckoutStatsVariant,
+        labelKey: 'outbound.returnToday',
+        subKey: 'outbound.returnedSub',
+        value: summary.returnedToday,
+        icon: PackageCheck,
+        filterStatus: getCheckoutStatusGroupFilterValue('completed'),
+        dotColor: 'bg-brand-ok',
+      },
+    ],
+    [summary.total, summary.pending, summary.approved, summary.overdue, summary.returnedToday]
+  );
 }
 
 /**
@@ -121,9 +126,15 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
  * - 기한 초과 그룹 최상단 고정 (overdue 그룹 id 부여)
  *
  * PR-7 Batch 2:
- * - overdue hero 카드 → HeroKPI 컴포넌트 연결 (col-span-2 구조 유지)
- * - secondary 카드에 SparklineMini 슬롯 추가 (현재 빈 배열 플레이스홀더 — 실제 데이터는 PR-x에서 연결)
+ * - overdue hero 카드 → HeroKPI 컴포넌트 연결
+ * - secondary 카드에 SparklineMini 슬롯 추가 (현재 빈 배열 플레이스홀더 — 실제 데이터는 Phase 4.6에서 연결)
  * - overdue===0 + status=CSVal.OVERDUE 필터 시 EmptyState celebration 분기
+ *
+ * Phase 4 (P1-1):
+ * - hero 선택 → selectHeroVariant SSOT 헬퍼 (priority 모델, 향후 확장 가능)
+ * - grid className → getStatsGridClass(hasHero) 토큰
+ * - hero wrapper → CHECKOUT_STATS_VARIANTS.hero.containerInGrid + alertRing
+ * - aria-current 추가 (SR에 hero 강조 카드 식별)
  */
 export default function OutboundCheckoutsTab({
   teamId,
@@ -222,19 +233,32 @@ export default function OutboundCheckoutsTab({
   // ──────────────────────────────────────────────
   const filterActive = countActiveFilters(filters) > 0;
   const isAllActive = !filterActive;
-  // overdue>0이면 해당 카드를 hero variant(col-span-2)로 강조
-  const heroVariantKey: CheckoutStatsVariant | null = summary.overdue > 0 ? 'overdue' : null;
+  // Hero 선택 SSOT — Phase 4 P1-1 (overdue>0 priority, 향후 priority 확장은 selectHeroVariant)
+  const { heroVariantKey } = useMemo(
+    () => selectHeroVariant({ overdue: summary.overdue, pending: summary.pending }),
+    [summary.overdue, summary.pending]
+  );
 
-  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 PR-x에서 연결 예정
+  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 Phase 4.6에서 연결 예정
   const sparklineValues: number[] = [];
+
+  // 카드 활성화 핸들러 — useCallback으로 referential stability (memo'd 자식 회귀 차단)
+  const handleStatActivate = useCallback(
+    (filterStatus: string) => {
+      if (filterStatus === 'all') {
+        onResetFilters();
+      } else {
+        onStatCardClick(filterStatus);
+      }
+    },
+    [onResetFilters, onStatCardClick]
+  );
 
   // ──────────────────────────────────────────────
   // 5개 통계 카드
   // ──────────────────────────────────────────────
   const renderStats = () => (
-    <div
-      className={`grid gap-3 ${heroVariantKey ? 'grid-cols-4 sm:grid-cols-6 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'}`}
-    >
+    <div className={getStatsGridClass(!!heroVariantKey)}>
       {statCards.map((card) => {
         const isActive =
           card.filterStatus === 'all' ? isAllActive : filters.status === card.filterStatus;
@@ -247,28 +271,36 @@ export default function OutboundCheckoutsTab({
 
         const variantTokens = CHECKOUT_STATS_VARIANTS[card.variantKey];
 
-        const handleStatActivate = () =>
-          card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus);
+        const onActivate = () => handleStatActivate(card.filterStatus);
 
-        // overdue hero 카드: HeroKPI 컴포넌트로 렌더 (col-span-2 그리드 셀 유지)
+        // Hero 카드: HeroKPI atom + alertRing wrapper + a11y 강조 시맨틱 (Phase 4 P1-1)
         if (isHero) {
+          const heroTokens = CHECKOUT_STATS_VARIANTS.hero;
+          const heroWrapperClass = [
+            heroTokens.containerInGrid,
+            'rounded-lg',
+            isAlert ? heroTokens.alertRing : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
           return (
             <div
               key={card.variantKey}
-              className="col-span-2"
+              className={heroWrapperClass}
               role="button"
               tabIndex={0}
               aria-pressed={isActive}
+              aria-current={isHero ? 'true' : undefined}
               aria-label={t(card.labelKey)}
-              onClick={handleStatActivate}
+              onClick={onActivate}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  handleStatActivate();
+                  onActivate();
                 }
               }}
             >
-              <HeroKPI label={t(card.labelKey)} value={card.value} variant="critical" trend="up" />
+              <HeroKPI label={t(card.labelKey)} value={card.value} variant="critical" />
             </div>
           );
         }
@@ -294,11 +326,11 @@ export default function OutboundCheckoutsTab({
             tabIndex={0}
             aria-pressed={isActive}
             aria-label={t(card.labelKey)}
-            onClick={handleStatActivate}
+            onClick={onActivate}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleStatActivate();
+                onActivate();
               }
             }}
           >

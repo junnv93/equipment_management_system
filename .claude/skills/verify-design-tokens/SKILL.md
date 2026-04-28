@@ -1755,3 +1755,58 @@ grep -rn "WORKFLOW_PANEL_TOKENS\.variant\.\(compact\|hero\)\.actionButton" \
 - `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom (P0-3 완료, 2026-04-28)
 - `packages/shared-constants/src/checkout-thresholds.ts` — `resolveInlineActionVariant` 매핑 SSOT
 - `apps/frontend/components/shared/NextStepPanel.tsx` — compact + hero variant 마이그레이션 호출처
+
+---
+
+### Step 45: KPI grid + hero `containerInGrid` + `alertRing` 토큰 적용 강제 (2026-04-28 추가, REVIEW_RESULT.md §P1-1)
+
+반출 KPI 영역(`OutboundCheckoutsTab` + `HeroKPISkeleton`)은 grid className과 hero col-span을 모두 `CHECKOUT_STATS_GRID_TOKENS` / `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 토큰 경유해야 한다. hero alert 강조는 `CHECKOUT_STATS_VARIANTS.hero.alertRing` 토큰을 호스트 wrapper에 적용 — 토큰 정의 후 미사용은 dead token.
+
+**왜 토큰 미경유가 위험한가**:
+- raw `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6` / `col-span-2` 호출처가 host와 skeleton 양쪽에 흩어지면, P1-1 grid 변경 시 두 곳을 동시에 수정해야 하며 누락 시 CLS(skeleton ↔ 실제 카드 사이즈 불일치)가 시각 회귀로 표면화.
+- `alertRing` 토큰을 정의만 하고 적용하지 않으면 색상 단독 강조(아이콘 + 라벨)에 의존하게 되어 저시력/색맹 사용자가 hero "기한 초과" 카드를 인지 못함. 또한 dead token은 향후 디자인 시스템 정리 시 누가 쓰는지 추적이 필요.
+
+```bash
+# checkouts KPI 영역에서 raw grid/col-span 잔존 (FAIL 패턴)
+grep -nE '\b(col-span|grid-cols)-\d' \
+  'apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx' \
+  apps/frontend/components/checkouts/HeroKPISkeleton.tsx
+# 기대: 0 hits (모두 getStatsGridClass / containerInGrid 토큰 경유)
+
+# hero alertRing 토큰 정의 후 미사용 (dead token)
+grep -rn "CHECKOUT_STATS_VARIANTS\.hero\.alertRing" \
+  apps/frontend/app apps/frontend/components
+# 기대: ≥ 1 hit (host wrapper에서 isAlert 시 합성)
+
+# raw ring-1 ring-brand-critical/N hero 외부 직접 사용 (FAIL 패턴) — checkouts 도메인 한정
+# (dashboard PendingApprovalCard 등 다른 도메인은 별도 토큰 정합화 PR로 추적 — tech-debt-tracker)
+grep -rn 'ring-1 ring-brand-critical' \
+  'apps/frontend/app/(dashboard)/checkouts/' \
+  apps/frontend/components/checkouts/ \
+  | grep -v 'lib/design-tokens'
+# 기대: 0 hits (호출처는 모두 토큰 변수 경유)
+
+# host와 skeleton이 동일 grid 토큰 import 확인
+grep -n "getStatsGridClass\|CHECKOUT_STATS_GRID_TOKENS" \
+  'apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx' \
+  apps/frontend/components/checkouts/HeroKPISkeleton.tsx
+# 기대: 양쪽 모두 import + 호출 (grid SSOT 공유 강제)
+```
+
+**PASS:**
+- `OutboundCheckoutsTab.tsx` + `HeroKPISkeleton.tsx`에서 raw `grid-cols-N` / `col-span-N` 0건
+- 두 파일 모두 `getStatsGridClass(hasHero)` 호출 + hero 분기는 `CHECKOUT_STATS_VARIANTS.hero.containerInGrid` 사용
+- hero `alertRing` 토큰이 host wrapper에 적용 (isAlert 분기 합성)
+- raw `ring-1 ring-brand-critical/N` hero 외부 직접 사용 0건
+
+**FAIL:**
+- raw grid/col-span 잔존 → host와 skeleton grid 비동기 회귀 시 CLS
+- `alertRing` 토큰 정의만 + 호출 0건 → dead token (저시력 강조 누락)
+- raw `ring-*` 직접 합성 → 토큰 변경 시 회귀 위험
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/components/checkout.ts` — `CHECKOUT_STATS_GRID_TOKENS`, `getStatsGridClass`, `CHECKOUT_STATS_VARIANTS.hero.containerInGrid`/`alertRing`
+- `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — host
+- `apps/frontend/components/checkouts/HeroKPISkeleton.tsx` — skeleton (host와 동일 토큰 미러링)
+
+**발생 이력 (2026-04-28)**: Phase 4 P1-1에서 `CHECKOUT_STATS_VARIANTS.hero.container` / `.alertRing` 토큰이 PR-7 단계에 정의되었으나 host에서 raw `col-span-2` + 미적용 상태로 잔존 — Phase 4 통합 마이그레이션으로 해소.

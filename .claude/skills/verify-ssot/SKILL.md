@@ -1153,3 +1153,49 @@ grep -rn "as const satisfies Record<" packages/shared-constants/src
 - `packages/shared-constants/src/checkout-thresholds.ts` — `CHECKOUT_ACTION_INLINE_CLASS` 모범 사례
 
 **발생 이력 (2026-04-28)**: Phase 3 P0-3에서 `OK_INLINE_ACTIONS`/`APPROVE_INLINE_ACTIONS` `ReadonlySet<CheckoutAction>` 패턴 → `CHECKOUT_ACTION_INLINE_CLASS as const satisfies Record<CheckoutAction, InlineActionClass>`로 전환. 14개 액션 분류 enum 확장 시 컴파일러가 강제.
+
+---
+
+### Step 41: Hero KPI 선택 로직 SSOT — `selectHeroVariant` 우회 inline 분기 금지 (2026-04-28 추가, REVIEW_RESULT.md §P1-1)
+
+반출 KPI hero 카드 선택은 `apps/frontend/lib/utils/checkout-hero-selector.ts`의 `selectHeroVariant` 헬퍼 단일 경로만 허용. 호스트(`OutboundCheckoutsTab` 등)에서 `summary.overdue > 0 ? 'overdue' : null` 같은 inline 분기 패턴은 SSOT 우회로 금지.
+
+**왜 inline 분기가 위험한가**:
+- hero 우선순위 정책(P1-1: overdue 단일 → Phase 5: pending 추가 가능 → 향후: role-based)이 호출처마다 흩어지면, 정책 변경 시 모든 호출처를 추적·수정해야 한다 — 누락 시 페이지마다 다른 hero 동작.
+- 단위 테스트가 inline 분기에 직접 닿을 수 없어 회귀 차단 가드 부재 (호스트 컴포넌트 통째 렌더 테스트는 비싸고 느림).
+- `selectHeroVariant`는 `HERO_PRIORITY` 배열 priority 모델로 향후 확장(pending hero 승격, role-based threshold 등)을 분리된 데이터로 표현하여 컴파일러가 우선순위 변경 영향을 즉시 검출.
+
+```bash
+# inline hero 분기 패턴 탐지 (FAIL 패턴)
+grep -rnE 'summary\.(overdue|pending)\s*>\s*\d+\s*\?\s*[\x27"]?(overdue|pending)' \
+  apps/frontend/app apps/frontend/components apps/frontend/hooks \
+  | grep -v 'lib/utils/checkout-hero-selector'
+# 기대: 0 hits (호출처는 모두 selectHeroVariant 경유)
+
+# selectHeroVariant 호출처 확인
+grep -rn "selectHeroVariant" apps/frontend/app apps/frontend/components
+# 기대: ≥ 1 hit (host에서 useMemo 감싸 호출)
+
+# 테스트 커버리지 확인
+ls apps/frontend/lib/utils/__tests__/checkout-hero-selector.test.ts
+# 기대: 파일 존재 + 6+ 케이스 (overdue × pending 매트릭스 + Phase 5 negative test 포함)
+```
+
+**PASS:**
+- 호스트 inline `summary.overdue > 0 ? ...` 패턴 0건
+- `selectHeroVariant({ overdue, pending })` 호출이 단일 SSOT 경로
+- 단위 테스트가 우선순위 정책의 회귀 가드로 작동 (Phase 4 boundary: pending hero 미승격 — Phase 5 정책 변경 시 negative test가 fail)
+
+**FAIL:**
+- `summary.overdue > 0 ? 'overdue' : null` 또는 `summary.pending > THRESHOLD ? 'pending' : ...` inline 분기 잔존 → 정책 변경 시 모든 호출처 추적 필요, 단위 테스트 부재
+
+**예외:**
+- `selectHeroVariant` 정의 파일(`apps/frontend/lib/utils/checkout-hero-selector.ts`) 자체는 grep 매치 허용 — `HERO_PRIORITY` 배열의 condition 함수가 본 패턴.
+- 단위 테스트 파일(`__tests__/checkout-hero-selector.test.ts`)도 매치 허용 (assertion).
+
+**관련 파일:**
+- `apps/frontend/lib/utils/checkout-hero-selector.ts` — `selectHeroVariant` SSOT
+- `apps/frontend/lib/utils/__tests__/checkout-hero-selector.test.ts` — 6+ 케이스 회귀 가드
+- `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — host (useMemo + selectHeroVariant)
+
+**발생 이력 (2026-04-28)**: Phase 4 P1-1 진입 시 OutboundCheckoutsTab line 226에 `heroVariantKey = summary.overdue > 0 ? 'overdue' : null` inline 분기 — Phase 4.A/4.B SSOT 헬퍼 분리로 해소. Phase 5 (P1-2 알림 단일 노출)에서 pending hero 승격 도입 시 `HERO_PRIORITY` 배열에 rule 추가 + negative test 5번 갱신.
