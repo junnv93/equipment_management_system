@@ -23,7 +23,6 @@ export interface UlLogoProps {
 
 export function UlLogo({ className, ariaHidden = false }: UlLogoProps) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- public/images SVG 직접 사용 (next/image 최적화 불필요)
     <img
       src="/images/ul-logo.svg"
       alt={ariaHidden ? '' : 'UL Solutions'}

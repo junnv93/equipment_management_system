@@ -166,6 +166,15 @@ const eslintConfig = [
       'no-restricted-syntax': ['error', STATUS_LITERAL_RULE],
     },
   },
+  // brand-assets — 외부 SVG 자산 직접 노출 허용.
+  // 이유: public/images/*.svg 같은 디자이너 공급 원본을 inline `<svg>` 변환 없이 사용. next/image의
+  // 자동 최적화는 vector SVG에 무의미하고, className으로 사이즈 자유 조정이 필요해 일반 `<img>`가 적합.
+  {
+    files: ['**/lib/brand-assets/**/*.{ts,tsx}'],
+    rules: {
+      '@next/next/no-img-element': 'off',
+    },
+  },
   // 대시보드 컴포넌트 — 글로벌 룰 + 한글 JSXText 금지 (i18n 강제)
   {
     files: ['**/components/dashboard/**/*.{ts,tsx}'],
