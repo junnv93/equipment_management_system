@@ -141,13 +141,13 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     emailStrategy: 'immediate',
   },
 
-  // rental 2-step: 차용팀 1차 승인 → 신청자 + 반출팀 TM 전체 알림
+  // rental 2-step: 사용 부서 1차 승인 → 신청자 + 관리 부서 TM 전체 알림
   [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED]: {
     category: 'checkout',
     priority: 'high',
     titleTemplate: '대여 1차 승인: {{equipmentName}}',
     contentTemplate:
-      '{{equipmentName}}({{managementNumber}}) 대여 신청이 차용팀 승인되었습니다. 반출 팀장 최종 승인이 필요합니다.',
+      '{{equipmentName}}({{managementNumber}}) 대여 신청이 사용 부서에서 승인되었습니다. 관리 부서 팀장 최종 승인이 필요합니다.',
     recipientStrategy: {
       type: 'composite',
       strategies: [
@@ -162,13 +162,13 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     emailStrategy: 'immediate',
   },
 
-  // rental 2-step: 차용팀 1차 반려 → 신청자만 알림
+  // rental 2-step: 사용 부서 1차 반려 → 신청자만 알림
   [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED]: {
     category: 'checkout',
     priority: 'high',
     titleTemplate: '대여 1차 반려: {{equipmentName}}',
     contentTemplate:
-      '{{equipmentName}}({{managementNumber}}) 대여 신청이 차용팀에서 반려되었습니다. 사유: {{reason}}',
+      '{{equipmentName}}({{managementNumber}}) 대여 신청이 사용 부서에서 반려되었습니다. 사유: {{reason}}',
     recipientStrategy: { type: 'actor', field: 'requesterId' },
     linkTemplate: '/checkouts/{{checkoutId}}',
     entityType: 'checkout',

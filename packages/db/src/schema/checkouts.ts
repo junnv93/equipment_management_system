@@ -89,7 +89,7 @@ export const checkouts = pgTable(
     // 대여 1차 승인 정보 (rental 전용, cal/repair는 NULL 유지)
     borrowerApproverId: uuid('borrower_approver_id').references(() => users.id, {
       onDelete: 'restrict',
-    }), // 차용 팀 기술책임자 (1차 승인자)
+    }), // 사용 부서 기술책임자 (1차 승인자)
     borrowerApprovedAt: timestamp('borrower_approved_at'), // 1차 승인 일시
     borrowerRejectionReason: text('borrower_rejection_reason'), // 1차 반려 사유
 

@@ -7,7 +7,7 @@ import { VM } from '@equipment-management/schemas';
 // ========== Zod 스키마 정의 ==========
 
 /**
- * 차용 팀 TM 1차 반려 스키마 (rental 전용)
+ * 사용 부서 TM 1차 반려 스키마 (rental 전용)
  * version은 optimistic locking을 위해 필수
  * ✅ Rule 2: approverId는 서버에서 req.user.userId로 추출 (DTO에 미포함)
  */

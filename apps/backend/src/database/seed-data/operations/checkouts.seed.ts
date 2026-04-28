@@ -708,7 +708,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
   }),
 
   // ========================================================================
-  // STATUS: borrower_received (3 records) - Rental 4-step ② (차용처 수령)
+  // STATUS: borrower_received (3 records) - Rental 4-step ② (사용 부서 수령)
   // ========================================================================
 
   // 33. Borrower Received - Rental (Suwon → Uiwang)

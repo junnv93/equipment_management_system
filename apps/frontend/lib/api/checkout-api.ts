@@ -361,7 +361,7 @@ const checkoutApi = {
   },
 
   /**
-   * 대여 반출 1차 승인 (차용 팀 TM)
+   * 대여 반출 1차 승인 (사용 부서 TM)
    * rental 전용. pending → borrower_approved.
    * ✅ Rule 2: approverId는 서버에서 추출
    */
@@ -374,7 +374,7 @@ const checkoutApi = {
   },
 
   /**
-   * 대여 반출 1차 반려 (차용 팀 TM)
+   * 대여 반출 1차 반려 (사용 부서 TM)
    * rental 전용. pending → rejected (borrowerRejectionReason 기록).
    * ✅ Rule 2: approverId는 서버에서 추출
    */

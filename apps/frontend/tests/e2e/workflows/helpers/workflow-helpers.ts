@@ -1225,18 +1225,18 @@ export async function resetSelfInspections(equipmentId: string): Promise<void> {
 }
 
 // ============================================================================
-// Rental 2-Step Borrower API (차용팀 TM 1차 승인/반려)
+// Rental 2-Step Borrower API (사용 부서 TM 1차 승인/반려)
 // ============================================================================
 
 /**
- * rental 차용팀 TM 1차 승인 — CAS-Aware, token 직접 주입
+ * rental 사용 부서 TM 1차 승인 — CAS-Aware, token 직접 주입
  *
  * 반환값: APIResponse — 호출자가 status 검증 (negative test에서 403/400 기대 시에도 사용 가능).
  * `expect(resp.ok())` 내부 강제 없음.
  *
  * @param page - Playwright Page (page.request 경유)
  * @param checkoutId - 대상 반출 ID
- * @param token - 차용팀 TM의 Bearer token (getBackendTokenByEmail로 취득)
+ * @param token - 사용 부서 TM의 Bearer token (getBackendTokenByEmail로 취득)
  */
 export async function borrowerApproveCheckout(page: Page, checkoutId: string, token: string) {
   const detailResp = await apiGetWithToken(page, `/api/checkouts/${checkoutId}`, token);
@@ -1251,7 +1251,7 @@ export async function borrowerApproveCheckout(page: Page, checkoutId: string, to
 }
 
 /**
- * rental 차용팀 TM 1차 반려 — CAS-Aware, token 직접 주입
+ * rental 사용 부서 TM 1차 반려 — CAS-Aware, token 직접 주입
  *
  * @param reason - 반려 사유 (필수)
  */

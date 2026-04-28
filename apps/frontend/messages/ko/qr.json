@@ -73,7 +73,8 @@
       "qrOnly": "QR만"
     },
     "downloadPdf": "PDF 다운로드",
-    "downloadFailed": "PDF 생성에 실패했습니다. 잠시 후 다시 시도하세요."
+    "downloadFailed": "PDF 생성에 실패했습니다. 잠시 후 다시 시도하세요.",
+    "error": "QR 코드 생성에 실패했습니다."
   },
   "landing": {
     "loadingLabel": "장비 정보를 불러오는 중...",
@@ -128,8 +129,8 @@
     "dialogTitle": "QR 인수인계",
     "dialogDescription": "상대방이 폰으로 이 QR을 스캔하면 상태 확인 페이지로 자동 이동합니다.",
     "purpose": {
-      "borrower_receive": "차용자가 장비 인수 확인을 진행합니다 (borrower_receive 단계)",
-      "borrower_return": "차용자가 반납 확인을 진행합니다 (borrower_return 단계)",
+      "borrower_receive": "사용 부서 담당자가 장비 인수 확인을 진행합니다 (borrower_receive 단계)",
+      "borrower_return": "사용 부서 담당자가 반납 확인을 진행합니다 (borrower_return 단계)",
       "lender_receive": "대여자가 반납 수령 확인을 진행합니다 (lender_receive 단계)"
     },
     "issuing": "토큰 발급 중...",

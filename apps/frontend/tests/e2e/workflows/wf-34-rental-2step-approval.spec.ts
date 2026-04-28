@@ -2,15 +2,15 @@
  * WF-34: rental 2-step 승인 워크플로우 — Phase 10 E2E 통합 검증
  *
  * 시나리오 (6개 직렬):
- *   T1  차용팀 TE가 rental 반출 신청 → PENDING
- *   T2  차용팀 TM이 borrower-approve → BORROWER_APPROVED
- *   T4  차용팀 TM이 lender /approve 시도 → 403 (cross-site scope 실패)
+ *   T1  사용 부서 TE가 rental 반출 신청 → PENDING
+ *   T2  사용 부서 TM이 borrower-approve → BORROWER_APPROVED
+ *   T4  사용 부서 TM이 lender /approve 시도 → 403 (cross-site scope 실패)
  *   T3  대출팀 TM(techManagerPage)이 /approve → APPROVED
  *   T5  동일 사이트 타 팀 TM이 borrower-approve 시도 → 403 CHECKOUT_BORROWER_TEAM_ONLY
  *   T6  calibration 반출에 borrower-approve 시도 → 400 CHECKOUT_BORROWER_APPROVE_RENTAL_ONLY
  *
  * 역할 배치:
- *   차용팀(borrower): uiwang-general-rf (다른 사이트)
+ *   사용 부서(borrower): uiwang-general-rf (다른 사이트)
  *     TE  — BORROWER_TE_EMAIL  (신청자)
  *     TM  — BORROWER_TM_EMAIL  (1차 승인권자)
  *   대출팀(lender): suwon-fcc-emc-rf (장비 소속팀)
@@ -55,9 +55,9 @@ import {
 
 const BACKEND_URL = BASE_URLS.BACKEND;
 
-/** 차용팀(uiwang-general-rf) TE — rental 반출 신청자 */
+/** 사용 부서(uiwang-general-rf) TE — rental 반출 신청자 */
 const BORROWER_TE_EMAIL = TEST_USER_EMAILS.TEST_ENGINEER_UIWANG;
-/** 차용팀(uiwang-general-rf) TM — borrower-approve 권한자 */
+/** 사용 부서(uiwang-general-rf) TM — borrower-approve 권한자 */
 const BORROWER_TM_EMAIL = TEST_USER_EMAILS.TECHNICAL_MANAGER_UIWANG;
 /** 동일 사이트(suwon) 타 팀(suwon-sar) TM — scope 통과, teamId 불일치로 BORROWER_TEAM_ONLY 유발 */
 const SUWON_SAR_TM_EMAIL = TEST_USER_EMAILS.TECHNICAL_MANAGER_SUWON_SAR;
@@ -127,15 +127,15 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
   });
 
   // --------------------------------------------------------------------------
-  // T1: 차용팀 TE 신청 → PENDING
+  // T1: 사용 부서 TE 신청 → PENDING
   // --------------------------------------------------------------------------
 
-  test('T1: 차용팀 TE가 rental 반출 신청 → PENDING', async ({ testOperatorPage: page }) => {
+  test('T1: 사용 부서 TE가 rental 반출 신청 → PENDING', async ({ testOperatorPage: page }) => {
     await clearBackendCache();
 
     const borrowerTeToken = await getBackendTokenByEmail(page, BORROWER_TE_EMAIL);
 
-    // token 직접 주입으로 차용팀 TE 신청 (testOperatorPage는 suwon TE — cross-site 신청)
+    // token 직접 주입으로 사용 부서 TE 신청 (testOperatorPage는 suwon TE — cross-site 신청)
     const resp = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
       headers: {
         Authorization: `Bearer ${borrowerTeToken}`,
@@ -160,10 +160,12 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
   });
 
   // --------------------------------------------------------------------------
-  // T2: 차용팀 TM borrower-approve → BORROWER_APPROVED
+  // T2: 사용 부서 TM borrower-approve → BORROWER_APPROVED
   // --------------------------------------------------------------------------
 
-  test('T2: 차용팀 TM borrower-approve → BORROWER_APPROVED', async ({ techManagerPage: page }) => {
+  test('T2: 사용 부서 TM borrower-approve → BORROWER_APPROVED', async ({
+    techManagerPage: page,
+  }) => {
     await clearBackendCache();
 
     const borrowerTmToken = await getBackendTokenByEmail(page, BORROWER_TM_EMAIL);
@@ -176,10 +178,10 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
   });
 
   // --------------------------------------------------------------------------
-  // T4: 차용팀 TM이 lender /approve 시도 → 403 (cross-site scope 실패, 순서상 T2 직후)
+  // T4: 사용 부서 TM이 lender /approve 시도 → 403 (cross-site scope 실패, 순서상 T2 직후)
   // --------------------------------------------------------------------------
 
-  test('T4: 차용팀 TM이 lender /approve 시도 → 403 cross-site scope 실패', async ({
+  test('T4: 사용 부서 TM이 lender /approve 시도 → 403 cross-site scope 실패', async ({
     techManagerPage: page,
   }) => {
     await clearBackendCache();
@@ -187,7 +189,7 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
     const borrowerTmToken = await getBackendTokenByEmail(page, BORROWER_TM_EMAIL);
     const resp = await approveCheckoutWithToken(page, checkoutId, borrowerTmToken);
 
-    // 차용팀 TM은 lender 사이트 소속이 아님 → scope 실패 403
+    // 사용 부서 TM은 lender 사이트 소속이 아님 → scope 실패 403
     expect(resp.status()).toBe(403);
   });
 

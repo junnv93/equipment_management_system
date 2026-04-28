@@ -1526,7 +1526,7 @@ expect(checks[0].step).toBe('lender_checkout');
 
 ---
 
-#### TEST-10-02: Step 2 - 차용자 수령 확인 (lender_checked → in_use) (P1)
+#### TEST-10-02: Step 2 - 사용 부서 담당자 수령 확인 (lender_checked → in_use) (P1)
 
 **Priority**: P1
 **Role**: technical_manager
@@ -1554,7 +1554,7 @@ expect(checks[0].step).toBe('lender_checkout');
 
 ---
 
-#### TEST-10-03: Step 3 - 차용자 반납 전 확인 (in_use → borrower_returned) (P1)
+#### TEST-10-03: Step 3 - 사용 부서 담당자 반납 전 확인 (in_use → borrower_returned) (P1)
 
 **Priority**: P1
 **Role**: technical_manager

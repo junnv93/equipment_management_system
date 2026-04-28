@@ -117,9 +117,9 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/checkouts/${id}`,
     APPROVE: (id: string) => `/api/checkouts/${id}/approve`,
     REJECT: (id: string) => `/api/checkouts/${id}/reject`,
-    /** 대여 1차 승인 (차용 팀 TM) */
+    /** 대여 1차 승인 (사용 부서 TM) */
     BORROWER_APPROVE: (id: string) => `/api/checkouts/${id}/borrower-approve`,
-    /** 대여 1차 반려 (차용 팀 TM) */
+    /** 대여 1차 반려 (사용 부서 TM) */
     BORROWER_REJECT: (id: string) => `/api/checkouts/${id}/borrower-reject`,
     START: (id: string) => `/api/checkouts/${id}/start`,
     COMPLETE: (id: string) => `/api/checkouts/${id}/complete`,
@@ -132,7 +132,7 @@ export const API_ENDPOINTS = {
     CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
     // 확인 필요 목록 조회
     PENDING_CHECKS: '/api/checkouts/pending-checks',
-    /** QR 인수인계 토큰 발급 (POST) — 대여자/차용자가 호출, 10분 TTL jti 1회용 */
+    /** QR 인수인계 토큰 발급 (POST) — 대여자/사용 부서 담당자가 호출, 10분 TTL jti 1회용 */
     HANDOVER_TOKEN: (id: string) => `/api/checkouts/${id}/handover-token`,
     /** QR 인수인계 토큰 검증 + 소비 (POST) — 스캔 진입점이 호출 */
     HANDOVER_VERIFY: '/api/checkouts/handover/verify',

@@ -94,7 +94,7 @@ export type InlineActionVariantKey = 'info' | 'ok' | 'warning' | 'danger';
 /**
  * 액션 의미 분류 — 변형(variant) 결정의 기준.
  *
- *   - `approve`: 승인 류 (1차 승인, 차용팀 1차 승인). isMyTurn일 때만 강조.
+ *   - `approve`: 승인 류 (1차 승인, 사용 부서 1차 승인). isMyTurn일 때만 강조.
  *   - `ok`:      정상 진행 액션 (반환·수령·반입·사용 시작). 컬러 변경 없이 ok로 안정 표시.
  *   - `negative`:거절·취소 류. inline action에선 일반적으로 overflow menu로 분리되므로
  *                inline 컬러 매핑 자체가 호출처에서 발생할 일 적음. 'info' fallback.

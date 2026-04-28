@@ -354,7 +354,7 @@
       "externalIdentifier": "외부 식별번호",
       "ownerDepartment": "소유 부서",
       "internalContact": "내부 담당자",
-      "borrowingJustification": "차용 사유",
+      "borrowingJustification": "사용 사유",
       "usagePeriodStart": "사용 시작일",
       "usagePeriodEnd": "사용 종료일",
       "usageLocation": "사용 장소",

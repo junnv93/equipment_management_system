@@ -16,7 +16,7 @@ import { z } from 'zod';
 // 반출 상태값 배열 (Zod enum과 동기화)
 export const CHECKOUT_STATUS_VALUES = [
   'pending', // 반출 신청 (승인 대기)
-  'borrower_approved', // 대여 1차 승인됨 (차용 팀 TM 승인 완료, lender TM 승인 대기) — rental 전용
+  'borrower_approved', // 대여 1차 승인됨 (사용 부서 TM 승인 완료, lender TM 승인 대기) — rental 전용
   'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
   'checked_out', // 반출 중 (교정/수리)

@@ -708,33 +708,33 @@
 - 대여자 반출 전 확인 완료
 - 상태 전이 정확
 
-#### 10.2. S10-02: 차용자 수령 확인 (Step ②)
+#### 10.2. S10-02: 사용 부서 담당자 수령 확인 (Step ②)
 
 **File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
 
 **Steps:**
 
 1. /checkouts/CHECKOUT_030_ID (lender_checked) 네비게이션
-2. 수령 확인 (차용자) 버튼 클릭 → 확인
+2. 수령 확인 (사용 부서 담당자) 버튼 클릭 → 확인
 3. API: 상태 전이 확인
 
 **Expected Results:**
 
-- 차용자 수령 확인 완료
+- 사용 부서 담당자 수령 확인 완료
 
-#### 10.3. S10-03: 차용자 반입 전 확인 (Step ③)
+#### 10.3. S10-03: 사용 부서 담당자 반입 전 확인 (Step ③)
 
 **File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
 
 **Steps:**
 
 1. /checkouts/CHECKOUT_033_ID (in_use) 네비게이션
-2. 반입 전 확인 (차용자) 버튼 클릭 → 확인
+2. 반입 전 확인 (사용 부서 담당자) 버튼 클릭 → 확인
 3. API: 상태 전이 확인
 
 **Expected Results:**
 
-- 차용자 반입 전 확인 완료
+- 사용 부서 담당자 반입 전 확인 완료
 
 #### 10.4. S10-04: 대여자 최종 확인 (Step ④)
 

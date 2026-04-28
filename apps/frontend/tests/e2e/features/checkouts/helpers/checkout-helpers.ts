@@ -510,7 +510,7 @@ export async function borrowerReceiptCheck(page: Page, checkoutId: string): Prom
   await page.goto(`/checkouts/${checkoutId}`);
   await page.waitForLoadState('domcontentloaded');
 
-  await page.getByRole('button', { name: '수령 확인 (차용자)' }).click();
+  await page.getByRole('button', { name: '수령 확인 (사용 부서 담당자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
   await page.waitForLoadState('domcontentloaded');
@@ -526,7 +526,7 @@ export async function borrowerPreReturn(page: Page, checkoutId: string): Promise
   await page.goto(`/checkouts/${checkoutId}`);
   await page.waitForLoadState('domcontentloaded');
 
-  await page.getByRole('button', { name: '반입 전 확인 (차용자)' }).click();
+  await page.getByRole('button', { name: '반입 전 확인 (사용 부서 담당자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
   await page.waitForLoadState('domcontentloaded');

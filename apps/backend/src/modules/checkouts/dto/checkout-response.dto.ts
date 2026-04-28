@@ -226,7 +226,7 @@ export class CheckoutResponseDto {
   // ============================================================================
 
   @ApiProperty({
-    description: '대여 1차 승인자 UUID (차용 팀 TM)',
+    description: '대여 1차 승인자 UUID (사용 부서 TM)',
     example: '123e4567-e89b-12d3-a456-426614174000',
     required: false,
   })

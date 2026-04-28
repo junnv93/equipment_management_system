@@ -528,9 +528,9 @@ export class CheckoutsController {
   @UsePipes(BorrowerApproveCheckoutValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
-    summary: '대여 반출 1차 승인 (차용 팀 TM)',
+    summary: '대여 반출 1차 승인 (사용 부서 TM)',
     description:
-      '대여(rental) 목적 반출의 1차 승인. 차용 팀 기술책임자만 가능. pending → borrower_approved.',
+      '대여(rental) 목적 반출의 1차 승인. 사용 부서 기술책임자만 가능. pending → borrower_approved.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: BorrowerApproveCheckoutDto })
@@ -539,7 +539,7 @@ export class CheckoutsController {
     status: HttpStatus.BAD_REQUEST,
     description: 'rental 목적이 아니거나 상태 불일치',
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '차용 팀 TM만 가능' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '사용 부서 TM만 가능' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async borrowerApprove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -555,15 +555,15 @@ export class CheckoutsController {
   @UsePipes(BorrowerRejectCheckoutValidationPipe)
   @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
-    summary: '대여 반출 1차 반려 (차용 팀 TM)',
+    summary: '대여 반출 1차 반려 (사용 부서 TM)',
     description:
-      '대여(rental) 목적 반출의 1차 반려. 차용 팀 기술책임자만 가능. pending → rejected (borrowerRejectionReason 기록).',
+      '대여(rental) 목적 반출의 1차 반려. 사용 부서 기술책임자만 가능. pending → rejected (borrowerRejectionReason 기록).',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: BorrowerRejectCheckoutDto })
   @ApiResponse({ status: HttpStatus.OK, description: '1차 반려 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '반려 사유 누락 또는 상태 불일치' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '차용 팀 TM만 가능' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '사용 부서 TM만 가능' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async borrowerReject(
     @Param('uuid', ParseUUIDPipe) uuid: string,

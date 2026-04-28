@@ -1267,7 +1267,7 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
-   * 차용 팀(borrower) 스코프 검증 — rental 전용.
+   * 사용 부서(borrower) 스코프 검증 — rental 전용.
    * requester의 site/teamId 기준으로 검증한다 (lender 기준 금지).
    * scope-먼저 원칙: 이 메서드 호출 후 FSM/domain 검증 수행.
    */
@@ -1789,7 +1789,7 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
-   * 대여 반출 1차 승인 (차용 팀 TM)
+   * 대여 반출 1차 승인 (사용 부서 TM)
    * rental 전용. pending → borrower_approved.
    * 보안 실행 순서: scope → FSM → identity rule → CAS
    */
@@ -1832,14 +1832,14 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Scope 먼저 — borrower(차용 팀) 기준으로 검증
+      // ✅ Scope 먼저 — borrower(사용 부서) 기준으로 검증
       this.enforceScopeForBorrower(checkout, requester.site ?? '', requester.teamId, req);
 
       // ✅ FSM — borrower_approve 전이 가능 여부
       const userPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'borrower_approve', userPermissions);
 
-      // ✅ Identity rule — 차용 팀 TM만 승인 가능
+      // ✅ Identity rule — 사용 부서 TM만 승인 가능
       // req.user.teamId 미존재 또는 신청자 팀과 불일치 시 거부
       if (!req.user?.teamId || req.user.teamId !== requester.teamId) {
         throw new ForbiddenException({
@@ -1909,7 +1909,7 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
-   * 대여 반출 1차 반려 (차용 팀 TM)
+   * 대여 반출 1차 반려 (사용 부서 TM)
    * rental 전용. pending → rejected (borrowerRejectionReason 기록).
    * 보안 실행 순서: scope → FSM → identity rule → domain(reason) → CAS
    */
