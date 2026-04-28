@@ -52,12 +52,18 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ...classNames,
       }}
       components={{
-        Chevron: ({ orientation }) =>
-          orientation === 'left' ? (
-            <ChevronLeft className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          ),
+        // react-day-picker v9 ChevronProps: { orientation, disabled, size, className }
+        // disabled prop을 className/aria-disabled로 전파해야 fromDate/toDate 경계에서
+        // 비활성 시각 + SR 안내가 정합. cn으로 disabled 시 opacity-30 추가.
+        Chevron: ({ orientation, disabled, className }) => {
+          const Icon = orientation === 'left' ? ChevronLeft : ChevronRight;
+          return (
+            <Icon
+              className={cn('h-4 w-4', disabled && 'opacity-30', className)}
+              aria-disabled={disabled || undefined}
+            />
+          );
+        },
       }}
       {...props}
     />

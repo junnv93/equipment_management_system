@@ -95,6 +95,13 @@ module.exports = {
         message:
           "Do not call .randomUUID() as member access. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
       },
+      // Computed property 우회 차단: `crypto['randomUUID']()` / `crypto[k]()` (k=Literal).
+      // review-architecture A3 권고 — non-computed MemberExpression selector 보완.
+      {
+        selector: "MemberExpression[computed=true][property.value='randomUUID']",
+        message:
+          "Do not use computed property access for randomUUID. Use IdentifierService (DI) from '@/common/identifiers/identifier.service'. See verify-ssot Step 44.",
+      },
       {
         selector:
           "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -137,6 +144,12 @@ module.exports = {
             selector: "MemberExpression[property.name='randomUUID']",
             message:
               "Do not call .randomUUID() as member access. Use IdentifierService (DI) from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
+          // Computed property 우회 차단 (controller scope): review-architecture A3.
+          {
+            selector: "MemberExpression[computed=true][property.value='randomUUID']",
+            message:
+              'Do not use computed property access for randomUUID. Use IdentifierService (DI). See verify-ssot Step 44.',
           },
           {
             selector:

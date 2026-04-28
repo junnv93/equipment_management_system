@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -228,6 +228,14 @@ function EquipmentFiltersComponent({
 
   // Reconcile: 딥링크/공유 링크로 진입했을 때 stale teamId(현재 사이트에 없는 팀)를 자동 정리.
   // 평상시 인터랙션은 setSite의 cascade reset이 처리하므로 여기는 안전망 역할.
+  // useRef로 t/toast 안정화: 둘 다 stable ref(next-intl locale-stable, shadcn singleton)
+  // 이지만 exhaustive-deps 만족 위해 ref 패턴으로 deps 외부화 — re-render loop 차단 + lint 정합.
+  const tRef = useRef(t);
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    tRef.current = t;
+    toastRef.current = toast;
+  });
   useEffect(() => {
     if (!filters.teamId) return;
     if (isLoadingTeams || teamsError) return;
@@ -236,11 +244,11 @@ function EquipmentFiltersComponent({
     const exists = teams.some((team) => team.id === filters.teamId);
     if (exists) return;
     onTeamIdChange('');
-    toast({
-      title: t('filters.teamReconcileTitle'),
-      description: t('filters.teamReconcileDesc'),
+    toastRef.current({
+      title: tRef.current('filters.teamReconcileTitle'),
+      description: tRef.current('filters.teamReconcileDesc'),
     });
-  }, [filters.teamId, teamsData?.data, isLoadingTeams, teamsError, onTeamIdChange, t, toast]);
+  }, [filters.teamId, teamsData?.data, isLoadingTeams, teamsError, onTeamIdChange]);
 
   // 2차 필터 활성 개수 (추가 필터 버튼 배지용)
   const additionalFilterCount = useMemo(() => {

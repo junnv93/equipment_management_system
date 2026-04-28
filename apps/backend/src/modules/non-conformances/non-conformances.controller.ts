@@ -169,6 +169,9 @@ export class NonConformancesController {
     @Request() req: AuthenticatedRequest
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
+    // 의도적 정책 분리: NC ID 직접 조회 컨텍스트는 NC 도메인 권한 적용.
+    // findOpenByEquipment의 장비 컨텍스트(EQUIPMENT_DATA_SCOPE)와 분리 — NC UUID를
+    // 직접 알 수 있는 진입점은 NC 권한 보유자만 (TE/TM 'team', LM 'site').
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
     return this.nonConformancesService.findOne(uuid);
   }
