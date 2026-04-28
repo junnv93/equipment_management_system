@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- self-audit-exception: design tokens SSOT 정의 위치 (no-hardcoded-colors 룰 예외) */
 /**
  * Brand Design Tokens - UL-QP-18 Equipment Management System
  *
@@ -46,6 +47,18 @@ export const BRAND_COLORS_HEX = {
 } as const;
 
 export type SemanticColorKey = keyof typeof BRAND_COLORS_HEX;
+
+/**
+ * Next.js viewport meta `themeColor` 값 — 브라우저 크롬(주소바, 스크롤바)이
+ * 앱 테마와 일치하도록 light/dark 별 hex 색상.
+ *
+ * SSOT: globals.css `:root` (light) / `.dark` (dark)의 `--background` CSS 변수와 일치.
+ * meta tag는 CSS 변수 미사용 → hex 하드코딩 불가피하므로 본 토큰 경유.
+ */
+export const BRAND_THEME_META_COLORS = {
+  light: '#EBEBEB',
+  dark: '#0A1C30',
+} as const;
 
 // ============================================================================
 // 2. Font Usage (Tailwind 유틸리티 클래스)

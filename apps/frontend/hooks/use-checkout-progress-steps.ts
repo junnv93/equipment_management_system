@@ -81,9 +81,14 @@ function toIsoOrUndef(value: string | Date | null | undefined): string | undefin
  * status → step별 scheduled/timestamp 추정 (audit log fallback).
  * audit event가 있으면 우선 사용. 없으면 checkout 자체 필드에서 가능한 만큼 채움.
  */
+type StepMetaInput = Pick<
+  UseCheckoutProgressStepsInput,
+  'requester' | 'requestedAt' | 'checkoutDate' | 'expectedReturnDate'
+>;
+
 function buildStepMeta(
   stepStatus: CheckoutStatus,
-  input: UseCheckoutProgressStepsInput,
+  input: StepMetaInput,
   eventByStatus: Map<CheckoutStatus, CheckoutAuditEventSlice>
 ): Pick<ProgressStepDescriptor, 'actor' | 'actorRole' | 'timestamp' | 'scheduledAt'> {
   const event = eventByStatus.get(stepStatus);
@@ -134,42 +139,46 @@ function buildStepMeta(
  *
  * **performance**: useMemo 의존성에 input 7개 — checkout/descriptor 변경 시에만 재계산.
  */
-export function useCheckoutProgressSteps(
-  input: UseCheckoutProgressStepsInput
-): ProgressStepDescriptor[] {
+export function useCheckoutProgressSteps({
+  status,
+  purpose,
+  descriptor,
+  requester,
+  requestedAt,
+  checkoutDate,
+  expectedReturnDate,
+  auditEvents,
+}: UseCheckoutProgressStepsInput): ProgressStepDescriptor[] {
   return useMemo(() => {
     const steps =
-      input.purpose === CPVal.RENTAL
-        ? CHECKOUT_DISPLAY_STEPS.rental
-        : CHECKOUT_DISPLAY_STEPS.nonRental;
+      purpose === CPVal.RENTAL ? CHECKOUT_DISPLAY_STEPS.rental : CHECKOUT_DISPLAY_STEPS.nonRental;
 
-    const termination = deriveTermination(input.status);
+    const termination = deriveTermination(status);
 
     // descriptor.currentStepIndex 는 1-based — UI 인덱스(0-based)로 정규화 + [0, steps.length-1] 클램프.
     // 클램프 이유: server schema는 `.positive()`만 강제하므로 N+1 같은 비정상 값 silent 통과 가능.
     // descriptor 부재 시 status 의 step list 위치를 fallback. terminal 상태는 reachedStepIndex 우선.
     const rawCurrent = (() => {
-      if (input.descriptor) {
+      if (descriptor) {
         // terminal일 때 reachedStepIndex 가 의미 있는 마지막 도달 단계
-        if (termination !== null && input.descriptor.reachedStepIndex > 0) {
-          return input.descriptor.reachedStepIndex - 1;
+        if (termination !== null && descriptor.reachedStepIndex > 0) {
+          return descriptor.reachedStepIndex - 1;
         }
-        if (input.descriptor.currentStepIndex > 0) {
-          return input.descriptor.currentStepIndex - 1;
+        if (descriptor.currentStepIndex > 0) {
+          return descriptor.currentStepIndex - 1;
         }
       }
-      const idx = steps.indexOf(input.status);
+      const idx = steps.indexOf(status);
       return idx >= 0 ? idx : 0;
     })();
     const currentIndex0 = Math.min(steps.length - 1, Math.max(0, rawCurrent));
 
     // SSOT: isOverdue / currentUserCanAct 모두 descriptor 직접 도출 (호출처 중복 제거).
-    const isOverdue =
-      input.descriptor?.urgency === 'critical' || input.status === CSVal.OVERDUE;
-    const currentUserCanAct = Boolean(input.descriptor?.availableToCurrentUser);
+    const isOverdue = descriptor?.urgency === 'critical' || status === CSVal.OVERDUE;
+    const currentUserCanAct = Boolean(descriptor?.availableToCurrentUser);
 
     const eventByStatus = new Map<CheckoutStatus, CheckoutAuditEventSlice>();
-    for (const ev of input.auditEvents ?? []) {
+    for (const ev of auditEvents ?? []) {
       // 동일 status 중복 시 가장 최근 이벤트 우선 (입력이 정렬 보장 안 한다고 가정)
       const existing = eventByStatus.get(ev.toStatus);
       if (!existing || ev.timestamp > existing.timestamp) {
@@ -177,7 +186,7 @@ export function useCheckoutProgressSteps(
       }
     }
 
-    return steps.map((status, index) => {
+    return steps.map((stepStatus, index) => {
       const baseState = deriveProgressStepState(
         index,
         currentIndex0,
@@ -185,15 +194,19 @@ export function useCheckoutProgressSteps(
         termination
       );
 
-      const meta = buildStepMeta(status, input, eventByStatus);
+      const meta = buildStepMeta(
+        stepStatus,
+        { requester, requestedAt, checkoutDate, expectedReturnDate },
+        eventByStatus
+      );
 
-      const labelKey = `stepper.${CHECKOUT_STEP_LABELS[status] ?? status}`;
+      const labelKey = `stepper.${CHECKOUT_STEP_LABELS[stepStatus] ?? stepStatus}`;
 
       const isYourTurn =
         baseState === 'current' || baseState === 'late' ? currentUserCanAct : false;
 
       return {
-        status,
+        status: stepStatus,
         index,
         state: baseState,
         labelKey,
@@ -205,13 +218,13 @@ export function useCheckoutProgressSteps(
       } satisfies ProgressStepDescriptor;
     });
   }, [
-    input.status,
-    input.purpose,
-    input.descriptor,
-    input.requester,
-    input.requestedAt,
-    input.checkoutDate,
-    input.expectedReturnDate,
-    input.auditEvents,
+    status,
+    purpose,
+    descriptor,
+    requester,
+    requestedAt,
+    checkoutDate,
+    expectedReturnDate,
+    auditEvents,
   ]);
 }

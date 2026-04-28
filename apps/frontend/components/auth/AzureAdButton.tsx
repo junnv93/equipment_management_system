@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { MicrosoftLogo } from '@/lib/brand-assets/microsoft-logo';
 
 interface AzureAdButtonProps {
   callbackUrl?: string;
@@ -66,18 +67,7 @@ export function AzureAdButton({
           aria-hidden="true"
         />
       ) : (
-        <svg
-          className="mr-3 h-5 w-5"
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <rect width="10" height="10" fill="#F25022" />
-          <rect x="11" width="10" height="10" fill="#7FBA00" />
-          <rect y="11" width="10" height="10" fill="#00A4EF" />
-          <rect x="11" y="11" width="10" height="10" fill="#FFB900" />
-        </svg>
+        <MicrosoftLogo className="mr-3 h-5 w-5" />
       )}
       {isPending ? AUTH_CONTENT.button.azureAdLoading : AUTH_CONTENT.button.azureAd}
     </Button>

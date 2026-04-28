@@ -264,7 +264,9 @@ export function MiniCalendar({
                   ))}
                   {cell.events.length > DISPLAY_LIMITS.calendarEvents && (
                     <div className="text-[10px] text-muted-foreground mt-1">
-                      +{cell.events.length - DISPLAY_LIMITS.calendarEvents}건 더
+                      {t('moreEvents', {
+                        count: cell.events.length - DISPLAY_LIMITS.calendarEvents,
+                      })}
                     </div>
                   )}
                 </TooltipContent>

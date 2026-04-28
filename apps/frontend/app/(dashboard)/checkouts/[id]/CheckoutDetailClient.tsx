@@ -59,9 +59,7 @@ import {
   CheckoutStatus,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
-  computeTotalSteps,
   type CheckoutAction,
-  type CheckoutPurpose,
   type UserRole,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
@@ -526,7 +524,6 @@ export default function CheckoutDetailClient({
       <ErrorBoundary fallback={(_, reset) => <WorkflowTimelineError onRetry={reset} />}>
         <ProgressFlowSection checkout={checkout} descriptor={nextStepDescriptor} />
       </ErrorBoundary>
-
 
       {/* 기본 정보 */}
       <div className="grid gap-6 md:grid-cols-2">

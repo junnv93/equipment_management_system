@@ -30,6 +30,7 @@
     "online": "Online",
     "onlineStatus": "Online status",
     "suffix": "",
+    "_suffixNote": "Intentionally empty for English. Korean uses '님' honorific suffix; English does not.",
     "ariaLabel": "Welcome message and user information",
     "currentRole": "Current role: {role}"
   },
@@ -320,7 +321,8 @@
     "upcomingCalib": "Calib. Due",
     "returnDue": "Return Due",
     "dayLabels": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
-    "ariaLabel": "Mini calendar"
+    "ariaLabel": "Mini calendar",
+    "moreEvents": "+{count} more"
   },
   "teamDistribution": {
     "title": "Equipment by Team",

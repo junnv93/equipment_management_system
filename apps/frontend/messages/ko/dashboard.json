@@ -30,6 +30,7 @@
     "online": "온라인",
     "onlineStatus": "온라인 상태",
     "suffix": "님",
+    "_suffixNote": "한국어 호칭 — 영문은 빈 문자열 의도 (en/dashboard.json _suffixNote 참고).",
     "ariaLabel": "환영 메시지 및 사용자 정보",
     "currentRole": "현재 역할: {role}"
   },
@@ -320,7 +321,8 @@
     "upcomingCalib": "교정 예정",
     "returnDue": "반납 예정",
     "dayLabels": ["일", "월", "화", "수", "목", "금", "토"],
-    "ariaLabel": "미니 달력"
+    "ariaLabel": "미니 달력",
+    "moreEvents": "+{count}건 더"
   },
   "teamDistribution": {
     "title": "팀별 장비 분포",

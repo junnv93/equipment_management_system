@@ -144,6 +144,7 @@ export default function ReturnCheckoutClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* eslint-disable-next-line @typescript-eslint/no-deprecated -- self-audit-exception: return 페이지 audit timeline 데이터 부재로 status-only stepper 사용. CheckoutProgressStepper 마이그레이션은 별도 sprint */}
           <CheckoutStatusStepper
             currentStatus={checkout.status}
             checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}

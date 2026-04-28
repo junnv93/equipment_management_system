@@ -7,6 +7,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { DEFAULT_LOCALE } from '@equipment-management/schemas';
+import { BRAND_THEME_META_COLORS } from '@/lib/design-tokens';
 import { LocaleHtmlSync } from '@/components/i18n/LocaleHtmlSync';
 import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 
@@ -58,8 +59,8 @@ export const metadata: Metadata = {
  */
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#EBEBEB' },
-    { media: '(prefers-color-scheme: dark)', color: '#0A1C30' },
+    { media: '(prefers-color-scheme: light)', color: BRAND_THEME_META_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: BRAND_THEME_META_COLORS.dark },
   ],
   colorScheme: 'light dark',
   // iOS safe-area(노치/홈 인디케이터) 대응 — `--safe-area-inset-*` CSS 변수가 env(safe-area-inset-*)
