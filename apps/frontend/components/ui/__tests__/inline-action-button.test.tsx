@@ -113,6 +113,10 @@ describe('InlineActionButton', () => {
     render(<InlineActionButton variant="info">click me</InlineActionButton>);
     expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
   });
+
+  it("displayName이 'InlineActionButton'으로 설정 (DevTools 가독성)", () => {
+    expect(InlineActionButton.displayName).toBe('InlineActionButton');
+  });
 });
 
 // ── resolveInlineActionVariant 매트릭스 — 7+ 케이스 (co-location) ──────────────
@@ -162,7 +166,7 @@ describe('resolveInlineActionVariant — 와이어프레임 04 spec table 매트
     ).toBe('warning');
   });
 
-  it("urgency='normal' + 반환·수령·반입 액션 → 'ok' (와이어프레임 04 spec)", () => {
+  it("urgency='normal' + 반환·수령·반입 액션 → 'ok' (와이어프레임 04 spec, isMyTurn 무관)", () => {
     const okActions = [
       'submit_return',
       'lender_receive',
@@ -170,14 +174,17 @@ describe('resolveInlineActionVariant — 와이어프레임 04 spec table 매트
       'approve_return',
       'mark_in_use',
     ] as const;
-    for (const nextAction of okActions) {
-      expect(
-        resolveInlineActionVariant({
-          urgency: 'normal',
-          nextAction,
-          isMyTurn: true,
-        })
-      ).toBe('ok');
+    // isMyTurn=true와 false 양쪽 모두 'ok' (ok-class 액션은 isMyTurn에 종속되지 않음)
+    for (const isMyTurn of [true, false]) {
+      for (const nextAction of okActions) {
+        expect(
+          resolveInlineActionVariant({
+            urgency: 'normal',
+            nextAction,
+            isMyTurn,
+          })
+        ).toBe('ok');
+      }
     }
   });
 
