@@ -28,13 +28,13 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import {
   FOCUS_TOKENS,
-  MOBILE_NAV_TOKENS,
   MOBILE_NAV_DRAWER_TOKENS,
   MOBILE_NAV_SECTION_TOKENS,
   getMobileNavItemClasses,
 } from '@/lib/design-tokens';
 import type { FilteredNavItem, FilteredNavSection } from '@/lib/navigation/nav-config';
 import { isNavItemActive } from '@/lib/navigation/nav-config';
+import { NavBadge } from '@/components/layout/NavBadge';
 
 // aria-live 영역에 스크린리더 알림 전송
 function announceToScreenReader(message: string) {
@@ -63,6 +63,7 @@ interface NavLinkProps {
 const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps) {
   const t = useTranslations('navigation');
   const Icon = item.icon;
+  const hasBadge = item.badge !== undefined && item.badge > 0;
   return (
     <Link
       href={item.href}
@@ -74,16 +75,12 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
         <Icon className="h-5 w-5" />
       </span>
       <span className="flex-1">{item.label}</span>
-      {item.badge !== undefined && item.badge > 0 && (
-        <span
-          className={cn(
-            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full',
-            MOBILE_NAV_TOKENS.badge.background,
-            MOBILE_NAV_TOKENS.badge.text
-          )}
-          aria-label={t('layout.notificationCount', { count: item.badge })}
-        >
-          {item.badge}
+      {hasBadge && (
+        <span className="ml-auto inline-flex">
+          <NavBadge
+            count={item.badge ?? 0}
+            srLabel={t('layout.notificationCount', { count: item.badge ?? 0 })}
+          />
         </span>
       )}
     </Link>

@@ -1,30 +1,30 @@
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { SIDEBAR_ITEM_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
 
 interface NavBadgeProps {
   count: number;
+  /**
+   * 스크린리더 라벨. 부모 anchor에도 같은 aria-label이 부여되면 link의
+   * accessible name이 우선되므로 중복 announce는 발생하지 않는다.
+   */
   srLabel: string;
-  /** 배지 클릭 시 이동 href (제공 시 Link로 렌더링) */
-  badgeLinkHref?: string;
   variant?: 'default' | 'critical';
   className?: string;
 }
 
 /**
- * 사이드바 nav 아이템 배지
+ * 사이드바/모바일 nav 배지 (시각 + SR 라벨 단일 책임)
  *
- * - count 0이면 null
+ * - count <= 0이면 null
  * - count > 9면 "9+" 표시
- * - badgeLinkHref 제공 시 별도 Link로 렌더링 (배지 단독 클릭 → 필터 뷰)
+ * - 항상 `<span>` 으로 렌더 — 링크 의미 부여는 caller(부모 anchor)가 담당
+ *
+ * 안티패턴 회피: 본 컴포넌트가 `<a>` 또는 `<Link>`를 직접 렌더하지 않음으로써
+ * 부모 anchor 안에 nested anchor가 들어가는 hydration error를 구조적으로 차단.
+ * 보조 동선이 필요하면 caller가 sibling anchor 패턴을 사용해야 한다
+ * (예: `NavRowWithSecondaryAction` 컴포넌트).
  */
-export function NavBadge({
-  count,
-  srLabel,
-  badgeLinkHref,
-  variant = 'default',
-  className,
-}: NavBadgeProps) {
+export function NavBadge({ count, srLabel, variant = 'default', className }: NavBadgeProps) {
   if (count <= 0) return null;
 
   const displayText = count > 9 ? '9+' : String(count);
@@ -36,19 +36,6 @@ export function NavBadge({
     ANIMATION_PRESETS.pulse,
     className
   );
-
-  if (badgeLinkHref) {
-    return (
-      <Link
-        href={badgeLinkHref}
-        className={badgeClasses}
-        aria-label={srLabel}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span aria-hidden="true">{displayText}</span>
-      </Link>
-    );
-  }
 
   return (
     <span className={badgeClasses} aria-label={srLabel}>

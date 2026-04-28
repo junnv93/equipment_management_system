@@ -173,6 +173,63 @@ export const SIDEBAR_SECTION_TOKENS = {
 } as const;
 
 /**
+ * 사이드바 행 패턴 토큰 — 메인 링크 + 선택적 보조 액션 링크
+ *
+ * 구조: `<div container>` `<Link primary>` `<Link secondary>` (sibling anchors)
+ * - 두 anchor가 같은 행을 공유. hover/focus 시 `group/sidebar-row`로 시각 통합
+ * - 보조 anchor의 hit area는 Pointer Events Lvl 2 권장 24×24px 이상
+ *
+ * 회피 안티패턴:
+ * - `<a>` 안 `<a>` (HTML 명세 위반, React hydration error)
+ * - `<a>` 안 `<button onClick=router.push>` (WCAG 4.1.1 parsing 위반)
+ *
+ * 사용:
+ * - 컨테이너: `SIDEBAR_ROW_TOKENS.container`
+ * - 메인 anchor: `getSidebarRowPrimaryClasses(isActive)`
+ * - 보조 anchor: `getSidebarRowSecondaryClasses()`
+ */
+export const SIDEBAR_ROW_TOKENS = {
+  container: 'group/sidebar-row relative flex items-stretch',
+  secondaryHitArea: 'min-w-6 min-h-6',
+  /**
+   * Collapsed 모드 dot indicator의 위치/크기/모양.
+   * 색상은 caller가 `SIDEBAR_ITEM_TOKENS.badge.background` 등으로 주입.
+   */
+  collapsedDot: 'absolute top-0.5 right-0.5 w-2 h-2 rounded-full',
+} as const;
+
+/**
+ * 사이드바 행의 메인 anchor 클래스 — `getSidebarItemClasses`의 expanded 변형 + `flex-1`
+ *
+ * @param isActive - 현재 활성 상태
+ */
+export function getSidebarRowPrimaryClasses(isActive: boolean): string {
+  const stateBase = isActive ? SIDEBAR_ITEM_TOKENS.active.base : SIDEBAR_ITEM_TOKENS.inactive.base;
+  const indicator = isActive
+    ? SIDEBAR_ITEM_TOKENS.active.indicator
+    : SIDEBAR_ITEM_TOKENS.inactive.indicator;
+  return [
+    'flex flex-1 items-center gap-3 rounded-lg px-3 py-2 relative',
+    stateBase,
+    indicator,
+    SIDEBAR_ITEM_TOKENS.transition,
+    SIDEBAR_ITEM_TOKENS.focus,
+  ].join(' ');
+}
+
+/**
+ * 사이드바 행의 보조 anchor 클래스 — 배지 hit area + focus ring
+ */
+export function getSidebarRowSecondaryClasses(): string {
+  return [
+    'inline-flex items-center justify-center rounded-full ml-2 px-1',
+    SIDEBAR_ROW_TOKENS.secondaryHitArea,
+    SIDEBAR_ITEM_TOKENS.transition,
+    SIDEBAR_ITEM_TOKENS.focus,
+  ].join(' ');
+}
+
+/**
  * 사이드바 아이템 클래스 조합 함수
  *
  * @param isActive - 현재 활성 상태

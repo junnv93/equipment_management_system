@@ -858,3 +858,48 @@ grep -n "useCallback" apps/frontend/components/shared/NextStepPanel.tsx
 - `apps/frontend/components/shared/NextStepPanel.tsx` — `handlePanelClick` / `handleCompactClick` `useCallback` 모범 사례
 
 **발생 이력 (2026-04-28)**: Phase 3 P0-3 마이그레이션 1차에서 NextStepPanel가 atom에 inline arrow `onClick={(e) => {...}}` 전달 → memo 무력화 → review-architecture/verify-implementation FAIL. useCallback로 stabilize 후 PASS.
+
+---
+
+### Step 31: Nested interactive (a-in-a / Link-in-Link) 차단 (2026-04-28 추가)
+
+**근거:** HTML Interactive Content Model 위반(`<a>` 안 `<a>`/`<button>` 등)은 React 19 hydration error의 직접 원인. 정적/동적 양쪽으로 차단해야 회귀 0 보장.
+
+**검증:**
+
+```bash
+# 1) ESLint custom rule (no-restricted-syntax) 정의 + 적용 블록 검증
+grep -nE "NESTED_LINK_RULE|NESTED_ANCHOR_RULE" apps/frontend/eslint.config.mjs
+# 기대: ≥ 4 hits (정의 2 + 글로벌 룰 + 예외 블록 적용)
+
+# 2) lint 실측
+pnpm --filter frontend run lint 2>&1 | grep -E "Nested <Link>|Nested <a>"
+# 기대: 0 hits
+
+# 3) JSX 정적 검출 (lint 백업)
+grep -rEn "<Link[^>]*>[[:space:]]*<Link|<a[^>]*>[[:space:]]*<a" apps/frontend/components apps/frontend/app
+# 기대: 0 hits
+
+# 4) Playwright e2e 회귀 스펙 존재
+test -f apps/frontend/tests/e2e/features/layout/sidebar-nav-action.spec.ts && echo "OK"
+# 기대: OK
+```
+
+**PASS:**
+- ESLint `NESTED_LINK_RULE` / `NESTED_ANCHOR_RULE`이 frontend 전체에 적용
+- lint 실측 0 violation
+- 사이드바 nav row 패턴은 `NavRowWithSecondaryAction`을 사용 (sibling anchor)
+- e2e가 콘솔 hydration 에러 0건 + DOM `a > a` 0건 검증
+
+**FAIL:**
+- caller가 `<Link>` 안에 또 `<Link>` 직접 렌더 (NavBadge `badgeLinkHref` 분기로 Link 렌더한 회귀 사례)
+- caller가 `<a>` 안에 `<button onClick=router.push>` 사용 — WCAG 4.1.1 parsing 위반 + URL 공유/우클릭 새 탭 손실
+
+**예외 정책:**
+- 정당한 polymorphic 컴포넌트 충돌 (예: shadcn Slot가 Link로 리졸브되는 경우): `// eslint-disable-next-line no-restricted-syntax -- <사유>` 명시
+
+**해결 패턴 참조:**
+- `docs/references/frontend-patterns.md` "Row with Secondary Action Pattern" 섹션
+- `apps/frontend/components/layout/NavRowWithSecondaryAction.tsx` 구현 예시
+
+**발생 이력 (2026-04-28):** SidebarItem의 NavBadge가 `badgeLinkHref` optional prop 분기로 Link를 렌더 → `<a>` 안 `<a>` hydration error. `NavRowWithSecondaryAction` 신설 + discriminated union 데이터 모델 + ESLint 룰로 해결.

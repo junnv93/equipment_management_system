@@ -24,11 +24,49 @@ import {
   Monitor,
   Cable,
 } from 'lucide-react';
-import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  Permission,
+  hasPermission,
+  CHECKOUT_QUERY_PARAMS,
+} from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { computeApprovalTotal } from '@/lib/utils/approval-count-utils';
 import type { PendingCountsByCategory } from '@/lib/api/approvals-api';
+
+/** 배지 데이터 소스 식별자 */
+export type NavBadgeSourceKey = 'approvals' | 'checkouts-your-turn';
+
+/**
+ * 배지 설정 — discriminated union으로 분기 silent break 방지
+ *
+ * - `count`: 단순 카운트 배지만 표시 (메인 anchor 안에 span)
+ * - `count-with-action`: 카운트 배지가 별도 보조 anchor로 동작 (필터 뷰 진입)
+ *
+ * 메모리 교훈: optional prop 분기는 silent break 위험 (GuidanceCallout ctaKind와 동일).
+ * `kind` 필드로 명시화하여 caller가 누락 분기를 못하도록 강제.
+ */
+export type NavItemBadgeConfig =
+  | { kind: 'count'; sourceKey: NavBadgeSourceKey }
+  | {
+      kind: 'count-with-action';
+      sourceKey: NavBadgeSourceKey;
+      action: {
+        /** URL query param 이름 (CHECKOUT_QUERY_PARAMS 등 SSOT 경유) */
+        queryParam: string;
+        /** URL query 값 (CHECKOUT_QUERY_PARAMS.VIEW_VALUES 등 SSOT 경유) */
+        queryValue: string;
+        /** 보조 anchor의 aria-label i18n 키 (ICU `{count}` 지원) */
+        ariaKey: string;
+        /**
+         * 메인 anchor의 aria-label i18n 키.
+         * 보조 anchor와 의미 구분을 위해 명시 (예: 메인은 "전체 목록", 보조는 "내 차례 N건").
+         * sibling anchor 패턴에서 SR이 두 link의 의도를 즉시 구별하도록.
+         */
+        primaryAriaKey: string;
+      };
+    };
 
 /** 정적 네비게이션 아이템 설정 */
 export interface NavItemConfig {
@@ -37,8 +75,8 @@ export interface NavItemConfig {
   /** i18n 키 (navigation 네임스페이스) */
   labelKey: string;
   requiredPermission: Permission | null;
-  /** 배지 데이터 소스 식별자 */
-  badgeKey?: 'approvals' | 'checkouts-your-turn';
+  /** 배지 + 선택적 보조 액션 (count-with-action일 때만 보조 anchor 렌더) */
+  badge?: NavItemBadgeConfig;
 }
 
 /** 정적 섹션 설정 */
@@ -48,12 +86,27 @@ export interface NavSection {
   items: NavItemConfig[];
 }
 
+/**
+ * 보조 액션 (정규화된 형태) — caller가 즉시 사용 가능
+ *
+ * sibling anchor 패턴에서 두 anchor의 SR 안내가 명료하도록 양쪽 i18n 키를 모두 정규화.
+ */
+export interface FilteredNavSecondaryAction {
+  href: string;
+  /** 보조 anchor aria-label i18n 키 */
+  ariaKey: string;
+  /** 메인 anchor aria-label i18n 키 (보조 anchor와 의미 구분) */
+  primaryAriaKey: string;
+}
+
 /** 필터링/번역 완료된 네비게이션 아이템 */
 export interface FilteredNavItem {
   icon: LucideIcon;
   href: string;
   label: string;
   badge?: number;
+  /** 배지 클릭 시 이동할 보조 액션 (count-with-action 분기에서만 채워짐) */
+  secondaryAction?: FilteredNavSecondaryAction;
 }
 
 /** 필터링/번역 완료된 섹션 */
@@ -89,7 +142,16 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.CHECKOUTS.LIST,
         labelKey: 'checkouts',
         requiredPermission: Permission.VIEW_CHECKOUTS,
-        badgeKey: 'checkouts-your-turn',
+        badge: {
+          kind: 'count-with-action',
+          sourceKey: 'checkouts-your-turn',
+          action: {
+            queryParam: CHECKOUT_QUERY_PARAMS.VIEW,
+            queryValue: CHECKOUT_QUERY_PARAMS.VIEW_VALUES.YOUR_TURN,
+            ariaKey: 'layout.checkoutYourTurnAria',
+            primaryAriaKey: 'layout.checkoutOpenList',
+          },
+        },
       },
       {
         icon: FileSpreadsheet,
@@ -137,7 +199,10 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.ADMIN.APPROVALS,
         labelKey: 'adminApprovals',
         requiredPermission: Permission.APPROVE_EQUIPMENT,
-        badgeKey: 'approvals',
+        badge: {
+          kind: 'count',
+          sourceKey: 'approvals',
+        },
       },
       {
         icon: FileSearch,
@@ -203,23 +268,18 @@ export function getFilteredNavSections(
         return hasPermission(role, item.requiredPermission);
       })
       .map((item) => {
-        let badge: number | undefined;
-        if (
-          item.badgeKey === 'approvals' &&
-          role &&
-          hasApprovalPermissions(role) &&
-          pendingCounts
-        ) {
-          const total = computeApprovalTotal(pendingCounts, role);
-          badge = total > 0 ? total : undefined;
-        } else if (item.badgeKey === 'checkouts-your-turn' && checkoutYourTurnCount) {
-          badge = checkoutYourTurnCount > 0 ? checkoutYourTurnCount : undefined;
-        }
+        const { badge, secondaryAction } = resolveBadgeAndAction(
+          item,
+          role,
+          pendingCounts,
+          checkoutYourTurnCount
+        );
         return {
           icon: item.icon,
           href: item.href,
           label: t(item.labelKey),
           badge,
+          secondaryAction,
         };
       });
 
@@ -228,6 +288,47 @@ export function getFilteredNavSections(
       items: filteredItems,
     };
   }).filter((section) => section.items.length > 0);
+}
+
+/**
+ * 배지 카운트 + 선택적 보조 액션을 정규화
+ *
+ * - 권한/카운트 0건 가드를 모두 통과해야 배지 노출
+ * - `count-with-action` 분기일 때만 secondaryAction 정규화
+ * - href 조립 시 query param/value는 모두 SSOT(`CHECKOUT_QUERY_PARAMS` 등)에서 옴
+ */
+function resolveBadgeAndAction(
+  item: NavItemConfig,
+  role: UserRole | undefined,
+  pendingCounts: PendingCountsByCategory | undefined,
+  checkoutYourTurnCount: number | undefined
+): { badge?: number; secondaryAction?: FilteredNavSecondaryAction } {
+  const cfg = item.badge;
+  if (!cfg) return {};
+
+  let count = 0;
+  if (cfg.sourceKey === 'approvals') {
+    if (role && hasApprovalPermissions(role) && pendingCounts) {
+      count = computeApprovalTotal(pendingCounts, role);
+    }
+  } else if (cfg.sourceKey === 'checkouts-your-turn') {
+    count = checkoutYourTurnCount ?? 0;
+  }
+  if (count <= 0) return {};
+
+  if (cfg.kind === 'count-with-action') {
+    const separator = item.href.includes('?') ? '&' : '?';
+    return {
+      badge: count,
+      secondaryAction: {
+        href: `${item.href}${separator}${cfg.action.queryParam}=${cfg.action.queryValue}`,
+        ariaKey: cfg.action.ariaKey,
+        primaryAriaKey: cfg.action.primaryAriaKey,
+      },
+    };
+  }
+
+  return { badge: count };
 }
 
 /**

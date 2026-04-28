@@ -79,6 +79,7 @@
     "goHome": "Go to Home",
     "notificationCount": "{count} notifications",
     "checkoutYourTurnAria": "Your turn: {count} checkouts",
+    "checkoutOpenList": "Checkout management list",
     "skipToContent": "Skip to main content",
     "menuOpen": "Open menu",
     "menuClose": "Close menu",

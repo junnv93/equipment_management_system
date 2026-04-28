@@ -61,6 +61,36 @@ const DASHBOARD_KO_JSX_RULE = {
     "Korean literal in dashboard JSX forbidden. Use useTranslations() with key under messages/{ko,en}/dashboard.json.",
 };
 
+/**
+ * Nested interactive 회귀 차단: `<Link>` 안 `<Link>` 패턴 금지.
+ *
+ * 배경: React 19 + Next.js 16에서 `<a>` 안 `<a>`는 HTML Interactive Content Model
+ * 위반으로 hydration error를 유발한다. `next/link`의 `Link`는 anchor를 렌더하므로
+ * Link in Link도 동일 위반. SidebarItem + NavBadge에서 발생한 표면 회귀를 정적으로 차단.
+ *
+ * 해결 패턴: 행 컨테이너 + sibling anchor (`NavRowWithSecondaryAction`).
+ * 상세: docs/references/frontend-patterns.md "Row with Secondary Action Pattern".
+ *
+ * 예외 정책: 정당한 polymorphic 컴포넌트 충돌(예: shadcn Slot가 Link로 변환되는 경우)이
+ * 발생하면 `// eslint-disable-next-line no-restricted-syntax -- <사유>` 명시.
+ */
+const NESTED_LINK_RULE = {
+  selector:
+    "JSXElement[openingElement.name.name='Link'] JSXElement[openingElement.name.name='Link']",
+  message:
+    "Nested <Link> inside <Link> forbidden — invalid HTML (Interactive Content Model) and causes React hydration error. Use sibling anchors via NavRowWithSecondaryAction or split into independent rows. See docs/references/frontend-patterns.md 'Row with Secondary Action Pattern'.",
+};
+
+/**
+ * Nested interactive 회귀 차단: `<a>` 안 `<a>` (raw HTML anchor 케이스).
+ */
+const NESTED_ANCHOR_RULE = {
+  selector:
+    "JSXElement[openingElement.name.name='a'] JSXElement[openingElement.name.name='a']",
+  message:
+    "Nested <a> inside <a> forbidden — invalid HTML and causes React hydration error. Use sibling anchors. See docs/references/frontend-patterns.md.",
+};
+
 /** @type {import('eslint').Linter.FlatConfig[]} */
 const eslintConfig = [
   {
@@ -134,11 +164,14 @@ const eslintConfig = [
       // - STATUS_LITERAL_RULE: obj.status 도메인 리터럴 비교 금지
       // - HEX_COLOR_RULE: hex 컬러 직접 사용 금지 (design tokens 강제)
       // - DDAY_TONE_RULE: raw dday tone 클래스 금지
+      // - NESTED_LINK_RULE / NESTED_ANCHOR_RULE: nested interactive 회귀 차단
       'no-restricted-syntax': [
         'error',
         STATUS_LITERAL_RULE,
         HEX_COLOR_RULE,
         DDAY_TONE_RULE,
+        NESTED_LINK_RULE,
+        NESTED_ANCHOR_RULE,
       ],
     },
     settings: {
@@ -163,7 +196,14 @@ const eslintConfig = [
       '**/*.worker.ts',
     ],
     rules: {
-      'no-restricted-syntax': ['error', STATUS_LITERAL_RULE],
+      // hex/dday 리터럴은 데이터 자체이므로 STATUS만 유지.
+      // NESTED_*는 markup 패턴이므로 이 영역에도 동등 적용 (실 위반 위험은 거의 없음).
+      'no-restricted-syntax': [
+        'error',
+        STATUS_LITERAL_RULE,
+        NESTED_LINK_RULE,
+        NESTED_ANCHOR_RULE,
+      ],
     },
   },
   // brand-assets — 외부 SVG 자산 직접 노출 허용.
@@ -185,6 +225,8 @@ const eslintConfig = [
         HEX_COLOR_RULE,
         DDAY_TONE_RULE,
         DASHBOARD_KO_JSX_RULE,
+        NESTED_LINK_RULE,
+        NESTED_ANCHOR_RULE,
       ],
     },
   },

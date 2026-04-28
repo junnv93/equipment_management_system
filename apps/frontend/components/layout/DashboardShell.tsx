@@ -17,8 +17,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Wrench, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { UlLogo } from '@/lib/brand-assets/ul-logo';
-import type { LucideIcon } from 'lucide-react';
-import { ReactNode, memo, useMemo, useEffect } from 'react';
+import { ReactNode, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,7 @@ import type { UserRole } from '@equipment-management/schemas';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
-import { NavBadge } from '@/components/layout/NavBadge';
+import { NavRowWithSecondaryAction } from '@/components/layout/NavRowWithSecondaryAction';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
@@ -47,73 +46,17 @@ import {
   TRANSITION_PRESETS,
   SIDEBAR_LAYOUT,
   SIDEBAR_COLORS,
-  SIDEBAR_ITEM_TOKENS,
   SIDEBAR_SECTION_TOKENS,
   LAYOUT_Z_INDEX,
   SIDEBAR_ELEVATION,
-  getSidebarItemClasses,
   getSidebarWidthClasses,
   getSidebarMarginClasses,
 } from '@/lib/design-tokens';
 import { getFilteredNavSections, isNavItemActive } from '@/lib/navigation/nav-config';
 import type { FilteredNavSection } from '@/lib/navigation/nav-config';
-import { CHECKOUT_QUERY_PARAMS, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { saveRecentPage } from '@/components/layout/GlobalSearchDialog';
 import { useSidebarState } from '@/hooks/use-sidebar-state';
 import { useTranslations } from 'next-intl';
-
-interface SidebarItemProps {
-  icon: LucideIcon;
-  href: string;
-  label: string;
-  isActive?: boolean;
-  badge?: number;
-  badgeLinkHref?: string;
-  badgeSrLabel?: string;
-  isCollapsed?: boolean;
-}
-
-// SidebarItem을 memo로 래핑하여 불필요한 리렌더 방지 (rerender-memo)
-const SidebarItem = memo(function SidebarItem({
-  icon: Icon,
-  href,
-  label,
-  isActive,
-  badge,
-  badgeLinkHref,
-  badgeSrLabel,
-  isCollapsed,
-}: SidebarItemProps) {
-  const t = useTranslations('navigation');
-  const resolvedSrLabel = badgeSrLabel ?? t('layout.notificationCount', { count: badge ?? 0 });
-  return (
-    <Link
-      href={href}
-      className={cn(getSidebarItemClasses(!!isActive, isCollapsed))}
-      aria-current={isActive ? 'page' : undefined}
-      title={isCollapsed ? label : undefined}
-    >
-      <span aria-hidden="true">
-        <Icon className={SIDEBAR_ITEM_TOKENS.iconSize} />
-      </span>
-      {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
-      {/* 펼쳐진 상태: NavBadge (별도 링크 지원) */}
-      {!isCollapsed && badge !== undefined && badge > 0 && (
-        <NavBadge count={badge} srLabel={resolvedSrLabel} badgeLinkHref={badgeLinkHref} />
-      )}
-      {/* 접힌 상태: dot 인디케이터 */}
-      {isCollapsed && badge !== undefined && badge > 0 && (
-        <span
-          className={cn(
-            'absolute top-0.5 right-0.5 w-2 h-2 rounded-full',
-            SIDEBAR_ITEM_TOKENS.badge.background
-          )}
-          aria-label={resolvedSrLabel}
-        />
-      )}
-    </Link>
-  );
-});
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -298,31 +241,20 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     {section.sectionLabel}
                   </div>
                 )}
-                {/* 아이템 목록 */}
+                {/* 아이템 목록 — 보조 액션은 nav-config 정규화에서 secondaryAction으로 내려옴 */}
                 <div className="flex flex-col gap-1">
-                  {section.items.map((item) => {
-                    const isCheckoutItem =
-                      item.href === FRONTEND_ROUTES.CHECKOUTS.LIST && item.badge && item.badge > 0;
-                    const yourTurnHref = isCheckoutItem
-                      ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${CHECKOUT_QUERY_PARAMS.VIEW}=${CHECKOUT_QUERY_PARAMS.VIEW_VALUES.YOUR_TURN}`
-                      : undefined;
-                    const badgeSrLabel = isCheckoutItem
-                      ? t('layout.checkoutYourTurnAria', { count: item.badge ?? 0 })
-                      : undefined;
-                    return (
-                      <SidebarItem
-                        key={item.href}
-                        icon={item.icon}
-                        href={item.href}
-                        label={item.label}
-                        isActive={isNavItemActive(item.href, pathname)}
-                        badge={item.badge}
-                        badgeLinkHref={yourTurnHref}
-                        badgeSrLabel={badgeSrLabel}
-                        isCollapsed={isCollapsed}
-                      />
-                    );
-                  })}
+                  {section.items.map((item) => (
+                    <NavRowWithSecondaryAction
+                      key={item.href}
+                      icon={item.icon}
+                      href={item.href}
+                      label={item.label}
+                      isActive={isNavItemActive(item.href, pathname)}
+                      badge={item.badge}
+                      secondaryAction={item.secondaryAction}
+                      isCollapsed={isCollapsed}
+                    />
+                  ))}
                 </div>
               </div>
             ))}
