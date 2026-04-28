@@ -17,7 +17,8 @@ import { ConditionCheckStep } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
-import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
+import CheckoutProgressStepper from '@/components/checkouts/CheckoutProgressStepper';
+import { useCheckoutProgressSteps } from '@/hooks/use-checkout-progress-steps';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 
@@ -48,6 +49,19 @@ export default function ConditionCheckClient({
   const queryClient = useQueryClient();
   const { can } = useAuth();
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
+
+  // 진행 흐름 stepper — descriptor 미전달(status-only fallback). hook이 status로 step index 결정.
+  // condition check는 RENTAL purpose 전용이지만 hook이 purpose 기반 자동 분기.
+  const progressSteps = useCheckoutProgressSteps({
+    status: checkout.status,
+    purpose: checkout.purpose,
+    descriptor: undefined,
+    requester: checkout.user ? { name: checkout.user.name, role: null } : null,
+    requestedAt: checkout.createdAt,
+    checkoutDate: checkout.checkoutDate,
+    expectedReturnDate: checkout.expectedReturnDate,
+    auditEvents: undefined,
+  });
 
   // 상태 확인 제출 mutation
   const submitMutation = useMutation({
@@ -103,8 +117,7 @@ export default function ConditionCheckClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* eslint-disable-next-line @typescript-eslint/no-deprecated -- self-audit-exception: check 페이지 audit timeline 데이터 부재로 status-only stepper 사용. CheckoutProgressStepper 마이그레이션은 별도 sprint */}
-          <CheckoutStatusStepper currentStatus={checkout.status} checkoutType="rental" />
+          <CheckoutProgressStepper steps={progressSteps} />
         </CardContent>
       </Card>
 

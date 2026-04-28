@@ -21,7 +21,8 @@ import { useAuth } from '@/hooks/use-auth';
 import ReturnInspectionForm, {
   InspectionFormData,
 } from '@/components/checkouts/ReturnInspectionForm';
-import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
+import CheckoutProgressStepper from '@/components/checkouts/CheckoutProgressStepper';
+import { useCheckoutProgressSteps } from '@/hooks/use-checkout-progress-steps';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
@@ -47,6 +48,19 @@ export default function ReturnCheckoutClient({
   const formatter = useFormatter();
   const { can } = useAuth();
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
+
+  // 진행 흐름 stepper — descriptor 미전달(status-only fallback). hook이 status로 step index 결정.
+  // purpose 기반 자동 분기 (RENTAL=8-step, CAL/REPAIR=5-step) — 기존 checkoutType prop 하드코딩 제거.
+  const progressSteps = useCheckoutProgressSteps({
+    status: checkout.status,
+    purpose: checkout.purpose,
+    descriptor: undefined,
+    requester: checkout.user ? { name: checkout.user.name, role: null } : null,
+    requestedAt: checkout.createdAt,
+    checkoutDate: checkout.checkoutDate,
+    expectedReturnDate: checkout.expectedReturnDate,
+    auditEvents: undefined,
+  });
 
   // 반입 처리 mutation — useOptimisticMutation 패턴 (CheckoutDetailClient과 일관성)
   // 성공 시 onSettledCallback에서 네비게이션 (캐시 무효화 완료 후)
@@ -144,11 +158,7 @@ export default function ReturnCheckoutClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* eslint-disable-next-line @typescript-eslint/no-deprecated -- self-audit-exception: return 페이지 audit timeline 데이터 부재로 status-only stepper 사용. CheckoutProgressStepper 마이그레이션은 별도 sprint */}
-          <CheckoutStatusStepper
-            currentStatus={checkout.status}
-            checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
-          />
+          <CheckoutProgressStepper steps={progressSteps} />
         </CardContent>
       </Card>
 
