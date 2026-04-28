@@ -601,6 +601,10 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
         disposal_final: 'default',
         incoming: 'default',
       },
+      // 시험소장은 2-step/3-step 결재의 최종 승인자(plan_final hero) → 승인대기 우선 노출.
+      // 기술책임자와 동일 layout으로 통일 (UL-QP-18 도메인 의미 일관성).
+      row3Layout: 'three-col-action-first',
+      pendingApprovalElevated: true,
       alertBannerTrailingAction: 'approval',
       teamDistributionScope: 'lab',
     },
