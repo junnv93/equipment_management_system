@@ -14,11 +14,11 @@
 import { Fragment } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { generateBreadcrumbs, type BreadcrumbItem } from '@/lib/navigation/generate-breadcrumbs';
+import { NavLink } from '@/components/navigation/nav-link';
 
 const NAVIGATION_PREFIX = 'navigation.';
 
@@ -102,8 +102,9 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
                 {displayLabel}
               </span>
             ) : (
-              <Link
+              <NavLink
                 href={item.href}
+                variant="breadcrumb"
                 className={cn(
                   'text-sm text-muted-foreground',
                   'hover:text-foreground',
@@ -115,7 +116,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
                 {displayLabel}
-              </Link>
+              </NavLink>
             )}
           </Fragment>
         );
@@ -162,8 +163,9 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
     <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
       {parentItem && parentLabel && (
         <>
-          <Link
+          <NavLink
             href={parentItem.href}
+            variant="breadcrumb"
             className={cn(
               'text-sm text-muted-foreground hover:text-foreground truncate max-w-[100px]',
               TRANSITION_PRESETS.fastColor,
@@ -171,7 +173,7 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
             )}
           >
             {parentLabel}
-          </Link>
+          </NavLink>
           <ChevronRight
             className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
             aria-hidden="true"

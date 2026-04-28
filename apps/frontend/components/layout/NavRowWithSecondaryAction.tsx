@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { memo } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -13,6 +12,7 @@ import {
   getSidebarRowSecondaryClasses,
 } from '@/lib/design-tokens';
 import { NavBadge } from '@/components/layout/NavBadge';
+import { NavLink } from '@/components/navigation/nav-link';
 import type { FilteredNavSecondaryAction } from '@/lib/navigation/nav-config';
 
 interface NavRowWithSecondaryActionProps {
@@ -74,8 +74,9 @@ export const NavRowWithSecondaryAction = memo(function NavRowWithSecondaryAction
     const primaryAriaLabel = t(secondaryAction.primaryAriaKey as Parameters<typeof t>[0]);
     return (
       <div className={cn(SIDEBAR_ROW_TOKENS.container)}>
-        <Link
+        <NavLink
           href={href}
+          variant="sidebar"
           className={cn(getSidebarRowPrimaryClasses(!!isActive))}
           aria-current={isActive ? 'page' : undefined}
           aria-label={primaryAriaLabel}
@@ -84,22 +85,24 @@ export const NavRowWithSecondaryAction = memo(function NavRowWithSecondaryAction
             <Icon className={SIDEBAR_ITEM_TOKENS.iconSize} />
           </span>
           <span className="flex-1 truncate">{label}</span>
-        </Link>
-        <Link
+        </NavLink>
+        <NavLink
           href={secondaryAction.href}
+          variant="sidebar"
           className={cn(getSidebarRowSecondaryClasses())}
           aria-label={secondaryAriaLabel}
         >
           <NavBadge count={badge ?? 0} srLabel={secondaryAriaLabel} />
-        </Link>
+        </NavLink>
       </div>
     );
   }
 
   // 분기 1, 2: 단일 anchor (collapsed 또는 보조 액션 없음)
   return (
-    <Link
+    <NavLink
       href={href}
+      variant="sidebar"
       className={cn(getSidebarItemClasses(!!isActive, isCollapsed))}
       aria-current={isActive ? 'page' : undefined}
       title={isCollapsed ? label : undefined}
@@ -115,6 +118,6 @@ export const NavRowWithSecondaryAction = memo(function NavRowWithSecondaryAction
           aria-label={collapsedDotLabel}
         />
       )}
-    </Link>
+    </NavLink>
   );
 });

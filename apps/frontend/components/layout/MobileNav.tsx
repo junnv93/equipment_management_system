@@ -19,8 +19,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { NavLink as PendingNavLink } from '@/components/navigation/nav-link';
 import { useTranslations } from 'next-intl';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -65,8 +65,9 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
   const Icon = item.icon;
   const hasBadge = item.badge !== undefined && item.badge > 0;
   return (
-    <Link
+    <PendingNavLink
       href={item.href}
+      variant="mobile"
       className={cn(getMobileNavItemClasses(isActive))}
       aria-current={isActive ? 'page' : undefined}
       onClick={onClick}
@@ -83,7 +84,7 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
           />
         </span>
       )}
-    </Link>
+    </PendingNavLink>
   );
 });
 
