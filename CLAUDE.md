@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/claude-code) when working 
 ```bash
 # Development
 pnpm dev                              # Start all services (frontend + backend)
+pnpm dev:doctor                       # 진단 — dev 좀비 + Next.js 매니페스트 desync 점검 (액션 없음)
+pnpm dev:fresh                        # 좀비 정리 + .next/dev 클린 + dev 재기동 (404/ClientFetchError 복구)
 pnpm --filter backend run dev         # Backend only (NestJS)
 pnpm --filter frontend run dev        # Frontend only (Next.js)
 
@@ -278,6 +280,7 @@ export async function middleware(request: NextRequest) { ... }
 | Behavioral Guidelines | [behavioral-guidelines.md](docs/references/behavioral-guidelines.md) | 4 guidelines: think first, minimal code, surgical changes, goal-based |
 | Production Checklist | [production-checklist.md](docs/references/production-checklist.md) | Backend/Frontend endpoint/feature checklists |
 | PostToolUse Hook | [post-tool-use-hook.md](docs/references/post-tool-use-hook.md) | Prettier auto-run, git diff verification |
+| Dev Server Hygiene | [dev-server-hygiene.md](docs/references/dev-server-hygiene.md) | 좀비 dev 프로세스 + Next.js 매니페스트 desync 진단/복구 (`pnpm dev:doctor` / `pnpm dev:fresh`) |
 | Secret 관리 (sops+age) | [secret-backup.md](docs/operations/secret-backup.md), [secret-rotation.md](docs/operations/secret-rotation.md) | ADR-0005, `infra/secrets/*.sops.yaml`, `pnpm compose:lan`, pre-commit gitleaks |
 | Self-Audit (pre-commit gate) | [self-audit.md](docs/references/self-audit.md) | 7대 체크: 하드코딩URL/eslint-disable/any/SSOT우회/role리터럴/setQueryData/a11y, 예외 승인 절차 |
 | UltraReview 통합 (Layer 6) | [ultrareview-usage.md](docs/references/ultrareview-usage.md), [ultrareview-governance.md](docs/operations/ultrareview-governance.md) | 7-Layer 방어선, SSOT 파생 Trigger, Pre-upload secret gate, 피드백 루프 |

@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:doctor": "node scripts/dev-doctor.mjs",
+    "dev:fresh": "node scripts/dev-fresh.mjs",
     "prebuild": "node scripts/check-role-config-sync.mjs && node scripts/check-css-vars.mjs",
     "build": "turbo run build",
     "start": "turbo run start",
