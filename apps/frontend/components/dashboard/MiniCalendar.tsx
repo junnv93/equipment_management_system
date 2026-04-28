@@ -275,13 +275,16 @@ export function MiniCalendar({
           })}
         </div>
 
-        {/* 범례 */}
+        {/* 범례 — 명세서 §A.3.1: 4 항목 모두 동일한 도트 + 라벨 패턴.
+           공휴일은 도트(brand-critical, holiday cell의 cellNumberHoliday 색상과 일치) +
+           현재 월 공휴일 카운트(0보다 클 때만 ` N` 형식). hardcoded 숫자 금지. */}
         <div className={T.legend}>
           <div className={T.legendItem}>
-            <span className="text-[10px] font-medium text-brand-critical tabular-nums leading-none">
-              1
+            <span className={cn(T.legendDot, 'bg-brand-neutral')} />
+            <span className={T.legendText}>
+              {t('legendHoliday')}
+              {holidayMap.size > 0 ? ` ${holidayMap.size}` : ''}
             </span>
-            <span className={T.legendText}>{t('legendHoliday')}</span>
           </div>
           <div className={T.legendItem}>
             <span className={cn(T.legendDot, 'bg-brand-critical')} />

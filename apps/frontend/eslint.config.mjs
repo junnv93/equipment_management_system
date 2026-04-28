@@ -34,7 +34,15 @@ const HEX_COLOR_RULE = {
 
 /**
  * D-day tone 클래스 SSOT 강제: raw `text-overdue|urgent|soon|normal` 등 직접 사용 금지.
- * 허용 예외: design-tokens/components/dday-tone.ts (정의 자체).
+ *
+ * 허용 예외: `**\/lib/design-tokens/**` glob (아래 ignores 블록에서 일괄 exempt).
+ * 즉 `DDAY_TONE_CLASSES` 정의가 들어 있는 `dday-tone.ts`처럼 CSS 클래스 리터럴이
+ * 포함된 design-tokens 파일은 디렉토리 단위로 룰 적용 대상에서 제외된다.
+ *
+ * 주의: `dday-tone.ts`의 type union (`'overdue' | 'urgent' | ...`) 값 자체는
+ * 본 selector(`(text|bg|border|ring)-...`)에 매칭되지 않으므로 룰의 직접 위반
+ * 대상이 아니며, exempt가 필요한 것은 `DDAY_TONE_CLASSES`의 `text-overdue` 등
+ * 클래스 리터럴이다.
  */
 const DDAY_TONE_RULE = {
   selector:

@@ -56,8 +56,9 @@ const createMockApprovalCounts = (
 describe('DashboardService', () => {
   let service: DashboardService;
   let mockCacheService: ReturnType<typeof createMockCacheService>;
-  let mockDb: { select: jest.Mock };
+  let mockDb: { select: jest.Mock; execute: jest.Mock };
   let mockApprovalsService: { getApprovalCountsByScope: jest.Mock };
+  let mockConfigService: { get: jest.Mock };
 
   beforeEach(async () => {
     mockCacheService = createMockCacheService();
@@ -68,10 +69,20 @@ describe('DashboardService', () => {
 
     mockDb = {
       select: jest.fn().mockReturnValue(createQueryChain()),
+      execute: jest.fn().mockResolvedValue({ rows: [] }),
     };
 
     mockApprovalsService = {
       getApprovalCountsByScope: jest.fn().mockResolvedValue(createMockApprovalCounts()),
+    };
+
+    // AP-03: getSystemHealth가 ConfigService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') 호출.
+    // env.validation.ts 기본값(100 GiB)을 mock으로 반환. 테스트 케이스에서 capacity 변경 시 직접 재할당.
+    mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'DASHBOARD_STORAGE_CAPACITY_BYTES') return 100 * 1024 * 1024 * 1024;
+        return undefined;
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -80,17 +91,7 @@ describe('DashboardService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
         { provide: ApprovalsService, useValue: mockApprovalsService },
-        {
-          // AP-03: getSystemHealth가 ConfigService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') 호출.
-          // env.validation.ts 기본값(100 GiB)을 mock으로 반환.
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'DASHBOARD_STORAGE_CAPACITY_BYTES') return 100 * 1024 * 1024 * 1024;
-              return undefined;
-            }),
-          },
-        },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -308,6 +309,147 @@ describe('DashboardService', () => {
       const cacheKey = mockCacheService.getOrSet.mock.calls[0][0] as string;
       expect(cacheKey).toContain('SUW');
       expect(cacheKey).toContain('team-1');
+    });
+  });
+
+  describe('getSystemHealth()', () => {
+    /**
+     * getSystemHealth는 다음 호출 순서로 DB를 사용한다:
+     *   1. db.execute(SELECT 1)                        — dbResponseMs 측정
+     *   2. db.select(activeUsers)        ← chain 1     — auditLogs groupBy
+     *   3. db.select(maxUsers)           ← chain 2     — users count
+     *   4. db.execute(SELECT pg_database_size)         — dbSizeBytes
+     *   5. db.select(errorCount24h)      ← chain 3     — auditLogs reject/cancel count
+     *
+     * 시간 측정은 Date.now() 두 번 호출(dbStart, dbEnd) — mockReturnValueOnce로 시뮬레이션.
+     */
+    function setupHealthMocks(opts: {
+      dbSizeBytes: number;
+      capacityBytes?: number;
+      dbResponseMs: number;
+      activeUsers?: { userId: string }[];
+      maxUsersCount?: number;
+      errorCount24h?: number;
+    }) {
+      const {
+        dbSizeBytes,
+        capacityBytes = 100 * 1024 * 1024 * 1024,
+        dbResponseMs,
+        activeUsers = [{ userId: 'u1' }, { userId: 'u2' }],
+        maxUsersCount = 10,
+        errorCount24h = 3,
+      } = opts;
+
+      // ConfigService capacity override (default가 100 GiB이므로 변경 시에만 재정의)
+      mockConfigService.get = jest.fn((key: string) =>
+        key === 'DASHBOARD_STORAGE_CAPACITY_BYTES' ? capacityBytes : undefined
+      );
+
+      // db.execute: SELECT 1 → {}, SELECT pg_database_size → { rows: [{ size }] }
+      mockDb.execute
+        .mockResolvedValueOnce({ rows: [] }) // ping
+        .mockResolvedValueOnce({ rows: [{ size: String(dbSizeBytes) }] });
+
+      // db.select: 호출 순서대로 다른 결과 chain 반환
+      mockDb.select
+        .mockReturnValueOnce(createQueryChain(activeUsers))
+        .mockReturnValueOnce(createQueryChain([{ count: maxUsersCount }]))
+        .mockReturnValueOnce(createQueryChain([{ count: errorCount24h }]));
+
+      // Date.now: dbStart → dbEnd (차이 = dbResponseMs)
+      // 그 외 호출은 실제 OS time 반환
+      const realNow = Date.now;
+      jest
+        .spyOn(Date, 'now')
+        .mockImplementationOnce(() => 1_000_000)
+        .mockImplementationOnce(() => 1_000_000 + dbResponseMs)
+        .mockImplementation(() => realNow.call(Date));
+    }
+
+    afterEach(() => {
+      (Date.now as unknown as jest.SpyInstance).mockRestore?.();
+    });
+
+    it('storagePct는 dbSize/capacity × 100 (10 GiB / 100 GiB → 10%)', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        capacityBytes: 100 * 1024 * 1024 * 1024,
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.storagePct).toBe(10);
+    });
+
+    it('storagePct는 100을 초과하지 않는다 (capacity 초과 시 cap)', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 200 * 1024 * 1024 * 1024,
+        capacityBytes: 100 * 1024 * 1024 * 1024,
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.storagePct).toBe(100);
+    });
+
+    it('capacity가 0이면 storagePct는 0 (방어 코드)', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        capacityBytes: 0,
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.storagePct).toBe(0);
+    });
+
+    it('overallStatus는 모든 메트릭 정상 시 healthy', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024, // 10%
+        dbResponseMs: 50, // < 500
+      });
+      const result = await service.getSystemHealth();
+      expect(result.overallStatus).toBe('healthy');
+    });
+
+    it('overallStatus는 dbResponseMs >= 500 시 degraded', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        dbResponseMs: 500,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.overallStatus).toBe('degraded');
+    });
+
+    it('overallStatus는 storagePct >= 90 시 degraded', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 95 * 1024 * 1024 * 1024, // 95%
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.overallStatus).toBe('degraded');
+    });
+
+    it('overallStatus는 dbResponseMs >= 1500 시 down (degraded 우선순위 위)', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        dbResponseMs: 1500,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.overallStatus).toBe('down');
+    });
+
+    it('activeUsers/maxUsers/errorCount24h가 결과에 매핑된다', async () => {
+      setupHealthMocks({
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        dbResponseMs: 50,
+        activeUsers: [{ userId: 'u1' }, { userId: 'u2' }, { userId: 'u3' }],
+        maxUsersCount: 25,
+        errorCount24h: 7,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.activeUsers).toBe(3);
+      expect(result.maxUsers).toBe(25);
+      expect(result.errorCount24h).toBe(7);
+      expect(result.queueSize).toBe(0); // BullMQ 미연결 stub
+      expect(typeof result.measuredAt).toBe('string');
     });
   });
 });

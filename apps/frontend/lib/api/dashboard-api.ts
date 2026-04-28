@@ -144,9 +144,6 @@ export interface DashboardCheckoutsScope {
   pendingRequests?: number;
 }
 
-/** @deprecated `DashboardScope` from '@equipment-management/shared-constants' 사용. 별칭 유지 (호환성). */
-export type DashboardCheckoutScope = DashboardScope;
-
 /** §4.3 — 검토 대기 hero 응답. */
 export interface QualityReviewPending {
   pendingCount: number;
@@ -293,7 +290,7 @@ class DashboardApi {
   // 대시보드 개선안 v1 — 신규 엔드포인트 (§3.9, §4.3, §A.4, §A.7)
   // ========================================================================
 
-  async getCheckoutsByScope(scope: DashboardCheckoutScope): Promise<DashboardCheckoutsScope> {
+  async getCheckoutsByScope(scope: DashboardScope): Promise<DashboardCheckoutsScope> {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.CHECKOUTS, {
       params: { scope },
     });
