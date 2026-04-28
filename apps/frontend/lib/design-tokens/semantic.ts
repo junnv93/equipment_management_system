@@ -598,6 +598,14 @@ export const SURFACE_INLINE_ACTION_TOKENS = {
       'hover:bg-surface-inline-action-danger-bg-hover',
     ].join(' '),
   },
+
+  /**
+   * 부속 아이콘 크기 — Loader2 spinner / leading icon 공통.
+   * h-3 w-3 (12px) — h-7(28px) 버튼 높이의 ~43% 비율로 시각 균형.
+   * 호출처에서 raw `h-3 w-3` 하드코딩 금지 — 본 토큰 경유.
+   * lucide 아이콘은 `stroke="currentColor"` 기본이므로 fg 색상 자동 상속.
+   */
+  iconSize: 'h-3 w-3',
 } as const;
 
 export type SurfaceInlineActionVariant = keyof typeof SURFACE_INLINE_ACTION_TOKENS.variant;

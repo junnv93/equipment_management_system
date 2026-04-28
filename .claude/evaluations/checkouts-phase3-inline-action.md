@@ -141,3 +141,36 @@ it('displayName이 "InlineActionButton"으로 설정됨 (DevTools 식별 + React
 | Iter | Date | Verdict | FAIL items | Notes |
 |------|------|---------|------------|-------|
 | 1 | 2026-04-28 | FAIL | M11 (displayName 미설정) | 11/12 MUST PASS. displayName 1라인 추가로 해결 가능. |
+| 2 | 2026-04-28 | PASS | — | M11 수정 확인. 16 tests all pass. tsc EXIT 0. 전 회귀 없음. |
+
+---
+
+## Iteration 2 — M11 Fix Verification
+
+### Verification Commands
+
+| Step | Command | Result |
+|---|---|---|
+| 1. M11 displayName 랜딩 | `grep -n "displayName" inline-action-button.tsx` | line 72: `InlineActionButton.displayName = 'InlineActionButton';` — 확인 |
+| 2. atom + matrix 테스트 | `npx jest inline-action-button --no-coverage` | **16 tests PASS** (atom 9개 + matrix 7개). 0 failures. |
+| 3. tsc 회귀 | `cd apps/frontend && npx tsc --noEmit; echo "EXIT $?"` | `EXIT 0` — 오류 없음 |
+| 4. shared-constants build | `pnpm --filter @equipment-management/shared-constants build` | 빌드 성공 (rimraf dist && tsc -p tsconfig.json --skipLibCheck, 0 오류) |
+| 5a. M3 토큰 cut 회귀 | `grep -rn "WORKFLOW_PANEL_TOKENS\.variant\.(compact\|hero)\.actionButton"` (소스 파일 한정) | 0 hits — PASS |
+| 5b. M4 raw utility 회귀 | `grep -rn "(bg\|text\|border)-surface-inline-action-" components app \| grep -v inline-action-button.tsx \| grep -v __tests__/` | 0 hits — PASS |
+| 6. canAct 상호배타 + stopPropagation | `grep -n "!canAct\|canAct &&\|stopPropagation" NextStepPanel.tsx` | `!canAct` line 309, `canAct &&` line 315, `stopPropagation` lines 325/342/352 — 구조 보존 |
+| 7. hero canAct=false aria-label (Notable #1) | `grep -n "aria-label={stepLabel}" NextStepPanel.tsx` | 4 hits (lines 234, 253, 323, 401) — canAct=true 및 canAct=false 양쪽 포함, PASS |
+
+### Verdict
+
+- **M11**: PASS — `InlineActionButton.displayName = 'InlineActionButton'` line 72에 확인. 테스트 케이스 `displayName이 'InlineActionButton'으로 설정 (DevTools 가독성)` 신규 추가 후 PASS (atom test 8→9개).
+- **Regression check**: PASS — 이전 11 MUST 모두 유지. tsc EXIT 0. shared-constants 빌드 성공. M3/M4 grep 0 hits. canAct 상호배타 분기 및 stopPropagation 3곳 보존.
+- **Final**: **ALL MUST PASS** (12/12)
+
+### Bonus items
+
+- **Notable #1 (aria-label balance)**: PASS — `grep -n "aria-label={stepLabel}" NextStepPanel.tsx` → 4 hits. canAct=true (line 323)와 canAct=false (line 401) 양쪽에 aria-label 추가 확인. Iteration 1에서 지적한 접근성 불균형 해소.
+- **Notable #2 (matrix isMyTurn coverage)**: PASS — `urgency='normal' + 반환·수령·반입 액션 → 'ok'` 테스트 내 `for (const isMyTurn of [true, false])` 루프로 isMyTurn=true 및 isMyTurn=false 양쪽 검증. Iteration 1에서 지적한 리그레션 탐지 범위 좁음 문제 해소.
+
+### Final Verdict for Harness
+
+**ALL MUST PASS — proceed to Step 7**

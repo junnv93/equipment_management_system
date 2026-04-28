@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { Bell, CheckCircle2, Loader2, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -121,6 +122,7 @@ export function NextStepPanel({
   'data-testid': testId,
 }: NextStepPanelProps) {
   const t = useTranslations('checkouts.fsm');
+  const tCommon = useTranslations('common');
   const urgency = descriptor.urgency;
   const actorVariant = resolveActorVariant(descriptor.nextActor);
   const { isVisible: shouldPulse, dismiss: markDone } = useOnboardingHint('checkout-next-step');
@@ -136,6 +138,24 @@ export function NextStepPanel({
     currentUserRole === UserRoleValues.SYSTEM_ADMIN
       ? descriptor.availableToCurrentUser
       : userActorVariant !== null && userActorVariant === actorVariant;
+
+  // ── Stable click handlers — InlineActionButton의 React.memo 효과 보존 ────────
+  // 호출처가 inline arrow를 전달하면 매 렌더 새 함수 → memo 무력화. useCallback으로 stabilize.
+  const nextAction = descriptor.nextAction;
+  const handleHeroClick = useCallback(() => {
+    markDone();
+    if (nextAction) onActionClick?.(nextAction);
+  }, [markDone, nextAction, onActionClick]);
+  const handleCompactClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      markDone();
+      if (nextAction) onActionClick?.(nextAction);
+    },
+    [markDone, nextAction, onActionClick]
+  );
+  // sr-only loading 라벨 — atom의 도메인 중립성 보장 (atom은 i18n 모름)
+  const loadingLabel = tCommon('loading');
 
   // ── Terminal state ─────────────────────────────────────────────────────────
   if (descriptor.nextAction === null) {
@@ -231,12 +251,10 @@ export function NextStepPanel({
               isMyTurn,
             })}
             loading={isPending}
+            loadingLabel={loadingLabel}
             aria-label={stepLabel}
             className={cn('mt-4', pulseClass)}
-            onClick={() => {
-              markDone();
-              onActionClick?.(descriptor.nextAction!);
-            }}
+            onClick={handleHeroClick}
             data-testid={testId ? `${testId}-action` : undefined}
           >
             {t(`action.${descriptor.labelKey}`)}
@@ -320,12 +338,9 @@ export function NextStepPanel({
                 isMyTurn,
               })}
               loading={isPending}
+              loadingLabel={loadingLabel}
               aria-label={stepLabel}
-              onClick={(e) => {
-                e.stopPropagation();
-                markDone();
-                onActionClick?.(descriptor.nextAction!);
-              }}
+              onClick={handleCompactClick}
               data-testid={testId ? `${testId}-action` : undefined}
             >
               {t(`action.${descriptor.labelKey}`)}

@@ -92,37 +92,65 @@ import type { CheckoutAction } from '@equipment-management/schemas';
 export type InlineActionVariantKey = 'info' | 'ok' | 'warning' | 'danger';
 
 /**
- * `urgency='normal'` 정상 흐름에서 'ok'로 매핑되는 액션 (반환·수령·반입 류).
- * 와이어프레임 04: "정상 진행 액션은 ok variant" + 핸드오프 "반입 처리/수령 확인 → ok".
+ * 액션 의미 분류 — 변형(variant) 결정의 기준.
+ *
+ *   - `approve`: 승인 류 (1차 승인, 차용팀 1차 승인). isMyTurn일 때만 강조.
+ *   - `ok`:      정상 진행 액션 (반환·수령·반입·사용 시작). 컬러 변경 없이 ok로 안정 표시.
+ *   - `negative`:거절·취소 류. inline action에선 일반적으로 overflow menu로 분리되므로
+ *                inline 컬러 매핑 자체가 호출처에서 발생할 일 적음. 'info' fallback.
+ *   - `lender`:  대여팀 검수·반입 (외부 렌탈 워크플로). 'info' fallback (스코프 외 강조 없음).
+ *   - `neutral`: 시작·기본 진행 (start). 'info' fallback.
  */
-const OK_INLINE_ACTIONS: ReadonlySet<CheckoutAction> = new Set([
-  'submit_return',
-  'lender_receive',
-  'borrower_receive',
-  'approve_return',
-  'mark_in_use',
-]);
+type InlineActionClass = 'approve' | 'ok' | 'negative' | 'lender' | 'neutral';
 
 /**
- * `urgency='normal'`에서 `isMyTurn`일 때 'warning'으로 강조되는 승인 액션.
- * 핸드오프: "1차 승인 → info; 2차 승인(내 차례 시) → warning".
- * 단 urgency가 이미 critical/warning이면 그쪽이 우선.
+ * **CheckoutAction × InlineActionClass exhaustive map (SSOT)**.
+ *
+ * `satisfies Record<CheckoutAction, InlineActionClass>`로 컴파일러가 다음을 강제:
+ *   1. CheckoutAction enum에 새 멤버 추가 시 본 map에 분류 추가 누락 → 빌드 실패.
+ *   2. CheckoutAction enum에서 멤버 제거 시 본 map의 dead key → eslint/tsc 경고.
+ *
+ * 단순 `Set<CheckoutAction>` 패턴은 enum 확장 시 silent fail 가능 — Record 권장.
  */
-const APPROVE_INLINE_ACTIONS: ReadonlySet<CheckoutAction> = new Set([
-  'approve',
-  'borrower_approve',
-]);
+const CHECKOUT_ACTION_INLINE_CLASS = {
+  // approve 클래스 — isMyTurn일 때 'warning' 강조
+  approve: 'approve',
+  borrower_approve: 'approve',
+  // ok 클래스 — 정상 진행 액션
+  submit_return: 'ok',
+  lender_receive: 'ok',
+  borrower_receive: 'ok',
+  approve_return: 'ok',
+  mark_in_use: 'ok',
+  // negative 클래스 — overflow menu가 일반적, inline일 경우 info fallback
+  reject: 'negative',
+  cancel: 'negative',
+  borrower_reject: 'negative',
+  reject_return: 'negative',
+  // lender/logistics 워크플로 — 별도 강조 없이 info
+  lender_check: 'lender',
+  borrower_return: 'lender',
+  // neutral — 기본 진행
+  start: 'neutral',
+} as const satisfies Record<CheckoutAction, InlineActionClass>;
 
 /**
  * Inline action variant 결정 함수 — 행 단위 액션 버튼 색상 SSOT.
+ *
+ * **권위 순서 (Q1 결정)**:
+ *   1) urgency='critical'                           → 'danger'
+ *   2) urgency='warning'                            → 'warning'
+ *   3) urgency='normal' + isMyTurn + class='approve' → 'warning' (내 차례 강조)
+ *   4) urgency='normal' + class='ok'                → 'ok' (isMyTurn 무관)
+ *   5) 그 외 (terminal, negative, lender, neutral)   → 'info'
  *
  * @example
  *   resolveInlineActionVariant({ urgency: 'critical', nextAction: 'approve', isMyTurn: true })
  *     // 'danger' (urgency 권위)
  *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'approve', isMyTurn: true })
  *     // 'warning' (내 차례 강조)
- *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'submit_return', isMyTurn: true })
- *     // 'ok'
+ *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'submit_return', isMyTurn: false })
+ *     // 'ok' (isMyTurn 무관)
  *   resolveInlineActionVariant({ urgency: 'normal', nextAction: 'approve', isMyTurn: false })
  *     // 'info' (기본 진행, 남의 차례)
  *   resolveInlineActionVariant({ urgency: 'normal', nextAction: null, isMyTurn: false })
@@ -135,13 +163,18 @@ export function resolveInlineActionVariant(input: {
 }): InlineActionVariantKey {
   const { urgency, nextAction, isMyTurn } = input;
 
+  // urgency 1차 권위 — D-day/reason 종합 판정 결과 우선
   if (urgency === 'critical') return 'danger';
   if (urgency === 'warning') return 'warning';
 
+  // terminal 방어
   if (nextAction === null) return 'info';
 
-  if (isMyTurn && APPROVE_INLINE_ACTIONS.has(nextAction)) return 'warning';
-  if (OK_INLINE_ACTIONS.has(nextAction)) return 'ok';
+  // action class 분류 SSOT 조회
+  const actionClass = CHECKOUT_ACTION_INLINE_CLASS[nextAction];
+
+  if (actionClass === 'approve' && isMyTurn) return 'warning';
+  if (actionClass === 'ok') return 'ok';
 
   return 'info';
 }
