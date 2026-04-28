@@ -83,7 +83,7 @@ export function ExportFormButton({
       title={iconOnly ? label : undefined}
     >
       {exporting ? (
-        <Loader2 className={`${iconClass} ${iconSpacing} animate-spin`} />
+        <Loader2 className={`${iconClass} ${iconSpacing} motion-safe:animate-spin`} />
       ) : (
         <Download className={`${iconClass} ${iconSpacing}`} />
       )}
