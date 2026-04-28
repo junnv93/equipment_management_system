@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
@@ -182,9 +182,13 @@ export function EquipmentTabs({ equipment, activeTab: rawActiveTab }: EquipmentT
     },
   ];
 
-  // 탭 변경 핸들러 (URL 쿼리 파라미터 업데이트)
+  const [isPending, startTransition] = useTransition();
+
+  // 탭 변경 핸들러 — useTransition으로 비긴급 처리 (현재 탭 UI 유지하며 전환)
   const handleTabChange = (tab: string) => {
-    router.push(`${pathname}?tab=${tab}`, { scroll: false });
+    startTransition(() => {
+      router.push(`${pathname}?tab=${tab}`, { scroll: false });
+    });
   };
 
   // 그룹 경계: 'calibration'(이력 시작), 'factors'(관리 시작) 앞에 구분선 삽입
@@ -198,6 +202,7 @@ export function EquipmentTabs({ equipment, activeTab: rawActiveTab }: EquipmentT
           <TabsList
             className={EQUIPMENT_TAB_UNDERLINE_TOKENS.list}
             aria-label={t('tabs.ariaLabel')}
+            aria-busy={isPending}
           >
             {tabs.map(({ value, label, icon: Icon }) => (
               <React.Fragment key={value}>
@@ -237,7 +242,7 @@ export function EquipmentTabs({ equipment, activeTab: rawActiveTab }: EquipmentT
         <TabsContent
           key={value}
           value={value}
-          className={`space-y-4 ${ANIMATION_PRESETS.slideUpFade} motion-safe:duration-200 focus-visible:outline-none`}
+          className={`space-y-4 ${ANIMATION_PRESETS.slideUpFade} motion-safe:duration-200 focus-visible:outline-none ${isPending ? 'opacity-60 transition-opacity' : ''}`}
           role="tabpanel"
           aria-labelledby={`${value}-tab`}
           aria-label={t('tabs.panelAriaLabel', { label })}
