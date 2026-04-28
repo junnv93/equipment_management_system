@@ -24,7 +24,7 @@ import { createServerApiClient } from '@/lib/api/server-api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import CheckoutsContent from './CheckoutsContent';
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 import type { CheckoutSummary } from '@/lib/api/checkout-api';
 import { parseCheckoutFiltersFromSearchParams } from '@/lib/utils/checkout-filter-utils';
 
@@ -35,7 +35,7 @@ type PageProps = {
 
 export default function CheckoutsPage(props: PageProps) {
   return (
-    <Suspense fallback={<RouteLoading variant="table" showHeader />}>
+    <Suspense fallback={<RouteLoading variant="list" />}>
       <CheckoutsContentAsync searchParamsPromise={props.searchParams} />
     </Suspense>
   );

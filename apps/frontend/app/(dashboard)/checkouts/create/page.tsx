@@ -6,7 +6,7 @@
  */
 
 import dynamic from 'next/dynamic';
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 const CreateCheckoutContent = dynamic(() => import('./CreateCheckoutContent'), {
   loading: () => <RouteLoading variant="detail" />,

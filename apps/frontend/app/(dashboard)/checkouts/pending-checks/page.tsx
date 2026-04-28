@@ -3,7 +3,7 @@ import { createServerApiClient } from '@/lib/api/server-api-client';
 import { API_ENDPOINTS, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import PendingChecksClient from './PendingChecksClient';
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 import type { Checkout } from '@/lib/api/checkout-api';
 
 /**
@@ -33,7 +33,7 @@ function parseRole(raw: string | string[] | undefined): PendingCheckRole {
 
 export default function PendingChecksPage(props: PageProps) {
   return (
-    <Suspense fallback={<RouteLoading variant="table" showHeader />}>
+    <Suspense fallback={<RouteLoading variant="list" />}>
       <PendingChecksAsync searchParamsPromise={props.searchParams} />
     </Suspense>
   );

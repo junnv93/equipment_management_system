@@ -1,4 +1,4 @@
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 export default function CreateCheckoutLoading() {
   return <RouteLoading variant="detail" />;
