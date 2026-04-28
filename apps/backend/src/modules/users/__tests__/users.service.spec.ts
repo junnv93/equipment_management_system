@@ -7,7 +7,7 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserQueryDto } from '../dto/user-query.dto';
 import { UserRoleEnum } from '@equipment-management/schemas';
-import * as crypto from 'crypto';
+import { randomBytes } from 'crypto';
 import { getErrorMessage } from '../../../common/utils/error';
 
 // 테스트용 비밀번호 필드 확장 (실제 DTO에 없지만 서비스에서 처리할 수 있음)
@@ -17,7 +17,7 @@ interface CreateUserWithPasswordDto extends CreateUserDto {
 
 // 랜덤 문자열 생성 헬퍼 함수
 const generateRandomString = (length = 8): string => {
-  return crypto.randomBytes(length).toString('hex');
+  return randomBytes(length).toString('hex');
 };
 
 describe('UsersService', () => {

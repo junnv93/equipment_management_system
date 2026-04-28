@@ -6,7 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import * as crypto from 'crypto';
+import { createHash } from 'crypto';
 import sharp from 'sharp';
 import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
@@ -479,7 +479,7 @@ export class DocumentService {
     }
 
     const buffer = await this.fileUploadService.readFile(document.filePath);
-    const actualHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const actualHash = createHash('sha256').update(buffer).digest('hex');
 
     return {
       valid: document.fileHash === actualHash,

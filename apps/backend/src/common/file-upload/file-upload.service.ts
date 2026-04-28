@@ -7,7 +7,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import * as path from 'path';
-import * as crypto from 'crypto';
+import { createHash } from 'crypto';
 import { ErrorCode } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
@@ -154,7 +154,7 @@ export class FileUploadService implements OnModuleInit {
       const fileName = `${uuid}${fileExtension}`;
       const safeSubdir = this.sanitizeKey(subdirectory);
       const key = `${safeSubdir}/${fileName}`;
-      const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+      const fileHash = createHash('sha256').update(file.buffer).digest('hex');
 
       await this.provider.upload(key, file.buffer, file.mimetype);
 

@@ -1379,6 +1379,23 @@ console.log("PASS: overrides caret-locked");
 grep -rn 'identifiers\.\(generateAttachmentId\|generateMigrationBatchId\|generateOpaqueId\)' \
   apps/backend/src/ 2>/dev/null
 # 기대: ≥ 1 hit (file-upload.service, data-migration.service)
+
+# 6) Spec 파일이 IdentifierService를 의존하면 mock 등록 강제
+#    @Global() 모듈은 Test.createTestingModule에서 자동 import되지 않으므로
+#    spec에서 IdentifierService를 inject하면 반드시 createMockIdentifierService()로
+#    provide해야 한다. 누락 시 NestJS DI 런타임 에러.
+spec_files=$(grep -rln "IdentifierService" apps/backend/src --include="*.spec.ts" 2>/dev/null)
+if [ -n "$spec_files" ]; then
+  for f in $spec_files; do
+    if grep -q "IdentifierService" "$f" && \
+       ! grep -q "createMockIdentifierService\|provide:\s*IdentifierService" "$f"; then
+      echo "FAIL: $f references IdentifierService but does not register mock provider"
+      exit 1
+    fi
+  done
+fi
+# 기대: 모든 spec이 createMockIdentifierService 사용 또는 provide: IdentifierService 명시
+# 헬퍼 파일 위치: apps/backend/src/common/testing/mock-providers.ts
 ```
 
 **PASS:**
@@ -1386,12 +1403,16 @@ grep -rn 'identifiers\.\(generateAttachmentId\|generateMigrationBatchId\|generat
 - IdentifierModule이 `@Global()`로 등록되어 모든 feature module이 별도 imports 없이 주입 가능
 - pnpm.overrides 모든 entry가 caret(`^`) 또는 정확한 버전
 - preinstall guard `scripts/check-dependabot-drift.mjs`가 `preinstall` 훅에 연결됨
+- spec 파일이 IdentifierService를 의존할 경우 `createMockIdentifierService()` 헬퍼로 mock provider 등록
+- ESLint `no-restricted-imports`(node:crypto/crypto) + `no-restricted-syntax`(crypto.randomUUID member call) 이중 가드 작동 (정적 grep 우회 차단)
+- CI workflow `.github/workflows/supply-chain-gate.yml` 가 PR 게이트로 drift guard + audit:dependabot 강제 (preinstall `--ignore-scripts` 우회 방어)
 
 **FAIL:**
 - `import { v4 } from 'uuid'` 또는 `const { randomUUID } = require('node:crypto')` 직접 사용 (헬퍼 외부)
 - `>=` / `>` / `~` / `*` / `latest` overrides 잔존
 - IdentifierService가 NestJS DI에서 resolve 안 됨 (모듈 등록 누락)
 - preinstall 훅에서 `check-dependabot-drift.mjs` 연결 누락
+- spec이 IdentifierService 의존하면서 mock provider 등록 누락 (런타임 NestJS DI 에러 위험)
 
 **예외:**
 - `apps/backend/src/common/identifiers/identifier.service.ts` 자체 — `randomUUID`를 `node:crypto`에서 직접 import (SSOT 정의 파일)

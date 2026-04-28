@@ -170,3 +170,33 @@ export const createMockMigrationValidatorService = (): Record<string, jest.Mock>
   validateBatch: jest.fn().mockResolvedValue([]),
   filterValidRows: jest.fn().mockImplementation((rows: unknown[]) => rows),
 });
+
+/**
+ * IdentifierService mock — `IdentifierModule`은 `@Global()`이라 런타임/e2e에서는
+ * 자동 주입되지만 `Test.createTestingModule`은 글로벌 모듈을 자동 import 하지 않는다.
+ * 따라서 IdentifierService를 의존하는 spec은 반드시 본 헬퍼로 mock provider를 등록해야 한다.
+ *
+ * 사용 예:
+ *   ```ts
+ *   import { IdentifierService } from '@/common/identifiers/identifier.service';
+ *   import { createMockIdentifierService } from '@/common/testing/mock-providers';
+ *
+ *   const moduleRef = await Test.createTestingModule({
+ *     providers: [
+ *       MyService,
+ *       { provide: IdentifierService, useValue: createMockIdentifierService() },
+ *     ],
+ *   }).compile();
+ *   ```
+ *
+ * 등록 누락 검증: verify-ssot Step 44 검증 명령 6 참조.
+ */
+export const createMockIdentifierService = (): Record<string, jest.Mock> => ({
+  generateAttachmentId: jest.fn().mockReturnValue('00000000-0000-4000-8000-000000000001'),
+  generateMigrationBatchId: jest.fn().mockReturnValue('00000000-0000-4000-8000-000000000002'),
+  generateJti: jest.fn().mockReturnValue('00000000-0000-4000-8000-000000000003'),
+  generateOpaqueId: jest.fn().mockImplementation((prefix?: string) => {
+    const id = '00000000-0000-4000-8000-000000000004';
+    return prefix ? `${prefix}-${id}` : id;
+  }),
+});

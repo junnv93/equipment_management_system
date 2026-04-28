@@ -1,0 +1,82 @@
+name: Supply Chain Gate
+
+# preinstall 훅(scripts/check-dependabot-drift.mjs)이 `pnpm install --ignore-scripts`로
+# 우회되는 시나리오를 워크플로 단계로 닫는 defense-in-depth 게이트.
+# verify-ssot Step 44 (Supply-Chain SSOT)와 짝을 이루며, pnpm.overrides caret 잠금 회귀와
+# 새 Dependabot alert가 PR 머지 시점에 차단되도록 한다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# 같은 PR에 새 push가 오면 이전 실행 취소. main push는 보존.
+concurrency:
+  group: supply-chain-gate-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Gate A: Offline drift guard (~10s)
+  # pnpm.overrides caret 잠금 회귀를 install 단계와 무관하게 검증.
+  # `--ignore-scripts` 우회 시 preinstall 훅이 실행되지 않으므로
+  # 이 job이 동일 검증을 PR 게이트로 강제한다.
+  # ─────────────────────────────────────────────
+  drift-check:
+    name: Overrides Drift Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # pnpm install 없이도 동작 — drift guard는 package.json만 읽는다.
+      - name: Run drift guard (offline)
+        run: node scripts/check-dependabot-drift.mjs
+
+  # ─────────────────────────────────────────────
+  # Gate B: Dependabot audit (~30s)
+  # 새 Dependabot alert가 lockfile 실측으로 REAL인 경우 차단.
+  # FALSE_POSITIVE는 통과시켜 phantom alert에 의한 차단을 막는다.
+  # ─────────────────────────────────────────────
+  dependabot-audit:
+    name: Dependabot Audit (lockfile-matched)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Dependabot alert API 권한이 필요 — GITHUB_TOKEN의 security-events 스코프 사용.
+    # 권한 부여를 jobs 레벨에서 하는 이유: drift-check는 alert API 불필요.
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      # audit:dependabot은 semver만 require — 전체 의존성 설치 불필요하지만
+      # `semver` 패키지가 root devDep로 잡혀 있어 install 필요.
+      # `--ignore-scripts`로 preinstall 훅을 *건너뛰어* 이 job 자체를
+      # preinstall 게이트와 독립화한다 (defense-in-depth).
+      - name: Install semver only (no scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Audit Dependabot alerts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm audit:dependabot

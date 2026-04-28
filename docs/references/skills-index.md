@@ -6,6 +6,7 @@
 
 - **equipment-management** — UL-QP-18 equipment management domain guide (CRUD, calibration, checkout, non-conformance, approval workflows)
 - **nextjs-16** — Next.js 16 App Router reference (params Promise, PageProps, useActionState, Server Components)
+- **identifier-policy** — 도메인 ID 생성 SSOT (`docs/references/identifier-policy.md`): IdentifierService 진입점, 4개 도메인 헬퍼, ulid/nanoid 미선택 트레이드오프, 신규 ID 추가 절차, 정적+install+CI 5단 가드
 
 ## Verify Skills (정적 패턴 검증)
 

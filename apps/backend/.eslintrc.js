@@ -54,6 +54,24 @@ module.exports = {
     'no-restricted-imports': [
       'error',
       {
+        // Supply-Chain SSOT (verify-ssot Step 44): randomUUID는 IdentifierService 경유로만 호출.
+        // 정적 grep이 못 잡는 우회 패턴(`* as crypto`, alias rename) 차단을 위해 ESLint 이중 가드.
+        // 예외: `apps/backend/src/common/identifiers/identifier.service.ts` (overrides에서 off).
+        // 참고: `docs/references/identifier-policy.md`
+        paths: [
+          {
+            name: 'node:crypto',
+            importNames: ['randomUUID'],
+            message:
+              "Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service' instead. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
+          {
+            name: 'crypto',
+            importNames: ['randomUUID'],
+            message:
+              "Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service' instead. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
+        ],
         patterns: [
           {
             group: ['**/auth/rbac/roles.enum'],
@@ -69,6 +87,14 @@ module.exports = {
     // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단 (비교 패턴)
     'no-restricted-syntax': [
       'error',
+      // Supply-Chain SSOT (verify-ssot Step 44): randomUUID member call 차단.
+      // `import * as crypto from 'crypto'; crypto.randomUUID()` 우회 패턴 봉쇄.
+      // identifier.service.ts는 named import만 사용하므로 영향 없음 (overrides에서 off도 적용).
+      {
+        selector: "MemberExpression[property.name='randomUUID']",
+        message:
+          "Do not call .randomUUID() as member access. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+      },
       {
         selector:
           "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -106,6 +132,12 @@ module.exports = {
             message:
               'Controllers must not call emitAsync. Move event emission to the Service layer.',
           },
+          // Supply-Chain SSOT (verify-ssot Step 44): controller에서도 randomUUID member call 차단.
+          {
+            selector: "MemberExpression[property.name='randomUUID']",
+            message:
+              "Do not call .randomUUID() as member access. Use IdentifierService (DI) from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
           {
             selector:
               "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -136,6 +168,16 @@ module.exports = {
         '**/testing/**/*.ts',
       ],
       rules: {
+        'no-restricted-syntax': 'off',
+      },
+    },
+    {
+      // Supply-Chain SSOT (verify-ssot Step 44): identifier.service.ts는 SSOT 정의 파일.
+      // randomUUID를 node:crypto에서 직접 import해야 하므로 본 파일만 룰 비활성화.
+      // member call 사용처는 없으나 일관성을 위해 syntax 룰도 함께 off.
+      files: ['src/common/identifiers/identifier.service.ts'],
+      rules: {
+        'no-restricted-imports': 'off',
         'no-restricted-syntax': 'off',
       },
     },
