@@ -12,6 +12,7 @@ import { LocaleHtmlSync } from '@/components/i18n/LocaleHtmlSync';
 import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 import { NavigationPendingProvider } from '@/hooks/use-navigation-pending';
 import { GlobalProgressBar } from '@/components/layout/global-progress-bar';
+import { ConnectionBanner } from '@/components/layout/connection-banner';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -114,6 +115,7 @@ async function IntlProvider({ children }: { children: React.ReactNode }) {
       <LocaleHtmlSync />
       <NavigationPendingProvider>
         <GlobalProgressBar />
+        <ConnectionBanner />
         <Providers>
           <div className="min-h-screen bg-background flex flex-col">{children}</div>
           <Toaster />
