@@ -119,13 +119,16 @@ export type WorkflowPanelActorVariant = keyof typeof WORKFLOW_PANEL_TOKENS.actor
  *
  * container.floating: 모달/드롭다운 수준 강조 (ELEVATION_TOKENS.surface.emphasis 기반)
  * container.inline: 그룹 카드 내 인라인 삽입 (ELEVATION_TOKENS.surface.raised 기반)
+ * container.compact: 행 Zone 4 — 행 평면에 통합되는 layout-only 컨테이너.
+ *                    padding/shadow/rounded 0 — 외곽 사각형/glow 효과를 만들지 않음.
+ *                    내부 InlineActionButton 자체 크기로 결정.
  * container.hero: 상세 Hero 영역 강조 (ELEVATION_TOKENS.surface.emphasis 기반, 더 큰 패딩)
  */
 export const NEXT_STEP_PANEL_TOKENS = {
   container: {
     floating: `${ELEVATION_TOKENS.surface.emphasis} rounded-lg ${SPACING_RHYTHM_TOKENS.comfortable.padding}`,
     inline: `${ELEVATION_TOKENS.surface.raised} rounded-md ${SPACING_RHYTHM_TOKENS.tight.padding}`,
-    compact: `${ELEVATION_TOKENS.surface.raised} rounded px-2 py-1.5`,
+    compact: 'inline-flex flex-col gap-0.5',
     hero: `${ELEVATION_TOKENS.surface.emphasis} rounded-xl ${SPACING_RHYTHM_TOKENS.comfortable.padding}`,
   },
 

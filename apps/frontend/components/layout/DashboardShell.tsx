@@ -15,7 +15,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Wrench, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { UlLogo } from '@/lib/brand-assets/ul-logo';
 import type { LucideIcon } from 'lucide-react';
 import { ReactNode, memo, useMemo, useEffect } from 'react';
@@ -207,12 +207,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <Link
                   href="/"
                   className={cn(
-                    'flex items-center justify-center h-8 w-8 rounded-md',
+                    'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
                     FOCUS_TOKENS.classes.onDark
                   )}
                   aria-label={t('layout.goHome')}
                 >
-                  <UlLogo variant="mark" className="h-7 w-7" ariaHidden />
+                  <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
                 </Link>
                 <Button
                   variant="ghost"
@@ -241,14 +241,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   )}
                   aria-label={t('layout.goHome')}
                 >
-                  <UlLogo
-                    variant="mark"
+                  <div
                     className={cn(
-                      'h-7 w-7 group-hover:scale-110',
+                      'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                      'group-hover:scale-110',
                       TRANSITION_PRESETS.fastTransform
                     )}
-                    ariaHidden
-                  />
+                  >
+                    <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+                  </div>
                   <span className={cn('group-hover:text-brand-info', TRANSITION_PRESETS.fastColor)}>
                     {t('layout.systemName')}
                   </span>
@@ -327,20 +328,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
             ))}
           </nav>
 
-          {/* 사이드바 하단 — 자체 브랜드 마크 (대시보드 개선안 §3.1, C1) */}
+          {/* 사이드바 하단 — 자체 회사 로고 (대시보드 개선안 §3.1, C1) */}
           {!isCollapsed && (
             <div className={cn('mt-auto p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
-              <div className="flex items-center gap-2">
-                <span
-                  className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-ul-info to-ul-blue text-white font-bold text-[11px] tracking-tight"
-                  aria-hidden="true"
-                >
-                  EQ
-                </span>
-                <span className={cn('font-semibold text-xs', SIDEBAR_COLORS.brandPrimary)}>
-                  {t('layout.systemName')}
-                </span>
-              </div>
+              <UlLogo className="h-6 w-auto" />
             </div>
           )}
         </aside>
@@ -361,7 +352,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <MobileNav
                   navSections={filteredSections}
                   brandName={t('layout.systemName')}
-                  brandIcon={<UlLogo variant="mark" className="h-6 w-6" ariaHidden />}
+                  brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
                 />
                 <GlobalSearchTrigger filteredSections={filteredSections} />
               </>
@@ -417,7 +408,9 @@ export function DashboardShellSkeleton() {
           )}
         >
           <div className="flex items-center gap-2">
-            <UlLogo variant="mark" className="h-7 w-7" ariaHidden />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
+              <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+            </div>
             <span className="font-semibold text-white">{t('layout.systemName')}</span>
           </div>
         </div>
@@ -432,17 +425,7 @@ export function DashboardShellSkeleton() {
         </nav>
 
         <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
-          <div className="flex items-center gap-2">
-            <span
-              className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-ul-info to-ul-blue text-white font-bold text-[11px] tracking-tight"
-              aria-hidden="true"
-            >
-              EQ
-            </span>
-            <span className={cn('font-semibold text-xs', SIDEBAR_COLORS.brandPrimary)}>
-              {t('layout.systemName')}
-            </span>
-          </div>
+          <UlLogo className="h-6 w-auto" />
         </div>
       </aside>
 
