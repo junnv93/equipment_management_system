@@ -1,91 +1,93 @@
+import { UTILIZATION_THRESHOLDS } from '@/lib/config/dashboard-config';
 import { computeUtilizationState } from '../utilization-state';
 
+const { HIGH, MEDIUM, HYSTERESIS } = UTILIZATION_THRESHOLDS;
+const HIGH_EXIT = HIGH - HYSTERESIS;
+const HIGH_ENTRY = HIGH + HYSTERESIS;
+const MEDIUM_EXIT = MEDIUM - HYSTERESIS;
+const MEDIUM_ENTRY = MEDIUM + HYSTERESIS;
+
 describe('computeUtilizationState', () => {
-  // 초기 상태 (prev 없음)
   describe('초기 상태 결정', () => {
-    it('70% 이상 → good', () => {
-      expect(computeUtilizationState(70)).toBe('good');
+    it('HIGH 이상 → good', () => {
+      expect(computeUtilizationState(HIGH)).toBe('good');
       expect(computeUtilizationState(100)).toBe('good');
-      expect(computeUtilizationState(71)).toBe('good');
+      expect(computeUtilizationState(HIGH + 1)).toBe('good');
     });
 
-    it('40% 이상 70% 미만 → warning', () => {
-      expect(computeUtilizationState(40)).toBe('warning');
-      expect(computeUtilizationState(69)).toBe('warning');
-      expect(computeUtilizationState(55)).toBe('warning');
+    it('MEDIUM 이상 HIGH 미만 → warning', () => {
+      expect(computeUtilizationState(MEDIUM)).toBe('warning');
+      expect(computeUtilizationState(HIGH - 1)).toBe('warning');
+      expect(computeUtilizationState(Math.floor((MEDIUM + HIGH) / 2))).toBe('warning');
     });
 
-    it('40% 미만 → danger', () => {
-      expect(computeUtilizationState(39)).toBe('danger');
+    it('MEDIUM 미만 → danger', () => {
+      expect(computeUtilizationState(MEDIUM - 1)).toBe('danger');
       expect(computeUtilizationState(0)).toBe('danger');
     });
   });
 
-  // good 상태에서의 hysteresis
-  describe('prev=good hysteresis (이탈 임계값 68%)', () => {
-    it('68% 이상 → good 유지 (70-2=68)', () => {
-      expect(computeUtilizationState(68, 'good')).toBe('good');
-      expect(computeUtilizationState(69, 'good')).toBe('good');
+  describe(`prev=good hysteresis (이탈 임계값=${HIGH_EXIT})`, () => {
+    it(`HIGH_EXIT(${HIGH_EXIT}) 이상 → good 유지`, () => {
+      expect(computeUtilizationState(HIGH_EXIT, 'good')).toBe('good');
+      expect(computeUtilizationState(HIGH - 1, 'good')).toBe('good');
     });
 
-    it('67% → warning (68 미만)', () => {
-      expect(computeUtilizationState(67, 'good')).toBe('warning');
+    it(`HIGH_EXIT-1(${HIGH_EXIT - 1}) → warning`, () => {
+      expect(computeUtilizationState(HIGH_EXIT - 1, 'good')).toBe('warning');
     });
 
-    it('39% → danger (40 미만)', () => {
-      expect(computeUtilizationState(39, 'good')).toBe('danger');
-    });
-  });
-
-  // warning 상태에서의 hysteresis
-  describe('prev=warning hysteresis (진입=72%, 이탈=38%)', () => {
-    it('72% 이상 → good (70+2=72)', () => {
-      expect(computeUtilizationState(72, 'warning')).toBe('good');
-      expect(computeUtilizationState(73, 'warning')).toBe('good');
-    });
-
-    it('71% → warning 유지 (72 미만)', () => {
-      expect(computeUtilizationState(71, 'warning')).toBe('warning');
-    });
-
-    it('38% 이상 → warning 유지 (40-2=38)', () => {
-      expect(computeUtilizationState(38, 'warning')).toBe('warning');
-    });
-
-    it('37% → danger (38 미만)', () => {
-      expect(computeUtilizationState(37, 'warning')).toBe('danger');
+    it(`MEDIUM-1(${MEDIUM - 1}) → danger`, () => {
+      expect(computeUtilizationState(MEDIUM - 1, 'good')).toBe('danger');
     });
   });
 
-  // danger 상태에서의 hysteresis
-  describe('prev=danger hysteresis (진입=70%, warning진입=42%)', () => {
-    it('70% 이상 → good (순수 임계값)', () => {
-      expect(computeUtilizationState(70, 'danger')).toBe('good');
+  describe(`prev=warning hysteresis (진입=${HIGH_ENTRY}, 이탈=${MEDIUM_EXIT})`, () => {
+    it(`HIGH_ENTRY(${HIGH_ENTRY}) 이상 → good`, () => {
+      expect(computeUtilizationState(HIGH_ENTRY, 'warning')).toBe('good');
+      expect(computeUtilizationState(HIGH_ENTRY + 1, 'warning')).toBe('good');
     });
 
-    it('42% 이상 70% 미만 → warning (40+2=42)', () => {
-      expect(computeUtilizationState(42, 'danger')).toBe('warning');
-      expect(computeUtilizationState(69, 'danger')).toBe('warning');
+    it(`HIGH_ENTRY-1(${HIGH_ENTRY - 1}) → warning 유지`, () => {
+      expect(computeUtilizationState(HIGH_ENTRY - 1, 'warning')).toBe('warning');
     });
 
-    it('41% → danger 유지 (42 미만)', () => {
-      expect(computeUtilizationState(41, 'danger')).toBe('danger');
+    it(`MEDIUM_EXIT(${MEDIUM_EXIT}) 이상 → warning 유지`, () => {
+      expect(computeUtilizationState(MEDIUM_EXIT, 'warning')).toBe('warning');
+    });
+
+    it(`MEDIUM_EXIT-1(${MEDIUM_EXIT - 1}) → danger`, () => {
+      expect(computeUtilizationState(MEDIUM_EXIT - 1, 'warning')).toBe('danger');
     });
   });
 
-  // 경계값 정밀 검증
-  describe('경계값 (67~72)', () => {
+  describe(`prev=danger hysteresis (good 진입=${HIGH}, warning 진입=${MEDIUM_ENTRY})`, () => {
+    it(`HIGH(${HIGH}) 이상 → good (순수 임계값)`, () => {
+      expect(computeUtilizationState(HIGH, 'danger')).toBe('good');
+    });
+
+    it(`MEDIUM_ENTRY(${MEDIUM_ENTRY}) 이상 HIGH 미만 → warning`, () => {
+      expect(computeUtilizationState(MEDIUM_ENTRY, 'danger')).toBe('warning');
+      expect(computeUtilizationState(HIGH - 1, 'danger')).toBe('warning');
+    });
+
+    it(`MEDIUM_ENTRY-1(${MEDIUM_ENTRY - 1}) → danger 유지`, () => {
+      expect(computeUtilizationState(MEDIUM_ENTRY - 1, 'danger')).toBe('danger');
+    });
+  });
+
+  describe(`경계값 (${HIGH_EXIT - 1}~${HIGH_ENTRY})`, () => {
     const cases: [
       number,
       'good' | 'warning' | 'danger' | undefined,
       'good' | 'warning' | 'danger',
     ][] = [
-      [67, 'good', 'warning'],
-      [68, 'good', 'good'],
-      [69, 'good', 'good'],
-      [70, undefined, 'good'],
-      [71, 'warning', 'warning'],
-      [72, 'warning', 'good'],
+      [HIGH_EXIT - 1, 'good', 'warning'],
+      [HIGH_EXIT, 'good', 'good'],
+      [HIGH - 1, 'good', 'good'],
+      [HIGH, undefined, 'good'],
+      [HIGH_ENTRY - 1, 'warning', 'warning'],
+      [HIGH_ENTRY, 'warning', 'good'],
     ];
 
     it.each(cases)('pct=%i prev=%s → %s', (pct, prev, expected) => {
