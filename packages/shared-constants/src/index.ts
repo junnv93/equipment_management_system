@@ -107,8 +107,13 @@ export {
   CHECKOUT_BLOCKED_REASONS,
   getBlockedReasonKey,
   CHECKOUT_MAX_EQUIPMENT_COUNT,
+  USER_SELECTABLE_PURPOSES,
+  getAvailablePurposes,
+  isPurposeCompatibleWithEquipment,
   type BlockedReasonI18n,
   type EquipmentSelectability,
+  type UserSelectablePurpose,
+  type PurposeAvailability,
 } from './checkout-selectability';
 
 // 반출 목적 배지 스타일

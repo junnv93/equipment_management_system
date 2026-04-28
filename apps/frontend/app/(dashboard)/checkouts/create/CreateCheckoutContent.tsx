@@ -62,6 +62,8 @@ import {
   FRONTEND_ROUTES,
   SELECTOR_PAGE_SIZE,
   Permission,
+  getAvailablePurposes,
+  isPurposeCompatibleWithEquipment,
 } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -80,7 +82,9 @@ export default function CreateCheckoutContent() {
   const queryClient = useQueryClient();
   const { user, can } = useAuth();
   const canCreate = can(Permission.CREATE_CHECKOUT);
-  const hasPreselected = useRef(false);
+  // 두 ref로 분리: equipment 자동 선택은 즉시, purpose/site/team은 userTeamId까지 도착해야 잠금
+  const hasInitializedEquipment = useRef(false);
+  const hasInitializedPurpose = useRef(false);
 
   // URL searchParams에서 프리셀렉션 equipmentId 읽기
   const searchParams = useSearchParams();
@@ -110,12 +114,37 @@ export default function CreateCheckoutContent() {
     enabled: !!preselectedEquipmentId,
   });
 
+  // Effect 1: 장비 자동 선택 — equipment 로드되면 즉시 (userTeamId 대기 X)
   useEffect(() => {
-    if (preselectedEquipment && !hasPreselected.current) {
-      hasPreselected.current = true;
+    if (preselectedEquipment && !hasInitializedEquipment.current) {
+      hasInitializedEquipment.current = true;
       setSelectedEquipments([preselectedEquipment]);
     }
   }, [preselectedEquipment]);
+
+  // Effect 2: purpose + site/team 자동 채움 — equipment AND userTeamId 둘 다 도착해야 평가
+  // (둘 중 하나라도 없으면 ref를 잠그지 않아 다음 도착 시 재평가됨)
+  useEffect(() => {
+    if (!preselectedEquipment || !userTeamId || hasInitializedPurpose.current) return;
+    hasInitializedPurpose.current = true;
+
+    const isCrossTeam = !!preselectedEquipment.teamId && preselectedEquipment.teamId !== userTeamId;
+
+    if (isCrossTeam) {
+      // 타팀 장비: rental + 관리 부서 + 장비(belt-and-suspenders) 자동 채움
+      setPurpose(CPVal.RENTAL);
+      setSelectedSite(preselectedEquipment.site);
+      setSelectedTeamId(preselectedEquipment.teamId!);
+      setSelectedEquipments([preselectedEquipment]);
+    }
+    // 자팀 장비: useState 기본값 'calibration' 그대로 유지
+  }, [preselectedEquipment, userTeamId]);
+
+  // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
+  const purposeAvailability = useMemo(
+    () => getAvailablePurposes(preselectedEquipment?.teamId, userTeamId),
+    [preselectedEquipment?.teamId, userTeamId]
+  );
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({
@@ -170,9 +199,33 @@ export default function CreateCheckoutContent() {
     },
   });
 
-  // 목적 변경 시 장비 및 사이트/팀 초기화
+  // 목적 변경 시: 현재 선택된 장비(URL preselection 또는 사용자 선택)가 새 목적과 호환되면
+  // 보존 + rental 진입 시 site/team 자동 채움. 비호환이면 모두 초기화.
   const handlePurposeChange = (value: UserSelectableCheckoutPurpose) => {
     setPurpose(value);
+
+    // 현재 선택된 첫 장비 — preselectedEquipment에 의존하지 않고 actual selection 기준
+    const currentEquipment = selectedEquipments[0] ?? preselectedEquipment;
+
+    if (currentEquipment) {
+      const compat = isPurposeCompatibleWithEquipment(value, currentEquipment.teamId, userTeamId);
+
+      if (compat) {
+        // 호환: 장비 명시적 보존 (이미 selectedEquipments에 있어도 멱등)
+        setSelectedEquipments([currentEquipment]);
+
+        if (value === CPVal.RENTAL) {
+          setSelectedSite(currentEquipment.site);
+          setSelectedTeamId(currentEquipment.teamId ?? '');
+        } else {
+          setSelectedSite('');
+          setSelectedTeamId('');
+        }
+        return;
+      }
+    }
+
+    // 비호환 또는 선택된 장비 없음
     setSelectedEquipments([]);
     setSelectedSite('');
     setSelectedTeamId('');
@@ -660,27 +713,38 @@ export default function CreateCheckoutContent() {
                     <SelectValue placeholder={t('create.purposePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={CPVal.CALIBRATION}>
+                    <SelectItem
+                      value={CPVal.CALIBRATION}
+                      disabled={!purposeAvailability.calibration.enabled}
+                    >
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeCalibration')}</span>
                         <span className="text-xs text-muted-foreground">
-                          {t('create.purposeCalibrationDesc')}
+                          {purposeAvailability.calibration.enabled
+                            ? t('create.purposeCalibrationDesc')
+                            : t(
+                                purposeAvailability.calibration.reasonKey as Parameters<typeof t>[0]
+                              )}
                         </span>
                       </div>
                     </SelectItem>
-                    <SelectItem value={CPVal.REPAIR}>
+                    <SelectItem value={CPVal.REPAIR} disabled={!purposeAvailability.repair.enabled}>
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeRepair')}</span>
                         <span className="text-xs text-muted-foreground">
-                          {t('create.purposeRepairDesc')}
+                          {purposeAvailability.repair.enabled
+                            ? t('create.purposeRepairDesc')
+                            : t(purposeAvailability.repair.reasonKey as Parameters<typeof t>[0])}
                         </span>
                       </div>
                     </SelectItem>
-                    <SelectItem value={CPVal.RENTAL}>
+                    <SelectItem value={CPVal.RENTAL} disabled={!purposeAvailability.rental.enabled}>
                       <div className="flex flex-col">
                         <span className="font-medium">{t('create.purposeRental')}</span>
                         <span className="text-xs text-muted-foreground">
-                          {t('create.purposeRentalDesc')}
+                          {purposeAvailability.rental.enabled
+                            ? t('create.purposeRentalDesc')
+                            : t(purposeAvailability.rental.reasonKey as Parameters<typeof t>[0])}
                         </span>
                       </div>
                     </SelectItem>
