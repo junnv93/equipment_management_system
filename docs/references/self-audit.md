@@ -12,10 +12,10 @@ node scripts/self-audit.mjs --staged
 node scripts/self-audit.mjs --all
 ```
 
-| 모드       | 트리거                      | 적용 규칙                         |
-| ---------- | --------------------------- | --------------------------------- |
-| `--staged` | `.husky/pre-commit`         | ①②③④⑤⑥⑦⑧⑨ 전체                    |
-| `--all`    | `main.yml` quality-gate job | ①④⑤⑥ (나머지는 기존 tracked 제외) |
+| 모드       | 트리거                      | 적용 규칙                          |
+| ---------- | --------------------------- | ---------------------------------- |
+| `--staged` | `.husky/pre-commit`         | ①②③④⑤⑥⑦⑧⑨⑩ 전체                    |
+| `--all`    | `main.yml` quality-gate job | ①④⑤⑥⑩ (나머지는 기존 tracked 제외) |
 
 ---
 
@@ -226,6 +226,48 @@ className="text-brand-critical"
 ```
 
 **예외 처리**: 불가피한 경우 해당 라인에 `// self-audit-exception` 마커 추가.
+
+---
+
+### ⑩ Service 메서드 파라미터 underscore prefix (silent loss 회귀 차단)
+
+**의도**: ESLint `argsIgnorePattern: '^_'`가 underscore prefix를 lint-bypass로 통과시키지만, service 레이어에서는 사용자 입력이 어디에도 저장되지 않는 silent loss로 이어질 수 있다. 본 룰은 의도된 unused와 silent loss를 명시적으로 구분하도록 강제한다.
+
+**범위**: `apps/backend/src/modules/**/*.service.ts` (test/spec 제외)
+
+**감지 패턴**: `async \w+\([^)]*\b_[a-zA-Z]\w*\s*[?:]` — async 메서드 파라미터의 underscore prefix.
+
+**관련 사고**:
+
+- `software-validation-approve-comment-silent-loss` (2026-04-28): `_approvalComment` underscore prefix가 lint를 통과시켰지만 도메인 가치 0. 1주일간 silent loss.
+- `qualityApprove-comment-silent-loss` (2026-04-28): controller가 `ApproveValidationPipe` 재사용으로 `approvalComment` 통과 → service `qualityApprove(id, version, approverId)` 폐기.
+
+**올바른 대안**:
+
+```typescript
+// ❌ silent loss 위험 — 사용자 입력이 어디에도 저장 안 됨
+async approve(id: string, version: number, approverId: string, _approvalComment?: string) {
+  return this.updateWithVersion(...);  // approvalComment 미사용
+}
+
+// ✅ 파라미터 사용
+async approve(id: string, version: number, approverId: string, approvalComment?: string) {
+  return this.updateWithVersion(table, id, version, {
+    ...,
+    approvalComment: approvalComment || null,
+  });
+}
+
+// ✅ 의도된 unused — escape hatch 주석 (같은 라인 또는 바로 위 라인)
+// allowed: VersionedBaseService.onVersionConflict 베이스 hook 시그니처 호환 (id 미사용)
+protected async onVersionConflict(_id: string): Promise<void> { ... }
+```
+
+**예외 처리**: `// allowed: <reason>` 주석을 같은 라인 또는 바로 위 라인에 추가. 정당화 사례:
+
+- VersionedBaseService 같은 base class의 hook 시그니처 호환
+- 데코레이터 metadata-only 파라미터
+- audit interceptor가 자동 기록하는 actor (도메인 표시 컬럼 없음)
 
 ---
 

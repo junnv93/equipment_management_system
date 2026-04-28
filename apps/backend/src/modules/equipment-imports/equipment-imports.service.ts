@@ -78,6 +78,7 @@ export class EquipmentImportsService extends VersionedBaseService {
    * 모든 updateWithVersion 호출 경로(approve/reject/requestReturn/완료/롤백 등)
    * 가 단일 정책을 공유 → 누락된 catch boilerplate 위험 제거.
    */
+  // allowed: VersionedBaseService.onVersionConflict 베이스 hook 시그니처 호환 (id 미사용 — 도메인 전체 무효화)
   protected async onVersionConflict(_id: string): Promise<void> {
     await this.cacheInvalidationHelper.invalidateAllEquipmentImports();
   }

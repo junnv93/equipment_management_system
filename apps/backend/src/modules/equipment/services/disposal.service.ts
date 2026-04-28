@@ -61,6 +61,7 @@ export class DisposalService extends VersionedBaseService {
    * 특정 detail 키 단위 삭제로는 정합성 보장이 어려워 `CACHE_PREFIX + '*'` 로
    * equipment 도메인 전체를 무효화한다 (기존 inline 정책과 동일 semantics).
    */
+  // allowed: VersionedBaseService.onVersionConflict 베이스 hook 시그니처 호환 (id 미사용 — 도메인 전체 무효화)
   protected async onVersionConflict(_id: string): Promise<void> {
     await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
   }

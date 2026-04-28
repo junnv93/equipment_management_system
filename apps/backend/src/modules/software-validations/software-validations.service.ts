@@ -444,7 +444,8 @@ export class SoftwareValidationsService extends VersionedBaseService {
   async qualityApprove(
     id: string,
     version: number,
-    approverId: string
+    approverId: string,
+    qualityApprovalComment?: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -470,6 +471,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
         status: ValidationStatusValues.QUALITY_APPROVED,
         qualityApproverId: approverId,
         qualityApprovedAt: new Date(),
+        qualityApprovalComment: qualityApprovalComment || null,
       },
       '소프트웨어 유효성 확인',
       undefined,

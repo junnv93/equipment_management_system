@@ -9,12 +9,13 @@
 #   1. ENV SSOT sync (env.validation.ts ↔ .env.example drift 방지)
 #   2. SOPS sync (SOPS_AGE_KEY env + sops binary 존재 시에만 — 선택적)
 #   3. TypeScript type check (all packages)
-#   4. Backend unit tests
-#   5. Frontend unit tests
+#   4. Backend lint (ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
+#   5. Frontend lint (Next.js ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
+#   6. Backend unit tests
+#   7. Frontend unit tests
 #
 # Skipped (still rely on GitHub Actions for these):
 #   - E2E tests (too slow for every push)
-#   - Lint (already covered by pre-commit lint-staged)
 #   - CodeQL / Secret Scan (server-side only)
 
 set -e
@@ -36,6 +37,12 @@ fi
 
 echo "▶ pre-push: TypeScript check..."
 pnpm tsc --noEmit
+
+echo "▶ pre-push: backend lint..."
+pnpm --filter backend run lint:ci
+
+echo "▶ pre-push: frontend lint..."
+pnpm --filter frontend run lint
 
 echo "▶ pre-push: i18n call-sites parity..."
 node scripts/check-i18n-call-sites.mjs --all --quiet

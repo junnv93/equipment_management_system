@@ -272,6 +272,24 @@
       "cancel": "Cancel",
       "confirm": "Reject"
     },
+    "approveDialog": {
+      "title": "Technical Approval",
+      "commentLabel": "Review Comment",
+      "commentPlaceholder": "Enter review comment (optional)",
+      "commentHelp": "ISO/IEC 17025 §6.2.2 — Comment will be permanently recorded in the approval audit trail",
+      "cancel": "Cancel",
+      "confirm": "Approve",
+      "submitting": "Processing..."
+    },
+    "qualityApproveDialog": {
+      "title": "Quality Approval",
+      "commentLabel": "Review Comment",
+      "commentPlaceholder": "Enter review comment (optional)",
+      "commentHelp": "ISO/IEC 17025 §6.2.2 — Comment will be permanently recorded in the approval audit trail",
+      "cancel": "Cancel",
+      "confirm": "Approve",
+      "submitting": "Processing..."
+    },
     "documents": {
       "title": "Attachments",
       "empty": "No files attached",

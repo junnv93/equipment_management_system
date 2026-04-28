@@ -6,12 +6,25 @@ import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 export const approveValidationSchema = z.object({
   ...versionedSchema,
-  /** 검토 코멘트 — 감사 로그 기록용 (optional) */
+  /** 기술책임자 검토 코멘트 — ISO/IEC 17025 §6.2.2 audit trail (optional) */
   approvalComment: z.string().trim().max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
 });
 
 export type ApproveValidationInput = z.infer<typeof approveValidationSchema>;
 export const ApproveValidationPipe = new ZodValidationPipe(approveValidationSchema);
+
+/**
+ * 품질책임자 승인용 DTO — 기술책임자(`approve`)와 분리.
+ * ISO/IEC 17025 §6.2.2: 책임/시점 다른 별도 audit trail 컬럼(`quality_approval_comment`).
+ */
+export const qualityApproveValidationSchema = z.object({
+  ...versionedSchema,
+  /** 품질책임자 검토 코멘트 — ISO/IEC 17025 §6.2.2 audit trail (optional) */
+  qualityApprovalComment: z.string().trim().max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
+});
+
+export type QualityApproveValidationInput = z.infer<typeof qualityApproveValidationSchema>;
+export const QualityApproveValidationPipe = new ZodValidationPipe(qualityApproveValidationSchema);
 
 export const rejectValidationSchema = z.object({
   ...versionedSchema,

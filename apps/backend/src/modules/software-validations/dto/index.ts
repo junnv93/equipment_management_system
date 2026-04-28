@@ -13,7 +13,13 @@ export type { SubmitValidationInput } from './submit-validation.dto';
 export {
   approveValidationSchema,
   ApproveValidationPipe,
+  qualityApproveValidationSchema,
+  QualityApproveValidationPipe,
   rejectValidationSchema,
   RejectValidationPipe,
 } from './approve-validation.dto';
-export type { ApproveValidationInput, RejectValidationInput } from './approve-validation.dto';
+export type {
+  ApproveValidationInput,
+  QualityApproveValidationInput,
+  RejectValidationInput,
+} from './approve-validation.dto';

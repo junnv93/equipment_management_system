@@ -245,9 +245,16 @@ const softwareValidationApi = {
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version, approvalComment })
       .then((res) => res.data);
   },
-  qualityApprove: async (id: string, version: number): Promise<SoftwareValidation> => {
+  qualityApprove: async (
+    id: string,
+    version: number,
+    qualityApprovalComment?: string
+  ): Promise<SoftwareValidation> => {
     return apiClient
-      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.QUALITY_APPROVE(id), { version })
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.QUALITY_APPROVE(id), {
+        version,
+        qualityApprovalComment,
+      })
       .then((res) => res.data);
   },
   reject: async (

@@ -76,6 +76,9 @@ export const softwareValidations = pgTable(
       onDelete: 'restrict',
     }),
     qualityApprovedAt: timestamp('quality_approved_at'),
+    // ISO/IEC 17025 §6.2.2 audit trail — 품질책임자 승인 시 검토 의견.
+    // 기술승인(approval_comment)과 책임/시점 분리하여 별도 컬럼.
+    qualityApprovalComment: text('quality_approval_comment'),
     rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'restrict' }),
     rejectedAt: timestamp('rejected_at'),
     rejectionReason: text('rejection_reason'),

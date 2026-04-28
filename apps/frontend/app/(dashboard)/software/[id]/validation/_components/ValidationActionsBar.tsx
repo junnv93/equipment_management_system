@@ -19,9 +19,15 @@ interface ValidationActionsBarProps {
   can: (permission: (typeof Permission)[keyof typeof Permission]) => boolean;
   userId: string | undefined;
   submitMutation: MutationHandle<{ id: string; version: number }>;
-  approveMutation: MutationHandle<{ id: string; version: number }>;
-  qualityApproveMutation: MutationHandle<{ id: string; version: number }>;
+  approveMutation: MutationHandle<{ id: string; version: number; approvalComment?: string }>;
+  qualityApproveMutation: MutationHandle<{
+    id: string;
+    version: number;
+    qualityApprovalComment?: string;
+  }>;
   reviseMutation: MutationHandle<{ id: string; version: number }>;
+  onApprove: (validation: SoftwareValidation) => void;
+  onQualityApprove: (validation: SoftwareValidation) => void;
   onReject: (validation: SoftwareValidation) => void;
 }
 
@@ -34,6 +40,8 @@ export function ValidationActionsBar({
   approveMutation,
   qualityApproveMutation,
   reviseMutation,
+  onApprove,
+  onQualityApprove,
   onReject,
 }: ValidationActionsBarProps) {
   const t = useTranslations('software');
@@ -81,7 +89,7 @@ export function ValidationActionsBar({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                approveMutation.mutate({ id: v.id, version: v.version });
+                onApprove(v);
               }}
               // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
               disabled={approveMutation.isPending || v.submittedBy === userId}
@@ -110,7 +118,7 @@ export function ValidationActionsBar({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              qualityApproveMutation.mutate({ id: v.id, version: v.version });
+              onQualityApprove(v);
             }}
             // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
             disabled={qualityApproveMutation.isPending || v.technicalApproverId === userId}

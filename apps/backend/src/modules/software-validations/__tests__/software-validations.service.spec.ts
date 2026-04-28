@@ -43,6 +43,7 @@ const MOCK_VALIDATION = {
   approvalComment: null,
   qualityApproverId: null,
   qualityApprovedAt: null,
+  qualityApprovalComment: null,
   rejectedBy: null,
   rejectedAt: null,
   rejectionReason: null,
@@ -376,6 +377,98 @@ describe('SoftwareValidationsService', () => {
 
       await expect(service.qualityApprove('val-uuid-1', 1, 'same-person-uuid')).rejects.toThrow(
         ForbiddenException
+      );
+    });
+
+    // ISO/IEC 17025 §6.2.2 audit trail — qualityApprovalComment persistence
+    // 직전까지 qualityApprove() 시그니처에 코멘트 파라미터 자체가 없던 silent loss 진짜 fix.
+    it('qualityApprovalComment가 제공되면 UPDATE SET 에 포함된다', async () => {
+      const approvedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'tech-approver-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([approvedValidation]));
+      const updateChain = mockUpdateChain({
+        ...approvedValidation,
+        status: ValidationStatusValues.QUALITY_APPROVED,
+        qualityApprovalComment: '품질 검토 완료',
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1', '품질 검토 완료');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ qualityApprovalComment: '품질 검토 완료' })
+      );
+    });
+
+    it('qualityApprovalComment가 undefined이면 NULL로 persist된다', async () => {
+      const approvedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'tech-approver-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([approvedValidation]));
+      const updateChain = mockUpdateChain({
+        ...approvedValidation,
+        status: ValidationStatusValues.QUALITY_APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ qualityApprovalComment: null })
+      );
+    });
+
+    it('qualityApprovalComment가 빈 문자열이면 NULL로 persist된다', async () => {
+      const approvedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'tech-approver-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([approvedValidation]));
+      const updateChain = mockUpdateChain({
+        ...approvedValidation,
+        status: ValidationStatusValues.QUALITY_APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1', '');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({ qualityApprovalComment: null })
+      );
+    });
+
+    it('qualityApprove의 status / qualityApproverId / qualityApprovedAt 기존 필드가 보존된다 (regression guard)', async () => {
+      const approvedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'tech-approver-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([approvedValidation]));
+      const updateChain = mockUpdateChain({
+        ...approvedValidation,
+        status: ValidationStatusValues.QUALITY_APPROVED,
+      });
+      mockDb.update.mockReturnValueOnce(updateChain);
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
+
+      await service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1', '품질 코멘트');
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ValidationStatusValues.QUALITY_APPROVED,
+          qualityApproverId: 'qa-uuid-1',
+          qualityApprovedAt: expect.any(Date),
+          qualityApprovalComment: '품질 코멘트',
+        })
       );
     });
   });

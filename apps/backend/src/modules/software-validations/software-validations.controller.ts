@@ -17,6 +17,7 @@ import {
   ValidationQueryPipe,
   SubmitValidationPipe,
   ApproveValidationPipe,
+  QualityApproveValidationPipe,
   RejectValidationPipe,
 } from './dto';
 import type {
@@ -25,6 +26,7 @@ import type {
   ValidationQueryInput,
   SubmitValidationInput,
   ApproveValidationInput,
+  QualityApproveValidationInput,
   RejectValidationInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -182,14 +184,19 @@ export class SoftwareValidationsController {
     entityType: 'software_validation',
     entityIdPath: 'params.uuid',
   })
-  @UsePipes(ApproveValidationPipe)
+  @UsePipes(QualityApproveValidationPipe)
   async qualityApprove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() dto: ApproveValidationInput,
+    @Body() dto: QualityApproveValidationInput,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
-    return this.validationsService.qualityApprove(uuid, dto.version, approverId);
+    return this.validationsService.qualityApprove(
+      uuid,
+      dto.version,
+      approverId,
+      dto.qualityApprovalComment
+    );
   }
 
   @Patch(':uuid/reject')

@@ -498,6 +498,7 @@ export class SelfInspectionsService extends VersionedBaseService {
    * 재제출 (rejected → draft)
    * 반려 사유 초기화
    */
+  // allowed: actor 기록은 audit.interceptor.ts:287-291이 request.body 자동 기록 (resubmit은 도메인 표시 컬럼 없음)
   async resubmit(id: string, version: number, _userId: string): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 

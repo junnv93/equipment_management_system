@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * self-audit.mjs — 7대 아키텍처 원칙 위반 탐지 스크립트
+ * self-audit.mjs — 8대 아키텍처 원칙 위반 탐지 스크립트
  *
  * 사용법:
  *   node scripts/self-audit.mjs --staged   # git staged 파일만 검사 (pre-commit)
@@ -413,6 +413,36 @@ function checkHexColors(file, content) {
   });
 }
 
+// ⑩ Service 메서드 파라미터 underscore prefix (silent loss 회귀 차단)
+// 범위: apps/backend/src/modules/**/*.service.ts (test/spec 제외)
+// 관련 사고: software-validation-approve-comment-silent-loss (2026-04-28)
+//          — `_approvalComment` underscore prefix가 lint를 통과시켰지만
+//          도메인 가치 0. 사용자 입력 1주일간 silent loss.
+// 예외: 동일 라인에 `// allowed: <reason>` 주석 명시 시 허용
+//      (e.g., VersionedBaseService 호환 파라미터, 데코레이터 metadata-only)
+
+const SERVICE_PARAM_UNDERSCORE_RE =
+  /async\s+\w+\([^)]*\b_[a-zA-Z][a-zA-Z0-9]*\s*[?:]/;
+
+function checkServiceParamUnderscore(file, lines) {
+  if (!/apps\/backend\/src\/modules\/.*\.service\.ts$/.test(file)) return;
+  if (isTestFile(file)) return;
+
+  lines.forEach((line, i) => {
+    if (!SERVICE_PARAM_UNDERSCORE_RE.test(line)) return;
+    // allowed: 마커는 같은 라인 또는 바로 위 라인 (JSDoc 닫기 직후 패턴 지원)
+    if (line.includes('// allowed:')) return;
+    if ((lines[i - 1] ?? '').includes('// allowed:')) return;
+    fail(
+      '⑩ service param underscore prefix',
+      file,
+      i + 1,
+      'Service 메서드 파라미터에 underscore prefix(_param) — silent loss 위험. ' +
+        '파라미터 사용 또는 "// allowed: <reason>" 주석 추가 필요',
+    );
+  });
+}
+
 // ─── 메인 실행 ─────────────────────────────────────────────────────────────
 
 for (const file of files) {
@@ -430,6 +460,7 @@ for (const file of files) {
   checkIconButtonA11y(file, lines);
   checkFsmLiterals(file, lines);
   checkHexColors(file, content);
+  checkServiceParamUnderscore(file, lines);
 }
 
 // ─── 결과 출력 ─────────────────────────────────────────────────────────────

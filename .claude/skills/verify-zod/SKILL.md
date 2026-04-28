@@ -462,7 +462,50 @@ export class InboundOverviewQueryDto {
 | 11  | 배열 .max() 매직 넘버          | PASS/FAIL | 레이아웃 상수 미경유 숫자 리터럴 위치 |
 | 12  | required string .trim() 여부   | PASS/FAIL | .min(1) 앞 .trim() 누락 DTO 위치 |
 | 13  | .default() 필드 non-optional   | PASS/FAIL | .default() 있는데 DTO 클래스 optional 선언 위치 |
+| 14  | Pipe DTO 통과 필드 ↔ service 호출 인자 (silent loss 차단) | PASS/FAIL | underscore prefix 의심 위치 + DTO 필드 미전달 호출 |
 ```
+
+### Step 14: Pipe DTO 통과 필드 ↔ service 호출 인자 매핑 정합 — silent loss 차단 (2026-04-28 추가)
+
+**탐지 대상**: controller에서 `@UsePipes(SomePipe)` 적용 후 `service.method(...)` 호출 시 DTO에 정의된 도메인 필드가 service 시그니처에서 누락되어 silent loss(사용자 입력이 어디에도 저장되지 않음)가 발생하는 케이스. ESLint `no-unused-vars` 의 `argsIgnorePattern: '^_'` 가 underscore prefix를 통과시키는 갭을 정적으로 차단.
+
+**원인 패턴**:
+- service 메서드 작성 시 DTO 필드 무시 → ESLint underscore prefix(`_paramName`) 우회로 lint 통과
+- DTO에 새 필드 추가했지만 service 시그니처 미동기화
+- DTO 재사용(예: `ApproveValidationPipe`를 `qualityApprove`에서도 사용)했지만 service 시그니처는 단순한 형태로 남음
+
+**검증 명령**:
+```bash
+# 1. service 메서드 파라미터에 underscore prefix가 있는 곳 탐지 (silent loss 의심)
+#    test/spec/__tests__/ 디렉토리 제외
+grep -rnE "async\s+\w+\([^)]*_[a-zA-Z]\w*\s*[?:]" \
+  apps/backend/src/modules/*/services apps/backend/src/modules/*/*.service.ts \
+  2>/dev/null | grep -v "\.spec\.ts" | grep -v "__tests__"
+# expected: 0 hits — 신규 도메인 silent loss 의심 위치 0건
+
+# 2. DTO 정의 필드 ↔ service 호출 인자 비교 (도메인별 수동 검증)
+#    예: ApproveValidationPipe DTO에 approvalComment 있고 controller가 service.method(... dto.approvalComment) 전달하는지
+grep -A20 "ApproveValidationPipe\|QualityApproveValidationPipe" \
+  apps/backend/src/modules/software-validations/software-validations.controller.ts \
+  | grep -E "dto\.[a-zA-Z]+|service\..*\(" | head -10
+```
+
+**예외**:
+- spec/test 파일 내 mock 메서드 — `spec.ts`/`__tests__/` 경로
+- VersionedBaseService 같은 base class의 `_unused?` 호환 파라미터 — 별도 정당화 주석(`// allowed: <reason>`) 추가
+- 데코레이터 메타데이터 전용 파라미터 — `@Body() _body: never` 처럼 의도된 unused
+
+**관련 사고**:
+- `software-validation-approve-comment-silent-loss` (2026-04-28): `_approvalComment` underscore prefix가 lint를 통과시켰지만 도메인 가치 0. 1주일간 silent loss.
+- `qualityApprove-comment-silent-loss` (2026-04-28): controller가 `ApproveValidationPipe` 재사용으로 `approvalComment` 통과 → service `qualityApprove(id, version, approverId)` 폐기 → DTO 분리 + `qualityApprovalComment` 컬럼 신설로 closure.
+
+**PASS 기준**:
+- service 디렉토리에서 underscore prefix 파라미터 0건 (또는 모두 `// allowed:` 주석 보유)
+- 도메인 검수: DTO 필드가 controller→service 전달 누락 0건
+
+**FAIL 기준**:
+- 정당화 없는 underscore prefix 파라미터 1건 이상
+- DTO 필드가 service 시그니처에 누락되어 사용자 입력 silent loss
 
 ## Exceptions
 
