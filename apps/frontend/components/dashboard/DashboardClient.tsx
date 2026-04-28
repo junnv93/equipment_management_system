@@ -164,11 +164,13 @@ function DashboardClientComponent({
   }, [userRole, pendingCounts]);
 
   // §3.9 — 시스템관리자 전용 시스템 상태. 백엔드 /api/dashboard/system-health 호출.
+  // MONITORING 전략: staleTime=SHORT(30s) + refetchInterval=PERIODIC(5min) — 시스템 상태는
+  // 실시간성이 중요하므로 NORMAL(focus only)에서 격상. enabled gating으로 SYSTEM_ADMIN만 폴링.
   const { data: systemHealth } = useQuery<SystemHealthMetrics>({
     queryKey: queryKeys.dashboard.systemHealth(),
     queryFn: () => dashboardApi.getSystemHealth(),
     enabled: userRole === UserRoleValues.SYSTEM_ADMIN,
-    ...QUERY_CONFIG.DASHBOARD,
+    ...QUERY_CONFIG.MONITORING,
   });
 
   // §A.7 — 시험실무자 본인 반출 현황 (CheckoutCard scope='me' 대기 신청 푸터용).

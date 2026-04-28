@@ -60,7 +60,7 @@ export function CalibrationDdayList({
   loading = false,
   className,
 }: CalibrationDdayListProps) {
-  const minH = 280;
+  const minH = T.minHeightPx;
   const t = useTranslations('dashboard.compactDday');
 
   // 초과(내림차순) + 예정(오름차순) 통합

@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- self-audit-exception: design tokens SSOT 정의 위치 (no-hardcoded-colors 룰 예외) */
 /**
  * Dashboard Component Tokens (Layer 3: Component-Specific)
  *
@@ -388,6 +389,8 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   emptyIcon: 'h-10 w-10 mb-2 text-brand-ok',
   emptyTitle: 'text-sm font-medium',
   emptyDesc: 'text-xs mt-1 text-center',
+  /** 카드 최소 높이(px) — 비어 있을 때도 카드 그리드 정렬 유지. CalibrationDdayList 사용. */
+  minHeightPx: 280,
 } as const;
 
 // ============================================================================
