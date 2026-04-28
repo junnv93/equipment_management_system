@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 export default function FormTemplatesLoading() {
-  return <RouteLoading variant="table" showHeader />;
+  return <RouteLoading variant="list" />;
 }

@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 export default function SettingsLoading() {
-  return <RouteLoading variant="cards" cards={4} showHeader={false} />;
+  return <RouteLoading variant="list" hasHero={false} rows={4} />;
 }

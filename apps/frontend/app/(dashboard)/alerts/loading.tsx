@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 export default function AlertsLoading() {
-  return <RouteLoading variant="cards" cards={6} showHeader />;
+  return <RouteLoading variant="list" rows={6} />;
 }

@@ -1,15 +1,20 @@
+// @route-loading: custom-justified — 팀 멤버 리스트·탭 구조가 실제 레이아웃과 동기화되어야 CLS 최소화
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
-/**
- * 팀 상세 페이지 로딩 UI
- *
- * Next.js 16 패턴: loading.tsx로 라우트 전환 시 로딩 상태 표시
- */
-export default function TeamDetailLoading() {
+export default async function TeamDetailLoading() {
+  const t = await getTranslations();
   return (
-    <div className={getPageContainerClasses()} aria-busy="true" aria-live="polite">
+    <section
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className={getPageContainerClasses()}
+    >
+      <span className="sr-only">{t(FEEDBACK_KEYS.loadingDetail)}</span>
       {/* 뒤로가기 & 헤더 */}
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-10 rounded-md" />
@@ -100,6 +105,6 @@ export default function TeamDetailLoading() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </section>
   );
 }

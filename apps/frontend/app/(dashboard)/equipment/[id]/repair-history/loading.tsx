@@ -1,5 +1,5 @@
 import { RouteLoading } from '@/components/loading';
 
-export default function NotificationsLoading() {
+export default function RepairHistoryLoading() {
   return <RouteLoading variant="list" />;
 }

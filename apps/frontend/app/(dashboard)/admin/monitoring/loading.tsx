@@ -1,5 +1,5 @@
-import { RouteLoading } from '@/components/layout/RouteLoading';
+import { RouteLoading } from '@/components/loading';
 
 export default function MonitoringLoading() {
-  return <RouteLoading variant="cards" cards={5} showHeader={true} />;
+  return <RouteLoading variant="dashboard" />;
 }
