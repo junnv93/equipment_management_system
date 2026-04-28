@@ -1,10 +1,13 @@
 'use client';
 
+import React from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/components/ui/use-toast';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 /**
  * CAS(Optimistic Locking) fetch-before-mutate 훅 (SSOT)
@@ -54,6 +57,7 @@ export function useCasGuardedMutation<TData, TVariables = void>({
 }: CasGuardedMutationOptions<TData, TVariables>) {
   const { toast } = useToast();
   const t = useTranslations('errors');
+  const tGlobal = useTranslations();
 
   return useMutation<TData, Error & { response?: { data?: { message?: string } } }, TVariables>({
     mutationFn: async (variables) => {
@@ -71,6 +75,12 @@ export function useCasGuardedMutation<TData, TVariables = void>({
           title: conflictInfo.title,
           description: conflictInfo.message,
           variant: 'destructive',
+          duration: 8000,
+          action: (
+            <ToastAction altText={tGlobal(FEEDBACK_KEYS.retry)}>
+              {tGlobal(FEEDBACK_KEYS.retry)}
+            </ToastAction>
+          ),
         });
         return;
       }

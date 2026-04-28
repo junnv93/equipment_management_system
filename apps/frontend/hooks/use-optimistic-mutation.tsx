@@ -55,11 +55,14 @@
  */
 'use client';
 
+import React from 'react';
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage, isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 import { safeCallback } from './lib/safe-callback';
 
 /**
@@ -209,6 +212,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('errors');
+  const tGlobal = useTranslations();
 
   return useMutation<TData, Error, TVariables, { snapshot: TCachedData | undefined }>({
     mutationFn,
@@ -255,6 +259,15 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
           title: conflictInfo.title,
           description: conflictInfo.message,
           variant: 'destructive',
+          duration: 8000,
+          action: (
+            <ToastAction
+              altText={tGlobal(FEEDBACK_KEYS.retry)}
+              onClick={() => queryClient.invalidateQueries({ queryKey })}
+            >
+              {tGlobal(FEEDBACK_KEYS.retry)}
+            </ToastAction>
+          ),
         });
       } else {
         const unknownInfo = getLocalizedErrorInfo(EquipmentErrorCode.UNKNOWN_ERROR, t);
@@ -297,7 +310,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         const message =
           typeof successMessage === 'function' ? successMessage(data, variables) : successMessage;
         toast({
-          title: '성공',
+          title: tGlobal(FEEDBACK_KEYS.success),
           description: message,
         });
       }
