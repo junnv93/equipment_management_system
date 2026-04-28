@@ -1917,3 +1917,36 @@ grep -nE "compact:\s*['\"\`].*inline-flex|compact:\s*['\"\`].*flex-col" apps/fro
 - `apps/frontend/components/shared/NextStepPanel.tsx` — compact container 소비처
 
 **발생 이력 (2026-04-28)**: NextStepPanel compact가 padding/shadow를 가진 채 행 안에 들어가 "외곽 사각형 glow"로 표면화 → `inline-flex flex-col gap-0.5` layout-only 토큰으로 교체. 본 Step이 회귀 차단 게이트.
+
+---
+
+### Step 45: SIDEBAR_ROW_TOKENS Layer 3 — sibling-anchor 컴포넌트 토큰 우회 금지 (2026-04-28 추가)
+
+**근거:** 사이드바 nav 행은 단일 anchor → "행 + 보조 액션" sibling anchor 패턴으로 진화. `NavRowWithSecondaryAction` Layer 3 컴포넌트가 SIDEBAR_ROW_TOKENS만 참조해야 시각/접근성/hover-group 일관성 보장. 인라인 className 도입 시 collapsedDot 위치/secondaryHitArea 24px/hoverGroup `group/sidebar-row` 패턴이 분산.
+
+**검증:**
+
+```bash
+# 1) SIDEBAR_ROW_TOKENS 정의 + 5개 키 (container/secondaryHitArea/collapsedDot/primary/secondary)
+grep -nE "SIDEBAR_ROW_TOKENS\s*=|container:|secondaryHitArea:|collapsedDot:" \
+  apps/frontend/lib/design-tokens/components/sidebar.ts
+# 기대: ≥ 4 hits
+
+# 2) NavRowWithSecondaryAction 인라인 className 도입 0건
+grep -E "(bg-|text-|border-|p-|m-|gap-|rounded-)" \
+  apps/frontend/components/layout/NavRowWithSecondaryAction.tsx | \
+  grep -vE "import|cn\(|getSidebar|SIDEBAR_|FOCUS_TOKENS|TRANSITION_PRESETS"
+# 기대: 0 lines
+
+# 3) index.ts barrel export 정합
+grep -cE "SIDEBAR_ROW_TOKENS|getSidebarRowPrimaryClasses|getSidebarRowSecondaryClasses" \
+  apps/frontend/lib/design-tokens/index.ts
+# 기대: ≥ 3
+```
+
+**PASS:** SIDEBAR_ROW_TOKENS 5+ key 정의 + NavRowWithSecondaryAction 인라인 0건 + barrel export 3건.
+**FAIL:** 컴포넌트 내 raw `'absolute top-0.5 right-0.5 w-2 h-2 rounded-full'` 같은 위치/크기 인라인.
+
+**예외:** 검증/디버깅용 `data-*` 속성, `aria-*` 속성, focus/hover state class.
+
+**발생 이력 (2026-04-28):** Iter 1 evaluation FAIL — `collapsedDot` 위치 인라인 → SIDEBAR_ROW_TOKENS.collapsedDot 토큰화 후 PASS.

@@ -903,3 +903,45 @@ test -f apps/frontend/tests/e2e/features/layout/sidebar-nav-action.spec.ts && ec
 - `apps/frontend/components/layout/NavRowWithSecondaryAction.tsx` 구현 예시
 
 **발생 이력 (2026-04-28):** SidebarItem의 NavBadge가 `badgeLinkHref` optional prop 분기로 Link를 렌더 → `<a>` 안 `<a>` hydration error. `NavRowWithSecondaryAction` 신설 + discriminated union 데이터 모델 + ESLint 룰로 해결.
+
+---
+
+### Step 32: useEffect deps 안정화 — useRef 패턴 (eslint-disable 회피) (2026-04-28 추가)
+
+**근거:** `t (next-intl)`, `toast (shadcn singleton)` 같은 stable ref이 useEffect deps에 포함되면 `react-hooks/exhaustive-deps` 만족하지만 향후 구현 변경(매 렌더 새 참조 반환)으로 re-render loop 회귀 위험. `eslint-disable-next-line react-hooks/exhaustive-deps`는 self-audit 7대 원칙(eslint-disable 0)에 위반. 시니어 표준은 useRef로 deps 외부화.
+
+**검증:**
+
+```bash
+# 1) eslint-disable react-hooks/exhaustive-deps 0건 (self-audit 정합)
+grep -rn "eslint-disable.*react-hooks/exhaustive-deps" \
+  apps/frontend/components apps/frontend/hooks 2>/dev/null
+# 기대: 0 hits
+
+# 2) toast/t 같은 stable ref가 useEffect deps에 포함되면 useRef 외부화 패턴 권고
+# (자동 검출 어려움 — 코드 리뷰에서 grep으로 확인)
+grep -nB 1 "useEffect" apps/frontend/components apps/frontend/hooks --include="*.tsx" -r 2>/dev/null | \
+  grep -E "}, \[.*toast|}, \[.*\bt[,)]"
+# 0 hits 기대 (있으면 useRef 패턴으로 교체)
+```
+
+**PASS:** eslint-disable react-hooks 0건 + stable ref(t/toast) deps 직접 포함 0건.
+**FAIL:** `}, [filters.id, t, toast]` 같은 deps 배열에 next-intl `t` 또는 shadcn `toast` 직접 포함.
+
+**해결 패턴:**
+```tsx
+const tRef = useRef(t);
+const toastRef = useRef(toast);
+useEffect(() => {
+  tRef.current = t;
+  toastRef.current = toast;
+});
+useEffect(() => {
+  // ...
+  toastRef.current({ title: tRef.current('key') });
+}, [otherDeps]); // t/toast 외부화
+```
+
+**예외:** `useTranslations(ns)` 결과를 `useMemo`로 처리 + dep로 포함 (권장 안 됨, useRef가 더 정합).
+
+**발생 이력 (2026-04-28):** EquipmentFilters useEffect reconcile 안전망에 `t/toast` deps 포함 → eslint-disable 추가 시 self-audit FAIL → useRef 패턴(`tRef/toastRef`) 적용으로 양쪽 정합.
