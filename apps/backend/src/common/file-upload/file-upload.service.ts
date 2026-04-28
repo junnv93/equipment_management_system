@@ -7,11 +7,11 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 import { ErrorCode } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
+import { IdentifierService } from '../identifiers/identifier.service';
 
 /**
  * 파일 업로드 서비스
@@ -51,7 +51,10 @@ export class FileUploadService implements OnModuleInit {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
   };
 
-  constructor(@Inject(STORAGE_PROVIDER) private readonly provider: IStorageProvider) {}
+  constructor(
+    @Inject(STORAGE_PROVIDER) private readonly provider: IStorageProvider,
+    private readonly identifiers: IdentifierService
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.provider.ensureContainer();
@@ -146,7 +149,7 @@ export class FileUploadService implements OnModuleInit {
     try {
       this.validateFile(file);
 
-      const uuid = uuidv4();
+      const uuid = this.identifiers.generateAttachmentId();
       const fileExtension = path.extname(file.originalname);
       const fileName = `${uuid}${fileExtension}`;
       const safeSubdir = this.sanitizeKey(subdirectory);

@@ -17,6 +17,7 @@ import { MigrationValidatorService } from '../services/migration-validator.servi
 import { HistoryValidatorService } from '../services/history-validator.service';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import { FkResolutionService } from '../services/fk-resolution.service';
+import { IdentifierService } from '../../../common/identifiers/identifier.service';
 
 const createSelectChain = (finalValue: unknown): Record<string, jest.Mock> => {
   const chain: Record<string, jest.Mock> = {};
@@ -109,6 +110,14 @@ describe('DataMigrationService', () => {
         {
           provide: FkResolutionService,
           useValue: { resolveEquipmentFks: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: IdentifierService,
+          useValue: {
+            generateAttachmentId: jest.fn(() => 'test-attach-uuid'),
+            generateMigrationBatchId: jest.fn(() => 'test-mig-uuid'),
+            generateOpaqueId: jest.fn((p?: string) => (p ? `${p}-test` : 'test-opaque-uuid')),
+          },
         },
       ],
     }).compile();

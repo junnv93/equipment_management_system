@@ -8,7 +8,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { getTableColumns, inArray } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { IdentifierService } from '../../../common/identifiers/identifier.service';
 import {
   parseManagementNumber,
   EquipmentStatusEnum,
@@ -100,7 +100,8 @@ export class DataMigrationService {
     private readonly excelParserService: ExcelParserService,
     private readonly migrationValidatorService: MigrationValidatorService,
     private readonly historyValidatorService: HistoryValidatorService,
-    private readonly fkResolutionService: FkResolutionService
+    private readonly fkResolutionService: FkResolutionService,
+    private readonly identifiers: IdentifierService
   ) {}
 
   /** 멀티시트 Preview (Dry-run): 파싱 → 시트별 검증(장비/이력) → sessionId 발급 + 캐시 저장 */
@@ -413,7 +414,7 @@ export class DataMigrationService {
         }
       }
 
-      const sessionId = uuidv4();
+      const sessionId = this.identifiers.generateMigrationBatchId();
       const totalRows = sheetResults.reduce((acc, s) => acc + s.totalRows, 0);
       const validRows = sheetResults.reduce((acc, s) => acc + s.validRows, 0);
       const errorRows = sheetResults.reduce((acc, s) => acc + s.errorRows, 0);

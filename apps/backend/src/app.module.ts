@@ -29,6 +29,7 @@ import { CacheModule } from './common/cache/cache.module';
 import { CacheEventModule } from './common/cache/cache-event.module';
 import { StorageModule } from './common/storage/storage.module';
 import { FileUploadModule } from './common/file-upload/file-upload.module';
+import { IdentifierModule } from './common/identifiers/identifier.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { MetricsMiddleware } from './common/metrics/metrics.middleware';
 import { LoggerModule } from './common/logger/logger.module';
@@ -64,6 +65,7 @@ import { SecurityModule } from './modules/security/security.module';
     CacheEventModule, // EventEmitterModule 이후 — 이벤트 기반 캐시 무효화
     StorageModule,
     FileUploadModule,
+    IdentifierModule, // ID 생성 SSOT (verify-ssot Step 44)
     LoggerModule,
     MetricsModule,
     AuditModule,
