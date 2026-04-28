@@ -323,3 +323,26 @@ export {
 
 // 교정기한 초과 대상 제외 장비 상태 (Scheduler + API 공유 SSOT)
 export { EXCLUDED_OVERDUE_EQUIPMENT_STATUSES } from './calibration-overdue';
+
+// 대시보드 임계값 SSOT (대시보드 개선안 v1)
+// — D-day 톤, 가동률 게이지, 분포 막대, 시스템 상태, 검토 처리율 모두 단일 소스
+export {
+  DDAY_THRESHOLDS,
+  UTILIZATION_GAUGE_THRESHOLDS,
+  DISTRIBUTION_BAR_THRESHOLDS,
+  SYSTEM_HEALTH_THRESHOLDS,
+  SYSTEM_HEALTH_GAUGE_CAPS,
+  SYSTEM_HEALTH_OVERALL_THRESHOLDS,
+  REVIEW_PROCESSING_RATE_THRESHOLDS,
+  TEAM_DISTRIBUTION_DEFAULT_VISIBLE_ROWS,
+  DASHBOARD_TIME_WINDOWS,
+  DASHBOARD_CARD_DISPLAY_LIMITS,
+} from './dashboard-thresholds';
+
+// 반출 도메인 임계값 SSOT (REVIEW_RESULT.md §4.3 — D-day pill 색상 명세)
+// — 대시보드 임계값과 분리: 반출은 단기 워크플로 즉시 조치 의미
+export {
+  CHECKOUT_DDAY_THRESHOLDS,
+  getCheckoutDdayTier,
+  type CheckoutDdayTier,
+} from './checkout-thresholds';

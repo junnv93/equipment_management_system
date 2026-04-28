@@ -513,13 +513,101 @@ export const DIMENSION_TOKENS = {
   purposeBar: 'w-hairline',
   /** 페이지네이션 버튼 정사각 (--spacing-pagination = 30px) */
   paginationBtn: 'w-pagination h-pagination',
-  /** 상태 흐름 도트 원 정사각 (--spacing-step-dot = 18px) */
+  /** 상태 흐름 도트 원 정사각 (--spacing-step-dot = 14px, 와이어프레임 01 line 220) */
   stepDot: 'w-step-dot h-step-dot',
   /** 그룹 헤더 row hover 좌측 강조 바 (w-1 = 4px) — purposeBar(3px)보다 넓음 */
   accentBar: 'w-1',
   /** Sticky 그룹 헤더 상단 오프셋 — ResizeObserver가 업데이트하는 CSS 변수 기반 */
   stickyHeaderOffset: 'top-[var(--sticky-header-height,0px)]',
+  /** Equipment row zone-status 컬럼 너비 (78px — 와이어프레임 01 line 170) */
+  zoneStatus: 'w-[78px] max-w-[78px]',
+  /** Equipment row 4-zone grid template (3px / 78px / 1fr / auto) — 와이어프레임 01 line 170 */
+  rowGrid4Zone: 'grid grid-cols-[3px_78px_1fr_auto] gap-3 items-center',
 } as const;
+
+// ============================================================================
+// Surface Inline Action Tokens (REVIEW_RESULT.md 4.1 — soft-tint pattern, P0-3)
+// ============================================================================
+
+/**
+ * 인라인 액션 표면 토큰 — 행/그룹 헤더 inline action 버튼 전용.
+ *
+ * **위계**: solid CTA (`btn-primary`) > raised card > **inline-action (soft-tint)** > ghost.
+ * 카드 내부 보조 액션은 카드 elevation보다 낮아야 함 (Material 1-tier rule).
+ *
+ * **i18n + 의미 매핑**:
+ *   - `info`    — 1차 승인 / 일반 진행 (brand-info)
+ *   - `ok`      — 반입 처리 / 수령 확인 / 완료 (brand-ok)
+ *   - `warning` — 2차 승인 / 내 차례 (brand-warning)
+ *   - `danger`  — 반려 / 취소 / 강제 종료 (brand-critical)
+ *
+ * **D-day semantic alignment** (REVIEW_RESULT.md 4.3):
+ *   D+N(overdue) → danger 행은 `danger` variant,
+ *   D-0..2(warning) → `warning`, D-3..14(ok) → `ok`로 매핑.
+ *
+ * **a11y**:
+ *   - 색상에만 의존하지 않도록 항상 텍스트 라벨 동반.
+ *   - `border` alpha 0.22+로 저시력 대비비 ≥ 3:1 충족.
+ *   - `transition-colors` 한정 (`transition-all` 금지).
+ *
+ * **사용**:
+ *   ```tsx
+ *   <button className={cn(SURFACE_INLINE_ACTION_TOKENS.base, SURFACE_INLINE_ACTION_TOKENS.variant.warning)}>
+ *     2차 승인
+ *   </button>
+ *   ```
+ *   또는 `<InlineActionButton variant="warning">2차 승인</InlineActionButton>` atom (components/ui/inline-action-button.tsx).
+ */
+export const SURFACE_INLINE_ACTION_TOKENS = {
+  /** 공통 base — 크기·라운드·상호작용 (와이어프레임 01 line 203-211 정확 사양) */
+  base: [
+    'inline-flex items-center gap-1',
+    'h-7 px-2.5',
+    'rounded-md',
+    'text-xs font-semibold',
+    'border',
+    'transition-colors duration-150',
+    'disabled:opacity-50 disabled:cursor-not-allowed',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-info',
+  ].join(' '),
+
+  /** 4축 variant — alpha-합성된 surface-* 토큰 사용 (Tailwind v4 utility) */
+  variant: {
+    info: [
+      'bg-surface-inline-action-info-bg',
+      'text-surface-inline-action-info-fg',
+      'border-surface-inline-action-info-border',
+      'hover:bg-surface-inline-action-info-bg-hover',
+    ].join(' '),
+    ok: [
+      'bg-surface-inline-action-ok-bg',
+      'text-surface-inline-action-ok-fg',
+      'border-surface-inline-action-ok-border',
+      'hover:bg-surface-inline-action-ok-bg-hover',
+    ].join(' '),
+    warning: [
+      'bg-surface-inline-action-warning-bg',
+      'text-surface-inline-action-warning-fg',
+      'border-surface-inline-action-warning-border',
+      'hover:bg-surface-inline-action-warning-bg-hover',
+    ].join(' '),
+    danger: [
+      'bg-surface-inline-action-danger-bg',
+      'text-surface-inline-action-danger-fg',
+      'border-surface-inline-action-danger-border',
+      'hover:bg-surface-inline-action-danger-bg-hover',
+    ].join(' '),
+  },
+} as const;
+
+export type SurfaceInlineActionVariant = keyof typeof SURFACE_INLINE_ACTION_TOKENS.variant;
+
+/**
+ * Helper: variant + base 합성 (cn 없이도 동작).
+ */
+export function getSurfaceInlineActionClasses(variant: SurfaceInlineActionVariant): string {
+  return `${SURFACE_INLINE_ACTION_TOKENS.base} ${SURFACE_INLINE_ACTION_TOKENS.variant[variant]}`;
+}
 
 // ============================================================================
 // Empty State Tokens (도메인 중립 — 전체 앱 공용)

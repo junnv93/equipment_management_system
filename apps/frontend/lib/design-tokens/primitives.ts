@@ -58,8 +58,10 @@ export const SIZE_PRIMITIVES = {
 export const WIDTH_PRIMITIVES = {
   /** 접근성 안전 최소 강조 바 (3px — WCAG 권고 시각 구분선 최소값) */
   hairline: 3,
-  /** 상태 흐름 도트 원 크기 (18px — CheckoutMiniProgress 스텝 원) */
-  stepDot: 18,
+  /** 상태 흐름 도트 원 크기 (14px — CheckoutMiniProgress 스텝 원, 와이어프레임 01 line 220) */
+  stepDot: 14,
+  /** 행 zone-status 컬럼 너비 (78px — 와이어프레임 01 line 170 grid template, 상태 + D-day pill 세로 스택) */
+  zoneStatus: 78,
 } as const;
 
 /**
@@ -265,3 +267,16 @@ export function toTailwindGap(value: ResponsiveValue): string {
 export function toTailwindDuration(ms: number): string {
   return `duration-${ms}`;
 }
+
+// ============================================================================
+// 도메인 임계값은 본 primitives에 두지 않음.
+//
+// D-day 같은 "정책 임계값"은 frontend/backend 양쪽이 동일한 값을 보장해야 하므로
+// 반드시 `@equipment-management/shared-constants` 패키지에 단일화 (SSOT).
+//
+// - 대시보드 D-day (urgent/soon)  → shared-constants `DDAY_THRESHOLDS`
+// - 반출 도메인 D-day (REVIEW 4.3) → shared-constants `CHECKOUT_DDAY_THRESHOLDS`
+//   (반출 list/detail의 D-day pill — overdue/warning/ok/neutral 4-tier)
+//
+// 시각 변환(클래스 매핑)은 components/dday-colors.ts 가 담당.
+// ============================================================================

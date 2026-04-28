@@ -91,6 +91,27 @@
   --color-brand-site-uiw: hsl(var(--brand-color-site-uiw));
   --color-brand-site-pyt: hsl(var(--brand-color-site-pyt));
 
+  /* Inline Action Surface — utility bridge (REVIEW_RESULT.md 4.1, P0-3)
+   * 사용: bg-surface-inline-action-info-bg, hover:bg-surface-inline-action-info-bg-hover,
+   *       border-surface-inline-action-info-border, text-surface-inline-action-info-fg.
+   * 다크 모드는 :root/.dark 양쪽 정의되어 자동 전환. */
+  --color-surface-inline-action-info-bg:         var(--surface-inline-action-info-bg);
+  --color-surface-inline-action-info-bg-hover:   var(--surface-inline-action-info-bg-hover);
+  --color-surface-inline-action-info-border:     var(--surface-inline-action-info-border);
+  --color-surface-inline-action-info-fg:         var(--surface-inline-action-info-fg);
+  --color-surface-inline-action-ok-bg:           var(--surface-inline-action-ok-bg);
+  --color-surface-inline-action-ok-bg-hover:     var(--surface-inline-action-ok-bg-hover);
+  --color-surface-inline-action-ok-border:       var(--surface-inline-action-ok-border);
+  --color-surface-inline-action-ok-fg:           var(--surface-inline-action-ok-fg);
+  --color-surface-inline-action-warning-bg:      var(--surface-inline-action-warning-bg);
+  --color-surface-inline-action-warning-bg-hover:var(--surface-inline-action-warning-bg-hover);
+  --color-surface-inline-action-warning-border:  var(--surface-inline-action-warning-border);
+  --color-surface-inline-action-warning-fg:      var(--surface-inline-action-warning-fg);
+  --color-surface-inline-action-danger-bg:       var(--surface-inline-action-danger-bg);
+  --color-surface-inline-action-danger-bg-hover: var(--surface-inline-action-danger-bg-hover);
+  --color-surface-inline-action-danger-border:   var(--surface-inline-action-danger-border);
+  --color-surface-inline-action-danger-fg:       var(--surface-inline-action-danger-fg);
+
   /* Semantic colors */
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
@@ -124,7 +145,7 @@
      primitives.ts WIDTH_PRIMITIVES.hairline / SIZE_PRIMITIVES.pagination 연동. */
   --spacing-hairline: 3px;
   --spacing-pagination: 30px;
-  --spacing-step-dot: 18px;
+  --spacing-step-dot: 14px;
 
   /* UL Solutions Brand Colors — literal hex */
   --color-ul-midnight: #122c49;
@@ -448,6 +469,28 @@
     --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
     --brand-color-site-uiw: 212 62% 56%;   /* #4A90D9 의왕 — UL Blue */
     --brand-color-site-pyt: 152 100% 32%;  /* #00A451 평택 — UL Green */
+
+    /* Inline Action Surface (REVIEW_RESULT.md 4.1 — soft-tint pattern, P0-3)
+     * 행/그룹 헤더 inline action 버튼 전용. solid CTA(primary)보다 한 단계 낮은 elevation.
+     * alpha를 토큰 단계에서 고정 (SSOT) — 컴포넌트는 의미명만 참조.
+     * Light/Dark 동일 alpha(0.10 bg, 0.22 border) — brand-color-* 가 다크 모드 자동 보정.
+     * Tailwind utility 노출은 @theme inline 블록 (line 80~ 부근) 참조. */
+    --surface-inline-action-info-bg:         hsl(var(--brand-color-info) / 0.10);
+    --surface-inline-action-info-bg-hover:   hsl(var(--brand-color-info) / 0.16);
+    --surface-inline-action-info-border:     hsl(var(--brand-color-info) / 0.22);
+    --surface-inline-action-info-fg:         hsl(var(--brand-color-info));
+    --surface-inline-action-ok-bg:           hsl(var(--brand-color-ok) / 0.10);
+    --surface-inline-action-ok-bg-hover:     hsl(var(--brand-color-ok) / 0.16);
+    --surface-inline-action-ok-border:       hsl(var(--brand-color-ok) / 0.22);
+    --surface-inline-action-ok-fg:           hsl(var(--brand-color-ok));
+    --surface-inline-action-warning-bg:      hsl(var(--brand-color-warning) / 0.12);
+    --surface-inline-action-warning-bg-hover:hsl(var(--brand-color-warning) / 0.18);
+    --surface-inline-action-warning-border:  hsl(var(--brand-color-warning) / 0.25);
+    --surface-inline-action-warning-fg:      hsl(var(--brand-color-warning));
+    --surface-inline-action-danger-bg:       hsl(var(--brand-color-critical) / 0.10);
+    --surface-inline-action-danger-bg-hover: hsl(var(--brand-color-critical) / 0.16);
+    --surface-inline-action-danger-border:   hsl(var(--brand-color-critical) / 0.22);
+    --surface-inline-action-danger-fg:       hsl(var(--brand-color-critical));
   }
 
   .dark {
@@ -525,6 +568,26 @@
     --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */
     --brand-color-site-uiw: 212 70% 65%;   /* 의왕 — 다크모드 밝기 보정 */
     --brand-color-site-pyt: 152 80% 45%;   /* 평택 — 다크모드 밝기 보정 */
+
+    /* Inline Action Surface — Dark Mode (REVIEW_RESULT.md 4.1)
+     * Light와 동일 alpha. brand-color-* 가 다크 변형(밝기 보정)을 자동 제공하므로
+     * 별도 alpha 조정 불필요. WCAG SC 1.4.3 대비비 ≥ 3:1 검증 (Phase 13). */
+    --surface-inline-action-info-bg:         hsl(var(--brand-color-info) / 0.10);
+    --surface-inline-action-info-bg-hover:   hsl(var(--brand-color-info) / 0.16);
+    --surface-inline-action-info-border:     hsl(var(--brand-color-info) / 0.22);
+    --surface-inline-action-info-fg:         hsl(var(--brand-color-info));
+    --surface-inline-action-ok-bg:           hsl(var(--brand-color-ok) / 0.10);
+    --surface-inline-action-ok-bg-hover:     hsl(var(--brand-color-ok) / 0.16);
+    --surface-inline-action-ok-border:       hsl(var(--brand-color-ok) / 0.22);
+    --surface-inline-action-ok-fg:           hsl(var(--brand-color-ok));
+    --surface-inline-action-warning-bg:      hsl(var(--brand-color-warning) / 0.12);
+    --surface-inline-action-warning-bg-hover:hsl(var(--brand-color-warning) / 0.18);
+    --surface-inline-action-warning-border:  hsl(var(--brand-color-warning) / 0.25);
+    --surface-inline-action-warning-fg:      hsl(var(--brand-color-warning));
+    --surface-inline-action-danger-bg:       hsl(var(--brand-color-critical) / 0.10);
+    --surface-inline-action-danger-bg-hover: hsl(var(--brand-color-critical) / 0.16);
+    --surface-inline-action-danger-border:   hsl(var(--brand-color-critical) / 0.22);
+    --surface-inline-action-danger-fg:       hsl(var(--brand-color-critical));
   }
 }
 
@@ -574,6 +637,26 @@
     --tw-ring-shadow: 0 0 #0000;
     outline: calc(var(--tw-ring-width, 1px)) dashed var(--tw-ring-color, currentColor);
     outline-offset: calc(var(--tw-ring-offset-width, 0px) + 1px);
+  }
+
+  /* label-ko — 한국어 어절 단위 줄바꿈 (REVIEW_RESULT.md 4.4, P0-2)
+   * stepper 단계명, FSM 액션 버튼, 상태 배지 등 한국어 본문 텍스트 컨테이너.
+   * white-space:nowrap + text-overflow:ellipsis 정책을 폐기하고 어절 단위 wrap 허용. */
+  .label-ko {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-height: 1.45;
+  }
+
+  /* label-mono — 영문 vendor/관리번호 라벨용 truncate 정책 (REVIEW_RESULT.md 4.4)
+   * 관리번호(SUW-E0007), 제조번호, 시리얼, vendor PN 등 monospace 컨테이너.
+   * label-ko와 분리해 줄바꿈을 막고 잘림 + tooltip을 권장. */
+  .label-mono {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-feature-settings: "tnum";
   }
 }
 

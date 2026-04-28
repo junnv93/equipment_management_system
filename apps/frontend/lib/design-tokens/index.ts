@@ -81,6 +81,9 @@ export {
   MICRO_TYPO,
   TYPOGRAPHY_TOKENS,
   DIMENSION_TOKENS,
+  SURFACE_INLINE_ACTION_TOKENS,
+  getSurfaceInlineActionClasses,
+  type SurfaceInlineActionVariant,
   EMPTY_STATE_TOKENS,
   SECTION_RHYTHM_TOKENS,
   getSectionRhythm,
@@ -485,7 +488,16 @@ export {
   type CheckoutEmptyStateVariant,
 } from './components/checkout-empty-state';
 
-// D-day 6단계 색온도 (SSOT)
+// D-day — 신규 4-tier (REVIEW_RESULT.md §4.3 SSOT — shared-constants 임계값 사용)
+export {
+  DDAY_4TIER_CLASSES,
+  DDAY_4TIER_ICON_KEY,
+  getCheckoutDday4Tier,
+  getCheckoutDday4TierClasses,
+  getCheckoutDday4TierIconKey,
+} from './components/dday-colors';
+
+// D-day 6단계 색온도 (legacy — @deprecated, 다음 마이너에서 제거)
 export {
   DDAY_TIERS,
   DDAY_TIER_CLASSES,
@@ -495,6 +507,25 @@ export {
   getDdayIconKey,
   type DdayTier,
 } from './components/dday-colors';
+
+// D-day 4단계 의미론 톤 (대시보드 개선안 v1 — overdue/urgent/soon/normal)
+export {
+  DDAY_TONES,
+  DDAY_TONE_CLASSES,
+  DIST_BAR_TONE_CLASSES,
+  resolveDdayTone,
+  formatDdayLabel,
+  resolveDistBarTone,
+  utilizationGaugeTone,
+  resolveSystemHealthTone,
+  resolveSystemHealthGaugePct,
+  resolveSystemHealthOverallTone,
+  type DdayTone,
+  type DistBarTone,
+  type SystemHealthTone,
+  type SystemHealthMetric,
+  type SystemHealthOverallStatus,
+} from './components/dday-tone';
 
 // Checkout Phase (Rental Phase UI 토큰)
 export { CHECKOUT_RENTAL_PHASE_TOKENS, getPhaseCardState } from './components/checkout-phase';
