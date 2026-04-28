@@ -176,7 +176,21 @@
     "accessoriesStatus": "부속품 상태",
     "workflowTimeline": "진행 단계",
     "ddayLabel": "반납 {dday} ({date})",
-    "ddaySrLabel": "반납 예정일까지 {days}일"
+    "ddaySrLabel": "반납 예정일까지 {days}일",
+    "progressFlow": "진행 흐름",
+    "progressFlowSubtitle": "{current}단계 진행 중 · 총 {total}단계",
+    "backToList": "목록으로"
+  },
+  "progressStep": {
+    "ariaLabel": "반출 진행 흐름",
+    "stateDone": "완료",
+    "stateCurrent": "진행 중",
+    "stateLate": "지연 — 즉시 조치 필요",
+    "stateFuture": "예정",
+    "metaScheduled": "예정 {date}",
+    "metaPending": "대기 중",
+    "actorYou": "⚡ 당신",
+    "actorYouAriaLabel": "현재 사용자가 처리할 차례입니다"
   },
   "returnInspection": {
     "purposeLabel": "반출 목적:",

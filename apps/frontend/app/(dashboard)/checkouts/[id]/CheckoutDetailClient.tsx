@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -71,17 +71,12 @@ import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import { DdayBadge } from '@/components/checkouts/DdayBadge';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import { NextStepPanel } from '@/components/shared/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
-import {
-  WorkflowTimeline,
-  WorkflowTimelineSkeleton,
-} from '@/components/checkouts/WorkflowTimeline';
-import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineError';
 import { NextStepPanelError } from '@/components/checkouts/NextStepPanelError';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
+import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -524,50 +519,10 @@ export default function CheckoutDetailClient({
         />
       </ErrorBoundary>
 
-      {/* 상태 진행 표시 */}
-      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CheckoutStatusStepper
-              currentStatus={checkout.status}
-              checkoutType={checkout.purpose as 'calibration' | 'repair' | 'rental'}
-              nextStepIndex={
-                nextStepDescriptor.nextAction !== null
-                  ? nextStepDescriptor.currentStepIndex
-                  : undefined
-              }
-            />
-          </CardContent>
-        </Card>
+      {/* 진행 흐름 — REVIEW_RESULT.md P0-1 통합: 기존 진행 상태 stepper + 워크플로 타임라인 두 카드를
+          단일 통합 stepper로. 각 step 하단에 actor + timestamp + ⚡당신 마커. P0-2 라벨 줄바꿈은 .label-ko 적용. */}
+      <ProgressFlowSection checkout={checkout} descriptor={nextStepDescriptor} role={role} />
 
-        {/* 워크플로우 타임라인 — 세로 단계 흐름 상세 */}
-        <Card className="md:w-48">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('detail.workflowTimeline')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ErrorBoundary fallback={(_, reset) => <WorkflowTimelineError onRetry={reset} />}>
-              <Suspense
-                fallback={
-                  <WorkflowTimelineSkeleton
-                    count={computeTotalSteps(checkout.purpose as CheckoutPurpose)}
-                  />
-                }
-              >
-                <WorkflowTimeline
-                  status={checkout.status}
-                  purpose={checkout.purpose as CheckoutPurpose}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* 기본 정보 */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -724,7 +679,9 @@ export default function CheckoutDetailClient({
                       <p className="text-sm text-muted-foreground">{equip.managementNumber}</p>
                     </div>
                   </div>
-                  <Badge variant="outline">{tEquipment(`status.${equip.status}`)}</Badge>
+                  {equip.status && (
+                    <Badge variant="outline">{tEquipment(`status.${equip.status}`)}</Badge>
+                  )}
                 </div>
               ))}
             </div>

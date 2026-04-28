@@ -176,7 +176,21 @@
     "accessoriesStatus": "Accessories Status",
     "workflowTimeline": "Workflow Steps",
     "ddayLabel": "Return {dday} ({date})",
-    "ddaySrLabel": "{days} days until return date"
+    "ddaySrLabel": "{days} days until return date",
+    "progressFlow": "Progress Flow",
+    "progressFlowSubtitle": "Step {current} of {total}",
+    "backToList": "Back to list"
+  },
+  "progressStep": {
+    "ariaLabel": "Checkout progress flow",
+    "stateDone": "Done",
+    "stateCurrent": "In progress",
+    "stateLate": "Late — immediate action required",
+    "stateFuture": "Upcoming",
+    "metaScheduled": "Scheduled {date}",
+    "metaPending": "Pending",
+    "actorYou": "⚡ You",
+    "actorYouAriaLabel": "It is your turn to take action"
   },
   "returnInspection": {
     "purposeLabel": "Checkout Purpose:",

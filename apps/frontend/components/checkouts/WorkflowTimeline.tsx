@@ -391,6 +391,14 @@ function RentalPhaseTimeline({ status, className }: RentalPhaseTimelineProps) {
   );
 }
 
+/**
+ * 반출 진행 타임라인 (세로 — RentalPhaseTimeline 위임)
+ *
+ * @deprecated REVIEW_RESULT.md P0-1 (2026-04-28) — `CheckoutStatusStepper`(가로)와 같은
+ * 5/8-step 데이터를 다른 형태로 중복 표시. 통합 컴포넌트 `CheckoutProgressStepper`
+ * (actor + timestamp + ⚡당신 마커 포함)를 사용하세요. 본 파일은 즉시 삭제하지 않고
+ * 다음 마이너에서 제거합니다 (rollback 안전성).
+ */
 export function WorkflowTimeline({ status, purpose, className }: WorkflowTimelineProps) {
   if (purpose === CPVal.RENTAL) {
     return <RentalPhaseTimeline status={status} className={className} />;

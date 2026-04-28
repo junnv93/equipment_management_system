@@ -33,7 +33,12 @@ interface CheckoutStatusStepperProps {
 const SPECIAL_STATUSES: CheckoutStatus[] = [CSVal.REJECTED, CSVal.CANCELED, CSVal.OVERDUE];
 
 /**
- * 반출 상태 진행 표시기
+ * 반출 상태 진행 표시기 (가로 stepper)
+ *
+ * @deprecated REVIEW_RESULT.md P0-1 (2026-04-28) — 본 컴포넌트는 `WorkflowTimeline`(세로)와 같은
+ * 5/8-step 데이터를 두 카드에 중복 표시하여 위계가 평탄해지는 문제가 있었습니다.
+ * 통합 컴포넌트 `CheckoutProgressStepper`(actor + timestamp + ⚡당신 마커 포함)를 사용하세요.
+ * 본 파일은 즉시 삭제하지 않고 다음 마이너에서 제거합니다 (rollback 안전성).
  *
  * 반출 유형(교정/수리/대여)에 따라 다른 단계를 표시합니다.
  * - 교정/수리: 5단계 (단순 흐름)
