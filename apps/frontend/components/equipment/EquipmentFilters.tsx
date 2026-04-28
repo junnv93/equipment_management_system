@@ -1,9 +1,10 @@
 'use client';
 
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EQUIPMENT_FILTER_TOKENS } from '@/lib/design-tokens';
@@ -106,6 +107,7 @@ function EquipmentFiltersComponent({
   slotAfter,
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
+  const { toast } = useToast();
   const { user } = useAuth();
   const managementMethodLabels = useManagementMethodLabels();
   const classificationLabels = useClassificationLabels();
@@ -223,6 +225,22 @@ function EquipmentFiltersComponent({
     const teams = teamsData?.data || [];
     return teams.map((team) => ({ value: team.id, label: team.name }));
   }, [teamsData?.data]);
+
+  // Reconcile: 딥링크/공유 링크로 진입했을 때 stale teamId(현재 사이트에 없는 팀)를 자동 정리.
+  // 평상시 인터랙션은 setSite의 cascade reset이 처리하므로 여기는 안전망 역할.
+  useEffect(() => {
+    if (!filters.teamId) return;
+    if (isLoadingTeams || teamsError) return;
+    const teams = teamsData?.data;
+    if (!teams) return;
+    const exists = teams.some((team) => team.id === filters.teamId);
+    if (exists) return;
+    onTeamIdChange('');
+    toast({
+      title: t('filters.teamReconcileTitle'),
+      description: t('filters.teamReconcileDesc'),
+    });
+  }, [filters.teamId, teamsData?.data, isLoadingTeams, teamsError, onTeamIdChange, t, toast]);
 
   // 2차 필터 활성 개수 (추가 필터 버튼 배지용)
   const additionalFilterCount = useMemo(() => {

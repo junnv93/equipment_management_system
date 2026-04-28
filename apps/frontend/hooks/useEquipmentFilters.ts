@@ -233,7 +233,9 @@ export function useEquipmentFilters() {
 
   const setSite = useCallback(
     (site: Site | '') => {
-      updateURL({ site, page: 1 });
+      // Cascade reset: site 변경 시 종속 필터(teamId)를 함께 비움.
+      // (사이트가 다르면 팀 옵션 도메인이 완전히 달라져 stale teamId가 "알 수 없는 팀"으로 노출됨)
+      updateURL({ site, teamId: '', page: 1 });
     },
     [updateURL]
   );
