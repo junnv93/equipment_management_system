@@ -1,5 +1,7 @@
+import { getTranslations } from 'next-intl/server';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 interface RouteLoadingProps {
   /** 표시할 스켈레톤 카드 개수 */
@@ -10,21 +12,35 @@ interface RouteLoadingProps {
   variant?: 'cards' | 'table' | 'detail';
 }
 
+const VARIANT_TO_KEY: Record<NonNullable<RouteLoadingProps['variant']>, string> = {
+  cards: FEEDBACK_KEYS.loadingList,
+  table: FEEDBACK_KEYS.loadingList,
+  detail: FEEDBACK_KEYS.loadingDetail,
+};
+
 /**
  * 라우트별 로딩 컴포넌트 (loading.tsx에서 사용)
  *
  * Next.js 16 Best Practice:
- * - Server Component 가능 (상태 없음)
+ * - async server component
+ * - role="status" + aria-busy="true" + sr-only i18n key (Invariant I3)
  * - Suspense fallback으로 자동 사용됨
+ *
+ * @deprecated 신규 사용처는 `@/components/loading` (RouteLoading SSOT) 권장.
+ *   본 컴포넌트는 BC 보존용. Phase 3에서 호출자 점진 마이그레이션.
  */
-export function RouteLoading({
+export async function RouteLoading({
   cards = 3,
   showHeader = true,
   variant = 'cards',
 }: RouteLoadingProps) {
+  const t = await getTranslations();
+  const srLabel = t(VARIANT_TO_KEY[variant]);
+
   if (variant === 'detail') {
     return (
-      <div className="space-y-6">
+      <section role="status" aria-busy="true" aria-live="polite" className="space-y-6">
+        <span className="sr-only">{srLabel}</span>
         {showHeader && (
           <div className="flex items-center justify-between">
             <Skeleton className="h-8 w-48" />
@@ -46,13 +62,14 @@ export function RouteLoading({
             </div>
           </CardContent>
         </Card>
-      </div>
+      </section>
     );
   }
 
   if (variant === 'table') {
     return (
-      <div className="space-y-4">
+      <section role="status" aria-busy="true" aria-live="polite" className="space-y-4">
+        <span className="sr-only">{srLabel}</span>
         {showHeader && (
           <div className="flex items-center justify-between">
             <Skeleton className="h-8 w-48" />
@@ -79,13 +96,14 @@ export function RouteLoading({
             ))}
           </CardContent>
         </Card>
-      </div>
+      </section>
     );
   }
 
   // Default: cards
   return (
-    <div className="space-y-4">
+    <section role="status" aria-busy="true" aria-live="polite" className="space-y-4">
+      <span className="sr-only">{srLabel}</span>
       {showHeader && (
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
@@ -105,6 +123,6 @@ export function RouteLoading({
           </Card>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

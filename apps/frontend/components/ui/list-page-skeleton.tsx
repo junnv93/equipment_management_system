@@ -25,9 +25,11 @@
  * ```
  */
 
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 interface ListPageSkeletonProps {
   /** Page title (optional, shows skeleton title if provided) */
@@ -53,9 +55,15 @@ interface ListPageSkeletonProps {
 }
 
 /**
- * 목록 페이지 스켈레톤
+ * 목록 페이지 스켈레톤 — async server component (Invariant I3 충족)
+ *
+ * a11y:
+ * - role="status" + aria-busy="true" + aria-live="polite"
+ * - sr-only label: title prop 있으면 우선, 없으면 `feedback.loadingList` i18n
+ *
+ * 자식 Skeleton은 `aria-hidden="true"` (중복 announce 회피, Invariant I8)
  */
-export function ListPageSkeleton({
+export async function ListPageSkeleton({
   title,
   description,
   showFilters = true,
@@ -65,6 +73,9 @@ export function ListPageSkeleton({
   gridCols = { base: 1, md: 2, lg: 3 },
   showActionButton = true,
 }: ListPageSkeletonProps) {
+  const t = await getTranslations();
+  const srLabel = title ?? t(FEEDBACK_KEYS.loadingList);
+
   const gridClass = cn(
     'grid gap-6',
     gridCols.base === 1 && 'grid-cols-1',
@@ -77,7 +88,13 @@ export function ListPageSkeleton({
   );
 
   return (
-    <div className={getPageContainerClasses()}>
+    <section
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className={getPageContainerClasses()}
+    >
+      <span className="sr-only">{srLabel}</span>
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -112,7 +129,7 @@ export function ListPageSkeleton({
           <CardSkeleton key={i} />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -137,9 +154,9 @@ export function CardSkeleton() {
 }
 
 /**
- * 테이블 스켈레톤 (테이블 레이아웃용)
+ * 테이블 스켈레톤 (테이블 레이아웃용) — async server component (Invariant I3)
  */
-export function TablePageSkeleton({
+export async function TablePageSkeleton({
   title,
   description,
   showFilters = true,
@@ -152,8 +169,17 @@ export function TablePageSkeleton({
   rowCount?: number;
   columnCount?: number;
 }) {
+  const t = await getTranslations();
+  const srLabel = title ?? t(FEEDBACK_KEYS.loadingList);
+
   return (
-    <div className={getPageContainerClasses()}>
+    <section
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className={getPageContainerClasses()}
+    >
+      <span className="sr-only">{srLabel}</span>
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -196,6 +222,6 @@ export function TablePageSkeleton({
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
