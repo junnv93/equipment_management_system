@@ -250,6 +250,7 @@ export function NextStepPanel({
                 isMyTurn,
               })}
               disabled
+              aria-label={stepLabel}
             >
               {t(`action.${descriptor.labelKey}`)}
             </InlineActionButton>

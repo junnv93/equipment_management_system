@@ -69,3 +69,4 @@ const InlineActionButtonImpl = React.forwardRef<HTMLButtonElement, InlineActionB
 );
 
 export const InlineActionButton = React.memo(InlineActionButtonImpl);
+InlineActionButton.displayName = 'InlineActionButton';
