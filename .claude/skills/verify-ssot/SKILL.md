@@ -1199,3 +1199,205 @@ ls apps/frontend/lib/utils/__tests__/checkout-hero-selector.test.ts
 - `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — host (useMemo + selectHeroVariant)
 
 **발생 이력 (2026-04-28)**: Phase 4 P1-1 진입 시 OutboundCheckoutsTab line 226에 `heroVariantKey = summary.overdue > 0 ? 'overdue' : null` inline 분기 — Phase 4.A/4.B SSOT 헬퍼 분리로 해소. Phase 5 (P1-2 알림 단일 노출)에서 pending hero 승격 도입 시 `HERO_PRIORITY` 배열에 rule 추가 + negative test 5번 갱신.
+
+---
+
+### Step 42: 테스트 파일 hardcoded threshold vs SSOT 토큰 import 강제 (2026-04-30 추가, utilization-state drift 실측)
+
+**규칙**: 테스트 파일이 SSOT 토큰(`packages/shared-constants/*` 또는 `apps/{frontend,backend}/lib/config/*`)으로 정의된 임계값/경계의 boundary 케이스를 검증할 때, **반드시 SSOT 토큰을 import**해서 동적 boundary를 계산해야 한다. `toBe(70)` / `toEqual(40)` 같은 매직 넘버 hardcoding 금지.
+
+**왜 hardcoded threshold가 위험한가**:
+- SSOT 변경 시 코드는 즉시 추종하지만 테스트는 매직 넘버에 묶여 있어 boundary case가 fail — SSOT 변경의 자동 추종이 끊긴다.
+- 회귀 자동 차단의 신호가 *변경 의도된 SSOT drift*에서 발생하므로 false positive 노이즈 → 진짜 회귀 신호가 묻힘.
+- 같은 boundary 의미가 SSOT(코드)·hardcoded 매직넘버(테스트)·describe 라벨 등 3곳에 중복 → SSOT 분산.
+
+**검증 명령**:
+```bash
+# 1. SSOT 도메인의 임계값을 hardcoded로 사용하는 테스트 (FAIL 패턴)
+#    - 대시보드 임계값(40, 50, 60, 65, 80, 90, 100, 300, 500)
+#    - 반출 D-day 임계값(0, 2, 14)
+#    - 가동률 hysteresis(2)
+grep -rnE 'toBe\((40|50|60|65|80|90|100|300|500|1500)\)|toEqual\((40|50|60|65|80|90|100|300|500|1500)\)' \
+  apps/frontend/**/__tests__ apps/backend/**/__tests__ 2>/dev/null \
+  | grep -v 'shared-constants\|UTILIZATION_THRESHOLDS\|DDAY_THRESHOLDS\|DASHBOARD_TIME_WINDOWS'
+
+# 2. 같은 테스트 파일이 SSOT 모듈을 import하는지 cross-check
+#    매직 넘버를 사용하면서 SSOT 모듈을 import 안 하는 파일 = FAIL
+grep -rL 'shared-constants\|@/lib/config/dashboard-config\|@/lib/config/checkout-thresholds' \
+  $(grep -rlE 'toBe\((40|50|60|65|70|80|90|100)\)' \
+    apps/frontend/**/__tests__ apps/backend/**/__tests__ 2>/dev/null)
+# 기대: 0 hits (모든 테스트가 SSOT 토큰 import)
+
+# 3. 모범 사례 패턴 — describe 라벨도 동적 보간
+grep -rnE 'describe\(`.*\$\{(HIGH|MEDIUM|LOW|HIGH_EXIT|MEDIUM_EXIT|HIGH_ENTRY)' \
+  apps/frontend/**/__tests__/utilization-state.test.ts apps/frontend/**/__tests__/dday-tone.test.ts
+# 기대: ≥ 1 hit (라벨도 SSOT 추종)
+```
+
+**PASS:**
+- 모든 boundary 테스트가 SSOT 토큰 import 후 `HIGH`, `MEDIUM`, `HIGH_EXIT = HIGH - HYSTERESIS` 같은 파생 상수로 boundary 계산
+- SSOT 변경 시 테스트 코드 수정 없이 자동 추종 — boundary case가 *변경된 임계값*으로 다시 계산됨
+- describe/it 라벨도 매직 넘버 대신 동적 보간 (예: `` `HIGH_ENTRY(${HIGH_ENTRY}) 이상 → good` ``)
+
+**FAIL:**
+- `expect(state).toBe('warning')` 다음 줄에 `expect(computeUtilizationState(70)).toBe(...)` 패턴 — 70은 매직 넘버
+- 테스트 파일이 SSOT 모듈을 import하지 않음
+
+**예외:**
+- enum 멤버 수 검증 (`expect(Object.keys(EquipmentStatus).length).toBe(8)`) — 임계값이 아니라 *enum 정의 자체* 검증
+- fixture 데이터 길이 (`expect(equipments).toHaveLength(3)`) — 임계값과 무관한 setup data
+- HTTP status code (200/400/403/404/409) — 표준 코드, SSOT 의미 없음
+- 0/1 같은 trivial 경계값 (toBeGreaterThan(0), toHaveLength(1)) — 의미적 임계값 아님
+- 시간 단위 변환 (`60 * 1000` for ms) — 도메인 임계값이 아닌 단위 환산
+
+**관련 파일 (모범 사례):**
+- `apps/frontend/lib/utils/__tests__/utilization-state.test.ts` — `UTILIZATION_THRESHOLDS` import + `HIGH/MEDIUM/HYSTERESIS` 구조분해 + `HIGH_EXIT = HIGH - HYSTERESIS` 파생 + describe 라벨 동적 보간
+- `apps/frontend/lib/design-tokens/components/__tests__/dday-tone.test.ts` — `DDAY_THRESHOLDS` import 후 `urgent`, `soon` 동적 boundary
+
+**발생 이력 (2026-04-28 → 2026-04-30 신설)**: 2026-04-28 dashboard-redesign 세션에서 `UTILIZATION_THRESHOLDS.HIGH`를 70→60으로 변경(`6ddff791b`). 코드 사용처는 즉시 추종됐으나 `utilization-state.test.ts`는 hardcoded `expect(...).toBe('good')` 70 boundary 유지 → 1차 push 시 frontend test 6 fail. fix 패턴(이후 모범 사례): SSOT 토큰 import + 구조분해 + 파생 상수 + describe 라벨 보간.
+
+---
+
+### Step 43: `@deprecated` export alias 외부 소비처 0건 정리 (2026-04-30 추가, DashboardCheckoutScope 사례)
+
+**규칙**: `@deprecated` 주석이 달린 `export type` / `export const` alias는 **외부 소비처 grep 0건이면 즉시 제거**. 누적된 deprecated alias는 SSOT 분산 + import 혼동을 유발하므로 정기 cleanup이 필요. 검증은 정적 grep만으로 부족 — barrel `index.ts` re-export 체인 + dynamic import 패턴까지 포함해서 추적해야 한다.
+
+**왜 deprecated alias 누적이 위험한가**:
+- 한 도메인 타입에 정식 SSOT(`OverdueCheckoutDto`)와 deprecated alias(`OldOverdueCheckoutDto`)가 공존하면, 새 코드가 alias를 import해도 컴파일러는 경고만 남기고 통과 → SSOT 분산.
+- `@deprecated` 주석은 *권고*일 뿐 강제력 없음 → 점진적으로 alias가 늘어나 어떤 게 정식인지 신규 작업자가 식별하기 어려워짐.
+- alias가 정의된 모듈은 SSOT를 re-export 형태로 묶고 있어 tree-shaking 무효화 가능성.
+
+**검증 명령**:
+```bash
+# 1. @deprecated + export 패턴 전수 grep
+grep -rB1 -A2 '@deprecated' \
+  apps/frontend/lib/api apps/backend/src/modules packages/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -E 'export (type|const|interface|class) [A-Z]'
+
+# 2. 각 alias 이름으로 외부 소비처 grep (barrel re-export 포함)
+ALIAS_NAME="DashboardCheckoutScope"  # 후보 alias
+grep -rn "${ALIAS_NAME}" apps/ packages/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "$(grep -rl "@deprecated.*\n.*${ALIAS_NAME}" apps/ packages/)"
+# 기대: 0 hits → 제거 권고
+
+# 3. barrel index.ts 경유 re-export 확인 (놓치기 쉬운 패턴)
+grep -rn "export.*${ALIAS_NAME}\|export \*.*from" \
+  apps/frontend/lib/api apps/backend/src/modules packages/*/src \
+  --include="index.ts" --include="*.ts"
+```
+
+**PASS:**
+- `@deprecated` alias 외부 소비처 grep ≥ 1 → 제거 보류 (마이그레이션 grace period 명시)
+- 외부 소비처 grep = 0 → 제거 완료, 정식 SSOT만 export
+- 제거 시 git commit message에 alias 이름 + 외부 소비처 0건 grep 결과 포함
+
+**FAIL:**
+- `@deprecated` alias 외부 소비처 grep = 0인데 잔존 → cleanup 권고
+- alias 정의 파일이 정식 SSOT까지 re-export하는데 정식 SSOT만 사용하면 정리 가능
+
+**예외:**
+- **명시적 grace period**: 외부 사용처 0건이라도 CHANGELOG / `.claude/exec-plans/` 문서에 "v0.X까지 alias 유지" 명시된 경우 → 그 시점까지 보류
+- **외부 패키지 호환성**: alias가 lib package(예: `packages/db`, `packages/schemas`)에서 export되고 외부 consumer가 있을 가능성 → 메이저 버전 bump 시점에 제거
+- **dist 빌드 산출물**: `packages/*/dist/**` 의 `@deprecated`는 source가 아니므로 source 변경 후 재빌드로 자동 정리 — grep skip
+
+**관련 파일 (제거 모범 사례):**
+- `apps/frontend/lib/api/dashboard-api.ts` — `DashboardCheckoutScope` deprecated alias (2026-04-28 제거). 외부 소비처 0건 grep 후 즉시 정리. 정식 `DashboardScope` (shared-constants)만 사용.
+
+**관련 파일 (정리 후보 — 본 Step 신설 시점 잔존):**
+- `apps/frontend/lib/api/dashboard-api.ts:91` — `OverdueCheckoutDto` alias
+- `apps/backend/src/modules/dashboard/dto/dashboard-response.dto.ts:130` — `OverdueCheckoutDto` alias
+- `apps/backend/src/modules/equipment-imports/dto/*.ts` — `EquipmentImport*` alias 다수 (`reject-`, `create-`, `approve-`, `receive-`, `equipment-import-query-`)
+- `apps/backend/src/modules/calibration-plans/dto/approve-calibration-plan.dto.ts:71,150` — `submitForReviewSchema` / `SubmitForReviewDto` alias
+- `apps/frontend/lib/api/teams-api.ts:108` — `CLASSIFICATION_CONFIG` legacy 호환
+- `apps/frontend/lib/api/server-api-client.ts:166,173` — `getServerAuthHeaders` / `getServerAuthSession` alias
+- `apps/backend/src/modules/auth/rbac/{roles,permissions}.enum.ts` — packages re-export alias
+
+**발생 이력 (2026-04-28 → 2026-04-30 신설)**: dashboard-low-residual 세션에서 `DashboardCheckoutScope` alias가 외부 소비처 0건임을 grep으로 검증한 후 즉시 제거. 그 결과 `DashboardScope` (shared-constants) 정식 SSOT만 남게 되어 import 경로 단일화. 본 Step은 다른 deprecated alias도 같은 절차(외부 grep → 0건 확인 → 제거)로 정리하도록 권고하기 위해 신설.
+
+---
+
+### Step 44: Supply-Chain SSOT — raw uuid import 금지 + pnpm.overrides caret 잠금 (2026-04-30 추가, deps-supply-chain-hardening)
+
+**규칙**: 도메인 ID 생성은 반드시 `IdentifierService` (`apps/backend/src/common/identifiers/identifier.service.ts`) 단일 진입점을 경유한다. raw `uuid` 패키지 직접 import / `randomUUID` 직접 import는 금지. 동시에 root `package.json` 의 `pnpm.overrides` 모든 entry는 `^x.y.z` (caret) 또는 정확한 `x.y.z` 버전이어야 하며, `>=` / `>` / `~` / `*` / `latest` 같은 unbounded 범위는 금지.
+
+**왜 raw uuid import가 위험한가**:
+- vendor 패키지 직접 의존이 호출처에 흩어지면 알고리즘 전환(ulid/nanoid/`crypto.randomUUID()`) 시 모든 호출처를 추적·수정해야 함 — vendor lock-in 누수.
+- ID 형식 패턴(prefix, 길이)이 호출처마다 산재되어 SSOT 분산.
+- 보안/성능 정책 변경(CSPRNG 알고리즘, hot path inline) 시 단일 헬퍼만 수정하면 안 되는 상태로 부패.
+
+**왜 unbounded overrides (`>=`)가 위험한가**:
+- pnpm overrides의 `>=`는 *모든* transitive dependency를 그 버전 이상으로 hoist. 예: `tar: '>=7.5.7'`인데 다른 패키지가 `tar@8.0.0`을 요구하면 메이저 8.x로 통합되어 우리 코드 무관한데도 lockfile에서 메이저 점프가 silent하게 발생 (실측 사례: `jws: '>=3.2.3'` → 4.0.1 hoist, `tar-fs: '>=2.1.4'` → 3.1.2 hoist).
+- caret(`^x.y.z`)은 SemVer minor/patch만 허용하므로 메이저 통합을 차단하면서 보안 패치는 흡수.
+
+**검증 명령**:
+```bash
+# 1) backend raw uuid import 0건 확인 (FAIL 패턴)
+! grep -rn "from ['\"]uuid['\"]" apps/backend/src/ 2>/dev/null
+! grep -rn "require('uuid')" apps/backend/src/ 2>/dev/null
+! grep -rn "import .* from 'node:crypto'.*randomUUID\|import .* from 'crypto'.*randomUUID" apps/backend/src/ 2>/dev/null \
+  | grep -v 'common/identifiers/identifier\.service\.ts'
+# 기대: 모두 exit 0 (매치 0건)
+
+# 2) IdentifierService 존재 확인
+test -f apps/backend/src/common/identifiers/identifier.service.ts \
+  && test -f apps/backend/src/common/identifiers/identifier.module.ts \
+  && grep -q '@Global' apps/backend/src/common/identifiers/identifier.module.ts \
+  && echo "OK identifier module"
+# 기대: "OK identifier module"
+
+# 3) pnpm.overrides caret 잠금 확인 (FAIL 패턴)
+#    engines 필드의 ">=20.18.0" 같은 런타임 최소 버전은 정당하므로,
+#    overrides 블록 내부만 검사한다.
+node -e '
+const o = require("./package.json")?.pnpm?.overrides ?? {};
+const bad = Object.entries(o).filter(
+  ([_, v]) => typeof v !== "string" || /^(>=|>|~|\*|latest)/i.test(v),
+);
+if (bad.length) {
+  console.error("FAIL:", bad);
+  process.exit(1);
+}
+console.log("PASS: overrides caret-locked");
+'
+# 기대: exit 0 + "PASS" (매치 0건). 매치 발견 시 caret 또는 정확한 버전으로 변경 권고.
+
+# 4) preinstall guard 작동 확인 (회귀 시뮬레이션)
+# 일시적으로 ">=1.0.0" 추가 후 drift guard exit 1 기대, 원복.
+
+# 5) IdentifierService 실 사용처 확인 (구조적 검증)
+grep -rn 'identifiers\.\(generateAttachmentId\|generateMigrationBatchId\|generateOpaqueId\)' \
+  apps/backend/src/ 2>/dev/null
+# 기대: ≥ 1 hit (file-upload.service, data-migration.service)
+```
+
+**PASS:**
+- raw uuid / raw randomUUID import 0건 (IdentifierService 정의 파일 자체 제외)
+- IdentifierModule이 `@Global()`로 등록되어 모든 feature module이 별도 imports 없이 주입 가능
+- pnpm.overrides 모든 entry가 caret(`^`) 또는 정확한 버전
+- preinstall guard `scripts/check-dependabot-drift.mjs`가 회귀 차단
+
+**FAIL:**
+- `import { v4 } from 'uuid'` 또는 `const { randomUUID } = require('node:crypto')` 직접 사용 (헬퍼 외부)
+- `>=` / `>` / `~` / `*` / `latest` overrides 잔존
+- IdentifierService가 NestJS DI에서 resolve 안 됨 (모듈 등록 누락)
+
+**예외:**
+- `apps/backend/src/common/identifiers/identifier.service.ts` 자체 — `randomUUID`를 `node:crypto`에서 직접 import (SSOT 정의 파일)
+- 단위 테스트 파일 — IdentifierService mock 객체 직접 사용 가능
+- frontend NextAuth `randomUUID` (Web Crypto API) — backend 도메인과 별개 (현재 frontend는 별도 ID 헬퍼 미보유, 필요 시 별도 SSOT 신설)
+
+**관련 파일:**
+- `apps/backend/src/common/identifiers/identifier.service.ts` — SSOT 정의
+- `apps/backend/src/common/identifiers/identifier.module.ts` — `@Global()` 모듈
+- `apps/backend/src/common/identifiers/identifier.service.spec.ts` — 6 케이스 회귀 가드
+- `apps/backend/src/common/file-upload/file-upload.service.ts` — 첫 번째 호출처
+- `apps/backend/src/modules/data-migration/services/data-migration.service.ts` — 두 번째 호출처
+- `scripts/check-dependabot-drift.mjs` — preinstall guard
+- `package.json` (root) — `pnpm.overrides` SSOT
+
+**발생 이력 (2026-04-30 신설)**: deps-supply-chain-hardening Mode 2 작업. 출처:
+- Dependabot 4 alerts (postcss<8.5.10, fast-xml-parser<5.7.0, uuid<14, uuid<14 dup) 처리 과정에서 발견.
+- uuid v9→v14 메이저 5단계 bump 회피를 위해 `crypto.randomUUID()` 빌트인으로 전환 — vendor 캡슐화 SSOT로 격상.
+- `>=` overrides 9건 caret 통일 시 `jws: '>=3.2.3'` → 4.0.1 / `tar-fs: '>=2.1.4'` → 3.1.2 hoist 사례 실측 발견. 향후 차단을 위해 preinstall guard + 본 Step 신설.

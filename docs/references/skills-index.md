@@ -12,7 +12,7 @@
 - **verify-cas** — CAS/Optimistic Locking (version, VersionedBaseService, cache invalidation on 409)
 - **verify-auth** — 서버사이드 인증 (req.user.userId, @RequirePermissions, @AuditLog)
 - **verify-zod** — Zod validation (ZodValidationPipe, controller pipe, query DTO consistency, ZodResponse ↔ ZodSerializerInterceptor pairing, 2xx-only ZodResponse)
-- **verify-ssot** — SSOT import source (package imports, no local redefinitions, lucide-react)
+- **verify-ssot** — SSOT import source (package imports, no local redefinitions, lucide-react). Step 44: Supply-Chain SSOT — raw uuid import 금지 (IdentifierService 경유) + pnpm.overrides caret 잠금 (`>=` 패턴 0건)
 - **verify-hardcoding** — 하드코딩 탐지 (API paths, queryKeys, env, cache keys, token TTL, ErrorCode, Korean UI)
 - **verify-frontend-state** — TanStack Query (no onSuccess setQueryData, dynamic imports)
 - **verify-nextjs** — Next.js 16 패턴 (await params, useActionState, Server Components)
