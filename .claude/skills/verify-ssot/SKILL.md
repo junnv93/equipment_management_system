@@ -1337,15 +1337,24 @@ grep -rn "export.*${ALIAS_NAME}\|export \*.*from" \
 ! grep -rn "from ['\"]uuid['\"]" apps/backend/src/ 2>/dev/null
 ! grep -rn "require('uuid')" apps/backend/src/ 2>/dev/null
 ! grep -rn "import .* from 'node:crypto'.*randomUUID\|import .* from 'crypto'.*randomUUID" apps/backend/src/ 2>/dev/null \
-  | grep -v 'common/identifiers/identifier\.service\.ts'
+  | grep -v 'common/identifiers/identifier\.service\.ts\|\.spec\.ts'
 # 기대: 모두 exit 0 (매치 0건)
 
-# 2) IdentifierService 존재 확인
+# 1b) frontend randomUUID 직접 사용 — proxy.ts(CSP nonce)와 e2e spec 제외 후 0건
+grep -rn "randomUUID" apps/frontend --include="*.ts" --include="*.tsx" 2>/dev/null \
+  | grep -v "spec\|test\|proxy\.ts\|node_modules\|\.next\|coverage"
+# 기대: 0건 (proxy.ts는 Edge Runtime Web Crypto 예외, spec은 테스트 데이터 예외)
+
+# 2) IdentifierService 존재 + @Global 등록 확인
 test -f apps/backend/src/common/identifiers/identifier.service.ts \
   && test -f apps/backend/src/common/identifiers/identifier.module.ts \
   && grep -q '@Global' apps/backend/src/common/identifiers/identifier.module.ts \
   && echo "OK identifier module"
 # 기대: "OK identifier module"
+
+# 2b) preinstall 훅에 drift guard 연결 확인
+grep '"preinstall"' package.json | grep -q "check-dependabot-drift.mjs" && echo "OK preinstall hook"
+# 기대: "OK preinstall hook"
 
 # 3) pnpm.overrides caret 잠금 확인 (FAIL 패턴)
 #    engines 필드의 ">=20.18.0" 같은 런타임 최소 버전은 정당하므로,
@@ -1376,17 +1385,20 @@ grep -rn 'identifiers\.\(generateAttachmentId\|generateMigrationBatchId\|generat
 - raw uuid / raw randomUUID import 0건 (IdentifierService 정의 파일 자체 제외)
 - IdentifierModule이 `@Global()`로 등록되어 모든 feature module이 별도 imports 없이 주입 가능
 - pnpm.overrides 모든 entry가 caret(`^`) 또는 정확한 버전
-- preinstall guard `scripts/check-dependabot-drift.mjs`가 회귀 차단
+- preinstall guard `scripts/check-dependabot-drift.mjs`가 `preinstall` 훅에 연결됨
 
 **FAIL:**
 - `import { v4 } from 'uuid'` 또는 `const { randomUUID } = require('node:crypto')` 직접 사용 (헬퍼 외부)
 - `>=` / `>` / `~` / `*` / `latest` overrides 잔존
 - IdentifierService가 NestJS DI에서 resolve 안 됨 (모듈 등록 누락)
+- preinstall 훅에서 `check-dependabot-drift.mjs` 연결 누락
 
 **예외:**
 - `apps/backend/src/common/identifiers/identifier.service.ts` 자체 — `randomUUID`를 `node:crypto`에서 직접 import (SSOT 정의 파일)
-- 단위 테스트 파일 — IdentifierService mock 객체 직접 사용 가능
-- frontend NextAuth `randomUUID` (Web Crypto API) — backend 도메인과 별개 (현재 frontend는 별도 ID 헬퍼 미보유, 필요 시 별도 SSOT 신설)
+- `apps/backend/src/common/one-time-token/one-time-token.service.ts` — DI 생성자 없는 plain class에서 `generateJti()` 모듈 함수 직접 import. SSOT 정의 파일 내 함수 소비이므로 허용 (raw uuid 패키지 import 아님)
+- 단위 테스트 파일 (`*.spec.ts`) — IdentifierService mock 객체 직접 사용 가능
+- e2e spec 파일 (`apps/frontend/tests/e2e/**/*.spec.ts`) — 테스트 데이터 유일성 목적의 `crypto.randomUUID()` 직접 사용 허용 (도메인 ID 생성 아님)
+- `apps/frontend/proxy.ts` — Next.js Edge Runtime에서 `globalThis.crypto.randomUUID()` (Web Crypto API)로 CSP nonce 생성. Node.js `node:crypto` import 불가 환경이므로 backend IdentifierService와 별개 도메인으로 허용. frontend ID 헬퍼 신설 시 재검토.
 
 **관련 파일:**
 - `apps/backend/src/common/identifiers/identifier.service.ts` — SSOT 정의
