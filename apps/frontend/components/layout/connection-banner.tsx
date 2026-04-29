@@ -39,6 +39,11 @@ export function ConnectionBanner() {
   const t = useTranslations();
   const { online } = useOnlineStatus();
   const { newAvailable, applyUpdate } = useSwUpdate();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const banner: BannerSpec | null = React.useMemo(() => {
     if (!online) {
@@ -61,7 +66,7 @@ export function ConnectionBanner() {
     return null;
   }, [online, newAvailable, applyUpdate]);
 
-  if (!banner) return null;
+  if (!mounted || !banner) return null;
 
   return (
     <div

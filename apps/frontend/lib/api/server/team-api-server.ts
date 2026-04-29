@@ -7,7 +7,7 @@
  * @see packages/schemas/src/team.ts
  */
 import type { Team, TeamDetail, TeamQuery } from '../teams-api';
-import { INTERNAL_BACKEND_URL } from '../../config/api-config';
+import { INTERNAL_BACKEND_URL } from '../../config/api-config.server';
 import { API_ENDPOINTS, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { getServerAuthHeaders as getAuthHeaders } from '@/lib/auth/server-session';
 

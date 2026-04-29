@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_BACKEND_URL } from '@/lib/config/api-config';
+import { INTERNAL_BACKEND_URL } from '@/lib/config/api-config.server';
 
 /**
  * Frontend → Backend 헬스 체크 (Same-Origin Reverse-Proxy 모델, ADR-0006).

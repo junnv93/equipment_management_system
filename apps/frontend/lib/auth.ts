@@ -63,7 +63,7 @@ import {
   REFRESH_BUFFER_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '@equipment-management/shared-constants';
-import { INTERNAL_BACKEND_URL } from './config/api-config';
+import { INTERNAL_BACKEND_URL } from './config/api-config.server';
 import { getInternalApiKeyHeaders } from './config/internal-headers';
 
 /**

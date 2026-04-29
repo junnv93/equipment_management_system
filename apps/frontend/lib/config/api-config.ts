@@ -47,9 +47,6 @@
 
 import { RELATIVE_API_BASE } from '@equipment-management/shared-constants';
 
-/** dev에서 INTERNAL_BACKEND_URL 미설정 시 사용하는 기본 backend URL */
-const DEV_FALLBACK_INTERNAL_BACKEND_URL = 'http://localhost:3001';
-
 /**
  * 클라이언트(브라우저) baseURL — same-origin 모델에서는 빈 문자열.
  *
@@ -83,58 +80,13 @@ const resolveClientBaseUrl = (): string => {
 };
 
 /**
- * 서버(SSR/Server Component/NextAuth callback) baseURL.
+ * API_BASE_URL — 클라이언트(브라우저) axios baseURL.
  *
- * server-side는 backend를 직접 호출해야 하므로 INTERNAL_BACKEND_URL을 SSOT로 사용.
- * 미설정 시:
- *  - dev: localhost:3001 fallback
- *  - production: hard fail (Docker 환경에서 backend hostname resolve 불가하면 SSR 전체 실패)
+ * Same-Origin 모델에서 클라이언트는 상대 경로(`''`)만 사용한다.
+ * 이 파일은 클라이언트 번들에 포함되므로 server-only 분기 없음.
+ * 서버 측 backend URL은 api-config.server.ts의 INTERNAL_BACKEND_URL을 사용.
  */
-const resolveServerBaseUrl = (): string => {
-  const internalUrl = process.env.INTERNAL_BACKEND_URL;
-  if (internalUrl) return internalUrl;
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      '[API Config] INTERNAL_BACKEND_URL 환경변수가 설정되지 않았습니다. ' +
-        'Same-Origin Reverse-Proxy 모델(ADR-0006)에서는 server-side가 backend를 직접 호출하므로 ' +
-        'INTERNAL_BACKEND_URL이 필수입니다 (예: http://backend:3001).'
-    );
-  }
-
-  return DEV_FALLBACK_INTERNAL_BACKEND_URL;
-};
-
-/**
- * API_BASE_URL — 실행 환경(server/client)에 따라 자동 분기
- *
- * - server (`typeof window === 'undefined'`) → resolveServerBaseUrl() — backend 절대 URL
- * - client (`typeof window !== 'undefined'`) → resolveClientBaseUrl() — 빈 문자열(상대) 권장
- *
- * Same-Origin 모델에서 client는 axios가 호출자 origin을 자동으로 사용한다.
- */
-export const API_BASE_URL =
-  typeof window === 'undefined' ? resolveServerBaseUrl() : resolveClientBaseUrl();
-
-/**
- * INTERNAL_BACKEND_URL — server 전용 직접 호출용 SSOT
- *
- * NextAuth callback (Credentials authorize, refresh) 등 server-only 코드에서 명시적으로 사용.
- * client 코드에서는 import 금지 (server-only constraint는 각 호출처가 책임).
- */
-export const INTERNAL_BACKEND_URL = (() => {
-  if (typeof window !== 'undefined') {
-    // client에서 접근 시 즉시 발견되도록 빈 문자열 반환 + dev에서 console.error
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(
-        '[API Config] INTERNAL_BACKEND_URL은 server-only 상수입니다. ' +
-          'client 코드에서는 API_BASE_URL을 사용하세요.'
-      );
-    }
-    return '';
-  }
-  return resolveServerBaseUrl();
-})();
+export const API_BASE_URL = resolveClientBaseUrl();
 
 /**
  * API 타임아웃 설정 (ms)
