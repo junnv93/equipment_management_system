@@ -1,10 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import notificationsApi from '@/lib/api/notifications-api';
 import type { NotificationQueryParams } from '@/lib/api/notifications-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 /**
  * 미읽음 알림 개수 조회 훅
@@ -53,11 +55,12 @@ export function useMarkAsRead() {
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations();
 
   return useMutation({
     mutationFn: () => notificationsApi.markAllAsRead(),
     onSuccess: () => {
-      toast({ description: '모든 알림을 읽음으로 표시했습니다.' });
+      toast({ description: t(FEEDBACK_KEYS.notificationAllRead) });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
@@ -71,11 +74,12 @@ export function useMarkAllAsRead() {
 export function useDeleteNotification() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations();
 
   return useMutation({
     mutationFn: (id: string) => notificationsApi.remove(id),
     onSuccess: () => {
-      toast({ description: '알림이 삭제되었습니다.' });
+      toast({ description: t(FEEDBACK_KEYS.notificationDeleted) });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });

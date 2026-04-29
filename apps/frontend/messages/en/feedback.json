@@ -38,6 +38,8 @@
   "reload": "Reload",
   "sseReconnecting": "Reconnecting realtime updates",
   "tokenExpiringSoon": "Your session is expiring soon.",
+  "notificationAllRead": "All notifications marked as read",
+  "notificationDeleted": "Notification deleted",
   "autosave": {
     "idle": "Autosave idle",
     "saving": "Autosaving",

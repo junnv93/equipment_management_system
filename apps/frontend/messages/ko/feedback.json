@@ -38,6 +38,8 @@
   "reload": "새로고침",
   "sseReconnecting": "실시간 연결을 복구하는 중",
   "tokenExpiringSoon": "세션이 곧 만료됩니다.",
+  "notificationAllRead": "모든 알림을 읽음으로 표시했습니다",
+  "notificationDeleted": "알림이 삭제되었습니다",
   "autosave": {
     "idle": "자동저장 대기",
     "saving": "자동저장 중",

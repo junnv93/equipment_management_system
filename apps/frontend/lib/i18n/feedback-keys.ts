@@ -66,6 +66,10 @@ export const FEEDBACK_KEYS = {
   sseReconnecting: 'feedback.sseReconnecting',
   tokenExpiringSoon: 'feedback.tokenExpiringSoon',
 
+  // notifications
+  notificationAllRead: 'feedback.notificationAllRead',
+  notificationDeleted: 'feedback.notificationDeleted',
+
   // auto-save (L4ext)
   autosaveIdle: 'feedback.autosave.idle',
   autosaveSaving: 'feedback.autosave.saving',
