@@ -28,6 +28,8 @@
 
 ⚠️ **`NEXT_PUBLIC_API_URL`에 절대 URL을 지정하면 ADR-0006 위반.** dev에서는 console.error로 즉시 발견되며, production build에서는 `[API Config]` 에러로 hard-fail한다.
 
+⚠️ **`INTERNAL_BACKEND_URL` 미설정 시 production boot fail.** `apps/frontend/lib/config/api-config.ts`의 `resolveServerBaseUrl()`이 `NODE_ENV=production`에서 `INTERNAL_BACKEND_URL`이 없으면 `[API Config] INTERNAL_BACKEND_URL 환경변수가 설정되지 않았습니다 ...` 에러를 throw한다. 이는 의도된 fail-closed 동작으로, Docker 환경에서 backend hostname resolve 불가 상태로 SSR을 시작하는 사고를 차단한다. **운영팀은 모든 production/lan compose 매니페스트에 `INTERNAL_BACKEND_URL=http://backend:3001`을 명시해야 한다** (이미 `infra/compose/{lan,prod}.override.yml`에 반영됨).
+
 ## 3. 코드 진입점 (SSOT)
 
 | 진입점                     | 파일                                                              | 용도                                                                                             |
@@ -40,12 +42,12 @@
 
 본 4 레이어는 **동일한 분류 규칙**을 따라야 한다. 한 곳만 변경하면 다른 레이어와 disjoint 되지 않아 라우팅 버그 발생.
 
-| 레이어               | 파일                                           | NextAuth 핸들러 분기                                                                         |
-| -------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| SSOT (TypeScript)    | `packages/shared-constants/src/api-routing.ts` | `NEXTAUTH_HANDLER_PATHS` 배열 + 정규식                                                       |
-| Next.js dev rewrites | `apps/frontend/next.config.js`                 | inline 정규식 `(csrf\|session\|providers\|signin\|signout\|callback\|error\|verify-request)` |
-| nginx (lan/prod)     | `infra/nginx/lan.conf`                         | `location ~ ^/api/auth/(csrf\|...)(/\|$)` → `proxy_pass http://frontend`                     |
-| proxy.ts matcher     | `apps/frontend/proxy.ts`                       | `/api` 경로는 매처에서 제외(NextAuth 자체가 자기 가드 처리)                                  |
+| 레이어               | 파일                                                           | NextAuth 핸들러 분기                                                                              |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| SSOT (TypeScript)    | `packages/shared-constants/src/api-routing.ts`                 | `NEXTAUTH_HANDLER_PATHS` 배열 + 정규식                                                            |
+| Next.js dev rewrites | `apps/frontend/next.config.js`                                 | inline 정규식 `(csrf\|session\|providers\|signin\|signout\|callback\|error\|verify-request)`      |
+| nginx (lan/prod)     | `infra/nginx/lan.conf` **+** `infra/nginx/nginx.conf.template` | `location ~ ^/api/auth/(csrf\|...)(/\|$)` → `proxy_pass http://frontend` (두 파일 모두 동일 분기) |
+| proxy.ts matcher     | `apps/frontend/proxy.ts`                                       | `/api` 경로는 매처에서 제외(NextAuth 자체가 자기 가드 처리)                                       |
 
 **SSOT 동기화 의무**: 새 NextAuth 핸들러 경로(예: Auth.js v6 추가) 등장 시 위 4곳을 모두 갱신. `verify-routing-origin` (SHOULD skill)이 자동 검증.
 

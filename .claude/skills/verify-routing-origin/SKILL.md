@@ -105,17 +105,27 @@ grep -E "matcher:" apps/frontend/proxy.ts -A 2 | grep -oE "manifest\\\\\.json|ma
 # 기대: 6건 이상 (PWA + Next.js internal 자산 모두)
 ```
 
-### Step 7: nginx NextAuth 분기
+### Step 7: nginx NextAuth 분기 (모든 nginx 설정 + 템플릿)
+
+⚠️ `infra/nginx/`에는 `lan.conf`(LAN 운영) + `nginx.conf.template`(prod) 두 파일이 있다. 두 파일 **모두** 동일한 분기 정책을 따라야 한다 (prod 배포 회귀 차단).
 
 ```bash
-# NextAuth handler → frontend
-grep -E "location.*\\^/api/auth/\(csrf\\|session\\|providers\\|signin\\|signout\\|callback" \
-  infra/nginx/*.conf
-# 기대: 1건 이상 (lan.conf 등)
+# NextAuth handler → frontend (lan.conf + nginx.conf.template 모두)
+grep -lE "location.*\\^/api/auth/\(csrf\\|session\\|providers\\|signin\\|signout\\|callback" \
+  infra/nginx/*.conf infra/nginx/*.template
+# 기대: 2건 (lan.conf + nginx.conf.template)
 
-# 분기 location 직후에 proxy_pass http://frontend; 가 와야 함
-awk '/location.*api\/auth\/\(csrf\|session/,/}/' infra/nginx/lan.conf | grep "proxy_pass http://frontend"
-# 기대: 1건
+# 각 파일에서 NextAuth 분기 직후 proxy_pass http://frontend
+for f in infra/nginx/lan.conf infra/nginx/nginx.conf.template; do
+  echo "=== $f ===";
+  awk '/location.*api\/auth\/\(csrf\|session/,/}/' "$f" | grep "proxy_pass http://frontend";
+done
+# 기대: 각 1건 (총 2건)
+
+# Backend auth 분리 location도 동일하게 두 파일 모두 존재
+grep -lE "location.*\\^/api/auth/\(login\\|refresh\\|logout\\|profile" \
+  infra/nginx/*.conf infra/nginx/*.template
+# 기대: 2건
 ```
 
 ### Step 8: SW `/api/*` NetworkOnly 강제

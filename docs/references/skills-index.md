@@ -28,6 +28,7 @@
 - **verify-filters** — URL-driven filter SSOT (filter-utils, hooks, page.tsx server parsing)
 - **verify-qr-ssot** — QR URL 빌더/파서·설정·액션이 SSOT(qr-url.ts, qr-config.ts, qr-access.ts) 경유하는지 검증
 - **verify-handover-security** — Handover/OneTimeToken 보안 (시크릿 분리, jti nonce 소비, TTL SSOT, 권한 가드, 토큰 영속화 금지)
+- **verify-routing-origin** — Same-Origin Reverse-Proxy(ADR-0006) 정합. 4 레이어 동기화(api-routing.ts SSOT / next.config.js / nginx lan.conf+template / proxy.ts), env 절대 URL 잠입, BACKEND ∩ NEXTAUTH disjoint, SW NetworkOnly /api/\* 룰
 - **verify-implementation** — 통합 실행 (모든 verify-\* 순차 실행 + 결합 리포트)
 
 ## Review Skills (심층 분석)

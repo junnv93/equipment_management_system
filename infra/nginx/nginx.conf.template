@@ -144,9 +144,37 @@ http {
         limit_conn conn_limit 20;
 
         # ─────────────────────────────────────────────
-        # 인증 엔드포인트 — 엄격한 Rate Limiting (Brute-force 방지)
+        # NextAuth 핸들러 — frontend(Auth.js v5 catch-all route handler)로 분기 (ADR-0006)
+        #
+        # NextAuth가 처리해야 하는 경로(csrf/session/providers/signin/signout/callback/...)는
+        # backend로 보내면 404가 발생한다. 본 location은 일반 `/api` location보다 위에 두어
+        # nginx regex location 우선 매칭 규칙으로 가장 먼저 평가되어야 한다.
+        #
+        # ⚠️ SSOT 동기화: 본 정규식은 packages/shared-constants/src/api-routing.ts의
+        # NEXTAUTH_HANDLER_PATHS와 일치해야 한다 (verify-routing-origin 검증).
         # ─────────────────────────────────────────────
-        location ~ ^/api/auth/(login|signin|token|refresh) {
+        location ~ ^/api/auth/(csrf|session|providers|signin|signout|callback|error|verify-request)(/|$) {
+            limit_req zone=auth burst=5 nodelay;
+            limit_req_log_level warn;
+
+            proxy_pass http://frontend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_connect_timeout 10s;
+            proxy_send_timeout 30s;
+            proxy_read_timeout 30s;
+        }
+
+        # ─────────────────────────────────────────────
+        # Backend 인증 엔드포인트 — 엄격한 Rate Limiting (Brute-force 방지)
+        #
+        # backend NestJS auth 컨트롤러가 직접 노출하는 경로 (auth.controller.ts + test-auth.controller.ts).
+        # 위의 NextAuth 핸들러 location과 정확히 disjoint해야 함.
+        # ─────────────────────────────────────────────
+        location ~ ^/api/auth/(login|refresh|logout|profile|azure-login|test|test-login|test-cache-clear|forge-handover-token)(/|$) {
             limit_req zone=auth burst=5 nodelay;
             limit_req_log_level warn;
 
