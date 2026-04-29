@@ -789,8 +789,67 @@ grep -rEn "navigator\.onLine|addEventListener\(['\"](online|offline)['\"]" \
 **관련 파일**:
 - `apps/frontend/hooks/use-online-status.ts` — SSOT
 - `apps/frontend/components/dashboard/OfflineBanner.tsx` — 소비처
+- `apps/frontend/components/checkouts/CheckoutEmptyState.tsx` — 소비처 (network variant)
 
 ---
+
+### Step 25: `useEffect` dependency array TDZ 패턴 — 선언 이전 변수 참조 금지 (2026-04-29 추가)
+
+React 함수 컴포넌트에서 `useEffect`의 dependency array는 **렌더 함수 실행 중 동기적으로 평가**된다.
+따라서 `const { data: teamsData } = useQuery(...)` 선언 이전에 `useEffect(() => {...}, [teamsData?.data])` 를 두면,
+dependency array 평가 시점에 `teamsData`가 Temporal Dead Zone(TDZ)에 있어 `ReferenceError`가 발생한다.
+
+콜백 함수 내부(`() => { teamsData?.data.find(...) }`)는 나중에 실행되는 클로저라서 괜찮지만,
+**dependency array 자체는 렌더 시 즉시 평가되는 표현식**이라 TDZ를 벗어나지 못한다.
+
+**규칙:** `useQuery`/`useState`/`useMemo`로 선언된 변수를 참조하는 `useEffect`는 해당 선언 이후에 위치해야 한다.
+
+**탐지 — useQuery 결과를 dep array에서 참조하는 useEffect가 선언보다 앞에 있는지:**
+
+정적 grep으로 정확한 순서를 판정하기는 어렵지만, 같은 파일에서 의심 패턴을 좁힐 수 있다:
+```bash
+# 컴포넌트 파일에서 useQuery 결과를 dep array에 쓰는 useEffect 패턴 탐지
+# (수동 검토: 해당 변수 선언이 useEffect 이후에 있는지 확인)
+grep -rn "useEffect" apps/frontend/components apps/frontend/app \
+  --include="*.tsx" -A 10 \
+  | grep -E "\[.*Data\?\.|\[.*data\?" \
+  | grep -v "node_modules\|// "
+```
+
+실질적인 검증은 빌드 타임 오류로 확인:
+```bash
+pnpm --filter frontend exec tsc --noEmit 2>&1 | grep "ReferenceError\|before initialization"
+```
+
+**❌ FAIL 패턴 (TDZ 유발):**
+```typescript
+// Effect B — teamsData를 dep array에서 참조
+useEffect(() => {
+  if (!teamsData?.data) return;          // 콜백 내부는 OK (클로저)
+  // ...
+}, [teamsData?.data, ...]);             // ← dep array 동기 평가 시 TDZ!
+
+// ← teamsData 선언이 아직 없음
+const { data: teamsData } = useQuery({ ... }); // 선언이 뒤에 있음
+```
+
+**✅ PASS 패턴 (선언 이후 배치):**
+```typescript
+const { data: teamsData } = useQuery({ ... }); // 선언 먼저
+
+useEffect(() => {
+  if (!teamsData?.data) return;
+  // ...
+}, [teamsData?.data, ...]);             // ← dep array 평가 시점에 teamsData 선언됨
+```
+
+**PASS:** `useQuery` 결과를 dep array에 사용하는 `useEffect`가 해당 `useQuery` 선언 이후에 위치.
+**FAIL:** `tsc --noEmit`에서 `Cannot access 'X' before initialization` 오류 발생.
+
+**배경:** `CreateCheckoutContent.tsx`의 Effect B가 `teamsData` useQuery 선언 이전에 위치해 `ReferenceError` 발생 (2026-04-29). Radix UI Select 초기화 순서 요구사항으로 인해 팀 시드 effect를 teamsData 로드 이후로 분리하면서 발견.
+
+**관련 파일:**
+- `apps/frontend/app/(dashboard)/checkouts/create/CreateCheckoutContent.tsx` — TDZ 수정 사례
 
 ### Step 24: Dual-Mode 비대칭 props — controlled/uncontrolled 절반 주입 silent bug 탐지 (2026-04-28 추가)
 
