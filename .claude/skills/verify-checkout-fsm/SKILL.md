@@ -1425,3 +1425,123 @@ grep "requesterSite" apps/frontend/lib/api/approvals-api.ts
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll userInfo + findOne user
 - `apps/frontend/lib/api/checkout-api.ts` — `Checkout.user.team` 타입
 - `apps/frontend/lib/api/approvals-api.ts` — `mapCheckoutToApprovalItem` requesterSite
+
+### Step 46: ESCAPE_ACTIONS 집합 불변성 + getNextStep 4단계 우선순위 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** 이번 세션에서 도입된 ESCAPE_ACTIONS 분리 패턴 — cancel/reject/reject_return/borrower_reject를 primary 워크플로우 액션에서 격리. 이 집합이 축소되거나 다른 액션이 추가되면 borrower가 cancel을 primary 액션으로 보게 되는 회귀가 발생. 4단계 우선순위(fullyAvailableMain→permittedOnlyMain→firstMain→fullyAvailableEscape)가 유지되지 않으면 권한 없는 사용자에게 escape 액션이 primary로 노출된다.
+
+**검증 명령어:**
+```bash
+# 1. ESCAPE_ACTIONS 정의 존재 및 4개 멤버 확인
+grep -A3 "ESCAPE_ACTIONS" packages/schemas/src/fsm/checkout-fsm.ts | head -8
+# 기대: new Set<CheckoutAction>(['cancel', 'reject', 'reject_return', 'borrower_reject'])
+
+# 2. getNextStep 4단계 우선순위 구조 — fullyAvailableMain 변수 존재
+grep -n "fullyAvailableMain\|permittedOnlyMain\|firstMain\|fullyAvailableEscape" \
+  packages/schemas/src/fsm/checkout-fsm.ts
+# 기대: 4개 변수 모두 존재
+
+# 3. candidate 결합 — 4단계 순서 확인
+grep -n "fullyAvailableMain ?? permittedOnlyMain ?? firstMain ?? fullyAvailableEscape" \
+  packages/schemas/src/fsm/checkout-fsm.ts
+# 기대: 1건
+
+# 4. ESCAPE_ACTIONS.has() 필터가 Main 후보에 적용되는지 (escape가 primary로 빠져나가는 회귀 방지)
+grep -B1 "fullyAvailableMain\s*=" packages/schemas/src/fsm/checkout-fsm.ts | grep "ESCAPE_ACTIONS"
+# 기대: !ESCAPE_ACTIONS.has 필터 존재
+```
+
+**PASS:**
+1. ESCAPE_ACTIONS 4개 멤버({cancel, reject, reject_return, borrower_reject}) 정확히 일치
+2. 4개 후보 변수(fullyAvailableMain/permittedOnlyMain/firstMain/fullyAvailableEscape) 모두 존재
+3. `fullyAvailableMain ?? permittedOnlyMain ?? firstMain ?? fullyAvailableEscape ?? transitions[0]` 체인
+4. Main 후보에 `!ESCAPE_ACTIONS.has(t.action)` 필터 적용
+
+**FAIL:**
+- ESCAPE_ACTIONS 멤버 변경(추가/삭제) → FSM 우선순위 의도 변경 신호, 리뷰 필요
+- 4단계 체인 구조 누락 → escape 액션이 primary로 노출될 수 있음
+- `!ESCAPE_ACTIONS.has` 필터 없음 → cancel이 primary 디스크립터로 다시 노출
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — ESCAPE_ACTIONS, getNextStep 4단계 우선순위
+
+### Step 47: checkout-scope.util.ts outbound predicate 불변성 — case 1+3만 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** rental borrower(requester) 팀은 status와 무관하게 항상 inbound로만 분류된다는 도메인 결정. direction='outbound'에 `requesterIn`이 포함되면(이전 case 4) pending 상태 rental 건이 반출 탭에도 노출되어 UX 이중 분류 회귀가 발생.
+
+**검증 명령어:**
+```bash
+# 1. outbound 분기에 requesterIn 사용 없음 확인
+grep -A5 "direction === 'outbound'" \
+  apps/backend/src/modules/checkouts/checkout-scope.util.ts
+# 기대: requesterIn이 outbound 분기 OR 표현식에 미포함
+
+# 2. outbound = case 1+3 (isNonRental+equip, isRental+lenderEq) 확인
+grep -A3 "direction === 'outbound'" \
+  apps/backend/src/modules/checkouts/checkout-scope.util.ts | grep "lenderEq\|inEquip"
+# 기대: lenderEq, inEquipTeam/inEquipSite만 등장
+
+# 3. isPending 변수가 checkout-scope.util.ts에서 선언되지 않음 (case 4 제거 후 불필요)
+grep -n "isPending" apps/backend/src/modules/checkouts/checkout-scope.util.ts
+# 기대: 0건 (case 4 재도입 시 1건 이상 나타남 → FAIL)
+
+# 4. SSOT 주석 3-case 정의 존재
+grep -n "SSOT 정의 (3-case)" apps/backend/src/modules/checkouts/checkout-scope.util.ts
+# 기대: 1건
+```
+
+**PASS:**
+1. `direction === 'outbound'` 분기에 `requesterIn` 변수 미참조
+2. outbound OR 구조: `(isNonRental, equip)` + `(isRental, lenderEq)` 2개 케이스만
+3. `isPending` 변수 선언 0건
+4. SSOT 주석 "3-case" 명시
+
+**FAIL:**
+- `requesterIn`이 outbound 분기에 재등장 → case 4 회귀
+- `isPending` 변수 재선언 → case 4 재도입 신호
+- outbound OR에 3개 이상 조건 → 도메인 의도 이탈
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkout-scope.util.ts` — buildCheckoutSiteCondition, buildCheckoutTeamCondition
+
+### Step 48: CheckoutDetailClient availableToCurrentUser guard + canCancel 독립 버튼 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** 권한 없는 사용자가 handleNextStepAction을 호출하면 서버에서 403이 반환되고 페이지가 새로고침됐던 버그. `availableToCurrentUser` early-return guard가 없으면 동일 회귀 발생. cancel 버튼이 독립 UI가 아니라 handleNextStepAction 내 'cancel' case로만 존재하면 cancel 외 다른 primary 액션이 있는 상태에서 취소가 불가능해진다.
+
+**검증 명령어:**
+```bash
+# 1. handleNextStepAction 상단 availableToCurrentUser early-return guard
+grep -A3 "handleNextStepAction" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
+  | grep "availableToCurrentUser"
+# 기대: if (!nextStepDescriptor.availableToCurrentUser) return; 존재
+
+# 2. canCancel 독립 버튼 — meta.availableActions.canCancel 게이트
+grep -n "canCancel" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx
+# 기대: checkout.meta?.availableActions.canCancel 기반 조건부 렌더링 존재
+
+# 3. handleNextStepAction 'cancel' case가 canCancel 게이트와 분리 — cancel case 내에서 직접 dialog open
+grep -A5 "case 'cancel'" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx | head -10
+# 기대: setDialogState cancel: true 또는 독립 버튼이 직접 dialog open
+
+# 4. nextStep: checkout.meta?.nextStep wiring — useCheckoutNextStep에 서버값 전달
+grep -n "nextStep: checkout\.meta" \
+  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx
+# 기대: 1건 (useCheckoutNextStep 훅 호출 인수)
+```
+
+**PASS:**
+1. `handleNextStepAction` 진입 시 `if (!nextStepDescriptor.availableToCurrentUser) return;` 존재
+2. `checkout.meta?.availableActions.canCancel` 조건부 렌더링으로 cancel 버튼 독립 표시
+3. cancel 버튼이 nextAction 흐름과 별도로 항상 표시 가능(canCancel=true 시)
+4. `nextStep: checkout.meta?.nextStep`이 useCheckoutNextStep 훅에 전달
+
+**FAIL:**
+- `availableToCurrentUser` guard 없음 → 권한 없는 사용자 액션 시 403 → 페이지 새로고침 회귀
+- `canCancel` 독립 버튼 없음 → 특정 상태에서 취소 불가
+- `checkout.meta?.nextStep` wiring 없음 → 서버 actorCtx 기반 계산 무시, 클라이언트 FSM 폴백만 사용
+
+**관련 파일:**
+- `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` — handleNextStepAction, canCancel 버튼

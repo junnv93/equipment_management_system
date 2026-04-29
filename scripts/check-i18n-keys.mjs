@@ -42,7 +42,6 @@ const REQUIRED_LABEL_KEYS = [
   'cancel',
   'lender_check',
   'lender_receive',
-  'mark_in_use',
   'reject',
   'reject_return',
   'start',
@@ -53,7 +52,6 @@ const REQUIRED_LABEL_KEYS = [
 const REQUIRED_HINT_KEYS = [
   'approvedLenderCheck',
   'approvedStart',
-  'borrowerReceivedMarkInUse',
   'borrowerReturnedLenderReceive',
   'checkedOutSubmitReturn',
   'inUseBorrowerReturn',
