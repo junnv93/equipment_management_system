@@ -945,3 +945,27 @@ useEffect(() => {
 **예외:** `useTranslations(ns)` 결과를 `useMemo`로 처리 + dep로 포함 (권장 안 됨, useRef가 더 정합).
 
 **발생 이력 (2026-04-28):** EquipmentFilters useEffect reconcile 안전망에 `t/toast` deps 포함 → eslint-disable 추가 시 self-audit FAIL → useRef 패턴(`tRef/toastRef`) 적용으로 양쪽 정합.
+
+---
+
+### Step 33: TableRow onClick 내 router.push 네비게이션 금지 (2026-04-29 추가)
+
+**규칙:** `<TableRow onClick={() => router.push(...)}>` 패턴으로 detail 페이지 이동 금지.
+올바른 방법: NavLink overlay 패턴 (`absolute inset-0` + `TableRow className="... relative"`) 또는 `useNavigateWithPending`.
+
+```bash
+# TableRow에 router.push 네비게이션 탐지
+grep -rn "TableRow" apps/frontend/app apps/frontend/components \
+  --include="*.tsx" -l | xargs grep -l "router\.push" | \
+  xargs grep -n "onClick.*router\.push\|router\.push.*DETAIL\|router\.push.*ROUTES"
+```
+
+각 결과 라인:
+1. `onClick={() => router.push(ROUTES.DETAIL(id))}` + 같은 파일에 NavLink overlay 없음 → ❌ 안티패턴
+2. `router.push` in ButtonClick / 폼 submit → ✅ 허용 (네비게이션 목적이 아닌 액션)
+3. `router.replace(...)` → ✅ URL sync 전용 허용
+
+**PASS:** `TableRow onClick` 내 detail 이동 목적 `router.push` 0건.
+**FAIL:** `<TableRow onClick={() => router.push(ROUTES.DETAIL(id))}>` 발견 → NavLink overlay로 전환.
+
+> **배경:** 2026-04-29 TestSoftwareListContent `<TableRow onClick={router.push}>` → NavLink overlay 전환으로 해결. `TableRow onClick` 패턴은 키보드 접근성(`Tab+Enter`) 불가, `aria-label` 제공 불가, GlobalProgressBar 미연동 3가지 결함 동시 발생.

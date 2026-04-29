@@ -49,6 +49,9 @@ argument-hint: '[선택사항: 검증할 특정 훅 또는 컴포넌트명]'
 | `apps/frontend/hooks/use-mutation-with-refresh.ts` | 캐시 갱신 mutation — errorTitle useTranslations() 내부 resolve |
 | `apps/frontend/hooks/use-notifications.ts` | 알림 mutation — FEEDBACK_KEYS.notificationAllRead/Deleted |
 | `apps/frontend/hooks/use-reports.ts` | 보고서 export/generate — FEEDBACK_KEYS.exported/created/reportFileDownloaded |
+| `apps/frontend/components/navigation/nav-link.tsx` | NavLink L1 SSOT — useLinkStatus, NavigationPendingContext counter, aria-busy, pendingIndicator variants |
+| `apps/frontend/hooks/use-navigate-with-pending.ts` | useNavigateWithPending L1 SSOT — imperative navigation + GlobalProgressBar 연동 |
+| `apps/frontend/components/navigation/global-progress-bar.tsx` | GlobalProgressBar — NavigationPendingContext 구독, useDelayedFalse(200ms) |
 
 ## Workflow
 
@@ -233,6 +236,35 @@ grep -rn "= '[가-힣]\+'\|= \"[가-힣]\+\"" \
 
 > 배경: `useMutationWithRefresh`의 `errorTitle = '오류가 발생했습니다'` 기본값이 fix loop 2회째에야 탐지됐습니다.
 
+### Step 13: NavLink invisible overlay 패턴 검증 (2026-04-29 추가)
+
+**규칙:**
+- `pendingIndicator="none"` NavLink는 반드시 `className="absolute inset-0..."` + `aria-label` + 부모 `TableRow className="... relative"` 조합이어야 함
+- 가시 링크(non-overlay)에 `pendingIndicator="none"` 단독 사용 금지 → GlobalProgressBar만 작동하고 per-link 피드백 누락
+- invisible overlay 아닌 링크는 반드시 `variant="card"` 또는 `pendingIndicator="opacity"` 사용
+
+```bash
+# pendingIndicator="none" 사용처 전수 수집
+grep -rn 'pendingIndicator="none"' \
+  apps/frontend/app/ apps/frontend/components/ --include="*.tsx"
+```
+
+각 결과 라인에 대해:
+1. 같은 `<NavLink>` 블록에 `className=.*absolute inset-0` 포함 → ✅ overlay 패턴 올바름
+2. `absolute inset-0` 없이 `pendingIndicator="none"` 단독 → ❌ 피드백 누락 (variant 지정 필요)
+
+```bash
+# TableRow에 relative 없이 overlay NavLink 사용 탐지
+grep -B5 'pendingIndicator="none"' \
+  apps/frontend/app/ apps/frontend/components/ -r --include="*.tsx" | \
+  grep -v "relative\|absolute inset-0\|aria-label"
+```
+
+**PASS:** `pendingIndicator="none"` 사용처 모두 `absolute inset-0` + `aria-label` 조합.
+**FAIL:** 가시 링크에 `pendingIndicator="none"` → 의도한 변형으로 교체.
+
+> **배경:** 2026-04-29 CalibrationPlansContent/TestSoftwareListContent에서 overlay pattern 도입. 가시 링크에 `pendingIndicator="none"` 실수 시 클릭 후 시각 피드백 전혀 없음 — GlobalProgressBar도 실제 Route 이동까지 지연될 수 있어 즉각 피드백 부재 발생.
+
 ### Step 12: ListPageSkeleton srLabel 독립성 검사
 
 `srLabel`이 `title` prop 대신 항상 FEEDBACK_KEYS에서 파생되는지 확인합니다.
@@ -263,6 +295,7 @@ grep -n "srLabel" apps/frontend/components/ui/list-page-skeleton.tsx
 | 10 | tsc | 에러 0건 | MUST |
 | 11 | 훅 기본 파라미터 한국어 | 결과 0건 | MUST |
 | 12 | ListPageSkeleton srLabel 독립성 | `title ??` 패턴 0건 | MUST |
+| 13 | NavLink invisible overlay 패턴 | `pendingIndicator="none"` 가시링크 사용 0건 | MUST |
 
-MUST (Steps 1-4, 7, 10-12): 모두 PASS 필요.
+MUST (Steps 1-4, 7, 10-13): 모두 PASS 필요.
 SHOULD (Steps 5-6, 8-9): 위반 시 tech-debt-tracker.md 기록.
