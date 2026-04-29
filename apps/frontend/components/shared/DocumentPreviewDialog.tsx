@@ -22,6 +22,9 @@ export function DocumentPreviewDialog({
   open,
   onOpenChange,
 }: DocumentPreviewDialogProps) {
+  // 이 컴포넌트는 장비/교정/반출 등 문서가 첨부되는 모든 도메인에서 재사용 설계.
+  // 해소 방법: i18n 키를 shared.documentPreview로 이전 — 별도 배치 처리.
+  // eslint-disable-next-line no-restricted-syntax -- self-audit-exception: shared 컴포넌트, i18n 키 이전 전 임시 예외
   const t = useTranslations('equipment.attachmentsTab');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const blobUrlRef = useRef<string | null>(null);
@@ -66,7 +69,7 @@ export function DocumentPreviewDialog({
         blobUrlRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps 최소화로 open/doc 변경 시만 재실행, cleanup은 ref로 stale closure 해결
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: deps 최소화로 open/doc 변경 시만 재실행, cleanup은 ref로 stale closure 해결
   }, [open, doc?.id]);
 
   const handleDownload = async () => {
@@ -146,7 +149,7 @@ export function DocumentPreviewDialog({
             <>
               {category === 'image' && (
                 <div className="flex items-center justify-center overflow-auto bg-muted/30 rounded-lg p-4 min-h-[300px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- presigned/blob URL은 next/image 미지원 */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- self-audit-exception: presigned/blob URL은 next/image 미지원 */}
                   <img
                     src={previewUrl}
                     alt={doc?.originalFileName ?? ''}

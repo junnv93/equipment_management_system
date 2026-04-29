@@ -51,7 +51,7 @@ import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
 import { useToast } from '@/components/ui/use-toast';
-import { DocumentRevisionDialog } from '@/components/shared/DocumentRevisionDialog';
+import { DocumentRevisionDialog } from '@/components/equipment/DocumentRevisionDialog';
 
 interface AttachmentsTabProps {
   equipment: Equipment;

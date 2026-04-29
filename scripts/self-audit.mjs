@@ -331,8 +331,9 @@ function checkIconButtonA11y(file, lines) {
     if (/size=['"`]icon['"`]/.test(line) && !/<.*aria-label/.test(line)) {
       // 멀티라인 JSX: size="icon" 이후 최대 10줄 lookahead로 aria-label 검색
       const lookahead = lines.slice(i + 1, i + 11).join('\n');
-      // 닫는 > 이전까지만 확인 (다음 Button으로 넘어가지 않도록)
-      const untilClose = lookahead.split(/>/).slice(0, 2).join('>');
+      // 닫는 > 이전까지만 확인 (다음 Button으로 넘어가지 않도록).
+      // => 화살표는 ⇒로 치환 후 split — onClick={() => ...} 안의 > 오판 방지.
+      const untilClose = lookahead.replace(/=>/g, '⇒').split(/>/).slice(0, 2).join('>');
       if (!/aria-label/.test(untilClose)) {
         fail(
           '⑦ a11y icon button',

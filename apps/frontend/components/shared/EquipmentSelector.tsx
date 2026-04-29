@@ -44,6 +44,10 @@ export function EquipmentSelector({
   additionalFilters = {},
 }: EquipmentSelectorProps) {
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  // 이 컴포넌트는 checkout/calibration/인입 등 여러 도메인에서 재사용되는 진정한 shared 컴포넌트.
+  // 번역 키가 equipment.selector에 위치하나 컴포넌트 자체는 도메인 결합 없음.
+  // 해소 방법: i18n 키를 shared.equipmentSelector로 이전 또는 labels prop 주입 — 별도 배치 처리.
+  // eslint-disable-next-line no-restricted-syntax -- self-audit-exception: shared 컴포넌트, i18n 키 이전 전 임시 예외
   const tEquipment = useTranslations('equipment.selector');
 
   // 장비 목록 조회
