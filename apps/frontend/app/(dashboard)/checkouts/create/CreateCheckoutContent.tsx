@@ -96,13 +96,33 @@ export default function CreateCheckoutContent() {
   const [destination, setDestination] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [purpose, setPurpose] = useState<UserSelectableCheckoutPurpose>('calibration');
+  const [purpose, setPurpose] = useState<UserSelectableCheckoutPurpose>(() => {
+    // navigation 시 캐시에서 장비 데이터를 동기 조회해 즉시 올바른 purpose로 초기화.
+    // 캐시 미스(새로고침/직접 URL 진입)면 'calibration' 기본값 → Effect 2 fallback이 처리.
+    if (!preselectedEquipmentId || !user?.teamId) return 'calibration';
+    const eq = queryClient.getQueryData<Equipment>(
+      queryKeys.equipment.detail(preselectedEquipmentId)
+    );
+    return eq?.teamId && eq.teamId !== user.teamId ? CPVal.RENTAL : 'calibration';
+  });
   const [reason, setReason] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date>(addDays(new Date(), 7));
 
   // 외부 대여 시 사이트/팀 선택 상태
-  const [selectedSite, setSelectedSite] = useState<string>('');
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+  const [selectedSite, setSelectedSite] = useState<string>(() => {
+    if (!preselectedEquipmentId || !user?.teamId) return '';
+    const eq = queryClient.getQueryData<Equipment>(
+      queryKeys.equipment.detail(preselectedEquipmentId)
+    );
+    return eq?.teamId && eq.teamId !== user.teamId ? (eq.site ?? '') : '';
+  });
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(() => {
+    if (!preselectedEquipmentId || !user?.teamId) return '';
+    const eq = queryClient.getQueryData<Equipment>(
+      queryKeys.equipment.detail(preselectedEquipmentId)
+    );
+    return eq?.teamId && eq.teamId !== user.teamId ? eq.teamId : '';
+  });
 
   // 사용자 소속 정보
   const userTeamId = user?.teamId;
