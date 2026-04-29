@@ -58,6 +58,28 @@ export const ConditionCheckStepEnum = z.enum(CONDITION_CHECK_STEP_VALUES);
 export type ConditionCheckStep = z.infer<typeof ConditionCheckStepEnum>;
 
 /**
+ * SINGLE SOURCE OF TRUTH: 상태 확인 단계 → 액터 측 매핑 (lender / borrower)
+ *
+ * 4단계 양측 확인의 actor identity SSOT. BE scope guard(`enforceScopeFromCheckout`)
+ * 와 FE step 선택 UI 양쪽이 이 매핑을 import해 사용한다 — drift 방지.
+ *
+ * - lender_checkout: 반출 전 확인 → 빌려주는 측 (lender team)
+ * - borrower_receive: 인수 시 확인 → 빌리는 측 (requester team)
+ * - borrower_return: 반납 전 확인 → 빌린 측 (requester team)
+ * - lender_return: 반입 시 확인 → 빌려준 측 (lender team)
+ */
+export type ConditionCheckActorSide = 'lender' | 'borrower';
+
+export const CONDITION_STEP_ACTOR_SIDE: Readonly<
+  Record<ConditionCheckStep, ConditionCheckActorSide>
+> = Object.freeze({
+  lender_checkout: 'lender',
+  borrower_receive: 'borrower',
+  borrower_return: 'borrower',
+  lender_return: 'lender',
+});
+
+/**
  * SINGLE SOURCE OF TRUTH: 외관/작동 상태 열거형
  *
  * 상태 확인 시 외관 및 작동 상태를 기록하기 위한 열거형:

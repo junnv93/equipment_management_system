@@ -13,9 +13,10 @@ import checkoutApi, {
   ConditionCheck,
   CreateConditionCheckDto,
 } from '@/lib/api/checkout-api';
-import { ConditionCheckStep } from '@equipment-management/schemas';
+import { ConditionCheckStep, CONDITION_STEP_ACTOR_SIDE } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
+import { useSession } from 'next-auth/react';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutProgressStepper from '@/components/checkouts/CheckoutProgressStepper';
 import { useCheckoutProgressSteps } from '@/hooks/use-checkout-progress-steps';
@@ -48,7 +49,17 @@ export default function ConditionCheckClient({
   const formatter = useFormatter();
   const queryClient = useQueryClient();
   const { can } = useAuth();
+  const { data: session } = useSession();
   const canComplete = can(Permission.COMPLETE_CHECKOUT);
+
+  // Defense in depth: BE는 enforceScopeFromCheckout으로 cross-team 차단(403)하지만,
+  // FE도 사용자 측에 해당하지 않는 step에 진입하지 못하도록 사전 차단 + 사유 표시.
+  // SSOT: packages/schemas CONDITION_STEP_ACTOR_SIDE 매핑 사용 (BE와 동일).
+  const userTeamId = session?.user?.teamId;
+  const requesterTeamId = checkout.requesterTeamId;
+  const actorSide = CONDITION_STEP_ACTOR_SIDE[nextStep];
+  const expectedTeamId = actorSide === 'lender' ? checkout.lenderTeamId : (requesterTeamId ?? null);
+  const isWrongActor = !!userTeamId && !!expectedTeamId && userTeamId !== expectedTeamId;
 
   // 진행 흐름 stepper — descriptor 미전달(status-only fallback). hook이 status로 step index 결정.
   // condition check는 RENTAL purpose 전용이지만 hook이 purpose 기반 자동 분기.
@@ -87,14 +98,14 @@ export default function ConditionCheckClient({
     router.push(`/checkouts/${checkout.id}`);
   };
 
-  // UL-QP-18 직무분리: 권한 없는 역할은 상세 페이지로 리다이렉트 (hooks 이후)
+  // UL-QP-18 직무분리: 권한 없는 역할 + 잘못된 actor team은 상세 페이지로 리다이렉트
   useEffect(() => {
-    if (!canComplete) {
+    if (!canComplete || isWrongActor) {
       router.replace(`/checkouts/${checkout.id}`);
     }
-  }, [canComplete, router, checkout.id]);
+  }, [canComplete, isWrongActor, router, checkout.id]);
 
-  if (!canComplete) return null;
+  if (!canComplete || isWrongActor) return null;
 
   return (
     <div className={getPageContainerClasses('form')}>

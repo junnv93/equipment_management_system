@@ -27,6 +27,7 @@ import {
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
   ConditionCheckStepValues as CCSVal,
+  CONDITION_STEP_ACTOR_SIDE,
   ClassificationEnum,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   ErrorCode,
@@ -226,15 +227,8 @@ export class CheckoutsService extends VersionedBaseService {
     borrower_reject: 'reject',
   };
 
-  // condition check step → 액터 측 매핑 SSOT (lender/borrower 스코프 분기용)
-  private static readonly CONDITION_STEP_ACTING_SIDE: Readonly<
-    Record<ConditionCheckStep, 'lender' | 'borrower'>
-  > = {
-    [CCSVal.LENDER_CHECKOUT]: 'lender',
-    [CCSVal.BORROWER_RECEIVE]: 'borrower',
-    [CCSVal.BORROWER_RETURN]: 'borrower',
-    [CCSVal.LENDER_RETURN]: 'lender',
-  };
+  // condition check step → 액터 측 매핑은 packages/schemas SSOT(`CONDITION_STEP_ACTOR_SIDE`)
+  // 사용 — BE/FE drift 방지 (FE는 step 선택 UI에서 사용자 측 외 step 사전 차단).
 
   private assertFsmAction(
     checkout: Pick<Checkout, 'status' | 'purpose'>,
@@ -2793,7 +2787,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // step별 액터 측(lender/borrower) 결정 후 스코프 검증 — scope-먼저 원칙
       const conditionActingSide =
-        CheckoutsService.CONDITION_STEP_ACTING_SIDE[dto.step as ConditionCheckStep] ?? 'lender';
+        CONDITION_STEP_ACTOR_SIDE[dto.step as ConditionCheckStep] ?? 'lender';
       await this.enforceScopeFromCheckout(checkout, req, conditionActingSide);
 
       // 대여 목적만 상태 확인 가능
