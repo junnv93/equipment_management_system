@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import {
   EMPTY_STATE_TOKENS,
@@ -52,20 +52,8 @@ export default function CheckoutEmptyState({
   const showPrimary = canAct !== false;
   const Icon = CHECKOUT_ICON_MAP.emptyState[variant];
 
-  // network variant: navigator.onLine 감지 — 온라인 복구 시 자동 재시도 안내
-  const [isOnline, setIsOnline] = useState(true);
-  useEffect(() => {
-    if (variant !== 'network') return;
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [variant]);
+  // network variant: 온라인 복구 시 안내 표시 — SSOT useOnlineStatus 훅 경유
+  const { online: isOnline } = useOnlineStatus();
   const iconColorClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconColor[variant];
   const iconBgClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconBg[variant];
 

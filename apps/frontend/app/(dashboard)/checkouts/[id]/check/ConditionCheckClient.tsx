@@ -14,7 +14,7 @@ import checkoutApi, {
   CreateConditionCheckDto,
 } from '@/lib/api/checkout-api';
 import { ConditionCheckStep, CONDITION_STEP_ACTOR_SIDE } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { useSession } from 'next-auth/react';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
@@ -78,10 +78,12 @@ export default function ConditionCheckClient({
   const submitMutation = useMutation({
     mutationFn: (data: CreateConditionCheckDto) =>
       checkoutApi.submitConditionCheck(checkout.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.resource.detail(checkout.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
-      router.push(`/checkouts/${checkout.id}`);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.checkouts.resource.detail(checkout.id),
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
+      router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     },
   });
 
@@ -95,13 +97,13 @@ export default function ConditionCheckClient({
 
   // 취소 핸들러
   const handleCancel = () => {
-    router.push(`/checkouts/${checkout.id}`);
+    router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
   };
 
   // UL-QP-18 직무분리: 권한 없는 역할 + 잘못된 actor team은 상세 페이지로 리다이렉트
   useEffect(() => {
     if (!canComplete || isWrongActor) {
-      router.replace(`/checkouts/${checkout.id}`);
+      router.replace(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     }
   }, [canComplete, isWrongActor, router, checkout.id]);
 
@@ -113,7 +115,7 @@ export default function ConditionCheckClient({
       <PageHeader
         title={t('conditionCheck.title')}
         subtitle={checkout.destination}
-        backUrl={`/checkouts/${checkout.id}`}
+        backUrl={FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id)}
         backLabel={t('conditionCheck.backToDetail')}
       />
 
