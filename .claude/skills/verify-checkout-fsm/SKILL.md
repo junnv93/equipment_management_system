@@ -1385,3 +1385,43 @@ grep -B2 -A4 "requesterId.*userId" apps/backend/src/modules/checkouts/checkouts.
 - `apps/backend/src/modules/checkouts/checkouts.service.ts:getPendingChecks` + `getPendingChecksCount`
 - `packages/db/src/schema/checkouts.ts` — `requesterId` FK
 - `packages/db/src/schema/users.ts` — `teamId`
+
+---
+
+### Step 45: `findAll` + `findOne` `user.team` 양측 완전성 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** 이번 세션에서 발견된 회귀 패턴 — `findAll`의 `userInfo` 구성에 `team: { id, name, site }`를 추가했지만 `findOne`은 누락. 결���적으로 목록 경로에서는 소속이 표시되지만 단건 조회 경로(CheckoutDetailClient)에서는 여전히 "-". `user.team`을 응답에 포함하는 코드 경로는 반드시 findAll/findOne 양측 모두 동일한 구조를 유지해야 한다.
+
+**검증 명령어:**
+```bash
+# 1. findAll userInfo에 team.site 포함 여부
+grep -A10 "const userInfo = item.requester" apps/backend/src/modules/checkouts/checkouts.service.ts | grep "site"
+# 기대: teamSite 또는 site 참조 존재
+
+# 2. findOne user 응답에 team.site 포함 여부
+grep -A15 "user: userRow\[0\]" apps/backend/src/modules/checkouts/checkouts.service.ts | grep "site"
+# 기대: teamSite 또는 site 참조 존재
+
+# 3. frontend 타입 — Checkout.user.team에 site 필드 포함
+grep "team\?:" apps/frontend/lib/api/checkout-api.ts | grep "site"
+# 기대: site?: string 포함
+
+# 4. approvals-api.ts mapCheckoutToApprovalItem — team?.site 직접 접근 (캐스트 금지)
+grep "requesterSite" apps/frontend/lib/api/approvals-api.ts
+# 기대: team?.site 직접 접근, (team as ...) 캐스트 0건
+```
+
+**PASS:**
+1. `findAll` `userInfo.team` → `{ id, name, site }` 포함
+2. `findOne` `user.team` → `{ id, name, site }` 포함 (leftJoin teams)
+3. `checkout-api.ts` `team?: { ... site?: string }` 타입 포함
+4. `approvals-api.ts` `requesterSite: team?.site` 직접 접근 (캐스트 없음)
+
+**FAIL:**
+- findAll만 team 포함하고 findOne 누락 → 단건 조��� 페이지 소속 "-" 회귀
+- `(team as { site?: string })?. site` 캐스트 재도입 → 타입 드리프트 신호
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll userInfo + findOne user
+- `apps/frontend/lib/api/checkout-api.ts` — `Checkout.user.team` 타입
+- `apps/frontend/lib/api/approvals-api.ts` — `mapCheckoutToApprovalItem` requesterSite
