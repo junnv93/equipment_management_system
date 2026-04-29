@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -427,7 +428,7 @@ export default function CalibrationPlansContent({
                   <TableRow key={key} className="relative cursor-pointer">
                     <TableCell className="font-semibold tabular-nums">
                       {/* 행 전체를 키보드(Tab+Enter)로 접근 가능하게 하는 invisible overlay link */}
-                      <Link
+                      <NavLink
                         href={`/calibration-plans/${plan.id}`}
                         className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                         aria-label={t('plansList.rowAriaLabel', {
@@ -436,6 +437,7 @@ export default function CalibrationPlansContent({
                           status: t(`planStatus.${plan.status}`),
                         })}
                         tabIndex={0}
+                        pendingIndicator="none"
                       />
                       {t('plansList.yearUnit', { year: plan.year })}
                     </TableCell>

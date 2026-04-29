@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { Plus, Search, Package } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { Badge } from '@/components/ui/badge';
@@ -246,12 +247,15 @@ export default function TestSoftwareListContent() {
             </TableHeader>
             <TableBody>
               {items.map((sw) => (
-                <TableRow
-                  key={sw.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id))}
-                >
+                <TableRow key={sw.id} className="relative cursor-pointer hover:bg-muted/50">
                   <TableCell>
+                    <NavLink
+                      href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
+                      className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
+                      aria-label={sw.name}
+                      tabIndex={0}
+                      pendingIndicator="none"
+                    />
                     <span className="font-mono text-sm text-primary">{sw.managementNumber}</span>
                   </TableCell>
                   <TableCell className="font-medium">{sw.name}</TableCell>

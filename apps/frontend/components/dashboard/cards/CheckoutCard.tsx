@@ -15,7 +15,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
@@ -132,12 +132,13 @@ export function CheckoutCard({
               {t('activeBadge', { count: totalActive })}
             </span>
           )}
-          <Link
+          <NavLink
             href={FRONTEND_ROUTES.CHECKOUTS.LIST}
+            variant="card"
             className="text-[11px] text-brand-info font-medium hover:underline"
           >
             {t('viewAll')}
-          </Link>
+          </NavLink>
         </div>
       </header>
 
@@ -183,8 +184,9 @@ export function CheckoutCard({
             <ul className="flex flex-col divide-y divide-border" role="list">
               {upcomingCheckoutReturns.slice(0, 5).map((item) => (
                 <li key={item.checkoutItemId} className="py-2">
-                  <Link
+                  <NavLink
                     href={FRONTEND_ROUTES.CHECKOUTS.DETAIL(item.id)}
+                    pendingIndicator="opacity"
                     className="flex items-center justify-between gap-3 hover:bg-muted/40 -mx-1 px-1 rounded-sm motion-safe:transition-colors"
                   >
                     <div className="min-w-0">
@@ -194,7 +196,7 @@ export function CheckoutCard({
                       </div>
                     </div>
                     <DDayTag days={-item.daysUntilReturn} size="sm" />
-                  </Link>
+                  </NavLink>
                 </li>
               ))}
             </ul>
@@ -213,8 +215,9 @@ export function CheckoutCard({
             <ul className="flex flex-col divide-y divide-border" role="list">
               {overdueCheckouts.slice(0, 5).map((item) => (
                 <li key={item.checkoutItemId} className="py-2">
-                  <Link
+                  <NavLink
                     href={FRONTEND_ROUTES.CHECKOUTS.DETAIL(item.id)}
+                    pendingIndicator="opacity"
                     className="flex items-center justify-between gap-3 hover:bg-muted/40 -mx-1 px-1 rounded-sm motion-safe:transition-colors"
                   >
                     <div className="min-w-0">
@@ -226,7 +229,7 @@ export function CheckoutCard({
                       </div>
                     </div>
                     <DDayTag days={item.daysOverdue} size="sm" />
-                  </Link>
+                  </NavLink>
                 </li>
               ))}
             </ul>

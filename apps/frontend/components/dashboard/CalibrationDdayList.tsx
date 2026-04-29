@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useTranslations } from 'next-intl';
 import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -147,9 +147,10 @@ export function CalibrationDdayList({
           <div className="relative flex-1 overflow-hidden">
             <div className={cn(T.list, 'max-h-[320px]')}>
               {items.map((item) => (
-                <Link
+                <NavLink
                   key={`${item.kind}-${item.id}`}
                   href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.id)}
+                  pendingIndicator="opacity"
                   className={cn(T.item, 'hover:bg-muted/70 group')}
                   aria-label={`${item.name} ${getDdayLabel(item)}`}
                 >
@@ -165,7 +166,7 @@ export function CalibrationDdayList({
                     )}
                     <div className={T.equipmentName}>{item.name}</div>
                   </div>
-                </Link>
+                </NavLink>
               ))}
             </div>
             {/* 스크롤 어포던스 — 더 보기 있음을 시각적으로 표시 */}
@@ -177,12 +178,13 @@ export function CalibrationDdayList({
           {(overdueCount > DISPLAY_LIMITS.calibrationDday ||
             upcomingCount > DISPLAY_LIMITS.calibrationDday) && (
             <div className={T.footer}>
-              <Link
+              <NavLink
                 href={buildScopedUrl(scope, FRONTEND_ROUTES.CALIBRATION.LIST)}
+                variant="card"
                 className={T.viewAllLink}
               >
                 {t('viewAll')} →
-              </Link>
+              </NavLink>
             </div>
           )}
         </>

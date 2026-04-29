@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -126,9 +126,13 @@ export default function CalibrationListTable({
                 }`}
               >
                 <TableCell className="font-medium">
-                  <Link href={`/equipment/${item.equipmentId}`} className={CALIBRATION_TABLE.link}>
+                  <NavLink
+                    href={`/equipment/${item.equipmentId}`}
+                    variant="card"
+                    className={CALIBRATION_TABLE.link}
+                  >
                     {item.equipmentName}
-                  </Link>
+                  </NavLink>
                 </TableCell>
                 <TableCell className={getManagementNumberClasses()}>
                   {item.managementNumber}

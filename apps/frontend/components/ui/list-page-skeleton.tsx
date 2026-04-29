@@ -15,7 +15,8 @@
  * export default function TeamsLoading() {
  *   return (
  *     <ListPageSkeleton
- *       title="팀 관리"
+ *       showTitle
+ *       showDescription
  *       showFilters={true}
  *       filterCount={2}
  *       gridCols={{ base: 1, md: 2, lg: 3 }}

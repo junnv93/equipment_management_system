@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { Plus, Search, Cable } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { Badge } from '@/components/ui/badge';
@@ -249,12 +250,13 @@ export default function CableListContent() {
               {items.map((cable) => (
                 <TableRow key={cable.id}>
                   <TableCell>
-                    <Link
+                    <NavLink
                       href={FRONTEND_ROUTES.CABLES.DETAIL(cable.id)}
+                      variant="card"
                       className="font-mono text-sm text-primary hover:underline"
                     >
                       {cable.managementNumber}
-                    </Link>
+                    </NavLink>
                   </TableCell>
                   <TableCell>{cable.length || '-'}</TableCell>
                   <TableCell>

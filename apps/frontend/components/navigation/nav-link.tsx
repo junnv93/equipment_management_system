@@ -26,7 +26,8 @@ export interface NavLinkProps
   variant?: NavLinkVariant;
   /** 명시적 indicator 변형 — 없으면 variant에서 자동 추론 */
   pendingIndicator?: PendingIndicatorVariant;
-  children: React.ReactNode;
+  /** 가시 콘텐츠. invisible overlay 링크(`absolute inset-0` + `aria-label`)는 생략 가능 */
+  children?: React.ReactNode;
   className?: string;
 }
 
@@ -98,7 +99,7 @@ function NavLinkInner({
   onPendingChange,
 }: {
   indicatorVariant: PendingIndicatorVariant;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onPendingChange: (pending: boolean) => void;
 }) {
   const { pending } = useLinkStatus();
