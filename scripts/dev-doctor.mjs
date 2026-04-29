@@ -392,18 +392,36 @@ function printHumanReport(report) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * --hint-line 모드용 순수 함수. SessionStart hook에서 1줄 요약을 생성한다.
+ * level=ok면 빈 문자열 반환 (출력 없음). 그 외 [dev-hygiene] 1줄 텍스트 반환.
+ */
+export function formatHintLine(report) {
+  if (report.level === 'ok') return '';
+  const z = report.zombies?.length ?? 0;
+  const pgids = new Set((report.zombies ?? []).map((p) => p.pgid)).size;
+  const m = report.manifest?.state ?? 'unknown';
+  return `[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} — pnpm dev:doctor / pnpm dev:fresh`;
+}
+
 const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
 if (isDirectRun) {
   const args = process.argv.slice(2);
   const asJson = args.includes('--json');
+  const asHintLine = args.includes('--hint-line');
   const report = runDiagnosis();
 
   if (asJson) {
     process.stdout.write(JSON.stringify(report) + '\n');
+    process.exit(report.level === 'fail' ? 2 : report.level === 'warn' ? 1 : 0);
+  } else if (asHintLine) {
+    const hint = formatHintLine(report);
+    if (hint) process.stdout.write(hint + '\n');
+    // hint 모드는 항상 exit 0 — 알림용, 게이트 아님
+    process.exit(0);
   } else {
     printHumanReport(report);
+    // exit codes: ok=0, warn=1, fail=2
+    process.exit(report.level === 'fail' ? 2 : report.level === 'warn' ? 1 : 0);
   }
-
-  // exit codes: ok=0, warn=1, fail=2
-  process.exit(report.level === 'fail' ? 2 : report.level === 'warn' ? 1 : 0);
 }

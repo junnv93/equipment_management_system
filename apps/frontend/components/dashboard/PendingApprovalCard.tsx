@@ -363,7 +363,7 @@ export function PendingApprovalCard({
             className={cn(
               DASHBOARD_PENDING_APPROVAL_TOKENS.heroCard,
               DASHBOARD_FOCUS.brand,
-              hasItems && 'ring-2 ring-brand-critical/20'
+              hasItems && DASHBOARD_PENDING_APPROVAL_TOKENS.alertRing.heroFull
             )}
           >
             <div
@@ -460,7 +460,7 @@ export function PendingApprovalCard({
                   className={cn(
                     cardClass,
                     DASHBOARD_FOCUS.brand,
-                    hasItems && 'ring-1 ring-brand-critical/20'
+                    hasItems && DASHBOARD_PENDING_APPROVAL_TOKENS.alertRing.priority
                   )}
                 >
                   <div
@@ -538,7 +538,7 @@ export function PendingApprovalCard({
                 <div
                   className={cn(
                     DASHBOARD_PENDING_APPROVAL_TOKENS.gridCompactCard,
-                    hasItems && 'ring-1 ring-brand-critical/20'
+                    hasItems && DASHBOARD_PENDING_APPROVAL_TOKENS.alertRing.compact
                   )}
                 >
                   <div
@@ -588,7 +588,7 @@ export function PendingApprovalCard({
                   'hover:shadow-md hover:scale-[1.02]',
                   'cursor-pointer',
                   DASHBOARD_FOCUS.brand,
-                  hasItems && 'ring-2 ring-brand-critical/30'
+                  hasItems && DASHBOARD_PENDING_APPROVAL_TOKENS.alertRing.full
                 )}
               >
                 <CardContent className="p-4 flex flex-col items-center text-center">

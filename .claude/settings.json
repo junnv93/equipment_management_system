@@ -10,7 +10,7 @@
           },
           {
             "type": "command",
-            "command": "node scripts/dev-doctor.mjs --json 2>/dev/null | node -e 'let s=\"\";process.stdin.on(\"data\",d=>s+=d).on(\"end\",()=>{try{const r=JSON.parse(s);if(r.level===\"ok\")return;const z=r.zombies?.length||0;const m=r.manifest?.state||\"unknown\";const pgids=new Set((r.zombies||[]).map(p=>p.pgid)).size;console.log(`[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} — pnpm dev:doctor / pnpm dev:fresh`);}catch{}})' || true",
+            "command": "node scripts/dev-doctor.mjs --hint-line 2>/dev/null || true",
             "timeout": 10
           }
         ]

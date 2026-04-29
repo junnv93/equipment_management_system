@@ -55,6 +55,9 @@ import {
   QUERY_SAFETY_LIMITS,
   APPROVAL_REVOCATION_WINDOW_MS,
   getAllowedStatusesForPurpose,
+  isPurposeCompatibleWithEquipment,
+  USER_SELECTABLE_PURPOSES,
+  type UserSelectablePurpose,
   Permission,
 } from '@equipment-management/shared-constants';
 import { eq, and, gte, lte, or, desc, asc, sql, SQL, isNull, inArray } from 'drizzle-orm';
@@ -1755,23 +1758,25 @@ export class CheckoutsService extends VersionedBaseService {
           });
         }
 
-        // 목적별 팀 소유권 검증
-        if (purposeVal === CPVal.CALIBRATION || purposeVal === CPVal.REPAIR) {
-          // 교정/수리: 자기 팀 장비만 가능
-          if (userTeamId && equip.teamId && equip.teamId !== userTeamId) {
-            throw new BadRequestException({
-              code: CheckoutErrorCode.OWN_TEAM_ONLY,
-              message: 'Calibration/repair checkouts are only allowed for own team equipment',
-            });
-          }
-        } else if (purposeVal === CPVal.RENTAL) {
-          // 외부 대여: 다른 팀 장비만 가능
-          if (userTeamId && equip.teamId && equip.teamId === userTeamId) {
-            throw new BadRequestException({
-              code: CheckoutErrorCode.OTHER_TEAM_ONLY,
-              message: 'External rental is only allowed for other team equipment',
-            });
-          }
+        // 목적별 팀 소유권 검증 — SSOT: shared-constants/checkout-selectability
+        // return_to_vendor 등 시스템 전용 purpose는 팀 검증 제외 (USER_SELECTABLE_PURPOSES 범위만)
+        if (
+          USER_SELECTABLE_PURPOSES.includes(purposeVal as UserSelectablePurpose) &&
+          !isPurposeCompatibleWithEquipment(
+            purposeVal as UserSelectablePurpose,
+            equip.teamId,
+            userTeamId
+          )
+        ) {
+          const isRentalPurpose = purposeVal === CPVal.RENTAL;
+          throw new BadRequestException({
+            code: isRentalPurpose
+              ? CheckoutErrorCode.OTHER_TEAM_ONLY
+              : CheckoutErrorCode.OWN_TEAM_ONLY,
+            message: isRentalPurpose
+              ? 'External rental is only allowed for other team equipment'
+              : 'Calibration/repair checkouts are only allowed for own team equipment',
+          });
         }
 
         // 팀별 권한 체크: EMC팀은 RF팀 장비 반출 신청 불가 (동기, DB 0회)

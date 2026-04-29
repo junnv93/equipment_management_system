@@ -815,6 +815,16 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
   gridCompactIcon: 'h-[18px] w-[18px]',
   gridCompactLabel: `${MICRO_TYPO.badge} font-medium text-foreground leading-tight line-clamp-2 w-full`,
   gridCompactCount: 'font-mono tabular-nums font-bold text-lg tracking-tight leading-none mt-0.5',
+  /**
+   * hasItems 조건부 ring 강조 토큰 — layoutHint 4종별 두께/opacity 차별화
+   * 사용처: single-focus(heroFull) / prioritized-grid(priority) / compact grid(compact) / full grid Card(full)
+   */
+  alertRing: {
+    heroFull: 'ring-2 ring-brand-critical/20',
+    priority: 'ring-1 ring-brand-critical/20',
+    compact: 'ring-1 ring-brand-critical/20',
+    full: 'ring-2 ring-brand-critical/30',
+  } as const,
 } as const;
 
 // ============================================================================

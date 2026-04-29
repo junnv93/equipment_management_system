@@ -297,6 +297,11 @@ export function getFilteredNavSections(
  * - `count-with-action` 분기일 때만 secondaryAction 정규화
  * - href 조립 시 query param/value는 모두 SSOT(`CHECKOUT_QUERY_PARAMS` 등)에서 옴
  */
+// 컴파일 타임 exhaustiveness guard — NavItemBadgeConfig.kind에 신규 variant 추가 시 여기서 에러 발생
+function assertNever(x: never): never {
+  throw new Error(`Unhandled NavItemBadgeConfig kind: ${JSON.stringify(x)}`);
+}
+
 function resolveBadgeAndAction(
   item: NavItemConfig,
   role: UserRole | undefined,
@@ -316,19 +321,23 @@ function resolveBadgeAndAction(
   }
   if (count <= 0) return {};
 
-  if (cfg.kind === 'count-with-action') {
-    const separator = item.href.includes('?') ? '&' : '?';
-    return {
-      badge: count,
-      secondaryAction: {
-        href: `${item.href}${separator}${cfg.action.queryParam}=${cfg.action.queryValue}`,
-        ariaKey: cfg.action.ariaKey,
-        primaryAriaKey: cfg.action.primaryAriaKey,
-      },
-    };
+  switch (cfg.kind) {
+    case 'count-with-action': {
+      const separator = item.href.includes('?') ? '&' : '?';
+      return {
+        badge: count,
+        secondaryAction: {
+          href: `${item.href}${separator}${cfg.action.queryParam}=${cfg.action.queryValue}`,
+          ariaKey: cfg.action.ariaKey,
+          primaryAriaKey: cfg.action.primaryAriaKey,
+        },
+      };
+    }
+    case 'count':
+      return { badge: count };
+    default:
+      return assertNever(cfg);
   }
-
-  return { badge: count };
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
   CHECKOUT_STATS_VARIANTS,
@@ -21,7 +21,13 @@ interface HeroKPIProps {
   badge?: ReactNode;
 }
 
-export function HeroKPI({ label, value, trend, variant, badge }: HeroKPIProps) {
+export const HeroKPI = React.memo(function HeroKPI({
+  label,
+  value,
+  trend,
+  variant,
+  badge,
+}: HeroKPIProps) {
   const tokens = CHECKOUT_STATS_VARIANTS.hero;
   const valueColorClass = variant ? getSemanticContainerTextClasses(variant) : '';
   const surfaceClass = (variant && tokens.surfaceVariant[variant]) || tokens.surface;
@@ -58,4 +64,4 @@ export function HeroKPI({ label, value, trend, variant, badge }: HeroKPIProps) {
       )}
     </div>
   );
-}
+});
