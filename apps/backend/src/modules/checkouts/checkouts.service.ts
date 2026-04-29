@@ -2987,6 +2987,8 @@ export class CheckoutsService extends VersionedBaseService {
         // 3. 단계별 날짜 및 장비 상태 업데이트
         if (dto.step === CCSVal.LENDER_CHECKOUT) {
           checkoutUpdateData.checkoutDate = new Date();
+          checkoutUpdateData.lenderConfirmedBy = checkerId;
+          checkoutUpdateData.lenderConfirmedAt = new Date();
           await this.equipmentService.updateStatusBatch(
             equipmentIds,
             ESVal.CHECKED_OUT,
