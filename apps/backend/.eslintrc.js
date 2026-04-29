@@ -103,14 +103,14 @@ module.exports = {
           "Do not use computed property access for randomUUID. Use IdentifierService (DI) from '@/common/identifiers/identifier.service'. See verify-ssot Step 44.",
       },
       // 동적 import 우회 차단: `const { randomUUID } = await import('node:crypto')` 패턴.
-      // ES module import 구문이 아닌 dynamic import()도 no-restricted-imports가 검사 안 함.
+      // @typescript-eslint/parser v6+: dynamic import()는 ImportExpression 노드 (CallExpression 아님).
       {
-        selector: "CallExpression[callee.type='Import'][arguments.0.value='node:crypto']",
+        selector: "ImportExpression[source.value='node:crypto']",
         message:
           "Dynamic import('node:crypto') is not allowed. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
       },
       {
-        selector: "CallExpression[callee.type='Import'][arguments.0.value='crypto']",
+        selector: "ImportExpression[source.value='crypto']",
         message:
           "Dynamic import('crypto') is not allowed. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
       },
@@ -164,13 +164,14 @@ module.exports = {
               'Do not use computed property access for randomUUID. Use IdentifierService (DI). See verify-ssot Step 44.',
           },
           // 동적 import 우회 차단 (controller scope).
+          // @typescript-eslint/parser v6+: ImportExpression 노드 사용.
           {
-            selector: "CallExpression[callee.type='Import'][arguments.0.value='node:crypto']",
+            selector: "ImportExpression[source.value='node:crypto']",
             message:
               "Dynamic import('node:crypto') is not allowed. Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
           },
           {
-            selector: "CallExpression[callee.type='Import'][arguments.0.value='crypto']",
+            selector: "ImportExpression[source.value='crypto']",
             message:
               "Dynamic import('crypto') is not allowed. Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
           },
