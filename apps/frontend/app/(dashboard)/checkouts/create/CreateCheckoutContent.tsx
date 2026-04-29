@@ -125,26 +125,38 @@ export default function CreateCheckoutContent() {
     return CPVal.CALIBRATION;
   }, [purposeFromUrl, preselectedEquipment?.teamId, userTeamId]);
 
-  // URL 기반 프리셀렉션 자동 시드 (단일 Effect — 원자적 상태 일관성 보장)
-  // - 장비: preselectedEquipment 로드 즉시, selectedEquipments가 비어있을 때만
-  // - site/team: cross-team RENTAL이고 둘 다 비어있을 때만
-  // Strict Mode 이중 마운트 안전: 모든 가드가 ref가 아닌 state 기반
+  // Effect A: 장비 + 사이트 즉시 시드 (async 데이터 의존 없음)
+  // - 장비: 같은 site일 때만 시드 (사용자가 다른 site 선택 시 재시드 방지)
+  // - site: 비어있을 때만 (사용자 변경 보호)
   useEffect(() => {
-    if (!preselectedEquipment) return;
+    if (!preselectedEquipment || !userTeamId) return;
 
-    setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
-
-    if (
-      purpose === CPVal.RENTAL &&
-      userTeamId &&
-      preselectedEquipment.teamId !== userTeamId &&
-      !selectedSite &&
-      !selectedTeamId
-    ) {
-      setSelectedSite(preselectedEquipment.site ?? '');
-      setSelectedTeamId(preselectedEquipment.teamId ?? '');
+    const equipmentSite = preselectedEquipment.site ?? '';
+    // 현재 site가 비어있거나 프리셀렉션 장비의 site와 일치할 때만 장비 시드
+    if (!selectedSite || selectedSite === equipmentSite) {
+      setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
     }
-  }, [preselectedEquipment, purpose, userTeamId, selectedSite, selectedTeamId]);
+
+    // cross-team RENTAL: site는 즉시 시드 (팀 시드는 teamsData 로드 후 Effect B에서)
+    if (purpose === CPVal.RENTAL && preselectedEquipment.teamId !== userTeamId && !selectedSite) {
+      setSelectedSite(equipmentSite);
+    }
+  }, [preselectedEquipment, purpose, userTeamId, selectedSite]);
+
+  // Effect B: 팀 시드 — teamsData 로드 완료 후 실행 (Radix UI Select 요구사항)
+  // Radix UI Select는 value에 대응하는 SelectItem이 없으면 placeholder를 표시하며,
+  // 이후 options가 마운트돼도 자동 갱신되지 않을 수 있음.
+  // → options(teamsData) 로드 완료 후 팀 ID 존재 확인 → selectedTeamId 세팅.
+  useEffect(() => {
+    if (!teamsData?.data || !preselectedEquipment || selectedTeamId) return;
+    if (purpose !== CPVal.RENTAL || !userTeamId) return;
+    if (preselectedEquipment.teamId === userTeamId) return;
+    // 현재 선택된 site가 프리셀렉션 장비의 site와 일치할 때만 (사용자가 site 변경 시 무시)
+    if (selectedSite !== (preselectedEquipment.site ?? '')) return;
+
+    const team = teamsData.data.find((t) => t.id === preselectedEquipment.teamId);
+    if (team) setSelectedTeamId(team.id);
+  }, [teamsData?.data, preselectedEquipment, purpose, userTeamId, selectedTeamId, selectedSite]);
 
   // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
   const purposeAvailability = useMemo(
