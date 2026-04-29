@@ -579,6 +579,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
                     type="button"
                     onClick={handleApproveWithComment}
                     disabled={!approveComment.trim() || approveMutation.isPending}
+                    loading={approveMutation.isPending}
                     className={getApprovalActionButtonClasses('approve')}
                   >
                     {t(`tabMeta.${approveCommentItem.category}.action`)}
@@ -641,6 +642,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
                 type="button"
                 onClick={handleBulkApproveWithComment}
                 disabled={!bulkApproveComment.trim() || bulkApproveMutation.isPending}
+                loading={bulkApproveMutation.isPending}
                 className={getApprovalActionButtonClasses('approve')}
               >
                 {t('bulkCommentDialog.buttonLabel', {

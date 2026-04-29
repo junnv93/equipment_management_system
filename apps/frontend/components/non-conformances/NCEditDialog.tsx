@@ -165,6 +165,7 @@ export default function NCEditDialog({ nc, open, onOpenChange }: NCEditDialogPro
           <Button
             onClick={handleSubmit}
             disabled={editMutation.isPending || !cause.trim() || changeCount === 0}
+            loading={editMutation.isPending}
           >
             {editMutation.isPending
               ? t('detail.editDialog.saving')

@@ -489,7 +489,11 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
           >
             {tCommon('actions.cancel')}
           </Button>
-          <Button onClick={() => receiveMutation.mutate()} disabled={receiveMutation.isPending}>
+          <Button
+            onClick={() => receiveMutation.mutate()}
+            disabled={receiveMutation.isPending}
+            loading={receiveMutation.isPending}
+          >
             {receiveMutation.isPending
               ? tCommon('status.processing')
               : t('receiveEquipmentImport.submit')}

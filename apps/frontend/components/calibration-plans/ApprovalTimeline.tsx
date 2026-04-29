@@ -150,6 +150,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
         size="sm"
         onClick={() => reviewMutation.mutate()}
         disabled={reviewMutation.isPending || !plan}
+        loading={reviewMutation.isPending}
         className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
         aria-label={t('planDetail.timeline.ariaConfirmReview')}
       >

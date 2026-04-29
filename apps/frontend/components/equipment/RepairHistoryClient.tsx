@@ -536,7 +536,11 @@ export function RepairHistoryClient({
                 >
                   {tCommon('cancel')}
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  loading={createMutation.isPending}
+                >
                   {createMutation.isPending ? tCommon('registering') : tCommon('register')}
                 </Button>
               </DialogFooter>
@@ -672,7 +676,11 @@ export function RepairHistoryClient({
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   {tCommon('cancel')}
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  loading={updateMutation.isPending}
+                >
                   {updateMutation.isPending ? tCommon('saving') : tCommon('edit')}
                 </Button>
               </DialogFooter>

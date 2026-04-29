@@ -209,7 +209,11 @@ export function MeasurementFormDialog({ cableId, open, onOpenChange }: Measureme
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('form.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!hasValidData || createMutation.isPending}>
+          <Button
+            onClick={handleSubmit}
+            disabled={!hasValidData || createMutation.isPending}
+            loading={createMutation.isPending}
+          >
             {createMutation.isPending ? t('measurement.saving') : t('measurement.save')}
           </Button>
         </DialogFooter>

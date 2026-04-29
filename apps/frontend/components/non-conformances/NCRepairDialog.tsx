@@ -297,6 +297,7 @@ export default function NCRepairDialog({ nc, open, onOpenChange }: NCRepairDialo
                     })
                   }
                   disabled={createRepairMutation.isPending}
+                  loading={createRepairMutation.isPending}
                   className={NC_DIALOG_TOKENS.repairSubmit}
                 >
                   {createRepairMutation.isPending

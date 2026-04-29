@@ -612,6 +612,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
             <Button
               variant="destructive"
               disabled={!rejectReason.trim() || rejectMutation.isPending}
+              loading={rejectMutation.isPending}
               onClick={() => {
                 if (rejectTarget)
                   rejectMutation.mutate({

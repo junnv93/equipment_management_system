@@ -310,7 +310,11 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               {t('cancel')}
             </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
+            <Button
+              onClick={handleCreate}
+              disabled={createMutation.isPending}
+              loading={createMutation.isPending}
+            >
               {createMutation.isPending ? t('requesting') : t('submitRequest')}
             </Button>
           </DialogFooter>

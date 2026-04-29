@@ -143,7 +143,11 @@ export function ValidationEditDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('validation.form.cancel')}
               </Button>
-              <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+              <Button
+                onClick={handleUpdate}
+                disabled={updateMutation.isPending}
+                loading={updateMutation.isPending}
+              >
                 {updateMutation.isPending
                   ? t('validation.editDialog.saving')
                   : t('validation.editDialog.save')}

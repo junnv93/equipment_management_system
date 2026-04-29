@@ -235,6 +235,7 @@ export default function ResultSectionsPanel({
                       variant="ghost"
                       className={INSPECTION_SECTION_CARD.actionButton}
                       disabled={idx === 0 || reorderMutation.isPending}
+                      loading={reorderMutation.isPending}
                       onClick={() => handleMove(section, 'up')}
                       aria-label={t('moveUp')}
                     >
@@ -245,6 +246,7 @@ export default function ResultSectionsPanel({
                       variant="ghost"
                       className={INSPECTION_SECTION_CARD.actionButton}
                       disabled={idx === sections.length - 1 || reorderMutation.isPending}
+                      loading={reorderMutation.isPending}
                       onClick={() => handleMove(section, 'down')}
                       aria-label={t('moveDown')}
                     >

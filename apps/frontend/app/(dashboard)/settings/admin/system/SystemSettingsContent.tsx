@@ -297,6 +297,7 @@ function SystemSettingsFormContent({ initialSettings }: { initialSettings: Syste
               <Button
                 type="submit"
                 disabled={mutation.isPending || !form.formState.isDirty}
+                loading={mutation.isPending}
                 className={getSettingsSubmitButtonClasses()}
               >
                 {mutation.isPending ? (

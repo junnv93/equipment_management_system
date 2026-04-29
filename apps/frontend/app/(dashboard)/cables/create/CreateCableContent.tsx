@@ -185,7 +185,11 @@ export default function CreateCableContent() {
             <Button variant="outline" onClick={() => router.push(FRONTEND_ROUTES.CABLES.LIST)}>
               {t('form.cancel')}
             </Button>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending}
+              loading={createMutation.isPending}
+            >
               {createMutation.isPending ? t('create.submitting') : t('create.submitButton')}
             </Button>
           </div>

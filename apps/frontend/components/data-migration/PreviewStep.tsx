@@ -477,12 +477,17 @@ export default function PreviewStep({
               variant="outline"
               onClick={() => errorReportMutation.mutate(preview.sessionId)}
               disabled={errorReportMutation.isPending}
+              loading={errorReportMutation.isPending}
             >
               <Download className="mr-2 h-4 w-4" />
               {t('preview.downloadMigrationReport')}
             </Button>
           </div>
-          <Button onClick={handleExecute} disabled={!someSelected || executeMutation.isPending}>
+          <Button
+            onClick={handleExecute}
+            disabled={!someSelected || executeMutation.isPending}
+            loading={executeMutation.isPending}
+          >
             {executeMutation.isPending
               ? t('preview.loading')
               : t('preview.executeButtonCount', { count: selectedRowNumbers.size })}
@@ -586,13 +591,18 @@ export default function PreviewStep({
               variant="outline"
               onClick={() => errorReportMutation.mutate(preview.sessionId)}
               disabled={errorReportMutation.isPending}
+              loading={errorReportMutation.isPending}
             >
               <Download className="mr-2 h-4 w-4" />
               {t('preview.downloadErrorReport')}
             </Button>
           )}
         </div>
-        <Button onClick={handleExecute} disabled={!someSelected || executeMutation.isPending}>
+        <Button
+          onClick={handleExecute}
+          disabled={!someSelected || executeMutation.isPending}
+          loading={executeMutation.isPending}
+        >
           {executeMutation.isPending
             ? t('preview.loading')
             : t('preview.executeButtonCount', { count: selectedRowNumbers.size })}

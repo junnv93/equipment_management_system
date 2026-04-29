@@ -201,7 +201,11 @@ export function IntermediateCheckAlert({
               <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
                 {t('dialog.cancel')}
               </Button>
-              <Button onClick={handleComplete} disabled={completeMutation.isPending}>
+              <Button
+                onClick={handleComplete}
+                disabled={completeMutation.isPending}
+                loading={completeMutation.isPending}
+              >
                 {completeMutation.isPending ? t('dialog.processing') : t('dialog.submit')}
               </Button>
             </DialogFooter>
@@ -278,7 +282,11 @@ export function IntermediateCheckAlert({
             <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={handleComplete} disabled={completeMutation.isPending}>
+            <Button
+              onClick={handleComplete}
+              disabled={completeMutation.isPending}
+              loading={completeMutation.isPending}
+            >
               {completeMutation.isPending ? t('dialog.processing') : t('dialog.submit')}
             </Button>
           </DialogFooter>

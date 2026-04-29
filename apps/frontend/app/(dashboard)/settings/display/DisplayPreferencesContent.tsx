@@ -298,6 +298,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
             <Button
               type="submit"
               disabled={mutation.isPending || !form.formState.isDirty}
+              loading={mutation.isPending}
               className={getSettingsSubmitButtonClasses()}
             >
               {mutation.isPending ? (

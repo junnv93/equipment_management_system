@@ -418,6 +418,7 @@ function CheckoutGroupCard({
                     .forEach((co) => approveMutation.mutate({ id: co.id }))
                 }
                 disabled={approveMutation.isPending}
+                loading={approveMutation.isPending}
               >
                 <CheckCheck className="h-3 w-3" />
                 {t('actions.bulkApprove')} ({pendingCount})

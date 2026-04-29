@@ -219,7 +219,11 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t('maintenanceHistoryTab.dialog.cancel')}
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                loading={createMutation.isPending}
+              >
                 {createMutation.isPending
                   ? t('maintenanceHistoryTab.dialog.saving')
                   : t('maintenanceHistoryTab.dialog.save')}
@@ -344,6 +348,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                             size="sm"
                             onClick={() => handleDelete(item.id)}
                             disabled={deleteMutation.isPending}
+                            loading={deleteMutation.isPending}
                           >
                             {t('maintenanceHistoryTab.delete')}
                           </Button>

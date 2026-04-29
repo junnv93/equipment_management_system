@@ -84,6 +84,7 @@ export function DisposalCancelDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={mutation.isPending}
+            loading={mutation.isPending}
           >
             {t('cancelDialog.close')}
           </Button>
@@ -91,6 +92,7 @@ export function DisposalCancelDialog({
             variant="destructive"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
+            loading={mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('cancelDialog.confirm')}

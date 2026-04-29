@@ -39,6 +39,7 @@ export function AzureAdButton({
       variant="default"
       onClick={handleClick}
       disabled={disabled || isPending}
+      loading={isPending}
       className={cn(
         'w-full h-12 text-base font-medium text-white',
         'focus-visible:ring-2 focus-visible:ring-offset-2',

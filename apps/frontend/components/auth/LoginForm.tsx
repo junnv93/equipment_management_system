@@ -237,6 +237,7 @@ export function LoginForm({
             isSuccess && 'bg-brand-ok hover:bg-brand-ok/90'
           )}
           disabled={isPending || disabled || isSuccess}
+          loading={isPending}
           data-testid="login-button"
         >
           <div className="flex items-center justify-center gap-2">

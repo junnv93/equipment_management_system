@@ -96,6 +96,7 @@ export default function NotificationsListContent() {
               size="sm"
               onClick={() => markAllAsReadMutation.mutate()}
               disabled={markAllAsReadMutation.isPending}
+              loading={markAllAsReadMutation.isPending}
             >
               <CheckCheck className="h-4 w-4 mr-2" aria-hidden="true" />
               {t('list.markAllRead')}

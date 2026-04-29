@@ -422,7 +422,11 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               {t('form.cancel')}
             </Button>
-            <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={updateMutation.isPending}
+              loading={updateMutation.isPending}
+            >
               {updateMutation.isPending ? t('form.submitting') : t('form.submit')}
             </Button>
           </DialogFooter>

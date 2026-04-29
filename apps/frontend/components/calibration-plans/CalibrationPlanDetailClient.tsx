@@ -352,6 +352,7 @@ export function CalibrationPlanDetailClient({
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(true)}
               disabled={deleteMutation.isPending}
+              loading={deleteMutation.isPending}
               className={getActionButtonClasses('destructive')}
             >
               <Trash2 className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
@@ -363,6 +364,7 @@ export function CalibrationPlanDetailClient({
               variant="outline"
               onClick={() => setIsRejectDialogOpen(true)}
               disabled={rejectMutation.isPending}
+              loading={rejectMutation.isPending}
               className={getActionButtonClasses('destructive')}
             >
               <XCircle className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
@@ -373,6 +375,7 @@ export function CalibrationPlanDetailClient({
             <Button
               onClick={() => setIsSubmitDialogOpen(true)}
               disabled={submitForReviewMutation.isPending}
+              loading={submitForReviewMutation.isPending}
               className={getActionButtonClasses('primary')}
             >
               <Send className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
@@ -383,6 +386,7 @@ export function CalibrationPlanDetailClient({
             <Button
               onClick={() => setIsApproveDialogOpen(true)}
               disabled={approveMutation.isPending}
+              loading={approveMutation.isPending}
               className={getActionButtonClasses('primary')}
             >
               <UserCheck className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
@@ -459,6 +463,7 @@ export function CalibrationPlanDetailClient({
               variant="destructive"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
+              loading={deleteMutation.isPending}
             >
               {t('planDetail.actions.delete')}
             </Button>
@@ -480,6 +485,7 @@ export function CalibrationPlanDetailClient({
             <Button
               onClick={() => submitForReviewMutation.mutate()}
               disabled={submitForReviewMutation.isPending}
+              loading={submitForReviewMutation.isPending}
             >
               {t('planDetail.actions.submitForReview')}
             </Button>
@@ -498,7 +504,11 @@ export function CalibrationPlanDetailClient({
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
               {t('planDetail.actions.cancel')}
             </Button>
-            <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
+            <Button
+              onClick={() => approveMutation.mutate()}
+              disabled={approveMutation.isPending}
+              loading={approveMutation.isPending}
+            >
               {t('planDetail.actions.finalApprove')}
             </Button>
           </DialogFooter>
@@ -547,6 +557,7 @@ export function CalibrationPlanDetailClient({
               variant="destructive"
               onClick={() => rejectMutation.mutate()}
               disabled={rejectMutation.isPending || rejectionReason.trim().length < 10}
+              loading={rejectMutation.isPending}
             >
               {t('planDetail.actions.reject')}
             </Button>

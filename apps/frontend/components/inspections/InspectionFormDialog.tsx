@@ -786,6 +786,7 @@ export default function InspectionFormDialog({
             disabled={
               !inspectionDate || hasInvalidItems || createMutation.isPending || isEquipmentError
             }
+            loading={createMutation.isPending}
           >
             {createMutation.isPending
               ? t('intermediateInspection.saving')

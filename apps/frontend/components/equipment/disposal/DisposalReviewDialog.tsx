@@ -197,13 +197,19 @@ export function DisposalReviewDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={mutation.isPending}
+            loading={mutation.isPending}
+          >
             {t('common.cancel')}
           </Button>
           <Button
             variant="outline"
             onClick={handleReject}
             disabled={mutation.isPending || (showRejectInput && !isValid)}
+            loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.reject}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
@@ -212,6 +218,7 @@ export function DisposalReviewDialog({
           <Button
             onClick={() => mutation.mutate('approve')}
             disabled={!isValid || mutation.isPending || showRejectInput}
+            loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.review}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}

@@ -465,7 +465,11 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
           <Button type="button" variant="outline" onClick={handleBack}>
             {t('equipmentImport.createForm.cancelButton')}
           </Button>
-          <Button type="submit" disabled={createMutation.isPending}>
+          <Button
+            type="submit"
+            disabled={createMutation.isPending}
+            loading={createMutation.isPending}
+          >
             {createMutation.isPending
               ? t('equipmentImport.createForm.submitting')
               : t('equipmentImport.createForm.submitButton')}

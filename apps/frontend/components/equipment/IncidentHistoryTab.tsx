@@ -550,7 +550,11 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   {t('incidentHistoryTab.dialog.cancel')}
                 </Button>
-                <Button type="submit" disabled={createRepairMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createRepairMutation.isPending}
+                  loading={createRepairMutation.isPending}
+                >
                   {createRepairMutation.isPending
                     ? t('incidentHistoryTab.dialog.registering')
                     : t('incidentHistoryTab.dialog.register')}
@@ -738,7 +742,11 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   {t('incidentHistoryTab.dialog.cancel')}
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  loading={createMutation.isPending}
+                >
                   {createMutation.isPending
                     ? t('incidentHistoryTab.dialog.saving')
                     : t('incidentHistoryTab.dialog.save')}
@@ -873,6 +881,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                               size="sm"
                               onClick={() => handleDelete(item.id)}
                               disabled={deleteMutation.isPending}
+                              loading={deleteMutation.isPending}
                             >
                               {t('incidentHistoryTab.delete')}
                             </Button>

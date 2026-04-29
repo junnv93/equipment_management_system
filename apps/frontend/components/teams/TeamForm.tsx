@@ -347,10 +347,11 @@ export function TeamForm({ team, mode }: TeamFormProps) {
             variant="outline"
             onClick={() => router.back()}
             disabled={isPending}
+            loading={isPending}
           >
             {t('form.cancel')}
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending} loading={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 motion-safe:animate-spin" />

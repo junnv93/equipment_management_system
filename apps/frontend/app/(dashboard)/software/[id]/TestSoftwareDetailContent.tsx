@@ -437,7 +437,11 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               {t('form.cancel')}
             </Button>
-            <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={updateMutation.isPending}
+              loading={updateMutation.isPending}
+            >
               {updateMutation.isPending ? t('form.submitting') : t('form.submit')}
             </Button>
           </DialogFooter>
@@ -509,6 +513,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
                             size="sm"
                             onClick={() => handleUnlinkEquipment(eq.id)}
                             disabled={unlinkEquipmentMutation.isPending}
+                            loading={unlinkEquipmentMutation.isPending}
                           >
                             <Unlink className="h-3.5 w-3.5 text-destructive" />
                           </Button>
@@ -557,6 +562,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
             <Button
               onClick={handleLinkEquipment}
               disabled={!selectedEquipmentId || linkEquipmentMutation.isPending}
+              loading={linkEquipmentMutation.isPending}
             >
               {t('linkedEquipment.linkButton')}
             </Button>

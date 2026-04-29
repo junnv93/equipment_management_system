@@ -205,6 +205,7 @@ export default function CreateTestSoftwareContent() {
             <Button
               onClick={handleSubmit}
               disabled={!form.name || !form.testField || createMutation.isPending}
+              loading={createMutation.isPending}
             >
               {createMutation.isPending ? t('form.submitting') : t('create.submitButton')}
             </Button>

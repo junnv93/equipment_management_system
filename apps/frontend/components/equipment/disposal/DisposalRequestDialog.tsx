@@ -199,12 +199,18 @@ export function DisposalRequestDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={mutation.isPending}
+            loading={mutation.isPending}
+          >
             {t('common.cancel')}
           </Button>
           <Button
             onClick={() => mutation.mutate()}
             disabled={!isValid || mutation.isPending}
+            loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.submit}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}

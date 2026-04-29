@@ -374,11 +374,16 @@ export function CalibrationForm({
               variant="outline"
               onClick={onCancel}
               disabled={mutation.isPending}
+              loading={mutation.isPending}
             >
               {t('form.cancel')}
             </Button>
           )}
-          <Button type="submit" disabled={disabled || mutation.isPending}>
+          <Button
+            type="submit"
+            disabled={disabled || mutation.isPending}
+            loading={mutation.isPending}
+          >
             {mutation.isPending ? t('form.submitting') : t('form.submit')}
           </Button>
         </div>

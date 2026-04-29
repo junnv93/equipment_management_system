@@ -75,6 +75,7 @@ export function ValidationActionsBar({
                 submitMutation.mutate({ id: v.id, version: v.version });
               }}
               disabled={submitMutation.isPending}
+              loading={submitMutation.isPending}
             >
               {t('validation.actions.submit')}
             </Button>
@@ -93,6 +94,7 @@ export function ValidationActionsBar({
               }}
               // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
               disabled={approveMutation.isPending || v.submittedBy === userId}
+              loading={approveMutation.isPending}
               title={
                 v.submittedBy === userId ? t('validation.actions.selfApprovalForbidden') : undefined
               }
@@ -122,6 +124,7 @@ export function ValidationActionsBar({
             }}
             // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
             disabled={qualityApproveMutation.isPending || v.technicalApproverId === userId}
+            loading={qualityApproveMutation.isPending}
             title={
               v.technicalApproverId === userId
                 ? t('validation.actions.dualApprovalForbidden')
@@ -141,6 +144,7 @@ export function ValidationActionsBar({
               reviseMutation.mutate({ id: v.id, version: v.version });
             }}
             disabled={reviseMutation.isPending}
+            loading={reviseMutation.isPending}
           >
             {t('validation.actions.revise')}
           </Button>

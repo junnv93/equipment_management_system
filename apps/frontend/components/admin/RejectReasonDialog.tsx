@@ -84,6 +84,7 @@ export function RejectReasonDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!reason.trim() || isPending}
+            loading={isPending}
           >
             {t('actions.reject')}
           </Button>

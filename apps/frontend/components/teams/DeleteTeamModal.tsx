@@ -128,6 +128,7 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
             variant="destructive"
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
+            loading={deleteMutation.isPending}
           >
             {deleteMutation.isPending ? (
               <>

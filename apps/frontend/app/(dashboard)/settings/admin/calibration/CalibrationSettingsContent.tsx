@@ -220,6 +220,7 @@ function CalibrationSettingsFormContent({
         <Button
           onClick={() => mutation.mutate({ alertDays })}
           disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
+          loading={mutation.isPending}
           className={getSettingsSubmitButtonClasses()}
         >
           {mutation.isPending ? (

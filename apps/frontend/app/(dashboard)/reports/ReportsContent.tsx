@@ -542,6 +542,7 @@ export default function ReportsContent(_props: ReportsContentProps) {
               <Button
                 onClick={handleGenerateReport}
                 disabled={isPending}
+                loading={isPending}
                 className={REPORTS_LAYOUT_TOKENS.submitButton}
               >
                 {isPending ? (

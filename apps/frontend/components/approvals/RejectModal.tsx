@@ -186,13 +186,20 @@ export default function RejectModal(props: RejectModalProps) {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isPending}
+              loading={isPending}
+            >
               {t('rejectModal.cancel')}
             </Button>
             <Button
               type="submit"
               variant="outline"
               disabled={isPending}
+              loading={isPending}
               aria-busy={isPending}
               className={getApprovalActionButtonClasses('reject')}
             >

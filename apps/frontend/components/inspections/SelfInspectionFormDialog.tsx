@@ -459,7 +459,7 @@ export default function SelfInspectionFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('selfInspection.form.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || isPending}>
+          <Button onClick={handleSubmit} disabled={!isValid || isPending} loading={isPending}>
             {isPending
               ? t('selfInspection.form.saving')
               : isEdit

@@ -77,6 +77,7 @@ export function CalibrationApprovalActions({
           variant="outline"
           className={getCalibrationActionButtonClasses('approve')}
           disabled={isPending}
+          loading={isPending}
           onClick={() =>
             approveMutation.mutate({ id: calibration.id, version: calibration.version })
           }
@@ -89,6 +90,7 @@ export function CalibrationApprovalActions({
           variant="outline"
           className={getCalibrationActionButtonClasses('reject')}
           disabled={isPending}
+          loading={isPending}
           onClick={() => setIsRejectDialogOpen(true)}
         >
           <XCircle className="h-3.5 w-3.5 mr-1" />

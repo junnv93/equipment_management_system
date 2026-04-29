@@ -100,6 +100,7 @@ export function NotificationsDropdown() {
               className="h-6 text-xs"
               onClick={handleMarkAllAsRead}
               disabled={markAllAsReadMutation.isPending}
+              loading={markAllAsReadMutation.isPending}
             >
               {t('layout.markAllRead')}
             </Button>

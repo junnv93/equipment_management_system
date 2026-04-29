@@ -467,7 +467,11 @@ export default function EquipmentImportDetail({ id }: Props) {
       <div className="flex gap-2">
         {status === EISVal.PENDING && canApprove && (
           <>
-            <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
+            <Button
+              onClick={() => approveMutation.mutate()}
+              disabled={approveMutation.isPending}
+              loading={approveMutation.isPending}
+            >
               <Check className="mr-2 h-4 w-4" />
               {t('equipmentImport.approve')}
             </Button>
@@ -503,6 +507,7 @@ export default function EquipmentImportDetail({ id }: Props) {
           <Button
             onClick={() => initiateReturnMutation.mutate()}
             disabled={initiateReturnMutation.isPending}
+            loading={initiateReturnMutation.isPending}
           >
             <Undo2 className="mr-2 h-4 w-4" />
             {t('equipmentImport.initiateReturn')}
@@ -560,6 +565,7 @@ export default function EquipmentImportDetail({ id }: Props) {
               variant="destructive"
               onClick={() => rejectMutation.mutate()}
               disabled={!rejectionReason.trim() || rejectMutation.isPending}
+              loading={rejectMutation.isPending}
             >
               {t('equipmentImport.rejectDialog.submit')}
             </Button>
@@ -592,6 +598,7 @@ export default function EquipmentImportDetail({ id }: Props) {
               variant="destructive"
               onClick={() => cancelMutation.mutate()}
               disabled={!cancelReason.trim() || cancelMutation.isPending}
+              loading={cancelMutation.isPending}
             >
               {t('equipmentImport.cancelDialog.submit')}
             </Button>

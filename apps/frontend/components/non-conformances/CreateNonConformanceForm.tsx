@@ -274,6 +274,7 @@ export function CreateNonConformanceForm({
           variant="destructive"
           onClick={handleSubmit}
           disabled={createMutation.isPending || isUploadingPhotos}
+          loading={createMutation.isPending}
         >
           {isUploadingPhotos
             ? t('management.form.uploadingPhotos')

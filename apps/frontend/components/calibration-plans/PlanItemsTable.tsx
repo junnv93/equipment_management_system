@@ -286,6 +286,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                   confirmAllMutation.mutate(undefined);
                 }}
                 disabled={confirmAllMutation.isPending || confirmItemMutation.isPending}
+                loading={confirmAllMutation.isPending || confirmItemMutation.isPending}
                 aria-label={t('planDetail.items.confirmAllTitle')}
                 className="ml-auto shrink-0"
               >
@@ -513,6 +514,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                   size="sm"
                                   onClick={handleSaveEdit}
                                   disabled={updateItemMutation.isPending}
+                                  loading={updateItemMutation.isPending}
                                   className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
                                 >
                                   <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
@@ -563,6 +565,10 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                         confirmItemMutation.mutate(item.id);
                                       }}
                                       disabled={
+                                        confirmItemMutation.isPending ||
+                                        confirmAllMutation.isPending
+                                      }
+                                      loading={
                                         confirmItemMutation.isPending ||
                                         confirmAllMutation.isPending
                                       }

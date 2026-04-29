@@ -927,6 +927,7 @@ export default function CreateCheckoutContent() {
                   onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}
                   className="flex-1 sm:flex-none"
                   disabled={createCheckoutMutation.isPending}
+                  loading={createCheckoutMutation.isPending}
                 >
                   {t('actions.cancel')}
                 </Button>
@@ -938,6 +939,7 @@ export default function CreateCheckoutContent() {
                     selectedEquipments.length === 0 ||
                     equipmentsError
                   }
+                  loading={createCheckoutMutation.isPending}
                   className="flex-1 sm:flex-none min-w-[120px]"
                 >
                   {createCheckoutMutation.isPending ? (

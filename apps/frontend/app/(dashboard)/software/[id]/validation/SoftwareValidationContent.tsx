@@ -432,6 +432,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                 }
               }}
               disabled={!rejectionReason.trim() || rejectMutation.isPending}
+              loading={rejectMutation.isPending}
             >
               {t('validation.rejectDialog.confirm')}
             </Button>
@@ -475,6 +476,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                 }
               }}
               disabled={approveMutation.isPending}
+              loading={approveMutation.isPending}
             >
               {approveMutation.isPending
                 ? t('validation.approveDialog.submitting')
@@ -522,6 +524,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                 }
               }}
               disabled={qualityApproveMutation.isPending}
+              loading={qualityApproveMutation.isPending}
             >
               {qualityApproveMutation.isPending
                 ? t('validation.qualityApproveDialog.submitting')

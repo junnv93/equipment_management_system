@@ -5,10 +5,7 @@ import { Check, AlertTriangle, X } from 'lucide-react';
 import { useTranslations, useFormatter } from 'next-intl';
 
 import { cn } from '@/lib/utils';
-import {
-  type ProgressStepDescriptor,
-  type ProgressStepState,
-} from '@equipment-management/schemas';
+import { type ProgressStepDescriptor, type ProgressStepState } from '@equipment-management/schemas';
 
 // ============================================================================
 // 컴포넌트 토큰 (와이어프레임 02 line 73-126 정확 복제 + design-tokens 참조)
@@ -34,8 +31,7 @@ const STEP_CIRCLE_BY_STATE: Record<ProgressStepState, string> = {
     'motion-safe:animate-pulse',
   future: 'bg-card text-muted-foreground border-brand-border-strong',
   // terminated — 반려/취소된 reachedStep. 회색 strike + 비활성 시각.
-  terminated:
-    'bg-muted text-muted-foreground border-brand-border-strong opacity-60',
+  terminated: 'bg-muted text-muted-foreground border-brand-border-strong opacity-60',
 };
 
 const STEP_LABEL_BY_STATE: Record<ProgressStepState, string> = {
@@ -95,7 +91,12 @@ const StepNode = memo(function StepNode({
   const metaLine = (() => {
     if (state === 'done' && timestamp) {
       const date = new Date(timestamp);
-      const formatted = format.dateTime(date, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const formatted = format.dateTime(date, {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
       return (
         <span className="block">
           {formatted}
@@ -116,9 +117,7 @@ const StepNode = memo(function StepNode({
     if (scheduledAt) {
       const date = new Date(scheduledAt);
       const formatted = format.dateTime(date, { month: '2-digit', day: '2-digit' });
-      return (
-        <span className="block">{t('progressStep.metaScheduled', { date: formatted })}</span>
-      );
+      return <span className="block">{t('progressStep.metaScheduled', { date: formatted })}</span>;
     }
     return null;
   })();

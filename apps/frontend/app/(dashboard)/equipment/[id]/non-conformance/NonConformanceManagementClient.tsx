@@ -569,7 +569,11 @@ export default function NonConformanceManagementClient({
                     </Select>
                   </div>
                   <div className="flex gap-3">
-                    <Button onClick={() => handleUpdate(nc.id)} disabled={updateMutation.isPending}>
+                    <Button
+                      onClick={() => handleUpdate(nc.id)}
+                      disabled={updateMutation.isPending}
+                      loading={updateMutation.isPending}
+                    >
                       {updateMutation.isPending
                         ? t('management.update.saving')
                         : t('management.update.save')}

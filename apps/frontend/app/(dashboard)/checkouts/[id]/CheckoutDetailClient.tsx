@@ -539,6 +539,7 @@ export default function CheckoutDetailClient({
             className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
             onClick={() => setDialogState((prev) => ({ ...prev, cancel: true }))}
             disabled={cancelMutation.isPending}
+            loading={cancelMutation.isPending}
           >
             {t('actions.cancelCheckout')}
           </Button>
@@ -875,7 +876,11 @@ export default function CheckoutDetailClient({
             >
               {t('actions.cancel')}
             </Button>
-            <Button onClick={handleStart} disabled={startMutation.isPending}>
+            <Button
+              onClick={handleStart}
+              disabled={startMutation.isPending}
+              loading={startMutation.isPending}
+            >
               {startMutation.isPending ? t('actions.processing') : t('actions.confirm')}
             </Button>
           </DialogFooter>
@@ -899,7 +904,11 @@ export default function CheckoutDetailClient({
             >
               {t('actions.cancel')}
             </Button>
-            <Button onClick={handleApproveReturn} disabled={approveReturnMutation.isPending}>
+            <Button
+              onClick={handleApproveReturn}
+              disabled={approveReturnMutation.isPending}
+              loading={approveReturnMutation.isPending}
+            >
               {approveReturnMutation.isPending ? t('actions.processing') : t('actions.confirm')}
             </Button>
           </DialogFooter>
@@ -948,6 +957,7 @@ export default function CheckoutDetailClient({
               variant="destructive"
               onClick={handleRejectReturn}
               disabled={!returnRejectReason.trim() || rejectReturnMutation.isPending}
+              loading={rejectReturnMutation.isPending}
             >
               {rejectReturnMutation.isPending ? t('actions.processing') : t('actions.returnReject')}
             </Button>
@@ -998,6 +1008,7 @@ export default function CheckoutDetailClient({
               variant="destructive"
               onClick={handleReject}
               disabled={!rejectReason.trim() || rejectMutation.isPending}
+              loading={rejectMutation.isPending}
             >
               {rejectMutation.isPending ? t('actions.processing') : t('actions.reject')}
             </Button>
@@ -1026,6 +1037,7 @@ export default function CheckoutDetailClient({
               variant="destructive"
               onClick={handleCancelCheckout}
               disabled={cancelMutation.isPending}
+              loading={cancelMutation.isPending}
             >
               {cancelMutation.isPending ? t('actions.processing') : t('actions.cancelCheckout')}
             </Button>
@@ -1054,6 +1066,7 @@ export default function CheckoutDetailClient({
               className={CHECKOUT_DETAIL_TOKENS.approveButton}
               onClick={() => borrowerApproveMutation.mutate()}
               disabled={borrowerApproveMutation.isPending}
+              loading={borrowerApproveMutation.isPending}
             >
               {borrowerApproveMutation.isPending
                 ? t('actions.processing')
@@ -1098,6 +1111,7 @@ export default function CheckoutDetailClient({
               variant="destructive"
               onClick={() => borrowerRejectMutation.mutate(borrowerRejectReason)}
               disabled={!borrowerRejectReason.trim() || borrowerRejectMutation.isPending}
+              loading={borrowerRejectMutation.isPending}
             >
               {borrowerRejectMutation.isPending
                 ? t('actions.processing')

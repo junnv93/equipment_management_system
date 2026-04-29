@@ -396,7 +396,11 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t('checkoutHistoryTab.dialog.cancel')}
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                loading={createMutation.isPending}
+              >
                 {createMutation.isPending
                   ? t('checkoutHistoryTab.dialog.submitting')
                   : t('checkoutHistoryTab.dialog.submit')}

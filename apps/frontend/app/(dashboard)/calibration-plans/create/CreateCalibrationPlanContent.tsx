@@ -363,6 +363,7 @@ export default function CreateCalibrationPlanContent() {
         <Button
           onClick={handleCreate}
           disabled={!selectedYear || !selectedSite || createMutation.isPending}
+          loading={createMutation.isPending}
         >
           {createMutation.isPending ? (
             <>{t('planCreate.actions.saving')}</>

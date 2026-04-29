@@ -267,6 +267,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             size="sm"
             variant="destructive"
             disabled={!rejectionReason || isPending}
+            loading={isPending}
             onClick={() => rejectMutation.mutate({ id, version, reason: rejectionReason })}
           >
             <XCircle className="h-3 w-3" />
@@ -381,6 +382,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             size="icon"
             className="h-7 w-7"
             disabled={isPending}
+            loading={isPending}
             aria-label={t('intermediateInspection.actions.menuAriaLabel', {
               date: inspectionDateLabel,
             })}

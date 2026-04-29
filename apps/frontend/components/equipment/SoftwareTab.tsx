@@ -349,6 +349,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                             aria-label={t('softwareTab.unlinkAriaLabel', { name: sw.name })}
                             onClick={() => handleUnlink(sw.id)}
                             disabled={unlinkMutation.isPending}
+                            loading={unlinkMutation.isPending}
                           >
                             <Unlink className="h-3.5 w-3.5 text-destructive" />
                           </Button>
@@ -410,7 +411,11 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
             <Button variant="outline" onClick={() => setIsLinkOpen(false)}>
               {t('softwareTab.cancel')}
             </Button>
-            <Button onClick={handleLink} disabled={!selectedSoftwareId || linkMutation.isPending}>
+            <Button
+              onClick={handleLink}
+              disabled={!selectedSoftwareId || linkMutation.isPending}
+              loading={linkMutation.isPending}
+            >
               {t('softwareTab.linkButton')}
             </Button>
           </DialogFooter>

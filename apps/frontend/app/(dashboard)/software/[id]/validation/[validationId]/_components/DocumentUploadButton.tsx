@@ -60,6 +60,7 @@ export function DocumentUploadButton({ validationId, validationType }: DocumentU
         size="sm"
         onClick={() => fileInputRef.current?.click()}
         disabled={uploadMutation.isPending}
+        loading={uploadMutation.isPending}
       >
         <Upload className="mr-1 h-3.5 w-3.5" />
         {uploadMutation.isPending

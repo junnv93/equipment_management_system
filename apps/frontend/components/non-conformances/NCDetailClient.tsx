@@ -452,6 +452,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                   <Button
                     size="sm"
                     disabled={saveMutation.isPending}
+                    loading={saveMutation.isPending}
                     onClick={() => saveMutation.mutate({ correctionContent: correctionText })}
                   >
                     {t('detail.correction.save')}
@@ -580,6 +581,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               className={NC_APPROVE_BUTTON_TOKENS.approve}
               onClick={() => closeMutation.mutate({ closureNotes })}
               disabled={closeMutation.isPending}
+              loading={closeMutation.isPending}
             >
               {closeMutation.isPending
                 ? t('detail.dialog.closeProcessing')
@@ -616,6 +618,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 rejectMutation.mutate({ rejectionReason });
               }}
               disabled={rejectMutation.isPending}
+              loading={rejectMutation.isPending}
             >
               {rejectMutation.isPending
                 ? t('detail.dialog.rejectProcessing')

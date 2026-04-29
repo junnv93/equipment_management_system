@@ -105,7 +105,11 @@ export function ValidationCreateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('validation.form.cancel')}
           </Button>
-          <Button onClick={onSubmit} disabled={!createForm.validationType || isPending}>
+          <Button
+            onClick={onSubmit}
+            disabled={!createForm.validationType || isPending}
+            loading={isPending}
+          >
             {isPending ? t('validation.form.submitting') : t('validation.form.submit')}
           </Button>
         </DialogFooter>

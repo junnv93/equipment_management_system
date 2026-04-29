@@ -263,7 +263,11 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t('locationHistoryTab.dialog.cancel')}
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                loading={createMutation.isPending}
+              >
                 {createMutation.isPending
                   ? t('locationHistoryTab.dialog.saving')
                   : t('locationHistoryTab.dialog.save')}
@@ -407,6 +411,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                             size="sm"
                             onClick={() => handleDelete(item.id)}
                             disabled={deleteMutation.isPending}
+                            loading={deleteMutation.isPending}
                           >
                             {t('locationHistoryTab.delete')}
                           </Button>

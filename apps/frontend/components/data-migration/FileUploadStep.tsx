@@ -218,11 +218,12 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
           variant="outline"
           onClick={() => templateMutation.mutate()}
           disabled={templateMutation.isPending}
+          loading={templateMutation.isPending}
         >
           <Download className="mr-2 h-4 w-4" />
           {t('upload.downloadTemplate')}
         </Button>
-        <Button onClick={handlePreview} disabled={!selectedFile || isPending}>
+        <Button onClick={handlePreview} disabled={!selectedFile || isPending} loading={isPending}>
           {isPending ? (
             t('upload.loading')
           ) : (
