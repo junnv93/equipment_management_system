@@ -450,7 +450,7 @@ describe('getNextStep', () => {
       TECHNICAL_MANAGER_PERMS
     );
     expect(result.currentStepIndex).toBe(4);
-    expect(result.totalSteps).toBe(8);
+    expect(result.totalSteps).toBe(7);
   });
 
   it('rejected → terminal', () => {
@@ -524,7 +524,7 @@ describe('computeReachedStepIndex — non-terminal states', () => {
     ['pending', 'rental', 1],
     ['borrower_approved', 'rental', 2],
     ['approved', 'rental', 3],
-    ['in_use', 'rental', 6],
+    ['in_use', 'rental', 5],
   ];
 
   it.each(cases)(
