@@ -11,8 +11,8 @@ import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 export default function CalibrationPlansLoading() {
   return (
     <ListPageSkeleton
-      title="교정 계획"
-      description="연간 교정 계획을 수립하고 관리합니다"
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={3}
       showSearch={false}

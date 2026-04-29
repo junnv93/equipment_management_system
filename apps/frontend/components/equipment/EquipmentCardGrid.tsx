@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Calendar, MapPin, Tag, Package, ArrowRight, Wrench } from 'lucide-react';
@@ -277,8 +277,9 @@ const EquipmentCard = memo(function EquipmentCard({
       </CardContent>
 
       <CardFooter className="pt-2 justify-end">
-        <Link
+        <NavLink
           href={`/equipment/${equipment.id}`}
+          variant="card"
           aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
           className={cn(
             'inline-flex items-center gap-1 text-sm text-brand-text-secondary hover:text-brand-text-primary',
@@ -287,7 +288,7 @@ const EquipmentCard = memo(function EquipmentCard({
         >
           {t('detail.viewDetail')}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
+        </NavLink>
       </CardFooter>
     </Card>
   );

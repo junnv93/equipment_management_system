@@ -32,8 +32,8 @@ type PageProps = {
 function CalibrationPlansLoadingFallback() {
   return (
     <ListPageSkeleton
-      title="교정계획서"
-      description="연간 외부교정 대상 장비의 교정 계획을 관리합니다"
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={4}
       showSearch={false}

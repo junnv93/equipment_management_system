@@ -11,8 +11,8 @@ import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 export default function EquipmentLoading() {
   return (
     <ListPageSkeleton
-      title="장비 관리"
-      description="시험소 장비를 등록하고 관리합니다"
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={6}
       showSearch={true}

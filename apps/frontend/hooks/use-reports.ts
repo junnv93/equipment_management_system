@@ -173,7 +173,7 @@ export const useGenerateReport = (options?: {
     },
     onSuccess: (data) => {
       toast({
-        title: t(FEEDBACK_KEYS.created),
+        title: t(FEEDBACK_KEYS.reportGenerated),
         description: t(FEEDBACK_KEYS.reportFileDownloaded, { fileName: data.fileName }),
         variant: 'default',
       });

@@ -11,8 +11,8 @@ import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 export default function TeamsLoading() {
   return (
     <ListPageSkeleton
-      title="팀 관리"
-      description="시험소 팀을 관리하고 팀원 및 장비 현황을 확인합니다"
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={3}
       showSearch={true}

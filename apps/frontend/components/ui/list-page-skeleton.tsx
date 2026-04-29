@@ -32,10 +32,10 @@ import { getPageContainerClasses } from '@/lib/design-tokens';
 import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 interface ListPageSkeletonProps {
-  /** Page title (optional, shows skeleton title if provided) */
-  title?: string;
-  /** Description (optional) */
-  description?: string;
+  /** 제목 스켈레톤 행 표시 여부 */
+  showTitle?: boolean;
+  /** 설명 스켈레톤 행 표시 여부 */
+  showDescription?: boolean;
   /** Show filter bar */
   showFilters?: boolean;
   /** Number of filter dropdowns */
@@ -59,13 +59,13 @@ interface ListPageSkeletonProps {
  *
  * a11y:
  * - role="status" + aria-busy="true" + aria-live="polite"
- * - sr-only label: title prop 있으면 우선, 없으면 `feedback.loadingList` i18n
+ * - sr-only label: `feedback.loadingList` i18n
  *
  * 자식 Skeleton은 `aria-hidden="true"` (중복 announce 회피, Invariant I8)
  */
 export async function ListPageSkeleton({
-  title,
-  description,
+  showTitle,
+  showDescription,
   showFilters = true,
   filterCount = 2,
   showSearch = true,
@@ -98,10 +98,10 @@ export async function ListPageSkeleton({
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          {title !== undefined && (
+          {showTitle && (
             <Skeleton className="h-9 w-32" /> // h1 title
           )}
-          {description !== undefined && (
+          {showDescription && (
             <Skeleton className="h-5 w-96" /> // description
           )}
         </div>
@@ -157,8 +157,8 @@ export function CardSkeleton() {
  * 테이블 스켈레톤 (테이블 레이아웃용) — async server component (Invariant I3)
  */
 export async function TablePageSkeleton({
-  title,
-  description,
+  showTitle,
+  showDescription,
   showFilters = true,
   filterCount = 2,
   showSearch = true,
@@ -183,8 +183,8 @@ export async function TablePageSkeleton({
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          {title !== undefined && <Skeleton className="h-9 w-32" />}
-          {description !== undefined && <Skeleton className="h-5 w-96" />}
+          {showTitle && <Skeleton className="h-9 w-32" />}
+          {showDescription && <Skeleton className="h-5 w-96" />}
         </div>
         {showActionButton && <Skeleton className="h-10 w-32" />}
       </div>

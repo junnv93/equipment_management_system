@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useNavigateWithPending } from '@/hooks/use-navigate-with-pending';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClipboardList, Clock, AlertTriangle, PackageCheck, PackageOpen } from 'lucide-react';
@@ -146,6 +147,7 @@ export default function OutboundCheckoutsTab({
 }: OutboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
   const router = useRouter();
+  const navigateWithPending = useNavigateWithPending();
   const { can } = useAuth();
   const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 
@@ -217,8 +219,8 @@ export default function OutboundCheckoutsTab({
   });
 
   const handleCheckoutClick = useCallback(
-    (id: string) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
-    [router]
+    (id: string) => navigateWithPending(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
+    [navigateWithPending]
   );
 
   // ──────────────────────────────────────────────

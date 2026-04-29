@@ -11,8 +11,8 @@ import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 export default function CalibrationLoading() {
   return (
     <ListPageSkeleton
-      title="교정 관리"
-      description="장비 교정 기록을 관리하고 승인합니다"
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={7}
       showSearch={true}

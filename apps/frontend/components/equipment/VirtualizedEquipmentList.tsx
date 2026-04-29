@@ -5,7 +5,7 @@ import { List, type RowComponentProps } from 'react-window';
 import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useTranslations } from 'next-intl';
 import { Equipment } from '@/lib/api/equipment-api';
@@ -67,11 +67,11 @@ const EquipmentRow = memo(
         </TableCell>
         <TableCell className="hidden md:table-cell">{equipment.location}</TableCell>
         <TableCell className="text-right">
-          <Link href={`/equipment/${equipment.id}`}>
+          <NavLink href={`/equipment/${equipment.id}`} variant="card">
             <Button variant="outline" size="sm">
               {t('virtualizedList.headers.detail')}
             </Button>
-          </Link>
+          </NavLink>
         </TableCell>
       </TableRow>
     );

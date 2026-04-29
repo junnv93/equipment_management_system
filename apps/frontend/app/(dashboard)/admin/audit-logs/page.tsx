@@ -32,8 +32,8 @@ export default function AuditLogsPage(props: {
     <Suspense
       fallback={
         <TablePageSkeleton
-          title="감사 로그"
-          description="시스템 활동 기록"
+          showTitle
+          showDescription
           showFilters={true}
           filterCount={3}
           columnCount={7}

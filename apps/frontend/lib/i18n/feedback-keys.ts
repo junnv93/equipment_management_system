@@ -71,6 +71,7 @@ export const FEEDBACK_KEYS = {
   notificationDeleted: 'feedback.notificationDeleted',
 
   // reports
+  reportGenerated: 'feedback.reportGenerated',
   reportFileDownloaded: 'feedback.reportFileDownloaded',
 
   // auto-save (L4ext)

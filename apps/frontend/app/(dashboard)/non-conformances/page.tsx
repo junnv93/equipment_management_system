@@ -9,7 +9,6 @@
 
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import {
   parseNCFiltersFromSearchParams,
   convertNCFiltersToApiParams,
@@ -30,12 +29,11 @@ type PageProps = {
 /**
  * 로딩 폴백 (ListPageSkeleton 사용)
  */
-async function NonConformancesLoadingFallback() {
-  const t = await getTranslations('non-conformances');
+function NonConformancesLoadingFallback() {
   return (
     <ListPageSkeleton
-      title={t('title')}
-      description={t('subtitle')}
+      showTitle
+      showDescription
       showFilters={true}
       filterCount={3}
       showSearch={true}

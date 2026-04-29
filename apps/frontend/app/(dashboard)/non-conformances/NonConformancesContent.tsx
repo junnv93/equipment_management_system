@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { NavLink } from '@/components/navigation/nav-link';
 import { useTranslations } from 'next-intl';
 import { differenceInDays } from 'date-fns';
 import {
@@ -503,8 +504,9 @@ function NCListRow({
     );
 
   return (
-    <Link
+    <NavLink
       href={`/non-conformances/${nc.id}`}
+      pendingIndicator="opacity"
       className={cn(
         NC_LIST_TOKENS.itemWrapper,
         longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue,
@@ -595,7 +597,7 @@ function NCListRow({
           </span>
         </div>
       </div>
-    </Link>
+    </NavLink>
   );
 }
 
