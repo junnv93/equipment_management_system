@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { reviewDisposal } from '@/lib/api/disposal-api';
 import { type DisposalRequest } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -212,7 +212,6 @@ export function DisposalReviewDialog({
             loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.reject}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('common.reject')}
           </Button>
           <Button
@@ -221,7 +220,6 @@ export function DisposalReviewDialog({
             loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.review}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('reviewDialog.reviewComplete')}
           </Button>
         </DialogFooter>

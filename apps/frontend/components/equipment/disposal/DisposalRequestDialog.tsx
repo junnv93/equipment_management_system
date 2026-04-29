@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { DisposalReasonSelector } from './DisposalReasonSelector';
 import { requestDisposal } from '@/lib/api/disposal-api';
 import type { DisposalReason } from '@equipment-management/schemas';
@@ -213,7 +213,6 @@ export function DisposalRequestDialog({
             loading={mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.submit}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('requestDialog.submit')}
           </Button>
         </DialogFooter>

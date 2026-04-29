@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { cancelDisposalRequest } from '@/lib/api/disposal-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useTranslations } from 'next-intl';
@@ -94,7 +94,6 @@ export function DisposalCancelDialog({
             disabled={mutation.isPending}
             loading={mutation.isPending}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('cancelDialog.confirm')}
           </Button>
         </DialogFooter>
