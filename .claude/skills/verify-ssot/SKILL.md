@@ -1539,3 +1539,85 @@ grep -n "CheckoutPurpose\b" packages/schemas/src/ -r | head -5
 - `packages/schemas/src/enums/checkout.ts` (또는 schemas) — CheckoutPurpose enum SSOT
 
 **발생 이력 (2026-04-29 신설)**: rental 반입 처리 시 교정/수리 체크박스가 모든 목적에 표시되는 UX 중복 버그. 목적별 설정 SSOT 부재로 `isCalibrationRequired = purpose === 'calibration'` 인라인 플래그가 乱立 — `RETURN_INSPECTION_PURPOSE_CONFIG as const satisfies Record<CheckoutPurpose, ...>` 도입으로 exhaustiveness 강제.
+
+### Step 47: `isPurposeCompatibleWithEquipment` SSOT — `USER_SELECTABLE_PURPOSES.includes()` 가드 (2026-04-30 추가)
+
+**규칙**: 백엔드에서 목적별 팀 소유 검증을 수행할 때 `isPurposeCompatibleWithEquipment()` 헬퍼를 직접 호출하지 않는다. 반드시 `USER_SELECTABLE_PURPOSES.includes(purposeVal as UserSelectablePurpose)` 가드를 먼저 통과시킨 후 호출해야 한다.
+
+**왜 가드가 필요한가**: `return_to_vendor` 같은 시스템 전용 purpose는 `UserSelectablePurpose` 타입에 포함되지 않는다. 이 값을 `isPurposeCompatibleWithEquipment()`에 그대로 전달하면 헬퍼 내부에서 `undefined?.enabled ?? false = false`를 반환하여 팀 소유 검증에 실패했다고 잘못 판단한다. 가드 없이 호출하면 시스템 전용 목적의 반출이 **잘못 차단**된다(fail-close가 아닌 **false positive block**).
+
+**검증 명령**:
+```bash
+# 1) isPurposeCompatibleWithEquipment 호출 존재 확인 (shared-constants import)
+grep -n "isPurposeCompatibleWithEquipment" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: 1건 (shared-constants import + 1건 호출)
+
+# 2) USER_SELECTABLE_PURPOSES.includes 가드가 호출보다 앞에 있는지 확인
+grep -n "USER_SELECTABLE_PURPOSES\|isPurposeCompatibleWithEquipment" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: USER_SELECTABLE_PURPOSES.includes()가 isPurposeCompatibleWithEquipment() 직전 조건에 등장
+```
+
+**PASS 기준**:
+- `USER_SELECTABLE_PURPOSES.includes(purposeVal as UserSelectablePurpose)` 가드가 `isPurposeCompatibleWithEquipment()` 호출을 감싸는 `&&` 조건으로 존재
+- `isPurposeCompatibleWithEquipment`가 `@equipment-management/shared-constants`에서 import
+
+**FAIL 기준**:
+- `isPurposeCompatibleWithEquipment(purposeVal, ...)` 가드 없이 직접 호출 — 시스템 전용 purpose false-positive block 위험
+- 인라인 `equip.teamId === userTeamId` 비교 재등장 — SSOT 헬퍼 우회
+
+**예외**:
+- 단위 테스트 파일 — mock 환경에서 직접 호출 허용
+
+**관련 파일**:
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — 적용 지점
+- `packages/shared-constants/src/checkout-selectability.ts` — `isPurposeCompatibleWithEquipment`, `USER_SELECTABLE_PURPOSES` SSOT
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0429 Phase A — `checkouts.service.ts`의 inline 팀 비교를 SSOT 헬퍼로 전환할 때, `return_to_vendor` 시스템 전용 purpose가 `USER_SELECTABLE_PURPOSES`에 포함되지 않아 가드 없이 호출 시 false-positive block 발생 가능성 발견.
+
+---
+
+### Step 48: `switch + assertNever` exhaustiveness — discriminated union 핸들러 (2026-04-30 추가)
+
+**규칙**: discriminated union의 `kind` 필드(또는 동등한 태그 필드)를 분기하는 함수는 `if-else` 대신 `switch + assertNever(x: never): never` 패턴을 사용하여 컴파일 타임 exhaustiveness를 보장한다.
+
+**왜 `switch + assertNever`가 필요한가**: `if (cfg.kind === 'a') ... else ...` 패턴은 TypeScript가 새 kind 추가 시 미처리 경로를 컴파일 에러로 잡지 못한다. `default: assertNever(cfg)` 패턴은 `cfg`의 타입이 `never`가 되어야 컴파일을 통과하므로, 새 `kind` 추가 시 즉시 컴파일 에러가 발생한다.
+
+**현재 적용 지점**: `apps/frontend/lib/navigation/nav-config.ts` — `resolveBadgeAndAction()`
+
+**검증 명령**:
+```bash
+# 1) nav-config.ts resolveBadgeAndAction에 assertNever 존재 확인
+grep -n "assertNever\|switch.*cfg\.kind\|switch.*\.kind" \
+  apps/frontend/lib/navigation/nav-config.ts
+# 기대: assertNever 1건 + switch 1건
+
+# 2) assertNever 함수 정의 존재 확인
+grep -n "function assertNever.*never.*never\|assertNever(x: never): never" \
+  apps/frontend/lib/navigation/nav-config.ts
+# 기대: 1건 (function assertNever(x: never): never { throw ... })
+
+# 3) cfg.kind를 if-else로 처리하는 패턴 탐지 (회귀 방지)
+grep -n "if.*cfg\.kind\s*===\|if.*\.kind\s*===" \
+  apps/frontend/lib/navigation/nav-config.ts
+# 기대: 0건 (switch 패턴으로 교체됨)
+```
+
+**PASS 기준**:
+- `switch (cfg.kind)` + `default: assertNever(cfg)` 패턴 존재
+- `function assertNever(x: never): never` 정의 존재
+- `if (cfg.kind === ...)` else 체인 0건
+
+**FAIL 기준**:
+- `if (cfg.kind === 'count-with-action') ... else ...` — switch+assertNever로 교체 필요
+- `assertNever` 없는 switch `default:` — 런타임 에러만 가능, 컴파일 타임 체크 불가
+
+**예외**:
+- 단순 boolean guard (`if (cfg.enabled)`) — 유니언 분기 아니므로 해당 없음
+- JSX 삼항 조건 (`{cfg.kind === 'a' ? <A /> : <B />}`) — 컴포넌트 렌더 분기는 2분기라면 허용
+
+**관련 파일**:
+- `apps/frontend/lib/navigation/nav-config.ts` — `resolveBadgeAndAction`, `assertNever` 정의
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0429 Phase E — `NavItemBadgeConfig.kind` 2종에 `if-else` 사용 중 3번째 kind 추가 시 TypeScript가 잡지 못하는 구조적 취약점 발견. `switch + assertNever` 패턴으로 교체하여 컴파일 타임 exhaustiveness 보장.
