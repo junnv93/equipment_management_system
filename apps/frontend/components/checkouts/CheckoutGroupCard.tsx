@@ -384,18 +384,19 @@ function CheckoutGroupCard({
                 </div>
 
                 {isRentalGroup && rentalStatus && rentalDescriptor && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CheckoutPhaseIndicator descriptor={rentalDescriptor} variant="compact" />
-                    <NextStepPanel
-                      variant="compact"
-                      descriptor={rentalDescriptor}
-                      currentUserRole={role}
-                      loadingLabel={tCommon('status.loading')}
-                    />
-                  </div>
+                  <CheckoutPhaseIndicator descriptor={rentalDescriptor} variant="compact" />
                 )}
               </button>
             </CollapsibleTrigger>
+
+            {isRentalGroup && rentalStatus && rentalDescriptor && (
+              <NextStepPanel
+                variant="compact"
+                descriptor={rentalDescriptor}
+                currentUserRole={role}
+                loadingLabel={tCommon('status.loading')}
+              />
+            )}
 
             {yourTurnCount > 0 && (
               <span

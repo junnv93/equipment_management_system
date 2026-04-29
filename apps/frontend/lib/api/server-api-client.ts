@@ -39,7 +39,8 @@ import {
   getServerAuthSession,
   getServerAuthHeaders as getAuthHeaders,
 } from '@/lib/auth/server-session';
-import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
+import { API_TIMEOUTS } from '../config/api-config';
+import { INTERNAL_BACKEND_URL } from '../config/api-config.server';
 import { getInternalApiKeyHeaders } from '../config/internal-headers';
 
 /**
@@ -69,7 +70,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
 
   // Axios 인스턴스 생성
   const client = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: INTERNAL_BACKEND_URL,
     timeout: API_TIMEOUTS.SERVER_SIDE,
     headers: {
       'Content-Type': 'application/json',
@@ -124,7 +125,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
             '[Server API Client] API 에러 발생\n' +
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
             `📍 URL: ${error.config?.method?.toUpperCase()} ${error.config?.url}\n` +
-            `🌐 Base URL: ${API_BASE_URL}\n` +
+            `🌐 Base URL: ${INTERNAL_BACKEND_URL}\n` +
             `🔢 Status: ${status || 'N/A (응답 없음 - 연결 실패 가능성)'}\n` +
             `⚡ Axios error code: ${error.code || 'N/A'}\n` +
             `📝 Raw error message: ${error.message || 'N/A'}\n` +
