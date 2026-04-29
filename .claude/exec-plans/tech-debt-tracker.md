@@ -226,3 +226,7 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 - [x] **[2026-04-30 verify-impl-post-batch] 🟡 MEDIUM reason-field-trim-missing-3-dto** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 session wrapup). 3개 DTO 모두 `z.string().trim().min(1, ...)` 패턴으로 수정: reject-return.dto.ts:16, reject-checkout.dto.ts:16, borrower-reject-checkout.dto.ts:16.
 - [x] **[2026-04-30 verify-impl-post-batch] 🟢 LOW manual-entry-fallback-react-form-event** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 session wrapup). `ManualEntryFallback.tsx:46` `React.FormEvent<HTMLFormElement>` → `React.SyntheticEvent<HTMLFormElement>` 교체 (React 19 deprecated 해소).
+
+### 2026-04-30 sv-system-wide-completion SHOULD 후속
+
+- [ ] **[2026-04-30 sv-system-wide] 🟢 LOW sv-playwright-browser-approve-dialog-verification** — approveDialog / qualityApproveDialog 렌더링 + 코멘트 입력 → 승인 흐름을 브라우저 레벨에서 미검증. 현재는 unit/integration spec으로만 커버. 트리거: `/software/[id]/validation` 라우트 UI 수정 시 또는 다음 playwright-e2e sprint.

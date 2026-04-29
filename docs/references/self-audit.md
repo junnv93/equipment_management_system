@@ -1,4 +1,4 @@
-# Self-Audit — 9대 아키텍처 원칙 자동 검증
+# Self-Audit — 10대 아키텍처 원칙 자동 검증
 
 `scripts/self-audit.mjs`가 pre-commit + CI 양방향으로 실행하는 검증 규칙과 예외 승인 절차를 설명합니다.
 

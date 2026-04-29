@@ -119,8 +119,10 @@ export interface SoftwareValidation {
   submittedBy: string | null;
   technicalApproverId: string | null;
   technicalApprovedAt: string | null;
+  approvalComment: string | null;
   qualityApproverId: string | null;
   qualityApprovedAt: string | null;
+  qualityApprovalComment: string | null;
   rejectedBy: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;

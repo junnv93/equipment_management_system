@@ -62,6 +62,29 @@ const DASHBOARD_KO_JSX_RULE = {
 };
 
 /**
+ * components/shared/ 도메인 네임스페이스 결합 차단.
+ *
+ * shared/ 컴포넌트는 cross-cutting namespace (common, navigation, notifications,
+ * errors, auth)만 직접 호출 가능. 도메인 namespace (checkouts.*, equipment.* 등)는
+ * props 주입 강제. 위반 시 컴포넌트가 단일 도메인에 결합돼 재사용성 훼손.
+ *
+ * 해결 패턴:
+ *   // ❌ shared 컴포넌트 내부
+ *   const t = useTranslations('checkouts.fsm');
+ *   // ✅ props로 주입
+ *   interface Props { labels: { action: string; hint: string } }
+ *
+ * 예외: 실제 cross-cutting namespace는 허용. 도메인 결합이 불가피한 경우
+ *   `// eslint-disable-next-line no-restricted-syntax -- <사유>` 명시 후 팀 리뷰.
+ */
+const SHARED_COMPONENT_DOMAIN_NS_RULE = {
+  selector:
+    "CallExpression[callee.name='useTranslations'][arguments.0.type='Literal'][arguments.0.value=/^(?!(common|navigation|notifications|errors|auth)(\\.|$))/]",
+  message:
+    "components/shared/ is only allowed to use cross-cutting namespaces (common, navigation, notifications, errors, auth). Domain namespaces (checkouts.*, equipment.*, etc.) must be injected via props. See docs/references/frontend-patterns.md.",
+};
+
+/**
  * Nested interactive 회귀 차단: `<Link>` 안 `<Link>` 패턴 금지.
  *
  * 배경: React 19 + Next.js 16에서 `<a>` 안 `<a>`는 HTML Interactive Content Model
@@ -231,6 +254,22 @@ const eslintConfig = [
       ],
     },
   },
+  // components/shared/ — 도메인 namespace 결합 추가 차단
+  // 글로벌 룰(STATUS/HEX/DDAY/NESTED) + SHARED_COMPONENT_DOMAIN_NS_RULE 합성
+  {
+    files: ['**/components/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        STATUS_LITERAL_RULE,
+        HEX_COLOR_RULE,
+        DDAY_TONE_RULE,
+        NESTED_LINK_RULE,
+        NESTED_ANCHOR_RULE,
+        SHARED_COMPONENT_DOMAIN_NS_RULE,
+      ],
+    },
+  },
   // 테스트 파일 — Playwright/Vitest 진행 로그 console 허용
   {
     files: ['**/tests/**/*.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/*.test.{ts,tsx}'],
@@ -249,7 +288,7 @@ const eslintConfig = [
       '**/components/checkouts/**/*.{ts,tsx}',
       '**/app/(dashboard)/checkouts/**/*.{ts,tsx}',
     ],
-    ignores: ['**/lib/design-tokens/index.ts'],
+    ignores: ['**/lib/design-tokens/index.ts', '**/*.stories.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
