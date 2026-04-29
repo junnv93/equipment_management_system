@@ -5,25 +5,23 @@
  * SQL predicate 로 표현하는 **단일** 헬퍼이다. checkouts list, approvals KPI/카운트,
  * dashboard 등 모든 read-side 쿼리는 반드시 이 헬퍼를 호출해야 한다.
  *
- * SSOT 정의 (4-case, rental 2-step 승인 도입 후 확장 — 2026-04-29):
- *   case 1 (비rental + equipment.site/team = us)        →  우리 장비가 outgoing
- *   case 2 (rental  + requester.site/team = us)         →  우리가 빌려옴 (inbound 가시성, 모든 status)
- *   case 3 (rental  + lenderSite/Team    = us)          →  우리가 빌려줌 (outgoing rental)
- *   case 4 (rental  + status='pending'   + requester.site/team = us)
- *                                                       →  borrower TM 1차 승인 대기 (outbound 가시성)
+ * SSOT 정의 (3-case):
+ *   case 1 (비rental + equipment.site/team = us)  →  우리 장비가 outgoing
+ *   case 2 (rental  + requester.site/team = us)   →  우리가 빌려옴 (inbound, 모든 status — pending 포함)
+ *   case 3 (rental  + lenderSite/Team    = us)    →  우리가 빌려줌 (outgoing rental)
  *
- * direction='outbound' (forward 승인 파이프라인): case 1+3+4
- * direction='inbound'  (반입 검수 흐름): case 2 (rental의 모든 borrower-side 조회)
+ * direction='outbound' (장비 내보내는 흐름): case 1+3
+ * direction='inbound'  (장비 들어오는 흐름): case 2
  * direction undefined  (전체 가시성): case 1+2+3
+ *
+ * rental borrower 팀은 status와 무관하게 항상 inbound로만 분류한다.
+ * (pending 상태에서도 borrower 팀은 반입 탭에서 승인 액션 수행 — outbound 중복 노출 금지)
  *
  * 직접 인라인 SQL 작성을 금지한다 — drift 방지.
  */
 import { and, eq, inArray, ne, or, sql, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import {
-  CheckoutPurposeValues as CPVal,
-  CheckoutStatusValues as CSVal,
-} from '@equipment-management/schemas';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import {
   resolveDataScope,
   type ResolvedDataScope,
@@ -59,17 +57,12 @@ export function buildCheckoutSiteCondition(
   const inEquipSite = sql`${checkouts.id} IN (${checkoutIdsBySite})`;
   const isRental = eq(checkouts.purpose, CPVal.RENTAL);
   const isNonRental = ne(checkouts.purpose, CPVal.RENTAL);
-  const isPending = eq(checkouts.status, CSVal.PENDING);
   const lenderEq = eq(checkouts.lenderSiteId, site);
   const requesterIn = inArray(checkouts.requesterId, requesterIdsBySite);
 
   if (direction === 'outbound') {
-    // case 1+3+4: lender forward + borrower 1차 승인 대기 (rental 2-step 승인 도입)
-    return or(
-      and(isNonRental, inEquipSite),
-      and(isRental, lenderEq),
-      and(isRental, isPending, requesterIn)
-    )!;
+    // case 1+3: 우리 장비 outgoing + 우리가 빌려주는 rental (borrower측은 항상 inbound)
+    return or(and(isNonRental, inEquipSite), and(isRental, lenderEq))!;
   }
   if (direction === 'inbound') {
     return and(isRental, requesterIn)!;
@@ -99,17 +92,12 @@ export function buildCheckoutTeamCondition(
   const inEquipTeam = sql`${checkouts.id} IN (${checkoutIdsByEquipTeam})`;
   const isRental = eq(checkouts.purpose, CPVal.RENTAL);
   const isNonRental = ne(checkouts.purpose, CPVal.RENTAL);
-  const isPending = eq(checkouts.status, CSVal.PENDING);
   const lenderEq = eq(checkouts.lenderTeamId, teamId);
   const requesterIn = inArray(checkouts.requesterId, requesterIdsByTeam);
 
   if (direction === 'outbound') {
-    // case 1+3+4: lender forward + borrower 1차 승인 대기 (rental 2-step 승인 도입)
-    return or(
-      and(isNonRental, inEquipTeam),
-      and(isRental, lenderEq),
-      and(isRental, isPending, requesterIn)
-    )!;
+    // case 1+3: 우리 장비 outgoing + 우리가 빌려주는 rental (borrower측은 항상 inbound)
+    return or(and(isNonRental, inEquipTeam), and(isRental, lenderEq))!;
   }
   if (direction === 'inbound') {
     return and(isRental, requesterIn)!;
