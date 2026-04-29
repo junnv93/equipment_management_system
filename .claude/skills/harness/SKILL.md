@@ -39,6 +39,8 @@ OpenAI "Harness Engineering" 패턴 적용.
 | **evaluation-report** | `.claude/evaluations/{slug}.md` | Evaluator → Generator/User |
 
 완료된 계획: `active/` → `completed/`로 이동 (Step 7).
+완료된 contract: `.claude/contracts/{slug}.md` → `.claude/contracts/completed/{slug}.md`로 이동 (Step 7).
+인덱스: `.claude/contracts/REGISTRY.md` — active/backlog 목록. 새 contract 생성 후 REGISTRY.md Active 섹션에 추가.
 기술 부채 추적: `.claude/exec-plans/tech-debt-tracker.md` (누적 관리).
 
 ---
@@ -165,15 +167,20 @@ Track iteration count. Detect same-issue recurrence by comparing current FAIL is
 ### 7a: 실행 계획 라이프사이클 완료
 
 ```bash
-# active → completed 이동
+# exec-plan: active → completed 이동
 mv .claude/exec-plans/active/YYYY-MM-DD-{slug}.md \
    .claude/exec-plans/completed/YYYY-MM-DD-{slug}.md
 
+# contract: root → completed/ 이동
+mv .claude/contracts/{slug}.md \
+   .claude/contracts/completed/{slug}.md
+
+# REGISTRY.md Active 섹션에서 해당 행 삭제
 # SHOULD 실패 항목이 있으면 tech-debt-tracker.md에 추가
 # 형식: - [ ] {이슈} — {파일:라인} — {날짜}
 ```
 
-Mode 1은 plan 파일 없으므로 생략.
+Mode 1은 plan 파일 없으므로 생략. contract 이동은 Mode 1/2 모두 적용.
 
 ### 7b: PR 라이프사이클 (PASS 시)
 
