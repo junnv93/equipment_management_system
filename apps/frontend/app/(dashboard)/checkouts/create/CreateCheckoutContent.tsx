@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -131,17 +131,16 @@ export default function CreateCheckoutContent() {
     setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
   }, [preselectedEquipment]);
 
-  // cross-team rental 진입 시 lender site/team 자동 시드 (사용자 입력 후 덮어쓰기 방지)
-  const hasSeededLenderRef = useRef(false);
+  // cross-team rental 진입 시 lender site/team 자동 시드
+  // selectedSite/selectedTeamId가 비어있을 때만 동작 → Strict Mode 이중 마운트 안전
+  // (ref는 Strict Mode 사이클 후에도 유지되지만 state는 초기화됨 — state 기반 가드 사용)
   useEffect(() => {
-    if (hasSeededLenderRef.current) return;
     if (purpose !== CPVal.RENTAL || !preselectedEquipment || !userTeamId) return;
     if (preselectedEquipment.teamId === userTeamId) return;
-
-    hasSeededLenderRef.current = true;
+    if (selectedSite || selectedTeamId) return;
     setSelectedSite(preselectedEquipment.site ?? '');
     setSelectedTeamId(preselectedEquipment.teamId ?? '');
-  }, [purpose, preselectedEquipment, userTeamId]);
+  }, [purpose, preselectedEquipment, userTeamId, selectedSite, selectedTeamId]);
 
   // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
   const purposeAvailability = useMemo(
