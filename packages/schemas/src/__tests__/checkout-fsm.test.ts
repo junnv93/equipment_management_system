@@ -109,8 +109,8 @@ describe('computeTotalSteps', () => {
     expect(computeTotalSteps('return_to_vendor')).toBe(5);
   });
 
-  it('returns 7 for rental', () => {
-    expect(computeTotalSteps('rental')).toBe(7);
+  it('returns 8 for rental', () => {
+    expect(computeTotalSteps('rental')).toBe(8);
   });
 });
 
@@ -133,8 +133,8 @@ describe('computeStepIndex — calibration path', () => {
 describe('computeStepIndex — rental path', () => {
   const purpose: CheckoutPurpose = 'rental';
 
-  // 7-step rental path: pending(1) → borrower_approved(2) → approved(3) → lender_checked(4)
-  //   → in_use(5) → borrower_returned(6) → lender_received/returned/return_approved(7)
+  // 8-step rental path: pending(1) → borrower_approved(2) → approved(3) → lender_checked(4)
+  //   → in_use(5) → borrower_returned(6) → lender_received/returned(7) → return_approved(8)
   it('pending → 1', () => expect(computeStepIndex('pending', purpose)).toBe(1));
   it('borrower_approved → 2', () => expect(computeStepIndex('borrower_approved', purpose)).toBe(2));
   it('approved → 3', () => expect(computeStepIndex('approved', purpose)).toBe(3));
@@ -143,9 +143,10 @@ describe('computeStepIndex — rental path', () => {
   it('overdue → 5 (same as in_use)', () => expect(computeStepIndex('overdue', purpose)).toBe(5));
   it('borrower_returned → 6', () => expect(computeStepIndex('borrower_returned', purpose)).toBe(6));
   it('lender_received → 7', () => expect(computeStepIndex('lender_received', purpose)).toBe(7));
-  it('returned → 7', () => expect(computeStepIndex('returned', purpose)).toBe(7));
-  it('return_approved → 7 (terminal)', () =>
-    expect(computeStepIndex('return_approved', purpose)).toBe(7));
+  it('returned → 7 (same as lender_received — sub-state)', () =>
+    expect(computeStepIndex('returned', purpose)).toBe(7));
+  it('return_approved → 8 (terminal)', () =>
+    expect(computeStepIndex('return_approved', purpose)).toBe(8));
 });
 
 // ============================================================================
@@ -450,7 +451,7 @@ describe('getNextStep', () => {
       TECHNICAL_MANAGER_PERMS
     );
     expect(result.currentStepIndex).toBe(4);
-    expect(result.totalSteps).toBe(7);
+    expect(result.totalSteps).toBe(8);
   });
 
   it('rejected → terminal', () => {

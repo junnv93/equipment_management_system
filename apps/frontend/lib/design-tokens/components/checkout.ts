@@ -264,29 +264,31 @@ export const CHECKOUT_MINI_PROGRESS = {
   },
   /**
    * 상태 → 표시 단계 인덱스 매핑 (SSOT)
-   * 원 0번이 "신청됨(항상 완료)"이므로 real status는 index 1부터 시작
+   * 원 0번이 "신청됨(항상 완료)"이므로 real status는 index 1부터 시작.
+   * rental 8-step FSM 기준 정렬 — descriptor 부재 시 fallback 일관성용.
+   * 비rental 공유 status(approved 등)는 non-rental fallback 압축 의미 우선 유지.
    */
   statusToStepIndex: {
     pending: 1,
-    borrower_approved: 1, // 2-step 승인 진행 중 — approved 전 단계
-    approved: 1,
+    borrower_approved: 2, // rental: 사용 부서 승인 대기
+    approved: 1, // non-rental compressed fallback — descriptor path에서 FSM 기준 정확히 표시됨
     checked_out: 2,
-    overdue: 2, // checked_out 위치 + late(빨강) 스타일
-    in_use: 2,
-    returned: 3,
-    return_approved: 4, // returned 다음 단계 — 최종 승인 완료
-    rejected: 1, // 초기 단계에서 종료
-    canceled: 1, // 초기 단계에서 종료
-    // rental flow: lender_checked → in_use(인수+사용 동시) → borrower_returned → lender_received
-    lender_checked: 1,
-    borrower_returned: 3,
-    lender_received: 4,
+    overdue: 5, // rental: in_use 위치 + late(빨강) 스타일
+    in_use: 5,
+    returned: 7, // rental: lender_received sub-state (관리 측 수령 후 승인 대기)
+    return_approved: 8,
+    rejected: 1,
+    canceled: 1,
+    // rental 8-step FSM 정렬
+    lender_checked: 4,
+    borrower_returned: 6,
+    lender_received: 7,
   } as const satisfies Record<CheckoutStatus, number>,
-  /** 반출 유형별 원 개수 */
+  /** 반출 유형별 원 개수 (rental: 8-step FSM 기준) */
   stepCount: {
     calibration: 4,
     repair: 4,
-    rental: 5,
+    rental: 8,
     return_to_vendor: 4,
   } as const satisfies Record<CheckoutPurpose, number>,
 } as const;

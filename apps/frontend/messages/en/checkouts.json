@@ -240,19 +240,19 @@
   "stepper": {
     "ariaLabel": "Checkout Progress Status",
     "overdueMessage": "The expected return date has passed.",
-    "pendingApproval": "Pending Approval",
-    "approved": "Approved",
+    "pendingApproval": "Checkout Request",
+    "approved": "Lender Team Approval",
     "checkedOut": "Checked Out",
     "returned": "Returned",
     "returnApproved": "Return Approved",
     "lenderCheckout": "Lender Checkout",
     "borrowerReceive": "Borrower Receive",
     "inUse": "In Use",
-    "borrowerReturn": "Borrower Return",
-    "lenderReturn": "Lender Return",
+    "borrowerReturn": "Pre-Return Check",
+    "lenderReturn": "Return Check",
     "rejected": "Rejected",
     "canceled": "Canceled",
-    "borrowerApproved": "Borrower Approved"
+    "borrowerApproved": "User Team Approval"
   },
   "fsm": {
     "panelTitle": "Next Step",

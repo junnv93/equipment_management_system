@@ -556,7 +556,7 @@ export function getTransitionsFor(
 }
 
 export function computeTotalSteps(purpose: CheckoutPurpose): number {
-  if (purpose === 'rental') return 7;
+  if (purpose === 'rental') return 8;
   return 5;
 }
 
@@ -572,9 +572,10 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
       in_use: 5,
       overdue: 5,
       borrower_returned: 6,
+      // lender_received·returned는 step 7로 묶음 (관리 측 반입 확인 단계 sub-state)
       lender_received: 7,
       returned: 7,
-      return_approved: 7,
+      return_approved: 8,
       rejected: 1,
       canceled: 1,
     } as const satisfies Record<CheckoutStatus, number>;

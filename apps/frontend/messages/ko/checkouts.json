@@ -240,19 +240,19 @@
   "stepper": {
     "ariaLabel": "반출 진행 상태",
     "overdueMessage": "반입 예정일이 초과되었습니다.",
-    "pendingApproval": "승인 대기",
-    "approved": "승인됨",
+    "pendingApproval": "반출 요청",
+    "approved": "관리 부서 승인",
     "checkedOut": "반출 중",
     "returned": "반입 완료",
     "returnApproved": "반입 승인",
     "lenderCheckout": "반출 확인",
     "borrowerReceive": "인수 확인",
     "inUse": "사용 중",
-    "borrowerReturn": "반납 확인",
-    "lenderReturn": "반입 확인",
+    "borrowerReturn": "반납 전 확인",
+    "lenderReturn": "반납 확인",
     "rejected": "거절됨",
     "canceled": "취소됨",
-    "borrowerApproved": "1차 승인"
+    "borrowerApproved": "사용 부서 승인"
   },
   "fsm": {
     "panelTitle": "다음 단계",

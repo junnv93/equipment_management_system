@@ -197,12 +197,18 @@ function buildStepMeta(
         timestamp: toIsoOrUndef(input.checkoutDate),
       };
     case CSVal.BORROWER_RETURNED:
-      // 완료 시점: 빌려준 측이 LENDER_RETURN 상태 확인 후 lender_received → return_approved로 전환.
-      // "반납 확인" 단계의 actor = 빌려준 측 수령 확인자(LENDER_RETURN checker) 우선.
-      // lender_received가 스테퍼에 노출되지 않아 actor가 이 단계에 표시됨.
+      // "반납 전 확인" 단계 — 사용 측(borrower)이 반납 전 점검을 수행한 담당자 (BORROWER_RETURN 컨디션 체크 actor).
       return {
-        actor: input.lenderReturnActor?.name ?? input.borrowerReturnActor?.name ?? undefined,
-        actorRole: input.lenderReturnActor?.role ?? input.borrowerReturnActor?.role ?? undefined,
+        actor: input.borrowerReturnActor?.name ?? undefined,
+        actorRole: input.borrowerReturnActor?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.actualReturnDate),
+        scheduledAt: toIsoOrUndef(input.expectedReturnDate),
+      };
+    case CSVal.LENDER_RECEIVED:
+      // "반납 확인" 단계 — 관리 측(lender)이 반입 확인을 수행한 담당자 (LENDER_RETURN 컨디션 체크 actor).
+      return {
+        actor: input.lenderReturnActor?.name ?? undefined,
+        actorRole: input.lenderReturnActor?.role ?? undefined,
         timestamp: toIsoOrUndef(input.actualReturnDate),
         scheduledAt: toIsoOrUndef(input.expectedReturnDate),
       };
