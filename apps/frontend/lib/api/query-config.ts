@@ -343,11 +343,11 @@ export const QUERY_CONFIG = {
     retry: 2,
   },
 
-  /** 반출 상세 - SHORT (mutation 후 무효화, SSR placeholderData 사용으로 초기 refetch 생략) */
+  /** 반출 상세 - SHORT (mutation 후 무효화 → stale 상태에서 마운트 시 refetch 보장) */
   CHECKOUT_DETAIL: {
     staleTime: CACHE_TIMES.SHORT,
     gcTime: CACHE_TIMES.MEDIUM,
-    refetchOnMount: false,
+    refetchOnMount: true,
     retry: 2,
   },
 

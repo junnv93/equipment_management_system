@@ -53,7 +53,11 @@ import {
   type UserScopeContext,
   CACHE_TTL,
 } from '@equipment-management/shared-constants';
-import { ApprovalCategoryValues, getNCTypesRequiring } from '@equipment-management/schemas';
+import {
+  ApprovalCategoryValues,
+  getNCTypesRequiring,
+  LENDER_APPROVAL_PENDING_STATUSES,
+} from '@equipment-management/schemas';
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -182,18 +186,21 @@ export class ApprovalsService {
       softwareCount,
     ] = await Promise.all([
       // === Outgoing (반출) — SSOT: CHECKOUT_DATA_SCOPE ===
+      // SSOT: LENDER_APPROVAL_PENDING_STATUSES — FSM에서 도출 (pending + borrower_approved)
+      // outbound scope가 역할별로 각각의 책임 건만 필터링하므로 이중 카운트 없음
       shouldQuery(AC.OUTGOING)
         ? this.getCheckoutCount(
-            CheckoutStatusValues.PENDING,
+            [...LENDER_APPROVAL_PENDING_STATUSES],
             userCtx,
             undefined,
             CheckoutPurposeValues.RETURN_TO_VENDOR
           )
         : Promise.resolve(0),
 
+      // vendor return은 single-step (borrower_approved 상태 없음)
       shouldQuery(AC.OUTGOING)
         ? this.getCheckoutCount(
-            CheckoutStatusValues.PENDING,
+            [CheckoutStatusValues.PENDING],
             userCtx,
             CheckoutPurposeValues.RETURN_TO_VENDOR
           )
@@ -201,7 +208,7 @@ export class ApprovalsService {
 
       // === Incoming (반입) — SSOT: CHECKOUT_DATA_SCOPE / EQUIPMENT_IMPORT_DATA_SCOPE ===
       shouldQuery(AC.INCOMING)
-        ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, userCtx)
+        ? this.getCheckoutCount([CheckoutStatusValues.RETURNED], userCtx)
         : Promise.resolve(0),
 
       shouldQuery(AC.INCOMING)
@@ -377,17 +384,17 @@ export class ApprovalsService {
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
 
-    // 일반 반출 (purpose ≠ RETURN_TO_VENDOR)
+    // SSOT: LENDER_APPROVAL_PENDING_STATUSES — FSM에서 도출 (pending + borrower_approved)
     const regularQuery = this.getCheckoutKpiQuery(
-      CheckoutStatusValues.PENDING,
+      [...LENDER_APPROVAL_PENDING_STATUSES],
       userCtx,
       thresholdDate,
       { excludePurpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
     );
 
-    // 벤더 반환 (purpose = RETURN_TO_VENDOR)
+    // 벤더 반환 (purpose = RETURN_TO_VENDOR) — single-step
     const vendorQuery = this.getCheckoutKpiQuery(
-      CheckoutStatusValues.PENDING,
+      [CheckoutStatusValues.PENDING],
       userCtx,
       thresholdDate,
       { purpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
@@ -413,12 +420,16 @@ export class ApprovalsService {
    * SSOT: CHECKOUT_DATA_SCOPE 정책 기반 스코프 필터링
    */
   private getCheckoutKpiQuery(
-    status: CheckoutStatus,
+    statuses: CheckoutStatus[],
     userCtx: UserScopeContext,
     thresholdDate: Date,
     filter?: { purpose?: string; excludePurpose?: string }
   ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
-    const conditions: SQL[] = [eq(schema.checkouts.status, status)];
+    const conditions: SQL[] = [
+      statuses.length === 1
+        ? eq(schema.checkouts.status, statuses[0])
+        : inArray(schema.checkouts.status, statuses),
+    ];
     if (filter?.purpose) conditions.push(eq(schema.checkouts.purpose, filter.purpose));
     if (filter?.excludePurpose)
       conditions.push(ne(schema.checkouts.purpose, filter.excludePurpose));
@@ -468,7 +479,7 @@ export class ApprovalsService {
 
     // 반입 반환 건 — SSOT: CHECKOUT_DATA_SCOPE 정책 기반
     const returnQuery = this.getCheckoutKpiQuery(
-      CheckoutStatusValues.RETURNED,
+      [CheckoutStatusValues.RETURNED],
       userCtx,
       thresholdDate
     );
@@ -857,13 +868,17 @@ export class ApprovalsService {
    * - all: 필터 없음 (users JOIN 생략 → 성능)
    */
   private async getCheckoutCount(
-    status: CheckoutStatus,
+    statuses: CheckoutStatus[],
     userCtx: UserScopeContext,
     purpose?: string,
     excludePurpose?: string
   ): Promise<number> {
     try {
-      const conditions: SQL[] = [eq(schema.checkouts.status, status)];
+      const conditions: SQL[] = [
+        statuses.length === 1
+          ? eq(schema.checkouts.status, statuses[0])
+          : inArray(schema.checkouts.status, statuses),
+      ];
       if (purpose) conditions.push(eq(schema.checkouts.purpose, purpose));
       if (excludePurpose) conditions.push(ne(schema.checkouts.purpose, excludePurpose));
 

@@ -116,11 +116,14 @@ export default function CheckoutDetailClient({
     placeholderData: initialCheckout,
   });
 
-  // FSM 다음 단계 descriptor (feature flag on일 때만 실질적으로 사용)
+  // FSM 다음 단계 descriptor
+  // 서버 응답 meta.nextStep이 있으면 Zod 검증 후 우선 사용 (actorCtx 포함 → actor 팀 판정 정확)
+  // 없거나 스키마 드리프트 시 role 기반 client-side fallback
   const nextStepDescriptor = useCheckoutNextStep({
     status: checkout.status,
     purpose: checkout.purpose as import('@equipment-management/schemas').CheckoutPurpose,
     dueAt: checkout.expectedReturnDate ?? null,
+    nextStep: checkout.meta?.nextStep,
   });
 
   // 브레드크럼 동적 라벨 설정
@@ -409,6 +412,10 @@ export default function CheckoutDetailClient({
 
   // FSM NextStepPanel action 디스패처 (handleNextStepAction)
   const handleNextStepAction = (action: CheckoutAction) => {
+    // 서버/FSM이 availableToCurrentUser=false로 판정한 경우 방어적 조기 종료
+    // NextStepPanel이 이미 disabled 버튼을 렌더하지만, 혹시 다른 경로로 호출되더라도 보호
+    if (!nextStepDescriptor.availableToCurrentUser) return;
+
     switch (action) {
       case 'approve':
         approveMutation.mutate();
@@ -508,7 +515,9 @@ export default function CheckoutDetailClient({
         </Alert>
       )}
 
-      {/* 다음 단계 안내 패널 — hero: 상세 헤더 강조, actor variant 색 분기 */}
+      {/* 다음 단계 안내 패널 — hero: 상세 헤더 강조, actor variant 색 분기
+          FSM primary action(워크플로 진행)이 항상 표시됨.
+          cancel/reject 탈출 액션은 아래 별도 UI(canCancel 기반)로 노출 */}
       <ErrorBoundary fallback={(_, reset) => <NextStepPanelError onRetry={reset} />}>
         <NextStepPanel
           variant="hero"
@@ -519,6 +528,22 @@ export default function CheckoutDetailClient({
           loadingLabel={tCommon('status.loading')}
         />
       </ErrorBoundary>
+
+      {/* 반출 취소 — server canCancel(actorCtx 포함 판정) 기반 독립 노출.
+          NextStepPanel의 primary descriptor와 분리해 탈출 액션이 진행 컨텍스트를 가리지 않도록 함. */}
+      {checkout.meta?.availableActions.canCancel && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
+            onClick={() => setDialogState((prev) => ({ ...prev, cancel: true }))}
+            disabled={cancelMutation.isPending}
+          >
+            {t('actions.cancelCheckout')}
+          </Button>
+        </div>
+      )}
 
       {/* 진행 흐름 — REVIEW_RESULT.md P0-1 통합: 기존 진행 상태 stepper + 워크플로 타임라인 두 카드를
           단일 통합 stepper로. 각 step 하단에 actor + timestamp + ⚡당신 마커. P0-2 라벨 줄바꿈은 .label-ko 적용.
@@ -569,20 +594,9 @@ export default function CheckoutDetailClient({
               </div>
             )}
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
               <span className="text-muted-foreground">{t('detail.reason')}</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="font-medium text-right max-w-[200px] truncate cursor-help">
-                      {checkout.reason}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">{checkout.reason}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <p className="font-medium break-words">{checkout.reason}</p>
             </div>
           </CardContent>
         </Card>
@@ -1094,7 +1108,8 @@ export default function CheckoutDetailClient({
       </Dialog>
 
       {/* 모바일 Bottom Sheet — NextStep primary CTA. md 이상에서는 숨김 */}
-      {nextStepDescriptor.nextAction !== null && (
+      {/* availableToCurrentUser: 권한 없는 사용자에게는 Bottom Sheet 자체를 숨김 */}
+      {nextStepDescriptor.nextAction !== null && nextStepDescriptor.availableToCurrentUser && (
         <div
           className="md:hidden fixed inset-x-0 bottom-0 z-40"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}

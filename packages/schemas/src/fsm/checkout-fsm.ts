@@ -538,6 +538,27 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
 assertFsmInvariants(CHECKOUT_TRANSITIONS);
 
 // ============================================================================
+// Derived constants (FSM에서 도출 — 하드코딩 금지)
+// ============================================================================
+
+/**
+ * Lender TM이 'approve' 액션을 수행할 수 있는 출발 상태 목록.
+ *
+ * FSM CHECKOUT_TRANSITIONS에서 `requires='approve:checkout'`인 전환의 `from` 상태를
+ * 자동으로 수집한다. rental 2-step 등 새 승인 단계 추가 시 자동 반영된다.
+ *
+ * 현재: ['pending' (cal/repair), 'borrower_approved' (rental 2차)]
+ *
+ * 소비처: ApprovalsService.getCheckoutCount / getCheckoutKpiQuery (승인 대기 카운트),
+ *         approvals-api.ts getPendingOutgoing (승인 대기 목록 조회)
+ */
+export const LENDER_APPROVAL_PENDING_STATUSES: readonly CheckoutStatus[] = Object.freeze([
+  ...new Set(
+    CHECKOUT_TRANSITIONS.filter((t) => t.requires === 'approve:checkout').map((t) => t.from)
+  ),
+] as CheckoutStatus[]);
+
+// ============================================================================
 // Public API
 // ============================================================================
 
@@ -772,16 +793,40 @@ export function getNextStep(
 
   const transitions = getTransitionsFor(checkout.status, checkout.purpose);
 
-  // 우선순위: (1) permission + actor team 모두 OK,
-  //           (2) permission OK만 (actor 미스매치),
-  //           (3) 첫 번째 transition (정보용)
-  const fullyAvailable = transitions.find(
+  // 탈출 액션(cancel/reject 계열): 워크플로우를 종료하는 secondary 액션.
+  // 워크플로우 진행 액션(primary)이 있으면 반드시 그것을 descriptor의 nextAction으로 사용해야 함.
+  // 탈출 액션이 fullyAvailable이더라도 primary 우선 — 그래야 "누가 이 단계를 처리해야 하는가"
+  // 라는 컨텍스트가 UI에 보존됨. 탈출 액션은 availableActions.canCancel 등을 통해 별도 UI로 노출.
+  const ESCAPE_ACTIONS = new Set<CheckoutAction>([
+    'cancel',
+    'reject',
+    'reject_return',
+    'borrower_reject',
+  ]);
+
+  // 우선순위 (4단계):
+  // (1) primary: permission + actor team 모두 OK (완전 가용 진행 액션)
+  // (2) primary: permission OK, actor team 미스매치 (blockingReason: actor_team으로 컨텍스트 제공)
+  // (3) primary: 첫 번째 진행 액션 (blockingReason: permission으로 컨텍스트 제공)
+  // (4) escape: 위 3단계 모두 없을 때만 — cancel/reject 허용 (단독 전환 상태 대비)
+  const fullyAvailableMain = transitions.find(
     (t) =>
+      !ESCAPE_ACTIONS.has(t.action) &&
       userPermissions.includes(t.requires) &&
       actorTeamMatches(TRANSITION_ACTOR_SIDE[t.action], actorCtx).matched
   );
-  const permittedOnly = transitions.find((t) => userPermissions.includes(t.requires));
-  const candidate = fullyAvailable ?? permittedOnly ?? transitions[0];
+  const permittedOnlyMain = transitions.find(
+    (t) => !ESCAPE_ACTIONS.has(t.action) && userPermissions.includes(t.requires)
+  );
+  const firstMain = transitions.find((t) => !ESCAPE_ACTIONS.has(t.action));
+  const fullyAvailableEscape = transitions.find(
+    (t) =>
+      ESCAPE_ACTIONS.has(t.action) &&
+      userPermissions.includes(t.requires) &&
+      actorTeamMatches(TRANSITION_ACTOR_SIDE[t.action], actorCtx).matched
+  );
+  const candidate =
+    fullyAvailableMain ?? permittedOnlyMain ?? firstMain ?? fullyAvailableEscape ?? transitions[0];
 
   if (!candidate) {
     return {

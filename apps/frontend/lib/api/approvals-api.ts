@@ -26,6 +26,7 @@ import {
   EquipmentImportSourceValues as EISrcVal,
   EquipmentImportStatusValues as EIStVal,
   SITE_LABELS,
+  LENDER_APPROVAL_PENDING_STATUSES,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
@@ -500,10 +501,13 @@ class ApprovalsApi {
   private async getPendingOutgoing(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const [regularCheckouts, vendorReturns] = await Promise.all([
-        // SSOT: direction='outbound' 명시 — backend buildCheckoutScopePredicate 가
-        // case 1+3 (소유자 측만) 으로 좁힌다. borrower 가시성 case 2 가 outgoing
-        // 탭에 새지 않도록 액션 가드와 동일한 set 을 보장.
-        checkoutApi.getCheckouts({ statuses: 'pending', direction: 'outbound' }),
+        // SSOT: LENDER_APPROVAL_PENDING_STATUSES — FSM에서 도출 (pending + borrower_approved)
+        // direction='outbound': lender 소유자 측만 조회 (borrower 가시성 case 2 차단)
+        checkoutApi.getCheckouts({
+          statuses: LENDER_APPROVAL_PENDING_STATUSES.join(','),
+          direction: 'outbound',
+        }),
+        // vendor return은 single-step (borrower_approved 상태 없음)
         checkoutApi.getCheckouts({
           statuses: 'pending',
           purpose: 'return_to_vendor',
