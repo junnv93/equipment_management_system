@@ -143,6 +143,7 @@ interface CheckoutUser {
   id: string;
   name: string | null;
   email: string | null;
+  team: { id: string; name: string | null; site: string | null } | null;
 }
 
 /**
