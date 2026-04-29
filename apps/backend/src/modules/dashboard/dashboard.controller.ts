@@ -18,9 +18,8 @@ import {
   DASHBOARD_DATA_SCOPE,
   resolveDataScope,
   type UserScopeContext,
-  type DashboardScope,
 } from '@equipment-management/shared-constants';
-import { DashboardScopeValidationPipe } from './dto/dashboard-scope.dto';
+import { DashboardScopeValidationPipe, type DashboardScopeQuery } from './dto/dashboard-scope.dto';
 import { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import {
@@ -354,8 +353,9 @@ export class DashboardController {
   @UsePipes(DashboardScopeValidationPipe)
   async getCheckoutsByScope(
     @Req() req: AuthenticatedRequest,
-    @Query('scope') scope: DashboardScope
+    @Query() query: DashboardScopeQuery
   ): Promise<DashboardCheckoutsScopeDto> {
+    const { scope } = query;
     const userRole = req.user.roles?.[0] as UserRole;
     const userId = req.user.userId;
     const userTeamId = req.user.teamId;
