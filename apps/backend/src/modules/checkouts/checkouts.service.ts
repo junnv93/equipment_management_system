@@ -746,6 +746,13 @@ export class CheckoutsService extends VersionedBaseService {
                     id: item.requester.id,
                     name: item.requester.name,
                     email: item.requester.email,
+                    team: item.requester.team
+                      ? {
+                          id: item.requester.team.id,
+                          name: item.requester.team.name,
+                          site: item.requester.team.site,
+                        }
+                      : null,
                   }
                 : null;
 
