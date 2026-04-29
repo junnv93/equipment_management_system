@@ -3,8 +3,9 @@
 ## 메타
 - 작성: 2026-04-29
 - 슬러그: `nextauth-csrf-single-origin`
-- 상태: **로컬 commit 완료, push 차단** (다른 세션 잔존 테스트 fail로 pre-push hook 차단)
+- 상태: **push 완료** (origin/main = `2c256f28`)
 - 본 세션 commit: `5e2b06fb` (마무리 fix), `69883d63` (본체 — 다른 세션이 합쳐 commit한 것)
+- InlineActionButton selector fix는 다른 세션 `6c70a6ff feat(checkouts): fsm authority unification`에 동일하게 포함되어 push되었으므로 별도 처리 불필요
 
 ---
 
@@ -26,21 +27,11 @@ backend 콘솔의 `NotFoundException: Cannot GET /api/auth/csrf` 4040 반복 버
 
 ---
 
-## 2. push 차단 사유 (다음 세션 처리 필요)
+## 2. push 차단 → 해소 (해결됨)
 
-```
-apps/frontend/components/ui/__tests__/inline-action-button.test.tsx:49
-  expect(btn.querySelector('.animate-spin')).toBeInTheDocument(); // FAIL
-  Test Suites: 1 failed, 18 passed, 19 total
-```
-
-원인: 다른 세션의 click-feedback Phase 4d/4e 작업이 `animate-spin` → `motion-safe:animate-spin`으로 마이그레이션했는데 InlineActionButton 테스트 selector(`.animate-spin`)가 갱신되지 않음.
-
-본 작업과 무관 (`apps/frontend/components/ui/inline-action-button.tsx`도 본 commit 변경 없음).
-
-**다음 세션 첫 액션** (택1):
-- **권장 A**: `inline-action-button.test.tsx:49`의 selector를 `.motion-safe\\:animate-spin` 또는 더 안정적으로 `[role="status"]` 또는 `aria-busy` 검사로 교체. 1줄 fix 후 push.
-- **B**: `git push --no-verify` (hook 우회). 메모리 feedback `feedback_destructive_dry_run_first` + `git_workflow` 룰에 따라 사용자 명시 승인 없이는 회피.
+초기 push 시 InlineActionButton 테스트 selector fail로 pre-push hook 차단되었으나,
+다른 세션의 `6c70a6ff feat(checkouts): fsm authority unification` commit에 동일 selector fix가 포함되면서 자동 해소.
+사용자가 다른 세션 정리 완료 보고 후 final push (`c1db9968..2c256f28`) 성공.
 
 ---
 
