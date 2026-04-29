@@ -125,22 +125,26 @@ export default function CreateCheckoutContent() {
     return CPVal.CALIBRATION;
   }, [purposeFromUrl, preselectedEquipment?.teamId, userTeamId]);
 
-  // Effect 1: 장비 자동 선택 — equipment 로드되면 즉시 (selectedEquipments가 비어있을 때만)
+  // URL 기반 프리셀렉션 자동 시드 (단일 Effect — 원자적 상태 일관성 보장)
+  // - 장비: preselectedEquipment 로드 즉시, selectedEquipments가 비어있을 때만
+  // - site/team: cross-team RENTAL이고 둘 다 비어있을 때만
+  // Strict Mode 이중 마운트 안전: 모든 가드가 ref가 아닌 state 기반
   useEffect(() => {
     if (!preselectedEquipment) return;
-    setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
-  }, [preselectedEquipment]);
 
-  // cross-team rental 진입 시 lender site/team 자동 시드
-  // selectedSite/selectedTeamId가 비어있을 때만 동작 → Strict Mode 이중 마운트 안전
-  // (ref는 Strict Mode 사이클 후에도 유지되지만 state는 초기화됨 — state 기반 가드 사용)
-  useEffect(() => {
-    if (purpose !== CPVal.RENTAL || !preselectedEquipment || !userTeamId) return;
-    if (preselectedEquipment.teamId === userTeamId) return;
-    if (selectedSite || selectedTeamId) return;
-    setSelectedSite(preselectedEquipment.site ?? '');
-    setSelectedTeamId(preselectedEquipment.teamId ?? '');
-  }, [purpose, preselectedEquipment, userTeamId, selectedSite, selectedTeamId]);
+    setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
+
+    if (
+      purpose === CPVal.RENTAL &&
+      userTeamId &&
+      preselectedEquipment.teamId !== userTeamId &&
+      !selectedSite &&
+      !selectedTeamId
+    ) {
+      setSelectedSite(preselectedEquipment.site ?? '');
+      setSelectedTeamId(preselectedEquipment.teamId ?? '');
+    }
+  }, [preselectedEquipment, purpose, userTeamId, selectedSite, selectedTeamId]);
 
   // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
   const purposeAvailability = useMemo(
