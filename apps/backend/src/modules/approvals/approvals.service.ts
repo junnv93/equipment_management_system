@@ -447,12 +447,8 @@ export class ApprovalsService {
     };
 
     // SSOT helper — checkout-scope.util.ts. getCheckoutCount/list/Action 과 동일 predicate.
-    // direction='outbound' (case 1+3+4, 2026-04-29 rental 2-step 승인 도입 후 case 4 추가):
-    // - case 1: 자기팀 cal/repair (lender)
-    // - case 3: 자기팀이 lender인 rental (2차 승인)
-    // - case 4: 자기팀이 borrower인 rental + status=pending (1차 승인 대기, borrower TM 책임)
-    // case 4는 borrower TM이 명시적 actor (FSM TRANSITION_ACTOR_SIDE['borrower_approve']='borrower')
-    // 이므로 KPI 비대칭 우려 해소 — 자기 책임 항목만 카운트되는 의미 유지.
+    // direction='outbound' (case 1+3): 반출 KPI는 "내보내는 흐름" approver scope.
+    // rental borrower 가시성 (case 2) 는 inbound scope 이므로 여기서 제외.
     // deny 시에는 빈 KPI 한 행을 반환해 호출자(`Promise.all`)의 shape 호환을 유지.
     const scoped = buildCheckoutScopeForUser(this.db, userCtx, CHECKOUT_DATA_SCOPE, 'outbound');
     if (scoped.deny) {
