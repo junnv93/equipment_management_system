@@ -240,15 +240,19 @@ function FileUpload(props) {
 
 이 패턴은 안전하다 — `common.fileUpload`는 다른 atom과 공유되지 않는 *atom-owned 영역*이므로 결합 우려 없음.
 
-**예외:** 도메인-결합이 명시적인 전용 컴포넌트(예: `NextStepPanel`이 `checkouts.fsm` namespace를 사용하는 부분)는 `useTranslations('checkouts.fsm')` 직접 호출 가능. 다만 이 경우 컴포넌트 위치는 `components/checkouts/`에 두는 것이 SSOT 위반이 아니나, `components/shared/`에 둘 때는 namespace 결합을 props으로 끌어올리는 것이 일관적이다.
+**위치별 예외 정책:**
+
+- **도메인 디렉토리** (`components/checkouts/`, `components/equipment/` 등): 해당 도메인 namespace 직접 호출 OK. 결합이 의도된 위치이므로 SSOT 위반이 아님.
+- **`components/shared/`에 위치한 컴포넌트**: cross-cutting `common.*` 의존만 허용. 특정 도메인 namespace(`checkouts.*`, `equipment.*` 등)를 직접 사용하면 namespace 결합을 props로 분리해야 함 — "공유 컴포넌트가 특정 도메인을 알아야 한다"는 건 위치 오류 신호.
+- **`common.*` namespace**: 위치 무관, props 주입 강제. atom이 `tCommon('someLabel')` 직접 호출 시 자기-모순 회귀 발생.
 
 **위반 적발 (다층 게이트):**
 
 ```bash
 # (1) 호출지 ↔ messages JSON parity
 node scripts/check-i18n-call-sites.mjs --all
-# (2) common.json 구조 — flat top-level key 금지 (회귀 메커니즘 차단)
-#     동일 스크립트가 root level에 string/array 발견 시 exit 1
+# (2) CROSS_CUTTING_NAMESPACES (common, errors) 구조 검증
+#     root level에 string/array 발견 시 exit 1
 ```
 
 **구조적 차단**: `messages/{ko,en}/common.json`의 root level은 sub-namespace(object) 만 허용. flat string/array가 추가되면 빌드 실패. 본 회귀(`tCommon('loading')`이 flat key 호출)의 메커니즘이 빌드 타임에 _애초에 만들어질 수 없도록_ 차단됨.

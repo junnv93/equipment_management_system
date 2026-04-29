@@ -37,11 +37,9 @@ import { cn } from '@/lib/utils';
 // Types
 // ============================================================================
 
-export interface OverflowAction {
-  label: string;
-  onClick: () => void;
-  variant?: 'default' | 'destructive';
-}
+// SSOT: OverflowAction은 lib/types/checkout-ui.ts에 정의. 신규 호출처는 그 파일을 직접 import.
+import type { OverflowAction } from '@/lib/types/checkout-ui';
+export type { OverflowAction };
 
 interface NextStepPanelProps {
   descriptor: NextStepDescriptor;

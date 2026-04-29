@@ -319,28 +319,44 @@ function getStagedFiles() {
   }
 }
 
-// ─── common.json 구조 검증 ──────────────────────────────────────────────────────
+// ─── cross-cutting namespace 구조 검증 ──────────────────────────────────────────
 //
-// 정책 근거 (docs/references/frontend-patterns.md "Atom-level i18n 금지 원칙"):
-//   atom 컴포넌트는 cross-cutting `common.*` namespace의 *flat top-level* 키 의존 금지.
-//   sub-namespace(예: `common.fileUpload.uploading`)는 atom-owned로 허용.
-//   본 회귀(`tCommon('loading')` 자기 모순)의 메커니즘은 "flat top-level 키"가 추가되어
-//   atom이 그것을 호출하기 시작하는 패턴. 이를 빌드 타임에 *구조적으로* 차단한다.
+// 정책 (docs/references/frontend-patterns.md "Atom-level i18n 금지 원칙"):
+//   CROSS_CUTTING_NAMESPACES 에 열거된 ns는 root level을 sub-namespace(object)만 허용.
+//   flat top-level 키 추가 시 빌드 차단 — atom 자기-모순 회귀 방지.
+//
+//   ✅ 강제 ns (sub-namespace 구조 강제):
+//     - common  : atom cross-cutting — sub-namespace 캡슐화 필수
+//     - errors  : 오류 코드 그룹화 필수 — flat 허용 시 체계 붕괴
+//
+//   📝 flat 허용 ns (설계 의도 — 이 목록은 강제 미적용):
+//     - navigation       : 69개 route key 구조상 flat (리팩터 ROI 없음)
+//     - auth             : 8개 로그인 키 flat — 도메인 단순
+//     - notifications    : 13개 알림 타입 flat — 체계 변경 불필요
 
-function checkCommonJsonStructure() {
+const CROSS_CUTTING_NAMESPACES = ['common', 'errors'];
+
+function checkStructuralNamespaces() {
   const violations = [];
-  for (const locale of LOCALES) {
-    const filePath = resolve(MESSAGES_DIR, locale, 'common.json');
-    let data;
-    try {
-      data = JSON.parse(readFileSync(filePath, 'utf-8'));
-    } catch {
-      // common.json 부재는 다른 검증에서 잡힘 — 여기선 skip
-      continue;
-    }
-    for (const [key, value] of Object.entries(data)) {
-      if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-        violations.push({ locale, key, valueType: Array.isArray(value) ? 'array' : typeof value });
+  for (const ns of CROSS_CUTTING_NAMESPACES) {
+    for (const locale of LOCALES) {
+      const filePath = resolve(MESSAGES_DIR, locale, `${ns}.json`);
+      let data;
+      try {
+        data = JSON.parse(readFileSync(filePath, 'utf-8'));
+      } catch {
+        // 파일 부재는 다른 검증에서 잡힘 — 여기선 skip
+        continue;
+      }
+      for (const [key, value] of Object.entries(data)) {
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+          violations.push({
+            ns,
+            locale,
+            key,
+            valueType: Array.isArray(value) ? 'array' : typeof value,
+          });
+        }
       }
     }
   }
@@ -391,9 +407,9 @@ async function main() {
     allShadowed.push(...shadowed);
   }
 
-  // common.json 구조 검증 — flat top-level key 금지 (atom 회귀 차단)
+  // cross-cutting ns 구조 검증 — flat top-level key 금지 (atom 회귀 차단)
   // --all 또는 --file 모드에서만 실행 (--changed는 messages/* 변경분 추적은 별도 책임)
-  const commonStructureViolations = (isAll || isFile) ? checkCommonJsonStructure() : [];
+  const commonStructureViolations = (isAll || isFile) ? checkStructuralNamespaces() : [];
 
   // 보고
   if (allBroken.length === 0 && commonStructureViolations.length === 0) {
@@ -434,16 +450,16 @@ async function main() {
     }
     if (commonStructureViolations.length > 0) {
       process.stderr.write(
-        `\n❌ common.json 구조 위반 ${commonStructureViolations.length}건 (atom 회귀 차단 정책):\n`
+        `\n❌ cross-cutting ns 구조 위반 ${commonStructureViolations.length}건 (CROSS_CUTTING_NAMESPACES 정책):\n`
       );
       for (const v of commonStructureViolations) {
         process.stderr.write(
-          `   ${v.locale}/common.json :: "${v.key}" — root level은 sub-namespace(object)만 허용, ${v.valueType} 타입 발견\n`
+          `   ${v.locale}/${v.ns}.json :: "${v.key}" — root level은 sub-namespace(object)만 허용, ${v.valueType} 타입 발견\n`
         );
       }
       process.stderr.write(
-        `   원인: atom이 flat top-level common.* 키를 호출하면 자기-모순 회귀 가능 (frontend-patterns.md "Atom-level i18n 금지" 참조)\n` +
-          `   해결: 해당 키를 sub-namespace로 그룹화 (예: "loading" → "status.loading"). atom은 prop 주입으로 cross-cutting 라벨 받음\n`
+        `   원인: atom이 flat top-level ${CROSS_CUTTING_NAMESPACES.join('/')} 키를 호출하면 자기-모순 회귀 가능\n` +
+          `   해결: 해당 키를 sub-namespace로 그룹화 (예: "loading" → "status.loading")\n`
       );
     }
     if (allShadowed.length > 0 && !isQuiet) {

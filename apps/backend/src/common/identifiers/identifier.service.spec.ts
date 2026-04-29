@@ -1,4 +1,19 @@
+// node:crypto를 jest.fn() 래퍼로 교체 — non-configurable 프로퍼티 우회.
+// jest.mock은 자동 호이스트되어 import보다 먼저 실행된다.
+jest.mock('node:crypto', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const actual = jest.requireActual<typeof import('node:crypto')>('node:crypto');
+  return {
+    ...actual,
+    // jest.fn()으로 래핑 → mockImplementationOnce로 per-test 제어 가능
+    randomUUID: jest.fn(() => actual.randomUUID()),
+  };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
+// no-restricted-imports 예외: node:crypto SSOT 스펙 파일 — mock 접근 목적.
+// eslint-disable-next-line no-restricted-imports
+import * as nodeCrypto from 'node:crypto';
 import {
   IdentifierService,
   generateAttachmentId,
@@ -94,5 +109,18 @@ describe('Identifier module functions (plain class / util 진입점)', () => {
     // 동일 형식 보장 — 호출 경로 차이가 식별자 형식에 영향 주지 않음
     expect(UUID_V4_REGEX.test(svc.generateJti())).toBe(true);
     expect(UUID_V4_REGEX.test(generateJti())).toBe(true);
+  });
+});
+
+describe('Identifier error propagation (negative test — CSPRNG 장애 시 서비스 중단)', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('generateAttachmentId propagates crypto failure', () => {
+    (nodeCrypto.randomUUID as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('crypto failure');
+    });
+    expect(() => generateAttachmentId()).toThrow('crypto failure');
   });
 });

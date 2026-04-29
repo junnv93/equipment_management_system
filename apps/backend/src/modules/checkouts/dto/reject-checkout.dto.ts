@@ -13,7 +13,7 @@ import { VM } from '@equipment-management/schemas';
  */
 export const rejectCheckoutSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  reason: z.string().min(1, VM.approval.rejectReason.required),
+  reason: z.string().trim().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectCheckoutInput = z.infer<typeof rejectCheckoutSchema>;

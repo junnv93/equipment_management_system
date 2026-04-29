@@ -102,6 +102,18 @@ module.exports = {
         message:
           "Do not use computed property access for randomUUID. Use IdentifierService (DI) from '@/common/identifiers/identifier.service'. See verify-ssot Step 44.",
       },
+      // 동적 import 우회 차단: `const { randomUUID } = await import('node:crypto')` 패턴.
+      // ES module import 구문이 아닌 dynamic import()도 no-restricted-imports가 검사 안 함.
+      {
+        selector: "CallExpression[callee.type='Import'][arguments.0.value='node:crypto']",
+        message:
+          "Dynamic import('node:crypto') is not allowed. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+      },
+      {
+        selector: "CallExpression[callee.type='Import'][arguments.0.value='crypto']",
+        message:
+          "Dynamic import('crypto') is not allowed. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+      },
       {
         selector:
           "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -150,6 +162,17 @@ module.exports = {
             selector: "MemberExpression[computed=true][property.value='randomUUID']",
             message:
               'Do not use computed property access for randomUUID. Use IdentifierService (DI). See verify-ssot Step 44.',
+          },
+          // 동적 import 우회 차단 (controller scope).
+          {
+            selector: "CallExpression[callee.type='Import'][arguments.0.value='node:crypto']",
+            message:
+              "Dynamic import('node:crypto') is not allowed. Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
+          {
+            selector: "CallExpression[callee.type='Import'][arguments.0.value='crypto']",
+            message:
+              "Dynamic import('crypto') is not allowed. Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
           },
           {
             selector:

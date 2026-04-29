@@ -43,7 +43,7 @@ export function ManualEntryFallback({ reason, onRetryCamera }: ManualEntryFallba
   }, []);
 
   const handleSubmit = React.useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    (event: React.SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmed = value.trim();
       if (!trimmed) {

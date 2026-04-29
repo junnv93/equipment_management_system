@@ -21,12 +21,7 @@ import {
  * - app/layout.tsx의 IntlProvider(Suspense 내부)에서 getLocale()을 호출하므로
  *   Dynamic hole 내에서만 실행됨 → RootLayout 정적 셸 블로킹 없음
  *
- * 네임스페이스:
- * - Phase 0: common, equipment, auth, reservations (기존 4개)
- * - Phase 1+: errors, navigation, dashboard, checkouts, calibration,
- *             approvals, settings, notifications, teams (추가 예정)
- *
- * 없는 네임스페이스 파일은 무시 (점진적 추가 지원)
+ * 네임스페이스: 동적 로딩 — 없는 파일은 무시 (점진적 추가 지원)
  */
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
