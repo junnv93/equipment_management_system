@@ -94,10 +94,11 @@ export default function ReturnCheckoutClient({
   // RETURN_INSPECTION_PURPOSE_CONFIG.rental.workingUserProvided=false 이므로
   // ReturnInspectionForm 은 이 값을 그대로 사용한다.
   const inspectionConfig = RETURN_INSPECTION_PURPOSE_CONFIG[checkout.purpose];
-  const derivedWorkingStatusChecked =
-    !inspectionConfig.workingUserProvided && conditionChecks.length > 0
-      ? conditionChecks.every((c) => c.operationStatus === 'normal')
-      : false;
+  // workingStatusChecked = "작동 여부 확인을 수행했다" (performed) — 정상/이상 여부와 무관.
+  // 이상 여부는 conditionChecks[n].operationStatus 필드에 별도 기록됨.
+  const derivedWorkingStatusChecked = !inspectionConfig.workingUserProvided
+    ? conditionChecks.length > 0
+    : false;
 
   // 제출 핸들러
   const handleSubmit = (data: InspectionFormData) => {

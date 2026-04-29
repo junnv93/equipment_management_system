@@ -114,6 +114,13 @@ interface CheckoutActorUser {
   teamSite?: string | null;
 }
 
+/** conditionChecks step → actor 매핑 (rental in_use / borrower_returned 단계용) */
+interface CheckoutConditionActor {
+  name: string | null;
+  teamName?: string | null;
+  teamSite?: string | null;
+}
+
 /**
  * ✅ Phase 2: Server-Driven UI
  * 메타데이터(availableActions + nextStep)를 포함한 Checkout
@@ -125,12 +132,15 @@ export interface CheckoutWithMeta extends Checkout {
     availableActions: CheckoutAvailableActions;
     nextStep: NextStepDescriptor;
   };
-  // 단계별 actor 이름 hydration — 프론트 stepper 날짜/담당자 표시용
+  // FK 기반 actor hydration (checkouts 테이블 직접 참조)
   borrowerApprover: CheckoutActorUser | null;
   approver: CheckoutActorUser | null;
   lenderConfirmer: CheckoutActorUser | null;
   returner: CheckoutActorUser | null;
   returnApprover: CheckoutActorUser | null;
+  // conditionChecks 기반 actor (rental in_use / borrower_returned 단계)
+  inUseActor: CheckoutConditionActor | null;
+  borrowerReturnActor: CheckoutConditionActor | null;
 }
 
 /**
@@ -1373,6 +1383,29 @@ export class CheckoutsService extends VersionedBaseService {
         : [];
     const actorMap = new Map(actorRows.map((r) => [r.id, r]));
 
+    // rental in_use / borrower_returned 단계 actor — conditionChecks 에서 추출.
+    // checkouts 테이블에 직접 FK 없으므로 별도 조회 (rental 아니면 빈 배열 반환).
+    const conditionActorRows =
+      checkout.purpose === CPVal.RENTAL
+        ? await this.db
+            .select({
+              step: conditionChecks.step,
+              name: schema.users.name,
+              teamName: schema.teams.name,
+              teamSite: schema.teams.site,
+            })
+            .from(conditionChecks)
+            .leftJoin(schema.users, eq(schema.users.id, conditionChecks.checkedBy))
+            .leftJoin(schema.teams, eq(schema.teams.id, schema.users.teamId))
+            .where(
+              and(
+                eq(conditionChecks.checkoutId, uuid),
+                inArray(conditionChecks.step, [CCSVal.BORROWER_RECEIVE, CCSVal.BORROWER_RETURN])
+              )
+            )
+        : [];
+    const conditionActorMap = new Map(conditionActorRows.map((r) => [r.step, r]));
+
     const requesterTeamId = userRow[0]?.teamId ?? null;
     const actorCtx = this.buildActorCtx(userTeamId, checkout.lenderTeamId, requesterTeamId);
     const availableActions = this.calculateAvailableActions(checkout, userPermissions, actorCtx);
@@ -2456,8 +2489,9 @@ export class CheckoutsService extends VersionedBaseService {
           .select({ operationStatus: conditionChecks.operationStatus })
           .from(conditionChecks)
           .where(eq(conditionChecks.checkoutId, uuid));
-        resolvedWorkingStatusChecked =
-          priorChecks.length > 0 && priorChecks.every((c) => c.operationStatus === 'normal');
+        // workingStatusChecked = "확인을 수행했다" — 정상/이상 여부와 무관.
+        // 이상 여부는 condition_checks.operationStatus 로 별도 보존됨.
+        resolvedWorkingStatusChecked = priorChecks.length > 0;
       } else {
         // 교정/수리: 작동 여부 확인 필수
         if (!returnDto.workingStatusChecked) {
