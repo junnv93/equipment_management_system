@@ -17,7 +17,7 @@
  *                     → backend(:3001)
  *
  * 즉, 클라이언트는 항상 same-origin 상대 경로(`/api/*`)로 호출한다.
- * server-side(SSR/NextAuth callback)는 backend를 직접 호출해야 하므로 INTERNAL_BACKEND_URL 사용.
+ * server-side(SSR/NextAuth callback)는 backend를 직접 호출해야 하므로 api-config.server.ts의 INTERNAL_BACKEND_URL 사용.
  *
  * ─────────────────────────────────────────────────────────────────────
  * 환경변수
@@ -25,7 +25,7 @@
  *
  *  - NEXT_PUBLIC_API_URL  : 클라이언트 axios baseURL. **빈 값(same-origin) 권장**.
  *                           절대 URL을 지정하면 dev에서 경고 + production에서는 빌드 실패.
- *  - INTERNAL_BACKEND_URL : SSR/server 전용 backend 절대 URL.
+ *  - INTERNAL_BACKEND_URL : SSR/server 전용 backend 절대 URL (api-config.server.ts에서 export).
  *                           dev: `http://localhost:3001`, compose: `http://backend:3001`
  *
  * ─────────────────────────────────────────────────────────────────────

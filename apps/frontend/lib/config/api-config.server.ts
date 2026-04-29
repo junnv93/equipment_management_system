@@ -1,12 +1,14 @@
 /**
  * api-config.server.ts — server-only backend URL SSOT
  *
- * ⚠️ 이 파일은 Server Component, NextAuth callback, Route Handler에서만 import해야 합니다.
- * Client Component에서 import하면 번들에 INTERNAL_BACKEND_URL IIFE가 포함되어
- * console.error가 발생합니다. (ADR-0006)
+ * ⚠️ SERVER COMPONENT / NEXTAUTH CALLBACK / ROUTE HANDLER 전용
  *
- * 클라이언트 코드에서는 `@/lib/config/api-config` 의 API_BASE_URL을 사용하세요.
+ * import 'server-only'로 빌드타임 강제: Client 번들에 포함 시도 시 빌드 에러 발생.
+ * 클라이언트 코드에서는 `@/lib/config/api-config`의 API_BASE_URL을 사용하세요.
+ *
+ * 참고: docs/development/AUTH_ARCHITECTURE.md, ADR-0006
  */
+import 'server-only';
 
 /** dev에서 INTERNAL_BACKEND_URL 미설정 시 사용하는 기본 backend URL */
 const DEV_FALLBACK_INTERNAL_BACKEND_URL = 'http://localhost:3001';
