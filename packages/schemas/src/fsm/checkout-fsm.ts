@@ -382,7 +382,7 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     action: 'submit_return',
     to: 'returned',
     purposes: RENTAL,
-    requires: 'complete:checkout',
+    requires: 'approve:checkout', // 반입 처리는 기술책임자 전용 (UL-QP-18 직무분리)
     nextActor: 'approver',
     labelKey: 'submit_return',
     hintKey: 'checkedOutSubmitReturn',
@@ -394,7 +394,7 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     action: 'submit_return',
     to: 'returned',
     purposes: CAL_REPAIR,
-    requires: 'complete:checkout',
+    requires: 'approve:checkout', // 반입 처리는 기술책임자 전용 (UL-QP-18 직무분리)
     nextActor: 'approver',
     labelKey: 'submit_return',
     hintKey: 'checkedOutSubmitReturn',
@@ -406,7 +406,7 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     action: 'submit_return',
     to: 'returned',
     purposes: ALL,
-    requires: 'complete:checkout',
+    requires: 'approve:checkout', // 반입 처리는 기술책임자 전용 (UL-QP-18 직무분리)
     nextActor: 'approver',
     labelKey: 'submit_return',
     hintKey: 'overdueReturn',

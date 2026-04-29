@@ -45,9 +45,10 @@ export type ProgressStepState = (typeof PROGRESS_STEP_STATES)[number];
 
 /**
  * Terminal 종료 종류 — null = 비-terminal.
- * 향후 stepper 컴포넌트가 'rejected' vs 'canceled' 시각 차이가 필요해지면 prop으로 별도 전파.
+ * - 'rejected' / 'canceled': 중단 종료 — 현재 step 'terminated', 이후 'future'
+ * - 'completed': 성공 종료 (return_approved) — 모든 step 'done'
  */
-export type TerminationKind = 'rejected' | 'canceled' | null;
+export type TerminationKind = 'rejected' | 'canceled' | 'completed' | null;
 
 // ============================================================================
 // ProgressStepDescriptor — REVIEW §4.2 prop 정식화
@@ -126,6 +127,7 @@ export function deriveProgressStepState(
   isOverdue: boolean = false,
   termination: TerminationKind = null
 ): ProgressStepState {
+  if (termination === 'completed') return 'done'; // 성공 종료: 전 단계 done
   if (stepIndex < currentStepIndex) return 'done';
   if (stepIndex === currentStepIndex) {
     if (termination !== null) return 'terminated';

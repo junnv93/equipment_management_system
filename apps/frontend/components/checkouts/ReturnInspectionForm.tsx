@@ -56,6 +56,15 @@ export const RETURN_INSPECTION_PURPOSE_CONFIG = {
     workingRequired: false,
     workingUserProvided: false,
   },
+  [CPVal.RETURN_TO_VENDOR]: {
+    showCalibrationCheck: false,
+    showRepairCheck: false,
+    showWorkingCheck: false,
+    calibrationRequired: false,
+    repairRequired: false,
+    workingRequired: false,
+    workingUserProvided: false,
+  },
 } as const satisfies Record<CheckoutPurpose, PurposeInspectionConfig>;
 
 // ============================================================================

@@ -48,7 +48,7 @@ export default function ReturnCheckoutClient({
   const t = useTranslations('checkouts');
   const formatter = useFormatter();
   const { can } = useAuth();
-  const canComplete = can(Permission.COMPLETE_CHECKOUT);
+  const canComplete = can(Permission.APPROVE_CHECKOUT); // 반입 처리는 기술책임자 전용 (UL-QP-18)
 
   // 진행 흐름 stepper — descriptor 미전달(status-only fallback). hook이 status로 step index 결정.
   // purpose 기반 자동 분기 (RENTAL=8-step, CAL/REPAIR=5-step) — 기존 checkoutType prop 하드코딩 제거.

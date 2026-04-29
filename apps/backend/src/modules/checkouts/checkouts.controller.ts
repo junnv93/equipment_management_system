@@ -640,7 +640,7 @@ export class CheckoutsController {
   }
 
   @Post(':uuid/return')
-  @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @RequirePermissions(Permission.APPROVE_CHECKOUT) // 반입 처리는 기술책임자 전용 (UL-QP-18 직무분리)
   @UsePipes(ReturnCheckoutValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({

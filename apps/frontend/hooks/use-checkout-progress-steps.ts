@@ -93,11 +93,14 @@ interface UseCheckoutProgressStepsInput {
 }
 
 /**
- * status → TerminationKind 추론 (rejected/canceled). 그 외는 null.
+ * status → TerminationKind 추론.
+ * - rejected/canceled: 중단 종료 → reachedStep 위치 'terminated'
+ * - return_approved: 성공 종료 → 전 단계 'done'
  */
 function deriveTermination(status: CheckoutStatus): TerminationKind {
   if (status === CSVal.REJECTED) return 'rejected';
   if (status === CSVal.CANCELED) return 'canceled';
+  if (status === CSVal.RETURN_APPROVED) return 'completed';
   return null;
 }
 

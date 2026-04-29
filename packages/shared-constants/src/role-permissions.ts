@@ -20,8 +20,10 @@
  * ⚠️ 반출 승인 정책: technical_manager만 승인 가능 (직무분리: 신청자와 승인자 분리)
  *    - 교정/수리: 장비 소속 팀의 기술책임자 (CHECKOUT_DATA_SCOPE 'team' 스코프로 강제)
  *    - 대여: 빌려주는 팀(lenderTeamId)의 기술책임자 (service layer 명시적 체크)
- * ⚠️ 반출 시작·반입 처리 정책: 같은 팀 test_engineer·technical_manager 가능
- *    - 승인(APPROVE)과 직무 분리: 실제 장비 핸들링은 현장 실무자가 수행 (UL-QP-18)
+ * ⚠️ 반출 시작 정책: 같은 팀 test_engineer·technical_manager 가능
+ * ⚠️ 반입 처리(submit_return) 정책: technical_manager 전용 (UL-QP-18 직무분리)
+ *    - 상태 확인(condition-check) · 수령 확인(lender_receive): test_engineer·technical_manager 가능
+ *    - 반입 처리 공식 서명(submit_return → returned): technical_manager만 가능
  * ⚠️ 교정 등록 특수 정책: 시험실무자/기술책임자만 교정 기록 등록 가능 (등록/승인 완전 분리)
  *
  * 참고: 대여(Rentals)는 제거되었으며, 반출(Checkouts)이 교정/수리/시험소간 대여 모두 포함
