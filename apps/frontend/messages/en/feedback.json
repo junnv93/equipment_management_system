@@ -38,6 +38,7 @@
   "reload": "Reload",
   "sseReconnecting": "Reconnecting realtime updates",
   "tokenExpiringSoon": "Your session is expiring soon.",
+  "reportFileDownloaded": "{fileName} file downloaded",
   "notificationAllRead": "All notifications marked as read",
   "notificationDeleted": "Notification deleted",
   "autosave": {

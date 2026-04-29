@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -17,6 +18,7 @@ import {
   generateReport,
 } from '@/lib/api/reports-api';
 import { getErrorMessage } from '@/lib/api/error';
+import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
 
 // 보고서 생성 결과 타입 정의
 export interface ReportGenerationResult {
@@ -105,6 +107,7 @@ export const useExportEquipmentUsage = (options?: {
   onError?: (error: Error) => void;
 }) => {
   const { toast } = useToast();
+  const t = useTranslations();
 
   return useMutation({
     mutationFn: ({
@@ -120,8 +123,8 @@ export const useExportEquipmentUsage = (options?: {
     },
     onSuccess: (data) => {
       toast({
-        title: '보고서 내보내기 성공',
-        description: `${data.fileName} 파일이 다운로드되었습니다.`,
+        title: t(FEEDBACK_KEYS.exported),
+        description: t(FEEDBACK_KEYS.reportFileDownloaded, { fileName: data.fileName }),
         variant: 'default',
       });
 
@@ -129,8 +132,8 @@ export const useExportEquipmentUsage = (options?: {
     },
     onError: (error: unknown) => {
       toast({
-        title: '보고서 내보내기 실패',
-        description: getErrorMessage(error, '파일 생성 중 오류가 발생했습니다. 다시 시도해주세요.'),
+        title: t(FEEDBACK_KEYS.failed),
+        description: getErrorMessage(error, t(FEEDBACK_KEYS.unknownError)),
         variant: 'destructive',
       });
 
@@ -155,6 +158,7 @@ export const useGenerateReport = (options?: {
   onError?: (error: Error) => void;
 }) => {
   const { toast } = useToast();
+  const t = useTranslations();
 
   return useMutation({
     mutationFn: (params: GenerateReportParams) => {
@@ -169,8 +173,8 @@ export const useGenerateReport = (options?: {
     },
     onSuccess: (data) => {
       toast({
-        title: '보고서 생성 성공',
-        description: `${data.fileName} 파일이 다운로드되었습니다.`,
+        title: t(FEEDBACK_KEYS.created),
+        description: t(FEEDBACK_KEYS.reportFileDownloaded, { fileName: data.fileName }),
         variant: 'default',
       });
 
@@ -178,11 +182,8 @@ export const useGenerateReport = (options?: {
     },
     onError: (error: unknown) => {
       toast({
-        title: '보고서 생성 실패',
-        description: getErrorMessage(
-          error,
-          '보고서 생성 중 오류가 발생했습니다. 다시 시도해주세요.'
-        ),
+        title: t(FEEDBACK_KEYS.failed),
+        description: getErrorMessage(error, t(FEEDBACK_KEYS.unknownError)),
         variant: 'destructive',
       });
 

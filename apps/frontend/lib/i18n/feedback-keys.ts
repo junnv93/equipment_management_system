@@ -70,6 +70,9 @@ export const FEEDBACK_KEYS = {
   notificationAllRead: 'feedback.notificationAllRead',
   notificationDeleted: 'feedback.notificationDeleted',
 
+  // reports
+  reportFileDownloaded: 'feedback.reportFileDownloaded',
+
   // auto-save (L4ext)
   autosaveIdle: 'feedback.autosave.idle',
   autosaveSaving: 'feedback.autosave.saving',
