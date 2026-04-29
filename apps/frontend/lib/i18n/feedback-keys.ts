@@ -55,6 +55,7 @@ export const FEEDBACK_KEYS = {
 
   // result (error / conflict)
   failed: 'feedback.failed',
+  unknownError: 'feedback.unknownError',
   staleConflict: 'feedback.staleConflict',
   retry: 'feedback.retry',
 

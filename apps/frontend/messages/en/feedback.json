@@ -30,6 +30,7 @@
   "approved": "Approved",
   "rejected": "Rejected",
   "failed": "Action failed",
+  "unknownError": "An unknown error occurred",
   "staleConflict": "Another user modified this concurrently. Please refresh and try again.",
   "retry": "Retry",
   "offline": "You are offline. Some features may be limited.",

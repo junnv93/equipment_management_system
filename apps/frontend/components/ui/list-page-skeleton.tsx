@@ -74,7 +74,7 @@ export async function ListPageSkeleton({
   showActionButton = true,
 }: ListPageSkeletonProps) {
   const t = await getTranslations();
-  const srLabel = title ?? t(FEEDBACK_KEYS.loadingList);
+  const srLabel = t(FEEDBACK_KEYS.loadingList);
 
   const gridClass = cn(
     'grid gap-6',
@@ -170,7 +170,7 @@ export async function TablePageSkeleton({
   columnCount?: number;
 }) {
   const t = await getTranslations();
-  const srLabel = title ?? t(FEEDBACK_KEYS.loadingList);
+  const srLabel = t(FEEDBACK_KEYS.loadingList);
 
   return (
     <section

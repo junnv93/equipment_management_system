@@ -71,7 +71,7 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
   invalidateKeys = [],
   refreshServerCache = false,
   successMessage,
-  errorTitle = '오류가 발생했습니다',
+  errorTitle,
   onSuccessCallback,
   onErrorCallback,
   ...mutationOptions
@@ -79,6 +79,8 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations();
+  const resolvedErrorTitle = errorTitle ?? t(FEEDBACK_KEYS.failed);
 
   return useMutation<TData, Error, TVariables, TContext>({
     ...mutationOptions,
@@ -104,12 +106,12 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
     },
     onError: async (error, variables, context) => {
       // 에러 메시지 추출 (ApiError 포함 모든 에러 타입 처리)
-      const errorMessage = getErrorMessage(error, '알 수 없는 오류가 발생했습니다.');
+      const errorMessage = getErrorMessage(error, t(FEEDBACK_KEYS.unknownError));
 
-      console.error(`[Mutation Error] ${errorTitle}:`, error);
+      console.error(`[Mutation Error] ${resolvedErrorTitle}:`, error);
 
       toast({
-        title: errorTitle,
+        title: resolvedErrorTitle,
         description: errorMessage,
         variant: 'destructive',
       });
