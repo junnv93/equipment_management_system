@@ -232,6 +232,7 @@
     "urgencyNormal": "일반",
     "urgencyWarning": "주의",
     "urgencyCritical": "긴급",
+    "urgencyHint": "예상 반입일 기준 자동 — 48시간 이내: 주의, 기한 경과: 긴급",
     "approvalStatus": "승인 진행 상태",
     "requestDetail": "요청 상세",
     "attachments": "첨부 파일",

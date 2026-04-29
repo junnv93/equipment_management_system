@@ -232,6 +232,7 @@
     "urgencyNormal": "Normal",
     "urgencyWarning": "Caution",
     "urgencyCritical": "Urgent",
+    "urgencyHint": "Auto-derived from expected return date — within 48h: Caution, overdue: Urgent",
     "approvalStatus": "Approval Status",
     "requestDetail": "Request Detail",
     "attachments": "Attachments",

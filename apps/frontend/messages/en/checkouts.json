@@ -40,7 +40,7 @@
   "purpose": {
     "calibration": "Calibration",
     "repair": "Repair",
-    "rental": "Rental",
+    "rental": "Rental from Other Team",
     "return_to_vendor": "Return to Vendor"
   },
   "tabs": {
@@ -538,7 +538,7 @@
     "label": "Legend",
     "calibration": "Calibration",
     "repair": "Repair",
-    "rental": "Rental"
+    "rental": "Rental from Other Team"
   },
   "filters": {
     "all": "All",

@@ -40,7 +40,7 @@
   "purpose": {
     "calibration": "교정",
     "repair": "수리",
-    "rental": "렌탈",
+    "rental": "타팀 장비 대여",
     "return_to_vendor": "업체 반환"
   },
   "tabs": {
@@ -538,7 +538,7 @@
     "label": "색상 범례",
     "calibration": "교정",
     "repair": "수리",
-    "rental": "대여"
+    "rental": "타팀 장비 대여"
   },
   "filters": {
     "all": "전체",

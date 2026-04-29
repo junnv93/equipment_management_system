@@ -108,7 +108,16 @@ export default function ApprovalDetailModal({
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t('detail.department')}</p>
-                  <p className="font-medium">{item.requesterTeam || '-'}</p>
+                  <p className="font-medium">
+                    {(() => {
+                      const siteLabel = item.requesterSite
+                        ? siteLabels[item.requesterSite as keyof typeof siteLabels]
+                        : '';
+                      const teamName = item.requesterTeam || '';
+                      if (siteLabel && teamName) return `${siteLabel} / ${teamName}`;
+                      return siteLabel || teamName || '-';
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t('detail.requestDate')}</p>
@@ -122,7 +131,9 @@ export default function ApprovalDetailModal({
                 </div>
                 {urgency !== null && (
                   <div>
-                    <p className="text-muted-foreground">{t('detail.urgencyLabel')}</p>
+                    <p className="text-muted-foreground" title={t('detail.urgencyHint')}>
+                      {t('detail.urgencyLabel')}
+                    </p>
                     <p
                       className={`font-medium ${urgency === 'critical' ? 'text-brand-critical' : urgency === 'warning' ? 'text-brand-warning' : 'text-muted-foreground'}`}
                     >
@@ -131,6 +142,9 @@ export default function ApprovalDetailModal({
                         : urgency === 'warning'
                           ? t('detail.urgencyWarning')
                           : t('detail.urgencyNormal')}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-0.5">
+                      {t('detail.urgencyHint')}
                     </p>
                   </div>
                 )}

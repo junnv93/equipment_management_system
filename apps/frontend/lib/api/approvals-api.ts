@@ -390,6 +390,8 @@ export interface ApprovalItem {
   requesterId: string;
   requesterName: string;
   requesterTeam: string;
+  /** 신청자 사이트 코드 (suwon/uiwang/pyeongtaek) — 소속 표시 시 site/team 형식 결합용 */
+  requesterSite?: string;
   requestedAt: string;
   summary: string;
   /** 구조화된 summary 데이터 — getLocalizedSummary()에서 i18n 렌더링용 */
@@ -1171,6 +1173,7 @@ class ApprovalsApi {
       requesterId: calibration.registeredBy || '',
       requesterName: registeredByUser?.name ?? getRoleDisplayName(calibration.registeredByRole),
       requesterTeam: team?.name ?? '',
+      requesterSite: (team as { site?: string } | null | undefined)?.site,
       requestedAt: calibration.createdAt,
       summary: `Equipment (${calibration.equipmentId}) Calibration Record`,
       summaryData: { type: 'calibration', equipmentId: calibration.equipmentId },
@@ -1201,6 +1204,7 @@ class ApprovalsApi {
       requesterId: checkout.requesterId || '',
       requesterName: checkout.user?.name || 'Unknown',
       requesterTeam: team?.name ?? '',
+      requesterSite: (team as { site?: string } | null | undefined)?.site,
       requestedAt: checkout.createdAt,
       summary:
         category === 'outgoing'
@@ -1273,6 +1277,7 @@ class ApprovalsApi {
       requesterId: nc.correctedBy || nc.discoveredBy || '',
       requesterName: user?.name ?? 'Unknown',
       requesterTeam: team?.name ?? '',
+      requesterSite: (team as { site?: string } | null | undefined)?.site,
       requestedAt: nc.correctionDate || nc.discoveryDate,
       summary: `${nc.cause} (Corrected)`,
       summaryData: { type: 'non_conformance', cause: nc.cause },
@@ -1339,6 +1344,7 @@ class ApprovalsApi {
       requesterId: item.requestedBy ?? '',
       requesterName: requester?.name ?? 'Unknown',
       requesterTeam: team?.name ?? '',
+      requesterSite: (team as { site?: string } | null | undefined)?.site,
       requestedAt: item.requestedAt ?? '',
       summary: `${equipment?.name ?? 'Equipment'} (${equipment?.managementNumber ?? ''}) Disposal ${category === 'disposal_review' ? 'Review' : 'Approval'}`,
       summaryData: {
@@ -1395,6 +1401,7 @@ class ApprovalsApi {
       requesterId: item.requestedBy ?? '',
       requesterName: requester?.name ?? 'Unknown',
       requesterTeam: requester?.team?.name ?? '',
+      requesterSite: (requester?.team as { site?: string } | null | undefined)?.site,
       requestedAt: item.requestedAt ?? '',
       summary,
       summaryData: { type: 'equipment_request', equipmentName, requestType },
@@ -1493,6 +1500,7 @@ class ApprovalsApi {
       requesterId: item.requesterId,
       requesterName: requester?.name ?? 'Requester',
       requesterTeam: team?.name ?? '',
+      requesterSite: (team as { site?: string } | null | undefined)?.site,
       requestedAt: item.createdAt,
       summary,
       summaryData: {
