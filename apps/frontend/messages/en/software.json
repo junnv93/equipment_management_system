@@ -269,14 +269,18 @@
       "title": "Reject Validation",
       "reasonLabel": "Rejection Reason",
       "reasonPlaceholder": "Enter reason for rejection...",
+      "reasonHint": "Rejection reason is required",
+      "reasonRequired": "Please enter a rejection reason",
       "cancel": "Cancel",
-      "confirm": "Reject"
+      "confirm": "Reject",
+      "submitting": "Processing..."
     },
     "approveDialog": {
       "title": "Technical Approval",
       "commentLabel": "Review Comment",
       "commentPlaceholder": "Enter review comment (optional)",
       "commentHelp": "ISO/IEC 17025 §6.2.2 — Comment will be permanently recorded in the approval audit trail",
+      "charsRemaining": "{count} chars remaining",
       "cancel": "Cancel",
       "confirm": "Approve",
       "submitting": "Processing..."

@@ -7,8 +7,6 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, FileCheck, FileEdit, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -17,13 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   softwareValidationApi,
@@ -36,16 +27,14 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import {
-  FRONTEND_ROUTES,
-  Permission,
-  VALIDATION_RULES,
-} from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { ValidationCreateDialog } from './_components/ValidationCreateDialog';
 import type { CreateFormState } from './_components/validation-create-form.types';
 import { ValidationActionsBar } from './_components/ValidationActionsBar';
+import { ValidationApproveDialog } from './_components/ValidationApproveDialog';
+import { ValidationRejectDialog } from './_components/ValidationRejectDialog';
 
 interface SoftwareValidationContentProps {
   softwareId: string;
@@ -95,16 +84,14 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const router = useRouter();
   const { can, user } = useAuth();
 
+  type ActiveDialog =
+    | { type: 'approve'; target: SoftwareValidation }
+    | { type: 'qualityApprove'; target: SoftwareValidation }
+    | { type: 'reject'; target: SoftwareValidation }
+    | null;
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isRejectOpen, setIsRejectOpen] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<SoftwareValidation | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [isApproveOpen, setIsApproveOpen] = useState(false);
-  const [approveTarget, setApproveTarget] = useState<SoftwareValidation | null>(null);
-  const [approveComment, setApproveComment] = useState('');
-  const [isQualityApproveOpen, setIsQualityApproveOpen] = useState(false);
-  const [qualityApproveTarget, setQualityApproveTarget] = useState<SoftwareValidation | null>(null);
-  const [qualityApproveComment, setQualityApproveComment] = useState('');
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [createForm, setCreateForm] = useState<CreateFormState>(EMPTY_FORM);
 
   const { data: software } = useQuery({
@@ -186,11 +173,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     optimisticUpdate: makeStatusUpdate('approved'),
     invalidateKeys: commonInvalidateKeys,
     successMessage: t('toast.validationApproveSuccess'),
-    onSuccessCallback: () => {
-      setIsApproveOpen(false);
-      setApproveTarget(null);
-      setApproveComment('');
-    },
+    onSuccessCallback: () => setActiveDialog(null),
   });
 
   const qualityApproveMutation = useOptimisticMutation<
@@ -204,11 +187,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     optimisticUpdate: makeStatusUpdate('quality_approved'),
     invalidateKeys: commonInvalidateKeys,
     successMessage: t('toast.validationApproveSuccess'),
-    onSuccessCallback: () => {
-      setIsQualityApproveOpen(false);
-      setQualityApproveTarget(null);
-      setQualityApproveComment('');
-    },
+    onSuccessCallback: () => setActiveDialog(null),
   });
 
   const rejectMutation = useOptimisticMutation<
@@ -221,11 +200,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     optimisticUpdate: makeStatusUpdate('rejected'),
     invalidateKeys: commonInvalidateKeys,
     successMessage: t('toast.validationRejectSuccess'),
-    onSuccessCallback: () => {
-      setIsRejectOpen(false);
-      setRejectTarget(null);
-      setRejectionReason('');
-    },
+    onSuccessCallback: () => setActiveDialog(null),
   });
 
   const reviseMutation = useOptimisticMutation<
@@ -367,21 +342,11 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                       approveMutation={approveMutation}
                       qualityApproveMutation={qualityApproveMutation}
                       reviseMutation={reviseMutation}
-                      onApprove={(target) => {
-                        setApproveTarget(target);
-                        setApproveComment('');
-                        setIsApproveOpen(true);
-                      }}
-                      onQualityApprove={(target) => {
-                        setQualityApproveTarget(target);
-                        setQualityApproveComment('');
-                        setIsQualityApproveOpen(true);
-                      }}
-                      onReject={(target) => {
-                        setRejectTarget(target);
-                        setRejectionReason('');
-                        setIsRejectOpen(true);
-                      }}
+                      onApprove={(target) => setActiveDialog({ type: 'approve', target })}
+                      onQualityApprove={(target) =>
+                        setActiveDialog({ type: 'qualityApprove', target })
+                      }
+                      onReject={(target) => setActiveDialog({ type: 'reject', target })}
                     />
                   </TableCell>
                 </TableRow>
@@ -400,139 +365,52 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         isPending={createMutation.isPending}
       />
 
-      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('validation.rejectDialog.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t('validation.rejectDialog.reasonLabel')}</Label>
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder={t('validation.rejectDialog.reasonPlaceholder')}
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>
-              {t('validation.rejectDialog.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (rejectTarget && rejectionReason.trim()) {
-                  rejectMutation.mutate({
-                    id: rejectTarget.id,
-                    version: rejectTarget.version,
-                    reason: rejectionReason,
-                  });
-                }
-              }}
-              disabled={!rejectionReason.trim() || rejectMutation.isPending}
-              loading={rejectMutation.isPending}
-            >
-              {t('validation.rejectDialog.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ValidationApproveDialog
+        open={activeDialog?.type === 'approve'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        type="technical"
+        isPending={approveMutation.isPending}
+        onConfirm={(comment) => {
+          if (activeDialog?.type === 'approve') {
+            approveMutation.mutate({
+              id: activeDialog.target.id,
+              version: activeDialog.target.version,
+              approvalComment: comment,
+            });
+          }
+        }}
+      />
 
-      <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
-        <DialogContent className="max-w-md" aria-describedby="approve-comment-help">
-          <DialogHeader>
-            <DialogTitle>{t('validation.approveDialog.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="approve-comment">{t('validation.approveDialog.commentLabel')}</Label>
-              <Textarea
-                id="approve-comment"
-                value={approveComment}
-                onChange={(e) => setApproveComment(e.target.value)}
-                placeholder={t('validation.approveDialog.commentPlaceholder')}
-                maxLength={VALIDATION_RULES.LONG_TEXT_MAX_LENGTH}
-                className="min-h-[100px]"
-              />
-              <p id="approve-comment-help" className="text-xs text-muted-foreground">
-                {t('validation.approveDialog.commentHelp')}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApproveOpen(false)}>
-              {t('validation.approveDialog.cancel')}
-            </Button>
-            <Button
-              onClick={() => {
-                if (approveTarget) {
-                  approveMutation.mutate({
-                    id: approveTarget.id,
-                    version: approveTarget.version,
-                    approvalComment: approveComment.trim() || undefined,
-                  });
-                }
-              }}
-              disabled={approveMutation.isPending}
-              loading={approveMutation.isPending}
-            >
-              {approveMutation.isPending
-                ? t('validation.approveDialog.submitting')
-                : t('validation.approveDialog.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ValidationApproveDialog
+        open={activeDialog?.type === 'qualityApprove'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        type="quality"
+        isPending={qualityApproveMutation.isPending}
+        onConfirm={(comment) => {
+          if (activeDialog?.type === 'qualityApprove') {
+            qualityApproveMutation.mutate({
+              id: activeDialog.target.id,
+              version: activeDialog.target.version,
+              qualityApprovalComment: comment,
+            });
+          }
+        }}
+      />
 
-      <Dialog open={isQualityApproveOpen} onOpenChange={setIsQualityApproveOpen}>
-        <DialogContent className="max-w-md" aria-describedby="quality-approve-comment-help">
-          <DialogHeader>
-            <DialogTitle>{t('validation.qualityApproveDialog.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="quality-approve-comment">
-                {t('validation.qualityApproveDialog.commentLabel')}
-              </Label>
-              <Textarea
-                id="quality-approve-comment"
-                value={qualityApproveComment}
-                onChange={(e) => setQualityApproveComment(e.target.value)}
-                placeholder={t('validation.qualityApproveDialog.commentPlaceholder')}
-                maxLength={VALIDATION_RULES.LONG_TEXT_MAX_LENGTH}
-                className="min-h-[100px]"
-              />
-              <p id="quality-approve-comment-help" className="text-xs text-muted-foreground">
-                {t('validation.qualityApproveDialog.commentHelp')}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsQualityApproveOpen(false)}>
-              {t('validation.qualityApproveDialog.cancel')}
-            </Button>
-            <Button
-              onClick={() => {
-                if (qualityApproveTarget) {
-                  qualityApproveMutation.mutate({
-                    id: qualityApproveTarget.id,
-                    version: qualityApproveTarget.version,
-                    qualityApprovalComment: qualityApproveComment.trim() || undefined,
-                  });
-                }
-              }}
-              disabled={qualityApproveMutation.isPending}
-              loading={qualityApproveMutation.isPending}
-            >
-              {qualityApproveMutation.isPending
-                ? t('validation.qualityApproveDialog.submitting')
-                : t('validation.qualityApproveDialog.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ValidationRejectDialog
+        open={activeDialog?.type === 'reject'}
+        onOpenChange={(open) => !open && setActiveDialog(null)}
+        isPending={rejectMutation.isPending}
+        onConfirm={(reason) => {
+          if (activeDialog?.type === 'reject') {
+            rejectMutation.mutate({
+              id: activeDialog.target.id,
+              version: activeDialog.target.version,
+              reason,
+            });
+          }
+        }}
+      />
     </div>
   );
 }
