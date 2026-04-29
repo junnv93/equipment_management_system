@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useNavigateWithPending } from '@/hooks/use-navigate-with-pending';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,14 +64,14 @@ export default function InboundCheckoutsTab({
 }: InboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
   const tEquip = useTranslations('equipment');
-  const router = useRouter();
+  const navigateWithPending = useNavigateWithPending();
   const { fmtDate } = useDateFormatter();
   const { inboundPage, rentalPage, internalPage, setInboundPage, setRentalPage, setInternalPage } =
     useInboundSectionPagination();
 
   const handleCheckoutClick = useCallback(
-    (id: string) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
-    [router]
+    (id: string) => navigateWithPending(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
+    [navigateWithPending]
   );
 
   const { status: statusFilter, search: searchTerm } = filters;
@@ -410,7 +410,7 @@ export default function InboundCheckoutsTab({
                           PREMIUM_TABLE_TOKENS.stripe,
                         ].join(' ')}
                         onClick={() =>
-                          router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                          navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
                         }
                       >
                         <TableCell
@@ -537,7 +537,9 @@ export default function InboundCheckoutsTab({
                         CHECKOUT_INTERACTION_TOKENS.clickableRow,
                         PREMIUM_TABLE_TOKENS.stripe,
                       ].join(' ')}
-                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))}
+                      onClick={() =>
+                        navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                      }
                     >
                       <TableCell
                         className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
