@@ -1950,3 +1950,43 @@ grep -cE "SIDEBAR_ROW_TOKENS|getSidebarRowPrimaryClasses|getSidebarRowSecondaryC
 **예외:** 검증/디버깅용 `data-*` 속성, `aria-*` 속성, focus/hover state class.
 
 **발생 이력 (2026-04-28):** Iter 1 evaluation FAIL — `collapsedDot` 위치 인라인 → SIDEBAR_ROW_TOKENS.collapsedDot 토큰화 후 PASS.
+
+---
+
+### Step 48: ConnectionBanner kind→role 동적 분기 — kind별 role/ariaLive 일관성 (2026-04-29 추가)
+
+**원칙:** `ConnectionBanner`는 `BannerSpec.role` 필드로 동적 ARIA role을 결정. `offline`(critical) → `role="alert"` + `aria-live="assertive"`, `sw-update`(informational) → `role="status"` + `aria-live="polite"`. role을 렌더 시 정적으로 하드코딩하면 의미 불일치 발생. (WCAG 4.1.3, 프로젝트 메모리 ARIA 규칙)
+
+```bash
+# BannerSpec interface에 role 필드 존재 확인
+grep -n "role:" \
+  apps/frontend/components/layout/connection-banner.tsx
+
+# offline BannerSpec에 role: 'alert' 할당 확인
+grep -A 5 "kind: 'offline'" \
+  apps/frontend/components/layout/connection-banner.tsx
+
+# sw-update BannerSpec에 role: 'status' 할당 확인
+grep -A 5 "kind: 'sw-update'" \
+  apps/frontend/components/layout/connection-banner.tsx
+
+# 렌더에서 정적 role="status" 하드코딩 0건 확인 (동적 banner.role 사용)
+grep -n 'role="status"\|role="alert"' \
+  apps/frontend/components/layout/connection-banner.tsx
+```
+
+**PASS:**
+- `BannerSpec` interface에 `role: 'alert' | 'status'` 필드 존재
+- offline → `role: 'alert'`, sw-update → `role: 'status'`
+- 렌더에서 `role={banner.role}` 동적 참조 (정적 문자열 하드코딩 0건)
+
+**FAIL:**
+- `role="status"` 정적 하드코딩 + `aria-live="assertive"` 조합 (의미 불일치)
+- `BannerSpec`에 role 필드 없이 렌더 단에서 조건 분기
+
+**예외:** Step 31의 `role="alert"` 금지 범위는 callout/aside 정적 컴포넌트. ConnectionBanner는 시스템 신호 기반 동적 배너이므로 offline=alert 패턴 허용 (Step 31 exception: "즉각적 에러 알림 — role='alert' 허용").
+
+**관련 파일:**
+- `apps/frontend/components/layout/connection-banner.tsx` — BannerSpec interface + 렌더
+
+**발생 이력 (2026-04-29 신설):** mounted guard 추가 작업 중 role="status" + aria-live="assertive" 의미 불일치 발견. verify-security 에이전트가 탐지, 즉시 수정 후 Step 신설.
