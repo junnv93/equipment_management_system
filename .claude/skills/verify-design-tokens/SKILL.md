@@ -1989,4 +1989,87 @@ grep -n 'role="status"\|role="alert"' \
 **관련 파일:**
 - `apps/frontend/components/layout/connection-banner.tsx` — BannerSpec interface + 렌더
 
+---
+
+### Step 49: Dialog 내 필수 입력 검증 ARIA 패턴 (2026-04-30 추가)
+
+**원칙:** 다이얼로그 내 필수 `<Textarea>` / `<Input>`에는 4가지 ARIA 속성이 함께 구현되어야 한다.
+
+| 속성 | 값 | 목적 |
+|------|-----|------|
+| `aria-required="true"` | 고정 | 필수 필드 표시 |
+| `aria-invalid={isInvalid}` | 동적 | 검증 실패 상태 알림 |
+| `aria-describedby` | 동적 (errorId \| hintId) | 에러/힌트 연결 |
+| 에러 `<p>` | `role="alert" aria-live="assertive"` | 에러 즉시 인터럽트 |
+
+**`touched` 패턴** — blur 전에는 에러 미표시:
+```typescript
+// ✅ CORRECT
+const [touched, setTouched] = useState(false);
+const isInvalid = touched && value.trim().length === 0;
+
+<Textarea
+  aria-required="true"
+  aria-invalid={isInvalid}
+  aria-describedby={isInvalid ? errorId : hintId}
+  onBlur={() => setTouched(true)}
+/>
+{isInvalid && (
+  <p id={errorId} role="alert" aria-live="assertive">
+    {t('reasonRequired')}
+  </p>
+)}
+{!isInvalid && (
+  <p id={hintId}>{t('reasonHint')}</p>
+)}
+```
+
+**confirm 버튼 disabled** — touched 가드 없이 필드 비어있으면 항상 비활성화:
+```typescript
+// ✅ CORRECT — 초기 상태부터 비활성화
+disabled={isPending || !value.trim()}
+
+// ❌ WRONG — touched 가드로 초기 상태에서 버튼 활성화
+disabled={isPending || (touched && !value.trim())}
+```
+
+**optional 코멘트 char count** — `aria-live="polite"` + 임계값 미만 시 SR 전용 텍스트:
+```typescript
+<p aria-live="polite">
+  {value.length}/{MAX_LENGTH}
+  {remaining <= 50 && (
+    <span className="sr-only">{t('charsRemaining', { count: remaining })}</span>
+  )}
+</p>
+```
+
+```bash
+# Dialog 내 required textarea에 aria-required 누락 탐지
+grep -rn "aria-required\|aria-invalid\|role=\"alert\"" \
+  apps/frontend/app apps/frontend/components \
+  --include="*.tsx" | grep -i "dialog\|modal" | head -10
+
+# required textarea에 disabled가 touched 가드로 오판되는지 확인
+grep -rn "touched &&.*!.*trim\|touched && !value" \
+  apps/frontend --include="*.tsx"
+```
+
+**PASS:**
+- 필수 textarea: `aria-required="true"` + `aria-invalid` + `aria-describedby` 3종 세트
+- 에러 `<p>`: `role="alert" aria-live="assertive"` (role="status" 아님)
+- confirm disabled: `!value.trim()` (touched 가드 없음)
+
+**FAIL:**
+- `aria-required` 누락 → 스크린리더 필수 미표시
+- 에러 `<p>` `role="status"` 사용 → polite 인터럽트로 에러 전달 지연
+- `disabled={isPending || (touched && !value.trim())}` → 초기 상태 버튼 활성화
+
+**예외:** optional 코멘트 필드(approve 다이얼로그 등)는 `aria-required` 불필요.
+
+**발생 이력 (2026-04-30):** `ValidationRejectDialog.tsx` 신설 시 Evaluator가 `disabled={isPending || (touched && !reason.trim())}` M3 FAIL 판정. `disabled={isPending || !reason.trim()}`으로 수정 후 PASS. touched 가드와 disabled는 역할이 다름 — touched는 에러 표시 제어, disabled는 항상 비어있으면 비활성화.
+
+**관련 파일:**
+- `apps/frontend/app/(dashboard)/software/[id]/validation/_components/ValidationRejectDialog.tsx` — 참조 구현
+- `apps/frontend/app/(dashboard)/software/[id]/validation/_components/ValidationApproveDialog.tsx` — optional 코멘트 char count 패턴
+
 **발생 이력 (2026-04-29 신설):** mounted guard 추가 작업 중 role="status" + aria-live="assertive" 의미 불일치 발견. verify-security 에이전트가 탐지, 즉시 수정 후 Step 신설.

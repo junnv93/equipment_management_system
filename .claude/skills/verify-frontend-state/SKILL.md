@@ -1028,3 +1028,58 @@ grep -rn "TableRow" apps/frontend/app apps/frontend/components \
 **FAIL:** `<TableRow onClick={() => router.push(ROUTES.DETAIL(id))}>` 발견 → NavLink overlay로 전환.
 
 > **배경:** 2026-04-29 TestSoftwareListContent `<TableRow onClick={router.push}>` → NavLink overlay 전환으로 해결. `TableRow onClick` 패턴은 키보드 접근성(`Tab+Enter`) 불가, `aria-label` 제공 불가, GlobalProgressBar 미연동 3가지 결함 동시 발생.
+
+---
+
+### Step 34: 다중 다이얼로그 상태 — discriminated union `ActiveDialog` 패턴 (2026-04-30 추가)
+
+**규칙:** 동일 컴포넌트에서 3종 이상의 다이얼로그를 관리할 때, `isOpen + target + comment` 트리플 `useState` 세트를 다이얼로그당 반복하는 대신 단일 discriminated union `ActiveDialog` 상태를 사용한다. TypeScript가 `type` 필드로 narrowing하므로 별도 null-check 불필요.
+
+```typescript
+// ✅ CORRECT — 단일 union 상태
+type ActiveDialog =
+  | { type: 'approve'; target: SomeEntity }
+  | { type: 'qualityApprove'; target: SomeEntity }
+  | { type: 'reject'; target: SomeEntity }
+  | null;
+
+const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
+
+// 다이얼로그 열기
+setActiveDialog({ type: 'approve', target: item });
+
+// 다이얼로그에서 target 접근 (TypeScript narrowing)
+if (activeDialog?.type === 'approve') {
+  mutation.mutate({ id: activeDialog.target.id });
+}
+
+// 닫기
+setActiveDialog(null);
+
+// ❌ WRONG — 다이얼로그당 3개 상태 × N개 다이얼로그 = 상태 폭발
+const [isApproveOpen, setIsApproveOpen] = useState(false);
+const [approveTarget, setApproveTarget] = useState<SomeEntity | null>(null);
+const [approveComment, setApproveComment] = useState('');
+const [isRejectOpen, setIsRejectOpen] = useState(false);
+const [rejectTarget, setRejectTarget] = useState<SomeEntity | null>(null);
+...
+```
+
+```bash
+# 동일 컴포넌트에서 다이얼로그 관련 useState 3쌍 이상 탐지
+grep -rn "useState<.*null>" apps/frontend --include="*.tsx" | \
+  awk -F: '{print $1}' | sort | uniq -c | sort -rn | \
+  awk '$1 >= 3 { print $2 }' | \
+  xargs -I{} grep -c "useState" {} | \
+  paste - - | awk '$2 >= 6 { print $1 " — useState", $2, "개 (union 패턴 검토)" }'
+```
+
+**PASS:** 동일 컴포넌트 내 `isXxxOpen + xxxTarget + xxxComment` 같은 3-tuple 반복 패턴 없이 `ActiveDialog` union 사용.  
+**FAIL:** 동일 기능 다이얼로그 제어용 `useState` 6개 이상 반복 — `ActiveDialog` discriminated union으로 통합 권장.
+
+**예외:** 독립적 목적의 다이얼로그(create + filter + detail 등 서로 다른 도메인)는 별도 boolean으로 유지 가능.
+
+**발생 이력 (2026-04-30):** `SoftwareValidationContent.tsx` approve/qualityApprove/reject 다이얼로그 8개 `useState` → `ActiveDialog` union 1개로 압축. 타입 narrowing 덕에 `if (approveTarget)` null-guard 불필요.
+
+**관련 파일:**
+- `apps/frontend/app/(dashboard)/software/[id]/validation/SoftwareValidationContent.tsx` — ActiveDialog union 패턴 참조 구현

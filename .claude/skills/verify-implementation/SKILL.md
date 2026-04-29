@@ -27,10 +27,10 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 3  | `verify-zod`            | backend  | Zod 검증 — ZodValidationPipe, Query targets              |
 | 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 로컬 재정의 금지, config 파생 boolean → 수치 SSOT(Step 32), isPurposeCompatibleWithEquipment USER_SELECTABLE_PURPOSES guard(Step 47), switch+assertNever exhaustiveness(Step 48) |
 | 5  | `verify-hardcoding`     | both     | 하드코딩 탐지 — API 경로, queryKeys, 환경변수             |
-| 6  | `verify-frontend-state` | frontend | 상태 관리 — TanStack Query, 동적 import                   |
+| 6  | `verify-frontend-state` | frontend | 상태 관리 — TanStack Query, 동적 import, ActiveDialog discriminated union(Step 34)  |
 | 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState            |
 | 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT                                     |
-| 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer                                     |
+| 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer, Dialog ARIA 입력 검증 패턴(Step 49) |
 | 10 | `verify-security`       | both     | 보안 — Helmet CSP, Security Headers                       |
 | 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지, audit SSOT enum 동기화 |
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
