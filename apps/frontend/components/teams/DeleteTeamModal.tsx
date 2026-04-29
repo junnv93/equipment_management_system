@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { ANIMATION_PRESETS } from '@/lib/design-tokens';
 import {
   AlertDialog,
@@ -129,15 +129,9 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
             loading={deleteMutation.isPending}
+            loadingLabel={t('deleteModal.deleting')}
           >
-            {deleteMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 motion-safe:animate-spin" />
-                {t('deleteModal.deleting')}
-              </>
-            ) : (
-              t('deleteModal.confirm')
-            )}
+            {t('deleteModal.confirm')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

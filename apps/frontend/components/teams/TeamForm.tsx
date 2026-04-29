@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -351,17 +350,13 @@ export function TeamForm({ team, mode }: TeamFormProps) {
           >
             {t('form.cancel')}
           </Button>
-          <Button type="submit" disabled={isPending} loading={isPending}>
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 motion-safe:animate-spin" />
-                {isEditMode ? t('form.submittingEdit') : t('form.submitting')}
-              </>
-            ) : isEditMode ? (
-              t('form.submitEdit')
-            ) : (
-              t('form.submit')
-            )}
+          <Button
+            type="submit"
+            disabled={isPending}
+            loading={isPending}
+            loadingLabel={isEditMode ? t('form.submittingEdit') : t('form.submitting')}
+          >
+            {isEditMode ? t('form.submitEdit') : t('form.submit')}
           </Button>
         </div>
       </form>

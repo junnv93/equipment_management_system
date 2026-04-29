@@ -13,7 +13,7 @@ import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { CheckCircle2, Circle, XCircle, Loader2, Plus, ChevronUp, Check } from 'lucide-react';
+import { CheckCircle2, Circle, XCircle, Plus, ChevronUp, Check } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,6 @@ import {
   getCalibrationPlanTimelineNodeClasses,
   getCalibrationPlanTimelineConnectorClasses,
   getCalibrationPlanTimelineVerticalConnectorClasses,
-  getLoadingSpinnerClasses,
   CALIBRATION_PLAN_TIMELINE_TOKENS,
   CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
@@ -151,17 +150,12 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
         onClick={() => reviewMutation.mutate()}
         disabled={reviewMutation.isPending || !plan}
         loading={reviewMutation.isPending}
+        loadingPosition="replace"
         className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
         aria-label={t('planDetail.timeline.ariaConfirmReview')}
       >
-        {reviewMutation.isPending ? (
-          <Loader2 className={getLoadingSpinnerClasses()} aria-hidden="true" />
-        ) : (
-          <>
-            <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
-            {t('planDetail.actions.confirmReview')}
-          </>
-        )}
+        <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
+        {t('planDetail.actions.confirmReview')}
       </Button>
 
       <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
