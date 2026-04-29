@@ -171,11 +171,11 @@ test.describe('WF-03: 교정 반출 전체 흐름', () => {
   });
 
   // ────────────────────────────────────────────────────────────────────────
-  // Step 7: 반입 처리 (TE)
+  // Step 7: 반입 처리 (TM) — UL-QP-18 직무분리: 기술책임자 전용
   // ────────────────────────────────────────────────────────────────────────
 
-  test('Step 7: TE가 반입 처리 → returned, 장비 아직 checked_out', async ({
-    testOperatorPage: page,
+  test('Step 7: TM이 반입 처리 → returned, 장비 아직 checked_out', async ({
+    techManagerPage: page,
   }) => {
     await clearBackendCache();
     const body = await returnCheckout(page, checkoutId, {

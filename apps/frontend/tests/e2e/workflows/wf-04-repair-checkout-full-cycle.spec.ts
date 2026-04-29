@@ -67,12 +67,9 @@ test.describe('WF-04: 수리 반출 전체 흐름', () => {
     await expectEquipmentStatus(tePage, WF_EQUIPMENT_ID, ESVal.CHECKED_OUT);
   });
 
-  test('Step 3: 반입 + 승인 → 장비 available', async ({
-    testOperatorPage: tePage,
-    techManagerPage: tmPage,
-  }) => {
+  test('Step 3: TM 반입 처리 + 승인 → 장비 available', async ({ techManagerPage: tmPage }) => {
     await clearBackendCache();
-    await returnCheckout(tePage, checkoutId, { repairChecked: true, workingStatusChecked: true });
+    await returnCheckout(tmPage, checkoutId, { repairChecked: true, workingStatusChecked: true });
 
     await clearBackendCache();
     const body = await approveReturn(tmPage, checkoutId);

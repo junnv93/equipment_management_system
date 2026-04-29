@@ -88,12 +88,11 @@ test.describe('WF-07: 대여 반출 전체 흐름 (시험소 간)', () => {
     await conditionCheck(page, checkoutId, 'lender_return', 'technical_manager');
   });
 
-  test('Step 7: 반입 처리 + 반입 승인 → 장비 available 복원', async ({
-    testOperatorPage: tePage,
+  test('Step 7: TM 반입 처리 + 반입 승인 → 장비 available 복원', async ({
     techManagerPage: tmPage,
   }) => {
     await clearBackendCache();
-    await returnCheckout(tePage, checkoutId);
+    await returnCheckout(tmPage, checkoutId);
 
     await clearBackendCache();
     const body = await approveReturn(tmPage, checkoutId);

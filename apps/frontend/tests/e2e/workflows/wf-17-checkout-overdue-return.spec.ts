@@ -85,8 +85,7 @@ test.describe('WF-17: 반출 기한 초과 overdue → 반입 처리', () => {
     await expectEquipmentStatus(page, WF_EQUIPMENT_ID, ESVal.CHECKED_OUT);
   });
 
-  test('Step 4: overdue → checked_out 복원 후 반입 처리 → TM 반입 승인', async ({
-    testOperatorPage: tePage,
+  test('Step 4: overdue → checked_out 복원 후 TM 반입 처리 → TM 반입 승인', async ({
     techManagerPage: tmPage,
   }) => {
     // 현재 백엔드 returnCheckout()은 checked_out 상태만 허용.
@@ -99,7 +98,7 @@ test.describe('WF-17: 반출 기한 초과 overdue → 반입 처리', () => {
     );
     await clearBackendCache();
 
-    await returnCheckout(tePage, checkoutId);
+    await returnCheckout(tmPage, checkoutId);
 
     await clearBackendCache();
     await approveReturn(tmPage, checkoutId, 'technical_manager');

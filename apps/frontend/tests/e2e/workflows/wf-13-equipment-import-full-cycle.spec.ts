@@ -120,7 +120,7 @@ test.describe('WF-13: 대여 반입 전체 흐름', () => {
     await startCheckout(tePage, returnCheckoutId);
 
     await clearBackendCache();
-    await returnCheckout(tePage, returnCheckoutId, { workingStatusChecked: true });
+    await returnCheckout(tmPage, returnCheckoutId, { workingStatusChecked: true });
 
     await clearBackendCache();
     await approveReturn(tmPage, returnCheckoutId);

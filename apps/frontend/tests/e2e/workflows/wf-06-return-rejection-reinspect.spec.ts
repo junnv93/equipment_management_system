@@ -65,7 +65,7 @@ test.describe('WF-06: 반입 반려 → 재검사 → 재승인', () => {
     await startCheckout(tePage, checkoutId);
   });
 
-  test('Step 2: TE가 반입 처리', async ({ testOperatorPage: page }) => {
+  test('Step 2: TM이 반입 처리', async ({ techManagerPage: page }) => {
     await clearBackendCache();
     await returnCheckout(page, checkoutId);
   });
@@ -87,7 +87,7 @@ test.describe('WF-06: 반입 반려 → 재검사 → 재승인', () => {
     expect(data.calibrationChecked).toBeFalsy();
   });
 
-  test('Step 5: TE가 재반입 처리', async ({ testOperatorPage: page }) => {
+  test('Step 5: TM이 재반입 처리', async ({ techManagerPage: page }) => {
     await clearBackendCache();
     await returnCheckout(page, checkoutId, {
       calibrationChecked: true,

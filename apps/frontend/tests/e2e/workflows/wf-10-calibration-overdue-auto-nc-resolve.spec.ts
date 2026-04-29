@@ -200,12 +200,9 @@ test.describe('WF-10: 교정 기한 초과 → 자동 NC → 재교정 해결', 
   // Step 5: 반입 처리 + 반입 승인
   // ────────────────────────────────────────────────────────────────────────
 
-  test('Step 5: 반입 처리 + 반입 승인', async ({
-    testOperatorPage: tePage,
-    techManagerPage: tmPage,
-  }) => {
+  test('Step 5: TM 반입 처리 + 반입 승인', async ({ techManagerPage: tmPage }) => {
     await clearBackendCache();
-    await returnCheckout(tePage, checkoutId, {
+    await returnCheckout(tmPage, checkoutId, {
       calibrationChecked: true,
       workingStatusChecked: true,
     });
