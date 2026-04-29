@@ -1545,3 +1545,87 @@ grep -n "nextStep: checkout\.meta" \
 
 **관련 파일:**
 - `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` — handleNextStepAction, canCancel 버튼
+
+### Step 49: `useCheckoutProgressSteps` fallback — `steps.indexOf` 금지, `computeStepIndex` SSOT 경유 필수 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** `CHECKOUT_DISPLAY_STEPS[purpose]`는 시각 표시용 status 배열로, `lender_received` 같이 FSM에는 존재하지만 stepper에 표시하지 않는 status를 포함하지 않는다. `Array.prototype.indexOf`로 이 배열에서 status를 찾으면 -1이 반환되고 묵묵히 index 0(첫 단계 활성화)으로 fallback되어 진행 상태가 항상 1단계를 가리키는 버그가 발생한다. `computeStepIndex(status, purpose)`는 모든 CheckoutStatus를 명시적으로 매핑하므로 어떤 status든 올바른 인덱스를 반환한다.
+
+**검증 명령어:**
+```bash
+# 1. steps.indexOf fallback 금지 확인
+grep -n "steps\.indexOf\|\.indexOf(status)" \
+  apps/frontend/hooks/use-checkout-progress-steps.ts
+# 기대: 0건 (주석 제외). hit 발생 시 computeStepIndex 로 교체 필요.
+
+# 2. computeStepIndex SSOT fallback 존재 확인
+grep -n "computeStepIndex" \
+  apps/frontend/hooks/use-checkout-progress-steps.ts
+# 기대: import 1건 + fallback 사용 1건 이상
+
+# 3. import 경로 — @equipment-management/schemas 경유
+grep -n "computeStepIndex" \
+  apps/frontend/hooks/use-checkout-progress-steps.ts \
+  | grep "from '@equipment-management/schemas'"
+# 기대: 0건이면 import 누락 → FAIL (위 grep에서 import 라인 직접 확인)
+```
+
+**PASS:**
+1. `steps.indexOf(status)` 호출 0건 (주석 내부 제외)
+2. `computeStepIndex(status, purpose) - 1` 패턴으로 fallback 계산
+3. `computeStepIndex`를 `@equipment-management/schemas`에서 import
+
+**FAIL:**
+- `steps.indexOf(status)` 발견 → `lender_received` 등 비-display status에서 항상 1단계 활성화 버그 회귀
+
+**관련 파일:**
+- `apps/frontend/hooks/use-checkout-progress-steps.ts` — fallback rawCurrent 계산
+- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeStepIndex` SSOT 정의
+- `apps/frontend/lib/design-tokens/components/checkout-timeline.ts` — `CHECKOUT_DISPLAY_STEPS` (표시용 배열, 비-display status 미포함)
+
+**발생 이력 (2026-04-29 신설)**: rental `lender_received` 상태에서 진행 stepper가 항상 1단계(승인대기)를 활성화하는 버그. `CHECKOUT_DISPLAY_STEPS.rental`에 `lender_received`가 없어 `indexOf` → -1 → 0 으로 묵묵히 잘못 매핑. `computeStepIndex` SSOT 경유로 수정.
+
+### Step 50: rental `returnCheckout` purpose-aware validation — `workingStatusChecked` 서버 도출, DTO 검증 면제 (2026-04-29 추가)
+
+**왜 검증해야 하는가:** 대여 목적 반입은 4단계 상태확인(외관·작동 상태)이 이미 작동 여부 확인 기록을 대체한다. 모든 목적에 동일하게 `workingStatusChecked` DTO 필드를 검증하면 rental 반입 폼에서 중복 체크박스가 필요해지거나, 상태확인이 이상(abnormal)인 장비의 반입이 차단되는 버그가 발생한다. `workingStatusChecked`의 도메인 의미는 "확인을 수행했다"(performed)이지 "정상이다"(normal)가 아니므로, 이상 상태 장비도 반입은 가능해야 한다.
+
+**검증 명령어:**
+```bash
+# 1. rental purpose 시 DTO workingStatusChecked 검증 면제 확인
+grep -A20 "purpose === CPVal.RENTAL" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -A5 "workingStatusChecked"
+# 기대: rental 분기 내에서 WORKING_STATUS_REQUIRED 예외를 throw하지 않음
+
+# 2. rental 분기 — condition_checks 서버 도출 패턴
+grep -B2 -A5 "resolvedWorkingStatusChecked" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts | head -20
+# 기대: rental → priorChecks.length > 0, 교정/수리 → returnDto.workingStatusChecked
+
+# 3. resolvedWorkingStatusChecked = priorChecks.length > 0 (performed 의미)
+grep -n "priorChecks\.length > 0\|priorChecks\.every" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: priorChecks.length > 0 사용. priorChecks.every(operationStatus === 'normal') 금지
+# every(normal) 는 "정상이어야" 의미로 이상 장비 반입 차단 버그 유발.
+
+# 4. updateWithVersion에 resolvedWorkingStatusChecked 전달
+grep -n "workingStatusChecked: resolved" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: 1건 (returnDto.workingStatusChecked 직접 전달이면 rental 도출 로직 우회)
+```
+
+**PASS:**
+1. `purpose === CPVal.RENTAL` 분기에서 `WORKING_STATUS_REQUIRED` 예외 없음
+2. rental 분기: `priorChecks.length > 0`으로 도출 (not `every(normal)`)
+3. `updateWithVersion` 호출에 `resolvedWorkingStatusChecked` 전달 (not `returnDto.workingStatusChecked`)
+
+**FAIL:**
+- `if (!returnDto.workingStatusChecked) throw WORKING_STATUS_REQUIRED` 조건이 목적 구분 없이 모든 목적에 적용 → rental 반입 시 DTO 필드 강제 필요 (UX 중복)
+- `priorChecks.every(c => c.operationStatus === 'normal')` 패턴 → 이상 상태 장비 반입 차단 버그 (의미론적 오류)
+- `workingStatusChecked: returnDto.workingStatusChecked` 직접 전달 (rental 도출 로직 우회)
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — returnCheckout, resolvedWorkingStatusChecked
+- `apps/frontend/components/checkouts/ReturnInspectionForm.tsx` — RETURN_INSPECTION_PURPOSE_CONFIG.rental.workingUserProvided=false
+- `apps/frontend/app/(dashboard)/checkouts/[id]/return/ReturnCheckoutClient.tsx` — derivedWorkingStatusChecked = conditionChecks.length > 0
+
+**발생 이력 (2026-04-29 신설)**: rental 반입 시 (1) 중복 체크박스 UX 문제, (2) `workingStatusChecked` 의미론적 오류(`every(normal)` → 이상 장비 반입 차단) 동시 발견. purpose-aware 검증 분리 + 서버 도출 패턴으로 수정.

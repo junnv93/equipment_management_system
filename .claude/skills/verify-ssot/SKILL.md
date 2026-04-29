@@ -1492,3 +1492,50 @@ grep -n "getCheckoutCount\|getCheckoutKpiQuery" \
 - `apps/frontend/lib/api/approvals-api.ts` — 소비처 2
 
 **발생 이력 (2026-04-29 신설)**: rental 2-step `borrower_approved` 상태가 lender 승인 대기 카운트(`getCheckoutCount`)에서 누락되는 버그 발견. `pending`만 필터링하던 scalar 파라미터를 배열로 교체하고 FSM-derived `LENDER_APPROVAL_PENDING_STATUSES` SSOT를 신설.
+
+### Step 46: 목적별 폼 설정 SSOT — `as const satisfies Record<CheckoutPurpose, ...>` 패턴, 인라인 목적 분기 boolean 재정의 금지 (2026-04-29 추가)
+
+**규칙**: 반출 목적(`CheckoutPurpose`)에 따라 달라지는 폼 동작(필드 표시 여부, 필수 여부, 자동 도출 여부)은 반드시 `as const satisfies Record<CheckoutPurpose, ConfigInterface>` 설정 객체로 중앙화한다. 컴포넌트 내부에서 `const isCalibrationRequired = purpose === 'calibration'` 같은 인라인 boolean 플래그를 재정의하면 새 목적 추가 시 TypeScript exhaustiveness 검사가 작동하지 않아 누락 위험이 있다.
+
+**왜 SSOT 설정 객체가 필요한가**:
+- 인라인 `purpose === CPVal.CALIBRATION` 조건 분기는 TypeScript가 enum 완전성을 강제하지 않음 — 새 목적 추가 시 컴파일 에러 없이 조용히 누락.
+- `as const satisfies Record<CheckoutPurpose, ...>` 패턴은 `CheckoutPurpose` 모든 값에 대한 설정을 컴파일 타임에 강제.
+- 백엔드 validation과 프론트엔드 UX 조건이 분산되면 drift 발생 — 설정 객체가 의도를 문서화하는 SSOT 역할 수행.
+
+**검증 명령**:
+```bash
+# 1) 인라인 목적 boolean 플래그 패턴 탐지
+grep -rn "isCalibrationRequired\|isRepairRequired\|isRentalPurpose\b\|isRental\b" \
+  apps/frontend/components/checkouts/ \
+  --include="*.tsx" --include="*.ts"
+# 기대: 0건 (설정 객체 config.calibrationRequired 패턴만 허용)
+
+# 2) RETURN_INSPECTION_PURPOSE_CONFIG satisfies Record 유지 확인
+grep -n "satisfies Record<CheckoutPurpose" \
+  apps/frontend/components/checkouts/ReturnInspectionForm.tsx
+# 기대: 1건 (as const satisfies Record<CheckoutPurpose, PurposeInspectionConfig>)
+
+# 3) 새 목적 추가 시 exhausiveness — CheckoutPurpose 값 수
+grep -n "CheckoutPurposeValues\|CPVal\." \
+  packages/schemas/src/enums/checkout.ts 2>/dev/null || \
+grep -n "CheckoutPurpose\b" packages/schemas/src/ -r | head -5
+# 기대: RETURN_INSPECTION_PURPOSE_CONFIG 키 수 = CheckoutPurpose 값 수
+```
+
+**PASS:**
+- `ReturnInspectionForm.tsx`에 `as const satisfies Record<CheckoutPurpose, PurposeInspectionConfig>` 존재
+- 컴포넌트 내 `isCalibrationRequired` / `isRepairRequired` 인라인 boolean 0건
+- config 객체 필드 참조(`config.calibrationRequired`)로 조건 분기
+
+**FAIL:**
+- `const isCalibrationRequired = purpose === 'calibration'` 같은 인라인 재정의 발견 — 설정 객체로 이관 필요
+- `satisfies Record<CheckoutPurpose, ...>` 없는 단순 객체 리터럴 — 새 목적 누락 탐지 불가
+
+**예외:**
+- JSX 내 `{purpose === CPVal.RENTAL ? ... : ...}` 조건부 렌더링 — 단순 렌더 분기는 설정 객체 불필요 (설정에서 이미 결정된 값 사용)
+
+**관련 파일:**
+- `apps/frontend/components/checkouts/ReturnInspectionForm.tsx` — RETURN_INSPECTION_PURPOSE_CONFIG SSOT
+- `packages/schemas/src/enums/checkout.ts` (또는 schemas) — CheckoutPurpose enum SSOT
+
+**발생 이력 (2026-04-29 신설)**: rental 반입 처리 시 교정/수리 체크박스가 모든 목적에 표시되는 UX 중복 버그. 목적별 설정 SSOT 부재로 `isCalibrationRequired = purpose === 'calibration'` 인라인 플래그가 乱立 — `RETURN_INSPECTION_PURPOSE_CONFIG as const satisfies Record<CheckoutPurpose, ...>` 도입으로 exhaustiveness 강제.
