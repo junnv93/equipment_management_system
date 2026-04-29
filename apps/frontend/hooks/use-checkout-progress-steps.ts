@@ -79,6 +79,12 @@ interface UseCheckoutProgressStepsInput {
   /** 반입 최종 승인 시각/승인자 (return_approved 단계) */
   readonly returnApprovedAt?: string | null;
   readonly returnApprover?: { readonly name?: string | null; readonly role?: string | null } | null;
+  /** conditionChecks 기반 actor (rental 전용) */
+  readonly inUseActor?: { readonly name?: string | null; readonly role?: string | null } | null;
+  readonly borrowerReturnActor?: {
+    readonly name?: string | null;
+    readonly role?: string | null;
+  } | null;
 }
 
 /**
@@ -121,6 +127,8 @@ type StepMetaInput = Pick<
   | 'expectedReturnDate'
   | 'returnApprovedAt'
   | 'returnApprover'
+  | 'inUseActor'
+  | 'borrowerReturnActor'
 >;
 
 function buildStepMeta(
@@ -173,14 +181,17 @@ function buildStepMeta(
         scheduledAt: toIsoOrUndef(input.checkoutDate),
       };
     case CSVal.IN_USE:
-      // rental에서 lender_checked → in_use 전환 시점 = checkoutDate와 동일
+      // rental lender_checked → in_use 전환: conditionChecks BORROWER_RECEIVE actor 우선, 없으면 actor 없음
       return {
+        actor: input.inUseActor?.name ?? undefined,
+        actorRole: input.inUseActor?.role ?? undefined,
         timestamp: toIsoOrUndef(input.checkoutDate),
       };
     case CSVal.BORROWER_RETURNED:
+      // conditionChecks BORROWER_RETURN actor 우선 (borrower 직접 수행 단계)
       return {
-        actor: input.returner?.name ?? undefined,
-        actorRole: input.returner?.role ?? undefined,
+        actor: input.borrowerReturnActor?.name ?? undefined,
+        actorRole: input.borrowerReturnActor?.role ?? undefined,
         timestamp: toIsoOrUndef(input.actualReturnDate),
         scheduledAt: toIsoOrUndef(input.expectedReturnDate),
       };
@@ -240,6 +251,8 @@ export function useCheckoutProgressSteps({
   expectedReturnDate,
   returnApprovedAt,
   returnApprover,
+  inUseActor,
+  borrowerReturnActor,
   auditEvents,
 }: UseCheckoutProgressStepsInput): ProgressStepDescriptor[] {
   return useMemo(() => {
@@ -305,6 +318,8 @@ export function useCheckoutProgressSteps({
           expectedReturnDate,
           returnApprovedAt,
           returnApprover,
+          inUseActor,
+          borrowerReturnActor,
         },
         eventByStatus
       );
@@ -344,6 +359,8 @@ export function useCheckoutProgressSteps({
     expectedReturnDate,
     returnApprovedAt,
     returnApprover,
+    inUseActor,
+    borrowerReturnActor,
     auditEvents,
   ]);
 }

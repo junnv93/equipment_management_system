@@ -104,7 +104,12 @@ const StepNode = memo(function StepNode({
             <>
               <br />
               <b className="text-foreground font-semibold">{actor}</b>
-              {actorRole ? <span className="text-muted-foreground"> · {actorRole}</span> : null}
+              {actorRole ? (
+                <>
+                  <br />
+                  <span className="text-muted-foreground">{actorRole}</span>
+                </>
+              ) : null}
             </>
           ) : null}
         </span>

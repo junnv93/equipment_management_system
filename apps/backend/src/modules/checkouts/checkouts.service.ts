@@ -1434,6 +1434,8 @@ export class CheckoutsService extends VersionedBaseService {
       returnApprover: checkout.returnApprovedBy
         ? (actorMap.get(checkout.returnApprovedBy) ?? null)
         : null,
+      inUseActor: conditionActorMap.get(CCSVal.BORROWER_RECEIVE) ?? null,
+      borrowerReturnActor: conditionActorMap.get(CCSVal.BORROWER_RETURN) ?? null,
       meta: { availableActions, nextStep },
     };
   }
