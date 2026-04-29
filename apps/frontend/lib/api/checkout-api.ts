@@ -158,9 +158,10 @@ export interface Checkout {
     teamName?: string | null;
     teamSite?: string | null;
   } | null;
-  // conditionChecks 기반 actor (rental 전용 — in_use: BORROWER_RECEIVE, borrower_returned: BORROWER_RETURN)
+  // conditionChecks 기반 actor (rental 전용)
   inUseActor?: { name: string; teamName?: string | null; teamSite?: string | null } | null;
   borrowerReturnActor?: { name: string; teamName?: string | null; teamSite?: string | null } | null;
+  lenderReturnActor?: { name: string; teamName?: string | null; teamSite?: string | null } | null;
   // 종료 시점 기준 상태 (rejected/canceled 시 terminated step 위치 파악)
   terminatedFromStatus?: CheckoutStatus | null;
   // 상태 확인 기록 (대여 목적)

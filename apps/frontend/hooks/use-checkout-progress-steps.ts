@@ -85,6 +85,11 @@ interface UseCheckoutProgressStepsInput {
     readonly name?: string | null;
     readonly role?: string | null;
   } | null;
+  /** 빌려준 측 반납 수령 확인자 (rental LENDER_RETURN → lender_received 단계 actor) */
+  readonly lenderReturnActor?: {
+    readonly name?: string | null;
+    readonly role?: string | null;
+  } | null;
 }
 
 /**
@@ -129,6 +134,7 @@ type StepMetaInput = Pick<
   | 'returnApprover'
   | 'inUseActor'
   | 'borrowerReturnActor'
+  | 'lenderReturnActor'
 >;
 
 function buildStepMeta(
@@ -188,10 +194,12 @@ function buildStepMeta(
         timestamp: toIsoOrUndef(input.checkoutDate),
       };
     case CSVal.BORROWER_RETURNED:
-      // conditionChecks BORROWER_RETURN actor 우선 (borrower 직접 수행 단계)
+      // 완료 시점: 빌려준 측이 LENDER_RETURN 상태 확인 후 lender_received → return_approved로 전환.
+      // "반납 확인" 단계의 actor = 빌려준 측 수령 확인자(LENDER_RETURN checker) 우선.
+      // lender_received가 스테퍼에 노출되지 않아 actor가 이 단계에 표시됨.
       return {
-        actor: input.borrowerReturnActor?.name ?? undefined,
-        actorRole: input.borrowerReturnActor?.role ?? undefined,
+        actor: input.lenderReturnActor?.name ?? input.borrowerReturnActor?.name ?? undefined,
+        actorRole: input.lenderReturnActor?.role ?? input.borrowerReturnActor?.role ?? undefined,
         timestamp: toIsoOrUndef(input.actualReturnDate),
         scheduledAt: toIsoOrUndef(input.expectedReturnDate),
       };
@@ -253,6 +261,7 @@ export function useCheckoutProgressSteps({
   returnApprover,
   inUseActor,
   borrowerReturnActor,
+  lenderReturnActor,
   auditEvents,
 }: UseCheckoutProgressStepsInput): ProgressStepDescriptor[] {
   return useMemo(() => {
@@ -320,6 +329,7 @@ export function useCheckoutProgressSteps({
           returnApprover,
           inUseActor,
           borrowerReturnActor,
+          lenderReturnActor,
         },
         eventByStatus
       );
@@ -361,6 +371,7 @@ export function useCheckoutProgressSteps({
     returnApprover,
     inUseActor,
     borrowerReturnActor,
+    lenderReturnActor,
     auditEvents,
   ]);
 }

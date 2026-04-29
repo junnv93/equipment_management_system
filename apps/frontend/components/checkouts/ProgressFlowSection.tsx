@@ -51,9 +51,10 @@ interface CheckoutLike {
   readonly lenderConfirmer?: ActorLike | null;
   readonly returner?: ActorLike | null;
   readonly returnApprover?: ActorLike | null;
-  // conditionChecks 기반 actor (rental 전용 — in_use / borrower_returned 단계)
-  readonly inUseActor?: ActorLike | null;
-  readonly borrowerReturnActor?: ActorLike | null;
+  // conditionChecks 기반 actor (rental 전용)
+  readonly inUseActor?: ActorLike | null; // in_use 단계 차용측 수령자
+  readonly borrowerReturnActor?: ActorLike | null; // borrower_returned 단계 차용측 반납자
+  readonly lenderReturnActor?: ActorLike | null; // borrower_returned 단계 빌려준 측 수령 확인자
 }
 
 /** "{teamName} ({teamSite})" 포맷 — stepper actorRole 표시용 */
@@ -119,6 +120,7 @@ function ProgressFlowSection({ checkout, descriptor }: ProgressFlowSectionProps)
     returnApprover: toActorInput(checkout.returnApprover),
     inUseActor: toActorInput(checkout.inUseActor),
     borrowerReturnActor: toActorInput(checkout.borrowerReturnActor),
+    lenderReturnActor: toActorInput(checkout.lenderReturnActor),
     auditEvents: undefined,
   });
 

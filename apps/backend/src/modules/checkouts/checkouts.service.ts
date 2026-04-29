@@ -138,9 +138,10 @@ export interface CheckoutWithMeta extends Checkout {
   lenderConfirmer: CheckoutActorUser | null;
   returner: CheckoutActorUser | null;
   returnApprover: CheckoutActorUser | null;
-  // conditionChecks 기반 actor (rental in_use / borrower_returned 단계)
-  inUseActor: CheckoutConditionActor | null;
-  borrowerReturnActor: CheckoutConditionActor | null;
+  // conditionChecks 기반 actor (rental 전용)
+  inUseActor: CheckoutConditionActor | null; // BORROWER_RECEIVE: 차용측 수령자
+  borrowerReturnActor: CheckoutConditionActor | null; // BORROWER_RETURN: 차용측 반납자
+  lenderReturnActor: CheckoutConditionActor | null; // LENDER_RETURN: 빌려준 측 반납 수령 확인자
 }
 
 /**
@@ -1400,7 +1401,11 @@ export class CheckoutsService extends VersionedBaseService {
             .where(
               and(
                 eq(conditionChecks.checkoutId, uuid),
-                inArray(conditionChecks.step, [CCSVal.BORROWER_RECEIVE, CCSVal.BORROWER_RETURN])
+                inArray(conditionChecks.step, [
+                  CCSVal.BORROWER_RECEIVE,
+                  CCSVal.BORROWER_RETURN,
+                  CCSVal.LENDER_RETURN,
+                ])
               )
             )
         : [];
@@ -1436,6 +1441,7 @@ export class CheckoutsService extends VersionedBaseService {
         : null,
       inUseActor: conditionActorMap.get(CCSVal.BORROWER_RECEIVE) ?? null,
       borrowerReturnActor: conditionActorMap.get(CCSVal.BORROWER_RETURN) ?? null,
+      lenderReturnActor: conditionActorMap.get(CCSVal.LENDER_RETURN) ?? null,
       meta: { availableActions, nextStep },
     };
   }
