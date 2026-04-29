@@ -174,7 +174,6 @@ describe('resolveInlineActionVariant — 와이어프레임 04 spec table 매트
       'lender_receive',
       'borrower_receive',
       'approve_return',
-      'mark_in_use',
     ] as const;
     // isMyTurn=true와 false 양쪽 모두 'ok' (ok-class 액션은 isMyTurn에 종속되지 않음)
     for (const isMyTurn of [true, false]) {

@@ -43,8 +43,8 @@ describe('NON_EXPORTABLE_CHECKOUT_STATUSES', () => {
     ]);
   });
 
-  it('CheckoutStatus 중 10개는 제외되지 않음', () => {
+  it('CheckoutStatus 중 9개는 제외되지 않음', () => {
     const totalStatuses = CHECKOUT_STATUS_VALUES.length;
-    expect(totalStatuses - NON_EXPORTABLE_CHECKOUT_STATUSES.length).toBe(10);
+    expect(totalStatuses - NON_EXPORTABLE_CHECKOUT_STATUSES.length).toBe(9);
   });
 });
