@@ -105,6 +105,15 @@ export interface CheckoutAvailableActions {
   canBorrowerReject: boolean;
 }
 
+/** 단계별 actor hydration 공통 shape — 팀명/사이트는 FE stepper role 표시용 */
+interface CheckoutActorUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  teamName?: string | null;
+  teamSite?: string | null;
+}
+
 /**
  * ✅ Phase 2: Server-Driven UI
  * 메타데이터(availableActions + nextStep)를 포함한 Checkout
@@ -116,6 +125,12 @@ export interface CheckoutWithMeta extends Checkout {
     availableActions: CheckoutAvailableActions;
     nextStep: NextStepDescriptor;
   };
+  // 단계별 actor 이름 hydration — 프론트 stepper 날짜/담당자 표시용
+  borrowerApprover: CheckoutActorUser | null;
+  approver: CheckoutActorUser | null;
+  lenderConfirmer: CheckoutActorUser | null;
+  returner: CheckoutActorUser | null;
+  returnApprover: CheckoutActorUser | null;
 }
 
 /**
@@ -1331,6 +1346,33 @@ export class CheckoutsService extends VersionedBaseService {
         .limit(1),
     ]);
 
+    // actor 이름 배치 hydration — 단일 IN 쿼리로 N+1 방지.
+    // 각 단계별 actor FK를 수집하여 존재하는 ID만 조회.
+    const actorIdSet = new Set(
+      [
+        checkout.borrowerApproverId,
+        checkout.approverId,
+        checkout.lenderConfirmedBy,
+        checkout.returnerId,
+        checkout.returnApprovedBy,
+      ].filter((id): id is string => typeof id === 'string')
+    );
+    const actorRows =
+      actorIdSet.size > 0
+        ? await this.db
+            .select({
+              id: schema.users.id,
+              name: schema.users.name,
+              email: schema.users.email,
+              teamName: schema.teams.name,
+              teamSite: schema.teams.site,
+            })
+            .from(schema.users)
+            .leftJoin(schema.teams, eq(schema.teams.id, schema.users.teamId))
+            .where(inArray(schema.users.id, Array.from(actorIdSet)))
+        : [];
+    const actorMap = new Map(actorRows.map((r) => [r.id, r]));
+
     const requesterTeamId = userRow[0]?.teamId ?? null;
     const actorCtx = this.buildActorCtx(userTeamId, checkout.lenderTeamId, requesterTeamId);
     const availableActions = this.calculateAvailableActions(checkout, userPermissions, actorCtx);
@@ -1347,6 +1389,17 @@ export class CheckoutsService extends VersionedBaseService {
               ? { id: userRow[0].teamId, name: userRow[0].teamName, site: userRow[0].teamSite }
               : null,
           }
+        : null,
+      borrowerApprover: checkout.borrowerApproverId
+        ? (actorMap.get(checkout.borrowerApproverId) ?? null)
+        : null,
+      approver: checkout.approverId ? (actorMap.get(checkout.approverId) ?? null) : null,
+      lenderConfirmer: checkout.lenderConfirmedBy
+        ? (actorMap.get(checkout.lenderConfirmedBy) ?? null)
+        : null,
+      returner: checkout.returnerId ? (actorMap.get(checkout.returnerId) ?? null) : null,
+      returnApprover: checkout.returnApprovedBy
+        ? (actorMap.get(checkout.returnApprovedBy) ?? null)
         : null,
       meta: { availableActions, nextStep },
     };
@@ -2394,12 +2447,26 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ 반출 유형별 필수 검사 항목 검증
       const purpose = checkout.purpose;
 
-      // 모든 유형: workingStatusChecked 필수
-      if (!returnDto.workingStatusChecked) {
-        throw new BadRequestException({
-          code: CheckoutErrorCode.WORKING_STATUS_REQUIRED,
-          message: 'Working status check is required',
-        });
+      // 대여 목적: workingStatusChecked는 condition_checks 이력에서 서버가 직접 도출 — DTO 검증 면제.
+      // 교정/수리: 사용자가 직접 체크박스를 확인했으므로 DTO 값을 검증.
+      let resolvedWorkingStatusChecked: boolean;
+      if (purpose === CPVal.RENTAL) {
+        // condition_checks 이력 조회 — 모든 체크의 operationStatus가 'normal'이면 true
+        const priorChecks = await this.db
+          .select({ operationStatus: conditionChecks.operationStatus })
+          .from(conditionChecks)
+          .where(eq(conditionChecks.checkoutId, uuid));
+        resolvedWorkingStatusChecked =
+          priorChecks.length > 0 && priorChecks.every((c) => c.operationStatus === 'normal');
+      } else {
+        // 교정/수리: 작동 여부 확인 필수
+        if (!returnDto.workingStatusChecked) {
+          throw new BadRequestException({
+            code: CheckoutErrorCode.WORKING_STATUS_REQUIRED,
+            message: 'Working status check is required',
+          });
+        }
+        resolvedWorkingStatusChecked = returnDto.workingStatusChecked;
       }
 
       // 교정 목적: calibrationChecked 필수
@@ -2431,7 +2498,7 @@ export class CheckoutsService extends VersionedBaseService {
             returnerId,
             calibrationChecked: returnDto.calibrationChecked ?? false,
             repairChecked: returnDto.repairChecked ?? false,
-            workingStatusChecked: returnDto.workingStatusChecked ?? false,
+            workingStatusChecked: resolvedWorkingStatusChecked,
             inspectionNotes: returnDto.inspectionNotes || null,
           },
           '반출',

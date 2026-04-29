@@ -20,6 +20,7 @@ import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import ReturnInspectionForm, {
   InspectionFormData,
+  RETURN_INSPECTION_PURPOSE_CONFIG,
 } from '@/components/checkouts/ReturnInspectionForm';
 import CheckoutProgressStepper from '@/components/checkouts/CheckoutProgressStepper';
 import { useCheckoutProgressSteps } from '@/hooks/use-checkout-progress-steps';
@@ -88,6 +89,15 @@ export default function ReturnCheckoutClient({
       router.replace(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     }
   }, [canComplete, router, checkout.id]);
+
+  // 대여 목적: 4단계 상태확인 이력에서 workingStatusChecked 자동 도출.
+  // RETURN_INSPECTION_PURPOSE_CONFIG.rental.workingUserProvided=false 이므로
+  // ReturnInspectionForm 은 이 값을 그대로 사용한다.
+  const inspectionConfig = RETURN_INSPECTION_PURPOSE_CONFIG[checkout.purpose];
+  const derivedWorkingStatusChecked =
+    !inspectionConfig.workingUserProvided && conditionChecks.length > 0
+      ? conditionChecks.every((c) => c.operationStatus === 'normal')
+      : false;
 
   // 제출 핸들러
   const handleSubmit = (data: InspectionFormData) => {
@@ -282,6 +292,7 @@ export default function ReturnCheckoutClient({
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             isLoading={returnMutation.isPending}
+            derivedWorkingStatusChecked={derivedWorkingStatusChecked}
           />
         </CardContent>
       </Card>

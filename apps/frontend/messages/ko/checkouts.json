@@ -211,7 +211,8 @@
     "unchecked": "미확인",
     "validationWorking": "작동 여부 확인은 필수입니다.",
     "validationCalibration": "교정 목적 반출의 경우 교정 확인은 필수입니다.",
-    "validationRepair": "수리 목적 반출의 경우 수리 확인은 필수입니다."
+    "validationRepair": "수리 목적 반출의 경우 수리 확인은 필수입니다.",
+    "rentalConditionChecksNote": "대여 목적 반입은 4단계 상태 확인 이력(외관·작동 상태)이 검사 기록을 대체합니다. 특이사항이 있으면 아래 비고란에 입력하세요."
   },
   "dialogs": {
     "startTitle": "반출 시작",
@@ -300,7 +301,7 @@
     "blocked": {
       "permission": "현재 역할에는 이 작업 권한이 없습니다.",
       "role_mismatch": "담당 역할이 아닙니다.",
-      "actor_team": "이 작업은 다른 부서(차용/관리 부서) 담당자만 수행할 수 있습니다."
+      "actor_team": "이 작업은 관리 부서 담당자만 수행할 수 있습니다."
     },
     "urgency": {
       "normal": "일반",

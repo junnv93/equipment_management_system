@@ -20,15 +20,52 @@ import CheckoutProgressStepper from './CheckoutProgressStepper';
 // 본 컴포넌트는 CheckoutDetailClient 의 진행 흐름 영역을 캡슐화 — 헤더 + stepper.
 // detail 페이지 내 상태 변화(useQuery refetch) 시 본 섹션만 재렌더되도록 React.memo.
 
+/** actor 공통 shape — name + team 정보로 stepper role 문자열 구성 */
+interface ActorLike {
+  readonly name?: string | null;
+  readonly teamName?: string | null;
+  readonly teamSite?: string | null;
+}
+
 interface CheckoutLike {
   readonly id: string;
   readonly status: CheckoutStatus;
   readonly purpose: CheckoutPurpose;
+  readonly createdAt: string | Date;
+  readonly user?: {
+    readonly name?: string | null;
+    readonly team?: { readonly name?: string | null; readonly site?: string | null } | null;
+  } | null;
+  // timestamp 필드
   readonly checkoutDate?: string | Date | null;
   readonly expectedReturnDate?: string | Date | null;
-  readonly createdAt: string | Date;
-  readonly user?: { readonly name?: string | null } | null;
+  readonly borrowerApprovedAt?: string | null;
+  readonly approvedAt?: string | null;
+  readonly lenderConfirmedAt?: string | null;
+  readonly actualReturnDate?: string | null;
+  readonly returnApprovedAt?: string | null;
+  // actor hydration 필드 (BE Phase 2 — 없으면 undefined/null, graceful degrade)
+  readonly borrowerApprover?: ActorLike | null;
+  readonly approver?: ActorLike | null;
   readonly approvedBy?: { readonly name?: string | null } | null;
+  readonly lenderConfirmer?: ActorLike | null;
+  readonly returner?: ActorLike | null;
+  readonly returnApprover?: ActorLike | null;
+}
+
+/** "{teamName} ({teamSite})" 포맷 — stepper actorRole 표시용 */
+function formatActorRole(teamName?: string | null, teamSite?: string | null): string | null {
+  if (!teamName) return null;
+  return teamSite ? `${teamName} (${teamSite})` : teamName;
+}
+
+/** ActorLike → { name, role } 변환 */
+function toActorInput(actor: ActorLike | null | undefined) {
+  if (!actor) return null;
+  return {
+    name: actor.name,
+    role: formatActorRole(actor.teamName, actor.teamSite),
+  };
 }
 
 interface ProgressFlowSectionProps {
@@ -53,12 +90,30 @@ function ProgressFlowSection({ checkout, descriptor }: ProgressFlowSectionProps)
     status: checkout.status,
     purpose: checkout.purpose,
     descriptor,
-    // requester.role 은 신청자 본인의 역할이어야 함 (viewer role과 다름). 정확한 role은 Phase 11
-    // audit log endpoint(`auditEvents[].actorRole`)에서 인입. 그 전까지는 null.
-    requester: checkout.user ? { name: checkout.user.name, role: null } : null,
+    requester: checkout.user
+      ? {
+          name: checkout.user.name,
+          role: formatActorRole(checkout.user.team?.name, checkout.user.team?.site),
+        }
+      : null,
     requestedAt: checkout.createdAt,
+    borrowerApprovedAt: checkout.borrowerApprovedAt,
+    borrowerApprover: toActorInput(checkout.borrowerApprover),
+    approvedAt: checkout.approvedAt,
+    // approver(Phase 2 배치) 우선, 없으면 approvedBy(기존 필드) fallback (name만 있고 team 없음)
+    approver: checkout.approver
+      ? toActorInput(checkout.approver)
+      : checkout.approvedBy
+        ? { name: checkout.approvedBy.name, role: null }
+        : null,
     checkoutDate: checkout.checkoutDate,
+    lenderConfirmedAt: checkout.lenderConfirmedAt,
+    lenderConfirmer: toActorInput(checkout.lenderConfirmer),
+    actualReturnDate: checkout.actualReturnDate,
+    returner: toActorInput(checkout.returner),
     expectedReturnDate: checkout.expectedReturnDate,
+    returnApprovedAt: checkout.returnApprovedAt,
+    returnApprover: toActorInput(checkout.returnApprover),
     auditEvents: undefined,
   });
 

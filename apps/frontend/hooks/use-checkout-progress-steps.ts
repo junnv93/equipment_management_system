@@ -11,6 +11,7 @@ import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   deriveProgressStepState,
+  computeStepIndex,
 } from '@equipment-management/schemas';
 
 import { CHECKOUT_DISPLAY_STEPS, CHECKOUT_STEP_LABELS } from '@/lib/design-tokens';
@@ -56,6 +57,28 @@ interface UseCheckoutProgressStepsInput {
   readonly expectedReturnDate?: string | Date | null;
   /** Audit log 이벤트 (Phase 11에서 인입) */
   readonly auditEvents?: ReadonlyArray<CheckoutAuditEventSlice>;
+  // ── 단계별 actor/timestamp (BE Phase 2 hydration — 없으면 undefined, graceful degrade) ──
+  /** 대여 1차 승인 시각/승인자 (rental borrower_approved 단계) */
+  readonly borrowerApprovedAt?: string | null;
+  readonly borrowerApprover?: {
+    readonly name?: string | null;
+    readonly role?: string | null;
+  } | null;
+  /** 최종 승인 시각/승인자 (approved 단계) */
+  readonly approvedAt?: string | null;
+  readonly approver?: { readonly name?: string | null; readonly role?: string | null } | null;
+  /** 빌려준 측 확인 시각/확인자 (rental lender_checked 단계) */
+  readonly lenderConfirmedAt?: string | null;
+  readonly lenderConfirmer?: {
+    readonly name?: string | null;
+    readonly role?: string | null;
+  } | null;
+  /** 실제 반입 시각/반입자 (returned / borrower_returned 단계) */
+  readonly actualReturnDate?: string | null;
+  readonly returner?: { readonly name?: string | null; readonly role?: string | null } | null;
+  /** 반입 최종 승인 시각/승인자 (return_approved 단계) */
+  readonly returnApprovedAt?: string | null;
+  readonly returnApprover?: { readonly name?: string | null; readonly role?: string | null } | null;
 }
 
 /**
@@ -80,10 +103,24 @@ function toIsoOrUndef(value: string | Date | null | undefined): string | undefin
 /**
  * status → step별 scheduled/timestamp 추정 (audit log fallback).
  * audit event가 있으면 우선 사용. 없으면 checkout 자체 필드에서 가능한 만큼 채움.
+ * SSOT 보장: CHECKOUT_DISPLAY_STEPS에 등장하는 모든 status가 아래 switch에 명시적으로 처리됨.
  */
 type StepMetaInput = Pick<
   UseCheckoutProgressStepsInput,
-  'requester' | 'requestedAt' | 'checkoutDate' | 'expectedReturnDate'
+  | 'requester'
+  | 'requestedAt'
+  | 'borrowerApprovedAt'
+  | 'borrowerApprover'
+  | 'approvedAt'
+  | 'approver'
+  | 'checkoutDate'
+  | 'lenderConfirmedAt'
+  | 'lenderConfirmer'
+  | 'actualReturnDate'
+  | 'returner'
+  | 'expectedReturnDate'
+  | 'returnApprovedAt'
+  | 'returnApprover'
 >;
 
 function buildStepMeta(
@@ -91,6 +128,7 @@ function buildStepMeta(
   input: StepMetaInput,
   eventByStatus: Map<CheckoutStatus, CheckoutAuditEventSlice>
 ): Pick<ProgressStepDescriptor, 'actor' | 'actorRole' | 'timestamp' | 'scheduledAt'> {
+  // audit event 최우선 — Phase 11 audit log 인입 시 자동으로 정확한 데이터 사용
   const event = eventByStatus.get(stepStatus);
   if (event) {
     return {
@@ -100,23 +138,68 @@ function buildStepMeta(
     };
   }
 
-  // Fallback — checkout 자체 필드로 의미 있는 메타 채움
+  // Fallback — checkout 자체 필드로 단계별 timestamp/actor 채움
+  // 순서: CHECKOUT_DISPLAY_STEPS(nonRental ∪ rental) 합집합 — 9개 status 완전 커버
   switch (stepStatus) {
-    case CSVal.PENDING: {
-      const requestedIso = toIsoOrUndef(input.requestedAt);
+    case CSVal.PENDING:
       return {
         actor: input.requester?.name ?? undefined,
         actorRole: input.requester?.role ?? undefined,
-        timestamp: requestedIso,
+        timestamp: toIsoOrUndef(input.requestedAt),
       };
-    }
+    case CSVal.BORROWER_APPROVED:
+      return {
+        actor: input.borrowerApprover?.name ?? undefined,
+        actorRole: input.borrowerApprover?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.borrowerApprovedAt),
+      };
+    case CSVal.APPROVED:
+      return {
+        actor: input.approver?.name ?? undefined,
+        actorRole: input.approver?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.approvedAt),
+      };
+    case CSVal.LENDER_CHECKED:
+      return {
+        actor: input.lenderConfirmer?.name ?? undefined,
+        actorRole: input.lenderConfirmer?.role ?? undefined,
+        // lenderConfirmedAt 없으면 checkoutDate fallback (빌려준 측 확인 = 반출 시작 기준)
+        timestamp: toIsoOrUndef(input.lenderConfirmedAt) ?? toIsoOrUndef(input.checkoutDate),
+      };
     case CSVal.CHECKED_OUT:
-      return { scheduledAt: toIsoOrUndef(input.checkoutDate) };
-    case CSVal.RETURNED:
-    case CSVal.RETURN_APPROVED:
+      // done 시 timestamp = checkoutDate (실제 반출 시작), future 시 scheduledAt (예정일)
+      return {
+        timestamp: toIsoOrUndef(input.checkoutDate),
+        scheduledAt: toIsoOrUndef(input.checkoutDate),
+      };
+    case CSVal.IN_USE:
+      // rental에서 lender_checked → in_use 전환 시점 = checkoutDate와 동일
+      return {
+        timestamp: toIsoOrUndef(input.checkoutDate),
+      };
     case CSVal.BORROWER_RETURNED:
-      return { scheduledAt: toIsoOrUndef(input.expectedReturnDate) };
+      return {
+        actor: input.returner?.name ?? undefined,
+        actorRole: input.returner?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.actualReturnDate),
+        scheduledAt: toIsoOrUndef(input.expectedReturnDate),
+      };
+    case CSVal.RETURNED:
+      return {
+        actor: input.returner?.name ?? undefined,
+        actorRole: input.returner?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.actualReturnDate),
+        scheduledAt: toIsoOrUndef(input.expectedReturnDate),
+      };
+    case CSVal.RETURN_APPROVED:
+      return {
+        actor: input.returnApprover?.name ?? undefined,
+        actorRole: input.returnApprover?.role ?? undefined,
+        timestamp: toIsoOrUndef(input.returnApprovedAt),
+        scheduledAt: toIsoOrUndef(input.expectedReturnDate),
+      };
     default:
+      // rejected/canceled/overdue 등 CHECKOUT_DISPLAY_STEPS에 없는 status — 메타 없음
       return {};
   }
 }
@@ -145,8 +228,18 @@ export function useCheckoutProgressSteps({
   descriptor,
   requester,
   requestedAt,
+  borrowerApprovedAt,
+  borrowerApprover,
+  approvedAt,
+  approver,
   checkoutDate,
+  lenderConfirmedAt,
+  lenderConfirmer,
+  actualReturnDate,
+  returner,
   expectedReturnDate,
+  returnApprovedAt,
+  returnApprover,
   auditEvents,
 }: UseCheckoutProgressStepsInput): ProgressStepDescriptor[] {
   return useMemo(() => {
@@ -168,8 +261,9 @@ export function useCheckoutProgressSteps({
           return descriptor.currentStepIndex - 1;
         }
       }
-      const idx = steps.indexOf(status);
-      return idx >= 0 ? idx : 0;
+      // SSOT fallback: steps.indexOf 는 CHECKOUT_DISPLAY_STEPS에 없는 status(lender_received 등)에서
+      // -1 → 0 으로 묵묵히 잘못된 단계를 가리킨다. computeStepIndex 는 모든 status를 명시적으로 매핑.
+      return Math.max(0, computeStepIndex(status, purpose) - 1);
     })();
     const currentIndex0 = Math.min(steps.length - 1, Math.max(0, rawCurrent));
 
@@ -196,7 +290,22 @@ export function useCheckoutProgressSteps({
 
       const meta = buildStepMeta(
         stepStatus,
-        { requester, requestedAt, checkoutDate, expectedReturnDate },
+        {
+          requester,
+          requestedAt,
+          borrowerApprovedAt,
+          borrowerApprover,
+          approvedAt,
+          approver,
+          checkoutDate,
+          lenderConfirmedAt,
+          lenderConfirmer,
+          actualReturnDate,
+          returner,
+          expectedReturnDate,
+          returnApprovedAt,
+          returnApprover,
+        },
         eventByStatus
       );
 
@@ -223,8 +332,18 @@ export function useCheckoutProgressSteps({
     descriptor,
     requester,
     requestedAt,
+    borrowerApprovedAt,
+    borrowerApprover,
+    approvedAt,
+    approver,
     checkoutDate,
+    lenderConfirmedAt,
+    lenderConfirmer,
+    actualReturnDate,
+    returner,
     expectedReturnDate,
+    returnApprovedAt,
+    returnApprover,
     auditEvents,
   ]);
 }

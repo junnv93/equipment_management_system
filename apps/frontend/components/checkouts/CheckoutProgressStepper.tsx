@@ -87,9 +87,9 @@ const StepNode = memo(function StepNode({
     return <span aria-hidden>{index + 1}</span>;
   })();
 
-  // step-meta — done: actor + 시간 / current: "대기 중" 또는 "당신" / future: 예정일
+  // step-meta — timestamp가 있으면 모든 상태에서 날짜+담당자 표시 / current(데이터 없음): "대기 중" / future: 예정일
   const metaLine = (() => {
-    if (state === 'done' && timestamp) {
+    if (timestamp && state !== 'future') {
       const date = new Date(timestamp);
       const formatted = format.dateTime(date, {
         month: '2-digit',

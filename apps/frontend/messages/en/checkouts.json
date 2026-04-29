@@ -211,7 +211,8 @@
     "unchecked": "Not checked",
     "validationWorking": "Operation check is required.",
     "validationCalibration": "Calibration check is required for calibration checkouts.",
-    "validationRepair": "Repair check is required for repair checkouts."
+    "validationRepair": "Repair check is required for repair checkouts.",
+    "rentalConditionChecksNote": "For rental returns, the 4-stage condition check history (appearance & operation status) serves as the inspection record. Add any special notes in the field below."
   },
   "dialogs": {
     "startTitle": "Start Checkout",
@@ -300,7 +301,7 @@
     "blocked": {
       "permission": "You do not have permission for this action.",
       "role_mismatch": "This action is not for your role.",
-      "actor_team": "Only the responsible department (borrower or lender) can perform this action."
+      "actor_team": "Only the responsible department (managing department) can perform this action."
     },
     "urgency": {
       "normal": "Normal",

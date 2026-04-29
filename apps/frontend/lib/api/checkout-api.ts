@@ -116,6 +116,20 @@ export interface Checkout {
   borrowerApproverId?: string;
   borrowerApprovedAt?: string;
   borrowerRejectionReason?: string;
+  borrowerApprover?: { id: string; name: string; email: string; teamName?: string | null; teamSite?: string | null } | null;
+  // 반출 승인자 hydration (Phase 2 BE — borrower_approved → approved actor)
+  approver?: { id: string; name: string; email: string; teamName?: string | null; teamSite?: string | null } | null;
+  // 빌려준 측 확인 정보 (rental lender_checked 단계)
+  lenderConfirmedAt?: string | null;
+  lenderConfirmedBy?: string | null;
+  lenderConfirmer?: { id: string; name: string; email: string; teamName?: string | null; teamSite?: string | null } | null;
+  // 반입 처리자 (returned 단계 actor)
+  returnerId?: string | null;
+  returner?: { id: string; name: string; email: string; teamName?: string | null; teamSite?: string | null } | null;
+  // 반입 최종 승인자 hydration (return_approved 단계 actor)
+  returnApprover?: { id: string; name: string; email: string; teamName?: string | null; teamSite?: string | null } | null;
+  // 종료 시점 기준 상태 (rejected/canceled 시 terminated step 위치 파악)
+  terminatedFromStatus?: CheckoutStatus | null;
   // 상태 확인 기록 (대여 목적)
   conditionChecks?: ConditionCheck[];
   // ✅ Phase 2: Server-Driven UI - 서버가 계산한 가능한 액션 + 다음 단계
