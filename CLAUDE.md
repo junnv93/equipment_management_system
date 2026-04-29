@@ -304,7 +304,7 @@ Components: feature-grouped (`equipment/`, `checkouts/`, `calibration/`, `non-co
 
 This project has 25+ custom Claude Code skills in `.claude/skills/` organized by role:
 - **Domain guides**: equipment-management, nextjs-16
-- **Verify skills (20)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -cache-events / -handover-security / -qr-ssot / -routing-origin / -implementation
+- **Verify skills (22)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -cache-events / -handover-security / -qr-ssot / -routing-origin / -checkout-fsm / -click-feedback / -implementation
 - **Review skills**: review-architecture, review-design
 - **Orchestrators**: generate-prompts, manage-skills, playwright-e2e, harness
 - **UltraReview 스크립트**: `scripts/ultrareview-advisor.mjs` (Go/No-Go 판정), `scripts/ultrareview-preflight.mjs` (pre-upload secret gate)

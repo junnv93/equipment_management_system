@@ -1350,3 +1350,38 @@ grep -n "requesterTeamId" apps/backend/src/modules/checkouts/checkouts.service.t
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll post-cache meta
 - `apps/backend/src/modules/checkouts/checkouts.controller.ts` — user info forward
 - `apps/frontend/lib/api/checkout-api.ts:warnMetaDrift` — drift 검출
+
+---
+
+### Step 44: `getPendingChecks` borrower team EXISTS subquery 패턴 (rental-approval-workflow-fix, 2026-04-29)
+
+**왜 검증해야 하는가:** rental의 `pending` 상태는 차용자 측 TM이 1차 승인해야 하는 단계인데, 신청자(requester)와 borrower TM은 다른 사용자다. `requesterId === userId` 매칭만으로는 borrower TM이 자기 팀의 신청 건을 못 본다 → nav 배지에 "내 차례" 카운트 누락. EXISTS 서브쿼리로 `requester.teamId === userTeamId`를 매칭해야 borrower 팀 멤버 모두에게 노출.
+
+**검증 명령어:**
+```bash
+# 1. getPendingChecks(Count) borrower team EXISTS pattern
+grep -B1 -A5 "borrowerTeamPendingCondition\|EXISTS.*users.*team_id" apps/backend/src/modules/checkouts/checkouts.service.ts | head -40
+
+# 2. requester user team join 또는 EXISTS 패턴 — pending status 매칭 포함
+grep -n "CSVal.PENDING\|status.*pending" apps/backend/src/modules/checkouts/checkouts.service.ts | head -10
+# 기대: getPendingChecks/getPendingChecksCount 양쪽에서 PENDING 분기 존재
+
+# 3. 단일 user (`requesterId === userId`) 매칭만 사용하는 회귀 회피
+grep -B2 -A4 "requesterId.*userId" apps/backend/src/modules/checkouts/checkouts.service.ts | grep -A3 "borrowerStatuses"
+# 기대: borrowerActionCondition 와 borrowerTeamPendingCondition 분리 — 두 패턴 OR 조합
+```
+
+**PASS:**
+1. `getPendingChecks` + `getPendingChecksCount` 양쪽이 `borrowerTeamPendingCondition` (EXISTS subquery) 사용
+2. EXISTS 서브쿼리가 `users.id = checkouts.requesterId AND users.team_id = userTeamId` 형태
+3. 기존 `borrowerActionCondition` (requester action 단계) + 신규 `borrowerTeamPendingCondition` (1차 승인 대기) 둘 다 포함된 OR 조합
+4. lender + borrowerAction + borrowerTeamPending 3-way OR 조합 일관성
+
+**FAIL:**
+- borrower TM nav 배지에 pending+rental 누락 → 1차 승인 SLA 위반 위험
+- 단순히 `borrowerStatuses`에 `PENDING` 추가만 (requesterId 매칭) → 신청자만 자기 신청 보고 borrower TM은 못 봄
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts:getPendingChecks` + `getPendingChecksCount`
+- `packages/db/src/schema/checkouts.ts` — `requesterId` FK
+- `packages/db/src/schema/users.ts` — `teamId`
