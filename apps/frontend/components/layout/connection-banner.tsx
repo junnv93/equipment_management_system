@@ -14,6 +14,7 @@ type BannerKind = 'offline' | 'sw-update';
 interface BannerSpec {
   kind: BannerKind;
   messageKey: string;
+  role: 'alert' | 'status';
   ariaLive: 'polite' | 'assertive';
   variantClass: string;
   action?: { labelKey: string; onClick: () => void };
@@ -29,7 +30,8 @@ interface BannerSpec {
  * 동시 활성 시 우선순위 높은 1개만 표시 (Invariant I8 — 동시 announce 1개).
  *
  * a11y:
- * - role="status" + aria-live (offline=assertive / sw-update=polite)
+ * - offline: role="alert" + aria-live="assertive" (critical — WCAG 4.1.3, 즉시 announce)
+ * - sw-update: role="status" + aria-live="polite" (informational)
  * - 액션 버튼은 명시적 i18n 키 ('feedback.reload')
  * - WCAG 4.1.3 Status Messages
  *
@@ -50,6 +52,7 @@ export function ConnectionBanner() {
       return {
         kind: 'offline',
         messageKey: FEEDBACK_KEYS.offline,
+        role: 'alert',
         ariaLive: 'assertive',
         variantClass: 'bg-destructive text-destructive-foreground',
       };
@@ -58,6 +61,7 @@ export function ConnectionBanner() {
       return {
         kind: 'sw-update',
         messageKey: FEEDBACK_KEYS.swUpdateAvailable,
+        role: 'status',
         ariaLive: 'polite',
         variantClass: 'bg-brand-info/15 text-foreground border-b border-brand-info/30',
         action: { labelKey: FEEDBACK_KEYS.reload, onClick: applyUpdate },
@@ -70,7 +74,7 @@ export function ConnectionBanner() {
 
   return (
     <div
-      role="status"
+      role={banner.role}
       aria-live={banner.ariaLive}
       aria-atomic="true"
       data-banner-kind={banner.kind}
