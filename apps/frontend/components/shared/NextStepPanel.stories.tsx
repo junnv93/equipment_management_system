@@ -81,7 +81,7 @@ const LENDER_CHECKED_DESCRIPTOR: NextStepDescriptor = {
   totalSteps: 7,
   nextAction: 'borrower_receive',
   nextActor: 'borrower',
-  nextStatus: 'borrower_received',
+  nextStatus: 'in_use',
   availableToCurrentUser: true,
   blockingReason: null,
   labelKey: 'borrower_receive',

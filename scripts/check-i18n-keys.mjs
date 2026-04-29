@@ -133,8 +133,6 @@ const REQUIRED_PATHS = [
   'help.status.rejected.description',
   'help.status.lender_checked.title',
   'help.status.lender_checked.description',
-  'help.status.borrower_received.title',
-  'help.status.borrower_received.description',
   'help.status.in_use.title',
   'help.status.in_use.description',
   'help.status.borrower_returned.title',

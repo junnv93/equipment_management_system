@@ -119,7 +119,7 @@ export const SUITE_04 = {
 export const SUITE_05 = {
   APPROVED_CAL: CHECKOUT_009_ID, // Suwon, approved, calibration
   PENDING_BLOCK: CHECKOUT_056_ID, // Suwon, overdue (승인 차단 테스트)
-  APPROVED_MULTI: CHECKOUT_032_ID, // Suwon, (seed: borrower_received) → resetToApproved
+  APPROVED_MULTI: CHECKOUT_032_ID, // Suwon, (seed: in_use) → resetToApproved
 } as const;
 
 // ============================================================================
@@ -151,10 +151,10 @@ export const SUITE_07 = {
 export const SUITE_10 = {
   STEP1_LENDER: CHECKOUT_041_ID, // Suwon, (seed: lender_received rental) → resetToApproved
   STEP2_BORROWER: CHECKOUT_027_ID, // Suwon, lender_checked, rental
-  STEP3_RETURN: CHECKOUT_033_ID, // Suwon, borrower_received, rental
+  STEP3_RETURN: CHECKOUT_033_ID, // Suwon, in_use, rental
   STEP4_FINAL: CHECKOUT_036_ID, // Suwon, borrower_returned, rental
-  ORDER_VIOLATION: CHECKOUT_035_ID, // Suwon, (seed: borrower_received) → resetToApproved
-  HISTORY: CHECKOUT_030_ID, // Suwon, borrower_received, rental (이력 조회)
+  ORDER_VIOLATION: CHECKOUT_035_ID, // Suwon, (seed: in_use) → resetToApproved
+  HISTORY: CHECKOUT_030_ID, // Suwon, in_use, rental (이력 조회)
 } as const;
 
 // ============================================================================

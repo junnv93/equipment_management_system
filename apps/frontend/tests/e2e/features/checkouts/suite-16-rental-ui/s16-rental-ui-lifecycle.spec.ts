@@ -81,7 +81,7 @@ test.describe('Suite 16: 대여 UI 라이프사이클', () => {
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${CHECKOUT_ID}`);
     const updatedData = updated as Record<string, unknown>;
-    expect(updatedData.status).toBe(CSVal.BORROWER_RECEIVED);
+    expect(updatedData.status).toBe(CSVal.IN_USE);
     currentVersion = updatedData.version as number;
   });
 

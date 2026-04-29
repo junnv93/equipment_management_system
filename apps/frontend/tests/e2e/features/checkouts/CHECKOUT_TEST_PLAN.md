@@ -1673,7 +1673,7 @@ expect(checks.map((c) => c.step)).toEqual([
 **Priority**: P2
 **Role**: technical_manager
 **Execution**: parallel (read-only)
-**Test Data**: `CHECKOUT_030_ID` (seed: borrower_received, should have 2 checks)
+**Test Data**: `CHECKOUT_030_ID` (seed: in_use, should have 2 checks)
 
 **Steps:**
 

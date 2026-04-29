@@ -2,7 +2,7 @@
  * Checkout Component Tokens (Layer 3: Component-Specific)
  *
  * 반출입 관리 컴포넌트의 모든 디자인 값을 정의하는 SSOT
- * - 13개 checkout 상태 + 7개 rental import 상태 스타일 (brand 시멘틱 토큰)
+ * - 12개 checkout 상태 + 7개 rental import 상태 스타일 (brand 시멘틱 토큰)
  * - 반출 유형별 색상 바 + 행 강조 토큰
  * - 미니 프로그레스 토큰 (CHECKOUT_MINI_PROGRESS — statusToStepIndex 기반)
  * - Stepper node/connector/label 스타일 (모바일/데스크톱)
@@ -69,8 +69,7 @@ export const CHECKOUT_STATUS_BADGE_TOKENS = {
   checked_out: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
   // 렌탈 4단계 (purple 계열)
   lender_checked: 'bg-brand-purple/10 text-brand-purple border-brand-purple/15',
-  borrower_received: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
-  // 사용 중 (info)
+  // 사용 중 — 인수 완료와 동시에 전이 (rental borrower_receive)
   in_use: 'bg-brand-info/10 text-brand-info border-brand-info/20',
   // 반환 진행 (purple 계열)
   borrower_returned: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
@@ -222,7 +221,6 @@ export const CHECKOUT_STEP_LABELS: Readonly<Record<string, string>> = {
   returned: 'returned',
   return_approved: 'returnApproved',
   lender_checked: 'lenderCheckout',
-  borrower_received: 'borrowerReceive',
   borrower_returned: 'borrowerReturn',
   lender_received: 'lenderReturn',
   overdue: 'checkedOut',
@@ -279,9 +277,8 @@ export const CHECKOUT_MINI_PROGRESS = {
     return_approved: 4, // returned 다음 단계 — 최종 승인 완료
     rejected: 1, // 초기 단계에서 종료
     canceled: 1, // 초기 단계에서 종료
-    // rental 4-step flow
+    // rental flow: lender_checked → in_use(인수+사용 동시) → borrower_returned → lender_received
     lender_checked: 1,
-    borrower_received: 2,
     borrower_returned: 3,
     lender_received: 4,
   } as const satisfies Record<CheckoutStatus, number>,

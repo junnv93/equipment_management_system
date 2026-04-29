@@ -46,10 +46,6 @@ const PENDING_CHECK_KEY_MAP: Partial<
     labelKey: 'pendingChecks.labels.receiveCheck',
     roleKey: 'pendingChecks.roles.borrower',
   },
-  borrower_received: {
-    labelKey: 'pendingChecks.labels.preReturn',
-    roleKey: 'pendingChecks.roles.borrower',
-  },
   in_use: {
     labelKey: 'pendingChecks.labels.preReturn',
     roleKey: 'pendingChecks.roles.borrower',

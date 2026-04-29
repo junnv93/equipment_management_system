@@ -26,7 +26,6 @@
     "returned": "반입됨",
     "return_approved": "반입 승인",
     "lender_checked": "관리 부서 확인",
-    "borrower_received": "사용 부서 수령",
     "borrower_returned": "사용 부서 반납",
     "lender_received": "관리 부서 수령",
     "in_use": "사용 중",
@@ -768,13 +767,9 @@
         "title": "반출 확인 완료",
         "description": "반출 측에서 장비 상태를 확인했습니다. 인수 확인 대기 중입니다."
       },
-      "borrower_received": {
-        "title": "인수 완료",
-        "description": "수취 측에서 장비를 수령했습니다. 사용 시작을 눌러주세요."
-      },
       "in_use": {
-        "title": "사용 중",
-        "description": "장비가 현재 사용 중입니다. 반납 시 반납 확인을 진행해주세요."
+        "title": "인수 완료 / 사용 중",
+        "description": "장비를 인수했습니다. 사용이 완료되면 반납 확인을 진행해주세요."
       },
       "borrower_returned": {
         "title": "반납 확인 완료",

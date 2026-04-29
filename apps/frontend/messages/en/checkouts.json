@@ -26,7 +26,6 @@
     "returned": "Returned",
     "return_approved": "Return Approved",
     "lender_checked": "Lender Confirmed",
-    "borrower_received": "Borrower Received",
     "borrower_returned": "Borrower Returned",
     "lender_received": "Lender Received",
     "in_use": "In Use",
@@ -768,13 +767,9 @@
         "title": "Lender Confirmed",
         "description": "The lender has confirmed the equipment condition. Awaiting borrower receipt confirmation."
       },
-      "borrower_received": {
-        "title": "Received",
-        "description": "The borrower has received the equipment. Please start use."
-      },
       "in_use": {
-        "title": "In Use",
-        "description": "The equipment is currently in use. Please confirm return when ready."
+        "title": "Received / In Use",
+        "description": "Equipment received. Confirm return when usage is complete."
       },
       "borrower_returned": {
         "title": "Return Confirmed",

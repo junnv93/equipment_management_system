@@ -1003,7 +1003,7 @@ export async function resetRentalCheckoutToState(
   // Add dates based on progression
   const RENTAL_STATUSES = [
     CSVal.LENDER_CHECKED,
-    CSVal.BORROWER_RECEIVED,
+    CSVal.IN_USE,
     CSVal.BORROWER_RETURNED,
     CSVal.LENDER_RECEIVED,
   ];
@@ -1025,7 +1025,7 @@ export async function resetRentalCheckoutToState(
          approver_id = $3,
          approved_at = NOW() - INTERVAL '3 days',
          checkout_date = CASE
-           WHEN $4 IN ('${CSVal.LENDER_CHECKED}','${CSVal.BORROWER_RECEIVED}','${CSVal.BORROWER_RETURNED}','${CSVal.LENDER_RECEIVED}')
+           WHEN $4 IN ('${CSVal.LENDER_CHECKED}','${CSVal.IN_USE}','${CSVal.BORROWER_RETURNED}','${CSVal.LENDER_RECEIVED}')
            THEN NOW() - INTERVAL '2 days'
            ELSE NULL
          END,

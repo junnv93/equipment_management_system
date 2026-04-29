@@ -38,7 +38,6 @@ export const CHECKOUT_ICON_MAP = {
     canceled: Ban,
     overdue: Timer,
     lender_checked: ShieldCheck,
-    borrower_received: ArrowRight,
     in_use: Package,
     borrower_returned: RotateCcw,
     lender_received: CheckCircle2,

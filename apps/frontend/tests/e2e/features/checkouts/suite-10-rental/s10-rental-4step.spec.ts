@@ -5,11 +5,11 @@
  *
  * 대여 4단계:
  *   ① lender_checkout  : approved → lender_checked       (장비 → checked_out)
- *   ② borrower_receive : lender_checked → borrower_received (변화 없음)
- *   ③ borrower_return  : borrower_received → borrower_returned (변화 없음)
+ *   ② borrower_receive : lender_checked → in_use         (인수 확인과 동시에 사용 중 전이)
+ *   ③ borrower_return  : in_use → borrower_returned
  *   ④ lender_return    : borrower_returned → lender_received   (장비 → available)
  *
- * IDs: SUITE_10 (014=approved rental, 027=lender_checked, 033=borrower_received, 036=borrower_returned, 028=order violation)
+ * IDs: SUITE_10 (014=approved rental, 027=lender_checked, 033=in_use, 036=borrower_returned, 028=order violation)
  *
  * ⚠️ 백엔드 GET 캐싱: 상태 변경 후 clearBackendCache() 호출 필수
  */
@@ -36,7 +36,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     // 각 단계에 맞는 초기 상태로 설정
     await resetCheckoutToApproved(SUITE_10.STEP1_LENDER);
     await resetRentalCheckoutToState(SUITE_10.STEP2_BORROWER, CSVal.LENDER_CHECKED);
-    await resetRentalCheckoutToState(SUITE_10.STEP3_RETURN, CSVal.BORROWER_RECEIVED);
+    await resetRentalCheckoutToState(SUITE_10.STEP3_RETURN, CSVal.IN_USE);
     await resetRentalCheckoutToState(SUITE_10.STEP4_FINAL, CSVal.BORROWER_RETURNED);
     await resetCheckoutToApproved(SUITE_10.ORDER_VIOLATION);
 
@@ -110,7 +110,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     expect(after.checkoutDate).toBeTruthy(); // ① 단계에서 checkoutDate 설정
   });
 
-  test('S10-02: lender_checked → borrower_received (step: borrower_receive)', async ({
+  test('S10-02: lender_checked → in_use (step: borrower_receive — 인수+사용 동시 전이)', async ({
     techManagerPage: page,
   }) => {
     const token = await getBackendToken(page, 'technical_manager');
@@ -140,17 +140,17 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const after = await apiGet(page, `/api/checkouts/${SUITE_10.STEP2_BORROWER}`);
-    expect(after.status).toBe(CSVal.BORROWER_RECEIVED);
+    expect(after.status).toBe(CSVal.IN_USE);
   });
 
-  test('S10-03: borrower_received → borrower_returned (step: borrower_return)', async ({
+  test('S10-03: in_use → borrower_returned (step: borrower_return)', async ({
     techManagerPage: page,
   }) => {
     const token = await getBackendToken(page, 'technical_manager');
 
     await clearBackendCache();
     const before = await apiGet(page, `/api/checkouts/${SUITE_10.STEP3_RETURN}`);
-    expect(before.status).toBe(CSVal.BORROWER_RECEIVED);
+    expect(before.status).toBe(CSVal.IN_USE);
 
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_10.STEP3_RETURN}/condition-check`,

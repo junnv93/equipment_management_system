@@ -9,10 +9,11 @@
  *   - `ProgressStepDescriptor[]` (이 파일) = "전체 N-step 시각화" — 각 단계의 actor/timestamp/state
  *   두 타입은 보완 관계. NextStepDescriptor는 액션 결정용, ProgressStepDescriptor는 시각화용.
  *
- * **5-step (calibration/repair) vs 8-step (rental)**:
+ * **5-step (calibration/repair) vs 7-step (rental)**:
  *   - 5-step: PENDING → APPROVED → CHECKED_OUT → RETURNED → RETURN_APPROVED
- *   - 8-step: PENDING → BORROWER_APPROVED → APPROVED → LENDER_CHECKED → BORROWER_RECEIVED
+ *   - 7-step: PENDING → BORROWER_APPROVED → APPROVED → LENDER_CHECKED
  *             → IN_USE → BORROWER_RETURNED → RETURN_APPROVED
+ *   (BORROWER_RECEIVED 제거 — borrower_receive 인수 확인이 in_use로 직접 전이)
  *   step list 자체는 frontend `CHECKOUT_DISPLAY_STEPS` (design-tokens) 가 단일 출처.
  *   본 모듈은 각 step에 메타(actor/timestamp/state)를 입혀서 stepper 컴포넌트로 전달하는 형식만 정의.
  *
@@ -39,13 +40,7 @@ import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '../enums/checkout';
  * `terminated`는 NextStepDescriptor의 `reachedStepIndex` 와 짝을 이룬다.
  * checkout.status ∈ {rejected, canceled} 일 때 reachedStep 위치만 'terminated', 그 이후는 'future'.
  */
-export const PROGRESS_STEP_STATES = [
-  'done',
-  'current',
-  'late',
-  'future',
-  'terminated',
-] as const;
+export const PROGRESS_STEP_STATES = ['done', 'current', 'late', 'future', 'terminated'] as const;
 export type ProgressStepState = (typeof PROGRESS_STEP_STATES)[number];
 
 /**

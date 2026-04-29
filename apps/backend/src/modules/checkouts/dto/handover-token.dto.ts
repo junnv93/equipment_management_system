@@ -9,7 +9,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 토큰 payload에 명시적으로 담아 검증 단계에서 교차 검증한다.
  */
 export const HandoverTokenPurposeEnum = z.enum([
-  'borrower_receive', // lender_checked → borrower_received
+  'borrower_receive', // lender_checked → in_use (인수 확인과 동시에 사용 중 전이)
   'borrower_return', // checked_out → borrower_returned
   'lender_receive', // borrower_returned → lender_received
 ]);
