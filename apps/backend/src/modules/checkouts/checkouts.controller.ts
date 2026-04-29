@@ -329,12 +329,19 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
   async findAll(
     @Query() query: CheckoutQueryDto,
-    @CurrentEnforcedScope() scope: EnforcedScope
+    @CurrentEnforcedScope() scope: EnforcedScope,
+    @Request() req: AuthenticatedRequest
   ): Promise<CheckoutListResponse> {
     // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
     query.site = scope.site as CheckoutQueryDto['site'];
     if (scope.teamId) query.teamId = scope.teamId;
-    return this.checkoutsService.findAll(query, query.includeSummary ?? false);
+    // Server-Driven UI: user-specific meta(availableActions+nextStep) 동봉
+    return this.checkoutsService.findAll(
+      query,
+      query.includeSummary ?? false,
+      req.user?.permissions ?? [],
+      req.user?.teamId
+    );
   }
 
   // ============================================================================

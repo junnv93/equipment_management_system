@@ -84,7 +84,13 @@
       "Bash(rmdir .claude/exec-plans/active)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-28-i18n-parity-hardening.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-28-i18n-parity-hardening.md)",
       "Bash(rmdir /home/kmjkds/equipment_management_system/.claude/exec-plans/active)",
-      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-28-sidebar-nav-action-pattern.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-28-sidebar-nav-action-pattern.md)"
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-28-sidebar-nav-action-pattern.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-28-sidebar-nav-action-pattern.md)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-28-software-validation-approve-comment.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-28-software-validation-approve-comment.md)",
+      "Bash(mkdir -p apps/frontend/.claude/contracts)",
+      "Bash(mkdir -p .claude/contracts)",
+      "Bash(mv .claude/exec-plans/active/2026-04-28-nextauth-csrf-single-origin.md .claude/exec-plans/completed/2026-04-28-nextauth-csrf-single-origin.md)",
+      "Bash(rmdir .claude/exec-plans/active/)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-28-rental-approval-workflow-fix.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-28-rental-approval-workflow-fix.md)"
     ],
     "deny": [],
     "ask": []

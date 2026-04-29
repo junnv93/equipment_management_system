@@ -278,11 +278,22 @@ export function NextStepPanel({
               })}
               disabled
               aria-label={stepLabel}
+              aria-describedby={
+                descriptor.blockingReason
+                  ? testId
+                    ? `${testId}-blocked-reason`
+                    : 'next-step-blocked-reason'
+                  : undefined
+              }
             >
               {t(`action.${descriptor.labelKey}`)}
             </InlineActionButton>
             {descriptor.blockingReason && (
-              <p className={cn(NEXT_STEP_PANEL_TOKENS.labels.hint, 'mt-1.5 italic')}>
+              <p
+                id={testId ? `${testId}-blocked-reason` : 'next-step-blocked-reason'}
+                role="status"
+                className={cn(NEXT_STEP_PANEL_TOKENS.labels.hint, 'mt-1.5 italic')}
+              >
                 {t(`blocked.${descriptor.blockingReason}`)}
               </p>
             )}

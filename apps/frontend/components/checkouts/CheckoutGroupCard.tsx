@@ -84,6 +84,7 @@ interface EquipmentRow {
   expectedReturnDate: string | undefined;
   destination: string | undefined;
   canApproveItem: boolean;
+  canBorrowerApproveItem: boolean;
   canReturnItem: boolean;
   descriptor: NextStepDescriptor | undefined;
 }
@@ -105,8 +106,9 @@ function CheckoutGroupCard({
 
   const { data: session } = useSession();
   const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  const userTeamId = session?.user?.teamId ?? null;
 
-  const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role);
+  const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role, userTeamId);
 
   const unknownUserLabel = t('groupCard.unknownUser');
 
@@ -126,6 +128,7 @@ function CheckoutGroupCard({
           expectedReturnDate: checkout.expectedReturnDate,
           destination: checkout.destination,
           canApproveItem: checkout.meta?.availableActions?.canApprove ?? false,
+          canBorrowerApproveItem: checkout.meta?.availableActions?.canBorrowerApprove ?? false,
           canReturnItem: checkout.meta?.availableActions?.canReturn ?? false,
           descriptor,
         }));
@@ -218,20 +221,78 @@ function CheckoutGroupCard({
     },
   });
 
+  // ── 인라인 borrower 승인 mutation (rental 1차 승인, 차용자 측 TM) ────────
+  const borrowerApproveMutation = useMutation({
+    mutationFn: async ({ id }: { id: string; equipmentName?: string }) => {
+      const { version } = await checkoutApi.getCheckout(id);
+      return checkoutApi.borrowerApproveCheckout(id, version);
+    },
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
+      const previousViewQueries = queryClient.getQueriesData<
+        PaginatedResponse<Checkout, CheckoutSummary>
+      >({
+        queryKey: queryKeys.checkouts.view.all(),
+      });
+      // 낙관적: pending → borrower_approved
+      queryClient.setQueriesData<PaginatedResponse<Checkout, CheckoutSummary>>(
+        { queryKey: queryKeys.checkouts.view.all() },
+        (old) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: old.data.map((co) =>
+              co.id === id ? { ...co, status: CSVal.BORROWER_APPROVED } : co
+            ),
+          };
+        }
+      );
+      return { previousViewQueries };
+    },
+    onSuccess: (_data, variables) => {
+      notifyCheckoutAction(
+        toast,
+        'borrower_approve',
+        { equipmentName: variables.equipmentName ?? '' },
+        t
+      );
+    },
+    onError: (error: unknown, variables, context) => {
+      context?.previousViewQueries?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+      if (isConflictError(error)) {
+        queryClient.removeQueries({ queryKey: queryKeys.checkouts.resource.detail(variables.id) });
+        toast({
+          title: t('toasts.versionConflict'),
+          description: t('toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: t('toasts.approveError'), variant: 'destructive' });
+      }
+    },
+    onSettled: () => {
+      CheckoutCacheInvalidation.invalidateAfterApproval(queryClient);
+    },
+  });
+
   // ── Row-level NextStepPanel action dispatcher ────────────────────────────
   const handleRowAction = useCallback(
     (checkoutId: string, equipmentName: string) => (action: CheckoutAction) => {
       switch (action) {
         case 'approve':
-        case 'borrower_approve':
           approveMutation.mutate({ id: checkoutId, equipmentName });
+          break;
+        case 'borrower_approve':
+          borrowerApproveMutation.mutate({ id: checkoutId, equipmentName });
           break;
         default:
           onCheckoutClick(checkoutId);
           break;
       }
     },
-    [approveMutation, onCheckoutClick]
+    [approveMutation, borrowerApproveMutation, onCheckoutClick]
   );
 
   // ── Row overflow actions (reject → 상세 이동, fail-closed) ────────────────

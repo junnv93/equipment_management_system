@@ -47,6 +47,59 @@ export type NextActor =
   | 'none';
 
 /**
+ * Transition actor side — 어느 측 team이 해당 transition의 행위자인가.
+ *
+ * 동일 역할(technical_manager) 사용자가 lender·borrower 양측 permission을 모두
+ * 보유할 때, 두 사용자를 분리하기 위한 SSOT. canPerformAction/getNextStep에
+ * 옵셔널 actorCtx와 함께 전달되어 team identity 검증에 사용됨.
+ *
+ * - 'lender': lender team (장비 소유 팀) — 대여 승인·점검·반입 처리
+ * - 'borrower': requester team (차용 팀) — 차용 승인·수령·사용·반환
+ * - 'requester': borrower와 동일 (의미적 명시 — cancel은 신청자만 가능)
+ * - 'any': 양측 모두 (예: 시스템 자동 액션)
+ */
+export type TransitionActorSide = 'lender' | 'borrower' | 'requester' | 'any';
+
+/**
+ * Action별 actor side SSOT.
+ *
+ * 모든 CheckoutAction에 대해 어느 측 team이 행위자인지 단일 소스로 선언.
+ * Transition table의 nextActor는 "다음 행위자"이고, 이 매핑은 "현재 행위자".
+ */
+export const TRANSITION_ACTOR_SIDE: Readonly<Record<CheckoutAction, TransitionActorSide>> =
+  Object.freeze({
+    approve: 'lender', // cal/repair: own team / rental: lender team approves after borrower
+    reject: 'lender',
+    cancel: 'requester', // 신청자만 취소 가능
+    start: 'lender', // cal/repair: 신청자 == lender (own team)
+    lender_check: 'lender',
+    borrower_receive: 'borrower',
+    mark_in_use: 'borrower',
+    borrower_return: 'borrower',
+    lender_receive: 'lender',
+    submit_return: 'lender',
+    approve_return: 'lender',
+    reject_return: 'lender',
+    borrower_approve: 'borrower', // 차용자 측 1차 승인
+    borrower_reject: 'borrower',
+  });
+
+/**
+ * Actor identity context — canPerformAction/getNextStep에 옵셔널로 주입.
+ *
+ * undefined일 경우 actor 검증 스킵 (기존 호환). 제공 시 transition의
+ * TRANSITION_ACTOR_SIDE와 userTeamId === {lenderTeamId|requesterTeamId}
+ * 일치를 검증하여 "permission은 있지만 잘못된 측 사용자" 케이스 차단.
+ *
+ * Fail-soft 정책: 필드 중 하나라도 nullish면 해당 검증 스킵 (legacy data 보호).
+ */
+export interface CheckoutActorContext {
+  readonly userTeamId?: string | null;
+  readonly lenderTeamId?: string | null;
+  readonly requesterTeamId?: string | null;
+}
+
+/**
  * UI 표현용 actor 3-way 그루핑 (SSOT).
  * NextActor(FSM 워크플로 시점)와 분리: ActorVariant는 화면 컬러·뱃지 분류 전용.
  * 소비처: NextStepPanel.tsx (resolveActorVariant), roleToActorVariant()
@@ -93,7 +146,7 @@ export interface NextStepDescriptor {
   readonly nextActor: NextActor;
   readonly nextStatus: CheckoutStatus | null;
   readonly availableToCurrentUser: boolean;
-  readonly blockingReason: 'permission' | 'role_mismatch' | null;
+  readonly blockingReason: 'permission' | 'role_mismatch' | 'actor_team' | null;
   readonly labelKey: string;
   readonly hintKey: string;
   readonly urgency: Urgency;
@@ -146,7 +199,7 @@ export const NextStepDescriptorSchema: z.ZodType<NextStepDescriptor> = z.object(
   nextActor: z.enum(['requester', 'approver', 'logistics', 'lender', 'borrower', 'system', 'none']),
   nextStatus: z.enum(CHECKOUT_STATUS_VALUES).nullable(),
   availableToCurrentUser: z.boolean(),
-  blockingReason: z.enum(['permission', 'role_mismatch']).nullable(),
+  blockingReason: z.enum(['permission', 'role_mismatch', 'actor_team']).nullable(),
   labelKey: z.string(),
   hintKey: z.string(),
   urgency: z.enum(['normal', 'warning', 'critical']),
@@ -605,17 +658,43 @@ export function computeUrgency(
 }
 
 /**
- * Check if a transition action is allowed given the user's permissions.
+ * Actor team match 검증 결과.
+ *
+ * - checked=false: ctx 부재 또는 데이터 부재로 검증 스킵 (fail-soft)
+ * - checked=true, matched=true: 사용자가 행위자 측 team
+ * - checked=true, matched=false: 사용자가 잘못된 측 (예: lender가 borrower_approve 시도)
+ */
+function actorTeamMatches(
+  side: TransitionActorSide,
+  ctx?: CheckoutActorContext
+): { checked: boolean; matched: boolean } {
+  if (!ctx) return { checked: false, matched: true };
+  if (side === 'any') return { checked: true, matched: true };
+  if (!ctx.userTeamId) return { checked: false, matched: true };
+
+  const targetTeam = side === 'lender' ? ctx.lenderTeamId : ctx.requesterTeamId; // 'borrower' | 'requester'
+  if (!targetTeam) return { checked: false, matched: true };
+
+  return { checked: true, matched: ctx.userTeamId === targetTeam };
+}
+
+/**
+ * Check if a transition action is allowed given the user's permissions
+ * and (optionally) actor team identity.
  *
  * Design note: accepts `userPermissions: readonly string[]` instead of UserRole
  * to avoid circular dependency (schemas ← shared-constants ← schemas).
  * Callers bridge: `getPermissions(role)` from @equipment-management/shared-constants.
+ *
+ * @param actorCtx — 옵셔널. 제공 시 TRANSITION_ACTOR_SIDE 매핑과 userTeamId 일치
+ *                   검증. fail-soft (필드 부재 시 스킵). undefined 시 기존 동작 유지.
  */
 export function canPerformAction(
   checkout: Pick<{ status: CheckoutStatus; purpose: CheckoutPurpose }, 'status' | 'purpose'>,
   action: CheckoutAction,
-  userPermissions: readonly string[]
-): { ok: true } | { ok: false; reason: 'invalid_transition' | 'permission' } {
+  userPermissions: readonly string[],
+  actorCtx?: CheckoutActorContext
+): { ok: true } | { ok: false; reason: 'invalid_transition' | 'permission' | 'actor_team' } {
   const matchingTransition = CHECKOUT_TRANSITIONS.find(
     (t) =>
       t.from === checkout.status &&
@@ -628,6 +707,10 @@ export function canPerformAction(
   if (!userPermissions.includes(matchingTransition.requires)) {
     return { ok: false, reason: 'permission' };
   }
+  const actorCheck = actorTeamMatches(TRANSITION_ACTOR_SIDE[action], actorCtx);
+  if (actorCheck.checked && !actorCheck.matched) {
+    return { ok: false, reason: 'actor_team' };
+  }
   return { ok: true };
 }
 
@@ -636,6 +719,10 @@ export function canPerformAction(
  *
  * Design note: accepts `userPermissions: readonly string[]` — callers supply
  * `getPermissions(role)` from @equipment-management/shared-constants.
+ *
+ * @param actorCtx — 옵셔널. 제공 시 transition 후보 중 (1) permission + actor team
+ *                   모두 일치하는 것을 우선, (2) permission만 일치하면 actor_team 차단
+ *                   사유 표시, (3) permission 없으면 기존 동작.
  */
 export function getNextStep(
   checkout: Pick<
@@ -647,7 +734,8 @@ export function getNextStep(
     },
     'status' | 'purpose' | 'dueAt' | 'terminatedFromStatus'
   >,
-  userPermissions: readonly string[]
+  userPermissions: readonly string[],
+  actorCtx?: CheckoutActorContext
 ): NextStepDescriptor {
   const currentStepIndex = computeStepIndex(checkout.status, checkout.purpose);
   const reachedStepIndex = computeReachedStepIndex(
@@ -684,9 +772,16 @@ export function getNextStep(
 
   const transitions = getTransitionsFor(checkout.status, checkout.purpose);
 
-  // Prefer a transition the user has permission for
-  const permitted = transitions.find((t) => userPermissions.includes(t.requires));
-  const candidate = permitted ?? transitions[0];
+  // 우선순위: (1) permission + actor team 모두 OK,
+  //           (2) permission OK만 (actor 미스매치),
+  //           (3) 첫 번째 transition (정보용)
+  const fullyAvailable = transitions.find(
+    (t) =>
+      userPermissions.includes(t.requires) &&
+      actorTeamMatches(TRANSITION_ACTOR_SIDE[t.action], actorCtx).matched
+  );
+  const permittedOnly = transitions.find((t) => userPermissions.includes(t.requires));
+  const candidate = fullyAvailable ?? permittedOnly ?? transitions[0];
 
   if (!candidate) {
     return {
@@ -709,7 +804,15 @@ export function getNextStep(
     };
   }
 
-  const available = userPermissions.includes(candidate.requires);
+  const hasPermission = userPermissions.includes(candidate.requires);
+  const actorCheck = actorTeamMatches(TRANSITION_ACTOR_SIDE[candidate.action], actorCtx);
+  const available = hasPermission && actorCheck.matched;
+
+  let blockingReason: 'permission' | 'role_mismatch' | 'actor_team' | null = null;
+  if (!available) {
+    if (!hasPermission) blockingReason = 'permission';
+    else if (actorCheck.checked && !actorCheck.matched) blockingReason = 'actor_team';
+  }
 
   return {
     currentStatus: checkout.status,
@@ -719,7 +822,7 @@ export function getNextStep(
     nextActor: candidate.nextActor,
     nextStatus: candidate.to,
     availableToCurrentUser: available,
-    blockingReason: available ? null : 'permission',
+    blockingReason,
     labelKey: candidate.labelKey,
     hintKey: candidate.hintKey,
     urgency,

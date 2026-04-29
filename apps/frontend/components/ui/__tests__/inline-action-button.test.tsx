@@ -46,7 +46,9 @@ describe('InlineActionButton', () => {
     expect(btn).toHaveAttribute('aria-busy', 'true');
     expect(btn).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('승인')).toBeInTheDocument(); // 텍스트가 사라지지 않음
-    expect(btn.querySelector('.animate-spin')).toBeInTheDocument();
+    // motion-safe: prefix는 prefers-reduced-motion 정책 (click-feedback Phase 4d/4e 마이그레이션)
+    // CSS class에 ':'가 포함되어 querySelector에서 escape 필요
+    expect(btn.querySelector('.motion-safe\\:animate-spin')).toBeInTheDocument();
   });
 
   it('disabled prop은 loading 없이도 aria-disabled를 동기화', () => {

@@ -18,7 +18,14 @@ export type CheckoutToastTranslate = (
   values?: Record<string, string | number | Date>
 ) => string;
 
-type ActionKey = 'approve' | 'reject' | 'start' | 'return' | 'approveReturn';
+type ActionKey =
+  | 'approve'
+  | 'reject'
+  | 'start'
+  | 'return'
+  | 'approveReturn'
+  | 'borrowerApprove'
+  | 'borrowerReject';
 
 const ACTION_KEY_MAP: Partial<Record<CheckoutAction, ActionKey>> = {
   approve: 'approve',
@@ -27,6 +34,8 @@ const ACTION_KEY_MAP: Partial<Record<CheckoutAction, ActionKey>> = {
   submit_return: 'return',
   borrower_return: 'return',
   approve_return: 'approveReturn',
+  borrower_approve: 'borrowerApprove',
+  borrower_reject: 'borrowerReject',
 };
 
 export function notifyCheckoutAction(

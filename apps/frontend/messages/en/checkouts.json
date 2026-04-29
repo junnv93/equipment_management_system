@@ -276,6 +276,7 @@
     "hint": {
       "pendingApprove": "Waiting for approver review.",
       "pendingBorrowerApprove": "Waiting for borrower team manager's 1st approval.",
+      "pendingBorrowerWait": "Waiting for borrower team manager's 1st approval.",
       "waitingApprover": "Will be rejected after approver review.",
       "pendingCancel": "The requester can cancel directly.",
       "approvedStart": "Approved. Please start the checkout.",
@@ -301,7 +302,8 @@
     },
     "blocked": {
       "permission": "You do not have permission for this action.",
-      "role_mismatch": "This action is not for your role."
+      "role_mismatch": "This action is not for your role.",
+      "actor_team": "Only the responsible department (borrower or lender) can perform this action."
     },
     "urgency": {
       "normal": "Normal",
@@ -730,6 +732,12 @@
     },
     "approve": {
       "success": "{equipmentName} approved"
+    },
+    "borrowerApprove": {
+      "success": "{equipmentName} 1st approval complete. Awaiting lender team review."
+    },
+    "borrowerReject": {
+      "success": "{equipmentName} rejected at 1st approval stage."
     },
     "reject": {
       "success": "Request rejected"

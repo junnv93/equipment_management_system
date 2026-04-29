@@ -50,6 +50,15 @@ export interface CheckoutAvailableActions {
   canRejectReturn: boolean;
   canCancel: boolean;
   canSubmitConditionCheck: boolean;
+  /**
+   * Rental 1차 승인 (차용자 측 TM). FSM SSOT의 actor team identity 통과 시 true.
+   * Server-Driven UI: BE가 actorCtx 기반으로 평가 — FE는 boolean만 신뢰.
+   */
+  canBorrowerApprove: boolean;
+  /**
+   * Rental 1차 반려 (차용자 측 TM).
+   */
+  canBorrowerReject: boolean;
 }
 
 export interface Checkout {
@@ -84,6 +93,8 @@ export interface Checkout {
   // 외부 대여 시 빌려주는 측 정보
   lenderTeamId?: string;
   lenderSiteId?: string;
+  // 차용자 측 팀 ID (BE response에 동봉, FSM SSOT actorCtx 입력)
+  requesterTeamId?: string | null;
   // 반입 검사 정보
   calibrationChecked?: boolean;
   repairChecked?: boolean;

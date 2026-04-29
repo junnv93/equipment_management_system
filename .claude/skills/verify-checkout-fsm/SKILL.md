@@ -1268,3 +1268,85 @@ grep -n "Math.min.*steps.length\|Math.max(0," apps/frontend/hooks/use-checkout-p
 - `apps/frontend/hooks/use-checkout-progress-steps.ts` — descriptor 클램프 + termination 추론
 - `apps/frontend/components/checkouts/CheckoutProgressStepper.tsx` — 5-state 시각 (terminated: opacity-60 + line-through + X 아이콘)
 - `apps/frontend/components/checkouts/ProgressFlowSection.tsx` — ErrorBoundary 보호 + displayCurrent 클램프
+
+---
+
+### Step 42: `CheckoutActorContext` SSOT + `TRANSITION_ACTOR_SIDE` 매핑 (rental-approval-workflow-fix, 2026-04-29)
+
+**왜 검증해야 하는가:** rental 2단계 승인에서 lender/borrower 양측 TM이 같은 role(`technical_manager`)이라 permission만으로는 분리 불가. FSM `canPerformAction`/`getNextStep`이 옵셔널 `actorCtx`를 받아 `TRANSITION_ACTOR_SIDE[action]`과 `userTeamId === {lenderTeamId|requesterTeamId}` 일치 검증을 수행해야 함. 누락 시 평택랩 TM이 차용자 측 `borrower_approve` 호출 → 403, 또는 `pending`에서 lender approve 직격 → 400.
+
+**검증 명령어:**
+```bash
+# 1. CheckoutActorContext + TRANSITION_ACTOR_SIDE SSOT 정의
+grep -n "CheckoutActorContext\|TRANSITION_ACTOR_SIDE" packages/schemas/src/fsm/checkout-fsm.ts
+
+# 2. blockingReason union에 'actor_team' 포함
+grep -n "actor_team" packages/schemas/src/fsm/checkout-fsm.ts
+
+# 3. canPerformAction/getNextStep 시그니처에 옵셔널 actorCtx
+grep -A2 "function canPerformAction\|function getNextStep" packages/schemas/src/fsm/checkout-fsm.ts | head -16
+
+# 4. BE service의 actorCtx 합류
+grep -n "actorCtx\|CheckoutActorContext\|buildActorCtx" apps/backend/src/modules/checkouts/checkouts.service.ts | head -8
+
+# 5. canBorrowerApprove/canBorrowerReject BE/FE 동기
+grep -n "canBorrowerApprove\|canBorrowerReject" apps/backend/src/modules/checkouts/checkouts.service.ts apps/frontend/lib/api/checkout-api.ts
+
+# 6. fsm.blocked.actor_team i18n parity
+grep -n "actor_team" apps/frontend/messages/ko/checkouts.json apps/frontend/messages/en/checkouts.json
+```
+
+**PASS:**
+1. `CheckoutActorContext` interface + `TRANSITION_ACTOR_SIDE` Record SSOT
+2. `canPerformAction` reason union에 `'actor_team'` 추가, 모든 호출처 업데이트
+3. `getNextStep` 우선순위: (1) permission+actor OK, (2) permission only → blockingReason='actor_team', (3) permission 없음
+4. BE `calculateAvailableActions`가 actorCtx 기반 단일 helper로 모든 boolean 도출 — 인라인 lenderTeamOk 분기 0
+5. FE `CheckoutAvailableActions`에 `canBorrowerApprove`/`canBorrowerReject` 동기
+6. `fsm.blocked.actor_team` ko/en parity
+
+**FAIL:**
+- actor identity 미반영 → 평택랩 TM이 borrower_approve 버튼 노출 → 403
+- canPerformAction 시그니처 변경으로 280-row table test 회귀
+- BE/FE drift → 타입 에러 또는 runtime undefined 접근
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — SSOT
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — actorCtx 합류
+- `apps/frontend/lib/api/checkout-api.ts` — type sync
+- `apps/frontend/messages/{ko,en}/checkouts.json` — fsm.blocked.actor_team
+
+---
+
+### Step 43: `findAll` server-driven meta 항상 주입 (rental-approval-workflow-fix, 2026-04-29)
+
+**왜 검증해야 하는가:** FE `warnMetaDrift`가 list 응답에서 meta 누락 시 `[FSM drift] meta missing <id>` 경고 발생. `findAll`이 user-specific meta를 매 요청 신선하게 주입해야 함 — cache는 raw items만 (user-agnostic), post-cache step에서 actorCtx 기반 meta 합성. 그렇지 않으면 user A의 meta가 cache로 user B에게 leak.
+
+**검증 명령어:**
+```bash
+# 1. findAll 시그니처 — 옵셔널 user info
+grep -B2 -A6 "async findAll" apps/backend/src/modules/checkouts/checkouts.service.ts | head -20
+
+# 2. controller가 user info forward
+grep -B2 -A6 "checkoutsService.findAll" apps/backend/src/modules/checkouts/checkouts.controller.ts | head -10
+
+# 3. cache 후 post-process meta 패턴
+grep -B1 -A5 "user-specific meta post-process\|cachedResponse.items.map" apps/backend/src/modules/checkouts/checkouts.service.ts
+
+# 4. requesterTeamId 보존 (actorCtx 입력)
+grep -n "requesterTeamId" apps/backend/src/modules/checkouts/checkouts.service.ts
+```
+
+**PASS:**
+1. findAll 시그니처에 `userPermissions?` + `userTeamId?` 옵셔널 인자
+2. cache key에 user 정보 미포함 (post-cache 합성)
+3. items 매핑에 `requesterTeamId` 보존 (actor identity 평가 입력)
+4. user 정보 제공 시 매 요청 fresh meta 합성 — 누락 0
+
+**FAIL:**
+- meta가 cache에 포함되면 user 간 leak (보안 위반)
+- meta 누락 → `warnMetaDrift` console warning + 잘못된 버튼 노출
+
+**관련 파일:**
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll post-cache meta
+- `apps/backend/src/modules/checkouts/checkouts.controller.ts` — user info forward
+- `apps/frontend/lib/api/checkout-api.ts:warnMetaDrift` — drift 검출

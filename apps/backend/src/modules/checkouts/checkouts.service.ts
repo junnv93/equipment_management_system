@@ -39,6 +39,7 @@ import {
   CHECKOUT_TRANSITIONS,
   NextStepDescriptorSchema,
   type CheckoutAction,
+  type CheckoutActorContext,
   type NextActor,
   type NextStepDescriptor,
   type AuditAction,
@@ -92,6 +93,15 @@ export interface CheckoutAvailableActions {
   canRejectReturn: boolean;
   canCancel: boolean;
   canSubmitConditionCheck: boolean;
+  /**
+   * Rental 1차 승인 (차용자 측 TM). actorCtx 통과 시에만 true.
+   * non-rental 또는 lender team 사용자 → false (FSM SSOT가 invalid_transition 또는 actor_team으로 차단).
+   */
+  canBorrowerApprove: boolean;
+  /**
+   * Rental 1차 반려 (차용자 측 TM). actorCtx 통과 시에만 true.
+   */
+  canBorrowerReject: boolean;
 }
 
 /**
@@ -136,10 +146,19 @@ interface CheckoutUser {
 
 /**
  * 반출 항목 (관계 데이터 포함)
+ *
+ * - `meta`: findAll/findOne 가 항상 주입 (Server-Driven UI). FSM SSOT가 권위.
+ *   FE warnMetaDrift 가드 통과 조건. user-specific (cache 후 post-process).
+ * - `requesterTeamId`: actor team identity 검증용 (cache-friendly 부속 정보).
  */
 interface CheckoutWithRelations extends Checkout {
   equipment: CheckoutEquipmentSummary[];
   user: CheckoutUser | null;
+  requesterTeamId?: string | null;
+  meta?: {
+    availableActions: CheckoutAvailableActions;
+    nextStep: NextStepDescriptor;
+  };
 }
 
 /**
@@ -220,18 +239,25 @@ export class CheckoutsService extends VersionedBaseService {
   private assertFsmAction(
     checkout: Pick<Checkout, 'status' | 'purpose'>,
     action: CheckoutAction,
-    userPermissions: readonly string[]
+    userPermissions: readonly string[],
+    actorCtx?: CheckoutActorContext
   ): void {
     const fsmInput = {
       status: checkout.status,
       purpose: checkout.purpose as CheckoutPurpose,
     };
-    const check = canPerformAction(fsmInput, action, userPermissions);
+    const check = canPerformAction(fsmInput, action, userPermissions, actorCtx);
     if (check.ok) return;
     if (check.reason === 'invalid_transition') {
       throw new BadRequestException({
         code: CheckoutErrorCode.INVALID_TRANSITION,
         message: `Action "${action}" not allowed from status "${checkout.status}" (purpose: ${checkout.purpose})`,
+      });
+    }
+    if (check.reason === 'actor_team') {
+      throw new ForbiddenException({
+        code: CheckoutErrorCode.FORBIDDEN,
+        message: `Action "${action}" requires the correct actor team (lender vs borrower mismatch)`,
       });
     }
     throw new ForbiddenException({
@@ -261,7 +287,8 @@ export class CheckoutsService extends VersionedBaseService {
 
   private buildNextStep(
     checkout: Checkout,
-    userPermissions: readonly string[]
+    userPermissions: readonly string[],
+    actorCtx?: CheckoutActorContext
   ): NextStepDescriptor {
     const descriptor = getNextStep(
       {
@@ -270,7 +297,8 @@ export class CheckoutsService extends VersionedBaseService {
         dueAt: checkout.expectedReturnDate?.toISOString() ?? null,
         terminatedFromStatus: (checkout.terminatedFromStatus as CheckoutStatus) ?? null,
       },
-      userPermissions
+      userPermissions,
+      actorCtx
     );
     const validation = NextStepDescriptorSchema.safeParse(descriptor);
     if (!validation.success) {
@@ -595,13 +623,21 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
-   * 반출 목록 조회
+   * 반출 목록 조회 — Server-Driven UI: 모든 item에 meta(availableActions+nextStep) 동봉.
+   *
+   * Cache 전략: raw items(requesterTeamId 포함, meta 미포함)를 캐시. user-specific meta는
+   * cache 후 post-process 단계에서 주입 — 사용자 간 권한/팀 차이로 인한 leak 방지.
+   *
    * @param queryParams 쿼리 파라미터
    * @param includeSummary 요약 정보 포함 여부 (기본값: false)
+   * @param userPermissions FSM SSOT 평가용 사용자 권한 (선택; 미제공 시 meta 미주입 — 호환)
+   * @param userTeamId FSM SSOT actor identity 평가용 (선택)
    */
   async findAll(
     queryParams: CheckoutQueryDto,
-    includeSummary = false
+    includeSummary = false,
+    userPermissions?: readonly string[],
+    userTeamId?: string
   ): Promise<CheckoutListResponse> {
     const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = queryParams;
 
@@ -624,7 +660,7 @@ export class CheckoutsService extends VersionedBaseService {
       pageSize,
     });
 
-    return this.cacheService.getOrSet(
+    const cachedResponse = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
@@ -704,11 +740,20 @@ export class CheckoutsService extends VersionedBaseService {
             },
           });
 
-          // 정렬 순서 유지하며 응답 형식으로 변환
+          // 정렬 순서 유지하며 응답 형식으로 변환 — meta는 post-cache 단계에서 user-specific 주입
           const sortedItems = idsWithCount
             .map((idObj) => {
               const item = itemsWithRelations.find((c) => c.id === idObj.id);
               if (!item) return null;
+
+              const requesterTeamId = item.requester?.team?.id ?? null;
+              const userInfo = item.requester
+                ? {
+                    id: item.requester.id,
+                    name: item.requester.name,
+                    email: item.requester.email,
+                  }
+                : null;
 
               return {
                 ...item,
@@ -717,7 +762,8 @@ export class CheckoutsService extends VersionedBaseService {
                   name: ci.equipment.name,
                   managementNumber: ci.equipment.managementNumber,
                 })),
-                user: item.requester || null,
+                user: userInfo,
+                requesterTeamId,
               };
             })
             .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -747,6 +793,23 @@ export class CheckoutsService extends VersionedBaseService {
       },
       CACHE_TTL.LONG
     );
+
+    // user-specific meta post-process — 캐시된 raw items에 actorCtx 기반 meta 주입.
+    // 캐시는 user-agnostic 유지 (페이지 단위 cache hit 보존), meta만 매 요청 신선.
+    if (userPermissions) {
+      const itemsWithMeta = cachedResponse.items.map((item) => {
+        const actorCtx = this.buildActorCtx(userTeamId, item.lenderTeamId, item.requesterTeamId);
+        return {
+          ...item,
+          meta: {
+            availableActions: this.calculateAvailableActions(item, userPermissions, actorCtx),
+            nextStep: this.buildNextStep(item, userPermissions, actorCtx),
+          },
+        };
+      });
+      return { ...cachedResponse, items: itemsWithMeta };
+    }
+    return cachedResponse;
   }
 
   /**
@@ -795,26 +858,45 @@ export class CheckoutsService extends VersionedBaseService {
 
     const conditions: SQL<unknown>[] = [eq(checkouts.purpose, CPVal.RENTAL)];
 
+    // G9 (rental-approval-workflow-fix): pending+rental은 borrower 측 TM 1차 승인 대상.
+    // 신청자(requester)와 borrower TM은 다른 사용자이므로 requesterId 매칭만으로는 누락.
+    // requester.teamId === userTeamId EXISTS 서브쿼리로 borrower 팀 멤버 모두 포착.
+    const borrowerTeamPendingCondition = userTeamId
+      ? and(
+          eq(checkouts.status, CSVal.PENDING),
+          sql`EXISTS (SELECT 1 FROM ${schema.users} u WHERE u.id = ${checkouts.requesterId} AND u.team_id = ${userTeamId})`
+        )
+      : undefined;
+
     if (role === 'lender') {
       if (!userTeamId) return this.emptyListResponse(page, pageSize);
       conditions.push(
         and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))!
       );
     } else if (role === 'borrower') {
+      const borrowerActionCondition = and(
+        eq(checkouts.requesterId, userId),
+        inArray(checkouts.status, borrowerStatuses)
+      );
       conditions.push(
-        and(eq(checkouts.requesterId, userId), inArray(checkouts.status, borrowerStatuses))!
+        borrowerTeamPendingCondition
+          ? or(borrowerActionCondition, borrowerTeamPendingCondition)!
+          : borrowerActionCondition!
       );
     } else {
       const lenderCondition = userTeamId
         ? and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))
         : undefined;
-      const borrowerCondition = and(
+      const borrowerActionCondition = and(
         eq(checkouts.requesterId, userId),
         inArray(checkouts.status, borrowerStatuses)
       );
-      conditions.push(
-        lenderCondition ? or(lenderCondition, borrowerCondition)! : borrowerCondition!
-      );
+      const combined = [
+        lenderCondition,
+        borrowerActionCondition,
+        borrowerTeamPendingCondition,
+      ].filter((c): c is NonNullable<typeof c> => c !== undefined);
+      conditions.push(combined.length > 1 ? or(...combined)! : combined[0]!);
     }
 
     const numericPageSize = Math.min(Number(pageSize), MAX_PAGE_SIZE);
@@ -897,13 +979,26 @@ export class CheckoutsService extends VersionedBaseService {
     const lenderCondition = userTeamId
       ? and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))
       : undefined;
-    const borrowerCondition = and(
+    const borrowerActionCondition = and(
       eq(checkouts.requesterId, userId),
       inArray(checkouts.status, borrowerStatuses)
     );
+    // G9 (rental-approval-workflow-fix): borrower TM의 pending+rental 1차 승인 대기.
+    // 신청자 ≠ TM이므로 requester.teamId === userTeamId 멤버십으로 매칭.
+    const borrowerTeamPendingCondition = userTeamId
+      ? and(
+          eq(checkouts.status, CSVal.PENDING),
+          sql`EXISTS (SELECT 1 FROM ${schema.users} u WHERE u.id = ${checkouts.requesterId} AND u.team_id = ${userTeamId})`
+        )
+      : undefined;
+    const combined = [
+      lenderCondition,
+      borrowerActionCondition,
+      borrowerTeamPendingCondition,
+    ].filter((c): c is NonNullable<typeof c> => c !== undefined);
     const whereClause = and(
       eq(checkouts.purpose, CPVal.RENTAL),
-      lenderCondition ? or(lenderCondition, borrowerCondition)! : borrowerCondition!
+      combined.length > 1 ? or(...combined)! : combined[0]!
     );
 
     const [row] = await this.db
@@ -1221,18 +1316,31 @@ export class CheckoutsService extends VersionedBaseService {
         .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
         .where(eq(checkoutItems.checkoutId, uuid)),
       this.db
-        .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+        .select({
+          id: schema.users.id,
+          name: schema.users.name,
+          email: schema.users.email,
+          teamId: schema.users.teamId,
+        })
         .from(schema.users)
         .where(eq(schema.users.id, checkout.requesterId))
         .limit(1),
     ]);
 
-    const availableActions = this.calculateAvailableActions(checkout, userPermissions, userTeamId);
-    const nextStep = this.buildNextStep(checkout, userPermissions);
+    const requesterTeamId = userRow[0]?.teamId ?? null;
+    const actorCtx = this.buildActorCtx(userTeamId, checkout.lenderTeamId, requesterTeamId);
+    const availableActions = this.calculateAvailableActions(checkout, userPermissions, actorCtx);
+    const nextStep = this.buildNextStep(checkout, userPermissions, actorCtx);
     return {
       ...checkout,
       equipment: equipmentRows,
-      user: userRow[0] ?? null,
+      user: userRow[0]
+        ? {
+            id: userRow[0].id,
+            name: userRow[0].name,
+            email: userRow[0].email,
+          }
+        : null,
       meta: { availableActions, nextStep },
     };
   }
@@ -1392,32 +1500,34 @@ export class CheckoutsService extends VersionedBaseService {
    *
    * @param checkout 반출 정보
    * @param userPermissions 사용자 권한 목록
-   * @param userTeamId 사용자 팀 ID (선택)
+   * @param actorCtx (선택) FSM SSOT가 actor team identity 검증 수행 — undefined 시 기존 호환 (permission만)
    * @returns 가능한 액션 목록
    */
   private calculateAvailableActions(
     checkout: Checkout,
     userPermissions: readonly string[],
-    userTeamId?: string
+    actorCtx?: CheckoutActorContext
   ): CheckoutAvailableActions {
-    const { purpose, lenderTeamId } = checkout;
+    const { purpose } = checkout;
     const fsmInput = {
       status: checkout.status,
       purpose: checkout.purpose as CheckoutPurpose,
     };
 
-    // rental 승인은 FSM permission 외에 lenderTeam identity-rule 추가 적용
-    const baseCanApprove = canPerformAction(fsmInput, 'approve', userPermissions).ok;
-    const lenderTeamOk = purpose !== CPVal.RENTAL || !lenderTeamId || lenderTeamId === userTeamId;
+    // FSM SSOT (actorCtx 포함) 단일 호출로 모든 boolean 도출 — DRY + lender/borrower team identity 자동 강제
+    const ok = (action: CheckoutAction): boolean =>
+      canPerformAction(fsmInput, action, userPermissions, actorCtx).ok;
 
     return {
-      canApprove: baseCanApprove && lenderTeamOk,
-      canReject: canPerformAction(fsmInput, 'reject', userPermissions).ok,
-      canStart: canPerformAction(fsmInput, 'start', userPermissions).ok,
-      canReturn: canPerformAction(fsmInput, 'submit_return', userPermissions).ok,
-      canApproveReturn: canPerformAction(fsmInput, 'approve_return', userPermissions).ok,
-      canRejectReturn: canPerformAction(fsmInput, 'reject_return', userPermissions).ok,
-      canCancel: canPerformAction(fsmInput, 'cancel', userPermissions).ok,
+      canApprove: ok('approve'),
+      canReject: ok('reject'),
+      canStart: ok('start'),
+      canReturn: ok('submit_return'),
+      canApproveReturn: ok('approve_return'),
+      canRejectReturn: ok('reject_return'),
+      canCancel: ok('cancel'),
+      canBorrowerApprove: ok('borrower_approve'),
+      canBorrowerReject: ok('borrower_reject'),
       // step-based (FSM 미매핑) — 기존 로직 유지
       canSubmitConditionCheck:
         purpose === CPVal.RENTAL &&
@@ -1430,6 +1540,24 @@ export class CheckoutsService extends VersionedBaseService {
           ] as string[]
         ).includes(checkout.status) &&
         userPermissions.includes(Permission.COMPLETE_CHECKOUT),
+    };
+  }
+
+  /**
+   * actorCtx 빌드 (FSM SSOT actor team identity 검증용) — 모든 입력 명시적.
+   *
+   * 호출자가 각 ID를 명확히 전달하여 어디에서 가져왔는지(checkout 컬럼 vs join vs req) 추적 가능.
+   * fail-soft: 어느 필드든 nullish면 actor 검증 스킵 (legacy data 보호).
+   */
+  private buildActorCtx(
+    userTeamId: string | null | undefined,
+    lenderTeamId: string | null | undefined,
+    requesterTeamId: string | null | undefined
+  ): CheckoutActorContext {
+    return {
+      userTeamId: userTeamId ?? null,
+      lenderTeamId: lenderTeamId ?? null,
+      requesterTeamId: requesterTeamId ?? null,
     };
   }
 

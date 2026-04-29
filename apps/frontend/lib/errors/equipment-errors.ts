@@ -333,6 +333,7 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     title: '알 수 없는 오류',
     message: '예기치 않은 오류가 발생했습니다.',
     solutions: ['잠시 후 다시 시도해주세요', '문제가 지속되면 시스템 관리자에게 문의하세요'],
+    actionLabel: '다시 시도',
     severity: 'error',
   },
 };

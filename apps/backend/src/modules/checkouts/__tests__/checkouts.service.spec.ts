@@ -160,6 +160,67 @@ describe('CheckoutsService', () => {
     expect(service).toBeDefined();
   });
 
+  // 회귀 가드 (rental-approval-workflow-fix MUST-8c): findAll 응답 모든 item 에 meta 동봉.
+  // 사용자 권한 + 팀 정보가 제공되면 actorCtx 기반으로 availableActions/nextStep 합성.
+  describe('findAll meta injection', () => {
+    it('should inject meta.availableActions + meta.nextStep on every item when userPermissions provided', async () => {
+      const rawItem = {
+        id: 'a1b2c3d4-0000-0000-0000-000000000001',
+        status: 'pending',
+        purpose: 'rental',
+        version: 1,
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        lenderSiteId: 'suwon',
+        equipment: [],
+        user: null,
+        requesterTeamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+        // No meta initially — should be injected post-cache
+      };
+      // cache 가 raw items 를 반환 — meta 가 없는 상태. 서비스 가 post-cache 에서 합성해야 함.
+      mockCacheService.getOrSet.mockResolvedValue({
+        items: [rawItem],
+        meta: { totalItems: 1, itemCount: 1, itemsPerPage: 10, totalPages: 1, currentPage: 1 },
+      });
+
+      const result = await service.findAll(
+        { page: 1, pageSize: 10 } as never,
+        false,
+        mockReq.user.permissions,
+        '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].meta).toBeDefined();
+      expect(result.items[0].meta?.availableActions).toBeDefined();
+      expect(result.items[0].meta?.nextStep).toBeDefined();
+      // canBorrowerApprove/canBorrowerReject 신규 필드 검증
+      expect(result.items[0].meta?.availableActions).toHaveProperty('canBorrowerApprove');
+      expect(result.items[0].meta?.availableActions).toHaveProperty('canBorrowerReject');
+    });
+
+    it('should leave items meta-less when userPermissions undefined (backward compat)', async () => {
+      const rawItem = {
+        id: 'a1b2c3d4-0000-0000-0000-000000000002',
+        status: 'pending',
+        purpose: 'calibration',
+        version: 1,
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        equipment: [],
+        user: null,
+      };
+      mockCacheService.getOrSet.mockResolvedValue({
+        items: [rawItem],
+        meta: { totalItems: 1, itemCount: 1, itemsPerPage: 10, totalPages: 1, currentPage: 1 },
+      });
+
+      const result = await service.findAll({ page: 1, pageSize: 10 } as never, false);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].meta).toBeUndefined();
+    });
+  });
+
   describe('findOne', () => {
     const mockCheckout = {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -414,6 +475,54 @@ describe('CheckoutsService', () => {
 
       await expect(service.approve(checkoutId, mockApproveDto, mockReqNoTeam)).rejects.toThrow(
         ForbiddenException
+      );
+
+      mockChain.then = originalThen;
+    });
+
+    // 회귀 가드 (rental-approval-workflow-fix MUST-8a): pending+rental 에서 approve 직격 → 400.
+    // 사용자가 평택랩(lender) TM 으로 OUTGOING 탭의 잘못된 버튼을 눌러도 FSM 이 INVALID_TRANSITION 으로 차단.
+    it('should throw BadRequestException (INVALID_TRANSITION) for rental+pending — borrower_approve required first', async () => {
+      const rentalPendingCheckout = {
+        ...mockPendingCheckout,
+        purpose: 'rental',
+        status: 'pending',
+        lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        lenderSiteId: 'suwon',
+        version: 1,
+      };
+      const mockRentalEquipment = {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test Equipment',
+        managementNumber: 'SUW-E0001',
+        site: 'suwon',
+        teamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+      };
+      // lender team 사용자 — scope 통과 후 FSM 에서 INVALID_TRANSITION 으로 차단
+      const mockReqLender = {
+        user: {
+          userId: mockReq.user.userId,
+          roles: ['technical_manager'],
+          permissions: mockReq.user.permissions,
+          site: 'suwon',
+          teamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        },
+      } as unknown as AuthenticatedRequest;
+
+      mockCacheService.getOrSet.mockResolvedValue(rentalPendingCheckout);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([{ equipmentId: mockRentalEquipment.id }])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValue(
+        new Map([[mockRentalEquipment.id, mockRentalEquipment]])
+      );
+
+      await expect(service.approve(checkoutId, mockApproveDto, mockReqLender)).rejects.toThrow(
+        BadRequestException
       );
 
       mockChain.then = originalThen;

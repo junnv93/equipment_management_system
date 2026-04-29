@@ -809,8 +809,19 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
+        // Server-Driven UI: 서버 meta.availableActions가 권위.
+        // canBorrowerApprove=true 면 rental 1차 승인(borrower_approve) endpoint로 dispatch,
+        // canApprove=true 면 일반 approve endpoint. 양쪽 모두 false면 가드된 상태이므로
+        // 백엔드 FSM이 INVALID_TRANSITION 또는 actor_team으로 정확한 에러 반환.
+        const checkoutMeta = this.isCheckout(originalData)
+          ? originalData.meta?.availableActions
+          : undefined;
         const { version } = await checkoutApi.getCheckout(id);
-        await checkoutApi.approveCheckout(id, version, comment);
+        if (checkoutMeta?.canBorrowerApprove) {
+          await checkoutApi.borrowerApproveCheckout(id, version, comment);
+        } else {
+          await checkoutApi.approveCheckout(id, version, comment);
+        }
         break;
       }
 
@@ -924,8 +935,16 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
+        // Server-Driven UI: meta.canBorrowerReject=true면 rental 1차 반려, 아니면 일반 반려.
+        const checkoutMeta = this.isCheckout(originalData)
+          ? originalData.meta?.availableActions
+          : undefined;
         const { version } = await checkoutApi.getCheckout(id);
-        await checkoutApi.rejectCheckout(id, version, reason);
+        if (checkoutMeta?.canBorrowerReject) {
+          await checkoutApi.borrowerRejectCheckout(id, version, reason);
+        } else {
+          await checkoutApi.rejectCheckout(id, version, reason);
+        }
         break;
       }
 

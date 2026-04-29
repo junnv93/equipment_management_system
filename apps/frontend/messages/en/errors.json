@@ -204,7 +204,8 @@
     "solutions": [
       "Refresh the page and try again",
       "Contact the system administrator if the problem persists"
-    ]
+    ],
+    "actionLabel": "Retry"
   },
   "softwareValidation": {
     "SOFTWARE_VALIDATION_NOT_FOUND": "Validation record not found.",
