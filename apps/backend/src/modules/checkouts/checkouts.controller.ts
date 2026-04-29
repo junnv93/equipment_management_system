@@ -107,7 +107,6 @@ export class CheckoutsController {
     approved: null,
     rejected: null,
     borrower_approved: null,
-    borrower_received: null,
     in_use: null,
     lender_received: null,
     returned: null,

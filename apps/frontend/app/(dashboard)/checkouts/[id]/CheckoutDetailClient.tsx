@@ -431,7 +431,6 @@ export default function CheckoutDetailClient({
         break;
       case 'lender_check':
       case 'borrower_receive':
-      case 'mark_in_use':
       case 'borrower_return':
       case 'lender_receive':
         router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK(checkout.id));

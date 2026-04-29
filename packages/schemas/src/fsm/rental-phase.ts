@@ -15,7 +15,6 @@ export const RENTAL_STATUS_TO_PHASE = {
   borrower_approved: 'approve',
   approved: 'approve',
   lender_checked: 'handover',
-  borrower_received: 'handover',
   in_use: 'return',
   overdue: 'return',
   borrower_returned: 'return',
@@ -28,14 +27,14 @@ export const RENTAL_STATUS_TO_PHASE = {
 } as const satisfies Record<CheckoutStatus, RentalPhase | null>;
 
 /**
- * Phase별 단계 수 (rental 8-step 기준 분배).
+ * Phase별 단계 수 (rental 7-step 기준 분배).
  * approve: pending(1)·borrower_approved(2)·approved(3) = 3
- * handover: lender_checked(4)·borrower_received(5) = 2
- * return: in_use(6)·borrower_returned(7)·lender_received~return_approved(8) = 3
+ * handover: lender_checked(4) = 1  (borrower_received 제거 — 인수 확인 시 in_use 직행)
+ * return: in_use(5)·borrower_returned(6)·lender_received~return_approved(7) = 3
  */
 export const PHASE_STEP_COUNT = {
   approve: 3,
-  handover: 2,
+  handover: 1,
   return: 3,
 } as const satisfies Record<RentalPhase, number>;
 

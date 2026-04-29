@@ -67,14 +67,13 @@ describe('assertFsmInvariants (module-load)', () => {
     }
   });
 
-  it('all 13 CheckoutStatus values appear as from or to', () => {
+  it('all 12 CheckoutStatus values appear as from or to', () => {
     const allStatuses: CheckoutStatus[] = [
       'pending',
       'approved',
       'rejected',
       'checked_out',
       'lender_checked',
-      'borrower_received',
       'in_use',
       'borrower_returned',
       'lender_received',
@@ -110,8 +109,8 @@ describe('computeTotalSteps', () => {
     expect(computeTotalSteps('return_to_vendor')).toBe(5);
   });
 
-  it('returns 8 for rental', () => {
-    expect(computeTotalSteps('rental')).toBe(8);
+  it('returns 7 for rental', () => {
+    expect(computeTotalSteps('rental')).toBe(7);
   });
 });
 
@@ -134,20 +133,19 @@ describe('computeStepIndex — calibration path', () => {
 describe('computeStepIndex — rental path', () => {
   const purpose: CheckoutPurpose = 'rental';
 
-  // 8-step rental path: pending(1) → borrower_approved(2) → approved(3) → lender_checked(4)
-  //   → borrower_received(5) → in_use(6) → borrower_returned(7) → lender_received/returned/return_approved(8)
+  // 7-step rental path: pending(1) → borrower_approved(2) → approved(3) → lender_checked(4)
+  //   → in_use(5) → borrower_returned(6) → lender_received/returned/return_approved(7)
   it('pending → 1', () => expect(computeStepIndex('pending', purpose)).toBe(1));
   it('borrower_approved → 2', () => expect(computeStepIndex('borrower_approved', purpose)).toBe(2));
   it('approved → 3', () => expect(computeStepIndex('approved', purpose)).toBe(3));
   it('lender_checked → 4', () => expect(computeStepIndex('lender_checked', purpose)).toBe(4));
-  it('borrower_received → 5', () => expect(computeStepIndex('borrower_received', purpose)).toBe(5));
-  it('in_use → 6', () => expect(computeStepIndex('in_use', purpose)).toBe(6));
-  it('overdue → 6 (same as in_use)', () => expect(computeStepIndex('overdue', purpose)).toBe(6));
-  it('borrower_returned → 7', () => expect(computeStepIndex('borrower_returned', purpose)).toBe(7));
-  it('lender_received → 8', () => expect(computeStepIndex('lender_received', purpose)).toBe(8));
-  it('returned → 8', () => expect(computeStepIndex('returned', purpose)).toBe(8));
-  it('return_approved → 8 (terminal)', () =>
-    expect(computeStepIndex('return_approved', purpose)).toBe(8));
+  it('in_use → 5', () => expect(computeStepIndex('in_use', purpose)).toBe(5));
+  it('overdue → 5 (same as in_use)', () => expect(computeStepIndex('overdue', purpose)).toBe(5));
+  it('borrower_returned → 6', () => expect(computeStepIndex('borrower_returned', purpose)).toBe(6));
+  it('lender_received → 7', () => expect(computeStepIndex('lender_received', purpose)).toBe(7));
+  it('returned → 7', () => expect(computeStepIndex('returned', purpose)).toBe(7));
+  it('return_approved → 7 (terminal)', () =>
+    expect(computeStepIndex('return_approved', purpose)).toBe(7));
 });
 
 // ============================================================================

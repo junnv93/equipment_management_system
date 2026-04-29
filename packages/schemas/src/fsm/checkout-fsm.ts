@@ -28,7 +28,6 @@ export type CheckoutAction =
   | 'start'
   | 'lender_check'
   | 'borrower_receive'
-  | 'mark_in_use'
   | 'borrower_return'
   | 'lender_receive'
   | 'submit_return'
@@ -74,7 +73,6 @@ export const TRANSITION_ACTOR_SIDE: Readonly<Record<CheckoutAction, TransitionAc
     start: 'lender', // cal/repair: 신청자 == lender (own team)
     lender_check: 'lender',
     borrower_receive: 'borrower',
-    mark_in_use: 'borrower',
     borrower_return: 'borrower',
     lender_receive: 'lender',
     submit_return: 'lender',
@@ -186,7 +184,6 @@ export const NextStepDescriptorSchema: z.ZodType<NextStepDescriptor> = z.object(
       'start',
       'lender_check',
       'borrower_receive',
-      'mark_in_use',
       'borrower_return',
       'lender_receive',
       'submit_return',
@@ -347,24 +344,12 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
   {
     from: 'lender_checked',
     action: 'borrower_receive',
-    to: 'borrower_received',
-    purposes: RENTAL,
-    requires: 'start:checkout',
-    nextActor: 'lender',
-    labelKey: 'borrower_receive',
-    hintKey: 'lenderCheckedBorrowerReceive',
-    auditEventSuffix: 'borrower_received',
-  },
-  // ── borrower_received ─────────────────────────────────────────────────────
-  {
-    from: 'borrower_received',
-    action: 'mark_in_use',
     to: 'in_use',
     purposes: RENTAL,
     requires: 'start:checkout',
     nextActor: 'borrower',
-    labelKey: 'mark_in_use',
-    hintKey: 'borrowerReceivedMarkInUse',
+    labelKey: 'borrower_receive',
+    hintKey: 'lenderCheckedBorrowerReceive',
     auditEventSuffix: 'in_use',
   },
   // ── in_use ────────────────────────────────────────────────────────────────
@@ -484,7 +469,6 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
     'borrower_approved',
     'approved',
     'lender_checked',
-    'borrower_received',
     'in_use',
     'borrower_returned',
     'lender_received',
@@ -572,7 +556,7 @@ export function getTransitionsFor(
 }
 
 export function computeTotalSteps(purpose: CheckoutPurpose): number {
-  if (purpose === 'rental') return 8;
+  if (purpose === 'rental') return 7;
   return 5;
 }
 
@@ -585,13 +569,12 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
       // non-rental checkout stage — rental context에서는 발생하지 않으나 exhaustive 요구
       checked_out: 3,
       lender_checked: 4,
-      borrower_received: 5,
-      in_use: 6,
-      overdue: 6,
-      borrower_returned: 7,
-      lender_received: 8,
-      returned: 8,
-      return_approved: 8,
+      in_use: 5,
+      overdue: 5,
+      borrower_returned: 6,
+      lender_received: 7,
+      returned: 7,
+      return_approved: 7,
       rejected: 1,
       canceled: 1,
     } as const satisfies Record<CheckoutStatus, number>;
@@ -609,7 +592,6 @@ export function computeStepIndex(status: CheckoutStatus, purpose: CheckoutPurpos
     // rental-specific stages — non-rental context에서는 발생하지 않으나 exhaustive 요구
     borrower_approved: 1,
     lender_checked: 3,
-    borrower_received: 3,
     in_use: 3,
     borrower_returned: 4,
     lender_received: 4,

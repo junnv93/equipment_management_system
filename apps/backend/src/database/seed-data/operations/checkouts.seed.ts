@@ -647,7 +647,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
   }),
 
   // ========================================================================
-  // STATUS: borrower_received (3 records) - Rental 4-step ②
+  // STATUS: in_use (3 records) - Rental 4-step ②
   // ========================================================================
 
   // 30. Borrower Received - Rental (Suwon → Uiwang)
@@ -663,7 +663,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '시험 지원',
     expectedReturnDate: daysLater(20),
     checkoutDate: daysAgo(10),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(11),
     createdAt: daysAgo(13),
     updatedAt: daysAgo(8),
@@ -682,7 +682,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '긴급 시험',
     expectedReturnDate: daysLater(15),
     checkoutDate: daysAgo(15),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(16),
     createdAt: daysAgo(18),
     updatedAt: daysAgo(14),
@@ -701,14 +701,14 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '프로젝트 지원',
     expectedReturnDate: daysLater(25),
     checkoutDate: daysAgo(5),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(6),
     createdAt: daysAgo(8),
     updatedAt: daysAgo(4),
   }),
 
   // ========================================================================
-  // STATUS: borrower_received (3 records) - Rental 4-step ② (사용 부서 수령)
+  // STATUS: in_use (3 records) - Rental 4-step ② (사용 부서 수령)
   // ========================================================================
 
   // 33. Borrower Received - Rental (Suwon → Uiwang)
@@ -724,7 +724,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '장기 시험 지원',
     expectedReturnDate: daysLater(10),
     checkoutDate: daysAgo(20),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(21),
     createdAt: daysAgo(23),
     updatedAt: daysAgo(15),
@@ -743,7 +743,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '특수 시험',
     expectedReturnDate: daysLater(15),
     checkoutDate: daysAgo(15),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(16),
     createdAt: daysAgo(18),
     updatedAt: daysAgo(10),
@@ -762,7 +762,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '시스템 구성 시험',
     expectedReturnDate: daysLater(20),
     checkoutDate: daysAgo(10),
-    status: 'borrower_received',
+    status: 'in_use',
     approvedAt: daysAgo(11),
     createdAt: daysAgo(13),
     updatedAt: daysAgo(8),

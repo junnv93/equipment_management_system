@@ -124,7 +124,6 @@ const CHECKOUT_ACTION_INLINE_CLASS = {
   lender_receive: 'ok',
   borrower_receive: 'ok',
   approve_return: 'ok',
-  mark_in_use: 'ok',
   // negative 클래스 — overflow menu가 일반적, inline일 경우 info fallback
   reject: 'negative',
   cancel: 'negative',

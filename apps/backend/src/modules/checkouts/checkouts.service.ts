@@ -218,7 +218,6 @@ export class CheckoutsService extends VersionedBaseService {
     start: 'checkout',
     lender_check: 'checkout',
     borrower_receive: 'checkout',
-    mark_in_use: 'checkout',
     borrower_return: 'return',
     lender_receive: 'return',
     submit_return: 'return',
@@ -2823,10 +2822,10 @@ export class CheckoutsService extends VersionedBaseService {
         },
         [CCSVal.BORROWER_RECEIVE]: {
           requiredStatus: CSVal.LENDER_CHECKED,
-          nextStatus: CSVal.BORROWER_RECEIVED,
+          nextStatus: CSVal.IN_USE,
         },
         [CCSVal.BORROWER_RETURN]: {
-          requiredStatus: CSVal.BORROWER_RECEIVED,
+          requiredStatus: CSVal.IN_USE,
           nextStatus: CSVal.BORROWER_RETURNED,
         },
         [CCSVal.LENDER_RETURN]: {
