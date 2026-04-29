@@ -13,7 +13,7 @@ import { TRANSITION_PRESETS } from '../motion';
  * 사이드바 레이아웃 크기
  */
 export const SIDEBAR_LAYOUT = {
-  expanded: { width: 'w-56', marginLeft: 'md:ml-56' }, // 224px
+  expanded: { width: 'w-64', marginLeft: 'md:ml-64' }, // 256px — 영문 라벨 오버플로 방지
   collapsed: { width: 'w-[52px]', marginLeft: 'md:ml-[52px]' }, // 52px
   mobile: { width: 'w-72' }, // 288px (드로어)
   headerHeight: 'h-14',

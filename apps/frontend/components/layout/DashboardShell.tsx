@@ -177,24 +177,30 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <Link
                   href="/"
                   className={cn(
-                    'flex items-center gap-2 font-semibold text-white group',
+                    'flex min-w-0 items-center gap-2 font-semibold text-white group',
                     FOCUS_TOKENS.classes.onDark,
                     'rounded-md hover:bg-white/10 px-2 py-1.5 -mx-2',
                     TRANSITION_PRESETS.fastBg
                   )}
                   aria-label={t('layout.goHome')}
+                  title={t('layout.systemName')}
                 >
                   <div
                     className={cn(
-                      'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                      'flex shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
                       'group-hover:scale-110',
                       TRANSITION_PRESETS.fastTransform
                     )}
                   >
                     <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
                   </div>
-                  <span className={cn('group-hover:text-brand-info', TRANSITION_PRESETS.fastColor)}>
-                    {t('layout.systemName')}
+                  <span
+                    className={cn(
+                      'min-w-0 truncate group-hover:text-brand-info',
+                      TRANSITION_PRESETS.fastColor
+                    )}
+                  >
+                    {t('layout.systemNameSidebar')}
                   </span>
                 </Link>
                 <Button

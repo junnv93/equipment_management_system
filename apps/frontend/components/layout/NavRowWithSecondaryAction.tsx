@@ -105,7 +105,7 @@ export const NavRowWithSecondaryAction = memo(function NavRowWithSecondaryAction
       variant="sidebar"
       className={cn(getSidebarItemClasses(!!isActive, isCollapsed))}
       aria-current={isActive ? 'page' : undefined}
-      title={isCollapsed ? label : undefined}
+      title={label}
     >
       <span aria-hidden="true">
         <Icon className={SIDEBAR_ITEM_TOKENS.iconSize} />

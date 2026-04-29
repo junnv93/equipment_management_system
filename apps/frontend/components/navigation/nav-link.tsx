@@ -65,46 +65,62 @@ export function NavLink({
   ...linkProps
 }: NavLinkProps) {
   const indicatorVariant = pendingIndicator ?? VARIANT_TO_INDICATOR[variant];
+  const [isPending, setIsPending] = React.useState(false);
+
+  // opacity 변형(breadcrumb)은 <a> 자체에 opacity 적용
+  const opacityClass = indicatorVariant === 'opacity' ? getPendingOpacityClass(isPending) : '';
 
   return (
-    <Link {...linkProps} className={cn('relative', className)}>
-      <NavLinkInner indicatorVariant={indicatorVariant}>{children}</NavLinkInner>
+    <Link
+      {...linkProps}
+      className={cn('relative', className, opacityClass)}
+      aria-busy={isPending || undefined}
+    >
+      <NavLinkInner indicatorVariant={indicatorVariant} onPendingChange={setIsPending}>
+        {children}
+      </NavLinkInner>
     </Link>
   );
 }
 
 /**
  * useLinkStatus는 *next/link Link의 자식*에서만 동작 — 별도 컴포넌트로 분리 필수.
+ *
+ * 레이아웃 설계:
+ * - fragment로 렌더링해 <Link>(<a>)의 flex 레이아웃을 보존함.
+ *   이전: <span class="inline-flex w-full">이 래퍼로 작동해 <a>의 gap-3/flex-1이 무효화됨.
+ *   현재: children과 PendingIndicator가 <a>의 직접 flex child로 렌더링됨.
+ * - aria-busy / opacityClass는 NavLink가 <a>에 직접 적용 (onPendingChange 콜백 경유).
  */
 function NavLinkInner({
   indicatorVariant,
   children,
+  onPendingChange,
 }: {
   indicatorVariant: PendingIndicatorVariant;
   children: React.ReactNode;
+  onPendingChange: (pending: boolean) => void;
 }) {
   const { pending } = useLinkStatus();
   const begin = useNavigationPendingBegin();
   const t = useTranslations();
 
-  // pending 시작 시 글로벌 counter increment, pending 해제 시 cleanup
   React.useEffect(() => {
+    onPendingChange(pending);
     if (!pending) return;
     return begin();
-  }, [pending, begin]);
-
-  const opacityClass = indicatorVariant === 'opacity' ? getPendingOpacityClass(pending) : '';
+  }, [pending, begin, onPendingChange]);
 
   return (
-    <span
-      aria-busy={pending || undefined}
-      className={cn('inline-flex items-center w-full', opacityClass)}
-    >
-      <span className={cn(indicatorVariant === 'border' && 'pl-1')}>{children}</span>
+    <>
+      {/* border 변형(모바일): pl-1 패딩을 children 래퍼에만 적용 */}
+      {indicatorVariant === 'border' ? <span className="pl-1">{children}</span> : children}
+      {/* dot/border: PendingIndicator가 <a>의 flex child로 label 우측에 붙음 */}
       {indicatorVariant !== 'opacity' ? (
         <PendingIndicator variant={indicatorVariant} pending={pending} />
       ) : null}
+      {/* sr-only는 position:absolute라 flex flow에서 벗어남 */}
       {pending ? <span className="sr-only">{t(FEEDBACK_KEYS.navigating)}</span> : null}
-    </span>
+    </>
   );
 }

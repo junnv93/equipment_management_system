@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { IDLE_WARNING_BEFORE_SECONDS } from '@equipment-management/shared-constants';
 import { IDLE_TIMEOUT_DIALOG_TOKENS, getIdleTimeoutUrgencyClasses } from '@/lib/design-tokens';
 
-// SVG ring 상수 (design token에서 파생)
 const RING = IDLE_TIMEOUT_DIALOG_TOKENS.ring;
 const RADIUS = (RING.size - RING.strokeWidth) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -54,6 +53,7 @@ export function IdleTimeoutDialog({
           onContinue();
         }}
       >
+        {/* ── 헤더: 아이콘 + 제목 + 설명 ── */}
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <div className={IDLE_TIMEOUT_DIALOG_TOKENS.iconContainer}>
@@ -61,15 +61,22 @@ export function IdleTimeoutDialog({
             </div>
             <AlertDialogTitle>{t('title')}</AlertDialogTitle>
           </div>
-          <AlertDialogDescription>{t('description')}</AlertDialogDescription>
+          <AlertDialogDescription className="text-balance">
+            {t('description')}
+          </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {/* Countdown Ring */}
+        {/* ── 카운트다운 영역 ──
+            ring: 시간 숫자만 표시 (영문/한국어 라벨 오버플로 방지)
+            라벨: ring 하단 별도 배치 → 전체 다이얼로그 너비 활용 가능
+        */}
         <div
-          className="flex flex-col items-center py-4"
+          className="flex flex-col items-center gap-3 py-2"
           role="timer"
           aria-label={`${formatCountdown(secondsRemaining)} ${t('remaining')}`}
+          aria-live="off"
         >
+          {/* Ring */}
           <div className="relative" style={{ width: RING.size, height: RING.size }}>
             <svg
               className="-rotate-90"
@@ -78,7 +85,7 @@ export function IdleTimeoutDialog({
               viewBox={`0 0 ${RING.size} ${RING.size}`}
               aria-hidden="true"
             >
-              {/* Track (배경 원) */}
+              {/* 트랙 (배경 원) */}
               <circle
                 cx={RING.size / 2}
                 cy={RING.size / 2}
@@ -88,7 +95,7 @@ export function IdleTimeoutDialog({
                 className={IDLE_TIMEOUT_DIALOG_TOKENS.ringTrack}
                 stroke="currentColor"
               />
-              {/* Progress (잔여 시간) */}
+              {/* 진행 원 */}
               <circle
                 cx={RING.size / 2}
                 cy={RING.size / 2}
@@ -102,26 +109,35 @@ export function IdleTimeoutDialog({
                 style={{ strokeDashoffset: dashoffset }}
               />
             </svg>
-            {/* Center text */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+
+            {/* 중심: 시간만 — 라벨은 ring 밖으로 분리 */}
+            <div className="absolute inset-0 flex items-center justify-center">
               <span className={cn(IDLE_TIMEOUT_DIALOG_TOKENS.countdownText, urgency.text)}>
                 {formatCountdown(secondsRemaining)}
               </span>
-              <span className={IDLE_TIMEOUT_DIALOG_TOKENS.countdownLabel}>{t('remaining')}</span>
             </div>
           </div>
+
+          {/* ring 하단 라벨 — 전체 너비 확보로 영문 긴 텍스트도 안전 */}
+          <p className={IDLE_TIMEOUT_DIALOG_TOKENS.countdownLabel}>{t('remaining')}</p>
         </div>
 
+        {/* ── 버튼 영역 ──
+            DOM 순서: [로그아웃(Action), 계속사용(Cancel)]
+            AlertDialogFooter(flex-col-reverse sm:flex-row sm:justify-end):
+              - 모바일: col-reverse → Cancel(계속사용)이 시각 상단 = 안전 액션 우선 ✓
+              - 데스크톱: row → Action(로그아웃) 왼쪽, Cancel(계속사용) 오른쪽 = 주요 액션 우측 ✓
+        */}
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onContinue} autoFocus>
-            {t('continueButton')}
-          </AlertDialogCancel>
           <AlertDialogAction
             onClick={onLogout}
             className={buttonVariants({ variant: 'destructive' })}
           >
             {t('logoutButton')}
           </AlertDialogAction>
+          <AlertDialogCancel onClick={onContinue} autoFocus>
+            {t('continueButton')}
+          </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

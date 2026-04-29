@@ -75,6 +75,7 @@
   },
   "layout": {
     "systemName": "장비 관리 시스템",
+    "systemNameSidebar": "장비 관리 시스템",
     "mainNav": "메인 네비게이션",
     "goHome": "홈으로 이동",
     "notificationCount": "{count}건의 알림",

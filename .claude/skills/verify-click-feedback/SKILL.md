@@ -41,9 +41,14 @@ argument-hint: '[선택사항: 검증할 특정 훅 또는 컴포넌트명]'
 | `apps/frontend/messages/ko/feedback.json` | 한국어 피드백 메시지 |
 | `apps/frontend/messages/en/feedback.json` | 영어 피드백 메시지 |
 | `apps/frontend/components/loading/route-loading.tsx` | loading.tsx 기준 컴포넌트 |
+| `apps/frontend/components/ui/list-page-skeleton.tsx` | ListPageSkeleton — srLabel = t(FEEDBACK_KEYS.loadingList) 독립 |
 | `apps/frontend/components/ui/search-input.tsx` | 검색바 UI SSOT |
 | `apps/frontend/components/ui/auto-save-status.tsx` | 자동저장 인디케이터 SSOT |
 | `apps/frontend/components/ui/dialog-skeleton.tsx` | Dialog/Sheet 로딩 스켈레톤 SSOT |
+| `apps/frontend/hooks/use-form-submission.ts` | 폼 제출 mutation — FEEDBACK_KEYS.success/failed |
+| `apps/frontend/hooks/use-mutation-with-refresh.ts` | 캐시 갱신 mutation — errorTitle useTranslations() 내부 resolve |
+| `apps/frontend/hooks/use-notifications.ts` | 알림 mutation — FEEDBACK_KEYS.notificationAllRead/Deleted |
+| `apps/frontend/hooks/use-reports.ts` | 보고서 export/generate — FEEDBACK_KEYS.exported/created/reportFileDownloaded |
 
 ## Workflow
 
@@ -52,14 +57,17 @@ argument-hint: '[선택사항: 검증할 특정 훅 또는 컴포넌트명]'
 피드백 문자열이 FEEDBACK_KEYS 없이 직접 사용되는지 확인합니다.
 
 ```bash
-# 토스트에 하드코딩된 한국어 피드백 문자열 검색
-grep -rn "title: '완료\|title: '처리\|title: '저장\|title: '삭제\|title: '승인\|title: '반려" \
-  apps/frontend/components/ apps/frontend/hooks/ \
-  --include="*.tsx" --include="*.ts"
+# toast title/description에 한국어 Unicode 문자 직접 사용 탐지 (단순 키���드 목록 아님)
+grep -rn "description:.*[가-힣]\|title:.*[가-힣]" \
+  apps/frontend/hooks/ apps/frontend/components/ \
+  --include="*.tsx" --include="*.ts" | \
+  grep -v "\.spec\.\|__tests__\|//\|@example\|\*\|aria-\|placeholder\|className\|sr-only"
 ```
 
 **PASS:** 결과 없음 (모든 피드백이 FEEDBACK_KEYS 또는 i18n t() 경유).
 **FAIL:** 하드코딩된 피드백 문자열 발견 → FEEDBACK_KEYS로 교체.
+
+> ⚠️ 주의: 이전 패턴(`title: '완료|삭제|...'`)은 `use-notifications`, `use-reports` 같이 특정 키워드 외 문자열을 탐지 못했습니다. Unicode 범위 `[가-힣]`를 사용해야 전수 탐지됩니다.
 
 ### Step 2: ko/en feedback.json 패리티 검사
 
@@ -208,20 +216,53 @@ pnpm --filter frontend tsc --noEmit && echo "✅ tsc PASS"
 **PASS:** 에러 없음.
 **FAIL:** 타입 에러 발견 → 수정 필수.
 
+### Step 11: 훅 기본 파라미터 한국어 하드코딩 검사
+
+함수 시그니처의 기본값에 한국어 문자열이 박혀있는지 탐지합니다.
+
+```bash
+# 함수 파라미터/변수 기본값에 한국어 직접 할당 탐지
+grep -rn "= '[가-힣]\+'\|= \"[가-힣]\+\"" \
+  apps/frontend/hooks/ \
+  --include="*.ts" --include="*.tsx" | \
+  grep -v "\.spec\.\|__tests__\|//\|@example\|\*\|messages/"
+```
+
+**PASS:** 결과 없음.
+**FAIL:** `param = '오류가 발생했습니다'` 패턴 → `useTranslations()` 내부 resolve로 교체.
+
+> 배경: `useMutationWithRefresh`의 `errorTitle = '오류가 발생했습니다'` 기본값이 fix loop 2회째에야 탐지됐습니다.
+
+### Step 12: ListPageSkeleton srLabel 독립성 검사
+
+`srLabel`이 `title` prop 대신 항상 FEEDBACK_KEYS에서 파생되는지 확인합니다.
+
+```bash
+# srLabel 할당문 확인 — title prop 의존 여부
+grep -n "srLabel" apps/frontend/components/ui/list-page-skeleton.tsx
+```
+
+**PASS:** `srLabel = t(FEEDBACK_KEYS.loadingList)` — `?? title` 없음.
+**FAIL:** `srLabel = title ?? t(...)` 패턴 → `t(FEEDBACK_KEYS.loadingList)` 단독 사용으로 교체.
+
+> 배경: ARIA 레이블을 `title` prop(시각적 skeleton 제어)에서 파생하면 locale 무관하게 Korean이 노출됩니다.
+
 ## Pass/Fail Summary
 
-| Step | 검사 항목 | 기준 |
-|------|-----------|------|
-| 1 | FEEDBACK_KEYS 하드코딩 | 결과 0건 |
-| 2 | ko/en feedback.json 패리티 | Missing/Extra 모두 [] |
-| 3 | loading.tsx a11y I3 | ❌ 없음 |
-| 4 | 409 retry ToastAction | 양쪽 파일 모두 존재 |
-| 5 | useDebouncedSearch isPending | pending prop 전달 확인 |
-| 6 | useAutoSave 4-state | 자체 구현 없음 |
-| 7 | motion-safe:animate-spin | 결과 0건 |
-| 8 | Dialog lazy mount | ⚠️ INFO 수준 |
-| 9 | useExportAction | INFO 수준 |
-| 10 | tsc | 에러 0건 |
+| Step | 검사 항목 | 기준 | 등급 |
+|------|-----------|------|------|
+| 1 | FEEDBACK_KEYS 하드코딩 ([가-힣] 범위) | 결과 0건 | MUST |
+| 2 | ko/en feedback.json 패리티 | Missing/Extra 모두 [] | MUST |
+| 3 | loading.tsx a11y I3 | ❌ 없음 | MUST |
+| 4 | 409 retry ToastAction | 양쪽 파일 모두 존재 | MUST |
+| 5 | useDebouncedSearch isPending | pending prop 전달 확인 | SHOULD |
+| 6 | useAutoSave 4-state | 자체 구현 없음 | SHOULD |
+| 7 | motion-safe:animate-spin | 결과 0건 | MUST |
+| 8 | Dialog lazy mount | ⚠️ INFO 수준 | SHOULD |
+| 9 | useExportAction | INFO 수준 | SHOULD |
+| 10 | tsc | 에러 0건 | MUST |
+| 11 | 훅 기본 파라미터 한국어 | 결과 0건 | MUST |
+| 12 | ListPageSkeleton srLabel 독립성 | `title ??` 패턴 0건 | MUST |
 
-MUST (Steps 1-4, 7, 10): 모두 PASS 필요.
+MUST (Steps 1-4, 7, 10-12): 모두 PASS 필요.
 SHOULD (Steps 5-6, 8-9): 위반 시 tech-debt-tracker.md 기록.

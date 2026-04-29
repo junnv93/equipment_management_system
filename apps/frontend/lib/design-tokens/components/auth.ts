@@ -331,22 +331,29 @@ export const IDLE_TIMEOUT_DIALOG_TOKENS = {
     'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10',
   /** 아이콘 크기 + 색상 */
   iconSize: 'h-5 w-5 text-destructive',
-  /** 카운트다운 링 SVG 수치 */
+  /** 카운트다운 링 SVG 수치
+   *  96px: 80px보다 16px 크게 — 텍스트 가독성 + 시각 비중 향상
+   *  strokeWidth 4: 96px ring에 맞는 선 굵기 (80px 시절 3에서 조정) */
   ring: {
-    size: 80,
-    strokeWidth: 3,
+    size: 96,
+    strokeWidth: 4,
   },
-  /** 카운트다운 숫자 (Layer 2 CONTENT_TOKENS 참조 — 레이아웃 시프트 방지) */
-  countdownText: `${CONTENT_TOKENS.numeric.tabular} text-2xl font-semibold leading-none`,
-  /** 카운트다운 하위 라벨 */
-  countdownLabel: 'text-xs text-muted-foreground mt-0.5',
+  /** 카운트다운 숫자 — ring 중심에만 표시 (Layer 2 CONTENT_TOKENS 참조) */
+  countdownText: `${CONTENT_TOKENS.numeric.tabular} text-2xl font-bold leading-none`,
+  /** ring 하단 컨텍스트 라벨 — ring 외부 배치, 전체 너비 사용
+   *  영문 "until automatic sign-out"(22자) 등 긴 번역도 줄바꿈 없이 수용 */
+  countdownLabel: 'text-xs text-muted-foreground text-center text-balance',
   /** 링 트랙 (배경 원) 색상 */
   ringTrack: 'text-muted-foreground/20',
   /** 링 진행률 transition (motion-safe, specific property — transition-all 금지) */
   ringTransition:
     'motion-safe:transition-[stroke-dashoffset,color] motion-safe:duration-1000 motion-safe:ease-linear',
-  /** 긴급 시각 전환 임계값 (초) — 이 시간 이하에서 amber → destructive */
-  urgentThresholdSeconds: 60,
+  /** 긴급 시각 전환 임계값 (초)
+   *  IDLE_WARNING_BEFORE_SECONDS = 300s(5분) 기준:
+   *  - >120s (2분 초과): amber — "곧 만료됨" 경고
+   *  -  ≤120s (2분 이하): destructive — "즉시 조치" 긴급
+   *  비율: 경고 구간의 40% 시점 전환 = 업계 표준 */
+  urgentThresholdSeconds: 120,
 } as const;
 
 /**
@@ -359,7 +366,7 @@ export const IDLE_TIMEOUT_DIALOG_TOKENS = {
  * @returns 텍스트/링 색상 클래스
  *
  * @example
- * const urgency = getIdleTimeoutUrgencyClasses(45); // ≤60s → destructive
+ * const urgency = getIdleTimeoutUrgencyClasses(90); // ≤120s → destructive
  * <span className={urgency.text}>{countdown}</span>
  */
 export function getIdleTimeoutUrgencyClasses(secondsRemaining: number): {
