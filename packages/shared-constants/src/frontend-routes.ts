@@ -10,7 +10,10 @@
  * - 특수 페이지: MANAGE, PENDING_CHECKS 등
  */
 
-import type { ApprovalCategory } from '@equipment-management/schemas';
+import type {
+  ApprovalCategory,
+  UserSelectableCheckoutPurpose,
+} from '@equipment-management/schemas';
 
 /**
  * 범용 Intent URL 쿼리 파라미터 상수 — SSOT.
@@ -41,6 +44,7 @@ export const CHECKOUT_QUERY_PARAMS = {
   SCOPE: 'scope',
   VIEW: 'view',
   EQUIPMENT_ID: 'equipmentId',
+  PURPOSE: 'purpose',
   SCOPE_VALUES: {
     MINE: 'mine',
   },
@@ -144,9 +148,24 @@ export const FRONTEND_ROUTES = {
      * QR 랜딩의 `request_checkout` CTA, 장비 상세 "반출 신청" 버튼 등 모든 진입점 공유.
      *
      * `CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID` 파라미터를 `CreateCheckoutContent`가 읽어 자동 선택.
+     * `options.purpose` 를 지정하면 `CHECKOUT_QUERY_PARAMS.PURPOSE` 파라미터도 포함.
+     *
+     * @example
+     * CREATE_FOR_EQUIPMENT('uuid-123')                          // ?equipmentId=uuid-123
+     * CREATE_FOR_EQUIPMENT('uuid-123', { purpose: 'rental' })   // ?equipmentId=uuid-123&purpose=rental
      */
-    CREATE_FOR_EQUIPMENT: (equipmentId: string) =>
-      `/checkouts/create?${CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID}=${encodeURIComponent(equipmentId)}`,
+    CREATE_FOR_EQUIPMENT: (
+      equipmentId: string,
+      options?: { purpose?: UserSelectableCheckoutPurpose }
+    ) => {
+      const params = new URLSearchParams({
+        [CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID]: equipmentId,
+      });
+      if (options?.purpose) {
+        params.set(CHECKOUT_QUERY_PARAMS.PURPOSE, options.purpose);
+      }
+      return `/checkouts/create?${params.toString()}`;
+    },
   },
 
   // ============================================================================

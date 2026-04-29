@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -60,11 +60,13 @@ import {
 } from '@equipment-management/schemas';
 import {
   FRONTEND_ROUTES,
+  CHECKOUT_QUERY_PARAMS,
   SELECTOR_PAGE_SIZE,
   Permission,
   getAvailablePurposes,
   isPurposeCompatibleWithEquipment,
 } from '@equipment-management/shared-constants';
+import { parseCheckoutCreateParams } from '@/lib/utils/checkout-create-params';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -82,47 +84,26 @@ export default function CreateCheckoutContent() {
   const queryClient = useQueryClient();
   const { user, can } = useAuth();
   const canCreate = can(Permission.CREATE_CHECKOUT);
-  // 두 ref로 분리: equipment 자동 선택은 즉시, purpose/site/team은 userTeamId까지 도착해야 잠금
-  const hasInitializedEquipment = useRef(false);
-  const hasInitializedPurpose = useRef(false);
 
-  // URL searchParams에서 프리셀렉션 equipmentId 읽기
+  // URL searchParams에서 프리셀렉션 파라미터 파싱 (SSOT 파서 경유)
   const searchParams = useSearchParams();
-  const preselectedEquipmentId = searchParams.get('equipmentId');
+  const { equipmentId: preselectedEquipmentId, purpose: purposeFromUrl } = useMemo(
+    () => parseCheckoutCreateParams(searchParams),
+    [searchParams]
+  );
 
-  // 폼 ���태 관리
+  // 폼 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [destination, setDestination] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [purpose, setPurpose] = useState<UserSelectableCheckoutPurpose>(() => {
-    // navigation 시 캐시에서 장비 데이터를 동기 조회해 즉시 올바른 purpose로 초기화.
-    // 캐시 미스(새로고침/직접 URL 진입)면 'calibration' 기본값 → Effect 2 fallback이 처리.
-    if (!preselectedEquipmentId || !user?.teamId) return 'calibration';
-    const eq = queryClient.getQueryData<Equipment>(
-      queryKeys.equipment.detail(preselectedEquipmentId)
-    );
-    return eq?.teamId && eq.teamId !== user.teamId ? CPVal.RENTAL : 'calibration';
-  });
   const [reason, setReason] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date>(addDays(new Date(), 7));
 
-  // 외부 대여 시 사이트/팀 선택 상태
-  const [selectedSite, setSelectedSite] = useState<string>(() => {
-    if (!preselectedEquipmentId || !user?.teamId) return '';
-    const eq = queryClient.getQueryData<Equipment>(
-      queryKeys.equipment.detail(preselectedEquipmentId)
-    );
-    return eq?.teamId && eq.teamId !== user.teamId ? (eq.site ?? '') : '';
-  });
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(() => {
-    if (!preselectedEquipmentId || !user?.teamId) return '';
-    const eq = queryClient.getQueryData<Equipment>(
-      queryKeys.equipment.detail(preselectedEquipmentId)
-    );
-    return eq?.teamId && eq.teamId !== user.teamId ? eq.teamId : '';
-  });
+  // 외부 대여 시 사이트/팀 선택 상태 (사용자 입력 유지 — URL 비직렬화)
+  const [selectedSite, setSelectedSite] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState('');
 
   // 사용자 소속 정보
   const userTeamId = user?.teamId;
@@ -134,31 +115,33 @@ export default function CreateCheckoutContent() {
     enabled: !!preselectedEquipmentId,
   });
 
-  // Effect 1: 장비 자동 선택 — equipment 로드되면 즉시 (userTeamId 대기 X)
-  useEffect(() => {
-    if (preselectedEquipment && !hasInitializedEquipment.current) {
-      hasInitializedEquipment.current = true;
-      setSelectedEquipments([preselectedEquipment]);
+  // purpose: URL이 SSOT. URL에 없으면 cross-team 자동판정, 기본은 calibration.
+  // URL 변경 시 즉시 반응 (lazy init / ref 잠금 방식 제거).
+  const purpose = useMemo<UserSelectableCheckoutPurpose>(() => {
+    if (purposeFromUrl) return purposeFromUrl;
+    if (preselectedEquipment?.teamId && userTeamId && preselectedEquipment.teamId !== userTeamId) {
+      return CPVal.RENTAL;
     }
+    return CPVal.CALIBRATION;
+  }, [purposeFromUrl, preselectedEquipment?.teamId, userTeamId]);
+
+  // Effect 1: 장비 자동 선택 — equipment 로드되면 즉시 (selectedEquipments가 비어있을 때만)
+  useEffect(() => {
+    if (!preselectedEquipment) return;
+    setSelectedEquipments((prev) => (prev.length > 0 ? prev : [preselectedEquipment]));
   }, [preselectedEquipment]);
 
-  // Effect 2: purpose + site/team 자동 채움 — equipment AND userTeamId 둘 다 도착해야 평가
-  // (둘 중 하나라도 없으면 ref를 잠그지 않아 다음 도착 시 재평가됨)
+  // cross-team rental 진입 시 lender site/team 자동 시드 (사용자 입력 후 덮어쓰기 방지)
+  const hasSeededLenderRef = useRef(false);
   useEffect(() => {
-    if (!preselectedEquipment || !userTeamId || hasInitializedPurpose.current) return;
-    hasInitializedPurpose.current = true;
+    if (hasSeededLenderRef.current) return;
+    if (purpose !== CPVal.RENTAL || !preselectedEquipment || !userTeamId) return;
+    if (preselectedEquipment.teamId === userTeamId) return;
 
-    const isCrossTeam = !!preselectedEquipment.teamId && preselectedEquipment.teamId !== userTeamId;
-
-    if (isCrossTeam) {
-      // 타팀 장비: rental + 관리 부서 + 장비(belt-and-suspenders) 자동 채움
-      setPurpose(CPVal.RENTAL);
-      setSelectedSite(preselectedEquipment.site);
-      setSelectedTeamId(preselectedEquipment.teamId!);
-      setSelectedEquipments([preselectedEquipment]);
-    }
-    // 자팀 장비: useState 기본값 'calibration' 그대로 유지
-  }, [preselectedEquipment, userTeamId]);
+    hasSeededLenderRef.current = true;
+    setSelectedSite(preselectedEquipment.site ?? '');
+    setSelectedTeamId(preselectedEquipment.teamId ?? '');
+  }, [purpose, preselectedEquipment, userTeamId]);
 
   // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
   const purposeAvailability = useMemo(
@@ -219,37 +202,41 @@ export default function CreateCheckoutContent() {
     },
   });
 
-  // 목적 변경 시: 현재 선택된 장비(URL preselection 또는 사용자 선택)가 새 목적과 호환되면
-  // 보존 + rental 진입 시 site/team 자동 채움. 비호환이면 모두 초기화.
-  const handlePurposeChange = (value: UserSelectableCheckoutPurpose) => {
-    setPurpose(value);
+  // 목적 변경: URL을 갱신해 purpose SSOT를 유지. useMemo가 자동 재계산.
+  // 현재 선택 장비가 새 목적과 호환되면 보존 + rental 진입 시 site/team 채움.
+  const handlePurposeChange = useCallback(
+    (value: UserSelectableCheckoutPurpose) => {
+      // URL 갱신 — purpose는 URL이 SSOT (router.push로 히스토리 push)
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(CHECKOUT_QUERY_PARAMS.PURPOSE, value);
+      router.push(`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?${params.toString()}`, { scroll: false });
 
-    // 현재 선택된 첫 장비 — preselectedEquipment에 의존하지 않고 actual selection 기준
-    const currentEquipment = selectedEquipments[0] ?? preselectedEquipment;
+      // 현재 선택된 첫 장비 — actual selection 기준
+      const currentEquipment = selectedEquipments[0] ?? preselectedEquipment;
 
-    if (currentEquipment) {
-      const compat = isPurposeCompatibleWithEquipment(value, currentEquipment.teamId, userTeamId);
+      if (currentEquipment) {
+        const compat = isPurposeCompatibleWithEquipment(value, currentEquipment.teamId, userTeamId);
 
-      if (compat) {
-        // 호환: 장비 명시적 보존 (이미 selectedEquipments에 있어도 멱등)
-        setSelectedEquipments([currentEquipment]);
-
-        if (value === CPVal.RENTAL) {
-          setSelectedSite(currentEquipment.site);
-          setSelectedTeamId(currentEquipment.teamId ?? '');
-        } else {
-          setSelectedSite('');
-          setSelectedTeamId('');
+        if (compat) {
+          setSelectedEquipments([currentEquipment]);
+          if (value === CPVal.RENTAL) {
+            setSelectedSite(currentEquipment.site ?? '');
+            setSelectedTeamId(currentEquipment.teamId ?? '');
+          } else {
+            setSelectedSite('');
+            setSelectedTeamId('');
+          }
+          return;
         }
-        return;
       }
-    }
 
-    // 비호환 또는 선택된 장비 없음
-    setSelectedEquipments([]);
-    setSelectedSite('');
-    setSelectedTeamId('');
-  };
+      // 비호환 또는 선택된 장비 없음
+      setSelectedEquipments([]);
+      setSelectedSite('');
+      setSelectedTeamId('');
+    },
+    [searchParams, router, selectedEquipments, preselectedEquipment, userTeamId]
+  );
 
   // 사이트 변경 시 팀 초기화
   const handleSiteChange = (value: string) => {

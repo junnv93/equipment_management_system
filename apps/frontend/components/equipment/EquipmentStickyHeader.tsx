@@ -256,7 +256,7 @@ export function EquipmentStickyHeader({
               {t('header.exportHistoryCard')}
             </Button>
             {canCheckout && (
-              <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
+              <Link href={FRONTEND_ROUTES.CHECKOUTS.CREATE_FOR_EQUIPMENT(equipmentId)}>
                 <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>
                   <FileOutput className="h-4 w-4 mr-1.5" aria-hidden="true" />
                   {t('header.checkoutRequest')}
