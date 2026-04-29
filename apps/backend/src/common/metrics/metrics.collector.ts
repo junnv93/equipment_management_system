@@ -58,7 +58,7 @@ export class MetricsCollector {
     const activeStatuses = [
       CheckoutStatusValues.CHECKED_OUT,
       CheckoutStatusValues.LENDER_CHECKED,
-      CheckoutStatusValues.BORROWER_RECEIVED,
+      CheckoutStatusValues.IN_USE,
     ];
 
     const [result] = await this.db

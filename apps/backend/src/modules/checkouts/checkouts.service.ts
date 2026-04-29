@@ -843,8 +843,8 @@ export class CheckoutsService extends VersionedBaseService {
    *
    * UL-QP-18 렌탈 4단계 확인 워크플로우:
    * ① approved → lender_checked (빌려주는 측: 반출 전 확인)
-   * ② lender_checked → borrower_received (빌리는 측: 인수 확인)
-   * ③ borrower_received/in_use → borrower_returned (빌리는 측: 반납 전 확인)
+   * ② lender_checked → in_use (빌리는 측: 인수 확인 + 사용 시작 동시)
+   * ③ in_use → borrower_returned (빌리는 측: 반납 전 확인)
    * ④ borrower_returned → lender_received (빌려주는 측: 반입 확인)
    */
   async getPendingChecks(
@@ -855,7 +855,7 @@ export class CheckoutsService extends VersionedBaseService {
     pageSize: number = DEFAULT_PAGE_SIZE
   ): Promise<CheckoutListResponse> {
     const lenderStatuses = [CSVal.APPROVED, CSVal.BORROWER_RETURNED];
-    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.BORROWER_RECEIVED, CSVal.IN_USE];
+    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.IN_USE];
 
     const conditions: SQL<unknown>[] = [eq(checkouts.purpose, CPVal.RENTAL)];
 
@@ -975,7 +975,7 @@ export class CheckoutsService extends VersionedBaseService {
 
   async getPendingChecksCount(userId: string, userTeamId: string | undefined): Promise<number> {
     const lenderStatuses = [CSVal.APPROVED, CSVal.BORROWER_RETURNED];
-    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.BORROWER_RECEIVED, CSVal.IN_USE];
+    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.IN_USE];
 
     const lenderCondition = userTeamId
       ? and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))
@@ -1539,12 +1539,7 @@ export class CheckoutsService extends VersionedBaseService {
       canSubmitConditionCheck:
         purpose === CPVal.RENTAL &&
         (
-          [
-            CSVal.APPROVED,
-            CSVal.LENDER_CHECKED,
-            CSVal.BORROWER_RECEIVED,
-            CSVal.BORROWER_RETURNED,
-          ] as string[]
+          [CSVal.APPROVED, CSVal.LENDER_CHECKED, CSVal.IN_USE, CSVal.BORROWER_RETURNED] as string[]
         ).includes(checkout.status) &&
         userPermissions.includes(Permission.COMPLETE_CHECKOUT),
     };
@@ -1615,7 +1610,7 @@ export class CheckoutsService extends VersionedBaseService {
         CSVal.CHECKED_OUT,
         CSVal.OVERDUE,
         CSVal.LENDER_CHECKED,
-        CSVal.BORROWER_RECEIVED,
+        CSVal.IN_USE,
         CSVal.BORROWER_RETURNED,
         CSVal.LENDER_RECEIVED,
         CSVal.RETURNED,

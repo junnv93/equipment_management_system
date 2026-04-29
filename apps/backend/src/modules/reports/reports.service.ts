@@ -385,7 +385,6 @@ export class ReportsService {
           CSVal.APPROVED,
           CSVal.CHECKED_OUT,
           CSVal.LENDER_CHECKED,
-          CSVal.BORROWER_RECEIVED,
           CSVal.IN_USE,
         ]);
         const returnedStatuses: Set<string> = new Set([
