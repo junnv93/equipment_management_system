@@ -1322,8 +1322,11 @@ export class CheckoutsService extends VersionedBaseService {
           name: schema.users.name,
           email: schema.users.email,
           teamId: schema.users.teamId,
+          teamName: schema.teams.name,
+          teamSite: schema.teams.site,
         })
         .from(schema.users)
+        .leftJoin(schema.teams, eq(schema.teams.id, schema.users.teamId))
         .where(eq(schema.users.id, checkout.requesterId))
         .limit(1),
     ]);
@@ -1340,6 +1343,9 @@ export class CheckoutsService extends VersionedBaseService {
             id: userRow[0].id,
             name: userRow[0].name,
             email: userRow[0].email,
+            team: userRow[0].teamId
+              ? { id: userRow[0].teamId, name: userRow[0].teamName, site: userRow[0].teamSite }
+              : null,
           }
         : null,
       meta: { availableActions, nextStep },

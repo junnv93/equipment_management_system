@@ -77,7 +77,7 @@ export interface Checkout {
     name: string;
     email: string;
     department?: string;
-    team?: { name: string };
+    team?: { id?: string; name: string; site?: string };
   };
   destination: string; // ✅ 백엔드 필드명
   phoneNumber?: string; // ✅ 백엔드 필드명

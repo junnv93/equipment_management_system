@@ -114,7 +114,7 @@ export default function ApprovalDetailModal({
                         ? siteLabels[item.requesterSite as keyof typeof siteLabels]
                         : '';
                       const teamName = item.requesterTeam || '';
-                      if (siteLabel && teamName) return `${siteLabel} / ${teamName}`;
+                      if (siteLabel && teamName) return `${siteLabel} · ${teamName}`;
                       return siteLabel || teamName || '-';
                     })()}
                   </p>

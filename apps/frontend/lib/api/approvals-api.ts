@@ -1204,7 +1204,7 @@ class ApprovalsApi {
       requesterId: checkout.requesterId || '',
       requesterName: checkout.user?.name || 'Unknown',
       requesterTeam: team?.name ?? '',
-      requesterSite: (team as { site?: string } | null | undefined)?.site,
+      requesterSite: team?.site,
       requestedAt: checkout.createdAt,
       summary:
         category === 'outgoing'
