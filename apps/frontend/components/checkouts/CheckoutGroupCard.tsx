@@ -15,7 +15,8 @@ import { AlertTriangle, CalendarDays, Building, ChevronDown, CheckCheck } from '
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndicator';
-import { NextStepPanel, type OverflowAction } from '@/components/shared/NextStepPanel';
+import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
+import type { OverflowAction } from '@/lib/types/checkout-ui';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi, { type Checkout, type CheckoutSummary } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';

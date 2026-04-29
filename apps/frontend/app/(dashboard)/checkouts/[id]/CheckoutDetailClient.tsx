@@ -69,7 +69,7 @@ import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import { DdayBadge } from '@/components/checkouts/DdayBadge';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { NextStepPanel } from '@/components/shared/NextStepPanel';
+import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 import { NextStepPanelError } from '@/components/checkouts/NextStepPanelError';
 import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineError';

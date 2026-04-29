@@ -293,13 +293,12 @@ export async function bulkApprove(
   ids: string[],
   comment?: string
 ): Promise<{ success: string[]; failed: string[] }> {
-  const success: string[] = [];
-  const failed: string[] = [];
-
   const itemsMap = await fetchItemsMapIfNeeded(category);
 
-  for (const id of ids) {
-    try {
+  // Promise.allSettled: 병렬 실행 + 부분 실패 허용 (bulkReject와 동일 전략)
+  // CAS 안전성: bulk 내 각 id는 서로 다른 엔티티이므로 버전 충돌 없음
+  const results = await Promise.allSettled(
+    ids.map((id) => {
       let equipmentId: string | undefined;
       let originalData: unknown;
       if (itemsMap) {
@@ -307,13 +306,24 @@ export async function bulkApprove(
         equipmentId = item?.details?.equipmentId as string | undefined;
         originalData = item?.originalData;
       }
-      await approve(category, id, comment, equipmentId, originalData);
-      success.push(id);
-    } catch (error) {
-      console.error('[ApprovalsApi] bulk approve item failed:', { id, category, error });
-      failed.push(id);
+      return approve(category, id, comment, equipmentId, originalData);
+    })
+  );
+
+  const success: string[] = [];
+  const failed: string[] = [];
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      success.push(ids[i]);
+    } else {
+      console.error('[ApprovalsApi] bulk approve item failed:', {
+        id: ids[i],
+        category,
+        reason: result.reason,
+      });
+      failed.push(ids[i]);
     }
-  }
+  });
 
   return { success, failed };
 }

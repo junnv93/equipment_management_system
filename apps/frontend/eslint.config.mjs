@@ -103,6 +103,7 @@ const eslintConfig = [
       '*.config.mjs',
       'tests/e2e/**',
       '*.setup.js',
+      '**/*.stories.{ts,tsx}',
     ],
   },
   {
