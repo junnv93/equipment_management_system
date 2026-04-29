@@ -143,21 +143,6 @@ export default function CreateCheckoutContent() {
     }
   }, [preselectedEquipment, purpose, userTeamId, selectedSite]);
 
-  // Effect B: 팀 시드 — teamsData 로드 완료 후 실행 (Radix UI Select 요구사항)
-  // Radix UI Select는 value에 대응하는 SelectItem이 없으면 placeholder를 표시하며,
-  // 이후 options가 마운트돼도 자동 갱신되지 않을 수 있음.
-  // → options(teamsData) 로드 완료 후 팀 ID 존재 확인 → selectedTeamId 세팅.
-  useEffect(() => {
-    if (!teamsData?.data || !preselectedEquipment || selectedTeamId) return;
-    if (purpose !== CPVal.RENTAL || !userTeamId) return;
-    if (preselectedEquipment.teamId === userTeamId) return;
-    // 현재 선택된 site가 프리셀렉션 장비의 site와 일치할 때만 (사용자가 site 변경 시 무시)
-    if (selectedSite !== (preselectedEquipment.site ?? '')) return;
-
-    const team = teamsData.data.find((t) => t.id === preselectedEquipment.teamId);
-    if (team) setSelectedTeamId(team.id);
-  }, [teamsData?.data, preselectedEquipment, purpose, userTeamId, selectedTeamId, selectedSite]);
-
   // SSOT: 자팀/타팀 컨텍스트에 따른 목적별 사용 가능 여부 (백엔드 가드와 동일 룰)
   const purposeAvailability = useMemo(
     () => getAvailablePurposes(preselectedEquipment?.teamId, userTeamId),
@@ -170,6 +155,22 @@ export default function CreateCheckoutContent() {
     queryFn: () => teamsApi.getTeams({ site: selectedSite as Site, pageSize: 50 }),
     enabled: purpose === CPVal.RENTAL && !!selectedSite,
   });
+
+  // Effect B: 팀 시드 — teamsData 로드 완료 후 실행 (Radix UI Select 요구사항)
+  // Radix UI Select는 value에 대응하는 SelectItem이 없으면 placeholder를 표시하며,
+  // 이후 options가 마운트돼도 자동 갱신되지 않을 수 있음.
+  // → options(teamsData) 로드 완료 후 팀 ID 존재 확인 → selectedTeamId 세팅.
+  // 주의: dependency array가 렌더 중 동기 평가되므로 teamsData 선언 이후에 위치해야 함 (TDZ 방지).
+  useEffect(() => {
+    if (!teamsData?.data || !preselectedEquipment || selectedTeamId) return;
+    if (purpose !== CPVal.RENTAL || !userTeamId) return;
+    if (preselectedEquipment.teamId === userTeamId) return;
+    // 현재 선택된 site가 프리셀렉션 장비의 site와 일치할 때만 (사용자가 site 변경 시 무시)
+    if (selectedSite !== (preselectedEquipment.site ?? '')) return;
+
+    const team = teamsData.data.find((t) => t.id === preselectedEquipment.teamId);
+    if (team) setSelectedTeamId(team.id);
+  }, [teamsData?.data, preselectedEquipment, purpose, userTeamId, selectedTeamId, selectedSite]);
 
   // 장비 목록 조회 - 상태 필터 없이 전체 조회 (목적별 선택 가능 여부는 클라이언트에서 판단)
   const equipmentTeamId = purpose === CPVal.RENTAL ? selectedTeamId : userTeamId;
