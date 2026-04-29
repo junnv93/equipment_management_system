@@ -429,7 +429,7 @@ export default function CalibrationPlansContent({
                     <TableCell className="font-semibold tabular-nums">
                       {/* 행 전체를 키보드(Tab+Enter)로 접근 가능하게 하는 invisible overlay link */}
                       <NavLink
-                        href={`/calibration-plans/${plan.id}`}
+                        href={FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(plan.id)}
                         className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                         aria-label={t('plansList.rowAriaLabel', {
                           year: plan.year,

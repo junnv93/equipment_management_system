@@ -25,6 +25,7 @@ import {
   getCalibrationRowClasses,
   getManagementNumberClasses,
 } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { CalibrationHistory } from '@/lib/api/calibration-api';
 
 interface Props {
@@ -127,7 +128,7 @@ export default function CalibrationListTable({
               >
                 <TableCell className="font-medium">
                   <NavLink
-                    href={`/equipment/${item.equipmentId}`}
+                    href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.equipmentId)}
                     variant="card"
                     className={CALIBRATION_TABLE.link}
                   >
