@@ -321,7 +321,7 @@ export function PendingApprovalCard({
               icon={<span className="text-muted-foreground">·</span>}
               iconTone="muted"
               name={zeroEntries
-                .slice(0, 4)
+                .slice(0, DASHBOARD_CARD_DISPLAY_LIMITS.approvalZeroGroup)
                 .map((e) => `${e.category.label} 0`)
                 .join(' · ')}
               count={null}

@@ -142,4 +142,6 @@ export const DASHBOARD_CARD_DISPLAY_LIMITS = {
   calibrationDday: 8,
   /** PendingApprovalCard heavy variant 임계값 — count >= heavyMinCount AND 최대값일 때 heavy 적용. */
   approvalHeavyMinCount: 5,
+  /** PendingApprovalCard 0건 카테고리 그룹 요약 행에 표시할 최대 레이블 수. */
+  approvalZeroGroup: 4,
 } as const;

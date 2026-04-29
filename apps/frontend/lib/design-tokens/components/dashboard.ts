@@ -327,7 +327,7 @@ export const DASHBOARD_KPI_TOKENS = {
   heroBarThreshold: 'absolute top-0 bottom-0 w-px',
   heroBarThresholdHigh: 'bg-white/50',
   heroBarThresholdMedium: 'bg-white/30',
-  heroBarThresholdLabel: 'absolute -bottom-4 text-[9px] font-mono text-white/40 tabular-nums',
+  heroBarThresholdLabel: `absolute -bottom-4 ${MICRO_TYPO.badge} font-mono text-white/40 tabular-nums`,
   /** Hero KPI 카드 최소 높이 */
   heroMinH: 'min-h-[8.5rem]',
   /** Primary KPI 카드 최소 높이 */
@@ -841,17 +841,17 @@ export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
   container: `bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
-  subtitle: 'text-[11px] text-muted-foreground',
+  subtitle: `${MICRO_TYPO.meta} text-muted-foreground`,
   /** 상단 meta pill ("● 정상" / "● 경고" / "● 점검 중"). */
   statusPill: {
-    base: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full',
+    base: `inline-flex items-center gap-1 ${MICRO_TYPO.meta} font-semibold px-1.5 py-0.5 rounded-full`,
     ok: 'bg-brand-success/15 text-brand-success',
     warn: 'bg-brand-warning/15 text-brand-warning',
     danger: 'bg-brand-critical/15 text-brand-critical',
   },
   statusGrid: 'grid grid-cols-2 gap-x-6 gap-y-3.5',
   statusItem: 'flex flex-col gap-0.5',
-  statusLabel: 'text-[11px] text-muted-foreground',
+  statusLabel: `${MICRO_TYPO.meta} text-muted-foreground`,
   statusValue: 'font-mono tabular-nums font-bold text-lg leading-none flex items-baseline gap-1',
   statusUnit: 'text-xs font-medium text-muted-foreground',
   statusOk: 'text-brand-success',
@@ -869,8 +869,7 @@ export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
     fillInfo: 'bg-brand-info',
   },
   /** 푸터: 점선 구분 + 좌(라벨) 우(값). */
-  footer:
-    'mt-3 pt-2.5 border-t border-dashed border-border flex items-center justify-between text-[11px]',
+  footer: `mt-3 pt-2.5 border-t border-dashed border-border flex items-center justify-between ${MICRO_TYPO.meta}`,
   footerLabel: 'text-muted-foreground',
   footerValue: 'font-mono tabular-nums font-bold text-foreground',
 } as const;
