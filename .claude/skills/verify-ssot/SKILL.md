@@ -349,33 +349,68 @@ pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "nod
 # 결과: 0건 (lint 에러 없음)
 ```
 
-**PASS:** 3-layer selector 모두 존재 + lint 에러 0건. **FAIL:** selector 누락 또는 lint 에러 발생.
+**22f: ESLint dynamic import selector — `ImportExpression` 사용 확인 (2026-04-30 추가)**
+
+`@typescript-eslint/parser` v6+에서 `import('node:crypto')` 같은 dynamic import 표현식은
+`CallExpression` 노드가 아닌 `ImportExpression` 노드로 파싱된다.
+selector가 `CallExpression[callee.type='Import']`이면 **조건이 match되지 않아 silent fail** 발생.
+반드시 `ImportExpression[source.value='node:crypto']` 형식을 사용해야 한다.
+
+```bash
+# ImportExpression selector 존재 확인 (PASS 패턴)
+grep -n "ImportExpression\[source\.value=" apps/backend/.eslintrc.js
+# 기대: crypto 관련 2건 이상 (node:crypto + crypto)
+
+# CallExpression[callee.type='Import'] 잔존 탐지 (FAIL 패턴 — silent fail)
+grep -n "CallExpression\[callee\.type=.Import.\]" apps/backend/.eslintrc.js
+# 기대: 0건 (이 패턴은 @typescript-eslint/parser v6+에서 dynamic import 미탐지)
+```
+
+**PASS:**
+- `ImportExpression[source.value='node:crypto']` 및 `ImportExpression[source.value='crypto']` 존재
+- `CallExpression[callee.type='Import']` 0건
+
+**FAIL:**
+- `CallExpression[callee.type='Import']` 잔존 → `ImportExpression[source.value='...']`으로 교체
+- `ImportExpression` selector 누락 → dynamic import 차단 룰이 무효화되어 `node:crypto` 직접 import 탐지 불가
+
+**발생 이력 (2026-04-30)**: tech-debt-batch-0430 Phase C에서 verify-implementation FAIL 탐지. 백엔드 ESLint `no-restricted-imports` 룰에 `CallExpression[callee.type='Import']` 4곳이 `ImportExpression[source.value='...']`으로 교체됨.
+
+**PASS:** 3-layer selector 모두 존재 + ImportExpression selector 검증 통과 + lint 에러 0건. **FAIL:** selector 누락 또는 lint 에러 발생.
 
 > **연계:** verify-hardcoding Step 23(export allowlist 상태 리터럴)과 상호 보완 — ESLint가 BinaryExpression/Property/CallExpression을 정적으로 차단하고, Step 23은 배열 요소로 사용된 리터럴을 grep으로 탐지.
 
-### Step 24: UnifiedApprovalStatus (UASVal) SSOT — approvals-api.ts (2026-04-22 추가)
+### Step 24: UnifiedApprovalStatus (UASVal) SSOT — approvals mappers (2026-04-22 추가, 2026-04-30 파일 경로 업데이트)
 
-`apps/frontend/lib/api/approvals-api.ts`의 `mapCheckoutToApprovalItem` / `mapNonConformanceToApprovalItem` /
+`mapCheckoutToApprovalItem` / `mapNonConformanceToApprovalItem` /
 `mapInspectionToApprovalItem` 등 매핑 함수에서 `UnifiedApprovalStatus` 값을 raw 문자열 리터럴로
 할당하는 패턴 탐지. `UnifiedApprovalStatusValues` (= `UASVal`)에서 상수를 경유해야 함.
 
-**24a: approvals-api.ts 내 UnifiedApprovalStatus raw 리터럴 탐지**
+> **2026-04-30 파일 구조 변경:** `approvals-api.ts`가 barrel로 전환되고 매핑 함수는 `approvals/mappers.ts`로 이동. 검증 대상 파일 경로가 변경됨.
+
+**24a: approvals 매핑 파일 내 UnifiedApprovalStatus raw 리터럴 탐지**
 ```bash
-grep -n "status: 'pending'\|status: 'pending_review'\|status: 'approved'\|status: 'rejected'\|status: 'in_progress'" \
+# barrel + 실제 구현 파일 양쪽 검사 (2026-04-30 분할 이후)
+grep -rn "status: 'pending'\|status: 'pending_review'\|status: 'approved'\|status: 'rejected'\|status: 'in_progress'" \
+  apps/frontend/lib/api/approvals/ \
   apps/frontend/lib/api/approvals-api.ts \
   | grep -v "//\|import\|type\|interface"
 # 결과: 0건 (UASVal.PENDING 등 SSOT 상수 경유)
 ```
 
-**24b: UASVal import 확인**
+**24b: UASVal import 확인 — mappers.ts**
 ```bash
-grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals-api.ts | head -5
-# 결과: import 라인 존재해야 함
+grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals/mappers.ts | head -5
+# 결과: import 라인 + 사용 라인 2건 이상 (mappers.ts가 실제 UASVal 소비처)
 ```
 
-**PASS:** 24a 0건 + 24b import 확인. **FAIL:** raw 리터럴 직접 할당 발견 시 `UASVal.PENDING_REVIEW` 등 상수로 교체.
+**PASS:** 24a 0건 + 24b mappers.ts에서 UASVal import 확인. **FAIL:** raw 리터럴 직접 할당 발견 시 `UASVal.PENDING_REVIEW` 등 상수로 교체.
 
-> **배경:** 2026-04-22 verify-implementation에서 `status: 'pending_review'`(L1142), `status: 'pending'`(L1165, L1192) 3건 발견. 현재 값이 SSOT 값과 우연히 일치하여 런타임 버그는 없으나, 향후 SSOT 값 변경 시 approvals-api.ts가 무결성 보장을 받지 못함.
+> **배경:** 2026-04-22 verify-implementation에서 `status: 'pending_review'`(L1142), `status: 'pending'`(L1165, L1192) 3건 발견. 현재 값이 SSOT 값과 우연히 일치하여 런타임 버그는 없으나, 향후 SSOT 값 변경 시 무결성 보장 불가. 2026-04-30에 `approvals/mappers.ts`로 이관 후 UASVal 경유 패턴 확립.
+
+**관련 파일:**
+- `apps/frontend/lib/api/approvals/mappers.ts` — 매핑 함수 SSOT (2026-04-30 이후)
+- `apps/frontend/lib/api/approvals-api.ts` — barrel re-export (2026-04-30 이후)
 
 ### Step 25: design-token 헬퍼 함수 내 status literal 직접 비교 금지 (2026-04-24 추가)
 
@@ -683,20 +718,22 @@ interface TabMeta {
 // 소비처: const isMultiStep = meta.totalApprovalSteps > 1;
 ```
 
-**탐지 — approvals-api.ts TabMeta:**
+**탐지 — approvals-api.ts TabMeta (barrel + 실제 구현 파일 양쪽 검사):**
 ```bash
-# multiStep boolean 재도입 탐지
-grep -n "multiStep\s*[?:]\s*boolean" apps/frontend/lib/api/approvals-api.ts
+# multiStep boolean 재도입 탐지 — barrel + 구현 파일(approvals/types.ts) 양쪽
+# (2026-04-30: approvals-api.ts가 barrel로 전환됨. 실제 정의는 approvals/types.ts)
+grep -rn "multiStep\s*[?:]\s*boolean" apps/frontend/lib/api/ --include="*.ts"
 
 # totalApprovalSteps가 있는데 별도 boolean 필드로 중복 파생하는 패턴
-grep -n "totalSteps\s*[?:]\s*boolean\|stepCount\s*[?:]\s*boolean\|hasMultipleSteps\s*[?:]\s*boolean" \
+grep -rn "totalSteps\s*[?:]\s*boolean\|stepCount\s*[?:]\s*boolean\|hasMultipleSteps\s*[?:]\s*boolean" \
   apps/frontend/lib/api/ --include="*.ts"
 ```
 
-**PASS:** `multiStep?: boolean` 선언 0건 (전 approve 카테고리 파일). **FAIL:** boolean 재도입 → 제거 후 수치 비교 패턴으로 교체.
+**PASS:** `multiStep?: boolean` 선언 0건 (approvals-api.ts + approvals/types.ts 포함 전 approve 카테고리 파일). **FAIL:** boolean 재도입 → 제거 후 수치 비교 패턴으로 교체.
 
 **관련 파일:**
-- `apps/frontend/lib/api/approvals-api.ts` — `TabMeta.totalApprovalSteps` SSOT (2026-04-27)
+- `apps/frontend/lib/api/approvals-api.ts` — barrel re-export (2026-04-30 분할 이후)
+- `apps/frontend/lib/api/approvals/types.ts` — `TabMeta.totalApprovalSteps` SSOT 실제 정의 (2026-04-30)
 - `apps/frontend/components/approvals/ApprovalRow.tsx` — `meta.totalApprovalSteps` 소비
 - `apps/frontend/components/approvals/ApprovalDetailModal.tsx` — `meta.totalApprovalSteps > 1`
 
@@ -791,6 +828,7 @@ grep -n "onBulkReject" apps/frontend/components/approvals/ApprovalsClient.tsx | 
 | 30  | 상태 순서 매핑 키 enum Computed Property Name 경유 | PASS/FAIL | `STATUS_ORDER`/`PRIORITY_MAP` 등에서 문자열 리터럴 키 또는 `Record<string, N>` 타입 위치 |
 | 33  | TAB_META capability guard 완전성 — canReject 4-path | PASS/FAIL | 미가드 onReject/onBulkReject 직접 전달 위치 |
 | 34  | 로컬 인터페이스명 packages 동명 타입 충돌 금지 (2026-04-27) | PASS/FAIL | `packages/schemas` export 타입과 서비스 로컬 interface 동명 충돌 위치 |
+| 49  | UI 도메인 타입 파일 SSOT + 위임 re-export 패턴 (2026-04-30) | PASS/FAIL | 컴포넌트 내 `export interface` 직접 정의 위치 또는 `lib/types/` SSOT 파일 누락 |
 ```
 
 ## Exceptions
@@ -1621,3 +1659,63 @@ grep -n "if.*cfg\.kind\s*===\|if.*\.kind\s*===" \
 - `apps/frontend/lib/navigation/nav-config.ts` — `resolveBadgeAndAction`, `assertNever` 정의
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0429 Phase E — `NavItemBadgeConfig.kind` 2종에 `if-else` 사용 중 3번째 kind 추가 시 TypeScript가 잡지 못하는 구조적 취약점 발견. `switch + assertNever` 패턴으로 교체하여 컴파일 타임 exhaustiveness 보장.
+
+---
+
+### Step 49: UI 도메인 타입 파일 SSOT + 위임 re-export 패턴 (2026-04-30 추가, tech-debt-batch-0430 Phase D)
+
+**규칙**: 여러 컴포넌트가 공유하는 UI 인터페이스(예: `OverflowAction`)는 `apps/frontend/lib/types/` 하위 도메인 타입 파일에 단일 정의해야 한다. 중간 컴포넌트(예: `NextStepPanel.tsx`)가 re-export하는 경우 `import type { X } from '@/lib/types/...'; export type { X }` 패턴만 허용. 중간 컴포넌트에서 새로운 인터페이스를 **정의**하면 SSOT 분산이 발생한다.
+
+**패턴 구분**:
+- ✅ `lib/types/checkout-ui.ts`에서 `export interface OverflowAction { ... }` → SSOT 정의
+- ✅ `NextStepPanel.tsx`에서 `import type { OverflowAction } from '@/lib/types/checkout-ui'; export type { OverflowAction }` → 위임 re-export (backward-compat 허용)
+- ❌ `NextStepPanel.tsx`에서 `export interface OverflowAction { ... }` → 컴포넌트 내 인터페이스 직접 정의 (SSOT 분산)
+
+**왜 위임 re-export가 필요한가**: 기존 호출처가 `from '@/components/checkouts/NextStepPanel'`으로 import하는 경우 import 경로 수정 없이 SSOT로 이관 가능. 단, SSOT 파일에 주석(`// SSOT: OverflowAction은 lib/types/checkout-ui.ts에 정의. 신규 호출처는 그 파일을 직접 import.`)을 두어 신규 코드는 SSOT를 직접 import하도록 유도해야 한다.
+
+**검증 명령**:
+```bash
+# 1) OverflowAction SSOT 정의 위치 확인
+grep -rn "export interface OverflowAction\|export type OverflowAction" \
+  apps/frontend \
+  --include="*.ts" --include="*.tsx"
+# 기대: 1건 (apps/frontend/lib/types/checkout-ui.ts) — 컴포넌트 파일에서의 정의 0건
+
+# 2) lib/types/checkout-ui.ts 단일 SSOT 파일 존재 확인
+ls apps/frontend/lib/types/checkout-ui.ts && echo "EXISTS" || echo "MISSING"
+
+# 3) 위임 re-export 패턴 확인 (컴포넌트에서 re-export 시 정의가 아닌 re-export여야 함)
+grep -rn "export.*OverflowAction" \
+  apps/frontend/components \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "export type { OverflowAction }"
+# 기대: 0건 (컴포넌트 내 export는 모두 `export type { X }` 위임 패턴)
+
+# 4) 신규 호출처가 SSOT를 직접 import하는지 확인 (컴포넌트 경유 아닌 직접 경로)
+grep -rn "from '@/lib/types/checkout-ui'" \
+  apps/frontend \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "checkout-ui.ts"
+# 기대: ≥ 1건 (직접 import 호출처 존재)
+```
+
+**PASS**:
+- `OverflowAction`은 `apps/frontend/lib/types/checkout-ui.ts` 단 1곳에서 `export interface`로 정의
+- 컴포넌트(`NextStepPanel.tsx` 등)의 re-export는 `export type { OverflowAction }` 위임 형태
+- 신규 호출처(`CheckoutGroupCard.tsx` 등)는 `lib/types/checkout-ui` 직접 import
+
+**FAIL**:
+- 컴포넌트 파일에서 `export interface OverflowAction { ... }` 직접 정의 → `lib/types/checkout-ui.ts`로 이관
+- `lib/types/checkout-ui.ts` 파일 없음 → 생성 필요
+- 중간 컴포넌트가 정의+re-export 동시 수행 → 정의만 `lib/types/`로 이관하고 컴포넌트는 위임만 유지
+
+**예외**:
+- 단일 컴포넌트 전용 로컬 인터페이스 (외부 소비처 없는 `Props` 타입) — SSOT 이관 불필요
+- `packages/schemas`에 이미 정의된 타입 — `lib/types/`가 아닌 패키지에서 직접 import
+
+**관련 파일**:
+- `apps/frontend/lib/types/checkout-ui.ts` — `OverflowAction` SSOT 정의 (2026-04-30)
+- `apps/frontend/components/checkouts/NextStepPanel.tsx` — `import type + export type { OverflowAction }` 위임 re-export 모범 사례
+- `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — `lib/types/checkout-ui` 직접 import 호출처
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase D — `OverflowAction`이 `NextStepPanel.tsx`에 정의되어 있어 `CheckoutGroupCard.tsx`가 컴포넌트 파일을 import해야 했다. `apps/frontend/lib/types/checkout-ui.ts` SSOT 파일 신설 + NextStepPanel 위임 re-export 패턴 도입으로 타입 분산 해소.

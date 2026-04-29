@@ -340,6 +340,68 @@ node scripts/check-i18n-call-sites.mjs --all
 - `.husky/pre-commit` — staged 검사 (`--changed --quiet`)
 - `docs/references/frontend-patterns.md` — Atom-level i18n 금지 원칙 / namespace SSOT 원칙
 
+### Step 17: `check-i18n-call-sites.mjs` 구조 검증 — `CROSS_CUTTING_NAMESPACES` + `checkStructuralNamespaces` 존재 확인 (2026-04-30 추가, tech-debt-batch-0430 Phase B)
+
+**배경**: `check-i18n-call-sites.mjs`는 (1) 호출지↔JSON parity와 (2) `common.json` 구조 검증 두 기능을 담당한다. Phase B에서 `CROSS_CUTTING_NAMESPACES = ['common', 'errors']` 상수와 `checkStructuralNamespaces()` 함수가 추가되어 `navigation`, `auth`, `notifications`, `errors`를 flat-by-design 네임스페이스로 명시적 구분하고, `common`/`errors`만 구조 검증 대상으로 분리했다.
+
+**규칙**:
+- `CROSS_CUTTING_NAMESPACES` 배열에 `common`과 `errors`가 포함되어야 한다.
+- `checkStructuralNamespaces()` 함수가 스크립트 내에 존재하여 cross-cutting ns의 root level 구조를 검증해야 한다.
+- `navigation`, `auth`, `notifications`는 flat-by-design으로 구조 검증 제외가 의도적이어야 한다.
+
+**왜 이 검증이 필요한가**:
+- `CROSS_CUTTING_NAMESPACES` 상수가 없으면 어떤 ns가 구조 검증 대상인지 코드에서 명확히 드러나지 않아, 미래 네임스페이스 추가 시 구조 정책 누락 가능.
+- `checkStructuralNamespaces()` 함수가 없으면 `common.json` 구조 위반(flat root-level key)을 스크립트가 탐지하지 못해 atom 회귀 메커니즘 차단이 무효화됨.
+
+**검증 명령**:
+```bash
+# 1) CROSS_CUTTING_NAMESPACES 상수 존재 + common/errors 포함 확인
+grep -n "CROSS_CUTTING_NAMESPACES" scripts/check-i18n-call-sites.mjs
+# 기대: const CROSS_CUTTING_NAMESPACES = ['common', 'errors'] 정의 1건 이상
+
+# 2) checkStructuralNamespaces 함수 존재 확인
+grep -n "function checkStructuralNamespaces\|checkStructuralNamespaces()" \
+  scripts/check-i18n-call-sites.mjs
+# 기대: 함수 정의 1건 + 호출 1건 이상
+
+# 3) CROSS_CUTTING_NAMESPACES에 common/errors 실제 포함 확인
+node -e "
+const fs = require('fs');
+const src = fs.readFileSync('scripts/check-i18n-call-sites.mjs', 'utf8');
+const m = src.match(/CROSS_CUTTING_NAMESPACES\s*=\s*\[([^\]]+)\]/);
+if (!m) { console.log('FAIL: CROSS_CUTTING_NAMESPACES 상수 없음'); process.exit(1); }
+const values = m[1].replace(/['\"\s]/g, '').split(',');
+const required = ['common', 'errors'];
+const missing = required.filter(r => !values.includes(r));
+if (missing.length) { console.log('FAIL: CROSS_CUTTING_NAMESPACES에서 누락:', missing.join(', ')); process.exit(1); }
+console.log('PASS: CROSS_CUTTING_NAMESPACES =', values.join(', '));
+" 2>/dev/null
+
+# 4) flat-by-design 네임스페이스 주석 또는 문서 존재 확인 (navigation/auth/notifications)
+grep -n "flat-by-design\|navigation.*flat\|auth.*flat" \
+  scripts/check-i18n-call-sites.mjs docs/references/frontend-patterns.md 2>/dev/null
+# 기대: 1건 이상 (flat-by-design 의도가 코드 또는 문서에 명시)
+```
+
+**PASS**:
+- `CROSS_CUTTING_NAMESPACES` 상수가 스크립트에 존재하며 `common`과 `errors`를 포함
+- `checkStructuralNamespaces()` 함수 정의 + 호출 양쪽 존재
+- `navigation`, `auth`, `notifications`는 구조 검증에서 의도적으로 제외 (flat-by-design)
+
+**FAIL**:
+- `CROSS_CUTTING_NAMESPACES` 상수 없음 → 어떤 ns가 구조 검증 대상인지 불명확
+- `checkStructuralNamespaces()` 함수 없음 → common.json flat key 회귀 탐지 불가
+- `common` 또는 `errors`가 배열에서 누락 → 구조 정책 미적용
+
+**예외**:
+- `check-i18n-call-sites.mjs` 자체 수정 시 이 Step을 먼저 실행하여 기존 구조 검증이 유지되는지 확인할 것
+
+**관련 파일**:
+- `scripts/check-i18n-call-sites.mjs` — `CROSS_CUTTING_NAMESPACES` 상수 + `checkStructuralNamespaces()` 함수 정의 위치 (2026-04-30)
+- `docs/references/frontend-patterns.md` — Atom-level i18n 금지 원칙 / namespace SSOT 원칙 (flat-by-design 기술)
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase B — `check-i18n-call-sites.mjs`에 `CROSS_CUTTING_NAMESPACES = ['common', 'errors']` 상수와 `checkStructuralNamespaces()` 함수가 추가됨. `navigation`/`auth`/`notifications`는 flat-by-design으로 명시적 구분. 이전에는 common.json 구조 검증 로직이 스크립트 내 산재하여 어떤 ns가 구조 검증 대상인지 추적하기 어려웠음.
+
 ## Output Format
 
 ```markdown
@@ -361,6 +423,7 @@ node scripts/check-i18n-call-sites.mjs --all
 | 14  | checkouts.emptyState.*.description 마침표 없음 | PASS/FAIL | 마침표 잔존 키 목록 |
 | 15  | commentRequired=true ↔ commentDialogTitleKey/commentPlaceholderKey i18n 존재 | PASS/FAIL | ko/en approvals.json 누락 키 목록 |
 | 16  | 호출지 ↔ messages JSON parity + common.json 구조 (정적 + 회귀 차단) | PASS/FAIL | 누락 키 file:line + ns + locales 목록, 또는 common.json flat root key 위반 |
+| 17  | check-i18n-call-sites.mjs 구조 — CROSS_CUTTING_NAMESPACES + checkStructuralNamespaces | PASS/FAIL | 상수 누락, common/errors 미포함, 함수 정의 부재 위치 |
 ```
 
 ## Exceptions
