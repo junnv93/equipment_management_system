@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.json --skipLibCheck",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "jest --passWithNoTests"
   },
   "devDependencies": {
     "rimraf": "^5.0.5",

@@ -11,8 +11,9 @@
 #   3. TypeScript type check (all packages)
 #   4. Backend lint (ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
 #   5. Frontend lint (Next.js ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
-#   6. Backend unit tests
-#   7. Frontend unit tests
+#   6. [경로 기반] ADR-0006 routing 파일 변경 시 verify-routing-origin 자동 실행 (2026-04-29 추가)
+#   7. Backend unit tests
+#   8. Frontend unit tests
 #
 # Skipped (still rely on GitHub Actions for these):
 #   - E2E tests (too slow for every push)
@@ -46,6 +47,20 @@ pnpm --filter frontend run lint
 
 echo "▶ pre-push: i18n call-sites parity..."
 node scripts/check-i18n-call-sites.mjs --all --quiet
+
+# ── ADR-0006 경로 기반 게이트 (routing 파일 변경 시에만 실행) ────────────────
+# 대상 파일: infra/nginx/, next.config.js, proxy.ts, api-routing.ts
+# 목적: Same-Origin Reverse-Proxy 4-layer SSOT 회귀 차단 (§J3)
+_ROUTING_CHANGED=$(git diff --name-only "origin/main..HEAD" 2>/dev/null \
+  | grep -E "(infra/nginx/|apps/frontend/next\.config\.js|apps/frontend/proxy\.ts|packages/shared-constants/src/api-routing\.ts)" \
+  || true)
+if [ -n "$_ROUTING_CHANGED" ]; then
+  echo "▶ pre-push: ADR-0006 routing 파일 변경 감지 — verify-routing-origin 실행..."
+  printf '%s\n' "$_ROUTING_CHANGED" | sed 's/^/    /'
+  pnpm --filter @equipment-management/shared-constants run test --silent --passWithNoTests
+  bash scripts/verify-routing-origin.sh
+fi
+# ──────────────────────────────────────────────────────────────────────────────
 
 echo "▶ pre-push: backend tests..."
 pnpm --filter backend run test --silent --passWithNoTests
