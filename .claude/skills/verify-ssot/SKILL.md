@@ -1434,3 +1434,61 @@ fi
 - Dependabot 4 alerts (postcss<8.5.10, fast-xml-parser<5.7.0, uuid<14, uuid<14 dup) 처리 과정에서 발견.
 - uuid v9→v14 메이저 5단계 bump 회피를 위해 `crypto.randomUUID()` 빌트인으로 전환 — vendor 캡슐화 SSOT로 격상.
 - `>=` overrides 9건 caret 통일 시 `jws: '>=3.2.3'` → 4.0.1 / `tar-fs: '>=2.1.4'` → 3.1.2 hoist 사례 실측 발견. 향후 차단을 위해 preinstall guard + 본 Step 신설.
+
+### Step 45: LENDER_APPROVAL_PENDING_STATUSES SSOT 체인 — FSM 도출 승인 대기 상태 배열 인라인 재정의 금지 (2026-04-29 추가)
+
+**규칙**: lender TM의 `approve:checkout` 권한이 필요한 출발 상태 목록은 반드시 `packages/schemas/src/fsm/checkout-fsm.ts`에서 FSM transitions를 자동 도출하여 export하는 `LENDER_APPROVAL_PENDING_STATUSES`를 사용한다. `['pending', 'borrower_approved']` 같은 인라인 배열 리터럴로 상태를 열거하면 rental 2-step 등 새 승인 단계 추가 시 자동 반영이 안 되어 카운트 누락이 발생한다.
+
+**왜 FSM 도출이 필요한가**:
+- checkout FSM에 새 전환 규칙이 추가될 때 status 배열을 수동으로 동기화해야 함 — 휴먼 에러 필연.
+- `LENDER_APPROVAL_PENDING_STATUSES`는 `CHECKOUT_TRANSITIONS.filter(t => t.requires === 'approve:checkout').map(t => t.from)` 으로 자동 생성되므로 FSM이 유일한 진실의 소스가 됨.
+- `borrower_approved` 상태는 rental 2-step 중간 상태 — `pending`만 필터링하면 lender 승인 대기 카운트가 누락됨 (2026-04-29 버그 사례).
+
+**검증 명령**:
+```bash
+# 1) 단일 정의 확인 — schemas 외부 재정의 없어야 함
+grep -rn "LENDER_APPROVAL_PENDING_STATUSES" \
+  apps/backend apps/frontend packages \
+  --include="*.ts" --include="*.tsx"
+# 기대: 1 정의(checkout-fsm.ts) + 2+ 소비처(approvals.service.ts, approvals-api.ts)
+# 외부 재정의 = FAIL
+
+# 2) 인라인 status 배열 금지 — borrower_approved + pending 동시 나열
+grep -rn "\[.*['\"]pending['\"].*['\"]borrower_approved['\"].*\]\|\[.*['\"]borrower_approved['\"].*['\"]pending['\"].*\]" \
+  apps/backend apps/frontend \
+  --include="*.ts" --include="*.tsx"
+# 기대: 0건 (SSOT 상수 spread만 허용)
+
+# 3) 소비처가 @equipment-management/schemas 경유 확인
+grep -n "LENDER_APPROVAL_PENDING_STATUSES" \
+  apps/backend/src/modules/approvals/approvals.service.ts \
+  apps/frontend/lib/api/approvals-api.ts
+# 기대: 각 파일에서 from '@equipment-management/schemas' import 라인과 같은 파일에 존재
+
+# 4) getCheckoutCount / getCheckoutKpiQuery 시그니처 — scalar → 배열 회귀 방지
+grep -n "getCheckoutCount\|getCheckoutKpiQuery" \
+  apps/backend/src/modules/approvals/approvals.service.ts | head -10
+# 기대: private 정의에 CheckoutStatus[] 배열 타입 사용
+```
+
+**PASS:**
+- `LENDER_APPROVAL_PENDING_STATUSES` 정의: `packages/schemas/src/fsm/checkout-fsm.ts` 단 1곳
+- 소비처 import: `@equipment-management/schemas` 경유
+- 인라인 `['pending', 'borrower_approved']` 배열 리터럴 0건
+- `getCheckoutCount` / `getCheckoutKpiQuery`: `CheckoutStatus[]` 시그니처 유지
+
+**FAIL:**
+- 로컬 파일에 `LENDER_APPROVAL_PENDING_STATUSES`를 재정의
+- `['pending', 'borrower_approved']` 인라인 열거 (SSOT 우회)
+- `getCheckoutCount`가 다시 scalar `CheckoutStatus` 단일 인수로 회귀
+
+**예외:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` 자체 — 정의 파일
+- 단위 테스트 파일 (`*.spec.ts`) — 목업 목적 명시적 배열 허용
+
+**관련 파일:**
+- `packages/schemas/src/fsm/checkout-fsm.ts` — SSOT 정의 (FSM 도출)
+- `apps/backend/src/modules/approvals/approvals.service.ts` — 소비처 1
+- `apps/frontend/lib/api/approvals-api.ts` — 소비처 2
+
+**발생 이력 (2026-04-29 신설)**: rental 2-step `borrower_approved` 상태가 lender 승인 대기 카운트(`getCheckoutCount`)에서 누락되는 버그 발견. `pending`만 필터링하던 scalar 파라미터를 배열로 교체하고 FSM-derived `LENDER_APPROVAL_PENDING_STATUSES` SSOT를 신설.

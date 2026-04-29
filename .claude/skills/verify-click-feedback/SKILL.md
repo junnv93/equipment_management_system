@@ -265,6 +265,34 @@ grep -B5 'pendingIndicator="none"' \
 
 > **배경:** 2026-04-29 CalibrationPlansContent/TestSoftwareListContent에서 overlay pattern 도입. 가시 링크에 `pendingIndicator="none"` 실수 시 클릭 후 시각 피드백 전혀 없음 — GlobalProgressBar도 실제 Route 이동까지 지연될 수 있어 즉각 피드백 부재 발생.
 
+### Step 14: Button loading prop 후 manual Loader2 이중 스피너 anti-pattern 탐지 (2026-04-29 추가)
+
+**규칙**: `<Button loading={X.isPending}>` 적용 후 같은 Button children 내에 `{X.isPending && <Loader2 ...animate-spin... />}` 가 남아있으면 시각적 이중 스피너 + 스크린리더 이중 발화(aria-hidden 없는 Loader2)가 발생한다. Button 내장 스피너(`loading` prop)가 `aria-hidden` Spinner를 렌더링하므로 수동 Loader2는 반드시 제거해야 한다.
+
+```bash
+# 1) Button loading prop이 있는 파일에서 Loader2 animate-spin 동시 존재 탐지
+grep -rln "loading={.*isPending" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" | \
+  xargs grep -l "Loader2.*animate-spin\|animate-spin.*Loader2" 2>/dev/null
+# 기대: 0건 (Button loading 적용 파일에 수동 Loader2 없어야 함)
+
+# 2) disposal / approval 다이얼로그 특정 탐지
+grep -rn "Loader2" \
+  apps/frontend/components/equipment/disposal/ \
+  --include="*.tsx" | grep -v "^Binary"
+# 기대: 0건 (import 라인 포함)
+```
+
+각 결과에 대해:
+1. 같은 `<Button>` 블록에 `loading={...isPending}` + `{...isPending && <Loader2 .../>}` 동시 존재 → ❌ 이중 스피너
+2. Loader2가 Button 외부(별도 인디케이터 영역)에 있거나 aria-hidden 처리된 경우 → ✅ 허용
+
+**PASS:** `loading` prop 있는 Button 파일에 `{isPending && <Loader2 ...animate-spin.../>}` 패턴 0건.
+**FAIL:** 이중 스피너 → Button children의 manual Loader2 제거.
+
+> **배경:** 2026-04-29 Button loading codemod 적용 후 disposal 4개 다이얼로그에서 발견. `DisposalApprovalDialog`, `DisposalCancelDialog`, `DisposalRequestDialog`, `DisposalReviewDialog`에 `loading={mutation.isPending}` + `{mutation.isPending && <Loader2/>}` 이중 존재. Button loading prop은 내부적으로 `<Spinner aria-hidden />` 렌더 → Loader2가 aria-hidden 없어 SR 이중 발화 위험.
+
 ### Step 12: ListPageSkeleton srLabel 독립성 검사
 
 `srLabel`이 `title` prop 대신 항상 FEEDBACK_KEYS에서 파생되는지 확인합니다.
@@ -296,6 +324,7 @@ grep -n "srLabel" apps/frontend/components/ui/list-page-skeleton.tsx
 | 11 | 훅 기본 파라미터 한국어 | 결과 0건 | MUST |
 | 12 | ListPageSkeleton srLabel 독립성 | `title ??` 패턴 0건 | MUST |
 | 13 | NavLink invisible overlay 패턴 | `pendingIndicator="none"` 가시링크 사용 0건 | MUST |
+| 14 | Button loading 후 manual Loader2 이중 스피너 | loading+isPending 동시 존재 0건 | MUST |
 
-MUST (Steps 1-4, 7, 10-13): 모두 PASS 필요.
+MUST (Steps 1-4, 7, 10-14): 모두 PASS 필요.
 SHOULD (Steps 5-6, 8-9): 위반 시 tech-debt-tracker.md 기록.
