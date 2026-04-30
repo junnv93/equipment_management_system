@@ -32,8 +32,11 @@ test.describe('LegacyServiceWorkerCleanup — 서비스워커 정리', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // 컴포넌트가 getRegistrations() → unregister() 비동기 실행 완료를 위한 tick 대기
-    await page.waitForTimeout(500);
+    // 컴포넌트가 localStorage 플래그를 설정할 때까지 조건 기반 대기
+    // (플래그는 getRegistrations → unregister 완료 후 finally에서 설정되므로 cleanup 완료의 증거)
+    await page.waitForFunction((key) => window.localStorage.getItem(key) === '1', STORAGE_KEY, {
+      timeout: 5000,
+    });
 
     const registrations = await page.evaluate(async () => {
       if (!('serviceWorker' in navigator)) return [];
