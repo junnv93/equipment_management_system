@@ -40,6 +40,9 @@ export function useApprovalKeyboard({
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // IME 조합 중 (한글 등) 단축키 발화 방지
+      if (e.isComposing) return;
+
       const target = e.target as HTMLElement;
       // input, textarea, select, contenteditable, dialog 내부에서는 비활성화
       if (

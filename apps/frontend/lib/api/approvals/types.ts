@@ -76,6 +76,8 @@ export const APPROVAL_SECTIONS = {
 
 /** 반려 사유 최소 글자 수 — SSOT: shared-constants/validation-rules */
 export const REJECTION_MIN_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+/** 반려 사유 최대 글자 수 — SSOT: shared-constants/validation-rules.LONG_TEXT_MAX_LENGTH */
+export const REJECTION_MAX_LENGTH = VALIDATION_RULES.LONG_TEXT_MAX_LENGTH;
 
 /**
  * 반려 사유 검증 Zod 스키마 (SSOT)
@@ -85,7 +87,7 @@ export const REJECTION_MIN_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
 export const RejectReasonSchema = z
   .string()
   .min(REJECTION_MIN_LENGTH, `반려 사유는 ${REJECTION_MIN_LENGTH}자 이상 입력해주세요.`)
-  .max(500, '반려 사유는 500자 이내로 입력해주세요.');
+  .max(REJECTION_MAX_LENGTH, `반려 사유는 ${REJECTION_MAX_LENGTH}자 이내로 입력해주세요.`);
 
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based (checkout section)

@@ -99,6 +99,9 @@ export const APPROVAL_STEPPER_TOKENS = {
 
   /** 최소 너비 (단계 정보) */
   infoWidth: 'min-w-[80px]',
+
+  /** 시작 노드 SR-only 라벨 (첫 번째 단계 노드 — 스크린리더 맥락 제공) */
+  startNodeLabel: { srOnly: 'sr-only' },
 } as const;
 
 // ============================================================================

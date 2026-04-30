@@ -200,6 +200,7 @@
     "reasonLabel": "Rejection Reason",
     "reasonPlaceholder": "Enter rejection reason...",
     "minLengthHint": "Please enter at least {min} characters.",
+    "charsRemaining": "{remaining} characters remaining",
     "validation": "Rejection reason must be at least {min} characters.",
     "description": "Reject the request \"{summary}\". Please enter a rejection reason.",
     "single": {
@@ -249,6 +250,7 @@
   },
   "steps": {
     "ariaLabel": "Approval Progress Status",
+    "startNodeLabel": "Approval flow start",
     "request": "Request",
     "review": "Review",
     "approve": "Approve",

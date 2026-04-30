@@ -21,9 +21,13 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { RejectReasonSchema, REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
+import {
+  RejectReasonSchema,
+  REJECTION_MIN_LENGTH,
+  REJECTION_MAX_LENGTH,
+} from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
-import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
+import { getApprovalActionButtonClasses, REQUIRED_FIELD_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
@@ -169,10 +173,28 @@ export default function RejectModal(props: RejectModalProps) {
               placeholder={t('rejectModal.reasonPlaceholder')}
               className="min-h-[120px]"
               aria-describedby={error ? 'reject-error' : 'reject-modal-desc'}
+              maxLength={REJECTION_MAX_LENGTH}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('rejectModal.minLengthHint', { min: REJECTION_MIN_LENGTH })}
-            </p>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">
+                {t('rejectModal.minLengthHint', { min: REJECTION_MIN_LENGTH })}
+              </p>
+              <p
+                className={
+                  reason.length >= REJECTION_MAX_LENGTH
+                    ? `${REQUIRED_FIELD_TOKENS.charCount} text-destructive`
+                    : reason.length >= Math.floor(REJECTION_MAX_LENGTH * 0.8)
+                      ? `${REQUIRED_FIELD_TOKENS.charCount} text-warning`
+                      : REQUIRED_FIELD_TOKENS.charCount
+                }
+                aria-live="polite"
+                role="status"
+              >
+                {t('rejectModal.charsRemaining', {
+                  remaining: REJECTION_MAX_LENGTH - reason.length,
+                })}
+              </p>
+            </div>
             {error && (
               <p
                 id="reject-error"

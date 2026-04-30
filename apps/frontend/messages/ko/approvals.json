@@ -200,6 +200,7 @@
     "reasonLabel": "반려 사유",
     "reasonPlaceholder": "반려 사유를 입력하세요...",
     "minLengthHint": "{min}자 이상 입력하세요.",
+    "charsRemaining": "{remaining}자 남음",
     "validation": "반려 사유는 {min}자 이상 입력해주세요.",
     "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요.",
     "single": {
@@ -249,6 +250,7 @@
   },
   "steps": {
     "ariaLabel": "승인 진행 상태",
+    "startNodeLabel": "승인 흐름 시작",
     "request": "요청",
     "review": "검토",
     "approve": "승인",

@@ -1,15 +1,12 @@
 'use client';
 
 import { useState, useMemo, memo, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { toast } from '@/components/ui/use-toast';
-import { notifyCheckoutAction } from '@/lib/checkouts/toast-templates';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, CalendarDays, Building, ChevronDown, CheckCheck } from 'lucide-react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
@@ -18,11 +15,10 @@ import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndi
 import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
 import type { OverflowAction } from '@/lib/types/checkout-ui';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
-import checkoutApi, { type Checkout, type CheckoutSummary } from '@/lib/api/checkout-api';
-import type { PaginatedResponse } from '@/lib/api/types';
-import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { isConflictError } from '@/lib/api/error';
-import { queryKeys } from '@/lib/api/query-config';
+import {
+  useApproveCheckoutMutation,
+  useBorrowerApproveCheckoutMutation,
+} from '@/hooks/use-checkout-card-mutations';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
@@ -102,7 +98,6 @@ function CheckoutGroupCard({
   const t = useTranslations('checkouts');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup);
 
   const { data: session } = useSession();
@@ -169,114 +164,9 @@ function CheckoutGroupCard({
     return descriptorMap.get(rentalCheckout.id);
   }, [group.checkouts, descriptorMap]);
 
-  // ── 인라인 승인 mutation (fresh CAS) ──────────────────────────────────────
-  const approveMutation = useMutation({
-    mutationFn: async ({ id }: { id: string; equipmentName?: string }) => {
-      const { version } = await checkoutApi.getCheckout(id);
-      return checkoutApi.approveCheckout(id, version);
-    },
-    onMutate: async ({ id }) => {
-      // 뷰 쿼리 in-flight 취소 — 낙관적 업데이트가 서버 응답에 덮어써지지 않도록
-      await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
-      // 롤백용 스냅샷 저장 (onError에서 즉시 복원)
-      const previousViewQueries = queryClient.getQueriesData<
-        PaginatedResponse<Checkout, CheckoutSummary>
-      >({
-        queryKey: queryKeys.checkouts.view.all(),
-      });
-      // 낙관적: 해당 checkout status → approved (즉시 UI 반영)
-      queryClient.setQueriesData<PaginatedResponse<Checkout, CheckoutSummary>>(
-        { queryKey: queryKeys.checkouts.view.all() },
-        (old) => {
-          if (!old?.data) return old;
-          return {
-            ...old,
-            data: old.data.map((co) => (co.id === id ? { ...co, status: CSVal.APPROVED } : co)),
-          };
-        }
-      );
-      return { previousViewQueries };
-    },
-    onSuccess: (_data, variables) => {
-      notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName ?? '' }, t);
-    },
-    onError: (error: unknown, variables, context) => {
-      // 낙관적 업데이트 즉시 롤백 (스냅샷 복원 — refetch 대기 없이 즉시 원복)
-      context?.previousViewQueries?.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
-      if (isConflictError(error)) {
-        // CAS 409: detail 캐시 즉시 제거 → 재시도 시 fresh version 조회 보장
-        queryClient.removeQueries({ queryKey: queryKeys.checkouts.resource.detail(variables.id) });
-        toast({
-          title: t('toasts.versionConflict'),
-          description: t('toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({ title: t('toasts.approveError'), variant: 'destructive' });
-      }
-    },
-    onSettled: () => {
-      CheckoutCacheInvalidation.invalidateAfterApproval(queryClient);
-    },
-  });
-
-  // ── 인라인 borrower 승인 mutation (rental 1차 승인, 차용자 측 TM) ────────
-  const borrowerApproveMutation = useMutation({
-    mutationFn: async ({ id }: { id: string; equipmentName?: string }) => {
-      const { version } = await checkoutApi.getCheckout(id);
-      return checkoutApi.borrowerApproveCheckout(id, version);
-    },
-    onMutate: async ({ id }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
-      const previousViewQueries = queryClient.getQueriesData<
-        PaginatedResponse<Checkout, CheckoutSummary>
-      >({
-        queryKey: queryKeys.checkouts.view.all(),
-      });
-      // 낙관적: pending → borrower_approved
-      queryClient.setQueriesData<PaginatedResponse<Checkout, CheckoutSummary>>(
-        { queryKey: queryKeys.checkouts.view.all() },
-        (old) => {
-          if (!old?.data) return old;
-          return {
-            ...old,
-            data: old.data.map((co) =>
-              co.id === id ? { ...co, status: CSVal.BORROWER_APPROVED } : co
-            ),
-          };
-        }
-      );
-      return { previousViewQueries };
-    },
-    onSuccess: (_data, variables) => {
-      notifyCheckoutAction(
-        toast,
-        'borrower_approve',
-        { equipmentName: variables.equipmentName ?? '' },
-        t
-      );
-    },
-    onError: (error: unknown, variables, context) => {
-      context?.previousViewQueries?.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
-      if (isConflictError(error)) {
-        queryClient.removeQueries({ queryKey: queryKeys.checkouts.resource.detail(variables.id) });
-        toast({
-          title: t('toasts.versionConflict'),
-          description: t('toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({ title: t('toasts.approveError'), variant: 'destructive' });
-      }
-    },
-    onSettled: () => {
-      CheckoutCacheInvalidation.invalidateAfterApproval(queryClient);
-    },
-  });
+  // ── 승인 mutation (use-checkout-card-mutations SSOT) ─────────────────────
+  const approveMutation = useApproveCheckoutMutation();
+  const borrowerApproveMutation = useBorrowerApproveCheckoutMutation();
 
   // ── Row-level NextStepPanel action dispatcher ────────────────────────────
   const handleRowAction = useCallback(

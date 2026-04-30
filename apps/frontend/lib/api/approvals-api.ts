@@ -27,6 +27,7 @@ export {
   TAB_META,
   APPROVAL_SECTIONS,
   REJECTION_MIN_LENGTH,
+  REJECTION_MAX_LENGTH,
   RejectReasonSchema,
   REQUEST_TYPES,
 } from './approvals/types';

@@ -80,6 +80,17 @@ updates:
       # pg는 Drizzle 호환 매트릭스에 의존
       - dependency-name: 'pg'
         update-types: ['version-update:semver-major']
+      # eslint v9+ flat config 마이그레이션 필요 (eslintrc→flat config ABI 파괴적 변경)
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      # prettier v4+ 포맷 규칙 변경 — PostToolUse hook 전체 리포맷 위험
+      - dependency-name: 'prettier'
+        update-types: ['version-update:semver-major']
+      # @tanstack/react-query v6+ queryKey/queryFn/devtools ABI 파괴적 변경
+      - dependency-name: '@tanstack/react-query'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@tanstack/react-query-devtools'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore'
       prefix-development: 'chore'

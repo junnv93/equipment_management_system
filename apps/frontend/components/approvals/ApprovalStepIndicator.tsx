@@ -91,6 +91,7 @@ export function ApprovalStepIndicator({
                 getTransitionClasses('fast', ['border-color', 'background-color', 'color'])
               )}
               aria-current={isCurrent ? 'step' : undefined}
+              aria-label={index === 0 ? t('steps.startNodeLabel') : undefined}
             >
               {isRejected && isCurrent ? (
                 <XCircle className={APPROVAL_STEPPER_TOKENS.icon} />
