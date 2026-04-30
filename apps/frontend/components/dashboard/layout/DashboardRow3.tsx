@@ -66,7 +66,6 @@ export interface DashboardRow3Props {
   scope: DashboardScopeContext;
   loading: boolean;
   userId?: string;
-  userName?: string;
   /** 시험실무자: 대기 중인 반출 신청 건수 (CheckoutCard 푸터). 미제공 시 미표시. */
   pendingCheckoutRequests?: number;
   /** 품질책임자: 검토 대기 hero에 표시할 요약. */
@@ -91,7 +90,6 @@ export function DashboardRow3({
   scope,
   loading,
   userId,
-  userName,
   pendingCheckoutRequests,
   reviewPending,
   systemHealth,
@@ -139,11 +137,7 @@ export function DashboardRow3({
         </DashboardCardErrorBoundary>
         {showMyActivity && userId && (
           <DashboardCardErrorBoundary cardName="MyActivityCard">
-            <MyActivityCard
-              userId={userId}
-              userName={userName}
-              recentActivities={recentActivities}
-            />
+            <MyActivityCard userId={userId} recentActivities={recentActivities} />
           </DashboardCardErrorBoundary>
         )}
       </div>
@@ -250,11 +244,7 @@ export function DashboardRow3({
       <div className={cn(DASHBOARD_GRID.row3SingleCol, motionClasses)}>
         {showMyActivity && userId && (
           <DashboardCardErrorBoundary cardName="MyActivityCard">
-            <MyActivityCard
-              userId={userId}
-              userName={userName}
-              recentActivities={recentActivities}
-            />
+            <MyActivityCard userId={userId} recentActivities={recentActivities} />
           </DashboardCardErrorBoundary>
         )}
       </div>

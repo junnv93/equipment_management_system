@@ -189,10 +189,10 @@ export const DASHBOARD_GRID = {
   /**
    * Row 3 three-col-test-engineer 그리드 (시험실무자, 대시보드 개선안 §4.1)
    *
-   * [내 교정 예정 1.2fr | 내 반출 현황 1fr | 내 최근 활동 1fr]
+   * [내 교정 예정 1fr | 내 반출 현황 1fr | 내 최근 활동 1.2fr]
    */
   row3ThreeColTestEngineer:
-    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr] gap-4 items-stretch',
+    'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_1.1fr] gap-4 items-stretch',
   /**
    * Row 3 two-col-review-hero 그리드 (품질책임자, 대시보드 개선안 §4.3)
    *
@@ -205,7 +205,7 @@ export const DASHBOARD_GRID = {
    * lg: → xl: (P0 — 브레이크포인트 통일)
    * items-stretch: 사이드바가 최근활동 높이에 맞게 늘어남
    */
-  bottomRow: 'grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 items-stretch',
+  bottomRow: 'grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-4 items-stretch',
   /** Row 3 서브그리드: 승인대기 + 반출현황 2단 배치 */
   row3SubGrid: 'grid gap-4 grid-cols-1 md:grid-cols-2',
   /** Row 3 서브그리드 단일 카드 (반출현황 없는 역할) */

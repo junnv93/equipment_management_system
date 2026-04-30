@@ -1,65 +1,84 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ClipboardList, Truck, Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { DASHBOARD_RECENT_ACTIVITIES_TOKENS as T } from '@/lib/design-tokens';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DASHBOARD_RECENT_ACTIVITIES_TOKENS as RA,
+  DASHBOARD_EMPTY_STATE_TOKENS as ES,
+} from '@/lib/design-tokens';
+import {
+  ACTIVITY_TYPES,
+  ACTIVITY_ROUTES,
+  DEFAULT_ACTIVITY_META,
+} from '@/lib/config/recent-activities-config';
+import { ActivityItem } from '@/components/dashboard/atoms/ActivityItem';
 import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 import type { RecentActivity } from '@/lib/api/dashboard-api';
 
 interface MyActivityCardProps {
   userId: string;
-  userName?: string;
   recentActivities: RecentActivity[];
 }
 
-function ActivityKindIcon({ type }: { type: string }) {
-  if (type.includes('calibration') || type.includes('CALIBRATION'))
-    return <ClipboardList className="h-4 w-4" aria-hidden="true" />;
-  if (type.includes('checkout') || type.includes('CHECKOUT'))
-    return <Truck className="h-4 w-4" aria-hidden="true" />;
-  return <Activity className="h-4 w-4" aria-hidden="true" />;
-}
-
-export function MyActivityCard({ userId, userName, recentActivities }: MyActivityCardProps) {
-  const t = useTranslations('dashboard.myActivity');
+export function MyActivityCard({ userId, recentActivities }: MyActivityCardProps) {
+  const router = useRouter();
+  const t = useTranslations('dashboard.activities');
+  const tCard = useTranslations('dashboard.myActivity');
 
   const myActivities = useMemo(
     () => recentActivities.filter((a) => a.userId === userId).slice(0, DISPLAY_LIMITS.myActivity),
     [recentActivities, userId]
   );
 
-  return (
-    <section
-      className="bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm"
-      aria-label={t('ariaLabel', { name: userName ?? '' })}
-    >
-      <header>
-        <span className="text-sm font-semibold text-foreground">{t('title')}</span>
-      </header>
+  const handleNavigate = useCallback(
+    (activity: RecentActivity) => {
+      const route = ACTIVITY_ROUTES[activity.type];
+      if (route) router.push(route(activity.entityId));
+    },
+    [router]
+  );
 
-      {myActivities.length === 0 ? (
-        <div role="status" className="py-4 text-center text-xs text-muted-foreground">
-          {t('empty')}
-        </div>
-      ) : (
-        <ul className="flex flex-col gap-2" role="list">
-          {myActivities.map((activity) => (
-            <li key={activity.id} className={cn(T.item, 'text-sm')}>
-              <div className={cn(T.iconContainer, T.iconContainerDefault)}>
-                <ActivityKindIcon type={activity.type} />
-              </div>
-              <div className={T.content}>
-                <p className="text-xs font-medium text-foreground truncate">
-                  {activity.entityName || activity.equipmentName}
-                </p>
-                <span className={T.meta}>{activity.details}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+  return (
+    <Card role="region" aria-labelledby="my-activity-title">
+      <CardHeader className="pb-3">
+        <CardTitle id="my-activity-title" className="text-lg font-medium">
+          {tCard('title')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {myActivities.length === 0 ? (
+          <div className={ES.neutral.container}>
+            <p className={ES.neutral.title}>{tCard('empty')}</p>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className={RA.scrollContainer}>
+              {myActivities.map((activity) => {
+                const activityInfo = ACTIVITY_TYPES[activity.type] ?? DEFAULT_ACTIVITY_META;
+                const labelKey = activityInfo.labelKey;
+                const hasRoute = Boolean(ACTIVITY_ROUTES[activity.type]);
+                return (
+                  <ActivityItem
+                    key={activity.id}
+                    activity={activity}
+                    onNavigate={handleNavigate}
+                    activityLabel={
+                      labelKey === 'other'
+                        ? t('other')
+                        : t(`types.${labelKey}` as Parameters<typeof t>[0])
+                    }
+                    userActionText={t('userAction', { userName: activity.userName })}
+                    viewDetailText={hasRoute ? t('viewDetail') : undefined}
+                  />
+                );
+              })}
+            </div>
+            {myActivities.length > 4 && <div className={RA.scrollFade} />}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

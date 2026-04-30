@@ -235,7 +235,7 @@ function DashboardClientComponent({
     ) : null;
 
   return (
-    <div className={getPageContainerClasses('list')}>
+    <div id="dashboard-row1" tabIndex={-1} className={getPageContainerClasses('list')}>
       <SimulationBanner />
       <OfflineBanner />
       {isError && (
@@ -276,7 +276,6 @@ function DashboardClientComponent({
         scope={scope}
         loading={isLoading}
         userId={session?.user?.id}
-        userName={session?.user?.name ?? undefined}
         reviewPending={reviewPending}
         systemHealth={systemHealth}
         pendingCheckoutRequests={pendingCheckoutRequests}

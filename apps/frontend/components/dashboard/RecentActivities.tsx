@@ -5,15 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { Clock, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  DASHBOARD_MOTION,
   getDashboardStaggerDelay,
   DASHBOARD_RECENT_ACTIVITIES_TOKENS as RA,
   DASHBOARD_EMPTY_STATE_TOKENS as ES,
@@ -23,8 +20,8 @@ import {
   ACTIVITY_ROUTES,
   ROLE_CATEGORIES,
   CATEGORY_TABS,
-  DEFAULT_ACTIVITY_META,
 } from '@/lib/config/recent-activities-config';
+import { ActivityItem } from '@/components/dashboard/atoms/ActivityItem';
 import type { RecentActivity } from '@/lib/api/dashboard-api';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
@@ -32,77 +29,6 @@ interface RecentActivitiesProps {
   data: RecentActivity[];
   loading?: boolean;
 }
-
-// 개별 활동 항목 컴포넌트
-const ActivityItem = memo(function ActivityItem({
-  activity,
-  onNavigate,
-  activityLabel,
-  otherLabel,
-  userActionText,
-  viewDetailText,
-}: {
-  activity: RecentActivity;
-  onNavigate: (activity: RecentActivity) => void;
-  activityLabel: string;
-  otherLabel: string;
-  userActionText: string;
-  viewDetailText: string;
-}) {
-  const { fmtDateTime } = useDateFormatter();
-  const activityInfo = ACTIVITY_TYPES[activity.type] || DEFAULT_ACTIVITY_META;
-  const Icon = activityInfo.icon;
-
-  const isApproval = activity.type.includes('approved');
-  const isRejection = activity.type.includes('rejected');
-  const label = activityInfo.labelKey === 'other' ? otherLabel : activityLabel;
-
-  return (
-    <div
-      className={cn(
-        `${RA.item} ${DASHBOARD_MOTION.instantBg} motion-reduce:transition-none`,
-        'hover:bg-muted/50',
-        isApproval && RA.rowApproval,
-        isRejection && RA.rowRejection
-      )}
-    >
-      <div
-        className={cn(
-          RA.iconContainer,
-          isApproval && RA.iconContainerApproval,
-          isRejection && RA.iconContainerRejection,
-          !isApproval && !isRejection && RA.iconContainerDefault
-        )}
-      >
-        <Icon className="h-4 w-4" aria-hidden="true" />
-      </div>
-      <div className={RA.content}>
-        <div className="flex items-center flex-wrap gap-2">
-          <Badge variant={activityInfo.variant} className="py-0.5 text-xs">
-            {label}
-          </Badge>
-          <time dateTime={activity.timestamp} className={RA.meta}>
-            <Clock className="inline-block h-3 w-3 mr-1" aria-hidden="true" />
-            {fmtDateTime(activity.timestamp)}
-          </time>
-        </div>
-        <p className="text-sm truncate">
-          <span className="font-medium">{userActionText}</span>{' '}
-          <span className="font-medium text-primary">{activity.entityName}</span>
-          {activity.details ? ` ${activity.details}` : ''}
-        </p>
-        <Button
-          variant="link"
-          size="sm"
-          className={RA.viewDetailBtn}
-          onClick={() => onNavigate(activity)}
-        >
-          {viewDetailText}
-        </Button>
-      </div>
-    </div>
-  );
-});
 
 export const RecentActivities = memo(function RecentActivities({
   data,
@@ -222,15 +148,19 @@ export const RecentActivities = memo(function RecentActivities({
                   {filteredActivities.map((activity) => {
                     const activityInfo = ACTIVITY_TYPES[activity.type];
                     const labelKey = activityInfo?.labelKey || 'other';
+                    const hasRoute = Boolean(ACTIVITY_ROUTES[activity.type]);
                     return (
                       <ActivityItem
                         key={activity.id}
                         activity={activity}
                         onNavigate={handleNavigateToDetail}
-                        activityLabel={t(`types.${labelKey}` as Parameters<typeof t>[0])}
-                        otherLabel={t('other')}
+                        activityLabel={
+                          labelKey === 'other'
+                            ? t('other')
+                            : t(`types.${labelKey}` as Parameters<typeof t>[0])
+                        }
                         userActionText={t('userAction', { userName: activity.userName })}
-                        viewDetailText={t('viewDetail')}
+                        viewDetailText={hasRoute ? t('viewDetail') : undefined}
                       />
                     );
                   })}
