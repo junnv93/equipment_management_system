@@ -78,6 +78,34 @@ export function getCheckoutDday4TierIconKey(tier: CheckoutDdayTier): 'warning' |
 export type CheckoutDdayVisualLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
+ * 시각 6-level 임계값 SSOT — frontend 색온도 표현 전용.
+ *
+ * `getCheckoutDdayVisualLevel`이 boundary를 결정할 때 이 상수만 사용한다.
+ * backend `CHECKOUT_DDAY_THRESHOLDS`(0/2/14)와 의도적으로 분리 — 6단계 색온도는
+ * 4-tier 도메인 분류와 다른 시각 차별성을 위해 더 세분화된 분기(D-7/-4/-1/0/+3/+4)를
+ * 요구하기 때문.
+ *
+ *   level 1 (relaxed)        : days >= relaxedFloor (= 7)
+ *   level 2 (normal)         : normalFloor (= 4) <= days < relaxedFloor
+ *   level 3 (warningSoft)    : warningFloor (= 1) <= days < normalFloor
+ *   level 4 (urgent)         : days === urgentDay (= 0)
+ *   level 5 (overdueLight)   : overdueLightFloor (= -3) <= days < urgentDay
+ *   level 6 (criticalPulse)  : days < overdueLightFloor
+ */
+export const CHECKOUT_DDAY_VISUAL_THRESHOLDS = {
+  /** Level 1 floor — 일주일 이상 여유 */
+  relaxedFloor: 7,
+  /** Level 2 floor — 4~6일 여유 */
+  normalFloor: 4,
+  /** Level 3 floor — 1~3일 긴박 */
+  warningFloor: 1,
+  /** Level 4 — 당일 (D-day) */
+  urgentDay: 0,
+  /** Level 5 floor — D+1~D+3 overdue light */
+  overdueLightFloor: -3,
+} as const;
+
+/**
  * 시각 6-level별 className 매핑.
  * level 6은 `motion-safe:animate-pulse`로 prefers-reduced-motion 사용자에게는 정적 표시 (WCAG 2.3.3).
  * 모든 색상은 brand CSS 변수 경유 — `dark:` prefix 0.
@@ -117,11 +145,12 @@ export const DDAY_VISUAL_LEVEL_ICON_KEY = {
  *   getCheckoutDdayVisualLevel(-5)  // 6 (critical-pulse)
  */
 export function getCheckoutDdayVisualLevel(daysRemaining: number): CheckoutDdayVisualLevel {
-  if (daysRemaining >= 7) return 1;
-  if (daysRemaining >= 4) return 2;
-  if (daysRemaining >= 1) return 3;
-  if (daysRemaining === 0) return 4;
-  if (daysRemaining >= -3) return 5;
+  const T = CHECKOUT_DDAY_VISUAL_THRESHOLDS;
+  if (daysRemaining >= T.relaxedFloor) return 1;
+  if (daysRemaining >= T.normalFloor) return 2;
+  if (daysRemaining >= T.warningFloor) return 3;
+  if (daysRemaining === T.urgentDay) return 4;
+  if (daysRemaining >= T.overdueLightFloor) return 5;
   return 6;
 }
 

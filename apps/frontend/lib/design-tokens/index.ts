@@ -517,6 +517,7 @@ export {
   // Visual 6-level — Sprint 4.5 U-09 (frontend 시각 전용, 4-tier SSOT 보존)
   DDAY_VISUAL_LEVEL_CLASSES,
   DDAY_VISUAL_LEVEL_ICON_KEY,
+  CHECKOUT_DDAY_VISUAL_THRESHOLDS,
   getCheckoutDdayVisualLevel,
   getCheckoutDdayVisualClasses,
   getCheckoutDdayVisualIconKey,

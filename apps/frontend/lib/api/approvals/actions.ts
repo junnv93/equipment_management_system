@@ -11,7 +11,7 @@
 
 import { apiClient } from '../api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { type ApprovalCategory } from '@equipment-management/schemas';
+import { ApprovalCategoryValues, type ApprovalCategory } from '@equipment-management/schemas';
 import calibrationApi from '../calibration-api';
 import checkoutApi from '../checkout-api';
 import nonConformancesApi from '../non-conformances-api';
@@ -321,11 +321,17 @@ export async function reject(
  *   - HTTP round-trip N → 1 (네트워크 비용 감소)
  *   - AuditLog가 entityIdPath: 'body.ids'로 단일 기록 (bulk 액션 추적성)
  *   - backend Promise.allSettled가 partial failure 처리 (동등한 동작)
+ *
+ * 카테고리 SSOT: `ApprovalCategoryValues`(packages/schemas)에서 derive — 문자열
+ * 리터럴 인라인 금지. schemas에서 카테고리 추가/이름 변경 시 자동 추적.
  */
-const CHECKOUT_CATEGORIES: readonly ApprovalCategory[] = ['outgoing', 'incoming'] as const;
+const CHECKOUT_CATEGORIES = [
+  ApprovalCategoryValues.OUTGOING,
+  ApprovalCategoryValues.INCOMING,
+] as const satisfies readonly ApprovalCategory[];
 
 function isCheckoutCategory(category: ApprovalCategory): boolean {
-  return CHECKOUT_CATEGORIES.includes(category);
+  return (CHECKOUT_CATEGORIES as readonly ApprovalCategory[]).includes(category);
 }
 
 export async function bulkApprove(
