@@ -48,12 +48,21 @@ async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
   concurrency: number
 ): Promise<PromiseSettledResult<T>[]> {
-  const results: PromiseSettledResult<T>[] = [];
-  for (let i = 0; i < tasks.length; i += concurrency) {
-    const batch = tasks.slice(i, i + concurrency).map((task) => task());
-    const batchResults = await Promise.allSettled(batch);
-    results.push(...batchResults);
+  const results: PromiseSettledResult<T>[] = new Array(tasks.length);
+  let nextIndex = 0;
+
+  // worker pool: task 완료 즉시 다음을 grab — 항상 concurrency개 active
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const i = nextIndex++;
+      results[i] = await tasks[i]().then(
+        (value) => ({ status: 'fulfilled' as const, value }),
+        (reason: unknown) => ({ status: 'rejected' as const, reason })
+      );
+    }
   }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, worker));
   return results;
 }
 

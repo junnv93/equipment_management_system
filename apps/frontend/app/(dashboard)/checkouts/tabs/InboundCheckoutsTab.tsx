@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useNavigateWithPending } from '@/hooks/use-navigate-with-pending';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -22,7 +21,6 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { InboundSectionHeader } from '@/components/checkouts/InboundSectionHeader';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { useInboundSectionPagination } from '@/hooks/use-inbound-section-pagination';
 import checkoutApi from '@/lib/api/checkout-api';
 import {
   type EquipmentImportStatus,
@@ -47,10 +45,10 @@ interface InboundCheckoutsTabProps {
 }
 
 /**
- * 반입 탭 컴포넌트
+ * 반입 탭 컴포넌트 — BFF 단일 집계 API 전용
  *
- * BFF 단일 집계 API 경로 사용 (canary flag 제거됨).
- * teamId 파라미터 제거 — 백엔드가 JWT에서 역할 기반 필터링 수행.
+ * BFF는 섹션당 limitPerSection개의 미리보기 데이터만 반환하므로
+ * 섹션별 페이지네이션을 지원하지 않음. 전체 건수는 InboundSectionHeader에서 표시.
  * 3섹션: 타팀 대여 · 외부 렌탈 · 내부 공용
  */
 export default function InboundCheckoutsTab({ filters, onResetFilters }: InboundCheckoutsTabProps) {
@@ -58,8 +56,6 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   const tEquip = useTranslations('equipment');
   const navigateWithPending = useNavigateWithPending();
   const { fmtDate } = useDateFormatter();
-  const { inboundPage, rentalPage, internalPage, setInboundPage, setRentalPage, setInternalPage } =
-    useInboundSectionPagination();
 
   const handleCheckoutClick = useCallback(
     (id: string) => navigateWithPending(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
@@ -95,45 +91,9 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   const hasRentalImports = (overviewData?.rental?.items?.length ?? 0) > 0;
   const hasInternalSharedImports = (overviewData?.internalShared?.items?.length ?? 0) > 0;
 
+  const inboundTotal = overviewData?.standard?.meta?.totalItems ?? inboundGroups.length;
   const rentalTotal = overviewData?.rental?.meta?.totalItems ?? 0;
   const internalTotal = overviewData?.internalShared?.meta?.totalItems ?? 0;
-  const inboundTotal = overviewData?.standard?.meta?.totalItems ?? inboundGroups.length;
-
-  const rentalTotalPages = overviewData?.rental?.meta?.totalPages ?? 1;
-  const internalTotalPages = overviewData?.internalShared?.meta?.totalPages ?? 1;
-  const inboundTotalPages = overviewData?.standard?.meta?.totalPages ?? 1;
-
-  const renderSectionPagination = (
-    currentPage: number,
-    totalPages: number,
-    isLoadingSection: boolean,
-    onPageChange: (p: number) => void
-  ) => {
-    if (totalPages <= 1) return null;
-    return (
-      <div className="flex items-center justify-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1 || isLoadingSection}
-        >
-          {t('actions.previous')}
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          {currentPage} / {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages || isLoadingSection}
-        >
-          {t('actions.next')}
-        </Button>
-      </div>
-    );
-  };
 
   if (
     !overviewLoading &&
@@ -188,21 +148,13 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
             description={t('inbound.noDataDesc')}
           />
         ) : (
-          <>
-            {inboundGroups.map((group) => (
-              <CheckoutGroupCard
-                key={group.key}
-                group={group}
-                onCheckoutClick={handleCheckoutClick}
-              />
-            ))}
-            {renderSectionPagination(
-              inboundPage,
-              inboundTotalPages,
-              overviewLoading,
-              setInboundPage
-            )}
-          </>
+          inboundGroups.map((group) => (
+            <CheckoutGroupCard
+              key={group.key}
+              group={group}
+              onCheckoutClick={handleCheckoutClick}
+            />
+          ))
         )}
       </div>
 
@@ -243,81 +195,76 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
             description={t('inbound.noDataDesc')}
           />
         ) : (
-          <>
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.equipmentName')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.classification')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.vendor')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.usagePeriod')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.status')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.requestDate')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(overviewData?.rental?.items ?? []).map((item) => (
-                    <TableRow
-                      key={item.id}
-                      className={[
-                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
-                        PREMIUM_TABLE_TOKENS.stripe,
-                      ].join(' ')}
-                      onClick={() =>
-                        navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
-                      }
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.equipmentName')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.classification')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.vendor')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.usagePeriod')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.status')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.requestDate')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(overviewData?.rental?.items ?? []).map((item) => (
+                  <TableRow
+                    key={item.id}
+                    className={[
+                      CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                      PREMIUM_TABLE_TOKENS.stripe,
+                    ].join(' ')}
+                    onClick={() =>
+                      navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                    }
+                  >
+                    <TableCell
+                      className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
                     >
-                      <TableCell
-                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
-                      >
-                        {item.equipmentName}
-                      </TableCell>
-                      <TableCell>
-                        {tEquip(
-                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                      {item.equipmentName}
+                    </TableCell>
+                    <TableCell>
+                      {tEquip(
+                        `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                      )}
+                    </TableCell>
+                    <TableCell className="line-clamp-1">
+                      {'vendorName' in item ? item.vendorName : '-'}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {fmtDate(item.usagePeriodStart)}
+                      {' ~ '}
+                      {fmtDate(item.usagePeriodEnd)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
+                        {item.status === EquipmentImportStatusValues.APPROVED && (
+                          <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
+                            {t('inbound.receiveRequired')}
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="line-clamp-1">
-                        {'vendorName' in item ? item.vendorName : '-'}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {fmtDate(item.usagePeriodStart)}
-                        {' ~ '}
-                        {fmtDate(item.usagePeriodEnd)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <EquipmentImportStatusBadge
-                            status={item.status as EquipmentImportStatus}
-                          />
-                          {item.status === EquipmentImportStatusValues.APPROVED && (
-                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
-                              {t('inbound.receiveRequired')}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-            {renderSectionPagination(rentalPage, rentalTotalPages, overviewLoading, setRentalPage)}
-          </>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
 
@@ -362,86 +309,76 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
             description={t('inbound.noDataDesc')}
           />
         ) : (
-          <>
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.equipmentName')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.classification')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.ownerDepartment')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.usagePeriod')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.status')}
-                    </TableHead>
-                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                      {t('inbound.requestDate')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(overviewData?.internalShared?.items ?? []).map((item) => (
-                    <TableRow
-                      key={item.id}
-                      className={[
-                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
-                        PREMIUM_TABLE_TOKENS.stripe,
-                      ].join(' ')}
-                      onClick={() =>
-                        navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
-                      }
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.equipmentName')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.classification')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.ownerDepartment')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.usagePeriod')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.status')}
+                  </TableHead>
+                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                    {t('inbound.requestDate')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(overviewData?.internalShared?.items ?? []).map((item) => (
+                  <TableRow
+                    key={item.id}
+                    className={[
+                      CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                      PREMIUM_TABLE_TOKENS.stripe,
+                    ].join(' ')}
+                    onClick={() =>
+                      navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                    }
+                  >
+                    <TableCell
+                      className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
                     >
-                      <TableCell
-                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
-                      >
-                        {item.equipmentName}
-                      </TableCell>
-                      <TableCell>
-                        {tEquip(
-                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                      {item.equipmentName}
+                    </TableCell>
+                    <TableCell>
+                      {tEquip(
+                        `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                      )}
+                    </TableCell>
+                    <TableCell className="line-clamp-1">
+                      {'ownerDepartment' in item ? item.ownerDepartment || '-' : '-'}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {fmtDate(item.usagePeriodStart)}
+                      {' ~ '}
+                      {fmtDate(item.usagePeriodEnd)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
+                        {item.status === EquipmentImportStatusValues.APPROVED && (
+                          <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
+                            {t('inbound.receiveRequired')}
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="line-clamp-1">
-                        {'ownerDepartment' in item ? item.ownerDepartment || '-' : '-'}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {fmtDate(item.usagePeriodStart)}
-                        {' ~ '}
-                        {fmtDate(item.usagePeriodEnd)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <EquipmentImportStatusBadge
-                            status={item.status as EquipmentImportStatus}
-                          />
-                          {item.status === EquipmentImportStatusValues.APPROVED && (
-                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
-                              {t('inbound.receiveRequired')}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-            {renderSectionPagination(
-              internalPage,
-              internalTotalPages,
-              overviewLoading,
-              setInternalPage
-            )}
-          </>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
     </div>
