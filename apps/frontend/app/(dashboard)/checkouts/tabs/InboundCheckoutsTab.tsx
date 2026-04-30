@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useNavigateWithPending } from '@/hooks/use-navigate-with-pending';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +28,7 @@ import {
   EquipmentImportStatusValues,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import CheckoutListTabs from '@/components/checkouts/CheckoutListTabs';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
@@ -37,7 +39,14 @@ import {
   PREMIUM_TABLE_TOKENS,
   getSemanticBadgeClasses,
 } from '@/lib/design-tokens';
-import { countActiveFilters, type UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
+import {
+  countActiveFilters,
+  filtersToSearchParams,
+  SUBTAB_STATUS_GROUPS,
+  IMPORT_SUBTAB_STATUS_GROUPS,
+  type UICheckoutFilters,
+  type CheckoutSubTab,
+} from '@/lib/utils/checkout-filter-utils';
 
 interface InboundCheckoutsTabProps {
   filters: UICheckoutFilters;
@@ -55,6 +64,7 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   const t = useTranslations('checkouts');
   const tEquip = useTranslations('equipment');
   const navigateWithPending = useNavigateWithPending();
+  const router = useRouter();
   const { fmtDate } = useDateFormatter();
 
   const handleCheckoutClick = useCallback(
@@ -62,8 +72,29 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     [navigateWithPending]
   );
 
-  const { status: statusFilter, search: searchTerm } = filters;
+  const { status: statusFilter, search: searchTerm, subTab } = filters;
   const filterActive = countActiveFilters(filters) > 0;
+
+  const handleSubTabChange = useCallback(
+    (newSubTab: CheckoutSubTab) => {
+      const params = filtersToSearchParams({
+        ...filters,
+        subTab: newSubTab,
+        status: 'all',
+        page: 1,
+      });
+      const qs = params.toString();
+      router.replace(
+        qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
+        { scroll: false }
+      );
+    },
+    [filters, router]
+  );
+
+  // status='all'이면 subTab 기반 상태 목록 전달, 명시 statusFilter는 우선
+  const effectiveStatusFilter =
+    statusFilter !== 'all' ? statusFilter : SUBTAB_STATUS_GROUPS[subTab].join(',');
 
   const {
     data: overviewData,
@@ -71,10 +102,13 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     isError: overviewError,
     refetch: refetchOverview,
   } = useQuery({
-    queryKey: queryKeys.checkouts.view.inboundOverview({ statusFilter, searchTerm }),
+    queryKey: queryKeys.checkouts.view.inboundOverview({
+      statusFilter: effectiveStatusFilter,
+      searchTerm,
+    }),
     queryFn: () =>
       checkoutApi.getInboundOverview({
-        statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
+        statusFilter: effectiveStatusFilter,
         searchTerm: searchTerm || undefined,
         limitPerSection: DEFAULT_PAGE_SIZE,
       }),
@@ -87,13 +121,31 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     return groupCheckoutsByDateAndDestination(items);
   }, [overviewData?.standard]);
 
+  // rental/internalShared: BFF는 EquipmentImportStatus 다중값 무시 → 클라이언트 필터
+  const filteredRentalItems = useMemo(() => {
+    const statuses = IMPORT_SUBTAB_STATUS_GROUPS[subTab] as string[];
+    return (overviewData?.rental?.items ?? []).filter((item) => statuses.includes(item.status));
+  }, [overviewData?.rental?.items, subTab]);
+  const filteredInternalItems = useMemo(() => {
+    const statuses = IMPORT_SUBTAB_STATUS_GROUPS[subTab] as string[];
+    return (overviewData?.internalShared?.items ?? []).filter((item) =>
+      statuses.includes(item.status)
+    );
+  }, [overviewData?.internalShared?.items, subTab]);
+
   const hasInboundCheckouts = inboundGroups.length > 0;
-  const hasRentalImports = (overviewData?.rental?.items?.length ?? 0) > 0;
-  const hasInternalSharedImports = (overviewData?.internalShared?.items?.length ?? 0) > 0;
+  const hasRentalImports = filteredRentalItems.length > 0;
+  const hasInternalSharedImports = filteredInternalItems.length > 0;
 
   const inboundTotal = overviewData?.standard?.meta?.totalItems ?? inboundGroups.length;
-  const rentalTotal = overviewData?.rental?.meta?.totalItems ?? 0;
-  const internalTotal = overviewData?.internalShared?.meta?.totalItems ?? 0;
+  const rentalTotal = filteredRentalItems.length;
+  const internalTotal = filteredInternalItems.length;
+
+  // 타팀 장비 대여 섹션 — 현재 페이지 장비 대수 (OutboundCheckoutsTab과 동일 방식)
+  const inboundEquipmentCount = useMemo(
+    () => inboundGroups.reduce((sum, g) => sum + g.totalEquipment, 0),
+    [inboundGroups]
+  );
 
   if (
     !overviewLoading &&
@@ -117,269 +169,287 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   }
 
   return (
-    <div className="space-y-6">
-      {/* 타팀 장비 대여 건 */}
-      <div
-        className={[
-          CHECKOUT_INBOUND_SECTION_TOKENS.container,
-          CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.teamLoan,
-        ].join(' ')}
-      >
-        <InboundSectionHeader variant="teamLoan" count={inboundTotal} isLoading={overviewLoading} />
+    <div className="space-y-4">
+      {/* 진행 중 / 완료 서브탭 */}
+      <CheckoutListTabs
+        currentSubTab={subTab}
+        onSubTabChange={handleSubTabChange}
+        currentCount={inboundTotal}
+        currentEquipmentCount={inboundEquipmentCount}
+      />
 
-        {overviewData?.sparkline && overviewData.sparkline.standard.length > 1 && (
-          <SparklineMini values={overviewData.sparkline.standard} trend="flat" variant="info" />
-        )}
-
-        {overviewLoading ? (
-          <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
-        ) : overviewError ? (
-          <div className="p-6">
-            <ErrorState
-              title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchOverview()}
-            />
-          </div>
-        ) : !hasInboundCheckouts ? (
-          <EmptyState
-            variant="no-data"
-            icon={ClipboardList}
-            title={t('inbound.noData')}
-            description={t('inbound.noDataDesc')}
+      <div className="space-y-6">
+        {/* 타팀 장비 대여 건 */}
+        <div
+          className={[
+            CHECKOUT_INBOUND_SECTION_TOKENS.container,
+            CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.teamLoan,
+          ].join(' ')}
+        >
+          <InboundSectionHeader
+            variant="teamLoan"
+            count={inboundTotal}
+            isLoading={overviewLoading}
           />
-        ) : (
-          inboundGroups.map((group) => (
-            <CheckoutGroupCard
-              key={group.key}
-              group={group}
-              onCheckoutClick={handleCheckoutClick}
+
+          {overviewData?.sparkline && overviewData.sparkline.standard.length > 1 && (
+            <SparklineMini values={overviewData.sparkline.standard} trend="flat" variant="info" />
+          )}
+
+          {overviewLoading ? (
+            <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
+          ) : overviewError ? (
+            <div className="p-6">
+              <ErrorState
+                title={t('inbound.sectionFetchError')}
+                onRetry={() => void refetchOverview()}
+              />
+            </div>
+          ) : !hasInboundCheckouts ? (
+            <EmptyState
+              variant="no-data"
+              icon={ClipboardList}
+              title={t('inbound.noData')}
+              description={t('inbound.noDataDesc')}
             />
-          ))
-        )}
-      </div>
+          ) : (
+            inboundGroups.map((group) => (
+              <CheckoutGroupCard
+                key={group.key}
+                group={group}
+                onCheckoutClick={handleCheckoutClick}
+              />
+            ))
+          )}
+        </div>
 
-      {/* 외부 업체 렌탈 */}
-      <div
-        className={[
-          CHECKOUT_INBOUND_SECTION_TOKENS.container,
-          CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.externalRental,
-        ].join(' ')}
-      >
-        <InboundSectionHeader
-          variant="externalRental"
-          count={rentalTotal}
-          isLoading={overviewLoading}
-        />
-
-        {overviewData?.sparkline && overviewData.sparkline.rental.length > 1 && (
-          <SparklineMini values={overviewData.sparkline.rental} trend="flat" variant="info" />
-        )}
-
-        {overviewLoading ? (
-          <CheckoutListSkeleton
-            label={t('loading.externalRental')}
-            srOnly={t('loading.externalRentalSr')}
+        {/* 외부 업체 렌탈 */}
+        <div
+          className={[
+            CHECKOUT_INBOUND_SECTION_TOKENS.container,
+            CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.externalRental,
+          ].join(' ')}
+        >
+          <InboundSectionHeader
+            variant="externalRental"
+            count={rentalTotal}
+            isLoading={overviewLoading}
           />
-        ) : overviewError ? (
-          <div className="p-6">
-            <ErrorState
-              title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchOverview()}
+
+          {overviewData?.sparkline && overviewData.sparkline.rental.length > 1 && (
+            <SparklineMini values={overviewData.sparkline.rental} trend="flat" variant="info" />
+          )}
+
+          {overviewLoading ? (
+            <CheckoutListSkeleton
+              label={t('loading.externalRental')}
+              srOnly={t('loading.externalRentalSr')}
             />
-          </div>
-        ) : !hasRentalImports ? (
-          <EmptyState
-            variant="no-data"
-            icon={ClipboardList}
-            title={t('inbound.noData')}
-            description={t('inbound.noDataDesc')}
-          />
-        ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.equipmentName')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.classification')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.vendor')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.usagePeriod')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.status')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.requestDate')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(overviewData?.rental?.items ?? []).map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className={[
-                      CHECKOUT_INTERACTION_TOKENS.clickableRow,
-                      PREMIUM_TABLE_TOKENS.stripe,
-                    ].join(' ')}
-                    onClick={() =>
-                      navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
-                    }
-                  >
-                    <TableCell
-                      className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
-                    >
-                      {item.equipmentName}
-                    </TableCell>
-                    <TableCell>
-                      {tEquip(
-                        `classification.${item.classification}` as Parameters<typeof tEquip>[0]
-                      )}
-                    </TableCell>
-                    <TableCell className="line-clamp-1">
-                      {'vendorName' in item ? item.vendorName : '-'}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {fmtDate(item.usagePeriodStart)}
-                      {' ~ '}
-                      {fmtDate(item.usagePeriodEnd)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
-                        {item.status === EquipmentImportStatusValues.APPROVED && (
-                          <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
-                            {t('inbound.receiveRequired')}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+          ) : overviewError ? (
+            <div className="p-6">
+              <ErrorState
+                title={t('inbound.sectionFetchError')}
+                onRetry={() => void refetchOverview()}
+              />
+            </div>
+          ) : !hasRentalImports ? (
+            <EmptyState
+              variant="no-data"
+              icon={ClipboardList}
+              title={t('inbound.noData')}
+              description={t('inbound.noDataDesc')}
+            />
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.equipmentName')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.classification')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.vendor')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.usagePeriod')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.status')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.requestDate')}
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-      </div>
-
-      {/* 내부 공용장비 */}
-      <div
-        className={[
-          CHECKOUT_INBOUND_SECTION_TOKENS.container,
-          CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.internalShared,
-        ].join(' ')}
-      >
-        <InboundSectionHeader
-          variant="internalShared"
-          count={internalTotal}
-          isLoading={overviewLoading}
-        />
-
-        {overviewData?.sparkline && overviewData.sparkline.internalShared.length > 1 && (
-          <SparklineMini
-            values={overviewData.sparkline.internalShared}
-            trend="flat"
-            variant="info"
-          />
-        )}
-
-        {overviewLoading ? (
-          <CheckoutListSkeleton
-            label={t('loading.internalShared')}
-            srOnly={t('loading.internalSharedSr')}
-          />
-        ) : overviewError ? (
-          <div className="p-6">
-            <ErrorState
-              title={t('inbound.sectionFetchError')}
-              onRetry={() => void refetchOverview()}
-            />
-          </div>
-        ) : !hasInternalSharedImports ? (
-          <EmptyState
-            variant="no-data"
-            icon={ClipboardList}
-            title={t('inbound.noData')}
-            description={t('inbound.noDataDesc')}
-          />
-        ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.equipmentName')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.classification')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.ownerDepartment')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.usagePeriod')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.status')}
-                  </TableHead>
-                  <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
-                    {t('inbound.requestDate')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(overviewData?.internalShared?.items ?? []).map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className={[
-                      CHECKOUT_INTERACTION_TOKENS.clickableRow,
-                      PREMIUM_TABLE_TOKENS.stripe,
-                    ].join(' ')}
-                    onClick={() =>
-                      navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
-                    }
-                  >
-                    <TableCell
-                      className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                </TableHeader>
+                <TableBody>
+                  {filteredRentalItems.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      className={[
+                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                        PREMIUM_TABLE_TOKENS.stripe,
+                      ].join(' ')}
+                      onClick={() =>
+                        navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                      }
                     >
-                      {item.equipmentName}
-                    </TableCell>
-                    <TableCell>
-                      {tEquip(
-                        `classification.${item.classification}` as Parameters<typeof tEquip>[0]
-                      )}
-                    </TableCell>
-                    <TableCell className="line-clamp-1">
-                      {'ownerDepartment' in item ? item.ownerDepartment || '-' : '-'}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {fmtDate(item.usagePeriodStart)}
-                      {' ~ '}
-                      {fmtDate(item.usagePeriodEnd)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
-                        {item.status === EquipmentImportStatusValues.APPROVED && (
-                          <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
-                            {t('inbound.receiveRequired')}
-                          </Badge>
+                      <TableCell
+                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                      >
+                        {item.equipmentName}
+                      </TableCell>
+                      <TableCell>
+                        {tEquip(
+                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                      </TableCell>
+                      <TableCell className="line-clamp-1">
+                        {'vendorName' in item ? item.vendorName : '-'}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {fmtDate(item.usagePeriodStart)}
+                        {' ~ '}
+                        {fmtDate(item.usagePeriodEnd)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <EquipmentImportStatusBadge
+                            status={item.status as EquipmentImportStatus}
+                          />
+                          {item.status === EquipmentImportStatusValues.APPROVED && (
+                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
+                              {t('inbound.receiveRequired')}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+
+        {/* 내부 공용장비 */}
+        <div
+          className={[
+            CHECKOUT_INBOUND_SECTION_TOKENS.container,
+            CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent.internalShared,
+          ].join(' ')}
+        >
+          <InboundSectionHeader
+            variant="internalShared"
+            count={internalTotal}
+            isLoading={overviewLoading}
+          />
+
+          {overviewData?.sparkline && overviewData.sparkline.internalShared.length > 1 && (
+            <SparklineMini
+              values={overviewData.sparkline.internalShared}
+              trend="flat"
+              variant="info"
+            />
+          )}
+
+          {overviewLoading ? (
+            <CheckoutListSkeleton
+              label={t('loading.internalShared')}
+              srOnly={t('loading.internalSharedSr')}
+            />
+          ) : overviewError ? (
+            <div className="p-6">
+              <ErrorState
+                title={t('inbound.sectionFetchError')}
+                onRetry={() => void refetchOverview()}
+              />
+            </div>
+          ) : !hasInternalSharedImports ? (
+            <EmptyState
+              variant="no-data"
+              icon={ClipboardList}
+              title={t('inbound.noData')}
+              description={t('inbound.noDataDesc')}
+            />
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.equipmentName')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.classification')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.ownerDepartment')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.usagePeriod')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.status')}
+                    </TableHead>
+                    <TableHead className={PREMIUM_TABLE_TOKENS.stickyHeader}>
+                      {t('inbound.requestDate')}
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {filteredInternalItems.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      className={[
+                        CHECKOUT_INTERACTION_TOKENS.clickableRow,
+                        PREMIUM_TABLE_TOKENS.stripe,
+                      ].join(' ')}
+                      onClick={() =>
+                        navigateWithPending(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))
+                      }
+                    >
+                      <TableCell
+                        className={[PREMIUM_TABLE_TOKENS.importantCol, 'line-clamp-1'].join(' ')}
+                      >
+                        {item.equipmentName}
+                      </TableCell>
+                      <TableCell>
+                        {tEquip(
+                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                        )}
+                      </TableCell>
+                      <TableCell className="line-clamp-1">
+                        {'ownerDepartment' in item ? item.ownerDepartment || '-' : '-'}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {fmtDate(item.usagePeriodStart)}
+                        {' ~ '}
+                        {fmtDate(item.usagePeriodEnd)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <EquipmentImportStatusBadge
+                            status={item.status as EquipmentImportStatus}
+                          />
+                          {item.status === EquipmentImportStatusValues.APPROVED && (
+                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
+                              {t('inbound.receiveRequired')}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -739,6 +739,7 @@ grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
 | 20  | isMounted ref skip-first-render | PASS/FAIL | 상태 의존 포커스 effect에 isMounted guard 누락 위치 |
 | 21  | toast toastFn 외부 주입 + useOnboardingHint SSOT | PASS/FAIL | lib/ 레이어에서 useToast 직접 호출 위치 / onboarding-dismissed 하드코딩 위치 |
 | 22  | bulk 뮤테이션 `Promise.allSettled` 병렬 — `for...of` 순차 금지 | PASS/FAIL | bulk 함수 내 for...of+await 패턴 위치 |
+| 36  | 카운트 기반 `!!count` 방어 가드 | PASS/FAIL | `{someCount && <JSX/>}` 패턴(0 텍스트 노출) 위치 |
 ```
 
 ## Exceptions
@@ -1127,3 +1128,55 @@ const results = await Promise.allSettled(
 - `apps/frontend/lib/api/approvals/actions.ts` — `runWithConcurrency` + `BULK_CONCURRENCY_LIMIT = 5` 정의 및 사용
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b bulk-approve-rate-limit 작업. 초기 배치 방식(`chunk` 기반)에서 진짜 세마포어(worker pool) 방식으로 교체. 배치 방식은 slow outlier가 전체 chunk를 지연시키는 문제가 있어, `nextIndex` 공유 변수로 worker가 즉시 다음 task를 grab하는 구조로 개선.
+
+### Step 36: 카운트 기반 조건부 UI — `!!count` 방어 가드 패턴 (2026-04-30 추가)
+
+**규칙**: 숫자 카운트를 기반으로 UI 요소를 조건부 렌더링하거나 레이블 조합에 포함할 때,
+`count > 0` 대신 `!!count`(또는 `count !== 0`) 방어 가드를 사용해야 한다.
+`count === 0`을 falsy로 취급해 UI에서 자동 제거되도록 처리하는 패턴이다.
+
+**규칙 근거:**
+- `count && <Badge>{count}</Badge>` — `count === 0`이면 `0`이 렌더링됨 (React 텍스트 노드 버그)
+- `!!count && <Badge>{count}</Badge>` — `count === 0`이면 `false`가 되어 렌더링 안 됨
+- `currentEquipmentCount` 같은 집계값은 데이터 로딩 중 `undefined`이거나 결과 0일 수 있음
+
+**올바른 패턴 (CheckoutListTabs.tsx 기준):**
+```typescript
+// ✅ !!count 방어 가드 — 0 또는 undefined 모두 렌더링 안 함
+{!!currentEquipmentCount && (
+  <Badge>{t('list.count.equipment', { count: currentEquipmentCount })}</Badge>
+)}
+
+// ❌ 미가드 — count === 0이면 React가 "0"을 렌더링
+{currentEquipmentCount && (
+  <Badge>{t('list.count.equipment', { count: currentEquipmentCount })}</Badge>
+)}
+```
+
+**탐지 — 숫자 카운트 미가드 렌더링 패턴:**
+```bash
+# 카운트 변수에 !! 없이 직접 && 렌더링하는 패턴 탐지
+grep -rn "{\s*\(current\|inbound\|outbound\|pending\|total\).*Count\s*&&" \
+  apps/frontend/components/checkouts/ \
+  apps/frontend/app/\(dashboard\)/checkouts/ \
+  --include="*.tsx" \
+  | grep -v "!!\|> 0\|!== 0\|// "
+# 기대: 0건 (모두 !!count 또는 count > 0 가드 사용)
+```
+
+```bash
+# CheckoutListTabs.tsx에서 !!currentEquipmentCount 가드 확인
+grep -n "!!currentEquipmentCount" \
+  apps/frontend/components/checkouts/CheckoutListTabs.tsx
+# 기대: 1건 이상 (조건부 렌더링 가드 존재)
+```
+
+**PASS:** 숫자 카운트 기반 JSX 조건부 렌더링에 `!!count` 또는 `count > 0` 가드 사용.
+**FAIL:** `{someCount && <Component />}` 패턴 — `count === 0` 시 "0" 텍스트 노드 노출.
+
+**예외:**
+- `count > 0 ? <A /> : <B />` ternary — 명시적 분기이므로 정상
+- 이미 `number | undefined` 타입인 경우 `!!count`는 `undefined`도 처리하므로 권장
+
+**관련 파일:**
+- `apps/frontend/components/checkouts/CheckoutListTabs.tsx` — `!!currentEquipmentCount` 방어 패턴 참조 구현

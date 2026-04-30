@@ -202,6 +202,58 @@ grep -n "getSubTabForStatus" \
 **PASS 기준:** `handleStatCardClick` 또는 `handleStatusChange` 내에서 `getSubTabForStatus` 호출 확인.
 **FAIL 기준:** `getSubTabForStatus` 정의는 있으나 stat 카드 핸들러에서 미사용 → subTab 자동 정렬 누락.
 
+### Step 11: IMPORT_SUBTAB_STATUS_GROUPS SSOT 위치 + 인라인 EquipmentImportStatus 배열 금지 (2026-04-30 추가)
+
+`InboundCheckoutsTab`에서 장비 반입(EquipmentImport) 상태 필터링 시
+`IMPORT_SUBTAB_STATUS_GROUPS`를 `checkout-filter-utils.ts`에서 import해야 한다.
+컴포넌트 내부에서 `[EIV.PENDING, EIV.IN_PROGRESS, ...]` 인라인 배열로 구성하면
+`EQUIPMENT_IMPORT_STATUS_VALUES`에 새 상태 추가 시 자동 포함되지 않아 누락 버그 발생.
+
+**규칙 근거:** `IMPORT_SUBTAB_STATUS_GROUPS`는 `EQUIPMENT_IMPORT_STATUS_VALUES.filter()`로 자동 파생되어
+스키마에 새 상태가 추가되면 `inProgress`에 자동 포함되는 불변 조건을 보장한다.
+인라인 배열은 이 자동 파생 체계를 우회한다.
+
+**올바른 패턴:**
+```typescript
+// ✅ checkout-filter-utils.ts에서 import (SSOT)
+import { IMPORT_SUBTAB_STATUS_GROUPS } from '@/lib/utils/checkout-filter-utils';
+const statuses = IMPORT_SUBTAB_STATUS_GROUPS[subTab] as string[];
+
+// ❌ 인라인 배열 — 스키마 변경 시 누락 위험
+const statuses = subTab === 'inProgress'
+  ? [EIV.PENDING, EIV.IN_PROGRESS, EIV.UNDER_REVIEW]  // 새 상태 추가 시 자동 포함 안 됨
+  : [EIV.RETURNED, EIV.CANCELED, EIV.REJECTED];
+```
+
+**탐지 — `checkout-filter-utils.ts` 외부에서 IMPORT_SUBTAB_STATUS_GROUPS 재정의:**
+```bash
+# SSOT 위치(checkout-filter-utils.ts) 외에서 IMPORT_SUBTAB_STATUS_GROUPS 정의 탐지
+grep -rn "IMPORT_SUBTAB_STATUS_GROUPS\s*=" \
+  apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "checkout-filter-utils.ts"
+# 기대: 0건 (checkout-filter-utils.ts 에서만 정의)
+```
+
+**탐지 — InboundCheckoutsTab에서 인라인 EquipmentImportStatus 배열 사용:**
+```bash
+# subTab 분기 내 인라인 EIV/EquipmentImportStatusValues 배열 탐지
+grep -n "EIV\.\|EquipmentImportStatusValues\." \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/InboundCheckoutsTab.tsx \
+  | grep -v "import\|// "
+# 기대: 0건 (IMPORT_SUBTAB_STATUS_GROUPS 경유)
+```
+
+**탐지 — IMPORT_SUBTAB_STATUS_GROUPS가 checkout-filter-utils에서 올바르게 파생되는지 확인:**
+```bash
+# IMPORT_SUBTAB_STATUS_GROUPS.inProgress가 EQUIPMENT_IMPORT_STATUS_VALUES.filter()로 파생되는지 확인
+grep -A3 "IMPORT_SUBTAB_STATUS_GROUPS" apps/frontend/lib/utils/checkout-filter-utils.ts \
+  | grep "inProgress"
+# 기대: "inProgress: EQUIPMENT_IMPORT_STATUS_VALUES.filter(...)" 형태
+```
+
+**PASS:** `IMPORT_SUBTAB_STATUS_GROUPS` 재정의 0건 + `InboundCheckoutsTab`에서 인라인 EIV 배열 0건.
+**FAIL:** 탭 컴포넌트 내 인라인 `EquipmentImportStatus` 배열 → `checkout-filter-utils.ts`의 `IMPORT_SUBTAB_STATUS_GROUPS[subTab]` 경유로 교체.
+
 ### Step 6: URL 기반 섹션 독립 페이지네이션 훅
 
 한 페이지 내 여러 독립 섹션이 각각 별도 URL 파라미터로 페이지네이션하는 경우,
@@ -344,6 +396,7 @@ grep -n "CHECKOUT_PURPOSE_VALUES" "apps/frontend/app/(dashboard)/checkouts/Check
 | 8   | filtersToSearchParams SSOT | PASS/FAIL | new URLSearchParams 직접 조작 위치 |
 | 9   | 탭 컴포넌트 countActiveFilters SSOT | PASS/FAIL | 인라인 filterActive 계산 위치 |
 | 10  | checkout purpose 필터 타입 SSOT | PASS/FAIL | purpose: string 잔존 또는 enum 검증 누락 위치 |
+| 11  | IMPORT_SUBTAB_STATUS_GROUPS SSOT 위치 + 인라인 배열 금지 | PASS/FAIL | checkout-filter-utils.ts 외 재정의 또는 InboundTab 인라인 EIV 배열 위치 |
 ```
 
 ## Exceptions

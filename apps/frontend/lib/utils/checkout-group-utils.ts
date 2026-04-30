@@ -6,6 +6,8 @@ export interface CheckoutGroup {
   key: string;
   /** 그룹 기준 날짜 (YYYY-MM-DD) */
   date: string;
+  /** 그룹 내 가장 최근 createdAt ISO 문자열 — 동일 날짜 그룹 간 정렬용 */
+  latestCreatedAt: string;
   /** 날짜 라벨 ("반출일" | "신청일") — checkoutDate 유무에 따라 결정 */
   dateLabel: string;
   /** i18n 키 (예: "checkouts.groupCard.checkoutDateLabel") — Phase 3에서 전환 */
@@ -96,10 +98,16 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
       }
     }
 
+    const latestCreatedAt = groupCheckouts.reduce(
+      (max, co) => (co.createdAt > max ? co.createdAt : max),
+      groupCheckouts[0].createdAt
+    );
+
     const isUnspecified = destination === UNSPECIFIED_DESTINATION;
     groups.push({
       key,
       date,
+      latestCreatedAt,
       dateLabel: hasCheckoutDate ? 'groupCard.checkoutDateLabel' : 'groupCard.requestDateLabel',
       dateLabelKey: hasCheckoutDate ? 'groupCard.checkoutDateLabel' : 'groupCard.requestDateLabel',
       destination: isUnspecified ? '' : destination,
@@ -111,10 +119,10 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
     });
   }
 
-  // 정렬: 날짜 내림차순, 같은 날짜 내 반출지 가나다순
+  // 정렬: 날짜 내림차순, 같은 날짜 내 최신 생성 순
   return groups.toSorted((a, b) => {
     const dateCompare = b.date.localeCompare(a.date);
     if (dateCompare !== 0) return dateCompare;
-    return a.destination.localeCompare(b.destination, 'ko');
+    return b.latestCreatedAt.localeCompare(a.latestCreatedAt);
   });
 }

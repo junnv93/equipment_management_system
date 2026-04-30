@@ -85,11 +85,19 @@ export default function CheckoutListTabs({
             {showCount && (
               <span
                 className={`${CHECKOUT_TAB_BADGE_TOKENS.base} ${CHECKOUT_TAB_BADGE_TOKENS.active}`}
-                aria-label={`${t('list.count.checkouts', { count: currentCount })}${t('list.count.separator')}${t('list.count.equipment', { count: currentEquipmentCount ?? 0 })}`}
+                aria-label={
+                  currentEquipmentCount
+                    ? `${t('list.count.checkouts', { count: currentCount })}${t('list.count.separator')}${t('list.count.equipment', { count: currentEquipmentCount })}`
+                    : t('list.count.checkouts', { count: currentCount })
+                }
               >
                 {t('list.count.checkouts', { count: currentCount })}
-                {t('list.count.separator')}
-                {t('list.count.equipment', { count: currentEquipmentCount ?? 0 })}
+                {!!currentEquipmentCount && (
+                  <>
+                    {t('list.count.separator')}
+                    {t('list.count.equipment', { count: currentEquipmentCount })}
+                  </>
+                )}
               </span>
             )}
           </button>

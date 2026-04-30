@@ -30,8 +30,11 @@ import {
   findCheckoutStatusGroupKey,
   CHECKOUT_STATUS_VALUES,
   CHECKOUT_PURPOSE_VALUES,
+  EQUIPMENT_IMPORT_STATUS_VALUES,
+  EquipmentImportStatusValues as EIV,
   type CheckoutStatus,
   type CheckoutPurpose,
+  type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
@@ -53,6 +56,25 @@ export const SUBTAB_STATUS_GROUPS = {
 } as const;
 
 export type CheckoutSubTab = keyof typeof SUBTAB_STATUS_GROUPS;
+
+/**
+ * EquipmentImportStatus 서브탭 매핑 — InboundCheckoutsTab 클라이언트 측 필터용
+ *
+ * SUBTAB_STATUS_GROUPS 패턴 동일: terminal 상태 Set 명시, inProgress 자동 파생
+ * → EQUIPMENT_IMPORT_STATUS_VALUES에 새 상태 추가 시 inProgress에 자동 포함
+ */
+const IMPORT_COMPLETED_STATUSES = new Set<EquipmentImportStatus>([
+  EIV.RETURNED,
+  EIV.CANCELED,
+  EIV.REJECTED,
+]);
+
+export const IMPORT_SUBTAB_STATUS_GROUPS: Record<CheckoutSubTab, EquipmentImportStatus[]> = {
+  inProgress: EQUIPMENT_IMPORT_STATUS_VALUES.filter(
+    (s) => !IMPORT_COMPLETED_STATUSES.has(s as EquipmentImportStatus)
+  ) as EquipmentImportStatus[],
+  completed: [...IMPORT_COMPLETED_STATUSES],
+};
 
 // 모듈 레벨 Set — 매 호출마다 재생성 방지 (O(1) lookup 보장)
 const IN_PROGRESS_SET = new Set(SUBTAB_STATUS_GROUPS.inProgress);
