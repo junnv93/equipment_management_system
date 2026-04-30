@@ -1790,3 +1790,74 @@ await checkoutApi.getCheckouts({
 - `apps/frontend/lib/api/approvals/fetchers.ts` — `CheckoutDirectionValues.OUTBOUND` 사용처 (2026-04-30 SSOT 교체)
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b fetchers-status-literal-ssot 작업 중 `direction: 'outbound'` 2건 발견. `CheckoutDirectionValues`가 schemas에 없어 신규 추가 후 교체. `satisfies` 제약으로 컴파일 타임 안전성 확보.
+
+### Step 52: Visual layer ↔ domain SSOT 의식적 분리 — frontend 시각 임계값 named constant (2026-04-30 추가, Sprint 4.5 U-09)
+
+**규칙**: backend domain SSOT 임계값(`CHECKOUT_DDAY_THRESHOLDS` 0/2/14, shared-constants)은 backend aggregation 일관성을 위해 보존하되, frontend가 더 세분화된 시각 표현(예: 6단계 색온도)이 필요할 때는 **별도 named constant SSOT**로 분리한다. 인라인 magic number 또는 4-tier 임계값 재사용으로 시각 계산을 우회하지 않는다.
+
+**왜 분리가 필요한가**: domain SSOT는 frontend/backend 양측에서 같은 분류(`getCheckoutDdayTier(days) → 'danger'|'warning'|'ok'|'neutral'`)를 보장. visual layer는 이 분류와 무관한 시각 차별성(예: D-7+/D-6~4/D-3~1/D-0/D+1~3/D+4+)을 표현. 두 SSOT를 의식적으로 분리하면:
+1. backend aggregation 영향 0 (domain threshold 보존)
+2. visual 차별성 자유롭게 확장 (UI 디자인 반복)
+3. tier(아이콘) ↔ visual level(색온도) 책임 분리 — `getCheckoutDday4TierIconKey` ↔ `getCheckoutDdayVisualClasses`
+
+**검증 명령**:
+```bash
+# 1. visual threshold가 named constant로 정의되어 있는가
+grep -n "CHECKOUT_DDAY_VISUAL_THRESHOLDS\|export const CHECKOUT_DDAY_VISUAL_THRESHOLDS" \
+  apps/frontend/lib/design-tokens/components/dday-colors.ts
+# 기대: 1건 이상 (named constant 정의)
+
+# 2. visual level 헬퍼가 named constant만 사용하는가 (인라인 magic number 0)
+grep -E "if \(daysRemaining (>=|===|<=) -?[0-9]+\)" \
+  apps/frontend/lib/design-tokens/components/dday-colors.ts | grep -v "T\."
+# 기대: 0건 (모든 비교는 T.relaxedFloor 등 SSOT 경유)
+
+# 3. domain SSOT 호출자 보존 — 4-tier 헬퍼 export 유지
+grep -E "(getCheckoutDday4Tier|DDAY_4TIER_CLASSES|getCheckoutDday4TierClasses)" \
+  apps/frontend/lib/design-tokens/index.ts
+# 기대: 4-tier export 보존 (visual 6-level 도입이 4-tier 제거를 강제하지 않음)
+
+# 4. domain SSOT 재정의 0건 (frontend가 backend threshold를 우회/재정의 안 함)
+grep -rn "CHECKOUT_DDAY_THRESHOLDS\b" apps/frontend/lib/design-tokens/components/dday-colors.ts
+# 기대: import만 (재정의 0)
+```
+
+**PASS**: visual constant 정의 + magic number 0 + 4-tier 보존 + domain SSOT 재정의 0
+**FAIL**: visual 헬퍼 내 인라인 임계값 발견 → named constant로 추출 후 `T.<name>` 경유
+
+**올바른 패턴**:
+```typescript
+// ✅ CORRECT — visual layer 별도 named constant
+export const CHECKOUT_DDAY_VISUAL_THRESHOLDS = {
+  relaxedFloor: 7,
+  normalFloor: 4,
+  warningFloor: 1,
+  urgentDay: 0,
+  overdueLightFloor: -3,
+} as const;
+
+export function getCheckoutDdayVisualLevel(daysRemaining: number): CheckoutDdayVisualLevel {
+  const T = CHECKOUT_DDAY_VISUAL_THRESHOLDS;
+  if (daysRemaining >= T.relaxedFloor) return 1;
+  // ...
+}
+
+// ❌ WRONG — magic number 인라인
+export function getCheckoutDdayVisualLevel(daysRemaining: number): CheckoutDdayVisualLevel {
+  if (daysRemaining >= 7) return 1;  // magic 7
+  // ...
+}
+
+// ❌ WRONG — backend domain threshold 재사용으로 시각 계산
+import { CHECKOUT_DDAY_THRESHOLDS } from '@equipment-management/shared-constants';
+export function getCheckoutDdayVisualLevel(daysRemaining: number) {
+  // domain threshold(0/2/14)는 시각 6단계와 의도가 다름 — 재사용 금지
+}
+```
+
+**관련 파일**:
+- `apps/frontend/lib/design-tokens/components/dday-colors.ts` — `CHECKOUT_DDAY_VISUAL_THRESHOLDS` SSOT (2026-04-30 신설)
+- `packages/shared-constants/src/checkout-thresholds.ts` — backend domain SSOT (보존 대상)
+- `apps/frontend/components/checkouts/DdayBadge.tsx` — `getCheckoutDdayVisualClasses` 호출
+
+**발생 이력 (2026-04-30 신설)**: Sprint 4.5 U-09 D-day 색온도 6단계 작업에서, backend `CHECKOUT_DDAY_THRESHOLDS` 4-tier(0/2/14)는 backend aggregation 일관성을 위해 보존해야 하지만 사용자가 시각 6단계 표현을 요구. 하이브리드 접근으로 visual layer를 별도 SSOT(`CHECKOUT_DDAY_VISUAL_THRESHOLDS`)로 분리. 시각 임계값(7/4/1/0/-3)은 domain 임계값(0/2/14)과 의도적으로 다름 — 시각 차별성과 도메인 분류는 다른 책임.

@@ -1129,6 +1129,20 @@ const results = await Promise.allSettled(
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b bulk-approve-rate-limit 작업. 초기 배치 방식(`chunk` 기반)에서 진짜 세마포어(worker pool) 방식으로 교체. 배치 방식은 slow outlier가 전체 chunk를 지연시키는 문제가 있어, `nextIndex` 공유 변수로 worker가 즉시 다음 task를 grab하는 구조로 개선.
 
+**예외 (2026-04-30 보강, Sprint 4.5 D2 delegation)**: 도메인이 backend bulk endpoint(`/api/<domain>/bulk-approve`, `/bulk-reject`)를 제공하는 경우, frontend는 `runWithConcurrency` 우회가 **허용**된다. 이유: backend가 `Promise.allSettled` + AuditLog `entityIdPath: 'body.ids'` 통합 기록 + DB transaction 단위로 처리하므로 frontend의 worker pool은 불필요. 이 경우 `approvalsApi.bulkApprove/bulkReject`에 `isCheckoutCategory(category)` 같은 도메인 분기를 두고 `checkoutApi.bulkApproveCheckouts`/`bulkRejectCheckouts`로 위임. 다른 도메인(equipment, calibration 등)은 기존 worker pool 패턴 유지.
+
+**Delegation 검증 명령**:
+```bash
+# 도메인 분기 + 단일 HTTP 호출 패턴 확인
+grep -B2 -A5 "isCheckoutCategory\|isCalibrationCategory\|is.*Category" \
+  apps/frontend/lib/api/approvals/actions.ts | grep -E "bulk(Approve|Reject)Checkouts|bulk(Approve|Reject)Calibrations"
+# 기대: domain-specific bulk 함수 호출 (return 1줄)
+
+# 도메인 카테고리 SSOT derive 확인 (인라인 배열 금지)
+grep -n "CHECKOUT_CATEGORIES\s*=" apps/frontend/lib/api/approvals/actions.ts
+# 기대: ApprovalCategoryValues.OUTGOING/INCOMING 같은 SSOT 경유 (리터럴 인라인 0)
+```
+
 ### Step 36: 카운트 기반 조건부 UI — `!!count` 방어 가드 패턴 (2026-04-30 추가)
 
 **규칙**: 숫자 카운트를 기반으로 UI 요소를 조건부 렌더링하거나 레이블 조합에 포함할 때,
@@ -1180,3 +1194,92 @@ grep -n "!!currentEquipmentCount" \
 
 **관련 파일:**
 - `apps/frontend/components/checkouts/CheckoutListTabs.tsx` — `!!currentEquipmentCount` 방어 패턴 참조 구현
+
+### Step 37: sessionStorage TTL + try/catch + one-shot 패턴 (2026-04-30 추가, Sprint 4.5 U-07)
+
+**규칙**: `sessionStorage`/`localStorage`를 사용하는 클라이언트 헬퍼는 다음 3가지 패턴을 모두 만족해야 한다:
+
+1. **try/catch silent fallback** — `setItem`/`getItem`/`removeItem` 모든 호출이 try/catch로 감싸져 있어야 함 (private mode, 권한 차단, 용량 초과 시 silent fallback). 호출자에게 throw 전파 금지.
+2. **TTL 검증** — 시간 의존 데이터(컨텍스트 복원, 캐시 등)는 timestamp + TTL 비교 필수. 만료 시 null 반환 + storage에서 자동 삭제.
+3. **One-shot read** — 일회성 데이터(돌아가기 컨텍스트 등)는 read 후 자동 `removeItem`으로 두 번 복원되지 않도록 보장.
+
+**규칙 근거:**
+- private/incognito mode → sessionStorage `setItem` throw `QuotaExceededError`. throw 전파 시 페이지 crash.
+- TTL 없는 데이터는 사용자가 1주일 후 돌아왔을 때 stale context 복원 → 의도와 어긋난 UX.
+- one-shot 미적용 시 detail → list → detail → list 반복할 때 매번 같은 stale context 복원.
+
+**올바른 패턴 (`checkout-return-context.ts` 기준):**
+```typescript
+// ✅ try/catch 모든 storage 호출 wrap
+export function saveCheckoutListContext(searchParams: URLSearchParams | string): void {
+  try {
+    const query = typeof searchParams === 'string' ? searchParams : searchParams.toString();
+    if (!query) return;
+    const payload: StoredContext = { query, ts: Date.now() };
+    sessionStorage.setItem(CHECKOUT_RETURN_CONTEXT_KEY, JSON.stringify(payload));
+  } catch {
+    // private mode silent fallback (URL이 SSOT)
+  }
+}
+
+// ✅ TTL 검증 + one-shot removeItem
+export function restoreCheckoutListContext(): URLSearchParams | null {
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_RETURN_CONTEXT_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isStoredContext(parsed)) return null;
+    if (Date.now() - parsed.ts > CHECKOUT_RETURN_CONTEXT_TTL_MS) {
+      sessionStorage.removeItem(CHECKOUT_RETURN_CONTEXT_KEY); // ← 만료 자동 청소
+      return null;
+    }
+    sessionStorage.removeItem(CHECKOUT_RETURN_CONTEXT_KEY); // ← one-shot
+    return new URLSearchParams(parsed.query);
+  } catch {
+    return null;
+  }
+}
+```
+
+**탐지 — try/catch 누락:**
+```bash
+# sessionStorage/localStorage setItem이 try/catch 외부에 있는 패턴 탐지
+grep -B5 "sessionStorage\.\(setItem\|getItem\|removeItem\)\|localStorage\.\(setItem\|getItem\|removeItem\)" \
+  apps/frontend/lib/utils/ apps/frontend/hooks/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -B5 -A1 "sessionStorage\|localStorage" | grep -v "try {" | grep "sessionStorage\|localStorage" | head -10
+# 기대: 0건 (모든 호출이 try block 내부)
+```
+
+**탐지 — TTL 누락:**
+```bash
+# 시간 의존 storage 헬퍼에 TTL/expires/timestamp 키워드 존재 확인
+grep -l "sessionStorage.setItem\|localStorage.setItem" apps/frontend/lib/utils/*.ts | \
+  while read f; do
+    if ! grep -qE "(TTL|EXPIRES|timestamp|ts:|expiresAt)" "$f"; then
+      echo "TTL 누락 의심: $f"
+    fi
+  done
+# 기대: 빈 출력 (storage 헬퍼는 TTL 또는 명시적 영구 보존 의도 주석 보유)
+```
+
+**탐지 — One-shot 패턴 (read 후 removeItem):**
+```bash
+# restore* 함수가 getItem 후 removeItem을 호출하는지 확인
+grep -A20 "export function restore" apps/frontend/lib/utils/ apps/frontend/hooks/ \
+  --include="*.ts" -r | grep -E "removeItem"
+# 기대: 호출자 함수당 1건 이상 (one-shot 의도가 있는 경우)
+```
+
+**PASS:** 3 패턴 모두 적용 — try/catch wrap + TTL 검증 + one-shot removeItem.
+**FAIL:** ① throw 전파 가능, ② TTL 없이 stale context 영구 보존, ③ 두 번 read 가능 → 헬퍼 재설계.
+
+**예외:**
+- 영구 사용자 설정 (예: 사이드바 collapsed 상태) — TTL 불필요, one-shot 불필요. try/catch만 필수.
+- 플래그성 boolean (예: 첫 방문 마커) — TTL/one-shot 의도 명시 후 패턴 선택.
+
+**관련 파일:**
+- `apps/frontend/lib/utils/checkout-return-context.ts` — 3 패턴 모두 적용 참조 구현 (Sprint 4.5 U-07, 2026-04-30 신설)
+- `apps/frontend/lib/utils/__tests__/checkout-return-context.test.ts` — TTL/private mode/one-shot 단위 테스트 20건
+
+**발생 이력 (2026-04-30 신설)**: Sprint 4.5 U-07 돌아가기 컨텍스트 보존 작업에서 `restoreCheckoutListContext()`가 한 번 사용 후 sessionStorage에서 자동 삭제되어야 한다는 요구. private mode에서 throw 발생 시 silent fallback + URL이 SSOT이므로 storage 차단되어도 동작 보장. 단위 테스트로 3 패턴 모두 검증.
