@@ -18,8 +18,22 @@
 
 const ANALYTICS_EVENT_NAME = 'app:analytics';
 
-/** PII 위험 키 — track props에 포함되면 throw (DEV) / drop (PROD) */
-const PII_DENY_KEYS = ['userId', 'userid', 'email', 'role', '사번', 'employeeId', 'name'] as const;
+/**
+ * PII 위험 키 — track props에 포함되면 throw (DEV) / drop (PROD)
+ * 주의: 'name' 같은 단어는 컴포넌트명/설정명에도 쓰이므로 제외.
+ * 사람을 직접 식별하는 구체적 키만 등록.
+ */
+const PII_DENY_KEYS = [
+  'userId',
+  'userid',
+  'email',
+  'firstName',
+  'lastName',
+  'displayName',
+  'fullName',
+  '사번',
+  'employeeId',
+] as const;
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

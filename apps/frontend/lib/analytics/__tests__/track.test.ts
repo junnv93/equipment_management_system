@@ -42,22 +42,21 @@ describe('track', () => {
     expect(dispatched[0].detail.props).toBeUndefined();
   });
 
-  it('PII 키가 포함되면 이벤트를 발행하지 않는다 (userId)', () => {
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-
-    track('checkout.approve', { userId: 'u-123', count: 1 });
-
+  it('PII 키가 포함되면 DEV에서는 throw하여 호출자에게 즉시 알린다 (userId)', () => {
+    expect(() => track('checkout.approve', { userId: 'u-123', count: 1 })).toThrow(
+      /PII key "userId"/
+    );
     expect(dispatched).toHaveLength(0);
-    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('PII key "userId"'));
-    errSpy.mockRestore();
   });
 
-  it('PII 키가 포함되면 이벤트를 발행하지 않는다 (email)', () => {
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-
-    track('user.signin', { email: 'x@example.com' });
-
+  it('PII 키가 포함되면 DEV에서는 throw한다 (email)', () => {
+    expect(() => track('user.signin', { email: 'x@example.com' })).toThrow(/PII key "email"/);
     expect(dispatched).toHaveLength(0);
-    errSpy.mockRestore();
+  });
+
+  it('비PII 일반 키(name, state)는 정상 발행된다', () => {
+    // 'name'은 deny-list에서 제거 — 컴포넌트명/설정명으로 흔히 쓰임
+    expect(() => track('sidebar.toggle', { name: 'sidebar', state: 'collapsed' })).not.toThrow();
+    expect(dispatched).toHaveLength(1);
   });
 });
