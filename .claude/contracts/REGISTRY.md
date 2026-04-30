@@ -9,7 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 남은 체크박스 | 설명 |
 |------|------------|------|
-| `tech-debt-batch-0430b` | 6 | fetchers-SSOT·bulk-rate-limit·BFF-flag-removal |
 | `completed-ar13-self-inspection-approval` | 6 | ar13-self-inspection-approval |
 | `nc-design-review-phases` | 13 | (설명 없음) |
 | `dashboard-role-layout` | 33 | dashboard-role-layout |
@@ -52,4 +51,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 182개. 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 183개. 검색: `ls .claude/contracts/completed/ | grep <slug>`
