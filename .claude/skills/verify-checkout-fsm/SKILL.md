@@ -1629,3 +1629,78 @@ grep -n "workingStatusChecked: resolved" \
 - `apps/frontend/app/(dashboard)/checkouts/[id]/return/ReturnCheckoutClient.tsx` — derivedWorkingStatusChecked = conditionChecks.length > 0
 
 **발생 이력 (2026-04-29 신설)**: rental 반입 시 (1) 중복 체크박스 UX 문제, (2) `workingStatusChecked` 의미론적 오류(`every(normal)` → 이상 장비 반입 차단) 동시 발견. purpose-aware 검증 분리 + 서버 도출 패턴으로 수정.
+
+### Step 51: KPI 카드 value-filterStatus 상태 집합 정합성 — `CHECKOUT_STATUS_GROUPS` SSOT 경유 필수 (2026-04-30 추가)
+
+**규칙**: `OutboundCheckoutsTab`의 `useStatCards` 배열에서 각 카드의 `value`(숫자)와 `filterStatus`(클릭 필터)는 반드시 동일한 상태 집합을 기준으로 해야 한다. 백엔드 `getSummary()` 집계 필드와 `getCheckoutStatusGroupFilterValue()` 헬퍼가 같은 `CHECKOUT_STATUS_GROUPS` 상수를 참조할 때만 이 불변성이 보장된다.
+
+**왜 중요한가**: 카드에 표시된 숫자(예: 5)를 클릭했을 때 목록에 5건이 나와야 한다. `value`와 `filterStatus`가 다른 상태 집합을 가리키면 "카드 숫자 ≠ 클릭 후 목록 수"인 UX 버그가 발생한다. `CheckoutSummary.approved`가 `status='approved'` 하나만 카운트하면서 `filterStatus`는 `in_progress` 그룹(approved 미포함) 전체를 참조하던 것이 이 패턴의 실패 사례다.
+
+**검증 명령어**:
+```bash
+# 1. getSummary() inProgress 카운트가 CHECKOUT_STATUS_GROUPS.in_progress 경유인지 확인
+grep -A5 "inProgress:" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "CHECKOUT_STATUS_GROUPS\|inProgressStatuses"
+# 기대: CHECKOUT_STATUS_GROUPS.in_progress 경유 (하드코딩 상태 목록 0건)
+
+# 2. getSummary() returnedToday 카운트가 completed 그룹 경유인지 확인
+grep -A3 "returnedToday:" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep "CHECKOUT_STATUS_GROUPS\|completedStatuses"
+# 기대: CHECKOUT_STATUS_GROUPS.completed 경유
+
+# 3. KPI 카드 checkedOut value가 summary.inProgress 사용인지 확인
+grep -B2 -A2 "variantKey: 'checkedOut'" \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
+  | grep "inProgress"
+# 기대: value: summary.inProgress (summary.approved 리터럴 0건)
+
+# 4. checkedOut 카드 filterStatus가 SSOT 헬퍼 경유인지 확인
+grep -A5 "variantKey: 'checkedOut'" \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
+  | grep "getCheckoutStatusGroupFilterValue"
+# 기대: filterStatus: getCheckoutStatusGroupFilterValue('in_progress')
+
+# 5. returned 카드도 filterStatus가 SSOT 헬퍼 경유인지 확인
+grep -A5 "variantKey: 'returned'" \
+  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
+  | grep "getCheckoutStatusGroupFilterValue"
+# 기대: filterStatus: getCheckoutStatusGroupFilterValue('completed')
+```
+
+**PASS**:
+1. `getSummary()` `inProgress` 카운트 → `CHECKOUT_STATUS_GROUPS.in_progress` spread + sql.join
+2. `getSummary()` `returnedToday` 카운트 → `CHECKOUT_STATUS_GROUPS.completed` spread + sql.join
+3. `useStatCards` 내 `checkedOut.value = summary.inProgress` (not `summary.approved`)
+4. `filterStatus = getCheckoutStatusGroupFilterValue('in_progress')` SSOT 헬퍼 경유
+
+**FAIL**:
+- `value: summary.approved` + `filterStatus: getCheckoutStatusGroupFilterValue('in_progress')` 조합 → 집합 불일치 (approved ∉ in_progress)
+- `inProgress` 카운트가 하드코딩 상태 목록(`'approved','checked_out',...`) 인라인 → CHECKOUT_STATUS_GROUPS SSOT 우회
+- `returnedToday` 카운트가 `CSVal.RETURNED` 단일 → completed 그룹 우회 (return_approved 누락)
+
+**올바른 패턴**:
+```typescript
+// ✅ 백엔드 — SSOT 그룹에서 배열 도출
+const inProgressStatuses = [...CHECKOUT_STATUS_GROUPS.in_progress];
+const completedStatuses = [...CHECKOUT_STATUS_GROUPS.completed];
+inProgress: sql`COUNT(*) FILTER (WHERE status IN (${sql.join(inProgressStatuses.map(s => sql`${s}`), sql`, `)}))`,
+returnedToday: sql`COUNT(*) FILTER (WHERE status IN (${sql.join(completedStatuses.map(s => sql`${s}`), sql`, `)}) AND DATE(...) = CURRENT_DATE)`,
+
+// ✅ 프론트엔드 — summary 필드명과 filterStatus가 같은 그룹을 가리킴
+{ variantKey: 'checkedOut', value: summary.inProgress, filterStatus: getCheckoutStatusGroupFilterValue('in_progress') }
+{ variantKey: 'returned',   value: summary.returnedToday, filterStatus: getCheckoutStatusGroupFilterValue('completed') }
+
+// ❌ WRONG — 집합 불일치
+{ value: summary.approved, filterStatus: getCheckoutStatusGroupFilterValue('in_progress') }
+// summary.approved = status='approved' 1개, filterStatus = borrower_approved,...,lender_received 6개
+```
+
+**관련 파일**:
+- `packages/schemas/src/enums/labels.ts` — `CHECKOUT_STATUS_GROUPS` SSOT 정의 (in_progress, completed)
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `getSummary()` inProgress/returnedToday 카운트
+- `packages/schemas/src/checkout.ts` — `CheckoutSummary` 인터페이스 (inProgress 필드명)
+- `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — `useStatCards` KPI 카드 배열
+
+**발생 이력 (2026-04-30 신설)**: KPI 카드 검토 중 "반출 중" 카드 `value = summary.approved`(status='approved' 단일 카운트)와 `filterStatus = in_progress 그룹`(approved 미포함 6개 상태)이 완전 불일치임을 발견. 또한 `returnedToday`가 `returned` 단일 카운트인데 클릭 필터는 `returned + return_approved`로 구성되어 있어 숫자보다 목록이 더 많은 버그도 존재. 두 카운트 모두 `CHECKOUT_STATUS_GROUPS` 그룹 SSOT에서 배열을 도출하는 패턴으로 수정하여 value-filterStatus 정합성 확보.

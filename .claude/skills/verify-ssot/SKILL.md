@@ -883,7 +883,7 @@ comm -12 /tmp/schema_types.txt /tmp/local_interfaces.txt
 
 **관련 파일:**
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — `CheckoutEquipmentSummary` (이름 변경 이력)
-- `packages/schemas/src/checkout.ts` — `CheckoutEquipment` 행 타입 SSOT
+- `packages/schemas/src/checkout.ts` — `CheckoutEquipment` 행 타입 SSOT, `CheckoutSummary` 공유 응답 타입 SSOT (Step 53)
 
 ### Step 35: 대시보드 임계값 SSOT — `dashboard-thresholds.ts` 우회 금지 (2026-04-28 추가)
 
@@ -1861,3 +1861,68 @@ export function getCheckoutDdayVisualLevel(daysRemaining: number) {
 - `apps/frontend/components/checkouts/DdayBadge.tsx` — `getCheckoutDdayVisualClasses` 호출
 
 **발생 이력 (2026-04-30 신설)**: Sprint 4.5 U-09 D-day 색온도 6단계 작업에서, backend `CHECKOUT_DDAY_THRESHOLDS` 4-tier(0/2/14)는 backend aggregation 일관성을 위해 보존해야 하지만 사용자가 시각 6단계 표현을 요구. 하이브리드 접근으로 visual layer를 별도 SSOT(`CHECKOUT_DDAY_VISUAL_THRESHOLDS`)로 분리. 시각 임계값(7/4/1/0/-3)은 domain 임계값(0/2/14)과 의도적으로 다름 — 시각 차별성과 도메인 분류는 다른 책임.
+
+### Step 53: 백엔드-프론트 공유 API 응답 타입 → packages/schemas SSOT (2026-04-30 추가)
+
+**규칙**: 백엔드 서비스와 프론트엔드 API 클라이언트가 동시에 사용하는 응답 타입(예: `CheckoutSummary`)은 `packages/schemas`에 단일 정의 후 양측이 import해야 한다. 프론트엔드 `*-api.ts`나 백엔드 서비스 인라인에 별도 정의하는 것은 drift 원천이다.
+
+**왜 중요한가**: 응답 타입을 각자 정의하면 컴파일러가 drift를 잡지 못한다. 백엔드에서 필드명을 바꿔도 프론트가 자체 정의를 쓰면 빌드가 통과하고, 런타임에 `undefined`로 깨진다. `CheckoutSummary.approved`가 실제로 `inProgress`를 의미하는 동안 프론트 타입이 `approved`를 그대로 유지했던 것이 이 패턴의 실패 사례다.
+
+**올바른 구조**:
+```typescript
+// ✅ packages/schemas/src/checkout.ts — 단일 정의
+export interface CheckoutSummary {
+  total: number;
+  pending: number;
+  inProgress: number;   // 필드명이 의미를 정확히 표현
+  overdue: number;
+  returnedToday: number;
+}
+
+// ✅ apps/backend — import 사용
+import type { CheckoutSummary } from '@equipment-management/schemas';
+async getSummary(): Promise<CheckoutSummary> { ... }
+
+// ✅ apps/frontend/lib/api/*-api.ts — import 후 re-export만 허용
+import type { CheckoutSummary } from '@equipment-management/schemas';
+export type { CheckoutSummary };  // 위임 re-export
+
+// ❌ WRONG — 프론트엔드 로컬 재정의
+export interface CheckoutSummary {   // 별도 정의 금지
+  approved: number;  // 필드명 drift 발생
+}
+```
+
+**검증 명령어**:
+```bash
+# 1. CheckoutSummary 정의가 packages/schemas에만 존재
+grep -rn "interface CheckoutSummary\|type CheckoutSummary" \
+  apps/ packages/ \
+  --include="*.ts" \
+  | grep -v "node_modules\|\.d\.ts"
+# 기대: 0건 (packages/schemas에는 존재, apps/ 내 재정의 0건)
+
+# 2. packages/schemas에 CheckoutSummary export 존재
+grep -n "export interface CheckoutSummary\|export type CheckoutSummary" \
+  packages/schemas/src/checkout.ts
+# 기대: 1건
+
+# 3. 프론트엔드 API 파일이 re-export만 허용 (정의 아님)
+grep -n "CheckoutSummary" apps/frontend/lib/api/checkout-api.ts
+# 기대: import + export type 2건만 (interface/type 정의 0건)
+
+# 4. 백엔드 service 반환 타입이 CheckoutSummary 참조
+grep -n "Promise<CheckoutSummary>\|summary?: CheckoutSummary" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts
+# 기대: 2건 이상 (getSummary 반환 + CheckoutListResponse.summary)
+```
+
+**PASS**: packages/schemas 단일 정의 + 프론트 re-export만 + 백엔드 import 사용
+**FAIL**: `apps/` 내 `interface CheckoutSummary` 직접 정의 → schemas로 이동 후 re-export 패턴 적용
+
+**관련 파일**:
+- `packages/schemas/src/checkout.ts` — `CheckoutSummary` SSOT 정의 (2026-04-30 이동)
+- `apps/frontend/lib/api/checkout-api.ts` — re-export 위임 패턴
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `CheckoutListResponse.summary`, `getSummary()` 반환 타입
+
+**발생 이력 (2026-04-30 신설)**: KPI 카드 버그 수정 과정에서 `CheckoutSummary.approved` 필드가 실제로 `in_progress` 전체를 의미하는데 프론트 로컬 정의 때문에 컴파일러가 drift를 잡지 못했음. 타입을 packages/schemas로 이동하고 필드명을 `inProgress`로 교정 후 빌드 실패로 모든 참조 즉시 탐지.
