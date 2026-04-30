@@ -129,6 +129,15 @@ export const CheckoutPurposeValues = {
 } as const;
 
 /**
+ * 반출 방향 값 객체 (dot-notation 접근용)
+ * @example CheckoutDirectionValues.OUTBOUND // 'outbound'
+ */
+export const CheckoutDirectionValues = {
+  OUTBOUND: 'outbound',
+  INBOUND: 'inbound',
+} as const satisfies Record<string, import('./checkout').CheckoutDirection>;
+
+/**
  * 교정 승인 상태 값 객체 (dot-notation 접근용)
  * @example CalibrationApprovalStatusValues.PENDING_APPROVAL // 'pending_approval'
  */

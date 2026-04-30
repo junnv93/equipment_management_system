@@ -15,6 +15,7 @@ import {
   LENDER_APPROVAL_PENDING_STATUSES,
   CheckoutStatusValues,
   CheckoutPurposeValues,
+  CheckoutDirectionValues,
   IntermediateCheckFilterStatusValues,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from '../calibration-api';
@@ -93,12 +94,12 @@ async function getPendingOutgoing(_teamId?: string): Promise<ApprovalItem[]> {
     const [regularCheckouts, vendorReturns] = await Promise.all([
       checkoutApi.getCheckouts({
         statuses: LENDER_APPROVAL_PENDING_STATUSES.join(','),
-        direction: 'outbound',
+        direction: CheckoutDirectionValues.OUTBOUND,
       }),
       checkoutApi.getCheckouts({
         statuses: CheckoutStatusValues.PENDING,
         purpose: CheckoutPurposeValues.RETURN_TO_VENDOR,
-        direction: 'outbound',
+        direction: CheckoutDirectionValues.OUTBOUND,
       }),
     ]);
 
