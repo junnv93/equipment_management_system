@@ -1,7 +1,8 @@
 ---
 slug: sprint-45-s8-e2e-partial-failure
 created: 2026-04-30
-status: active
+completed: 2026-04-30
+status: completed
 mode: 1
 ---
 
@@ -38,7 +39,8 @@ setqueryd-purge-and-bulk-ux harness에서 이연된 SHOULD — 기존 wf-ap02 7-
 | M5 | `createCheckout` EXT 루프 존재 | `grep "EXT_EQUIPMENT_IDS" ...spec.ts` ≥ 2 |
 | M6 | Step EXT-2: 5건 체크박스 loop `i < 5` | `grep "i < 5" ...spec.ts` ≥ 1 |
 | M7 | `page.route` 또는 `techManagerPage.route` 인터셉트 2건 이상 (Step 8 + Step 9 또는 EXT-3) | `grep "\.route(" ...spec.ts` ≥ 2 |
-| M8 | mock body `rejected` + `failed` 배열 모두 포함 (부분 실패용) | `grep "rejected.*failed\|failed.*rejected" ...spec.ts` ≥ 1 |
+| M8 | mock body `rejected` + `failed` 배열 모두 포함 (부분 실패용) | `grep -c '"rejected"' ...spec.ts` ≥ 2 AND `grep -c '"failed"' ...spec.ts` ≥ 2 |
+| | ↑ 정정 2026-04-30: 원래 `rejected.*failed` 단일라인 grep은 Prettier 멀티라인 포맷에서 우회 가능 — 키 존재 여부를 각각 카운트하는 방식으로 교체 | |
 | M9 | `unroute` 정리 — finally 블록 또는 await 패턴 | `grep "unroute" ...spec.ts` ≥ 2 |
 | M10 | `expectToastVisible` import + 사용 (toast-helpers SSOT) | `grep "expectToastVisible" ...spec.ts` ≥ 2 |
 | M11 | `afterAll` 2건 이상 (기존 + EXT cleanup) | `grep "afterAll" ...spec.ts` ≥ 2 |

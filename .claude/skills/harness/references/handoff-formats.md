@@ -73,6 +73,27 @@ slug는 작업 시작 시 kebab-case로 결정 (예: `loading-tsx`, `monitoring-
 ### 적용 verify 스킬
 {변경 파일 경로 기반 자동 선택}
 
+---
+
+### contract grep 패턴 작성 규칙
+
+**Prettier 멀티라인 재포맷으로 인한 단일라인 grep 우회 방지.**
+
+Prettier는 `printWidth`(기본 80자)를 초과하는 객체 리터럴을 자동으로 멀티라인으로 분리한다.
+`grep "A.*B"` 패턴은 두 토큰이 같은 줄에 있어야 매칭되므로, Prettier 포맷 후 매칭에 실패하거나
+주석으로 우회 가능한 느슨한 기준이 된다.
+
+| ❌ 안티패턴 | ✅ 올바른 패턴 |
+|------------|--------------|
+| `grep "rejected.*failed"` | `grep -c '"rejected"' ≥ N AND grep -c '"failed"' ≥ N` |
+| `grep "A.*B"` (멀티라인 객체 키) | 각 키를 **개별 grep -c**로 카운트 |
+| `grep "import.*from.*'module'"` | `grep -c "from 'module'"` + `grep -c "import {.*Symbol"` 분리 |
+
+**규칙**: JSON/객체 구조에서 두 키가 모두 존재하는지 검증할 때는 `A.*B` 단일라인 패턴을 절대 사용하지 않는다.
+각 키를 `grep -c '"key"'` 로 독립 카운트하여 AND 조건으로 결합한다.
+
+---
+
 ## 종료 조건
 - 필수 기준 전체 PASS → 성공
 - 동일 이슈 2회 연속 FAIL → 설계 문제 (수동 개입 요청)
