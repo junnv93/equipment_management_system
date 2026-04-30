@@ -16,6 +16,7 @@ import {
 } from '@equipment-management/schemas';
 import { type CalibrationSeverity, CALIBRATION_BADGE_TOKENS } from '@/lib/design-tokens';
 import { calculateDaysRemaining } from './dday-utils';
+import { STATUS_SKIP_CALIBRATION_DISPLAY } from '@/lib/constants/equipment-status-styles';
 
 /**
  * 교정 상태 정보
@@ -127,20 +128,6 @@ export function calculateCalibrationStatus(
   // 8. 30일 초과 - 정상 (표시 안함)
   return null;
 }
-
-/**
- * 교정 상태 표시를 건너뛸 장비 상태 목록
- *
- * SSOT: equipment-status-styles.ts의 STATUS_SKIP_CALIBRATION_DISPLAY
- */
-const STATUS_SKIP_CALIBRATION_DISPLAY: readonly string[] = [
-  ESVal.NON_CONFORMING,
-  ESVal.SPARE,
-  ESVal.PENDING_DISPOSAL,
-  ESVal.DISPOSED,
-  ESVal.TEMPORARY,
-  ESVal.INACTIVE,
-];
 
 /**
  * 교정 상태 표시 여부 확인

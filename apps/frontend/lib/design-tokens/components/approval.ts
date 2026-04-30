@@ -513,7 +513,7 @@ export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
     normal: 'text-muted-foreground',
     urgent: 'text-brand-critical font-semibold',
     /** active 탭 카운트가 0일 때 "완료" 힌트 */
-    completed: 'text-brand-ok text-[10px]',
+    completed: `text-brand-ok ${MICRO_TYPO.badge}`,
   },
   divider: 'border-t border-border my-2',
 } as const;

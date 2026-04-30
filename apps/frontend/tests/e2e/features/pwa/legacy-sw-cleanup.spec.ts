@@ -25,12 +25,10 @@ test.describe('LegacyServiceWorkerCleanup — 서비스워커 정리', () => {
   }) => {
     // localStorage 플래그 제거 → 컴포넌트 강제 재실행 (세션당 1회 가드 우회)
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
     await page.evaluate((key) => window.localStorage.removeItem(key), STORAGE_KEY);
 
     // 리로드 → LegacyServiceWorkerCleanup useEffect 재실행 (async getRegistrations 완료 대기)
     await page.reload();
-    await page.waitForLoadState('networkidle');
 
     // 컴포넌트가 localStorage 플래그를 설정할 때까지 조건 기반 대기
     // (플래그는 getRegistrations → unregister 완료 후 finally에서 설정되므로 cleanup 완료의 증거)
@@ -60,7 +58,7 @@ test.describe('LegacyServiceWorkerCleanup — 서비스워커 정리', () => {
   }) => {
     // TC-02에서 플래그 설정 완료. 재로드해도 컴포넌트는 localStorage 체크 후 조기 종료.
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // 플래그가 여전히 '1' (컴포넌트 재실행 안 됨 = 삭제/변경 없음)
     const flag = await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
