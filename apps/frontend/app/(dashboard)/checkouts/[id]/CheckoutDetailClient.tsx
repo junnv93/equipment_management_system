@@ -11,6 +11,7 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { restoreCheckoutListContext } from '@/lib/utils/checkout-return-context';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   ArrowLeft,
@@ -470,11 +471,21 @@ export default function CheckoutDetailClient({
       {/* 헤더 */}
       <div className="flex justify-between items-start">
         <div>
-          <Button variant="ghost" size="sm" className="mb-2" asChild>
-            <Link href={FRONTEND_ROUTES.CHECKOUTS.LIST}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('actions.backToList')}
-            </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-2"
+            type="button"
+            onClick={() => {
+              const restored = restoreCheckoutListContext();
+              const qs = restored?.toString();
+              router.push(
+                qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST
+              );
+            }}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t('actions.backToList')}
           </Button>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('detail.title')}</h1>

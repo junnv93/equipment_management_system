@@ -514,6 +514,13 @@ export {
   getCheckoutDday4Tier,
   getCheckoutDday4TierClasses,
   getCheckoutDday4TierIconKey,
+  // Visual 6-level — Sprint 4.5 U-09 (frontend 시각 전용, 4-tier SSOT 보존)
+  DDAY_VISUAL_LEVEL_CLASSES,
+  DDAY_VISUAL_LEVEL_ICON_KEY,
+  getCheckoutDdayVisualLevel,
+  getCheckoutDdayVisualClasses,
+  getCheckoutDdayVisualIconKey,
+  type CheckoutDdayVisualLevel,
 } from './components/dday-colors';
 
 // D-day 4단계 의미론 톤 (대시보드 개선안 v1 — overdue/urgent/soon/normal)

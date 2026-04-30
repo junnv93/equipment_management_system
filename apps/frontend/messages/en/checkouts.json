@@ -175,7 +175,12 @@
     "accessoriesStatus": "Accessories Status",
     "workflowTimeline": "Workflow Steps",
     "ddayLabel": "Return {dday} ({date})",
-    "ddaySrLabel": "{days} days until return date",
+    "ddaySrLabel": {
+      "overdue": "Return is overdue by {days} days. Immediate action required",
+      "urgent": "Today is the return date",
+      "normal": "{days} days until return date",
+      "relaxed": "{days} days remaining until return date"
+    },
     "progressFlow": "Progress Flow",
     "progressFlowSubtitle": "Step {current} of {total}",
     "backToList": "Back to list"
@@ -694,12 +699,14 @@
       "title": "Failed to Load Checkouts",
       "description": "A temporary error occurred. Please try again shortly",
       "primaryCta": "Retry",
-      "secondaryCta": "Go Home"
+      "secondaryCta": "Go Home",
+      "retry": "Retry"
     },
     "network": {
       "title": "No Internet Connection",
       "description": "Check your network connection and try again",
       "restored": "Connection restored. Please try again.",
+      "offlineReason": "New checkout requests are unavailable while offline. Please retry when network is restored.",
       "primaryCta": "Retry",
       "secondaryCta": ""
     }

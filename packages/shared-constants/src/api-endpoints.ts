@@ -144,6 +144,8 @@ export const API_ENDPOINTS = {
     PENDING_COUNT: '/api/checkouts/pending-count',
     /** 일괄 승인 (POST) — Promise.allSettled, max 50건 */
     BULK_APPROVE: '/api/checkouts/bulk-approve',
+    /** 일괄 반려 (POST) — Promise.allSettled, max 50건, reason required */
+    BULK_REJECT: '/api/checkouts/bulk-reject',
     /** 반려 사유 프리셋 목록 (GET) — 관리자 등록 고정 템플릿 */
     REJECTION_PRESETS: '/api/checkouts/rejection-presets',
     /** 최근 사용한 반출지 목록 (GET) — userId 스코핑, 캐시 60s */

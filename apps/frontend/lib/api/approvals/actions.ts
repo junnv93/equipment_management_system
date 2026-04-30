@@ -312,11 +312,36 @@ export async function reject(
 // 일괄 처리
 // ============================================================================
 
+/**
+ * Sprint 4.5 U-01: checkout 도메인은 backend bulk endpoint(`/checkouts/bulk-approve`,
+ * `/checkouts/bulk-reject`)를 활용해 단일 HTTP 요청으로 처리. 다른 도메인은 기존
+ * 클라이언트-side runWithConcurrency 패턴 유지.
+ *
+ * 이점:
+ *   - HTTP round-trip N → 1 (네트워크 비용 감소)
+ *   - AuditLog가 entityIdPath: 'body.ids'로 단일 기록 (bulk 액션 추적성)
+ *   - backend Promise.allSettled가 partial failure 처리 (동등한 동작)
+ */
+const CHECKOUT_CATEGORIES: readonly ApprovalCategory[] = ['outgoing', 'incoming'] as const;
+
+function isCheckoutCategory(category: ApprovalCategory): boolean {
+  return CHECKOUT_CATEGORIES.includes(category);
+}
+
 export async function bulkApprove(
   category: ApprovalCategory,
   ids: string[],
   comment?: string
 ): Promise<{ success: string[]; failed: string[] }> {
+  // checkout 도메인: backend bulk endpoint 활용 (단일 HTTP 요청 + 통합 AuditLog)
+  if (isCheckoutCategory(category)) {
+    const result = await checkoutApi.bulkApproveCheckouts(ids, comment);
+    return {
+      success: result.approved.map((r) => r.id),
+      failed: result.failed.map((r) => r.id),
+    };
+  }
+
   const itemsMap = await fetchItemsMapIfNeeded(category);
 
   // runWithConcurrency: 동시성 5 제한 배치 실행 + 부분 실패 허용
@@ -358,6 +383,15 @@ export async function bulkReject(
   ids: string[],
   reason: string
 ): Promise<{ success: string[]; failed: string[] }> {
+  // checkout 도메인: backend bulk endpoint 활용
+  if (isCheckoutCategory(category)) {
+    const result = await checkoutApi.bulkRejectCheckouts(ids, reason);
+    return {
+      success: result.rejected.map((r) => r.id),
+      failed: result.failed.map((r) => r.id),
+    };
+  }
+
   const itemsMap = await fetchItemsMapIfNeeded(category);
 
   // runWithConcurrency: 동시성 5 제한 배치 실행 + 부분 실패 허용

@@ -420,6 +420,42 @@ const checkoutApi = {
   },
 
   /**
+   * 일괄 승인 (Sprint 4.5 U-01) — Promise.allSettled, max 50건.
+   * ✅ Rule 2: approverId는 서버에서 추출
+   */
+  async bulkApproveCheckouts(
+    ids: string[],
+    commonReason?: string
+  ): Promise<{
+    approved: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.BULK_APPROVE, {
+      ids,
+      commonReason,
+    });
+    return transformSingleResponse(response);
+  },
+
+  /**
+   * 일괄 반려 (Sprint 4.5 U-01) — Promise.allSettled, max 50건, reason required.
+   * ✅ Rule 2: approverId는 서버에서 추출
+   */
+  async bulkRejectCheckouts(
+    ids: string[],
+    reason: string
+  ): Promise<{
+    rejected: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.BULK_REJECT, {
+      ids,
+      reason,
+    });
+    return transformSingleResponse(response);
+  },
+
+  /**
    * 대여 반출 1차 승인 (사용 부서 TM)
    * rental 전용. pending → borrower_approved.
    * ✅ Rule 2: approverId는 서버에서 추출

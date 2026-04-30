@@ -23,18 +23,18 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 |------|------|
 | `calibration-phase4-7` | calibration-phase4-7 |
 | `checkout-sprint-2-5-2-8` | Checkout Sprint 2.5~2.8 — Token Layer 봉합 |
-| `checkout-ux-u01-bulk-approval` | Sprint 4.5 · U-01 — 일괄 승인 + 단축키 A + `BulkActionBar` + `POST  |
+| `checkout-ux-u01-bulk-approval` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-01 — 일괄 승인 |
 | `checkout-ux-u02-keyboard-shortcuts` | Sprint 4.5 · U-02 — 전역 단축키 + `?` 치트시트 모달 |
 | `checkout-ux-u03-filter-sticky-saved-views` | Sprint 4.5 · U-03 — 필터 Sticky 헤더 + Saved Views (시스템 기본 + 사용자 |
 | `checkout-ux-u04-inline-reject-presets` | Sprint 4.5 · U-04 — 인라인 반려 사유 + 프리셋 chips |
 | `checkout-ux-u05-undo-toast` | Sprint 4.5 · U-05 — Undo 5초 토스트 + `useOptimisticMutation` `u |
 | `checkout-ux-u06-qr-drawer` | Sprint 4.5 · U-06 — QR 한 번에 꺼내기 drawer (페이지 전환 없음) |
-| `checkout-ux-u07-context-restore` | Sprint 4.5 · U-07 — 돌아가기 컨텍스트 보존 (스크롤/필터/페이지/앵커) |
+| `checkout-ux-u07-context-restore` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-07 — 돌아가기 컨텍스트 보존 |
 | `checkout-ux-u08-destination-combobox` | Sprint 4.5 · U-08 — Destination 자동완성 combobox + 최근 목적지 + fuz |
-| `checkout-ux-u09-dday-color-temperature` | Sprint 4.5 · U-09 — Due-date 공감각 색온도 6단계 gradient |
-| `checkout-ux-u10-optimistic-skeleton` | Sprint 4.5 · U-10 — Optimistic UI + Skeleton ≠ Spinner 일관성 |
-| `checkout-ux-u11-nav-your-turn-badge` | Sprint 4.5 · U-11 — 전역 nav "내 차례 N" 배지 + SSE 옵션 실시간 |
-| `checkout-ux-u12-empty-error-recovery` | Sprint 4.5 · U-12 — Empty / Error의 인간적인 복구 경로 |
+| `checkout-ux-u09-dday-color-temperature` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-09 — D-day 시각 6-level (4-tier SSOT 보존) |
+| `checkout-ux-u10-optimistic-skeleton` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-10 — Optimistic UI + Skeleton 일관성 |
+| `checkout-ux-u11-nav-your-turn-badge` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-11 — Sidebar pendingCount 배지 |
+| `checkout-ux-u12-empty-error-recovery` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-12 — Empty/Error 복구 경로 |
 | `checkouts-phase3-inline-action` | checkouts-phase3-inline-action |
 | `checkouts-phase4-5-wireframe-gaps` | — Checkouts Phase 4.5 (Wireframe GAP 보정 + verify Step 46/47) |
 | `checkouts-phase4-kpi-hierarchy` | — 반출입 Phase 4 (P1-1 KPI 1-hero + 3-mini) |

@@ -72,6 +72,7 @@ export function BulkActionBar({
     <div
       role="toolbar"
       aria-label={ariaLabel ?? selectedLabel}
+      aria-live="polite"
       className={cn(
         BULK_ACTION_BAR_TOKENS.container,
         variantClass,

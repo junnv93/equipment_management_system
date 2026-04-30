@@ -175,7 +175,12 @@
     "accessoriesStatus": "부속품 상태",
     "workflowTimeline": "진행 단계",
     "ddayLabel": "반납 {dday} ({date})",
-    "ddaySrLabel": "반납 예정일까지 {days}일",
+    "ddaySrLabel": {
+      "overdue": "반납 예정일이 {days}일 초과되었습니다. 즉시 조치 필요",
+      "urgent": "오늘이 반납 예정일입니다",
+      "normal": "반납 예정일까지 {days}일 남았습니다",
+      "relaxed": "반납 예정일까지 {days}일 여유"
+    },
     "progressFlow": "진행 흐름",
     "progressFlowSubtitle": "{current}단계 진행 중 · 총 {total}단계",
     "backToList": "목록으로"
@@ -694,12 +699,14 @@
       "title": "반출 목록을 불러오지 못했습니다",
       "description": "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요",
       "primaryCta": "다시 시도",
-      "secondaryCta": "홈으로"
+      "secondaryCta": "홈으로",
+      "retry": "다시 시도"
     },
     "network": {
       "title": "네트워크 연결을 확인해주세요",
       "description": "인터넷 연결이 끊어졌습니다. 연결 후 다시 시도하세요",
       "restored": "연결이 복구되었습니다. 다시 시도해 주세요.",
+      "offlineReason": "오프라인 상태에서는 새 반출을 등록할 수 없습니다. 네트워크 복구 후 다시 시도하세요.",
       "primaryCta": "다시 시도",
       "secondaryCta": ""
     }

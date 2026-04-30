@@ -65,6 +65,9 @@ import {
   BulkApproveDto,
   BulkApproveValidationPipe,
   type BulkApproveResult,
+  BulkRejectDto,
+  BulkRejectValidationPipe,
+  type BulkRejectResult,
   RevokeApprovalDto,
   RevokeApprovalValidationPipe,
 } from './dto';
@@ -88,10 +91,12 @@ import {
 } from './dto/handover-token.dto';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ErrorCode, type CheckoutStatus } from '@equipment-management/schemas';
+import { FsmMetaGuardInterceptor } from '../../common/interceptors/fsm-meta-guard.interceptor';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
 @Controller('checkouts')
+@UseInterceptors(FsmMetaGuardInterceptor)
 export class CheckoutsController {
   constructor(
     private readonly checkoutsService: CheckoutsService,
@@ -873,6 +878,30 @@ export class CheckoutsController {
   ): Promise<BulkApproveResult> {
     const approverId = extractUserId(req);
     return this.checkoutsService.bulkApprove(dto.ids, approverId, req);
+  }
+
+  // ============================================================================
+  // M8b: 일괄 반려 (Sprint 4.5 U-01)
+  // ============================================================================
+
+  @Post('bulk-reject')
+  @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @UsePipes(BulkRejectValidationPipe)
+  @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'body.ids' })
+  @ApiOperation({
+    summary: '반출 일괄 반려',
+    description:
+      'Promise.allSettled 기반 — 부분 실패 허용. max 50건. 단건 reject의 fail-close 순서(scope → FSM → reason)를 그대로 활용. approverId는 세션에서 추출.',
+  })
+  @ApiBody({ type: BulkRejectDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '일괄 반려 결과 (rejected/failed 목록)' })
+  @HttpCode(HttpStatus.OK)
+  async bulkReject(
+    @Body() dto: BulkRejectDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<BulkRejectResult> {
+    const approverId = extractUserId(req);
+    return this.checkoutsService.bulkReject(dto.ids, dto.reason, approverId, req);
   }
 
   // ============================================================================

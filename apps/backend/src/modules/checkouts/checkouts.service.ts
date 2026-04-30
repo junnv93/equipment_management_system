@@ -3364,6 +3364,52 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   // ============================================================================
+  // M8b: 일괄 반려 (POST /checkouts/bulk-reject) — Sprint 4.5 U-01
+  // ============================================================================
+
+  /**
+   * 일괄 반려 — Promise.allSettled로 부분 실패 허용.
+   * 단건 reject()의 fail-close 순서(scope → FSM → reason validation)를 그대로 활용.
+   * cross-team 거부는 개별 reject() 호출 내부 enforceScopeFromCheckout에서 처리됨.
+   * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
+   * ✅ Rule 11 예외: bulk UX상 클라이언트가 per-item version 전달 불가 → DB 최신값 사용.
+   *    CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리.
+   */
+  async bulkReject(
+    ids: string[],
+    reason: string,
+    approverId: string,
+    req: AuthenticatedRequest
+  ): Promise<{
+    rejected: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const results = await Promise.allSettled(
+      ids.map(async (id) => {
+        const checkout = await this.findCheckoutEntity(id);
+        return this.reject(id, { version: checkout.version, reason, approverId }, req);
+      })
+    );
+
+    const rejected: { id: string; version: number }[] = [];
+    const failed: { id: string; error: string }[] = [];
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        rejected.push({ id: ids[i], version: result.value.version });
+      } else {
+        const err = result.reason as { message?: string; response?: { message?: string } };
+        failed.push({
+          id: ids[i],
+          error: err?.response?.message ?? err?.message ?? 'Unknown error',
+        });
+      }
+    });
+
+    return { rejected, failed };
+  }
+
+  // ============================================================================
   // M9: 반려 사유 프리셋 목록 (GET /checkouts/rejection-presets)
   // ============================================================================
 

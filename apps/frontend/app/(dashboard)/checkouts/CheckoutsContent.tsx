@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { saveCheckoutListContext } from '@/lib/utils/checkout-return-context';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -57,6 +58,7 @@ import {
   countActiveFilters,
   getStatusFilterDisplayKey,
   getSubTabForStatus,
+  SUBTAB_STATUS_GROUPS,
   type UICheckoutFilters,
   type CheckoutPeriod,
 } from '@/lib/utils/checkout-filter-utils';
@@ -127,6 +129,11 @@ export default function CheckoutsContent({
     setSearchInput(filters.search);
   }, [filters.search]);
 
+  // U-07: 현재 URL 컨텍스트를 sessionStorage에 보존 — 상세 → 목록 복귀 시 복원용
+  useEffect(() => {
+    saveCheckoutListContext(searchParams);
+  }, [searchParams]);
+
   // 검색어 디바운스 300ms — useDebouncedValue로 stale closure 위험 제거
   const debouncedSearch = useDebouncedValue(searchInput, 300);
 
@@ -179,6 +186,20 @@ export default function CheckoutsContent({
   });
 
   const summary = liveSummary ?? initialSummary;
+
+  // 반입 탭 배지용 활성 건수 (pageSize:1 → pagination.total만 활용)
+  const { data: inboundCountData } = useQuery({
+    queryKey: queryKeys.checkouts.resource.summary({ direction: 'inbound', teamId }),
+    queryFn: async () =>
+      checkoutApi.getCheckouts({
+        direction: 'inbound',
+        teamId,
+        pageSize: 1,
+        statuses: SUBTAB_STATUS_GROUPS.inProgress.join(','),
+      }),
+    ...QUERY_CONFIG.CHECKOUT_SUMMARY,
+  });
+  const inboundActiveCount = inboundCountData?.meta.pagination.total ?? 0;
 
   // URL 업데이트 헬퍼
   const updateUrl = useCallback(
@@ -349,6 +370,17 @@ export default function CheckoutsContent({
           <TabsTrigger value="inbound" className="gap-1.5">
             <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
             {t('tabs.inbound')}
+            {inboundActiveCount > 0 && (
+              <span
+                className={`${CHECKOUT_TAB_BADGE_TOKENS.base} ${
+                  filters.view === 'inbound'
+                    ? CHECKOUT_TAB_BADGE_TOKENS.active
+                    : CHECKOUT_TAB_BADGE_TOKENS.inactive
+                }`}
+              >
+                {inboundActiveCount}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 

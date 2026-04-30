@@ -22,13 +22,15 @@ export interface CheckoutEmptyStateProps {
   title: string;
   description: string;
   primaryAction?: CheckoutEmptyStatePrimaryAction;
-  secondaryAction?: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick?: () => void; href?: string };
   /**
    * false 시 primaryAction을 숨긴다 (권한 없음). undefined이면 항상 표시.
    */
   canAct?: boolean;
   /** noPermission variant: 현재 역할 인라인 표시용 */
   roleLabel?: string;
+  /** error variant 전용: 다시 시도 핸들러. 제공 시 자동 secondaryAction 합성. */
+  onRetry?: () => void;
   className?: string;
 }
 
@@ -46,6 +48,7 @@ export default function CheckoutEmptyState({
   secondaryAction,
   canAct,
   roleLabel,
+  onRetry,
   className,
 }: CheckoutEmptyStateProps) {
   const t = useTranslations('checkouts');
@@ -57,11 +60,20 @@ export default function CheckoutEmptyState({
   const iconColorClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconColor[variant];
   const iconBgClass = CHECKOUT_EMPTY_STATE_TOKENS.variantIconBg[variant];
 
+  // U-12: network variant + offline → primary disabled + 사유 노출 (hide 대신 disabled+reason)
+  const networkOffline = variant === 'network' && !isOnline;
+  // U-12: error variant + onRetry prop → secondary 자동 합성 (호출부 단순화)
+  const resolvedSecondary =
+    secondaryAction ??
+    (variant === 'error' && onRetry
+      ? { label: t('emptyState.error.retry'), onClick: onRetry }
+      : undefined);
+
   return (
     <div
       className={[EMPTY_STATE_TOKENS.container, className].filter(Boolean).join(' ')}
-      role="status"
-      aria-live="polite"
+      role={networkOffline ? 'alert' : 'status'}
+      aria-live={networkOffline ? 'assertive' : 'polite'}
       data-testid={`empty-state-${variant}`}
     >
       <div className={[EMPTY_STATE_TOKENS.iconContainer, iconBgClass].filter(Boolean).join(' ')}>
@@ -77,30 +89,55 @@ export default function CheckoutEmptyState({
         </p>
       )}
 
+      {networkOffline && (
+        <p
+          className="mt-1 text-xs text-brand-critical bg-brand-critical/10 rounded px-2 py-1 inline-block"
+          aria-live="assertive"
+        >
+          {t('emptyState.network.offlineReason')}
+        </p>
+      )}
+
       {variant === 'noPermission' && roleLabel && (
         <p className="mt-1 text-xs text-muted-foreground bg-muted rounded px-2 py-1 inline-block">
           {roleLabel}
         </p>
       )}
 
-      {(showPrimary && primaryAction) || secondaryAction ? (
+      {(showPrimary && primaryAction) || resolvedSecondary ? (
         <div className={EMPTY_STATE_TOKENS.actions}>
           {showPrimary &&
             primaryAction &&
             (primaryAction.href ? (
-              <Button asChild>
-                <Link href={primaryAction.href}>{primaryAction.label}</Link>
+              <Button asChild disabled={networkOffline}>
+                <Link
+                  href={primaryAction.href}
+                  aria-disabled={networkOffline || undefined}
+                  tabIndex={networkOffline ? -1 : undefined}
+                >
+                  {primaryAction.label}
+                </Link>
               </Button>
             ) : (
-              <Button onClick={primaryAction.onClick} type="button">
+              <Button
+                onClick={primaryAction.onClick}
+                type="button"
+                disabled={networkOffline}
+                aria-describedby={networkOffline ? 'offline-reason' : undefined}
+              >
                 {primaryAction.label}
               </Button>
             ))}
-          {secondaryAction && (
-            <Button variant="outline" onClick={secondaryAction.onClick} type="button">
-              {secondaryAction.label}
-            </Button>
-          )}
+          {resolvedSecondary &&
+            (resolvedSecondary.href ? (
+              <Button variant="outline" asChild>
+                <Link href={resolvedSecondary.href}>{resolvedSecondary.label}</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={resolvedSecondary.onClick} type="button">
+                {resolvedSecondary.label}
+              </Button>
+            ))}
         </div>
       ) : null}
     </div>
