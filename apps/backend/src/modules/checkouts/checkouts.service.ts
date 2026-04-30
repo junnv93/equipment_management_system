@@ -3327,6 +3327,8 @@ export class CheckoutsService extends VersionedBaseService {
    * 일괄 승인 — Promise.allSettled로 부분 실패 허용.
    * cross-team 거부는 개별 approve() 호출 내부에서 처리됨.
    * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
+   *
+   * **의도적 double findCheckoutEntity** — bulkReject와 동일 trade-off (단건 path 일관성 우선).
    */
   async bulkApprove(
     ids: string[],
@@ -3374,6 +3376,12 @@ export class CheckoutsService extends VersionedBaseService {
    * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
    * ✅ Rule 11 예외: bulk UX상 클라이언트가 per-item version 전달 불가 → DB 최신값 사용.
    *    CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리.
+   *
+   * **의도적 double findCheckoutEntity** (50건 max × 2 = 100 reads / ~100ms 추가):
+   *   - 외부 fetch는 version 획득 전용. 단건 reject() 내부에서 다시 fetch가 일어남.
+   *   - "단건 path와 정확히 같은 fail-close 순서·audit·notification 보장"을 우선 — 코드 중복 회피.
+   *   - 측정된 병목 발생 시 `_rejectWithEntity` 분리로 N reads로 감축 (tech-debt-tracker 등록).
+   *   - bulkApprove도 동일 패턴 — 일관성 유지.
    */
   async bulkReject(
     ids: string[],
