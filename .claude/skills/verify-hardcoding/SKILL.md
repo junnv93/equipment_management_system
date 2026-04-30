@@ -787,3 +787,46 @@ grep -n "getStatsGridClass\|containerInGrid" \
 - `apps/frontend/components/checkouts/HeroKPISkeleton.tsx` — skeleton
 
 **발생 이력 (2026-04-28)**: Phase 4 P1-1 진입 시 host에 `grid-cols-4 sm:grid-cols-6 lg:grid-cols-6` raw + `col-span-2` raw 잔존 — Phase 4.B/4.C 토큰 마이그레이션으로 해소.
+
+---
+
+### Step 32: analytics track() 호출 시 PII 키 직접 전달 금지 (2026-04-30 추가)
+
+`track()` 호출부의 props 객체에 `userId`, `email`, `firstName`, `lastName`, `displayName`, `fullName`, `사번`, `employeeId` 키를 직접 전달하는 것을 금지. 식별자 대신 익명화된 카운터/분류값만 허용.
+
+**왜 중요한가**: `track.ts`는 dev 환경에서 PII 키 포함 시 `throw`하여 즉시 알리고, prod에서는 silent drop한다. 그러나 호출부가 PII를 props에 포함한 채 머지되면 analytics 이벤트가 무음으로 사라져 데이터 누락 버그가 된다. 정적 탐지로 호출부 자체를 차단해야 한다.
+
+**올바른 패턴**:
+```typescript
+// ✅ CORRECT — 익명화된 카운터/분류값
+track('checkout.approve', { count: 1, purposeCategory: 'calibration' });
+track('sidebar.toggle', { state: 'collapsed' });
+
+// ❌ WRONG — PII 키 직접 전달
+track('checkout.approve', { userId: currentUser.id, count: 1 });
+track('user.signin', { email: user.email });
+track('profile.view', { firstName: user.name });
+```
+
+**검증 명령어**:
+```bash
+# track() 호출부에서 PII 키 props 탐지
+grep -rn "track(.*{" apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|lib/analytics/track.ts\|__tests__" \
+  | grep -E "userId|email|firstName|lastName|displayName|fullName|사번|employeeId"
+# 기대: 0건
+
+# PII deny-list 자체가 track.ts에 정의되어 있는지 확인
+grep -n "PII_DENY_KEYS" apps/frontend/lib/analytics/track.ts
+# 기대: 1건 이상 (deny-list 배열 + violatesPII 함수)
+```
+
+**PASS**: `track()` 호출부 전체에 PII 키 0건, `PII_DENY_KEYS` 배열 track.ts 내 존재
+**FAIL**: `userId`, `email` 등 PII 키 발견 → 카운터/분류값으로 교체 (`{ count: 1 }` 등)
+
+**관련 파일**:
+- `apps/frontend/lib/analytics/track.ts` — `PII_DENY_KEYS` 배열 + `violatesPII()` 런타임 검증
+- `apps/frontend/lib/analytics/__tests__/track.test.ts` — PII throw/drop 동작 회귀 테스트
+
+**발생 이력 (2026-04-30 신설)**: track() 신설 시 PII deny-list에 `'name'`을 포함했다가 컴포넌트명·설정명에도 흔히 쓰이는 키라 false-positive 발견. `firstName/lastName/displayName/fullName`으로 교체. 이 교체 이력이 "사람을 직접 식별하는 구체적 키만 등록" 원칙의 근거.

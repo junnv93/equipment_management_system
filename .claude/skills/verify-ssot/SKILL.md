@@ -1926,3 +1926,54 @@ grep -n "Promise<CheckoutSummary>\|summary?: CheckoutSummary" \
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — `CheckoutListResponse.summary`, `getSummary()` 반환 타입
 
 **발생 이력 (2026-04-30 신설)**: KPI 카드 버그 수정 과정에서 `CheckoutSummary.approved` 필드가 실제로 `in_progress` 전체를 의미하는데 프론트 로컬 정의 때문에 컴파일러가 drift를 잡지 못했음. 타입을 packages/schemas로 이동하고 필드명을 `inProgress`로 교정 후 빌드 실패로 모든 참조 즉시 탐지.
+
+### Step 54: Analytics SSOT — `lib/analytics/track.ts` 단일 진입점, `window.dispatchEvent` 직접 analytics 이벤트 발행 금지 (2026-04-30 추가)
+
+**규칙**: analytics 이벤트 발행은 `apps/frontend/lib/analytics/track.ts`의 `track()` 함수 단일 진입점만 허용. `window.dispatchEvent(new CustomEvent('app:analytics', ...))` 직접 호출 또는 GA/Amplitude SDK를 컴포넌트·훅 내에서 직접 임포트하는 것은 금지.
+
+**왜 중요한가**: 진입점이 분산되면 PII deny-list 검증, SSR-safe guard, timestamp 정규화 중 하나라도 빠진 호출이 생긴다. `track()`이 이 세 가지를 모두 보장하므로 우회 호출 0건 유지가 필수.
+
+**올바른 구조**:
+```typescript
+// ✅ CORRECT — track() SSOT 경유
+import { track } from '@/lib/analytics/track';
+track('sidebar.toggle', { state: 'collapsed' });
+
+// ❌ WRONG — 직접 발행 (PII 검증 우회)
+window.dispatchEvent(new CustomEvent('app:analytics', { detail: { event: 'x' } }));
+
+// ❌ WRONG — 외부 SDK 직접 import (PII 검증 없음)
+import { logEvent } from 'firebase/analytics';
+logEvent(analytics, 'sidebar_toggle');
+```
+
+**검증 명령어**:
+```bash
+# 1. window.dispatchEvent('app:analytics') 직접 호출 탐지
+grep -rn "dispatchEvent.*app:analytics\|CustomEvent.*app:analytics" \
+  apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|lib/analytics/track.ts"
+# 기대: 0건 (track.ts 자체 구현만 허용)
+
+# 2. 외부 analytics SDK 직접 import 탐지 (GA, Amplitude, Firebase 등)
+grep -rn "from 'firebase/analytics'\|from '@amplitude/analytics'\|from 'react-ga'" \
+  apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules"
+# 기대: 0건 (외부 SDK 통합은 track.ts 내부에서만)
+
+# 3. track() 진입점 존재 확인
+grep -n "^export function track" apps/frontend/lib/analytics/track.ts
+# 기대: 1건
+```
+
+**PASS**: `lib/analytics/track.ts` 외에 `app:analytics` CustomEvent 직접 발행 0건, 외부 analytics SDK 직접 import 0건
+**FAIL**: 컴포넌트·훅 내 `window.dispatchEvent('app:analytics')` 직접 → `track()` 경유로 교체
+
+**관련 파일**:
+- `apps/frontend/lib/analytics/track.ts` — `track()` 단일 진입점, SSR-safe, PII deny-list, CustomEvent 발행
+- `apps/frontend/lib/analytics/__tests__/track.test.ts` — 회귀 테스트 (5 cases)
+- `apps/frontend/hooks/use-sidebar-state.ts` — `track()` 사용 예시 (debounced)
+
+**발생 이력 (2026-04-30 신설)**: setqueryd-purge-and-bulk-ux contract 구현 시 sidebar 토글 analytics 추가. `window.dispatchEvent` 직접 호출 대신 SSR-safe + PII-safe + timestamp-normalized 단일 진입점 `track()`을 신설하여 향후 GA/Amplitude 통합 시에도 컴포넌트 코드 변경 없이 리스너만 등록하면 되는 구조 확립.
