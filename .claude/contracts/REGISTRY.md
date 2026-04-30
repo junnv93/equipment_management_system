@@ -51,4 +51,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 183개. 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 187개. 검색: `ls .claude/contracts/completed/ | grep <slug>`

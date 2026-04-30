@@ -7,6 +7,8 @@ updates:
       interval: 'weekly'
       day: 'monday'
     open-pull-requests-limit: 10
+    # pnpm.overrides caret(^) 잠금 정책 보존 — dependabot이 caret을 >= 로 넓히지 못하도록
+    versioning-strategy: 'auto'
     labels:
       - 'dependencies'
     groups:
@@ -47,6 +49,36 @@ updates:
         update-types: ['version-update:semver-major']
       # recharts is currently unused — remove dependency before re-enabling
       - dependency-name: 'recharts'
+        update-types: ['version-update:semver-major']
+      # React 19 + Next.js 16 RSC runtime compatibility — App Router 16→17 별도 마이그레이션
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
+      # next-auth v5+ auth() API 변경 — session/JWT 호환성
+      - dependency-name: 'next-auth'
+        update-types: ['version-update:semver-major']
+      # next-intl locale 라우팅 ABI 변경
+      - dependency-name: 'next-intl'
+        update-types: ['version-update:semver-major']
+      # tailwindcss v4 ESM/Lightning CSS 마이그레이션 필요
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+      # drizzle-orm/drizzle-kit 스키마/마이그레이션 형식 호환성 (baseline squash 정책)
+      - dependency-name: 'drizzle-orm'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'drizzle-kit'
+        update-types: ['version-update:semver-major']
+      # zod v4 schema API 변경
+      - dependency-name: 'zod'
+        update-types: ['version-update:semver-major']
+      # @playwright/test storageState/fixture 호환성
+      - dependency-name: '@playwright/test'
+        update-types: ['version-update:semver-major']
+      # pg는 Drizzle 호환 매트릭스에 의존
+      - dependency-name: 'pg'
         update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore'
