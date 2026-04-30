@@ -519,21 +519,39 @@ grep -rn "page\.route(" \
 **PASS:** 모킹 응답의 pagination 객체가 `{ currentPage, pageSize, total, totalPages }` 형태.
 **FAIL:** `page:` 필드 사용 → 컴포넌트의 `meta.pagination.currentPage` 참조가 `undefined` → UI 오동작.
 
-**18b: page.unroute() 정리 필수**
+**18b: page.unroute() 정리 필수 (픽스처 명 포함 — 2026-04-30 확장)**
+
+`page.route()` 뿐 아니라 `techManagerPage.route()` / `testOperatorPage.route()` 등 픽스처 이름이 붙은 호출도 탐지 대상.
+`await.*\.route\('` 패턴으로 모든 Playwright Page 객체의 route 호출을 포괄한다.
 
 ```bash
-# page.route() 사용 후 page.unroute() 없는 spec 탐지
-grep -rn "page\.route(" \
+# 모든 Playwright Page 객체 route 호출 수 vs unroute 수 불균형 탐지
+grep -rn "page\.route(\|Page\.route(" \
   apps/frontend/tests/e2e --include="*.spec.ts" -l \
   | while read f; do
-      routes=$(grep -c "page\.route(" "$f")
-      unroutes=$(grep -c "page\.unroute(" "$f")
+      routes=$(grep -cE "Page\.route\(|page\.route\(" "$f")
+      unroutes=$(grep -cE "unroute|unrouteAll" "$f")
       [ "$routes" -gt "$unroutes" ] && echo "UNROUTE 누락: $f (route=$routes unroute=$unroutes)"
     done
-# → 0건
+# → 0건 (workflow spec은 finally 블록 내 unroute 필수)
 ```
 
-**PASS:** `page.route()` 호출 수 ≤ `page.unroute()` 호출 수. **FAIL:** unroute 누락 → 이후 테스트에 모킹 오염.
+**근거 (2026-04-30):** WF-AP02-EXT Step EXT-3에서 `techManagerPage.route()` 패턴 도입. 기존 `page\.route(` 소문자 grep은 `techManagerPage.route(` (대문자 P) 미탐지 — 카운트 불일치 시 unroute 누락 감지 불가. `Page\.route(|page\.route(` 대소문자 OR 패턴으로 확장.
+
+**판정 기준:**
+- `workflows/` 스펙: **FAIL** — serial 모드 상태 공유 컨텍스트에서 route 누출은 실제 위험
+- `features/` 스펙: **WARN** — 각 test()가 fresh fixture를 받으므로 test 종료 시 자동 cleanup. 위생 권장
+
+**알려진 부채 (2026-04-30, WARN 수준):**
+- `features/dashboard/statistics.spec.ts` (route=1, unroute=0)
+- `features/equipment/list/equipment-list.spec.ts` (route=9, unroute=0)
+- `features/equipment/list/group-f-loading-states.spec.ts` (route=2, unroute=0)
+- `features/dashboard/dashboard.spec.ts` (route=3, unroute=0)
+- `features/equipment/create/equipment-form-errors.spec.ts` (route=7, unroute=0)
+- `features/calibration/certificate/registration-approval-flow.spec.ts` (route=1, unroute=0)
+- `features/calibration/certificate/rejection-workflow.spec.ts` (route=1, unroute=0)
+- `features/calibration/certificate/permission-error.spec.ts` (route=4, unroute=1)
+- `features/checkouts/suite-list-ia/s-empty-states.spec.ts` (route=3, unroute=2)
 
 **18c: goto 후 networkidle 금지**
 
