@@ -195,9 +195,9 @@ ctaKindNoneKeys.forEach(k => {
 > `NC_WORKFLOW_GUIDANCE_TOKENS` 에 있고 → i18n에도 존재해야 런타임 에러 없음.
 > 3곳 (토큰 정의 / i18n / `resolveNCGuidanceKey` 반환값)이 항상 동기화되어야 함.
 
-### Step 13: checkouts v2 네임스페이스 107개 필수 키 존재 확인
+### Step 13: checkouts v2 네임스페이스 103개 필수 키 존재 확인
 
-**배경**: `check-i18n-keys.mjs`는 FSM 40개 + v2 67개 = 107개 필수 키를 게이트로 검증.
+**배경**: `check-i18n-keys.mjs`는 FSM 38개 + v2 65개 = 103개 필수 키를 게이트로 검증.
 v2 네임스페이스: `guidance.*`, `list.subtab.*`, `list.count.*`, `timeline.*`,
 `emptyState.*`, `yourTurn.*`, `toast.transition.*`, `help.status.*`
 
@@ -205,7 +205,7 @@ v2 네임스페이스: `guidance.*`, `list.subtab.*`, `list.count.*`, `timeline.
 node scripts/check-i18n-keys.mjs --all
 ```
 
-**PASS**: `ko/en checkouts.json — fsm 40개 + v2 67개 = 107개 키 모두 존재`
+**PASS**: `ko/en checkouts.json — fsm 38개 + v2 65개 = 103개 키 모두 존재`
 **FAIL**: stderr에 누락 키 경로 출력 → JSON 파일 해당 경로에 값 추가
 
 **소유권 규칙**:
@@ -467,6 +467,41 @@ grep -n "stories" apps/frontend/eslint.config.mjs
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase C — `NextStepPanel.tsx`가 `components/shared/`에서 `components/checkouts/`로 이동하면서 shared/ 디렉터리의 namespace coupling 정책을 정적으로 강제하기 위해 `SHARED_COMPONENT_DOMAIN_NS_RULE` ESLint 규칙이 추가됨. 이전에는 shared/ 컴포넌트가 도메인 namespace를 직접 호출해도 빌드 단계에서 탐지되지 않았음.
 
+### Step 19: ESLint typed linting 블록 inner ignores — `**/*.stories.{ts,tsx}` 포함 확인 (2026-04-30 추가)
+
+**배경**: ESLint flat config에서 `project: true`를 사용하는 typed linting 블록은 global ignores와 독립 동작한다. Storybook stories 파일(`*.stories.{ts,tsx}`)이 tsconfig의 exclude에 있으면 typed linting 블록이 `parserOptions.project has been provided but file not found` 파싱 오류를 일으킨다. 최상위 `ignores` 배열에 stories 패턴이 있어도 typed linting 블록의 inner `ignores`에 별도로 명시하지 않으면 파싱 오류가 발생한다.
+
+**규칙**:
+- `eslint.config.mjs`의 typed linting 블록(`project: true` 포함 블록)의 `ignores` 배열에 `**/*.stories.{ts,tsx}` 패턴이 포함되어야 한다.
+- Global ignores와 중복이더라도 typed linting 블록 내부에 명시적으로 추가해야 한다 (ESLint flat config 설계 특성).
+
+**검증 명령**:
+```bash
+node -e "
+const fs = require('fs');
+const src = fs.readFileSync('apps/frontend/eslint.config.mjs', 'utf8');
+const projectTrueIdx = src.indexOf('project: true');
+if (projectTrueIdx === -1) { console.log('INFO: typed linting block 없음 (검사 스킵)'); process.exit(0); }
+const blockStr = src.slice(projectTrueIdx, projectTrueIdx + 2000);
+if (blockStr.includes('stories')) {
+  console.log('PASS: typed linting block ignores에 stories 패턴 포함');
+} else {
+  console.log('FAIL: typed linting block ignores에 stories 패턴 없음 — parserOptions.project 파싱 오류 위험');
+  process.exit(1);
+}
+" 2>/dev/null
+```
+
+**PASS**: typed linting block의 `ignores` 배열에 `**/*.stories.{ts,tsx}` 포함.
+**FAIL**: stories 패턴 누락 → typed linting block ignores에 `'**/*.stories.{ts,tsx}'` 추가.
+
+**예외**: typed linting block(`project: true`) 자체가 없는 프로젝트는 INFO로 처리(스킵).
+
+**관련 파일**:
+- `apps/frontend/eslint.config.mjs` — typed linting 블록 inner ignores (line 291)
+
+**발생 이력 (2026-04-30 신설)**: sv-system-wide-completion harness — `NextStepPanel.stories.tsx`의 `parserOptions.project` 파싱 오류. ESLint flat config에서 inner ignores는 global ignores와 독립 동작함을 확인. Typed linting 블록 ignores에 `'**/*.stories.{ts,tsx}'`를 별도 추가하여 해결.
+
 ## Output Format
 
 ```markdown
@@ -484,12 +519,13 @@ grep -n "stories" apps/frontend/eslint.config.mjs
 | 10  | audit SSOT enum ↔ i18n 동기화   | PASS/FAIL | 누락 entityType/action 목록 |
 | 11  | getSamplerPresetOrder ↔ qr.json | PASS/FAIL | sampler.header/size 누락·초과 preset 목록 |
 | 12  | NCGuidanceKey ↔ non-conformances.json 동기화 | PASS/FAIL | en/ko 누락 guidance 키, ctaHint 잔재 목록 |
-| 13  | checkouts v2 네임스페이스 107개 필수 키 존재 | PASS/FAIL | 누락 키 경로 목록 |
+| 13  | checkouts v2 네임스페이스 103개 필수 키 존재 | PASS/FAIL | 누락 키 경로 목록 |
 | 14  | checkouts.emptyState.*.description 마침표 없음 | PASS/FAIL | 마침표 잔존 키 목록 |
 | 15  | commentRequired=true ↔ commentDialogTitleKey/commentPlaceholderKey i18n 존재 | PASS/FAIL | ko/en approvals.json 누락 키 목록 |
 | 16  | 호출지 ↔ messages JSON parity + common.json 구조 (정적 + 회귀 차단) | PASS/FAIL | 누락 키 file:line + ns + locales 목록, 또는 common.json flat root key 위반 |
 | 17  | check-i18n-call-sites.mjs 구조 — CROSS_CUTTING_NAMESPACES + checkStructuralNamespaces | PASS/FAIL | 상수 누락, common/errors 미포함, 함수 정의 부재 위치 |
 | 18  | components/shared/ 도메인 namespace 결합 차단 — SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트 | PASS/FAIL | 상수 없음, shared glob 미적용, negative lookahead 누락 namespace 목록 |
+| 19  | ESLint typed linting 블록 inner ignores — `**/*.stories.{ts,tsx}` 포함 확인 | PASS/FAIL/INFO | stories 패턴 누락 시 파싱 오류 경로, typed linting block 없으면 INFO |
 ```
 
 ## Exceptions
