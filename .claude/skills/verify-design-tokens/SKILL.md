@@ -2137,3 +2137,39 @@ grep -rn "className.*flex.*flex-col" \
 
 **관련 파일:**
 - `apps/frontend/components/layout/MobileNav.tsx` — 참조 구현 (`<ul role="list">` + `<li>` 적용)
+
+---
+
+### Step 51: `text-[10px]` arbitrary size → `MICRO_TYPO.badge` 토큰 경유 필수 (2026-04-30 추가)
+
+`MICRO_TYPO.badge = 'text-2xs'` (Tailwind `text-2xs` = 0.625rem = 10px)가 존재하는데도 `text-[10px]` arbitrary value를 사용하면 Design Token 3-Layer 원칙 위반이다. Arbitrary value는 Tailwind JIT purge 불안정 + 단일 변경점 깨짐(글꼴 크기 변경 시 `MICRO_TYPO.badge` 한 곳만 바꾸면 끝나야 함).
+
+**위반 패턴 (`approval.ts:516`에서 발견, 2026-04-30 수정):**
+
+```typescript
+// ❌ WRONG — arbitrary font size in design token file
+completed: 'text-brand-ok text-[10px]',
+
+// ✅ CORRECT — MICRO_TYPO.badge 토큰 보간
+completed: `text-brand-ok ${MICRO_TYPO.badge}`,
+```
+
+**탐지:**
+
+```bash
+# lib/design-tokens/ 내 text-[10px] arbitrary size 탐지
+grep -rn "text-\[10px\]" apps/frontend/lib/design-tokens/ apps/frontend/components/
+# 0건이어야 PASS — MICRO_TYPO.badge ('text-2xs') 경유 필수
+```
+
+**PASS:** `text-[10px]` 0건. **FAIL:** 1건 이상 → `${MICRO_TYPO.badge}` 보간으로 교체.
+
+**예외:**
+- `text-[56px]`, `text-[32px]` 등 MICRO_TYPO에 없는 display 전용 크기 — 해당 크기의 named token이 없으면 arbitrary 허용 (단, 주석으로 이유 명시)
+- `components/ui/` (shadcn) — 라이브러리 컴포넌트, 자체 스타일 시스템 유지
+
+**발생 이력 (2026-04-30):** `APPROVAL_CATEGORY_SIDEBAR_TOKENS.badge.completed`에 `text-[10px]` 발견. `MICRO_TYPO` 이미 import 되어 있었으므로 `${MICRO_TYPO.badge}` 보간 1줄 수정으로 해결.
+
+**관련 파일:**
+- `apps/frontend/lib/design-tokens/semantic.ts` — `MICRO_TYPO.badge = 'text-2xs'` SSOT 정의
+- `apps/frontend/lib/design-tokens/components/approval.ts` — 참조 구현 (MICRO_TYPO.badge 보간)

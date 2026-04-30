@@ -746,6 +746,7 @@ console.log(issues.length ? 'FAIL:\n' + issues.join('\n') : 'PASS: all test.use(
 | 19b | emulateMedia reducedMotion 패턴 | PASS/INFO | pulse 클래스 검증 테스트에서 reduced-motion 시나리오 누락 |
 | 19c | 모바일 viewport + aria-modal 검증 | PASS/FAIL | Drawer toBeVisible 후 aria-modal="true" 검증 누락 |
 | 20e | 로그인 폼 자격증명 SSOT | PASS/FAIL | fill('user123') 등 하드코딩 리터럴 → E2E_PASSWORDS + DEV_*_PASSWORD fallback |
+| 22  | networkidle + 조건 기반 wait 중복 | PASS/WARN | reload 후 networkidle + waitForFunction/waitForSelector 직후 조합 탐지 |
 ```
 
 ## Exceptions
@@ -767,6 +768,52 @@ console.log(issues.length ? 'FAIL:\n' + issues.join('\n') : 'PASS: all test.use(
 15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — "클릭 후 아무 일도 일어나지 않음"을 증명하려면 일정 시간 대기가 불가피. `≤ 1000ms` 이내의 `waitForTimeout` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당. 예: early-return handler의 no-op 회귀 보호
 16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리 소속(CSS 셀렉터 아님). shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 `getByLabel`이 불안정할 때 허용. `getByRole('textbox', { name })`이 가능하면 그 쪽을 우선
 17. **`tests/e2e/a11y/*.a11y.spec.ts`** — 공개 라우트 접근성 게이트. 인증 불필요 페이지만 대상이므로 `auth.fixture` 대신 `@playwright/test` 직접 import 정당. `playwright.a11y.config.ts` 전용 설정 사용.
+
+### Step 22: goto/reload 후 `waitForLoadState('networkidle')` + 조건 기반 wait 중복 탐지 (2026-04-30 추가)
+
+`goto()` / `reload()` 직후에 `waitForFunction()` 또는 `waitForSelector()` 같은 조건 기반 wait가 이어진다면, 그 사이의 `waitForLoadState('networkidle')` 은 **중복**이다. 조건 기반 wait 자체가 해당 조건이 충족될 때까지 폴링하므로 네트워크 안정화를 별도로 기다릴 필요가 없다.
+
+**위반 패턴 (legacy-sw-cleanup.spec.ts에서 발견, 2026-04-30 수정):**
+
+```typescript
+// ❌ WRONG — reload 후 networkidle + 바로 waitForFunction 조합 (networkidle 중복)
+await page.reload();
+await page.waitForLoadState('networkidle');
+await page.waitForFunction((key) => localStorage.getItem(key) === '1', STORAGE_KEY);
+```
+
+```typescript
+// ✅ CORRECT — 조건 기반 wait 하나로 충분
+await page.reload();
+await page.waitForFunction((key) => localStorage.getItem(key) === '1', STORAGE_KEY, { timeout: 5000 });
+```
+
+**단, TC-03처럼 이어지는 조건 기반 wait 없이 `reload()` 후 단순 상태 확인만 한다면** `waitForLoadState('domcontentloaded')`가 적합하다 (`networkidle` 보다 빠르고 충분):
+
+```typescript
+// TC-03 패턴 — 이미 정착된 상태를 확인하는 경우
+await page.reload();
+await page.waitForLoadState('domcontentloaded');
+const flag = await page.evaluate(/* ... */);
+```
+
+**탐지:**
+
+```bash
+# goto/reload 직후 networkidle이 있고, 그 뒤 waitForFunction/waitForSelector가 이어지는 파일 탐지
+grep -rn "waitForLoadState.*networkidle" apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -v "/seeds/"
+# 각 결과의 앞뒤 10줄 확인 — 직후 waitForFunction/waitForSelector가 있으면 WARN
+```
+
+**예외:**
+- seed 파일 (`/seeds/`, `seed.spec.ts`) — 데이터 준비용으로 안정성 우선
+- `page.route()` 컨텍스트 내 networkidle → Step 18c에서 별도 관리
+- 이어지는 조건 기반 wait가 없는 단독 networkidle — Step 18c에 해당하지 않는 경우 WARN(검토 권장)
+
+**발생 이력 (2026-04-30):** `legacy-sw-cleanup.spec.ts` TC-01에서 `reload()` + `networkidle` + `waitForFunction` 3단 조합 발견. networkidle 2건 제거 완료 (`waitForFunction` + `domcontentloaded` 대체).
+
+---
 
 ### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion (2026-04-24 추가)
 
