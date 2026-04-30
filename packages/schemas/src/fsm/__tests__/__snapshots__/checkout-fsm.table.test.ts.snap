@@ -423,7 +423,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "checked_out:calibration:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -473,7 +473,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "checked_out:repair:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -498,7 +498,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "checked_out:return_to_vendor:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -730,27 +730,27 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
   "lender_received:rental:lab_manager": {
     "availableToCurrentUser": false,
     "nextAction": "submit_return",
-    "nextActor": "approver",
+    "nextActor": "none",
   },
   "lender_received:rental:quality_manager": {
     "availableToCurrentUser": false,
     "nextAction": "submit_return",
-    "nextActor": "approver",
+    "nextActor": "none",
   },
   "lender_received:rental:system_admin": {
     "availableToCurrentUser": true,
     "nextAction": "submit_return",
-    "nextActor": "approver",
+    "nextActor": "none",
   },
   "lender_received:rental:technical_manager": {
     "availableToCurrentUser": true,
     "nextAction": "submit_return",
-    "nextActor": "approver",
+    "nextActor": "none",
   },
   "lender_received:rental:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
-    "nextActor": "approver",
+    "nextActor": "none",
   },
   "lender_received:repair:lab_manager": {
     "availableToCurrentUser": false,
@@ -823,7 +823,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "overdue:calibration:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -848,7 +848,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "overdue:rental:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -873,7 +873,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "overdue:repair:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -898,7 +898,7 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
     "nextActor": "approver",
   },
   "overdue:return_to_vendor:test_engineer": {
-    "availableToCurrentUser": true,
+    "availableToCurrentUser": false,
     "nextAction": "submit_return",
     "nextActor": "approver",
   },
@@ -1229,28 +1229,28 @@ exports[`getNextStep behavioral regression all 260 combinations match snapshot 1
   },
   "returned:rental:lab_manager": {
     "availableToCurrentUser": false,
-    "nextAction": "approve_return",
-    "nextActor": "none",
+    "nextAction": null,
+    "nextActor": "system",
   },
   "returned:rental:quality_manager": {
     "availableToCurrentUser": false,
-    "nextAction": "approve_return",
-    "nextActor": "none",
+    "nextAction": null,
+    "nextActor": "system",
   },
   "returned:rental:system_admin": {
-    "availableToCurrentUser": true,
-    "nextAction": "approve_return",
-    "nextActor": "none",
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
   },
   "returned:rental:technical_manager": {
-    "availableToCurrentUser": true,
-    "nextAction": "approve_return",
-    "nextActor": "none",
+    "availableToCurrentUser": false,
+    "nextAction": null,
+    "nextActor": "system",
   },
   "returned:rental:test_engineer": {
     "availableToCurrentUser": false,
-    "nextAction": "approve_return",
-    "nextActor": "none",
+    "nextAction": null,
+    "nextActor": "system",
   },
   "returned:repair:lab_manager": {
     "availableToCurrentUser": false,

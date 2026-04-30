@@ -83,6 +83,7 @@ export default function ConditionCheckClient({
         queryKey: queryKeys.checkouts.resource.detail(checkout.id),
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
+      router.refresh();
       router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     },
   });

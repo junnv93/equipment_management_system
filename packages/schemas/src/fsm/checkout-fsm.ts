@@ -380,13 +380,13 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
   {
     from: 'lender_received',
     action: 'submit_return',
-    to: 'returned',
+    to: 'return_approved', // rental: 반입처리 = 최종 승인 (condition check 4단계로 검증 완료)
     purposes: RENTAL,
     requires: 'approve:checkout', // 반입 처리는 기술책임자 전용 (UL-QP-18 직무분리)
-    nextActor: 'approver',
+    nextActor: 'none',
     labelKey: 'submit_return',
     hintKey: 'checkedOutSubmitReturn',
-    auditEventSuffix: 'return_submitted',
+    auditEventSuffix: 'return_approved',
   },
   // ── checked_out ───────────────────────────────────────────────────────────
   {
@@ -417,7 +417,7 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     from: 'returned',
     action: 'approve_return',
     to: 'return_approved',
-    purposes: ALL,
+    purposes: CAL_REPAIR, // rental은 lender_received에서 submit_return 시 return_approved로 직접 전환
     requires: 'approve:checkout',
     nextActor: 'none',
     labelKey: 'approve_return',
@@ -464,6 +464,8 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
   }
 
   // Rental path traversability (2-step approval: pending → borrower_approved → approved)
+  // rental은 condition check 4단계 완료 후 lender_received에서 submit_return 시 return_approved로 직접 전환.
+  // 'returned' 중간 상태는 rental 경로에서 제거됨 (cal/repair 전용).
   const rentalPath: CheckoutStatus[] = [
     'pending',
     'borrower_approved',
@@ -472,7 +474,6 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
     'in_use',
     'borrower_returned',
     'lender_received',
-    'returned',
     'return_approved',
   ];
   for (let i = 0; i < rentalPath.length - 1; i++) {

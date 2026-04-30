@@ -2533,6 +2533,13 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // ✅ 트랜잭션: checkout 상태 변경 + 장비별 상태 기록을 원자적으로 처리
+      // rental: condition check 4단계(LENDER_RETURN)에서 검증 완료 → 반입처리 = 최종 승인
+      const isRental = purpose === CPVal.RENTAL;
+      const nextStatus = isRental
+        ? (CSVal.RETURN_APPROVED as CheckoutStatus)
+        : (CSVal.RETURNED as CheckoutStatus);
+      const now = new Date();
+
       const updated = await this.db.transaction(async (tx) => {
         // 1. CAS를 사용한 checkout 상태 전환
         const result = await this.updateWithVersion<Checkout>(
@@ -2540,13 +2547,15 @@ export class CheckoutsService extends VersionedBaseService {
           uuid,
           returnDto.version,
           {
-            status: CSVal.RETURNED as CheckoutStatus,
-            actualReturnDate: new Date(),
+            status: nextStatus,
+            actualReturnDate: now,
             returnerId,
             calibrationChecked: returnDto.calibrationChecked ?? false,
             repairChecked: returnDto.repairChecked ?? false,
             workingStatusChecked: resolvedWorkingStatusChecked,
             inspectionNotes: returnDto.inspectionNotes || null,
+            // rental: 반입처리가 최종 승인 — 처리자가 곧 승인자
+            ...(isRental ? { returnApprovedBy: returnerId, returnApprovedAt: now } : {}),
           },
           '반출',
           tx
@@ -2575,15 +2584,10 @@ export class CheckoutsService extends VersionedBaseService {
         return result;
       });
 
-      // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
+      // non-rental: 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
+      // rental: 장비 상태는 LENDER_RETURN condition check에서 이미 AVAILABLE로 변경됨
 
-      await this.writeTransitionAudit(
-        checkout,
-        'submit_return',
-        uuid,
-        CSVal.RETURNED as CheckoutStatus,
-        req
-      );
+      await this.writeTransitionAudit(checkout, 'submit_return', uuid, nextStatus, req);
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2593,18 +2597,34 @@ export class CheckoutsService extends VersionedBaseService {
       const { items: returnItems, firstEquipment: returnFirstEquip } =
         await this.getCheckoutItemsWithFirstEquipment(uuid);
       if (returnItems.length > 0 && returnFirstEquip) {
-        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURNED, {
-          checkoutId: uuid,
-          equipmentId: returnItems[0].equipmentId,
-          equipmentName: returnFirstEquip.name,
-          managementNumber: returnFirstEquip.managementNumber,
-          requesterId: checkout.requesterId,
-          requesterTeamId: affectedTeams[0] ?? '',
-          actorId: returnerId,
-          actorName: '',
-          nextActor: this.resolveNextActor(checkout.purpose, CSVal.RETURNED as CheckoutStatus),
-          timestamp: new Date(),
-        });
+        if (isRental) {
+          // rental: 반입처리가 곧 최종 승인 → RETURN_APPROVED 이벤트 발행
+          await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED, {
+            checkoutId: uuid,
+            equipmentId: returnItems[0].equipmentId,
+            equipmentName: returnFirstEquip.name ?? null,
+            managementNumber: returnFirstEquip.managementNumber ?? null,
+            requesterId: checkout.requesterId,
+            requesterTeamId: affectedTeams[0] ?? '',
+            actorId: returnerId,
+            actorName: '',
+            nextActor: 'none' as NextActor,
+            timestamp: now,
+          });
+        } else {
+          await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURNED, {
+            checkoutId: uuid,
+            equipmentId: returnItems[0].equipmentId,
+            equipmentName: returnFirstEquip.name,
+            managementNumber: returnFirstEquip.managementNumber,
+            requesterId: checkout.requesterId,
+            requesterTeamId: affectedTeams[0] ?? '',
+            actorId: returnerId,
+            actorName: '',
+            nextActor: this.resolveNextActor(checkout.purpose, CSVal.RETURNED as CheckoutStatus),
+            timestamp: now,
+          });
+        }
       }
 
       return updated;
