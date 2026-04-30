@@ -59,6 +59,8 @@ function KpiCard({
       aria-label={label}
       onClick={onClick}
       onKeyDown={(e) => {
+        // 한글 IME composition 중에는 단축키 처리 금지
+        if (e.nativeEvent.isComposing) return;
         if (onClick && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onClick();

@@ -40,6 +40,8 @@ export function RowSelectCell<T>({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // 한글 IME composition 중에는 단축키 처리 금지 — 입력 중 Enter는 조합 확정용
+      if (e.nativeEvent.isComposing) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         toggle(key, item);

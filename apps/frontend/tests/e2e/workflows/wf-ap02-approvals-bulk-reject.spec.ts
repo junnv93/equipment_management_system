@@ -179,4 +179,37 @@ test.describe('WF-AP02: 승인 목록 일괄 반려', () => {
 
     await expect(bar).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Step 7 (a11y): toolbar aria-live + 부분선택 시 master checkbox aria-checked="mixed"', async ({
+    techManagerPage: page,
+  }) => {
+    await page.goto('/admin/approvals?tab=outgoing');
+    await page.waitForSelector('[data-testid="approval-item"]', { timeout: 15000 });
+
+    const rows = page.locator('[data-testid="approval-item"]');
+    if ((await rows.count()) < 2) {
+      // 데이터 부족 — 스킵
+      return;
+    }
+
+    // toolbar는 aria-live="polite" — 카운트 변화를 SR이 polite하게 알림
+    const toolbar = page.locator('[role="toolbar"]').first();
+    await rows.first().locator('[role="checkbox"]').click();
+    await expect(toolbar).toHaveAttribute('aria-live', 'polite');
+
+    // 부분 선택 (1/2건) — toolbar 마스터 체크박스는 aria-checked="mixed"
+    // (Radix Checkbox checked='indeterminate' → 자동으로 mixed 부여)
+    const masterCheckbox = toolbar.locator('[role="checkbox"]').first();
+    await expect(masterCheckbox).toHaveAttribute('aria-checked', 'mixed');
+
+    // 모두 선택 (2/2건) — aria-checked="true"
+    await rows.nth(1).locator('[role="checkbox"]').click();
+    await expect(masterCheckbox).toHaveAttribute('aria-checked', 'true');
+
+    // 모두 해제 — toolbar 자체가 hidden 처리되므로 aria-hidden 검증으로 대체
+    await rows.first().locator('[role="checkbox"]').click();
+    await rows.nth(1).locator('[role="checkbox"]').click();
+    const bar = page.locator('[data-testid="bulk-action-bar"]');
+    await expect(bar).toHaveAttribute('aria-hidden', 'true');
+  });
 });

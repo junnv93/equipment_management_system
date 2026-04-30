@@ -107,7 +107,11 @@
       "Bash(mv .claude/exec-plans/active/2026-04-30-checkouts-v3-sprint45.md .claude/exec-plans/completed/)",
       "Bash(mv .claude/contracts/checkouts-v3-sprint45.md .claude/contracts/completed/)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-30-tech-debt-batch-0430c.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-30-tech-debt-batch-0430c.md)",
-      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/tech-debt-batch-0430c.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/tech-debt-batch-0430c.md)"
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/tech-debt-batch-0430c.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/tech-debt-batch-0430c.md)",
+      "Bash(mv .claude/exec-plans/active/2026-04-30-tech-debt-batch-0430d.md .claude/exec-plans/completed/2026-04-30-tech-debt-batch-0430d.md)",
+      "Bash(mv .claude/contracts/tech-debt-batch-0430d.md .claude/contracts/completed/tech-debt-batch-0430d.md)",
+      "Bash(mv .claude/exec-plans/active/2026-04-30-setqueryd-purge-and-bulk-ux.md .claude/exec-plans/completed/2026-04-30-setqueryd-purge-and-bulk-ux.md)",
+      "Bash(mv .claude/contracts/setqueryd-purge-and-bulk-ux.md .claude/contracts/completed/setqueryd-purge-and-bulk-ux.md)"
     ],
     "deny": [],
     "ask": []
