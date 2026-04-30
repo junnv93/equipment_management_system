@@ -571,7 +571,7 @@ export default function CheckoutsContent({
 
         <TabsContent value="inbound" className="mt-0">
           <Suspense fallback={<CheckoutListSkeleton />}>
-            <InboundCheckoutsTab teamId={teamId} filters={filters} onResetFilters={resetFilters} />
+            <InboundCheckoutsTab filters={filters} onResetFilters={resetFilters} />
           </Suspense>
         </TabsContent>
       </Tabs>

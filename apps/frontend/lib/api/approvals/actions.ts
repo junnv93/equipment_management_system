@@ -42,6 +42,21 @@ const ORIGINAL_DATA_REQUIRED_CATEGORIES = new Set<ApprovalCategory>([
   'disposal_final',
 ]);
 
+const BULK_CONCURRENCY_LIMIT = 5;
+
+async function runWithConcurrency<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number
+): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = [];
+  for (let i = 0; i < tasks.length; i += concurrency) {
+    const batch = tasks.slice(i, i + concurrency).map((task) => task());
+    const batchResults = await Promise.allSettled(batch);
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 // ============================================================================
 // 헬퍼
 // ============================================================================
@@ -295,10 +310,10 @@ export async function bulkApprove(
 ): Promise<{ success: string[]; failed: string[] }> {
   const itemsMap = await fetchItemsMapIfNeeded(category);
 
-  // Promise.allSettled: 병렬 실행 + 부분 실패 허용 (bulkReject와 동일 전략)
+  // runWithConcurrency: 동시성 5 제한 배치 실행 + 부분 실패 허용
   // CAS 안전성: bulk 내 각 id는 서로 다른 엔티티이므로 버전 충돌 없음
-  const results = await Promise.allSettled(
-    ids.map((id) => {
+  const results = await runWithConcurrency(
+    ids.map((id) => () => {
       let equipmentId: string | undefined;
       let originalData: unknown;
       if (itemsMap) {
@@ -307,7 +322,8 @@ export async function bulkApprove(
         originalData = item?.originalData;
       }
       return approve(category, id, comment, equipmentId, originalData);
-    })
+    }),
+    BULK_CONCURRENCY_LIMIT
   );
 
   const success: string[] = [];
@@ -335,9 +351,9 @@ export async function bulkReject(
 ): Promise<{ success: string[]; failed: string[] }> {
   const itemsMap = await fetchItemsMapIfNeeded(category);
 
-  // Promise.allSettled: 병렬 실행 + 부분 실패 허용
-  const results = await Promise.allSettled(
-    ids.map((id) => {
+  // runWithConcurrency: 동시성 5 제한 배치 실행 + 부분 실패 허용
+  const results = await runWithConcurrency(
+    ids.map((id) => () => {
       let equipmentId: string | undefined;
       let originalData: unknown;
       if (itemsMap) {
@@ -346,7 +362,8 @@ export async function bulkReject(
         originalData = item?.originalData;
       }
       return reject(category, id, reason, equipmentId, originalData);
-    })
+    }),
+    BULK_CONCURRENCY_LIMIT
   );
 
   const success: string[] = [];

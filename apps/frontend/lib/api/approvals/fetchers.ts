@@ -13,6 +13,9 @@ import {
   type UserRole,
   EquipmentImportStatusValues as EIStVal,
   LENDER_APPROVAL_PENDING_STATUSES,
+  CheckoutStatusValues,
+  CheckoutPurposeValues,
+  IntermediateCheckFilterStatusValues,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from '../calibration-api';
 import checkoutApi, { type Checkout } from '../checkout-api';
@@ -93,8 +96,8 @@ async function getPendingOutgoing(_teamId?: string): Promise<ApprovalItem[]> {
         direction: 'outbound',
       }),
       checkoutApi.getCheckouts({
-        statuses: 'pending',
-        purpose: 'return_to_vendor',
+        statuses: CheckoutStatusValues.PENDING,
+        purpose: CheckoutPurposeValues.RETURN_TO_VENDOR,
         direction: 'outbound',
       }),
     ]);
@@ -214,7 +217,7 @@ async function getPendingNonConformities(): Promise<ApprovalItem[]> {
 
 async function getPendingInspections(teamId?: string): Promise<ApprovalItem[]> {
   try {
-    const params = new URLSearchParams({ status: 'due' });
+    const params = new URLSearchParams({ status: IntermediateCheckFilterStatusValues.DUE });
     if (teamId) params.set('teamId', teamId);
     const response = await apiClient.get(
       `${API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL}?${params.toString()}`
