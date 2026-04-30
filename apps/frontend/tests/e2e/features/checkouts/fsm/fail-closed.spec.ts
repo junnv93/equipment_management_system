@@ -240,14 +240,13 @@ test.describe('FC: test_engineer — fail-closed 회귀 방지', () => {
 });
 
 // ─────────────────────────────────────────────────
-// FC-13 ~ FC-14: 반려 버튼 + quality_manager 회귀
+// FC-13: technical_manager — 반려 버튼 fail-closed
 // ─────────────────────────────────────────────────
 
-test.describe('FC: 반려 버튼 + quality_manager 회귀', () => {
-  test('FC-13: technical_manager — meta없음 → 반려 버튼 hidden (canReject fail-closed)', async ({
-    page,
-  }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
+test.describe('FC-13: technical_manager — 반려 버튼 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
+
+  test('FC-13: meta없음 → 반려 버튼 hidden (canReject fail-closed)', async ({ page }) => {
     await routeStrippingMeta(page);
     await page.goto('/checkouts');
     await page.waitForLoadState('domcontentloaded');
@@ -256,11 +255,16 @@ test.describe('FC: 반려 버튼 + quality_manager 회귀', () => {
     await expect(page.getByRole('button', { name: '반려' })).toBeHidden();
     await page.unroute('**/api/checkouts**');
   });
+});
 
-  test('FC-14: quality_manager — meta없음 → 승인 버튼 hidden (권한 없음 회귀 방지)', async ({
-    page,
-  }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'quality-manager.json') });
+// ─────────────────────────────────────────────────
+// FC-14: quality_manager — 승인 버튼 회귀
+// ─────────────────────────────────────────────────
+
+test.describe('FC-14: quality_manager — 승인 버튼 회귀', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'quality-manager.json') });
+
+  test('FC-14: meta없음 → 승인 버튼 hidden (권한 없음 회귀 방지)', async ({ page }) => {
     await routeStrippingMeta(page);
     await page.goto('/checkouts');
     await page.waitForLoadState('domcontentloaded');
@@ -272,12 +276,13 @@ test.describe('FC: 반려 버튼 + quality_manager 회귀', () => {
 });
 
 // ─────────────────────────────────────────────────
-// FC-15 ~ FC-16: availableActions 변형 (empty object)
+// FC-15: lab_manager — 완료 탭 반입 승인 fail-closed
 // ─────────────────────────────────────────────────
 
-test.describe('FC: availableActions 변형', () => {
-  test('FC-15: lab_manager — 완료 탭 + meta없음 → 반입 승인 없음', async ({ page }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'lab-manager.json') });
+test.describe('FC-15: lab_manager — 완료 탭 반입 승인 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'lab-manager.json') });
+
+  test('FC-15: 완료 탭 + meta없음 → 반입 승인 없음', async ({ page }) => {
     await routeStrippingMeta(page);
     await page.goto('/checkouts?subTab=completed');
     await page.waitForLoadState('domcontentloaded');
@@ -286,11 +291,16 @@ test.describe('FC: availableActions 변형', () => {
     await expect(page.getByRole('button', { name: /반입 승인/ })).toBeHidden();
     await page.unroute('**/api/checkouts**');
   });
+});
 
-  test('FC-16: system_admin — availableActions: {} (빈 객체) → 승인 버튼 hidden', async ({
-    page,
-  }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'system-admin.json') });
+// ─────────────────────────────────────────────────
+// FC-16: system_admin — availableActions: {} fail-closed
+// ─────────────────────────────────────────────────
+
+test.describe('FC-16: system_admin — availableActions 빈 객체 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'system-admin.json') });
+
+  test('FC-16: availableActions: {} (빈 객체) → 승인 버튼 hidden', async ({ page }) => {
     await routeWithEmptyActions(page);
     await page.goto('/checkouts');
     await page.waitForLoadState('domcontentloaded');
@@ -332,11 +342,10 @@ test.describe('FC: explicit false in availableActions', () => {
 // FC-19 ~ FC-20: canBorrowerApprove + pagination 회귀
 // ─────────────────────────────────────────────────
 
-test.describe('FC: canBorrowerApprove + pagination 회귀', () => {
-  test('FC-19: test_engineer — 렌탈 필터 + meta없음 → 1차 승인 hidden (canBorrowerApprove)', async ({
-    page,
-  }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'test-engineer.json') });
+test.describe('FC-19: test_engineer — 렌탈 1차 승인 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'test-engineer.json') });
+
+  test('FC-19: 렌탈 필터 + meta없음 → 1차 승인 hidden (canBorrowerApprove)', async ({ page }) => {
     await routeStrippingMeta(page);
     await page.goto('/checkouts?purpose=rental');
     await page.waitForLoadState('domcontentloaded');
@@ -345,11 +354,12 @@ test.describe('FC: canBorrowerApprove + pagination 회귀', () => {
     await expect(page.getByRole('button', { name: /1차 승인/ })).toBeHidden();
     await page.unroute('**/api/checkouts**');
   });
+});
 
-  test('FC-20: technical_manager — page=2 이동 후 meta없음 → 승인 버튼 없음 (회귀)', async ({
-    page,
-  }) => {
-    test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
+test.describe('FC-20: technical_manager — pagination 회귀 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
+
+  test('FC-20: page=2 이동 후 meta없음 → 승인 버튼 없음 (회귀)', async ({ page }) => {
     await routeStrippingMeta(page);
     await page.goto('/checkouts?page=2');
     await page.waitForLoadState('domcontentloaded');
