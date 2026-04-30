@@ -301,7 +301,7 @@ test.describe('WF-AP02: 승인 목록 일괄 반려', () => {
     await rows.first().locator('[role="checkbox"]').click();
     await rows.nth(1).locator('[role="checkbox"]').click();
 
-    // bulk-reject API 부분 실패 mock: 1건 성공 + 1건 실패
+    // bulk-reject API 부분 실패 mock: body = { rejected: [성공 건], failed: [실패 건] }
     await page.route('**/api/checkouts/bulk-reject', async (route) => {
       const body = JSON.parse(route.request().postData() ?? '{}') as { ids?: string[] };
       const ids = body.ids ?? [];
