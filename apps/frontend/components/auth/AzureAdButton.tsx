@@ -3,7 +3,6 @@
 import { signIn } from 'next-auth/react';
 import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { MicrosoftLogo } from '@/lib/brand-assets/microsoft-logo';
@@ -40,6 +39,8 @@ export function AzureAdButton({
       onClick={handleClick}
       disabled={disabled || isPending}
       loading={isPending}
+      loadingPosition="replace"
+      loadingLabel={AUTH_CONTENT.button.azureAdLoading}
       className={cn(
         'w-full h-12 text-base font-medium text-white',
         'focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -64,15 +65,8 @@ export function AzureAdButton({
       aria-label={AUTH_CONTENT.button.azureAd}
       data-testid="azure-ad-button"
     >
-      {isPending ? (
-        <Loader2
-          className="mr-3 h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none text-white/70"
-          aria-hidden="true"
-        />
-      ) : (
-        <MicrosoftLogo className="mr-3 h-5 w-5" />
-      )}
-      {isPending ? AUTH_CONTENT.button.azureAdLoading : AUTH_CONTENT.button.azureAd}
+      <MicrosoftLogo className="mr-3 h-5 w-5" />
+      {AUTH_CONTENT.button.azureAd}
     </Button>
   );
 }

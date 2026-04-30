@@ -126,6 +126,7 @@ export function ApprovalStepIndicator({
               <div
                 className={cn(
                   APPROVAL_STEPPER_TOKENS.connector.base,
+                  APPROVAL_STEPPER_TOKENS.connector.transition,
                   isRejected
                     ? APPROVAL_STEPPER_TOKENS.connector.rejectedDashed
                     : currentOrder > stepOrder

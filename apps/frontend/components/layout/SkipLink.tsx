@@ -19,10 +19,12 @@ import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface SkipLinkProps {
   href?: string;
+  /** i18n 키 (navigation 네임스페이스 기준). 미전달 시 'layout.skipToContent' 사용 */
+  labelKey?: string;
   children?: React.ReactNode;
 }
 
-export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
+export function SkipLink({ href = '#main-content', labelKey, children }: SkipLinkProps) {
   const t = useTranslations('navigation');
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -32,6 +34,8 @@ export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
       target.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const label = children ?? t((labelKey ?? 'layout.skipToContent') as Parameters<typeof t>[0]);
 
   return (
     <a
@@ -47,7 +51,7 @@ export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
         TRANSITION_PRESETS.fastTransformOpacity
       )}
     >
-      {children ?? t('layout.skipToContent')}
+      {label}
     </a>
   );
 }

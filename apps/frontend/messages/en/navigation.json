@@ -82,6 +82,7 @@
     "checkoutYourTurnAria": "Your turn: {count} checkouts",
     "checkoutOpenList": "Checkout management list",
     "skipToContent": "Skip to main content",
+    "skipToDashboard": "Skip to dashboard content",
     "menuOpen": "Open menu",
     "menuClose": "Close menu",
     "menuOpened": "Menu opened",

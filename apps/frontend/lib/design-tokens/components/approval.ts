@@ -87,6 +87,7 @@ export const APPROVAL_STEPPER_TOKENS = {
   /** 연결선 (flex-1로 늘어남 — 단계 수에 무관하게 균등 분배) */
   connector: {
     base: 'flex-1 min-w-[24px] h-0.5 mx-2',
+    transition: TRANSITION_PRESETS.fastBg,
     completed: 'bg-brand-ok',
     pending: 'bg-brand-neutral/20',
     /** 반려 이후 — dashed + opacity 억제 */

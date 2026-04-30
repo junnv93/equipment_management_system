@@ -120,8 +120,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
   return (
     <BreadcrumbProvider>
       <div className="flex min-h-screen bg-background">
-        {/* 스킵 네비게이션 */}
+        {/* 스킵 네비게이션 — WCAG 2.4.1 다중 skip link */}
         <SkipLink href="#main-content" />
+        <SkipLink href="#dashboard-row1" labelKey="layout.skipToDashboard" />
 
         {/* 데스크톱 사이드바 - UL Midnight Blue */}
         <aside
@@ -248,20 +249,21 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   </div>
                 )}
                 {/* 아이템 목록 — 보조 액션은 nav-config 정규화에서 secondaryAction으로 내려옴 */}
-                <div className="flex flex-col gap-1">
+                <ul className="flex flex-col gap-1 list-none" role="list">
                   {section.items.map((item) => (
-                    <NavRowWithSecondaryAction
-                      key={item.href}
-                      icon={item.icon}
-                      href={item.href}
-                      label={item.label}
-                      isActive={isNavItemActive(item.href, pathname)}
-                      badge={item.badge}
-                      secondaryAction={item.secondaryAction}
-                      isCollapsed={isCollapsed}
-                    />
+                    <li key={item.href}>
+                      <NavRowWithSecondaryAction
+                        icon={item.icon}
+                        href={item.href}
+                        label={item.label}
+                        isActive={isNavItemActive(item.href, pathname)}
+                        badge={item.badge}
+                        secondaryAction={item.secondaryAction}
+                        isCollapsed={isCollapsed}
+                      />
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ))}
           </nav>

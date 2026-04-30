@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { Loader2, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -238,6 +238,8 @@ export function LoginForm({
           )}
           disabled={isPending || disabled || isSuccess}
           loading={isPending}
+          loadingPosition="replace"
+          loadingLabel={t('submitting')}
           data-testid="login-button"
         >
           <div className="flex items-center justify-center gap-2">
@@ -248,14 +250,6 @@ export function LoginForm({
                   aria-hidden="true"
                 />
                 <span>{t('submitSuccess')}</span>
-              </>
-            ) : isPending ? (
-              <>
-                <Loader2
-                  className="h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none"
-                  aria-hidden="true"
-                />
-                <span>{t('submitting')}</span>
               </>
             ) : (
               <span>{t('submitButton')}</span>
