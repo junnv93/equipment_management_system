@@ -2073,3 +2073,67 @@ grep -rn "touched &&.*!.*trim\|touched && !value" \
 - `apps/frontend/app/(dashboard)/software/[id]/validation/_components/ValidationApproveDialog.tsx` — optional 코멘트 char count 패턴
 
 **발생 이력 (2026-04-29 신설):** mounted guard 추가 작업 중 role="status" + aria-live="assertive" 의미 불일치 발견. verify-security 에이전트가 탐지, 즉시 수정 후 Step 신설.
+
+### Step 50: 내비게이션 리스트 시맨틱 — `<ul role="list">` + `<li>` 패턴 (2026-04-30 추가)
+
+Safari VoiceOver는 `list-style: none` (Tailwind `list-none`)이 적용된 `<ul>` 요소에서
+**list semantics를 자동으로 제거**한다. 내비게이션 링크 목록을 `<div>` 컨테이너나 `list-none` `<ul>`로
+렌더하면 스크린리더 사용자에게 "목록 내 N개 항목"으로 안내되지 않는다. WCAG 1.3.1 Info and Relationships 위반.
+
+**올바른 패턴 (MobileNav.tsx 기준):**
+
+```tsx
+// ✅ CORRECT — list-none 에도 불구하고 role="list"로 VoiceOver 보존
+<ul className="flex flex-col gap-1 list-none" role="list">
+  {section.items.map(item => (
+    <li key={item.href}>
+      <NavLink href={item.href} icon={item.icon} label={item.label} />
+    </li>
+  ))}
+</ul>
+
+// ❌ WRONG — <div>는 list semantics 없음
+<div className="flex flex-col gap-1">
+  {section.items.map(item => (
+    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
+  ))}
+</div>
+
+// ❌ WRONG — <ul>에 role="list" 없이 list-none
+<ul className="flex flex-col gap-1 list-none">
+  {section.items.map(item => (
+    <NavLink key={item.href} ... />   {/* <li> 래핑 없음 */}
+  ))}
+</ul>
+```
+
+**적용 범위:** 내비게이션 링크 집합, 설정 카테고리 목록, 메뉴 항목 목록 등 반복 항목을 `.map()`으로 렌더하는 모든 컨테이너.
+
+**탐지:**
+
+```bash
+# 내비게이션 컴포넌트에서 .items.map()을 가진 컨테이너가 <ul role="list">인지 확인
+grep -rn "\.items\.map\|navItems\.map\|section\.items" \
+  apps/frontend/components/layout --include="*.tsx" -B 3 \
+  | grep -v "ul\|<li"
+# 결과 존재 시 FAIL — .map() 앞 컨테이너가 <ul role="list">여야 함
+```
+
+```bash
+# .map()으로 NavLink/아이템을 직접 렌더하는 <div> 탐지 (내비게이션 컴포넌트)
+grep -rn "className.*flex.*flex-col" \
+  apps/frontend/components/layout --include="*.tsx" -A 2 \
+  | grep -B 1 "\.map(" | grep "<div\b"
+# → 0건이어야 PASS (내비게이션 리스트 컨테이너는 <ul>)
+```
+
+**PASS:** 내비게이션 아이템 `.map()` 컨테이너가 `<ul role="list">` + `<li>` 구조. **FAIL:** `<div>` 직접 렌더 또는 `<ul>` 에 `role="list"` 누락 → `<ul role="list">` + `<li>` 래핑으로 교체.
+
+**예외:**
+- 단일 링크 (반복 없음) — `role="list"` 불필요
+- `shadcn/ui` 내부 컴포넌트 (`<NavigationMenuList>` 등) — 라이브러리가 ARIA 처리
+
+**발생 이력 (2026-04-30):** `MobileNav.tsx` 내비게이션 섹션 아이템 컨테이너가 `<div>`로 구현되어 WCAG 1.3.1 위반. `<ul role="list">` + `<li>` 구조로 수정 완료.
+
+**관련 파일:**
+- `apps/frontend/components/layout/MobileNav.tsx` — 참조 구현 (`<ul role="list">` + `<li>` 적용)

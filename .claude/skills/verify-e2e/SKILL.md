@@ -623,6 +623,92 @@ grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
 - `tests/e2e/features/checkouts/suite-ux/s-toast.spec.ts`
 - `tests/e2e/features/checkouts/suite-ux/s-mobile-bottom-sheet.spec.ts`
 
+### Step 20d: apiGetWithToken / apiPatchWithToken role vs token 헬퍼 분리
+
+`api-helpers.ts`의 역할 기반 토큰 캐시 헬퍼와 실제 HTTP 요청 헬퍼 간 파라미터 혼용 방지.
+
+**PASS:** `apiGetWithToken(token, url)` — 첫 인자가 token string, `loginAs(role)` 반환값 직접 전달. **FAIL:** role 문자열을 첫 인자로 전달 (타입 에러이지만 런타임 동작은 가능).
+
+### Step 20e: 로그인 폼 자격증명 DEV_*_PASSWORD 환경변수 + fallback SSOT
+
+백엔드 E2E에서 credentials 하드코딩 방지 — `DEV_ADMIN_PASSWORD`, `DEV_MANAGER_PASSWORD` 등 환경변수 경유 + fallback.
+
+**PASS:** `process.env.DEV_*_PASSWORD ?? 'fallback'` 패턴. **FAIL:** 비밀번호 리터럴 직접 사용.
+
+### Step 21: test.use() describe 스코프 위반 탐지 (2026-04-30 추가)
+
+Playwright의 `test.use()` 호출은 반드시 `test.describe()` 블록의 **직속 자식** 위치에 있어야 한다. `test()` 콜백 내부에서 호출하면 storageState가 이미 확립된 이후이므로 **silently ignored** — 에러도 경고도 없이 잘못된 인증 상태로 테스트가 실행된다.
+
+**위반 패턴 (FC-13~20에서 발견, 2026-04-30 수정):**
+
+```typescript
+// ❌ WRONG — test() 내부 test.use()는 Playwright에서 무시됨
+test.describe('FC: 여러 역할 묶음', () => {
+  test('FC-13: technical_manager', async ({ page }) => {
+    test.use({ storageState: 'technical-manager.json' }); // 무시됨!
+    await expect(page.getByRole('button')).toBeHidden();
+  });
+  test('FC-14: quality_manager', async ({ page }) => {
+    test.use({ storageState: 'quality-manager.json' });   // 무시됨!
+    ...
+  });
+});
+
+// ✅ CORRECT — 역할별로 describe 분리, test.use()는 describe 직속
+test.describe('FC-13: technical_manager — 반려 버튼 fail-closed', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
+  test('FC-13: ...', async ({ page }) => {
+    await expect(page.getByRole('button')).toBeHidden();
+  });
+});
+test.describe('FC-14: quality_manager — 승인 버튼 회귀', () => {
+  test.use({ storageState: path.join(AUTH_DIR, 'quality-manager.json') });
+  test('FC-14: ...', async ({ page }) => { ... });
+});
+```
+
+**탐지:**
+
+```bash
+# test.use() 호출 전체 목록 추출 후 describe 스코프 여부 수동 확인
+grep -rn "test\.use({" apps/frontend/tests/e2e --include="*.spec.ts"
+# 각 결과에서 해당 라인이 test.describe() 블록 내부의 '직속 자식'인지 확인
+# (test() 콜백 내부가 아닌 describe() 바디 직속 위치)
+```
+
+```bash
+# Node.js 기반 구조적 탐지 (더 신뢰성 높음)
+node -e "
+const fs = require('fs');
+const {execSync} = require('child_process');
+const files = execSync('find apps/frontend/tests/e2e -name \"*.spec.ts\" 2>/dev/null')
+  .toString().trim().split('\n').filter(Boolean);
+let issues = [];
+for (const f of files) {
+  const lines = fs.readFileSync(f, 'utf-8').split('\n');
+  let insideTest = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (/^\s*test\s*\(/.test(l) && !/test\.describe/.test(l) && !/test\.use/.test(l) && !/test\.beforeEach/.test(l) && !/test\.afterEach/.test(l) && !/test\.only/.test(l) || /^\s*test\.only\s*\(/.test(l)) {
+      insideTest++;
+    }
+    if (insideTest > 0 && /test\.use\s*\(/.test(l)) {
+      issues.push(f + ':' + (i+1) + ' — test.use() inside test() body (silently ignored)');
+    }
+    if (insideTest > 0 && /^\s*\}\s*\)\s*;?\s*$/.test(l)) insideTest = Math.max(0, insideTest - 1);
+  }
+}
+console.log(issues.length ? 'FAIL:\n' + issues.join('\n') : 'PASS: all test.use() at describe() scope');
+"
+```
+
+**PASS:** `PASS: all test.use() at describe() scope`. **FAIL:** 위반 파일:라인 목록 출력.
+
+**수정 패턴:**
+동일 `describe()` 블록에 여러 역할이 묶인 경우 → 역할별로 별도 `describe()` 블록으로 분리하고, 각 `describe()` 바디에 `test.use()` 배치.
+
+**예외:** `test.describe.configure()` 호출(`mode: 'serial'` 설정)은 `test.use()`와 다르며 `describe()` 내부 어느 위치든 허용.
+
 ## Output Format
 
 ```markdown
