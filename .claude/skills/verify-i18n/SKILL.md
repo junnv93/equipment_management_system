@@ -402,6 +402,71 @@ grep -n "flat-by-design\|navigation.*flat\|auth.*flat" \
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase B — `check-i18n-call-sites.mjs`에 `CROSS_CUTTING_NAMESPACES = ['common', 'errors']` 상수와 `checkStructuralNamespaces()` 함수가 추가됨. `navigation`/`auth`/`notifications`는 flat-by-design으로 명시적 구분. 이전에는 common.json 구조 검증 로직이 스크립트 내 산재하여 어떤 ns가 구조 검증 대상인지 추적하기 어려웠음.
 
+### Step 18: `components/shared/` 도메인 namespace 결합 차단 — `SHARED_COMPONENT_DOMAIN_NS_RULE` ESLint 게이트 존재 확인 (2026-04-30 추가, tech-debt-batch-0430 Phase C)
+
+**배경**: `apps/frontend/eslint.config.mjs`에 `SHARED_COMPONENT_DOMAIN_NS_RULE`이 추가되었다. `components/shared/**` 파일에서 `useTranslations(ns)` 호출 시 `ns`가 cross-cutting namespace (`common`, `navigation`, `notifications`, `errors`, `auth`)가 아닌 도메인 namespace(`checkouts.*`, `equipment.*` 등)이면 ESLint 오류를 발생시킨다. 이 규칙이 `eslint.config.mjs`에서 제거되거나 selector가 변경되면 shared/ 컴포넌트가 특정 도메인에 결합되어도 정적 탐지가 불가해진다.
+
+**규칙**:
+- `SHARED_COMPONENT_DOMAIN_NS_RULE` 상수가 `eslint.config.mjs`에 정의되어야 한다.
+- selector에 negative lookahead regex `^(?!(common|navigation|notifications|errors|auth)(\.|$))` 패턴이 포함되어야 한다.
+- `components/shared/**` glob에 대한 ESLint 설정에 `SHARED_COMPONENT_DOMAIN_NS_RULE`이 실제 적용되어야 한다.
+- `**/*.stories.{ts,tsx}` global ignore가 존재해야 한다 (Storybook 파일은 검사 대상 제외).
+
+**왜 이 검증이 필요한가**:
+- `SHARED_COMPONENT_DOMAIN_NS_RULE`이 제거되면 `components/shared/` 파일이 `useTranslations('checkouts.fsm')` 같은 도메인 호출을 해도 빌드/lint 단계에서 탐지되지 않는다.
+- selector의 negative lookahead 패턴이 바뀌면 허용/금지 namespace 목록이 조용히 변경되어 실제 도메인 결합을 통과시킬 수 있다.
+- `components/shared/`는 여러 도메인에서 재사용되는 컴포넌트가 위치하므로 도메인 namespace 결합 시 재사용성이 깨진다.
+
+**검증 명령**:
+```bash
+# 1) SHARED_COMPONENT_DOMAIN_NS_RULE 상수 존재 확인
+grep -n "SHARED_COMPONENT_DOMAIN_NS_RULE" apps/frontend/eslint.config.mjs
+# 기대: const 정의 1건 + 설정 적용 1건 이상 (총 2건 이상)
+
+# 2) negative lookahead regex 패턴 확인 (cross-cutting namespace 목록)
+grep -n "common|navigation|notifications|errors|auth" apps/frontend/eslint.config.mjs \
+  | grep -i "lookahead\|\\?!\|negative" 2>/dev/null || \
+  grep -n "(?!" apps/frontend/eslint.config.mjs | head -5
+# 기대: common/navigation/notifications/errors/auth 5개 namespace가 패턴에 포함
+
+# 3) components/shared/** glob에 SHARED_COMPONENT_DOMAIN_NS_RULE 적용 확인
+node -e "
+const fs = require('fs');
+const src = fs.readFileSync('apps/frontend/eslint.config.mjs', 'utf8');
+const hasRule = src.includes('SHARED_COMPONENT_DOMAIN_NS_RULE');
+const hasSharedGlob = /components.*shared.*\*\*/.test(src);
+const hasNegLookahead = src.includes('(?!');
+if (!hasRule) { console.log('FAIL: SHARED_COMPONENT_DOMAIN_NS_RULE 상수 없음'); process.exit(1); }
+if (!hasSharedGlob) { console.log('FAIL: components/shared/** glob 설정 없음'); process.exit(1); }
+if (!hasNegLookahead) { console.log('FAIL: negative lookahead regex 없음'); process.exit(1); }
+console.log('PASS: SHARED_COMPONENT_DOMAIN_NS_RULE + shared glob + negative lookahead 모두 존재');
+" 2>/dev/null
+
+# 4) *.stories.{ts,tsx} global ignore 존재 확인
+grep -n "stories" apps/frontend/eslint.config.mjs
+# 기대: **/*.stories.{ts,tsx} ignores 항목 1건 이상
+```
+
+**PASS**:
+- `SHARED_COMPONENT_DOMAIN_NS_RULE` 상수 정의 + `components/shared/**` 설정에 적용
+- selector에 `(?!(common|navigation|notifications|errors|auth)` negative lookahead 포함
+- `**/*.stories.{ts,tsx}` global ignore 존재
+
+**FAIL**:
+- `SHARED_COMPONENT_DOMAIN_NS_RULE` 상수 없음 → `eslint.config.mjs`에 도메인 namespace 차단 게이트 부재
+- `components/shared/**` glob 설정에서 규칙이 제거됨 → shared/ 컴포넌트 도메인 결합 탐지 불가
+- negative lookahead regex가 cross-cutting namespace 5개(`common`, `navigation`, `notifications`, `errors`, `auth`)를 누락 → 허용 범위 축소 또는 확대
+
+**예외**:
+- `*.stories.{ts,tsx}` 파일은 Storybook 전용이므로 도메인 namespace 사용 허용 (global ignore 적용)
+- `eslint-disable-next-line no-restricted-syntax -- <사유>` 주석이 있는 경우 팀 리뷰 후 예외 허용
+
+**관련 파일**:
+- `apps/frontend/eslint.config.mjs` — `SHARED_COMPONENT_DOMAIN_NS_RULE` 상수 정의 + `components/shared/**` 설정 적용 위치 (2026-04-30)
+- `docs/references/frontend-patterns.md` — shared/ namespace coupling 정책 (props 주입 패턴)
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase C — `NextStepPanel.tsx`가 `components/shared/`에서 `components/checkouts/`로 이동하면서 shared/ 디렉터리의 namespace coupling 정책을 정적으로 강제하기 위해 `SHARED_COMPONENT_DOMAIN_NS_RULE` ESLint 규칙이 추가됨. 이전에는 shared/ 컴포넌트가 도메인 namespace를 직접 호출해도 빌드 단계에서 탐지되지 않았음.
+
 ## Output Format
 
 ```markdown
@@ -424,6 +489,7 @@ grep -n "flat-by-design\|navigation.*flat\|auth.*flat" \
 | 15  | commentRequired=true ↔ commentDialogTitleKey/commentPlaceholderKey i18n 존재 | PASS/FAIL | ko/en approvals.json 누락 키 목록 |
 | 16  | 호출지 ↔ messages JSON parity + common.json 구조 (정적 + 회귀 차단) | PASS/FAIL | 누락 키 file:line + ns + locales 목록, 또는 common.json flat root key 위반 |
 | 17  | check-i18n-call-sites.mjs 구조 — CROSS_CUTTING_NAMESPACES + checkStructuralNamespaces | PASS/FAIL | 상수 누락, common/errors 미포함, 함수 정의 부재 위치 |
+| 18  | components/shared/ 도메인 namespace 결합 차단 — SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트 | PASS/FAIL | 상수 없음, shared glob 미적용, negative lookahead 누락 namespace 목록 |
 ```
 
 ## Exceptions

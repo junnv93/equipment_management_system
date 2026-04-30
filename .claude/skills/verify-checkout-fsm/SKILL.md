@@ -1406,8 +1406,8 @@ grep -A15 "user: userRow\[0\]" apps/backend/src/modules/checkouts/checkouts.serv
 grep "team\?:" apps/frontend/lib/api/checkout-api.ts | grep "site"
 # 기대: site?: string 포함
 
-# 4. approvals-api.ts mapCheckoutToApprovalItem — team?.site 직접 접근 (캐스트 금지)
-grep "requesterSite" apps/frontend/lib/api/approvals-api.ts
+# 4. approvals/mappers.ts mapCheckoutToApprovalItem — team?.site 직접 접근 (캐스트 금지)
+grep "requesterSite" apps/frontend/lib/api/approvals/mappers.ts
 # 기대: team?.site 직접 접근, (team as ...) 캐스트 0건
 ```
 
@@ -1415,7 +1415,7 @@ grep "requesterSite" apps/frontend/lib/api/approvals-api.ts
 1. `findAll` `userInfo.team` → `{ id, name, site }` 포함
 2. `findOne` `user.team` → `{ id, name, site }` 포함 (leftJoin teams)
 3. `checkout-api.ts` `team?: { ... site?: string }` 타입 포함
-4. `approvals-api.ts` `requesterSite: team?.site` 직접 접근 (캐스트 없음)
+4. `approvals/mappers.ts` `requesterSite: team?.site` 직접 접근 (캐스트 없음)
 
 **FAIL:**
 - findAll만 team 포함하고 findOne 누락 → 단건 조��� 페이지 소속 "-" 회귀
@@ -1424,7 +1424,7 @@ grep "requesterSite" apps/frontend/lib/api/approvals-api.ts
 **관련 파일:**
 - `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll userInfo + findOne user
 - `apps/frontend/lib/api/checkout-api.ts` — `Checkout.user.team` 타입
-- `apps/frontend/lib/api/approvals-api.ts` — `mapCheckoutToApprovalItem` requesterSite
+- `apps/frontend/lib/api/approvals/mappers.ts` — `mapCheckoutToApprovalItem` requesterSite
 
 ### Step 46: ESCAPE_ACTIONS 집합 불변성 + getNextStep 4단계 우선순위 (2026-04-29 추가)
 
