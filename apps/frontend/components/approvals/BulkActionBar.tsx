@@ -101,6 +101,7 @@ export function BulkActionBar({
             onClear={onClearSelection}
             variant="inline"
             ariaLabel={t('bulkBar.ariaLabel')}
+            className={APPROVAL_BULK_BAR_TOKENS.genericOverride}
             actions={
               <>
                 <Button

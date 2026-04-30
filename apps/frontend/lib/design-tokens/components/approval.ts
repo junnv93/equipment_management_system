@@ -224,6 +224,13 @@ export const APPROVAL_BULK_BAR_TOKENS = {
 
   /** × 선택 해제 버튼 */
   dismissButton: 'h-7 text-xs px-2',
+
+  /**
+   * GenericBulkActionBar className override
+   * fixedBottom wrapper가 이미 bg + border-t를 제공하므로 inner 중복 제거
+   * bg-transparent: container bg-muted/30 제거 / border-t-0: inline border-t 제거 / py-3: inner py-2 복원
+   */
+  genericOverride: 'bg-transparent border-t-0 py-3',
 } as const;
 
 // ============================================================================

@@ -1977,3 +1977,95 @@ grep -n "^export function track" apps/frontend/lib/analytics/track.ts
 - `apps/frontend/hooks/use-sidebar-state.ts` — `track()` 사용 예시 (debounced)
 
 **발생 이력 (2026-04-30 신설)**: setqueryd-purge-and-bulk-ux contract 구현 시 sidebar 토글 analytics 추가. `window.dispatchEvent` 직접 호출 대신 SSR-safe + PII-safe + timestamp-normalized 단일 진입점 `track()`을 신설하여 향후 GA/Amplitude 통합 시에도 컴포넌트 코드 변경 없이 리스너만 등록하면 되는 구조 확립.
+
+### Step 55: `useRowSelection` SSOT — BulkActionBar 사용 컴포넌트에서 `useState<string[]>` row selection 금지 (2026-04-30 추가)
+
+**규칙**: `BulkActionBar` (common 또는 domain wrapper)를 렌더링하는 컴포넌트는 반드시 `useRowSelection<T>`(`@/hooks/use-bulk-selection`)를 사용해야 함. `useState<string[]>` 또는 `useState<Set<string>>` 로 row selection ID를 관리하는 방식은 금지.
+
+**왜 중요한가**: `useRowSelection`은 `isAllPageSelected`, `isIndeterminate`, `isSelectable`, `resetOn`, snapshot LRU 보존을 내장. 수동 `useState<string[]>`는 이 모두를 inline으로 재구현하게 되어 SSOT 분산, `isIndeterminate` 미반영(마스터 체크박스 a11y 깨짐), `processingIds` 기반 `isSelectable` 미적용 등 다중 버그 발생 경로.
+
+**올바른 구조**:
+```typescript
+// ✅ CORRECT — useRowSelection SSOT
+const selection = useRowSelection<ApprovalItem>(sortedItems, (item) => item.id, {
+  isSelectable: (item) => !processingIds.has(item.id),
+  resetOn: [activeTab],
+});
+
+// ❌ WRONG — 수동 string[] 관리
+const [selectedItems, setSelectedItems] = useState<string[]>([]);
+// + isAllPageSelected inline 계산
+// + isIndeterminate inline 계산
+// + setSelectedItems([]) on tab change
+```
+
+**검증 명령어**:
+```bash
+# 1. BulkActionBar 사용 컴포넌트가 useRowSelection을 import하는지 확인
+grep -rn "BulkActionBar" apps/frontend/components --include="*.tsx" -l | \
+  while read f; do
+    if ! grep -qE "useRowSelection|useBulkSelection" "$f"; then
+      echo "MISSING useRowSelection: $f"
+    fi
+  done
+# 기대: 빈 출력 (BulkActionBar 사용 컴포넌트 모두 useRowSelection 경유)
+
+# 2. row selection용 useState<string[]> 잔존 탐지 (selectedItems 변수명 패턴)
+grep -rn "useState<string\[\]>" apps/frontend/components --include="*.tsx" | \
+  grep -iE "selected|checked|picked" | grep -v "node_modules"
+# 기대: 0건
+```
+
+**PASS**: 모든 BulkActionBar 사용 컴포넌트가 `useRowSelection` import + `selection.count`, `selection.isAllPageSelected`, `selection.isIndeterminate` 경유
+**FAIL**: `useState<string[]>` 수동 관리 → `useRowSelection` 마이그레이션 필요
+
+**관련 파일**:
+- `apps/frontend/hooks/use-bulk-selection.ts` — `useRowSelection<T>` SSOT 구현 (`isSelectable`, `resetOn`, snapshot LRU)
+- `apps/frontend/components/approvals/ApprovalsClient.tsx` — 마이그레이션 완료 참조 구현 (2026-04-30)
+- `apps/frontend/components/equipment/EquipmentListContent.tsx` — 기존 참조 구현
+
+**발생 이력 (2026-04-30 신설)**: SSOT 감사에서 `ApprovalsClient.tsx`가 코드베이스에서 유일하게 `useState<string[]>`로 row selection을 관리하고 있음을 발견. `isIndeterminate` 마스터 체크박스 미반영(wf-ap02 Step 7 a11y 위반), `processingIds` 기반 `isSelectable` 미적용으로 처리 중 항목도 선택 가능한 버그 내포. `useRowSelection` 마이그레이션 후 두 문제 모두 해소.
+
+### Step 56: `calculateDaysRemaining` SSOT — `dday-utils.ts` 외부에서 인라인 날짜 D-day 산술 금지 (2026-04-30 추가)
+
+**규칙**: "오늘로부터 날짜 X까지 남은 일수(정수)" 계산은 반드시 `calculateDaysRemaining(date)` (`@/lib/utils/dday-utils`) 를 사용해야 함. `new Date()`, `setHours(0,0,0,0)`, `.getTime() / 86400000` 조합의 인라인 D-day 산술을 `dday-utils.ts` 외부에서 직접 작성하는 것은 금지.
+
+**왜 중요한가**: 자정 정규화(midnight normalization)를 빠뜨리거나 `Math.ceil` vs `Math.round` 차이로 edge-case에서 ±1일 오차가 발생. SSOT 하나만 올바르게 유지하면 전체 코드베이스에서 일관된 D-day 계산 보장.
+
+**올바른 구조**:
+```typescript
+// ✅ CORRECT — SSOT 경유
+import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
+const diffDays = calculateDaysRemaining(nextCalibrationDate);
+
+// ❌ WRONG — 인라인 산술 (dday-utils.ts 외부)
+const today = new Date(); today.setHours(0,0,0,0);
+const target = new Date(date); target.setHours(0,0,0,0);
+const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+```
+
+**검증 명령어**:
+```bash
+# 1. dday-utils.ts 외부에서 setHours(0, 0, 0, 0) 인라인 패턴 탐지
+grep -rn "setHours(0, 0, 0, 0)" \
+  apps/frontend/lib/ apps/frontend/components/ apps/frontend/hooks/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "dday-utils.ts\|node_modules"
+# 기대: 0건
+
+# 2. 86400000 나누기 인라인 D-day 산술 탐지
+grep -rn "/ (1000 \* 60 \* 60 \* 24)\|/ 86400000" \
+  apps/frontend/lib/ apps/frontend/components/ apps/frontend/hooks/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "dday-utils.ts\|node_modules"
+# 기대: 0건 (dday-utils.ts만 허용)
+```
+
+**PASS**: `dday-utils.ts` 외부에서 `setHours(0,0,0,0)` 및 `/86400000` 패턴 0건
+**FAIL**: 인라인 D-day 산술 발견 → `calculateDaysRemaining()` 경유로 교체
+
+**관련 파일**:
+- `apps/frontend/lib/utils/dday-utils.ts` — `calculateDaysRemaining(date: string | Date): number` SSOT (자정 정규화 + Math.round)
+- `apps/frontend/lib/utils/calibration-status.ts` — 마이그레이션 완료 참조 (인라인 7줄 → 1줄, 2026-04-30)
+
+**발생 이력 (2026-04-30 신설)**: `calibration-status.ts`가 `calculateDaysRemaining`과 동일한 날짜 산술 로직을 7줄 인라인으로 중복 구현. `dday-utils.ts`의 타입 시그니처를 `string | Date`로 확장하고 인라인 코드를 1줄로 대체.

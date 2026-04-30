@@ -15,7 +15,7 @@ interface ApprovalListProps {
   processingIds: Set<string>;
   /** exitingIds: id → 'success' | 'reject' 매핑 */
   exitingIds: Map<string, 'success' | 'reject'>;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, item: ApprovalItem) => void;
   onApprove: (item: ApprovalItem) => void;
   /** canReject: false인 카테고리(inspection 등)에서 undefined로 전달 — 반려 버튼 미표시 (AR-8) */
   onReject?: (item: ApprovalItem) => void;
@@ -103,7 +103,7 @@ export function ApprovalList({
               isSelected={selectedItems.includes(item.id)}
               isMutating={processingIds.has(item.id)}
               isExiting={exitingIds.get(item.id) || false}
-              onToggleSelect={() => onToggleSelect(item.id)}
+              onToggleSelect={() => onToggleSelect(item.id, item)}
               onApprove={() => onApprove(item)}
               onReject={onReject ? () => onReject(item) : undefined}
               onViewDetail={() => onViewDetail(item)}

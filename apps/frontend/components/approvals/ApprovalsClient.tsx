@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { useRowSelection } from '@/hooks/use-bulk-selection';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,7 +67,6 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
       ? (tabParam as ApprovalCategory)
       : (defaultTab as ApprovalCategory);
 
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [detailModalItem, setDetailModalItem] = useState<ApprovalItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ApprovalItem | null>(null);
 
@@ -80,17 +80,6 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   // 벌크 승인 코멘트 다이얼로그 상태
   const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
   const [bulkApproveComment, setBulkApproveComment] = useState('');
-
-  // 탭 변경 핸들러
-  const handleTabChange = useCallback(
-    (tab: string) => {
-      setSelectedItems([]);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('tab', tab);
-      router.push(`?${params.toString()}`, { scroll: false });
-    },
-    [router, searchParams]
-  );
 
   // 승인 대기 목록 조회
   const {
@@ -110,6 +99,23 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
       (a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime()
     );
   }, [pendingItems]);
+
+  const selection = useRowSelection<ApprovalItem>(sortedItems, (item) => item.id, {
+    isSelectable: (item) => !processingIds.has(item.id),
+    resetOn: [activeTab],
+  });
+
+  // 탭 변경 핸들러 — clearSelection은 useCallback([]) 안정 참조
+  const { clear: clearSelection } = selection;
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      clearSelection();
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', tab);
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams, clearSelection]
+  );
 
   // 카테고리별 대기 개수 조회
   const { data: pendingCounts } = useQuery({
@@ -305,7 +311,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
           return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
-      setSelectedItems([]);
+      selection.clear();
       setIsBulkApproveCommentOpen(false);
       setBulkApproveComment('');
     },
@@ -319,21 +325,23 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   });
 
   const handleBulkApprove = () => {
-    if (selectedItems.length === 0) return;
+    if (selection.count === 0) return;
     const meta = TAB_META[activeTab];
+    const selectedIds = Array.from(selection.selected);
     if (meta?.commentRequired) {
       setIsBulkApproveCommentOpen(true);
       setBulkApproveComment('');
     } else {
-      setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
-      bulkApproveMutation.mutate({ ids: selectedItems });
+      setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
+      bulkApproveMutation.mutate({ ids: selectedIds });
     }
   };
 
   const handleBulkApproveWithComment = () => {
     if (!bulkApproveComment.trim()) return;
-    setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
-    bulkApproveMutation.mutate({ ids: selectedItems, comment: bulkApproveComment });
+    const selectedIds = Array.from(selection.selected);
+    setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
+    bulkApproveMutation.mutate({ ids: selectedIds, comment: bulkApproveComment });
   };
 
   // ✅ 일괄 반려 처리
@@ -392,7 +400,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
           return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
-      setSelectedItems([]);
+      selection.clear();
     },
     onErrorCallback: (_, { ids }) => {
       setProcessingIds((prev) => {
@@ -404,15 +412,11 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   });
 
   const handleBulkReject = async (reason: string) => {
-    if (selectedItems.length === 0) return;
-    setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
-    await bulkRejectMutation.mutateAsync({ ids: selectedItems, reason });
+    if (selection.count === 0) return;
+    const selectedIds = Array.from(selection.selected);
+    setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
+    await bulkRejectMutation.mutateAsync({ ids: selectedIds, reason });
   };
-
-  // 선택 토글
-  const handleToggleSelect = useCallback((id: string) => {
-    setSelectedItems((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
-  }, []);
 
   // 현재 탭의 코멘트 다이얼로그 메타 (SSOT: TAB_META)
   const activeTabMeta = TAB_META[activeTab];
@@ -466,16 +470,12 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
             )}
             {/* Bulk Action Bar */}
             <BulkActionBar
-              selectedCount={selectedItems.length}
+              selectedCount={selection.count}
               totalCount={sortedItems.length}
-              isAllPageSelected={
-                selectedItems.length > 0 && selectedItems.length === sortedItems.length
-              }
-              isIndeterminate={
-                selectedItems.length > 0 && selectedItems.length < sortedItems.length
-              }
-              onSelectAll={() => setSelectedItems(sortedItems.map((i) => i.id))}
-              onClearSelection={() => setSelectedItems([])}
+              isAllPageSelected={selection.isAllPageSelected}
+              isIndeterminate={selection.isIndeterminate}
+              onSelectAll={selection.selectAllOnPage}
+              onClearSelection={selection.clear}
               onBulkApprove={handleBulkApprove}
               onBulkReject={TAB_META[activeTab].canReject !== false ? handleBulkReject : undefined}
               actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
@@ -485,10 +485,10 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
             <ApprovalList
               items={sortedItems}
               isLoading={isLoading}
-              selectedItems={selectedItems}
+              selectedItems={Array.from(selection.selected)}
               processingIds={processingIds}
               exitingIds={exitingIds}
-              onToggleSelect={handleToggleSelect}
+              onToggleSelect={selection.toggle}
               onApprove={handleApprove}
               onReject={
                 TAB_META[activeTab].canReject !== false
@@ -615,7 +615,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
                   : t('bulkCommentDialog.titleFallback')}
               </DialogTitle>
               <DialogDescription>
-                {t('bulkCommentDialog.description', { count: selectedItems.length })}
+                {t('bulkCommentDialog.description', { count: selection.count })}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -653,7 +653,7 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
                 className={getApprovalActionButtonClasses('approve')}
               >
                 {t('bulkCommentDialog.buttonLabel', {
-                  count: selectedItems.length,
+                  count: selection.count,
                   action: t(`tabMeta.${activeTab}.action`),
                 })}
               </Button>

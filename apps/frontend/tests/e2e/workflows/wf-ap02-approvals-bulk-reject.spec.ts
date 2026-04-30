@@ -17,6 +17,7 @@ import {
 } from './helpers/workflow-helpers';
 import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import { TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
+import { expectToastVisible } from '../shared/helpers/toast-helpers';
 
 const WF_EQUIPMENT_IDS = [
   TEST_EQUIPMENT_IDS.CANCEL_RECEIVER_SUW_E,
@@ -212,5 +213,288 @@ test.describe('WF-AP02: 승인 목록 일괄 반려', () => {
     await rows.nth(1).locator('[role="checkbox"]').click();
     const bar = page.locator('[data-testid="bulk-action-bar"]');
     await expect(bar).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('Step 8: bulk-reject 전체 성공 — mock 응답 시 toast "{count}건이 반려되었습니다." 표시', async ({
+    techManagerPage: page,
+  }) => {
+    // Steps 1~7에서 소진된 항목 재생성
+    for (const id of WF_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+    for (const equipmentId of WF_EQUIPMENT_IDS) {
+      await createCheckout(page, [equipmentId], CPVal.CALIBRATION, 'KRISS', 'WF-AP02 Step 8');
+    }
+    await clearBackendCache();
+
+    await page.goto('/admin/approvals?tab=outgoing');
+    await page.waitForSelector('[data-testid="approval-item"]', { timeout: 15000 });
+
+    const rows = page.locator('[data-testid="approval-item"]');
+    const count = await rows.count();
+    if (count < 1) return; // 항목 없으면 스킵
+
+    // 모든 항목 선택
+    for (let i = 0; i < count; i++) {
+      await rows.nth(i).locator('[role="checkbox"]').click();
+    }
+
+    // bulk-reject API 전체 성공 mock
+    await page.route('**/api/checkouts/bulk-reject', async (route) => {
+      const body = JSON.parse(route.request().postData() ?? '{}') as { ids?: string[] };
+      const ids = body.ids ?? [];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          rejected: ids.map((id, i) => ({ id, version: i + 2 })),
+          failed: [],
+        }),
+      });
+    });
+
+    try {
+      const rejectButton = page.locator('[role="toolbar"] button').filter({ hasText: /반려/ });
+      await expect(rejectButton).toBeVisible();
+      await rejectButton.click();
+
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      const reasonInput = modal.locator('textarea');
+      await reasonInput.fill('WF-AP02 Step 8: 전체 성공 mock 검증 사유.');
+
+      const confirmButton = modal
+        .locator('button[type="submit"], button')
+        .filter({ hasText: /반려 확인|반려하기|확인/ })
+        .last();
+      await confirmButton.click();
+
+      await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+      // 전체 성공 → "{count}건이 반려되었습니다." toast
+      await expectToastVisible(page, /건이 반려되었습니다/, { timeout: 10000 });
+    } finally {
+      await page.unroute('**/api/checkouts/bulk-reject');
+    }
+  });
+
+  test('Step 9: bulk-reject 부분 실패 시뮬레이션 — mock 부분 실패 응답 시 toast 분기 표시', async ({
+    techManagerPage: page,
+  }) => {
+    // 이 스텝은 Step 8에서 이미 처리되어 남은 항목이 없을 수 있으므로 재생성
+    for (const id of WF_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+    for (const equipmentId of WF_EQUIPMENT_IDS) {
+      await createCheckout(page, [equipmentId], CPVal.CALIBRATION, 'KRISS', 'WF-AP02 Step 9');
+    }
+    await clearBackendCache();
+
+    await page.goto('/admin/approvals?tab=outgoing');
+    await page.waitForSelector('[data-testid="approval-item"]', { timeout: 15000 });
+
+    const rows = page.locator('[data-testid="approval-item"]');
+    const count = await rows.count();
+    if (count < 2) return; // 부분 실패 검증을 위해 2건 이상 필요
+
+    await rows.first().locator('[role="checkbox"]').click();
+    await rows.nth(1).locator('[role="checkbox"]').click();
+
+    // bulk-reject API 부분 실패 mock: 1건 성공 + 1건 실패
+    await page.route('**/api/checkouts/bulk-reject', async (route) => {
+      const body = JSON.parse(route.request().postData() ?? '{}') as { ids?: string[] };
+      const ids = body.ids ?? [];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          rejected: ids.slice(0, 1).map((id) => ({ id, version: 2 })),
+          failed: ids.slice(1).map((id) => ({ id, error: '교정 상태 충돌로 처리 불가' })),
+        }),
+      });
+    });
+
+    try {
+      const rejectButton = page.locator('[role="toolbar"] button').filter({ hasText: /반려/ });
+      await expect(rejectButton).toBeVisible();
+      await rejectButton.click();
+
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      const reasonInput = modal.locator('textarea');
+      await reasonInput.fill('WF-AP02 Step 9: 부분 실패 시뮬레이션 사유 입력.');
+
+      const confirmButton = modal
+        .locator('button[type="submit"], button')
+        .filter({ hasText: /반려 확인|반려하기|확인/ })
+        .last();
+      await confirmButton.click();
+
+      await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+      // 부분 실패 → "{success}건 반려 완료, {failed}건 실패" toast (destructive)
+      await expectToastVisible(page, /건 반려 완료.*건 실패|건 실패/, { timeout: 10000 });
+    } finally {
+      await page.unroute('**/api/checkouts/bulk-reject');
+    }
+  });
+});
+
+/**
+ * WF-AP02-EXT: Sprint 4.5 S8 — 5건 일괄 반려 (실제 반려) + 부분 실패 시뮬레이션 (route intercept)
+ *
+ * WF-AP02 Steps 8-9는 mock 응답으로 toast 분기를 검증한다.
+ * 이 블록은 실제 5건 데이터를 생성하고 bulk reject하여 E2E 전체 흐름을 커버한다.
+ */
+test.describe('WF-AP02-EXT: Sprint 4.5 S8 — 5건 일괄 반려 + 부분 실패', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  // WF_EQUIPMENT_IDS(100a/100b)와 겹치지 않는 5개 SUW_E 장비
+  const EXT_EQUIPMENT_IDS = [
+    TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E,
+    TEST_EQUIPMENT_IDS.SIGNAL_GEN_SUW_E,
+    TEST_EQUIPMENT_IDS.NETWORK_ANALYZER_SUW_E,
+    TEST_EQUIPMENT_IDS.EMC_RECEIVER_SUW_E,
+    TEST_EQUIPMENT_IDS.RBAC_SIGNAL_GEN_SUW_E,
+  ];
+
+  test.beforeAll(async () => {
+    for (const id of EXT_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+  });
+
+  test.afterAll(async () => {
+    for (const id of EXT_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+    await cleanupSharedPool();
+  });
+
+  test('Step EXT-1: 5건 반출 신청 생성', async ({ testOperatorPage: page }) => {
+    for (const equipmentId of EXT_EQUIPMENT_IDS) {
+      const body = await createCheckout(
+        page,
+        [equipmentId],
+        CPVal.CALIBRATION,
+        'KRISS',
+        'WF-AP02-EXT: 5건 일괄 반려 검증'
+      );
+      const id = body?.data?.id ?? body?.id;
+      expect(id).toBeTruthy();
+    }
+    await clearBackendCache();
+  });
+
+  test('Step EXT-2: 5건 선택 → 실제 일괄 반려 → "{5}건이 반려되었습니다." toast', async ({
+    techManagerPage: page,
+  }) => {
+    await page.goto('/admin/approvals?tab=outgoing');
+    await page.waitForSelector('[data-testid="approval-item"]', { timeout: 15000 });
+
+    const rows = page.locator('[data-testid="approval-item"]');
+    const count = await rows.count();
+    expect(count).toBeGreaterThanOrEqual(5);
+
+    // 5건 체크박스 선택
+    for (let i = 0; i < 5; i++) {
+      await rows.nth(i).locator('[role="checkbox"]').click();
+    }
+
+    const bar = page.locator('[data-testid="bulk-action-bar"]');
+    await expect(bar).toHaveAttribute('aria-hidden', 'false');
+    await expect(bar.locator('[role="toolbar"]')).toContainText('5');
+
+    const rejectButton = page.locator('[role="toolbar"] button').filter({ hasText: /반려/ });
+    await rejectButton.click();
+
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await modal.locator('textarea').fill('WF-AP02-EXT: 5건 일괄 반려 E2E 검증 사유입니다.');
+    await modal
+      .locator('button[type="submit"], button')
+      .filter({ hasText: /반려 확인|반려하기|확인/ })
+      .last()
+      .click();
+
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    await clearBackendCache();
+
+    // 전체 성공 toast: "5건이 반려되었습니다." (approvals.toasts.bulkRejectAll)
+    await expectToastVisible(page, /건이 반려되었습니다/, { timeout: 10000 });
+
+    // 목록에서 5건 제거 확인
+    const afterCount = await rows.count();
+    expect(afterCount).toBeLessThanOrEqual(count - 5);
+  });
+
+  test('Step EXT-3: 부분 실패 — route intercept → 2성공/1실패 toast', async ({
+    testOperatorPage,
+    techManagerPage,
+  }) => {
+    // Step EXT-2 반려 후 equipment는 available로 복귀 — 새 checkout 생성 가능
+    for (const equipmentId of EXT_EQUIPMENT_IDS.slice(0, 3)) {
+      const body = await createCheckout(
+        testOperatorPage,
+        [equipmentId],
+        CPVal.CALIBRATION,
+        'KRISS',
+        'WF-AP02-EXT: 부분 실패 시뮬레이션'
+      );
+      const id = body?.data?.id ?? body?.id;
+      expect(id).toBeTruthy();
+    }
+    await clearBackendCache();
+
+    // route intercept: 3건 선택 → 2건 성공 / 1건 실패
+    await techManagerPage.route('**/api/checkouts/bulk-reject', async (route) => {
+      const body = JSON.parse(route.request().postData() ?? '{}') as { ids?: string[] };
+      const ids = body.ids ?? [];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          rejected: ids.slice(0, 2).map((id) => ({ id, version: 2 })),
+          failed: ids.slice(2).map((id) => ({ id, error: 'FSM 전이 불가: 동시 처리 충돌' })),
+        }),
+      });
+    });
+
+    try {
+      await techManagerPage.goto('/admin/approvals?tab=outgoing');
+      await techManagerPage.waitForSelector('[data-testid="approval-item"]', { timeout: 15000 });
+
+      const rows = techManagerPage.locator('[data-testid="approval-item"]');
+      const count = await rows.count();
+      expect(count).toBeGreaterThanOrEqual(3);
+
+      // 3건 선택
+      for (let i = 0; i < 3; i++) {
+        await rows.nth(i).locator('[role="checkbox"]').click();
+      }
+
+      const rejectButton = techManagerPage
+        .locator('[role="toolbar"] button')
+        .filter({ hasText: /반려/ });
+      await rejectButton.click();
+
+      const modal = techManagerPage.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+      await modal.locator('textarea').fill('WF-AP02-EXT: 부분 실패 시뮬레이션 — 3건 중 2건 성공.');
+      await modal
+        .locator('button[type="submit"], button')
+        .filter({ hasText: /반려 확인|반려하기|확인/ })
+        .last()
+        .click();
+
+      await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+      // 부분 실패 toast: "2건 반려 완료, 1건 실패" (approvals.toasts.bulkRejectResult)
+      await expectToastVisible(techManagerPage, /건 반려 완료.*건 실패/, { timeout: 10000 });
+    } finally {
+      await techManagerPage.unroute('**/api/checkouts/bulk-reject');
+    }
   });
 });
