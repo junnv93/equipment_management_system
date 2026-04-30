@@ -300,6 +300,22 @@ export const FRONTEND_ROUTES = {
     LOGIN: '/login',
     LOGOUT: '/logout',
   },
+
+  // ============================================================================
+  // 도움말 / In-app FAQ
+  // ============================================================================
+  /**
+   * 도움말 라우트 SSOT — Sprint 4.5 S6.
+   * `mailto:` 외 in-app 대체 경로를 제공해 EmptyState/error fallback 등에서
+   * 사용자가 "어떻게 해야 하나요?" 의문을 가질 때 진입 가능한 단일 라우트.
+   *
+   * 새 도움말 토픽 추가 시 `topicKey`를 `messages/{locale}/help.json` 의
+   * `sections.<topicKey>` 와 동기화. 라우트 자체에는 토픽이 anchor(#)로 표현된다.
+   */
+  HELP: {
+    INDEX: '/help',
+    TOPIC: (topicKey: string) => `/help#${encodeURIComponent(topicKey)}`,
+  },
 } as const;
 
 /**

@@ -26,6 +26,12 @@ interface EmptyStateProps {
   title: string;
   description?: string;
   cta?: { label: string } & CtaTarget;
+  /**
+   * 보조 액션 — Sprint 4.5 S6.
+   * 도움말 in-app 라우트(`FRONTEND_ROUTES.HELP.INDEX`) 같은 부차적 경로를 표시한다.
+   * 시각 톤은 ghost(저관심)로 cta 와 구분되며, mailto 의존을 줄이기 위한 표준 패턴.
+   */
+  secondaryAction?: { label: string } & CtaTarget;
   /** 커스텀 아이콘 (기본 ○ / ✓ / ! 대체). lucide-react 컴포넌트 권장. */
   icon?: ReactNode;
   className?: string;
@@ -38,6 +44,7 @@ export function EmptyState({
   title,
   description,
   cta,
+  secondaryAction,
   icon,
   className,
   role,
@@ -96,6 +103,23 @@ export function EmptyState({
             className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-foreground text-background text-xs font-medium hover:bg-foreground/90 motion-safe:transition-colors"
           >
             {cta.label}
+          </button>
+        ))}
+      {secondaryAction &&
+        (secondaryAction.href ? (
+          <Link
+            href={secondaryAction.href}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground motion-safe:transition-colors underline-offset-4 hover:underline"
+          >
+            {secondaryAction.label}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={secondaryAction.onClick}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground motion-safe:transition-colors underline-offset-4 hover:underline"
+          >
+            {secondaryAction.label}
           </button>
         ))}
     </div>

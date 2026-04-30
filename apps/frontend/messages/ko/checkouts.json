@@ -396,7 +396,11 @@
     "collapse": "그룹 접기",
     "expand": "그룹 펼치기",
     "rowAria": "{equipment} · {status}{dday}",
-    "progressTooltipAria": "{current}/{total} 단계"
+    "progressTooltipAria": "{current}/{total} 단계",
+    "selectGroup": "그룹 전체 선택",
+    "selectGroupAria": "{destination} 그룹의 반출 {count}건 전체 선택",
+    "indeterminateAria": "{destination} 그룹의 반출 {selected}/{total}건 선택됨",
+    "deselectGroupAria": "{destination} 그룹 선택 해제"
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",

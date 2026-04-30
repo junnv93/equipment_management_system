@@ -396,7 +396,11 @@
     "collapse": "Collapse group",
     "expand": "Expand group",
     "rowAria": "{equipment} · {status}{dday}",
-    "progressTooltipAria": "{current}/{total} steps"
+    "progressTooltipAria": "{current}/{total} steps",
+    "selectGroup": "Select group",
+    "selectGroupAria": "Select all {count} checkouts in {destination}",
+    "indeterminateAria": "{selected} of {total} checkouts selected in {destination}",
+    "deselectGroupAria": "Clear selection in {destination}"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",

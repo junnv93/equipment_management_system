@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,11 @@ import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndi
 import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
 import type { OverflowAction } from '@/lib/types/checkout-ui';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
+import {
+  getGroupRowIds,
+  deriveGroupSelectionState,
+  toCheckboxCheckedProp,
+} from '@/lib/checkouts/group-selection';
 import {
   useApproveCheckoutMutation,
   useBorrowerApproveCheckoutMutation,
@@ -67,6 +73,28 @@ interface CheckoutGroupCardProps {
   group: CheckoutGroup;
   onCheckoutClick: (checkoutId: string) => void;
   isOverdueGroup?: boolean;
+  /**
+   * 외부 selection state. 미전달 시 헤더 체크박스 hidden (후방호환).
+   * 부모가 `useRowSelection` 훅의 `selected` Set을 그대로 전달.
+   */
+  selectedRowIds?: ReadonlySet<string>;
+  /**
+   * 그룹 헤더 토글 콜백. 미전달 시 헤더 체크박스 hidden.
+   * 부모가 그룹 row id 전체와 현재 상태를 받아 일괄 toggle/clear 결정.
+   *
+   * @param rowIds 그룹 내 모든 checkout id (Sprint 4.5 row 키 컨벤션 = checkout 단위)
+   * @param allCurrentlySelected 토글 직전 그룹 전체 선택 상태 — true면 clear, false면 select-all 의도
+   */
+  onToggleGroup?: (rowIds: readonly string[], allCurrentlySelected: boolean) => void;
+  /**
+   * Row-level 토글 콜백 — **본 세션(sprint45-should-residual)에서는 prop API surface만 등록**.
+   * 향후 부모 통합 sprint(`checkouts-tab-bulk-selection-integration`)에서 row 셀에
+   * 체크박스가 추가될 때 emit. 본 컴포넌트가 직접 호출하는 시점은 후속 sprint.
+   *
+   * 사전 등록 이유: 부모 통합 시 prop API 재변경 없이 즉시 활용 가능 + 격리
+   * fixture page가 row-level + group-level 두 토글 경로를 일관된 API로 노출.
+   */
+  onToggleRow?: (rowId: string) => void;
 }
 
 interface EquipmentRow {
@@ -94,6 +122,8 @@ function CheckoutGroupCard({
   group,
   onCheckoutClick,
   isOverdueGroup = false,
+  selectedRowIds,
+  onToggleGroup,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
   const tCommon = useTranslations('common');
@@ -210,12 +240,62 @@ function CheckoutGroupCard({
     ? `${CHECKOUT_ITEM_ROW_TOKENS.groupHeaderContainer} ${CHECKOUT_OVERDUE_GROUP_TOKENS.header}`
     : CHECKOUT_ITEM_ROW_TOKENS.groupHeaderContainer;
 
+  // ── 그룹 헤더 selection 3-state (S3, prop 옵셔널이라 외부 미전달 시 hidden) ──
+  const showGroupCheckbox = selectedRowIds !== undefined && onToggleGroup !== undefined;
+  const groupRowIds = useMemo(() => getGroupRowIds(group), [group]);
+  const groupSelectionState = useMemo(
+    () => (selectedRowIds ? deriveGroupSelectionState(groupRowIds, selectedRowIds) : 'none'),
+    [groupRowIds, selectedRowIds]
+  );
+  const selectedInGroupCount = useMemo(() => {
+    if (!selectedRowIds) return 0;
+    let count = 0;
+    for (const id of groupRowIds) if (selectedRowIds.has(id)) count++;
+    return count;
+  }, [groupRowIds, selectedRowIds]);
+  const groupDestinationLabel = group.destinationKey ? t(group.destinationKey) : group.destination;
+  const groupCheckboxAriaLabel =
+    groupSelectionState === 'all'
+      ? t('groupCard.deselectGroupAria', { destination: groupDestinationLabel })
+      : groupSelectionState === 'indeterminate'
+        ? t('groupCard.indeterminateAria', {
+            selected: selectedInGroupCount,
+            total: groupRowIds.length,
+            destination: groupDestinationLabel,
+          })
+        : t('groupCard.selectGroupAria', {
+            count: groupRowIds.length,
+            destination: groupDestinationLabel,
+          });
+  const handleGroupToggle = useCallback(() => {
+    if (!onToggleGroup) return;
+    onToggleGroup(groupRowIds, groupSelectionState === 'all');
+  }, [groupRowIds, groupSelectionState, onToggleGroup]);
+
   return (
     <TooltipProvider>
       <Card className={cardClass}>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* ── 그룹 헤더 ── */}
           <div className={headerContainerClass}>
+            {showGroupCheckbox && (
+              <Checkbox
+                data-testid="group-header-checkbox"
+                checked={toCheckboxCheckedProp(groupSelectionState)}
+                onCheckedChange={handleGroupToggle}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return;
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    handleGroupToggle();
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={groupCheckboxAriaLabel}
+                disabled={groupRowIds.length === 0}
+                className="shrink-0"
+              />
+            )}
             <CollapsibleTrigger asChild>
               <button type="button" className={CHECKOUT_ITEM_ROW_TOKENS.groupHeaderInfoTrigger}>
                 {isOverdueGroup && (

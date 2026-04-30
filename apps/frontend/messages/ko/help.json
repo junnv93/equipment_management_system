@@ -1,0 +1,27 @@
+{
+  "title": "도움말",
+  "subtitle": "장비 관리 시스템 사용 안내",
+  "placeholder": {
+    "title": "콘텐츠 준비 중",
+    "description": "도움말 항목은 운영팀과 함께 정리 후 게시될 예정입니다. 급한 문의는 사이드바의 알림 또는 담당자에게 직접 연락 부탁드립니다."
+  },
+  "sections": {
+    "checkout": {
+      "title": "반출 신청 안내",
+      "description": "반출 신청 절차와 승인 단계는 추후 공유될 예정입니다."
+    },
+    "calibration": {
+      "title": "교정 일정 확인",
+      "description": "교정 기한 임박/초과 알림 및 점검 절차는 추후 공유될 예정입니다."
+    },
+    "nonConformance": {
+      "title": "부적합 보고",
+      "description": "부적합 발견 시 보고 절차는 추후 공유될 예정입니다."
+    },
+    "permissions": {
+      "title": "권한 요청",
+      "description": "역할/권한 변경 요청 절차는 추후 공유될 예정입니다."
+    }
+  },
+  "ariaLandmark": "도움말 페이지 본문"
+}
