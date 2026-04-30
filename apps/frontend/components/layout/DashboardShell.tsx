@@ -270,6 +270,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
           {!isCollapsed && (
             <div className={cn('mt-auto p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
               <UlLogo className="h-10 w-auto" ariaHidden />
+              <p className="mt-1.5 text-[10px] leading-tight text-white/45 tracking-wide">
+                Working for a safer world
+              </p>
             </div>
           )}
         </aside>
@@ -364,6 +367,9 @@ export function DashboardShellSkeleton() {
 
         <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
           <UlLogo className="h-10 w-auto" ariaHidden />
+          <p className="mt-1.5 text-[10px] leading-tight text-white/45 tracking-wide">
+            Working for a safer world
+          </p>
         </div>
       </aside>
 
