@@ -290,6 +290,7 @@
       "commentLabel": "검토 의견",
       "commentPlaceholder": "검토 의견을 입력하세요 (선택)",
       "commentHelp": "ISO/IEC 17025 §6.2.2 — 입력한 의견은 승인 이력에 영구 기록됩니다",
+      "charsRemaining": "{count}자 남음",
       "cancel": "취소",
       "confirm": "승인",
       "submitting": "처리 중..."

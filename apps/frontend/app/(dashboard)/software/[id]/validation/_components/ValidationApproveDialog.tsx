@@ -78,7 +78,7 @@ export function ValidationApproveDialog({
                 {comment.length}/{VALIDATION_RULES.LONG_TEXT_MAX_LENGTH}
                 {remaining <= 50 && (
                   <span className="sr-only">
-                    {t('validation.approveDialog.charsRemaining', { count: remaining })}
+                    {t(`validation.${nsKey}.charsRemaining`, { count: remaining })}
                   </span>
                 )}
               </p>

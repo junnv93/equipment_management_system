@@ -290,6 +290,7 @@
       "commentLabel": "Review Comment",
       "commentPlaceholder": "Enter review comment (optional)",
       "commentHelp": "ISO/IEC 17025 §6.2.2 — Comment will be permanently recorded in the approval audit trail",
+      "charsRemaining": "{count} chars remaining",
       "cancel": "Cancel",
       "confirm": "Approve",
       "submitting": "Processing..."
