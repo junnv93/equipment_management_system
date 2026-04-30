@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, X, Plus } from 'lucide-react';
+import { Check, X, Plus } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,6 @@ import {
 import {
   SETTINGS_CARD_HEADER_TOKENS,
   SETTINGS_SUBMIT_TOKENS,
-  SETTINGS_SAVE_INDICATOR_TOKENS,
   getSettingsCardClasses,
   getSettingsCardHeaderClasses,
   getSettingsChipClasses,
@@ -221,19 +220,12 @@ function CalibrationSettingsFormContent({
           onClick={() => mutation.mutate({ alertDays })}
           disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
           loading={mutation.isPending}
+          loadingPosition="replace"
+          loadingLabel={t('common.saving')}
           className={getSettingsSubmitButtonClasses()}
         >
-          {mutation.isPending ? (
-            <>
-              <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
-              <span className="ml-2">{t('common.saving')}</span>
-            </>
-          ) : (
-            <>
-              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-              {t('common.save')}
-            </>
-          )}
+          <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+          {t('common.save')}
         </Button>
       </CardFooter>
     </Card>

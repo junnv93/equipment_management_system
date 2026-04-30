@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, ShieldAlert } from 'lucide-react';
+import { Check, ShieldAlert } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
@@ -42,7 +42,6 @@ import { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from '@equipment-managem
 import {
   SETTINGS_CARD_HEADER_TOKENS,
   SETTINGS_SUBMIT_TOKENS,
-  SETTINGS_SAVE_INDICATOR_TOKENS,
   getSettingsCardClasses,
   getSettingsCardDangerClasses,
   getSettingsCardHeaderClasses,
@@ -298,19 +297,12 @@ function SystemSettingsFormContent({ initialSettings }: { initialSettings: Syste
                 type="submit"
                 disabled={mutation.isPending || !form.formState.isDirty}
                 loading={mutation.isPending}
+                loadingPosition="replace"
+                loadingLabel={t('common.saving')}
                 className={getSettingsSubmitButtonClasses()}
               >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
-                    <span className="ml-2">{t('common.saving')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {t('common.save')}
-                  </>
-                )}
+                <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('common.save')}
               </Button>
             </CardFooter>
           </form>

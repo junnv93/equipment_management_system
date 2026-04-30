@@ -199,16 +199,17 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
                 {section.sectionLabel}
               </div>
               {/* 아이템 목록 */}
-              <div className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-1 list-none" role="list">
                 {section.items.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    item={item}
-                    isActive={isNavItemActive(item.href, pathname)}
-                    onClick={closeMenu}
-                  />
+                  <li key={item.href}>
+                    <NavLink
+                      item={item}
+                      isActive={isNavItemActive(item.href, pathname)}
+                      onClick={closeMenu}
+                    />
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
         </nav>
