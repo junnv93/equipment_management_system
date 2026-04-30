@@ -15,6 +15,7 @@ import {
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { type CalibrationSeverity, CALIBRATION_BADGE_TOKENS } from '@/lib/design-tokens';
+import { calculateDaysRemaining } from './dday-utils';
 
 /**
  * 교정 상태 정보
@@ -80,14 +81,8 @@ export function calculateCalibrationStatus(
     return null;
   }
 
-  // 4. 날짜 계산
-  const nextDate = new Date(nextCalibrationDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  nextDate.setHours(0, 0, 0, 0);
-
-  const diffTime = nextDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // 4. 날짜 계산 — SSOT: dday-utils.calculateDaysRemaining
+  const diffDays = calculateDaysRemaining(nextCalibrationDate);
 
   // 5. 교정 기한 초과
   if (diffDays < 0) {

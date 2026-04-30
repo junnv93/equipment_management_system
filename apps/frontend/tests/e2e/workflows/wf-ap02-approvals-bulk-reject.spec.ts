@@ -82,13 +82,14 @@ test.describe('WF-AP02: 승인 목록 일괄 반려', () => {
     const bar = page.locator('[data-testid="bulk-action-bar"]');
     await expect(bar).toHaveAttribute('aria-hidden', 'false');
 
-    const countChip = page.locator('[data-testid="bulk-selection-count"]');
-    await expect(countChip).toBeVisible();
-    await expect(countChip).toContainText('1');
+    // 선택 카운트 — GenericBulkActionBar span 내 텍스트
+    const toolbar = bar.locator('[role="toolbar"]');
+    await expect(toolbar).toBeVisible();
+    await expect(toolbar).toContainText('1');
 
     // 두 번째 행도 선택
     await rows.nth(1).locator('[role="checkbox"]').click();
-    await expect(countChip).toContainText('2');
+    await expect(toolbar).toContainText('2');
   });
 
   test('Step 4: 일괄 반려 버튼 클릭 → RejectModal bulk 모드 표시', async ({

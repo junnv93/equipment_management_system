@@ -468,6 +468,13 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
             <BulkActionBar
               selectedCount={selectedItems.length}
               totalCount={sortedItems.length}
+              isAllPageSelected={
+                selectedItems.length > 0 && selectedItems.length === sortedItems.length
+              }
+              isIndeterminate={
+                selectedItems.length > 0 && selectedItems.length < sortedItems.length
+              }
+              onSelectAll={() => setSelectedItems(sortedItems.map((i) => i.id))}
               onClearSelection={() => setSelectedItems([])}
               onBulkApprove={handleBulkApprove}
               onBulkReject={TAB_META[activeTab].canReject !== false ? handleBulkReject : undefined}

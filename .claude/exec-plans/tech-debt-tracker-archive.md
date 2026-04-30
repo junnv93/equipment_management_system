@@ -5,6 +5,124 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-30 — tech-debt-batch-0430c/d + harness 세션 완료 (57건 아카이브)
+
+### 2026-04-30 Checkouts V3 Sprint 4.5 — 완료 5건
+
+- [x] **[2026-04-30 sprint-4.5] 🟡 MEDIUM checkout-group-card-setQueryData** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). `setQueryData` 2건 제거. onMutate `setQueriesData` (optimistic) + onError `invalidateQueries` + CAS 409 `removeQueries(detail)` 3-패턴으로 대체. tsc 0 에러.
+- [x] **[2026-04-30 sprint-4.5] 🟢 LOW form-template-spec-pre-existing-tsc** — ✅ 2026-04-30 N/A (tech-debt-batch-0430d). backend tsc 0 에러 확인 — createdAt tsc 오류 사전 해소됨. 16 tests PASS.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S1 BulkActionBar SKILL.md actions slot 표준 명문화** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). verify-implementation SKILL.md Step 22(D1) 문서화: `actions?: React.ReactNode` slot 패턴 + 위반 패턴 grep 명시.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S2 useRowSelection IME 가드** — ✅ 2026-04-30 N/A + 부분 완료 (tech-debt-batch-0430d). use-bulk-selection.ts pre-flight grep 0건 → N/A. 실제 IME 가드는 `use-approval-keyboard.ts:44`에 `if (e.isComposing) return;` 추가 완료.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S9 RejectModal charsRemaining 카운터** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). `aria-live="polite"` char counter + `{remaining}자 남음` i18n ko/en. 80%/100% 임계값 색상 (text-amber-600/text-destructive). `REJECTION_MAX_LENGTH` SSOT.
+
+### 2026-04-30 deps-supply-chain-hardening — 완료 9건
+
+- [x] **[2026-04-30 deps-supply-chain] 🔴 IMMEDIATE A3 ci-supply-chain-gate** — ✅ 2026-04-28 완료. `.github/workflows/supply-chain-gate.yml` 신설 (drift-check + dependabot-audit 2 jobs, `--ignore-scripts`로 preinstall 독립 검증).
+- [x] **[2026-04-30 deps-supply-chain] 🔴 IMMEDIATE A1 mock-providers-identifier-helper** — ✅ 2026-04-28 완료. `createMockIdentifierService()` 헬퍼 추가, verify-ssot Step 44 검증 명령 6번에 mock 등록 grep 추가 + PASS/FAIL 항목 갱신.
+- [x] **[2026-04-30 deps-supply-chain] 🔴 IMMEDIATE A5 identifier-policy-docs** — ✅ 2026-04-28 완료. `docs/references/identifier-policy.md` 63 lines (5 섹션: SSOT 진입점/4 헬퍼/트레이드오프/예외/추가 절차). skills-index.md 인덱스 추가.
+- [x] **[2026-04-30 deps-supply-chain] 🔴 IMMEDIATE A6 eslint-no-restricted-imports-crypto** — ✅ 2026-04-28 완료. `apps/backend/.eslintrc.js`에 `no-restricted-imports.paths` (`node:crypto`/`crypto` randomUUID) + `no-restricted-syntax` (`MemberExpression[property.name='randomUUID']`) + identifier.service.ts overrides 추가. 부수: 3 파일을 named import (`createHash`/`randomBytes`)로 좁힘.
+- [x] **[2026-04-28 supply-chain-gate-completion] 🟢 LOW main-residual-lint-errors** — ✅ 2026-04-28 완료 (system-wide-completion sprint Phase C1). pre-push hook에 `pnpm --filter backend run lint:ci` + `pnpm --filter frontend run lint` 추가하여 회귀 차단 게이트 보강. 부수: frontend `RouteLoading` deprecated 9건 일괄 SSOT 마이그레이션 + `variant="table"` 4건 → `"list"` 정합화 + `showHeader` prop 4건 제거.
+- [x] **[2026-04-29 checkout-url-first-state] 🟢 LOW S6 parseCheckoutCreateParams-unit-test** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase D). `apps/frontend/lib/utils/__tests__/checkout-create-params.test.ts` 신설, 7 케이스 PASS.
+- [x] **[2026-04-30 deps-supply-chain] 🟡 MEDIUM A4 dependabot-yml-policy** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). semver-major ignore 28건, versioning-strategy 명시, YAML 파싱 통과.
+- [x] **[2026-04-30 deps-supply-chain] 🟡 MEDIUM file-upload-form-template-spec-신설** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d Phase A N/A). 두 spec 모두 이미 존재 + 16 tests PASS.
+- [x] **[2026-04-30 deps-supply-chain] 🟢 LOW identifier-negative-test** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase E). `jest.mock('node:crypto', factory)` 패턴으로 non-configurable 프로퍼티 우회. CSPRNG 장애 시 서비스 중단 negative test 추가.
+
+### 2026-04-28 review-architecture skill 권고 — 완료 2건
+
+- [x] **[2026-04-28 review-arch] 🟡 MEDIUM dev-doctor-hint-line-mode** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase B). `scripts/dev-doctor.mjs`에 `--hint-line` CLI mode 추가 + `formatHintLine()` export. `.claude/settings.json` SessionStart hook을 `node scripts/dev-doctor.mjs --hint-line 2>/dev/null || true` 1줄로 단순화.
+- [x] **[2026-04-28 review-arch] 🟡 MEDIUM checkout-selectability-physical-ssot** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase A). `checkouts.service.ts` inline `===` 팀 비교 제거, `isPurposeCompatibleWithEquipment` + `USER_SELECTABLE_PURPOSES.includes()` 가드로 교체.
+
+### 2026-04-28 checkouts-phase4-kpi-hierarchy — 완료 2건
+
+- [x] **[2026-04-28 checkouts-phase4] 🟡 MEDIUM dashboard-pending-approval-card-alert-ring-token** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase C). `DASHBOARD_PENDING_APPROVAL_TOKENS.alertRing` 4키(heroFull/priority/compact/full) 신설. `PendingApprovalCard.tsx` 4곳 raw ring 클래스 → 토큰 경유.
+- [x] **[2026-04-28 checkouts-phase4] 🟢 LOW heroKPI-atom-react-memo** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase F). `React.memo(function HeroKPI...)` named function expression으로 wrap. displayName 자동 보존.
+
+### 2026-04-29 nextauth-csrf — 완료 1건
+
+- [x] **[2026-04-29 nextauth-csrf §J3] 🟢 LOW verify-routing-origin-pre-commit-hook** — ✅ 2026-04-29 완료. `scripts/verify-routing-origin.sh` 신설(Steps 2-11) + `packages/shared-constants/__tests__/api-routing.spec.ts` 신설(34 invariant tests) + `.husky/pre-push` path-based gate 추가. Evaluator MUST 11/11 PASS.
+
+### 2026-04-30 verify-implementation 발견 — 완료 1건
+
+- [x] **[2026-04-30 verify-impl-batch-0430] 🟢 LOW fetchers-status-literal-ssot** — ✅ 2026-04-30 완료 (tech-debt-batch-0430b). `apps/frontend/lib/api/approvals/fetchers.ts` 리터럴 3건 → `CheckoutStatusValues.PENDING` / `CheckoutPurposeValues.RETURN_TO_VENDOR` / `IntermediateCheckFilterStatusValues.DUE` SSOT 교체.
+
+### 2026-04-27 approvals-ui-r2 DoD — 완료 2건
+
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM approvals-api-module-split** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase A). `approvals-api.ts` 1538줄 → `types/internal-rows/mappers/fetchers/actions` 5개 서브모듈 + 배럴 파일로 functional-axis 분리. 24개 호출처 변경 없음(배럴 re-export 보존).
+- [x] **[2026-04-27 approvals-ui-r2] 🟡 MEDIUM bulk-approve-rate-limit** — ✅ 2026-04-30 완료 (tech-debt-batch-0430b). `runWithConcurrency<T>(tasks, 5)` 헬퍼 도입, `bulkApprove` / `bulkReject` 동시 API 호출 5개로 제한.
+
+### 2026-04-27 Sprint 4.1+4.2 — 완료 1건
+
+- [x] **[2026-04-27 sprint-4.2] 🟢 LOW overflow-action-type-ssot** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase D). `OverflowAction` 인터페이스를 `lib/types/checkout-ui.ts` SSOT로 승격. `NextStepPanel.tsx`에서 `import type` + `export type` 분리 패턴으로 하위 호환성 보장.
+
+### 2026-04-26 Sprint 3.1~3.2 — 완료 1건
+
+- [x] **[2026-04-26 sprint-3.1] 🟡 MEDIUM inbound-bff-flag-removal** — ✅ 2026-04-30 완료 (tech-debt-batch-0430b). `checkout-flags.ts` 삭제, `InboundCheckoutsTab.tsx` BFF-only로 단순화 (legacy 3-useQuery 제거, `teamId` props 제거). `.env.example` 플래그 항목 제거.
+
+### 2026-04-27 approvals-ui-r2 SHOULD — 완료 1건
+
+- [x] **[2026-04-27 approvals-ui-r2] 🟢 LOW stepper-step-transition-animation** — ✅ 2026-04-30 완료 (tech-debt-batch-0430c). `APPROVAL_STEPPER_TOKENS.connector.transition = TRANSITION_PRESETS.fastBg` 신설, `ApprovalStepIndicator.tsx` connector div에 적용. background-color 200ms ease-standard `motion-safe:transition-[background-color]` 전환.
+
+### 2026-04-28 dashboard-redesign-residual — 완료 6건
+
+- [x] **[2026-04-28 dashboard-redesign] kpi-status-grid-min-h-token** — `DASHBOARD_DDAY_COMPACT_TOKENS.minHeightPx = 280` 토큰화 완료, CalibrationDdayList.tsx:63 사용. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 dashboard-redesign] system-health-react-query-monitoring-polling** — `DashboardClient.tsx:173` `QUERY_CONFIG.MONITORING` 적용 완료. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 dashboard-redesign] welcome-suffix-en-empty** — `_suffixNote` sibling 키 ko/en 양쪽 추가, intentional empty 명시. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 dashboard-redesign] dashboard-controller-zod-scope-validation** — `DashboardScopeValidationPipe` + `@UsePipes` 적용, `packages/shared-constants/src/dashboard-scope.ts` SSOT 신설. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 dashboard-redesign] dashboard-controller-process-env-direct** — `ConfigService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES')` 경유, `env.validation.ts` Zod schema 추가. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 dashboard-redesign] pre-existing-dday-deprecation** — 4-tier 마이그레이션 완료, deprecated 6-tier 정의 + 배럴 re-export 모두 제거. (완료 2026-04-28 phase-e-residual)
+
+### 2026-04-28 manage-skills P2 — 완료 4건
+
+- [x] **[2026-04-28 manage-skills] verify-ssot-step-37-effective-role** — Step 37로 추가 (Step 36은 D-day SSOT가 선점). useEffectiveRole SSOT 경유 강제. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 manage-skills] verify-frontend-state-step-24-dual-mode-asymmetry** — Step 24 추가, isControlled = propA && propB 비대칭 검증. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 manage-skills] verify-frontend-state-step-21-online-status-ssot** — Step 21 확장, useOnlineStatus SSOT + navigator.onLine 직접 사용 금지. (완료 2026-04-28 phase-e-residual)
+- [x] **[2026-04-28 manage-skills] verify-design-tokens-step-43-error-fallback** — Step 43 보강, getDerivedStateFromError 화이트리스트 + EmptyState variant="error" 경유 강제. (완료 2026-04-28 phase-e-residual)
+
+### 2026-04-28 dashboard-redesign-phase-e-residual — 완료 1건
+
+- [x] **[2026-04-28 phase-e-residual] 🟡 MEDIUM bundle-baseline-script-nextjs16-migration** — ✅ 2026-04-29 완료. `scripts/check-bundle-size.mjs`에 `measureFromBuildArtifacts()` 함수가 이미 존재하며 Next.js 16 PPR 빌드 산출물(build-manifest.json + app-paths-manifest.json) 직접 측정 지원. stdout 파싱은 레거시 fallback으로 유지.
+
+### 2026-04-28 i18n-parity-hardening — 완료 7건
+
+- [x] **[2026-04-28 i18n-parity-hardening] 🟡 MEDIUM lib-i18n-client-singular-deprecation** — `apps/frontend/lib/i18n/client.ts` 파일 삭제 완료 (0 callers, 단수형 `useTranslation` 래퍼는 dead code). next-intl 표준 `useTranslations` (복수형) 직접 사용으로 통일. (완료 2026-04-28 gap-fix-iter)
+- [x] **[2026-04-28 i18n-parity-hardening] 🟢 LOW shadowed-binding-eslint-rule** — NonConformanceBanner.tsx의 `t` 변수 분리 완료 (`tNc` + `tBanner`). 정적 검증 shadowed 0건 달성. (완료 2026-04-28 gap-fix-iter)
+- [x] **[2026-04-28 i18n-parity-hardening] 🟢 LOW eslint-no-atom-i18n-rule** — `scripts/check-i18n-call-sites.mjs`에 `common.json` 구조 검증 추가 — root level은 sub-namespace(object)만 허용, flat string/array 추가 시 exit 1. (완료 2026-04-28 gap-fix-iter)
+- [x] **[2026-04-28 i18n-parity-hardening] 🟢 LOW e2e-no-missing-message-spec** — `tests/e2e/features/i18n/no-missing-message.spec.ts` 작성 완료. 시드 UUID 회피 위해 system-wide list 라우트 3개 사용. console.error MISSING_MESSAGE 패턴 + body raw key 노출 0건 검증. (완료 2026-04-28 gap-fix-iter)
+- [x] **[2026-04-28 i18n-parity-hardening] 🟡 MEDIUM cross-cutting-ns-structural-check** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase B). `CROSS_CUTTING_NAMESPACES = ['common', 'errors']` 정책 명문화. `checkCommonJsonStructure()` → `checkStructuralNamespaces()`로 리팩터.
+- [x] **[2026-04-28 i18n-parity-hardening] 🟢 LOW frontend-patterns-shared-exception-text-precision** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase G). `frontend-patterns.md` 위치별 예외 정책을 도메인/shared/common.* 3-bullet로 명확화.
+- [x] **[2026-04-28 i18n-parity-hardening] 🟢 LOW i18n-namespaces-array-comment-lag** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase F). `apps/frontend/i18n/request.ts` "Phase 0 ~ Phase 1+" stale 주석 제거.
+
+### 2026-04-28 supply-chain-gate-completion 부수 발견 — 완료 4건
+
+- [x] **[2026-04-28 software-validations] 🔴 IMMEDIATE software-validation-approve-comment-silent-loss** — ✅ 2026-04-28 완료 (harness Mode 2). 도메인 결정 (c) **컬럼 + audit_logs 이중 안전망** 적용: `software_validations.approval_comment text` 컬럼 신설 + service `approve()` underscore prefix 제거. Migration `0048_add_software_validation_approval_comment.sql`. 4 spec 케이스 PASS.
+- [x] **[2026-04-28 software-validation-comment] 🟢 LOW service-param-underscore-prefix-static-check** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). `verify-implementation` SKILL.md Step 21 (경고 레벨 W2) 등록.
+- [x] **[2026-04-28 software-validation-comment] 🟢 LOW frontend-approval-comment-input-ui-audit** — ✅ 2026-04-30 완료 (harness Mode 1). `ValidationApproveDialog` (technical/quality 통합 type prop) + `ValidationRejectDialog` 신설. `SoftwareValidationContent` 8 useState → activeDialog discriminated union 압축.
+- [x] **[2026-04-28 supply-chain-gate-completion] 🟢 LOW eslint-require-alias-rename-gap (dynamic import variant)** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 Phase C). `dynamic import('node:crypto')` / `import('crypto')` 패턴 2개 차단 selector 추가.
+
+### 2026-04-28 sidebar-nav-action-pattern — 완료 4건
+
+- [x] **[2026-04-28 sidebar-nav-action-pattern] 🟢 LOW resolve-badge-and-action-exhaustive-kind-check** — ✅ 2026-04-29 완료 (tech-debt-batch-0429 Phase E). `switch (cfg.kind)` + `assertNever(x: never): never` 패턴 적용. `count-with-action` / `count` 양쪽 명시, default → assertNever로 컴파일 타임 exhaustiveness 보장.
+- [x] **[2026-04-29 rental-approval-workflow-fix] 🟡 MEDIUM g9-getpendingchecks-borrower-pending** — ✅ F-1에서 처리. EXISTS 서브쿼리로 `requester.teamId === userTeamId` 매칭 + `pending` status 추가. borrower TM nav 배지 정상 카운트.
+- [x] **[2026-04-29 rental-approval-workflow-fix] 🟡 MEDIUM use-checkout-group-descriptors-actor-ctx** — ✅ F-2에서 처리. hook 시그니처에 `userTeamId?` 합류, `requesterTeamId`를 FE Checkout 타입에 추가, `getNextStep`에 actorCtx 전달. defense-in-depth 일관성.
+- [x] **[2026-04-29 rental-approval-workflow-fix] 🟢 LOW actor-team-disabled-wcag** — ✅ F-3에서 처리. `aria-describedby` 연결 + `role="status"` 사유 노출. SR이 disabled 버튼에 포커스 시 사유 읽음.
+
+### 2026-04-29 button-loading-codemod — 완료 1건
+
+- [x] **[2026-04-29 button-loading] 🟢 LOW visual-double-spinner-settings-only** — ✅ 2026-04-30 완료. CalibrationSettingsContent / SystemSettingsContent / DisplayPreferencesContent 3개 파일 `loadingPosition="replace"` + `loadingLabel={t('common.saving')}` 적용, 내부 Loader2 조건부 렌더 + 미사용 import 정리 완료.
+
+### 2026-04-30 verify-implementation post-batch — 완료 2건
+
+- [x] **[2026-04-30 verify-impl-post-batch] 🟡 MEDIUM reason-field-trim-missing-3-dto** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 session wrapup). 3개 DTO 모두 `z.string().trim().min(1, ...)` 패턴으로 수정: reject-return.dto.ts:16, reject-checkout.dto.ts:16, borrower-reject-checkout.dto.ts:16.
+- [x] **[2026-04-30 verify-impl-post-batch] 🟢 LOW manual-entry-fallback-react-form-event** — ✅ 2026-04-30 완료 (tech-debt-batch-0430 session wrapup). `ManualEntryFallback.tsx:46` `React.FormEvent<HTMLFormElement>` → `React.SyntheticEvent<HTMLFormElement>` 교체 (React 19 deprecated 해소).
+
+### 2026-04-30 tech-debt-batch-0430c SHOULD 이연 항목 — 완료 3건
+
+- [x] **[2026-04-30 batch-0430c B3.5] 🟢 LOW mobilenav-list-semantics** — ✅ 2026-04-30 완료. `MobileNav.tsx` section items map → `<ul className="flex flex-col gap-1 list-none" role="list"><li key={item.href}>` 구조 전환. DashboardShell과 동일 패턴 적용 완료.
+- [x] **[2026-04-30 batch-0430c B6] 🟢 LOW stepper-start-node-label-token** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). `APPROVAL_STEPPER_TOKENS.startNodeLabel: { srOnly: 'sr-only' }` 추가. `ApprovalStepIndicator` `index === 0` 노드에 `aria-label={t('steps.startNodeLabel')}` 적용. ko/en i18n parity 완료.
+- [x] **[2026-04-30 batch-0430c B7.1] 🟢 LOW verify-implementation-spec-helper-return-type** — ✅ 2026-04-30 완료 (tech-debt-batch-0430d). `verify-implementation` SKILL.md Step 20 (경고 레벨 W1) 등록. `makeMock*`/`setup*`/`create*` spec 헬퍼 return type 누락 탐지 grep 추가.
+
+---
+
 ## 2026-04-28 — tech-debt-residual 완료 (Phase 1: 2건 SSOT/하드코딩 + Phase 2: 5건 SSOT/문서/스킬)
 
 ### 2026-04-28 harness: tech-debt-residual Phase 2 (재평가 후 추가 처리)

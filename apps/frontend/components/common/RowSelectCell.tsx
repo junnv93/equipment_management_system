@@ -14,7 +14,7 @@ export interface RowSelectCellProps<T> {
   item: T;
   keyFn: (item: T) => string;
   selection: Pick<RowSelectionAPI<T>, 'isSelected' | 'toggle'>;
-  /** i18n 키 (common.bulk.selectRow 등) — {name} 인자 사용 */
+  /** i18n 키 — common 네임스페이스 기준 sub-key (e.g. 'bulk.selectRow'). 'common.' prefix 제외 */
   ariaLabelKey?: string;
   /** aria-label 인자 빌더 */
   ariaLabelArgs: (item: T) => Record<string, string | number>;
@@ -50,9 +50,7 @@ export function RowSelectCell<T>({
     [toggle, key, item]
   );
 
-  // i18n 키를 dotted path로 resolve (e.g. 'bulk.selectRow' → t('bulk.selectRow', args))
-  const labelKey = ariaLabelKey.replace(/^common\./, '');
-  const ariaLabel = t(labelKey as Parameters<typeof t>[0], ariaLabelArgs(item));
+  const ariaLabel = t(ariaLabelKey as Parameters<typeof t>[0], ariaLabelArgs(item));
 
   return (
     <TableCell className="w-10 [&:has([role=checkbox])]:pr-0">
