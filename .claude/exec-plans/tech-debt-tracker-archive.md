@@ -5,7 +5,23 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-30 — tech-debt-batch-0430e (Mode 1 harness, 3건)
+
+### tech-debt-batch-0430e — 완료 3건 (7/7 MUST PASS)
+
+- [x] **[verify-impl-batch-0430d WARN] 🟢 LOW display-preferences-select-ssot** — ✅ 2026-04-30 완료 (tech-debt-batch-0430e). `DisplayPreferencesContent.tsx` 4개 Select 필드를 SSOT 배열 `.map()`으로 교체. `SUPPORTED_LOCALES` / `ITEMS_PER_PAGE_OPTIONS` / `DATE_FORMAT_OPTIONS` / `EQUIPMENT_SORT_OPTIONS` 모두 `@equipment-management/schemas` import. dateFormat UI 렌더링 메타데이터는 컴포넌트 레이어 상수(`DATE_FORMAT_EXAMPLE` / `DATE_FORMAT_I18N_KEY`)로 분리 (SSOT 허용 로컬 UI 옵션).
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S8 bulk-reject e2e 테스트** — ✅ 2026-04-30 완료 (tech-debt-batch-0430e). `wf-ap02-approvals-bulk-reject.spec.ts` Step 8(route mock 전체 성공 toast `/건이 반려되었습니다/`) + Step 9(route mock 부분 실패 toast `/건 반려 완료.*건 실패/`) + `finally page.unroute()` 정리. `expectToastVisible` SSOT 활용.
+- [x] **[2026-04-29 nextauth-csrf §S1] 🟡 MEDIUM legacy-sw-unregister-e2e-verification** — ✅ 2026-04-30 완료 (tech-debt-batch-0430e). `tests/e2e/features/pwa/legacy-sw-cleanup.spec.ts` TC-01(getRegistrations() 0건) + TC-02(localStorage `__legacy_sw_cleaned_v1` 플래그 '1') + TC-03(재로드 후 플래그 유지 + reload 정책 주석 문서화). ADR-0006 same-origin 확인: 강제 reload 없음 = 의도된 설계.
+
+---
+
 ## 2026-04-30 — tech-debt-batch-0430c/d + harness 세션 완료 (57건 아카이브)
+
+### 2026-04-30 Checkouts V3 Sprint 4.5 SHOULD 잔여 — 완료 3건 (sprint45-should-residual harness)
+
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S3 그룹 헤더 indeterminate 체크박스** — ✅ 2026-04-30 완료 (sprint45-should-residual harness, Mode 2). `lib/checkouts/group-selection.ts` SSOT (getGroupRowIds / deriveGroupSelectionState / toCheckboxCheckedProp) + CheckoutGroupCard `selectedRowIds`/`onToggleGroup` 옵셔널 prop API + Radix `data-state="indeterminate"` + IME 가드 + 단위 테스트 19건 (SSOT 10 + 컴포넌트 9) + 격리 fixture page (`__visual__/group-indeterminate`) + e2e 3 시나리오. **부모 통합 미수행** — Outbound/Inbound 탭 통합은 후속 트래커 등록.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S4 D-day 6-level visual regression** — ✅ 2026-04-30 완료 (sprint45-should-residual harness). Storybook 도입 회피, 기존 Playwright `toHaveScreenshot()` 인프라 재사용 (의존성 0). `tests/e2e/visual/dday-6level.spec.ts` 12 baseline (6 level × light/dark). dev-only fixture (`__visual__/dday/page.tsx`) `process.env.NODE_ENV` 가드. SSOT 직접 import (`getCheckoutDdayVisualLevel` / `CHECKOUT_DDAY_VISUAL_THRESHOLDS` / `DDAY_VISUAL_LEVEL_CLASSES`) — 임계값/className 하드코딩 0건. 초기 PNG 캡처 후속 트래커 등록.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S6 EmptyState in-app 도움말 라우팅** — ✅ 2026-04-30 완료 (sprint45-should-residual harness). `FRONTEND_ROUTES.HELP` SSOT (`INDEX` + `TOPIC(key)` 빌더) + `app/(dashboard)/help/page.tsx` Next.js 16 sync Server Component + `messages/{ko,en}/help.json` placeholder (4 sections: checkout/calibration/nonConformance/permissions) + `i18n/request.ts` namespace 등록 + `dashboard/atoms/EmptyState` `secondaryAction` prop 신설 (다른 2 EmptyState는 이미 보유). `mailto:` 사용처(TeamMemberList/MemberProfileDialog)는 도메인 의도 별개로 보존. FAQ 카피는 운영팀 confirm 후 별도(후속 트래커 등록).
 
 ### 2026-04-30 Checkouts V3 Sprint 4.5 — 완료 5건
 

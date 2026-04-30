@@ -39,6 +39,10 @@ import {
   displayPreferencesSchema,
   DEFAULT_DISPLAY_PREFERENCES,
   type DisplayPreferences,
+  SUPPORTED_LOCALES,
+  ITEMS_PER_PAGE_OPTIONS,
+  DATE_FORMAT_OPTIONS,
+  EQUIPMENT_SORT_OPTIONS,
 } from '@equipment-management/schemas';
 import { setLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { useTranslations, useLocale } from 'next-intl';
@@ -112,6 +116,17 @@ export default function DisplayPreferencesContent() {
  * defaultValues만 사용: Radix Select가 마운트 시점에 올바른 value로 초기화됨.
  * (values useEffect 없음 → 포털이 닫힌 상태에서의 item 텍스트 조회 문제 없음)
  */
+// UI-only 렌더링 메타데이터 — 표시 예시 날짜(실제 날짜 아님)와 i18n 키 suffix
+// DATE_FORMAT_OPTIONS 배열이 추가될 경우 여기도 갱신 필요
+const DATE_FORMAT_EXAMPLE: Record<(typeof DATE_FORMAT_OPTIONS)[number], string> = {
+  'YYYY-MM-DD': '2026-02-15',
+  'YYYY.MM.DD': '2026.02.15',
+};
+const DATE_FORMAT_I18N_KEY: Record<(typeof DATE_FORMAT_OPTIONS)[number], 'iso' | 'korean'> = {
+  'YYYY-MM-DD': 'iso',
+  'YYYY.MM.DD': 'korean',
+};
+
 function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPreferences }) {
   const t = useTranslations('settings');
   const { toast } = useToast();
@@ -177,8 +192,11 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="ko">{t('display.languageOptions.ko')}</SelectItem>
-                        <SelectItem value="en">{t('display.languageOptions.en')}</SelectItem>
+                        {SUPPORTED_LOCALES.map((locale) => (
+                          <SelectItem key={locale} value={locale}>
+                            {t(`display.languageOptions.${locale}` as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
@@ -204,9 +222,11 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="10">{t('display.itemsPerPageOptions.10')}</SelectItem>
-                        <SelectItem value="20">{t('display.itemsPerPageOptions.20')}</SelectItem>
-                        <SelectItem value="50">{t('display.itemsPerPageOptions.50')}</SelectItem>
+                        {ITEMS_PER_PAGE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {t(`display.itemsPerPageOptions.${opt}` as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
@@ -232,18 +252,20 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="YYYY-MM-DD">
-                          <span className="font-mono">2026-02-15</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            ({t('display.dateFormatOptions.iso')})
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="YYYY.MM.DD">
-                          <span className="font-mono">2026.02.15</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            ({t('display.dateFormatOptions.korean')})
-                          </span>
-                        </SelectItem>
+                        {DATE_FORMAT_OPTIONS.map((fmt) => (
+                          <SelectItem key={fmt} value={fmt}>
+                            <span className="font-mono">{DATE_FORMAT_EXAMPLE[fmt]}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              (
+                              {t(
+                                `display.dateFormatOptions.${DATE_FORMAT_I18N_KEY[fmt]}` as Parameters<
+                                  typeof t
+                                >[0]
+                              )}
+                              )
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
@@ -269,11 +291,11 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="managementNumber">
-                          {t('sortOptions.managementNumber')}
-                        </SelectItem>
-                        <SelectItem value="name">{t('sortOptions.name')}</SelectItem>
-                        <SelectItem value="updatedAt">{t('sortOptions.updatedAt')}</SelectItem>
+                        {EQUIPMENT_SORT_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {t(`sortOptions.${opt}` as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
