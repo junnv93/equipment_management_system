@@ -1083,3 +1083,47 @@ grep -rn "useState<.*null>" apps/frontend --include="*.tsx" | \
 
 **관련 파일:**
 - `apps/frontend/app/(dashboard)/software/[id]/validation/SoftwareValidationContent.tsx` — ActiveDialog union 패턴 참조 구현
+
+### Step 35: bulk approve/reject는 `runWithConcurrency` worker pool 패턴 — `Promise.allSettled` 직접 호출 금지 (2026-04-30 추가, tech-debt-batch-0430b)
+
+**규칙**: `bulkApprove` / `bulkReject` 같은 대량 비동기 작업은 `Promise.allSettled(ids.map(...))` 직접 호출을 금지하고, 동시성 제한 worker pool인 `runWithConcurrency(tasks, BULK_CONCURRENCY_LIMIT)` 패턴을 사용한다.
+
+**왜 직접 `Promise.allSettled`가 문제인가**: N개 항목 전체를 동시에 시작하면 백엔드 처리량을 초과해 rate-limit/timeout이 발생한다. Worker pool 패턴은 항상 `BULK_CONCURRENCY_LIMIT`개만 활성 상태를 유지하며, task 완료 즉시 다음 task를 grab하므로 slow outlier가 전체 배치를 지연시키지 않는다.
+
+**검증 명령**:
+```bash
+# bulkApprove / bulkReject 함수 본문에서 직접 Promise.allSettled 호출 탐지
+# (runWithConcurrency 내부에서의 사용은 허용)
+grep -n "Promise.allSettled" apps/frontend/lib/api/approvals/actions.ts | \
+  grep -v "runWithConcurrency"
+# 기대: 0건 — Promise.allSettled는 runWithConcurrency 내부에서만 허용
+```
+
+```bash
+# runWithConcurrency 존재 + BULK_CONCURRENCY_LIMIT 상수 확인
+grep -n "runWithConcurrency\|BULK_CONCURRENCY_LIMIT" \
+  apps/frontend/lib/api/approvals/actions.ts
+# 기대: runWithConcurrency 함수 정의 1건 + BULK_CONCURRENCY_LIMIT 상수 1건 + 사용처 2건(bulkApprove/bulkReject)
+```
+
+**PASS**: `bulkApprove`/`bulkReject` 본문에 `Promise.allSettled` 직접 호출 0건, `runWithConcurrency` 경유 확인  
+**FAIL**: 직접 호출 발견 → `runWithConcurrency` 함수로 래핑
+
+**올바른 패턴**:
+```typescript
+// ✅ CORRECT — worker pool: 항상 BULK_CONCURRENCY_LIMIT개만 active
+const results = await runWithConcurrency(
+  ids.map((id) => () => approve(category, id, comment, equipmentId, originalData)),
+  BULK_CONCURRENCY_LIMIT
+);
+
+// ❌ WRONG — N개 동시 실행 → rate-limit 위험
+const results = await Promise.allSettled(
+  ids.map((id) => approve(category, id, comment))
+);
+```
+
+**관련 파일**:
+- `apps/frontend/lib/api/approvals/actions.ts` — `runWithConcurrency` + `BULK_CONCURRENCY_LIMIT = 5` 정의 및 사용
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b bulk-approve-rate-limit 작업. 초기 배치 방식(`chunk` 기반)에서 진짜 세마포어(worker pool) 방식으로 교체. 배치 방식은 slow outlier가 전체 chunk를 지연시키는 문제가 있어, `nextIndex` 공유 변수로 worker가 즉시 다음 task를 grab하는 구조로 개선.

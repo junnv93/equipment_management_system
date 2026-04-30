@@ -829,6 +829,7 @@ grep -n "onBulkReject" apps/frontend/components/approvals/ApprovalsClient.tsx | 
 | 33  | TAB_META capability guard 완전성 — canReject 4-path | PASS/FAIL | 미가드 onReject/onBulkReject 직접 전달 위치 |
 | 34  | 로컬 인터페이스명 packages 동명 타입 충돌 금지 (2026-04-27) | PASS/FAIL | `packages/schemas` export 타입과 서비스 로컬 interface 동명 충돌 위치 |
 | 49  | UI 도메인 타입 파일 SSOT + 위임 re-export 패턴 (2026-04-30) | PASS/FAIL | 컴포넌트 내 `export interface` 직접 정의 위치 또는 `lib/types/` SSOT 파일 누락 |
+| 50  | `components/shared/` eslint-disable `self-audit-exception` 마커 강제 (2026-04-30) | PASS/FAIL | 마커 없는 `eslint-disable-next-line no-restricted-syntax` 위치 |
 ```
 
 ## Exceptions
@@ -1719,3 +1720,73 @@ grep -rn "from '@/lib/types/checkout-ui'" \
 - `apps/frontend/components/checkouts/CheckoutGroupCard.tsx` — `lib/types/checkout-ui` 직접 import 호출처
 
 **발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430 Phase D — `OverflowAction`이 `NextStepPanel.tsx`에 정의되어 있어 `CheckoutGroupCard.tsx`가 컴포넌트 파일을 import해야 했다. `apps/frontend/lib/types/checkout-ui.ts` SSOT 파일 신설 + NextStepPanel 위임 re-export 패턴 도입으로 타입 분산 해소.
+
+### Step 50: `components/shared/` eslint-disable에 `self-audit-exception` 마커 강제 (2026-04-30 추가, tech-debt-batch-0430b)
+
+**규칙**: `apps/frontend/components/shared/` 하위 파일에서 `eslint-disable-next-line no-restricted-syntax` 주석을 사용하는 경우, 반드시 `-- self-audit-exception:` 마커와 사유를 포함해야 한다. 마커 없는 disable 주석은 `scripts/self-audit.mjs`의 `checkEslintDisable()` 함수에서 pre-commit 차단 대상이 된다.
+
+**왜 이 마커가 필요한가**: `components/shared/`의 컴포넌트는 도메인 NS 결합이 금지되어 있으나, i18n 키 이전 전 임시 허용이 필요한 경우가 있다. 이 경우 `self-audit-exception` 마커로 "의도된 예외임을 명시" + "이전 완료 시 제거 대상 추적"의 두 목적을 달성한다. 마커 없이 disable만 있으면 레거시 우회인지 의도된 임시 예외인지 구분이 불가하다.
+
+**검증 명령**:
+```bash
+# components/shared/ 내 마커 없는 no-restricted-syntax disable 탐지
+grep -rn "eslint-disable.*no-restricted-syntax" \
+  apps/frontend/components/shared/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "self-audit-exception"
+# 기대: 0건 — 마커 없는 disable 0건
+```
+
+**PASS**: 0건 (모든 disable에 `-- self-audit-exception: <사유>` 포함)
+**FAIL**: 마커 없는 disable 발견 → `-- self-audit-exception: <사유>` 추가 또는 disable 제거
+
+**현재 허용된 예외 목록** (2026-04-30 기준):
+- `DocumentPreviewDialog.tsx:28` — `equipment.attachmentsTab` i18n 키 이전 전 임시 허용
+- `EquipmentSelector.tsx:51` — `equipment.selector` i18n 키 이전 전 임시 허용
+
+**관련 파일**:
+- `scripts/self-audit.mjs` — `checkEslintDisable()`: `self-audit-exception` 패턴으로 승인 예외 처리
+- `apps/frontend/eslint.config.mjs` — `SHARED_COMPONENT_DOMAIN_NS_RULE`: NS 결합 금지 ESLint 게이트 (Step 50은 해당 게이트의 예외 처리 완전성을 검증)
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b — `DocumentPreviewDialog.tsx`, `EquipmentSelector.tsx`의 기존 eslint-disable 주석이 `self-audit-exception` 마커 없이 pre-commit에서 false positive로 차단되는 버그 발견. 마커 도입 + `self-audit.mjs` 예외 인식 로직 추가로 해소. 향후 `components/shared/` 신규 eslint-disable 추가 시 마커 필수.
+
+### Step 51: `CheckoutDirectionValues` SSOT — `direction` 리터럴 문자열 인라인 금지 (2026-04-30 추가, tech-debt-batch-0430b)
+
+**규칙**: `checkoutApi.getCheckouts()` 등 checkout API 호출 시 `direction` 파라미터에 `'outbound'`/`'inbound'` 문자열 리터럴을 직접 사용하지 않는다. 반드시 `CheckoutDirectionValues.OUTBOUND` / `CheckoutDirectionValues.INBOUND` SSOT 상수를 경유한다.
+
+**왜 SSOT가 필요한가**: `CheckoutDirection` 타입은 `packages/schemas/`에서 중앙 관리된다. 리터럴 인라인 시 타입이 변경되어도 컴파일 에러가 발생하지 않아 런타임 필터링 오작동이 조용히 발생한다. `satisfies Record<string, CheckoutDirection>` 제약을 가진 `CheckoutDirectionValues` 상수를 통하면 타입 변경 즉시 컴파일 에러로 탐지된다.
+
+**검증 명령**:
+```bash
+# direction 파라미터에 리터럴 문자열 직접 사용 탐지
+grep -rn "direction: 'outbound'\|direction: 'inbound'\|direction: \"outbound\"\|direction: \"inbound\"" \
+  apps/frontend/lib/api/ \
+  apps/frontend/app/ \
+  apps/frontend/components/ \
+  --include="*.ts" --include="*.tsx"
+# 기대: 0건
+```
+
+**PASS**: 0건 (모든 direction 파라미터가 `CheckoutDirectionValues.*` 경유)  
+**FAIL**: 리터럴 발견 → `import { CheckoutDirectionValues } from '@equipment-management/schemas'` 후 교체
+
+**올바른 패턴**:
+```typescript
+// ✅ CORRECT
+import { CheckoutDirectionValues } from '@equipment-management/schemas';
+
+await checkoutApi.getCheckouts({
+  direction: CheckoutDirectionValues.OUTBOUND,
+});
+
+// ❌ WRONG
+await checkoutApi.getCheckouts({
+  direction: 'outbound', // 리터럴 인라인
+});
+```
+
+**관련 파일**:
+- `packages/schemas/src/enums/values.ts` — `CheckoutDirectionValues` 정의 (`as const satisfies Record<string, CheckoutDirection>`)
+- `apps/frontend/lib/api/approvals/fetchers.ts` — `CheckoutDirectionValues.OUTBOUND` 사용처 (2026-04-30 SSOT 교체)
+
+**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b fetchers-status-literal-ssot 작업 중 `direction: 'outbound'` 2건 발견. `CheckoutDirectionValues`가 schemas에 없어 신규 추가 후 교체. `satisfies` 제약으로 컴파일 타임 안전성 확보.
