@@ -31,6 +31,8 @@ import {
   ClassificationEnum,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   ErrorCode,
+  CHECKOUT_STATUS_GROUPS,
+  type CheckoutSummary,
   type ConditionCheckStep,
   type CheckoutPurpose,
   type InboundOverviewQueryInput,
@@ -198,13 +200,7 @@ interface CheckoutWithRelations extends Checkout {
 export interface CheckoutListResponse {
   items: CheckoutWithRelations[];
   meta: PaginationMeta;
-  summary?: {
-    total: number;
-    pending: number;
-    approved: number;
-    overdue: number;
-    returnedToday: number;
-  };
+  summary?: CheckoutSummary;
 }
 
 @Injectable()
@@ -1219,13 +1215,7 @@ export class CheckoutsService extends VersionedBaseService {
    * ✅ 성능: 단일 쿼리로 모든 상태별 카운트 집계
    * ✅ 캐시: 5분 TTL
    */
-  async getSummary(teamId?: string): Promise<{
-    total: number;
-    pending: number;
-    approved: number;
-    overdue: number;
-    returnedToday: number;
-  }> {
+  async getSummary(teamId?: string): Promise<CheckoutSummary> {
     const cacheKey = this.buildCacheKey('summary', { teamId });
 
     return this.cacheService.getOrSet(
@@ -1249,13 +1239,21 @@ export class CheckoutsService extends VersionedBaseService {
           }
 
           // 단일 쿼리로 모든 상태별 카운트 집계
+          const inProgressStatuses = [...CHECKOUT_STATUS_GROUPS.in_progress];
+          const completedStatuses = [...CHECKOUT_STATUS_GROUPS.completed];
           const [summaryData] = await this.db
             .select({
               total: sql<number>`COUNT(*)`,
               pending: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.PENDING})`,
-              approved: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.APPROVED})`,
+              inProgress: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
+                inProgressStatuses.map((s) => sql`${s}`),
+                sql`, `
+              )}))`,
               overdue: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.OVERDUE})`,
-              returnedToday: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.RETURNED} AND DATE(${checkouts.actualReturnDate}) = CURRENT_DATE)`,
+              returnedToday: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
+                completedStatuses.map((s) => sql`${s}`),
+                sql`, `
+              )}) AND DATE(${checkouts.actualReturnDate}) = CURRENT_DATE)`,
             })
             .from(checkouts)
             .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
@@ -1263,7 +1261,7 @@ export class CheckoutsService extends VersionedBaseService {
           return {
             total: Number(summaryData.total || 0),
             pending: Number(summaryData.pending || 0),
-            approved: Number(summaryData.approved || 0),
+            inProgress: Number(summaryData.inProgress || 0),
             overdue: Number(summaryData.overdue || 0),
             returnedToday: Number(summaryData.returnedToday || 0),
           };

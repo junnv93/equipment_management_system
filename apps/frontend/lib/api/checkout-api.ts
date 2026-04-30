@@ -18,8 +18,10 @@ import type {
   AccessoriesStatus,
   NextStepDescriptor,
   InboundSectionMeta,
+  CheckoutSummary,
 } from '@equipment-management/schemas';
 import { InboundOverviewResponseSchema } from '@equipment-management/schemas';
+export type { CheckoutSummary };
 
 // ✅ Handover 토큰 타입 (QR Phase 3) — DTO shape은 백엔드와 동일 SSOT 재사용 대상.
 // 프론트에서 백엔드 DTO를 직접 import할 수 없으므로 구조만 로컬 재정의.
@@ -302,14 +304,6 @@ export interface ApproveReturnDto {
 export interface RejectReturnDto {
   version: number; // ✅ Phase 1: Optimistic Locking
   reason: string; // 반려 사유 (필수)
-}
-
-export interface CheckoutSummary {
-  total: number;
-  pending: number;
-  approved: number;
-  overdue: number;
-  returnedToday: number;
 }
 
 /** Sprint 1.1 보장: 서버는 항상 meta를 populate해야 함. 누락 시 FSM drift 감지 로그. */

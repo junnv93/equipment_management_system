@@ -68,7 +68,7 @@ async function CheckoutsContentAsync({
     initialSummary = transformed.meta.summary ?? {
       total: 0,
       pending: 0,
-      approved: 0,
+      inProgress: 0,
       overdue: 0,
       returnedToday: 0,
     };
@@ -78,7 +78,7 @@ async function CheckoutsContentAsync({
     initialSummary = {
       total: 0,
       pending: 0,
-      approved: 0,
+      inProgress: 0,
       overdue: 0,
       returnedToday: 0,
     };

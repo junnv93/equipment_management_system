@@ -8,6 +8,21 @@ import { NextStepDescriptorSchema } from './fsm/checkout-fsm';
  * CheckoutStatusEnum과 CheckoutPurposeEnum은 enums.ts에서 import하여 사용
  */
 
+/**
+ * 반출 요약 통계 — KPI 카드 데이터 구조.
+ * 백엔드 getSummary()와 프론트엔드 CheckoutSummary의 단일 진실 소스.
+ *
+ * inProgress: in_progress 그룹(approved~lender_received) 전체 카운트.
+ * returnedToday: 오늘 actualReturnDate 기준 returned+return_approved 카운트.
+ */
+export interface CheckoutSummary {
+  total: number;
+  pending: number;
+  inProgress: number;
+  overdue: number;
+  returnedToday: number;
+}
+
 // 반출 스키마 (DB: checkouts 테이블 필드명과 일치)
 export const CheckoutSchema = z.object({
   id: uuidString(),

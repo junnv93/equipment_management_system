@@ -103,8 +103,9 @@ export const CHECKOUT_STATUS_FILTER_OPTIONS: CheckoutStatus[] = [
  * value = 해당 그룹에 속하는 CheckoutStatus 배열
  */
 export const CHECKOUT_STATUS_GROUPS = {
-  /** 진행 중 (반출~반입 전 모든 단계) */
+  /** 진행 중 (승인 완료 ~ 반입 전 모든 단계) */
   in_progress: [
+    'approved',
     'borrower_approved',
     'checked_out',
     'lender_checked',

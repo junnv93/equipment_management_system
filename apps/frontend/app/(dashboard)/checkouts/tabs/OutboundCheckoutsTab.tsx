@@ -54,13 +54,7 @@ import {
 interface OutboundCheckoutsTabProps {
   teamId?: string;
   filters: UICheckoutFilters;
-  summary: {
-    total: number;
-    pending: number;
-    approved: number;
-    overdue: number;
-    returnedToday: number;
-  };
+  summary: import('@equipment-management/schemas').CheckoutSummary;
   onStatCardClick: (status: string) => void;
   onResetFilters: () => void;
 }
@@ -91,7 +85,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         variantKey: 'checkedOut' as CheckoutStatsVariant,
         labelKey: 'outbound.inProgress',
         subKey: 'outbound.inProgressSub',
-        value: summary.approved,
+        value: summary.inProgress,
         icon: PackageOpen,
         filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
         dotColor: 'bg-brand-purple',
@@ -115,7 +109,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         dotColor: 'bg-brand-ok',
       },
     ],
-    [summary.total, summary.pending, summary.approved, summary.overdue, summary.returnedToday]
+    [summary.total, summary.pending, summary.inProgress, summary.overdue, summary.returnedToday]
   );
 }
 
