@@ -449,6 +449,10 @@ export {
   type InspectionStatusKey,
   // Phase 0C (P1 자체점검 정합성)
   INSPECTION_CHECKITEM_ROW_STATE,
+  // Phase 1A (P1 prefill 즉시 확장)
+  INSPECTION_PREFILL_NOTICE,
+  INSPECTION_CELL_PROVENANCE,
+  INSPECTION_TABLE_CELL_STATE,
 } from './components/inspection';
 
 // ============================================================================

@@ -711,6 +711,19 @@
         "description": "{itemCount} inspection items and {sectionCount} result sections will be deleted. This cannot be undone.",
         "action": "Discard and start fresh",
         "cancel": "Cancel"
+      },
+      "banner": {
+        "title": "Structure imported from previous inspection",
+        "description": "{summary} were copied. All measurement values are empty — please re-enter.",
+        "partTable": "{count} table(s)",
+        "partPhoto": "{count} photo(s)",
+        "partText": "{count} text(s)",
+        "meta": "Last approved: {date}",
+        "dismiss": "Dismiss"
+      },
+      "noSourceNotice": {
+        "title": "Previous inspection unavailable",
+        "description": "The most recent inspection was not approved, so auto-fill is disabled."
       }
     },
     "measurementEquipment": {

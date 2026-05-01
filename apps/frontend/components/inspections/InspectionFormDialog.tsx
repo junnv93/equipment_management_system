@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
-import { Plus, Trash2, Info, ClipboardList, Wrench, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Info, ClipboardList, Wrench, AlertCircle, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,9 +54,14 @@ import {
   INSPECTION_ITEM_CARD,
   INSPECTION_EMPTY_STATE,
   INSPECTION_PREFILL,
+  INSPECTION_PREFILL_NOTICE,
   getJudgmentCardClasses,
   ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
+import {
+  extractStructureFromInspection,
+  describeStructureCounts,
+} from '@/lib/inspection/template-utils';
 import { cn } from '@/lib/utils';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -130,6 +135,14 @@ export default function InspectionFormDialog({
   const [pendingToggleOffConfirm, setPendingToggleOffConfirm] = useState(false);
   /** 이번 dialog 세션에서 직전 점검 prefill 이 이미 적용됐는지 — 재적용 방지 */
   const [previousInspectionApplied, setPreviousInspectionApplied] = useState(false);
+  /** Phase 1A: prefill banner 카운트 (banner 표시 여부와 무관하게 dismiss 추적) */
+  const [prefillCounts, setPrefillCounts] = useState<{
+    tables: number;
+    photos: number;
+    texts: number;
+  } | null>(null);
+  /** Phase 1A: banner dismiss 상태 */
+  const [prefillBannerDismissed, setPrefillBannerDismissed] = useState(false);
 
   // Fetch equipment data for prefill
   const {
@@ -170,6 +183,17 @@ export default function InspectionFormDialog({
         : Promise.resolve(null),
     enabled: open && !!latestInspectionId,
   });
+  // Phase 1A: 직전 점검의 resultSections 별도 fetch — list endpoint에는 미포함
+  const { data: latestResultSections } = useQuery({
+    queryKey: latestInspectionId
+      ? queryKeys.intermediateInspections.resultSections(latestInspectionId)
+      : ['intermediate-inspections', 'result-sections', 'disabled'],
+    queryFn: () =>
+      latestInspectionId
+        ? calibrationApi.intermediateInspections.resultSections.list(latestInspectionId)
+        : Promise.resolve([]),
+    enabled: open && !!latestInspectionId && usePreviousInspection,
+  });
 
   // Prefill from equipment master data when dialog opens
   useEffect(() => {
@@ -203,43 +227,48 @@ export default function InspectionFormDialog({
   }, [open, equipment]);
 
   /**
-   * 직전 점검 prefill — 같은 장비의 가장 최근 점검의 items / resultSections(title) 구조를 복사.
-   * - items: checkItem / checkCriteria 만 복사. checkResult / judgment 는 비워 이번 측정값만 입력하게 함.
-   * - resultSections: 각 item 에 대응되는 title 섹션 자동 생성 (기존 `handleAddPresetItem` 과 동일 패턴).
-   * - measurementEquipment: 매번 달라질 수 있으므로 복사하지 않음 (사용자가 필요 시 추가).
+   * 직전 점검 prefill — Phase 1A 확장:
+   * 같은 장비의 가장 최근 *승인된* 점검의 items + resultSections 구조 모두 복사.
+   * - items: checkItem / checkCriteria 만 복사 (값은 비움)
+   * - resultSections: richTableData / tableData / imageWidthCm/Height / title 구조 보존
+   *   · 표 셀 값 비움, image cell → text 빈 셀로 변환
+   *   · documentId(사진 첨부)는 매번 새로 → 비움
+   *   · content(텍스트)는 매번 새로 → 비움
+   * - measurementEquipment: 매번 달라질 수 있으므로 복사하지 않음
    * 재적용 방지: previousInspectionApplied flag.
-   * 사용자가 체크박스를 off 로 바꾸면 items/sections 초기화.
+   * 사용자가 체크박스를 off 로 바꾸면 items/sections 초기화 (AlertDialog confirm 후).
+   *
+   * SSOT: extractStructureFromInspection (lib/inspection/template-utils.ts)
+   * 디자인 리뷰 §N: prefill 갭 80% 보완.
    */
   useEffect(() => {
     if (!open || !usePreviousInspection || previousInspectionApplied) return;
     if (!latestInspection) return;
-    const prevItems = latestInspection.items ?? [];
-    if (prevItems.length === 0) return;
-    if (items.length > 0) return; // 사용자가 이미 수동 입력했으면 건드리지 않음
+    // resultSections fetch가 끝나기 전엔 대기 (값 비울 구조까지 함께 적용)
+    if (latestResultSections === undefined) return;
+    if (items.length > 0 || resultSections.length > 0) return; // 사용자가 이미 입력 시작
 
-    setItems(
-      prevItems.map((it) => ({
-        checkItem: it.checkItem ?? '',
-        checkCriteria: it.checkCriteria ?? '',
-        checkResult: '',
-        judgment: '',
-      }))
-    );
-    setResultSections((prev) => {
-      // 이미 사용자가 수동으로 섹션을 추가했다면 prepend, 아니면 새로 생성
-      const titleSections: CreateResultSectionDto[] = prevItems
-        .filter((it) => !!it.checkItem?.trim())
-        .map((it, idx) => ({
-          sortOrder: prev.length + idx,
-          sectionType: 'title' as const,
-          title: it.checkItem as string,
-        }));
-      return [...prev, ...titleSections];
+    const extracted = extractStructureFromInspection({
+      items: latestInspection.items,
+      resultSections: latestResultSections ?? [],
     });
+
+    if (extracted.items.length === 0 && extracted.resultSections.length === 0) return;
+
+    setItems(extracted.items);
+    setResultSections(extracted.resultSections);
     setPrefilled((prev) => ({ ...prev, previousInspection: true }));
     setPreviousInspectionApplied(true);
+    setPrefillCounts(extracted.counts);
+    setPrefillBannerDismissed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·latestInspection 변경 시만 실행
-  }, [open, usePreviousInspection, latestInspection, previousInspectionApplied]);
+  }, [
+    open,
+    usePreviousInspection,
+    latestInspection,
+    latestResultSections,
+    previousInspectionApplied,
+  ]);
 
   /**
    * 사용자가 체크박스를 off 하면 이전 점검에서 복사된 items/sections 를 초기화.
@@ -252,6 +281,8 @@ export default function InspectionFormDialog({
     setPrefilled((prev) => ({ ...prev, previousInspection: false }));
     setPreviousInspectionApplied(false);
     setUsePreviousInspection(false);
+    setPrefillCounts(null);
+    setPrefillBannerDismissed(false);
   };
 
   const handleTogglePreviousInspection = (checked: boolean) => {
@@ -281,6 +312,28 @@ export default function InspectionFormDialog({
     setPendingToggleOffConfirm(false);
   };
 
+  // Phase 1A: prefill banner summary 문자열 (구조 복사 안내)
+  const prefillBannerSummary = (() => {
+    if (!prefillCounts) return null;
+    const desc = describeStructureCounts(prefillCounts);
+    if (!desc.hasAny) return null;
+    const partKey = {
+      tables: 'intermediateInspection.prefill.banner.partTable',
+      photos: 'intermediateInspection.prefill.banner.partPhoto',
+      texts: 'intermediateInspection.prefill.banner.partText',
+    } as const;
+    return desc.parts
+      .map((p) =>
+        t(partKey[p.key] as Parameters<typeof t>[0], { count: p.count } as Record<string, number>)
+      )
+      .join(' · ');
+  })();
+
+  // Phase 1A: prefill 미동작 사유 — 직전 점검이 승인되지 않은 경우 안내
+  // (실측: 현재 latestInspection은 approvalStatus === 'approved' 만 반환)
+  const showNoSourceNotice =
+    open && !latestInspection && usePreviousInspection && !previousInspectionApplied;
+
   const resetForm = () => {
     setInspectionDate('');
     setInspectionCycle('');
@@ -293,6 +346,8 @@ export default function InspectionFormDialog({
     setPrefilled({});
     setPreviousInspectionApplied(false);
     setUsePreviousInspection(true);
+    setPrefillCounts(null);
+    setPrefillBannerDismissed(false);
   };
 
   const tErrors = useTranslations('errors');
@@ -499,6 +554,53 @@ export default function InspectionFormDialog({
           </DialogTitle>
           {equipmentName && <DialogDescription>{equipmentName}</DialogDescription>}
         </DialogHeader>
+
+        {/* Phase 1A: prefill 안내 banner — 구조 복사 적용 시 */}
+        {previousInspectionApplied && prefillBannerSummary && !prefillBannerDismissed && (
+          <div role="status" aria-live="polite" className={INSPECTION_PREFILL_NOTICE.banner}>
+            <Info className={INSPECTION_PREFILL_NOTICE.icon} aria-hidden="true" />
+            <div className={INSPECTION_PREFILL_NOTICE.body}>
+              <p className="font-medium">{t('intermediateInspection.prefill.banner.title')}</p>
+              <p>
+                {t('intermediateInspection.prefill.banner.description', {
+                  summary: prefillBannerSummary,
+                })}
+              </p>
+              {latestInspection && (
+                <p className={INSPECTION_PREFILL_NOTICE.meta}>
+                  {t('intermediateInspection.prefill.banner.meta', {
+                    date: latestInspection.inspectionDate?.slice(0, 10) ?? '—',
+                  })}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              className={INSPECTION_PREFILL_NOTICE.dismissButton}
+              onClick={() => setPrefillBannerDismissed(true)}
+              aria-label={t('intermediateInspection.prefill.banner.dismiss')}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Phase 1A: prefill 미동작 사유 안내 — 직전 점검이 승인되지 않음 */}
+        {showNoSourceNotice && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+          >
+            <Info className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="font-medium text-foreground">
+                {t('intermediateInspection.prefill.noSourceNotice.title')}
+              </p>
+              <p>{t('intermediateInspection.prefill.noSourceNotice.description')}</p>
+            </div>
+          </div>
+        )}
 
         <div className={INSPECTION_SPACING.section}>
           {isEquipmentError && (

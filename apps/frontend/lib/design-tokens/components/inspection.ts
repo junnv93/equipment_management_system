@@ -416,7 +416,85 @@ export const INSPECTION_SECTION_TYPE_CHIP = {
 } as const;
 
 // ============================================================================
-// 17. INSPECTION_CHECKITEM_ROW_STATE — Phase 0C (자체점검 정합성)
+// 17. INSPECTION_PREFILL_NOTICE — Phase 1A (P1 prefill 안내 banner)
+// ============================================================================
+
+/**
+ * 직전 점검 구조 prefill 적용 시 노출되는 inline notice (디자인 리뷰 b9/b16)
+ *
+ * - role="status" + aria-live="polite" — 즉시 인터럽트 X (안내성)
+ * - sky-50 + border-sky-200 — info 톤 (warning 아님)
+ * - dismissible — 사용자가 한 번 보면 닫을 수 있음
+ *
+ * SSOT: InspectionFormDialog DialogHeader 아래 inline.
+ */
+export const INSPECTION_PREFILL_NOTICE = {
+  /** banner 컨테이너 */
+  banner:
+    'flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900 px-3 py-2 text-xs',
+  /** 아이콘 (info 시각) */
+  icon: 'h-4 w-4 shrink-0 text-sky-700 dark:text-sky-300 mt-0.5',
+  /** 본문 */
+  body: 'flex-1 text-sky-900 dark:text-sky-100',
+  /** 메타 (이전 점검 v3 · 2026-04-15 · 김OO) */
+  meta: 'mt-0.5 text-2xs text-sky-700/80 dark:text-sky-300/80',
+  /** dismiss 버튼 */
+  dismissButton: 'shrink-0 text-sky-700/70 hover:text-sky-900',
+} as const;
+
+// ============================================================================
+// 18. INSPECTION_CELL_PROVENANCE — Phase 1A (P1 셀 provenance 시각)
+// ============================================================================
+
+/**
+ * 표 셀의 prefill 출처 시각 (디자인 리뷰 b5/b6/b9/b11/b16)
+ *
+ * - prefilled: 직전 점검 구조에서 가져옴 — sky-300 left border + 우상단 dot
+ * - userModified: 사용자가 입력 또는 변경 — primary left border
+ * - empty: 빈 상태 — 시각 없음
+ *
+ * SSOT: VisualTableEditor 셀 td 클래스에 추가.
+ * 출처 추적: provenanceMap?: Set<string> ('${ri}:${ci}' 형태)
+ */
+export const INSPECTION_CELL_PROVENANCE = {
+  prefilled: 'border-l-2 border-l-sky-300 dark:border-l-sky-600',
+  userModified: 'border-l-2 border-l-primary',
+  empty: '',
+  /** 우상단 dot 마이크로 hint */
+  prefillDot: 'absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-sky-400 dark:bg-sky-500',
+  /** 이전엔 사진이었던 셀 hint */
+  imageConvertedHint: 'absolute bottom-0.5 right-0.5 h-3 w-3 text-amber-500',
+} as const;
+
+// ============================================================================
+// 19. INSPECTION_TABLE_CELL_STATE — Phase 1A (P1 셀 5상태 시각, 디자인 리뷰 b5/b10)
+// ============================================================================
+
+/**
+ * 표 셀 5상태 시각 (디자인 리뷰 WF-06)
+ *
+ * - empty: 빈 셀 — slate-50 bg + dashed border
+ * - dirty: 사용자 입력 중, commit 안 됨 — amber-50 + ⚠
+ * - committed: 입력 완료 — white bg
+ * - outOfSpec: spec 위반 (1B의 measurement 메타 의존) — rose-50 + ❌
+ * - focus: 활성 셀 — INSPECTION_TABLE_FOCUS_RING과 연동
+ *
+ * 1A 적용 범위: empty / dirty / committed (out-of-spec은 1B-backend 의존, focus는 0B 연동).
+ * WCAG SC 1.4.1 — 색만 의존 X, 아이콘 + border 보강.
+ */
+export const INSPECTION_TABLE_CELL_STATE = {
+  empty: 'bg-slate-50/40 dark:bg-slate-900/40',
+  dirty: 'bg-amber-50/50 dark:bg-amber-950/30 border-l-2 border-l-amber-300',
+  committed: 'bg-background',
+  outOfSpec: 'bg-rose-50/60 dark:bg-rose-950/30 border-l-2 border-l-rose-400',
+  /** focus는 0B의 INSPECTION_TABLE_FOCUS_RING과 결합 */
+  /** 5상태 아이콘 (색만 의존 X) */
+  dirtyIcon: 'h-2.5 w-2.5 text-amber-600',
+  outOfSpecIcon: 'h-2.5 w-2.5 text-rose-600',
+} as const;
+
+// ============================================================================
+// 20. INSPECTION_CHECKITEM_ROW_STATE — Phase 0C (자체점검 정합성)
 // ============================================================================
 
 /**
