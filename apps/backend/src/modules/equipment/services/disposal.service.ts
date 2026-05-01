@@ -5,6 +5,7 @@ import {
   Logger,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
@@ -28,7 +29,7 @@ import {
   EquipmentStatusValues as ESVal,
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
-import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
+import { DASHBOARD_ITEM_LIMIT, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import type { DisposalRequestWithRelations } from './disposal.types';
 
 /**
@@ -323,7 +324,20 @@ export class DisposalService extends VersionedBaseService {
     approveDto: ApproveDisposalInput,
     approvedBy: string
   ): Promise<DisposalRequestWithRelations | null> {
-    // 1. 현재 요청 조회 (reviewStatus='reviewed'만 승인 가능)
+    // 1. Fail-close: reject 분기는 comment ≥ REJECTION_REASON_MIN_LENGTH 강제
+    //    (Zod는 max+optional만 적용 — reject 시 min 강제는 도메인 invariant이라 service layer 책임)
+    //    → frontend 우회(curl/legacy client) 시에도 의미있는 사유 없이 audit log에 기록되지 않도록 차단
+    if (approveDto.decision === 'reject') {
+      const trimmed = approveDto.comment?.trim() ?? '';
+      if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+        throw new BadRequestException({
+          code: 'DISPOSAL_REJECT_COMMENT_REQUIRED',
+          message: `반려 코멘트는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+        });
+      }
+    }
+
+    // 2. 현재 요청 조회 (reviewStatus='reviewed'만 승인 가능)
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
@@ -338,10 +352,12 @@ export class DisposalService extends VersionedBaseService {
       });
     }
 
-    // 2. 트랜잭션: 승인 처리 (CAS: disposalRequests.version 검증은 베이스 클래스 위임)
+    // 3. 트랜잭션: 승인 처리 (CAS: disposalRequests.version 검증은 베이스 클래스 위임)
     await this.db.transaction(async (tx) => {
       if (approveDto.decision === 'approve') {
         // 승인: reviewStatus를 'approved'로 변경하고 장비 상태를 'disposed'로 변경
+        // (approvalComment는 optional — trim 후 빈 문자열이면 null로 정규화)
+        const approvalComment = approveDto.comment?.trim() || null;
         await this.updateWithVersion(
           disposalRequests,
           request.id,
@@ -350,7 +366,7 @@ export class DisposalService extends VersionedBaseService {
             reviewStatus: DRVal.APPROVED,
             approvedBy,
             approvedAt: new Date(),
-            approvalComment: approveDto.comment || null,
+            approvalComment,
           },
           '폐기요청',
           tx as AppDatabase,
@@ -368,6 +384,7 @@ export class DisposalService extends VersionedBaseService {
           .where(eq(equipment.id, equipmentId));
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
+        // (comment는 위 fail-close에서 ≥REJECTION_REASON_MIN_LENGTH 보장 — fallback 불필요)
         await this.updateWithVersion(
           disposalRequests,
           request.id,
@@ -376,7 +393,7 @@ export class DisposalService extends VersionedBaseService {
             reviewStatus: DRVal.REJECTED,
             rejectedBy: approvedBy,
             rejectedAt: new Date(),
-            rejectionReason: approveDto.comment || '승인 단계에서 반려',
+            rejectionReason: approveDto.comment!.trim(),
             rejectionStep: 'approval',
           },
           '폐기요청',
