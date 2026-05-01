@@ -736,6 +736,12 @@
       "emptyDescription": "점검에 사용한 측정 장비를 검색하여 추가하세요."
     },
     "cancel": "취소",
+    "cancelConfirm": {
+      "title": "작성 중인 내용을 버릴까요?",
+      "description": "입력하신 점검 항목과 결과 섹션이 모두 삭제됩니다. 되돌릴 수 없습니다.",
+      "confirm": "버리고 닫기",
+      "cancel": "계속 작성"
+    },
     "save": "저장",
     "saving": "저장 중...",
     "records": "점검 기록",
@@ -807,6 +813,12 @@
       "applyPaste": "붙여넣기 적용",
       "save": "저장",
       "cancel": "취소"
+    },
+    "cancelConfirm": {
+      "title": "작성 중인 결과 섹션을 버릴까요?",
+      "description": "입력하신 표/사진/텍스트 데이터가 모두 삭제됩니다. 되돌릴 수 없습니다.",
+      "confirm": "버리고 닫기",
+      "cancel": "계속 작성"
     },
     "pasteMode": {
       "groupLabel": "붙여넣기 방식",

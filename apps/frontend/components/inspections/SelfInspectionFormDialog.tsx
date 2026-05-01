@@ -18,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import {
@@ -28,6 +38,7 @@ import {
 } from '@/lib/design-tokens';
 import CheckItemPresetSelect from './CheckItemPresetSelect';
 import { cn } from '@/lib/utils';
+import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
 import {
   Select,
   SelectContent,
@@ -120,6 +131,22 @@ export default function SelfInspectionFormDialog({
     setCalibrationValidityPeriod('');
   }, [equipment]);
 
+  // Phase 0A-ext: cancel/X/Esc 작성 데이터 가드 — 정의 위치를 mutation 위로 이동 (markCommitted 호출용)
+  const close = useFormDialogClose({
+    isDirty: () => {
+      // edit 모드는 의도적으로 열었으므로 dirty 간주
+      if (initialData) return true;
+      const hasUserInput =
+        inspectionDate !== '' ||
+        overallResult !== '' ||
+        remarks !== '' ||
+        specialNotes.length > 0 ||
+        items.some((it) => it.checkResult !== '');
+      return hasUserInput;
+    },
+    onConfirmClose: () => onOpenChange(false),
+  });
+
   // edit/create 모드: dialog가 열릴 때 데이터 채우기
   useEffect(() => {
     if (!open) return;
@@ -167,6 +194,8 @@ export default function SelfInspectionFormDialog({
       queryClient.invalidateQueries({
         queryKey: queryKeys.equipment.selfInspections(equipmentId),
       });
+      // Phase 0A-ext: CAS 409 강제 닫기 — confirm 우회 (사용자가 재시도 의도)
+      close.markCommitted();
       onOpenChange(false);
       return;
     }
@@ -190,6 +219,8 @@ export default function SelfInspectionFormDialog({
     onSuccess: () => {
       toast({ description: t('selfInspection.form.createSuccess') });
       invalidateAfterSuccess();
+      // Phase 0A-ext: submit 성공 → 다음 requestClose에서 confirm 우회
+      close.markCommitted();
       resetForm();
       onOpenChange(false);
     },
@@ -204,6 +235,8 @@ export default function SelfInspectionFormDialog({
     onSuccess: () => {
       toast({ description: t('selfInspection.form.updateSuccess') });
       invalidateAfterSuccess();
+      // Phase 0A-ext: submit 성공 → 다음 requestClose에서 confirm 우회
+      close.markCommitted();
       onOpenChange(false);
     },
     onError: (error: Error) => handleMutationError(error, 'updateError'),
@@ -226,6 +259,8 @@ export default function SelfInspectionFormDialog({
     overallResult &&
     items.length > 0 &&
     items.every((item) => item.checkItem && item.checkResult);
+
+  // Phase 0A-ext: close hook은 위에서 정의됨 (resetForm 직후) — markCommitted 호출 위해
 
   // Phase 0C: 종합결과↔항목결과 정합성 — 항목 fail 1+ 인데 종합 pass 면 alert
   const failCount = items.filter((it) => it.checkResult === 'fail').length;
@@ -275,12 +310,23 @@ export default function SelfInspectionFormDialog({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        if (!newOpen) close.requestClose();
+        else onOpenChange(newOpen);
+      }}
+    >
       <DialogContent
         className="max-w-2xl max-h-[85vh] overflow-y-auto"
         // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
+        // Phase 0A-ext: Esc 키 작성 데이터 가드
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          close.requestClose();
+        }}
       >
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
@@ -585,7 +631,7 @@ export default function SelfInspectionFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={close.requestClose}>
             {t('selfInspection.form.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid || isPending} loading={isPending}>
@@ -597,6 +643,34 @@ export default function SelfInspectionFormDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Phase 0A-ext: cancel/X/Esc 작성 데이터 가드 */}
+      <AlertDialog
+        open={close.confirmOpen}
+        onOpenChange={(o) => {
+          if (!o) close.cancel();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('selfInspection.cancelConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('selfInspection.cancelConfirm.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={close.cancel}>
+              {t('selfInspection.cancelConfirm.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={close.confirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('selfInspection.cancelConfirm.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

@@ -736,6 +736,12 @@
       "emptyDescription": "Search and add the measurement equipment used for this inspection."
     },
     "cancel": "Cancel",
+    "cancelConfirm": {
+      "title": "Discard your draft?",
+      "description": "All inspection items and result sections you've entered will be deleted. This cannot be undone.",
+      "confirm": "Discard and close",
+      "cancel": "Keep editing"
+    },
     "save": "Save",
     "saving": "Saving...",
     "records": "Inspection Records",
@@ -807,6 +813,12 @@
       "applyPaste": "Apply Paste",
       "save": "Save",
       "cancel": "Cancel"
+    },
+    "cancelConfirm": {
+      "title": "Discard the result section in progress?",
+      "description": "All entered table/photo/text data will be deleted. This cannot be undone.",
+      "confirm": "Discard and close",
+      "cancel": "Keep editing"
     },
     "pasteMode": {
       "groupLabel": "Paste mode",

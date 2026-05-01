@@ -63,6 +63,7 @@ import {
   describeStructureCounts,
 } from '@/lib/inspection/template-utils';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
+import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
 import { cn } from '@/lib/utils';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -163,6 +164,18 @@ function InspectionFormDialogInner({
   const [usePreviousInspection, setUsePreviousInspection] = useState(true);
   /** Phase 0A: 토글 OFF 확인 다이얼로그 (작성 중 데이터 손실 방지) */
   const [pendingToggleOffConfirm, setPendingToggleOffConfirm] = useState(false);
+
+  // Phase 0A-ext: cancel/X/Esc 닫기 시 작성 데이터 감지 + confirmation
+  const close = useFormDialogClose({
+    isDirty: () =>
+      inspectionDate !== '' ||
+      items.length > 0 ||
+      resultSections.length > 0 ||
+      measurementEquipment.length > 0 ||
+      overallResult !== '' ||
+      remarks !== '',
+    onConfirmClose: () => onOpenChange(false),
+  });
 
   // Phase 1A-b: dialog 닫힐 때 Context state 자동 reset.
   // (Provider unmount 패턴 대신 useEffect — Radix Dialog transition 호환)
@@ -409,6 +422,8 @@ function InspectionFormDialogInner({
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibrations.all,
       });
+      // Phase 0A-ext: submit 성공 → 다음 requestClose에서 confirm 우회
+      close.markCommitted();
       resetForm();
       onOpenChange(false);
     },
@@ -443,6 +458,8 @@ function InspectionFormDialogInner({
             queryKey: queryKeys.intermediateInspections.byCalibration(calibrationId),
           });
         }
+        // Phase 0A-ext: CAS 409로 강제 닫기 — confirm 우회 (사용자가 재시도 의도)
+        close.markCommitted();
         onOpenChange(false);
         return;
       }
@@ -573,13 +590,27 @@ function InspectionFormDialogInner({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        if (!newOpen) {
+          // Phase 0A-ext: X 버튼 / Esc / 외부 트리거 닫기 — isDirty 시 confirmation
+          close.requestClose();
+        } else {
+          onOpenChange(newOpen);
+        }
+      }}
+    >
       <DialogContent
         className="max-w-3xl max-h-[90vh] overflow-y-auto"
         // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
-        // 명시적 cancel 버튼/X 버튼/Esc 키만 허용
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
+        // Phase 0A-ext: Esc 키도 cancel 동선 통일 (작성 데이터 가드)
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          close.requestClose();
+        }}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -957,7 +988,7 @@ function InspectionFormDialogInner({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={close.requestClose}>
             {t('intermediateInspection.cancel')}
           </Button>
           <Button
@@ -973,6 +1004,34 @@ function InspectionFormDialogInner({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Phase 0A-ext: cancel/X/Esc 작성 데이터 가드 (모든 destructive 1단계 안전망) */}
+      <AlertDialog
+        open={close.confirmOpen}
+        onOpenChange={(o) => {
+          if (!o) close.cancel();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('intermediateInspection.cancelConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('intermediateInspection.cancelConfirm.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={close.cancel}>
+              {t('intermediateInspection.cancelConfirm.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={close.confirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('intermediateInspection.cancelConfirm.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Phase 0A: prefill 토글 OFF 확인 (디자인 리뷰 b6 — 30셀 손실 방지) */}
       <AlertDialog

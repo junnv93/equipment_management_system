@@ -332,6 +332,12 @@
       "groupLabel": "Common items",
       "addCustomLabel": "Add custom"
     },
+    "cancelConfirm": {
+      "title": "Discard the self-inspection draft?",
+      "description": "All entered items and overall result will be deleted. This cannot be undone.",
+      "confirm": "Discard and close",
+      "cancel": "Keep editing"
+    },
     "form": {
       "title": "Self Inspection Record",
       "description": "Enter inspection results for each item",

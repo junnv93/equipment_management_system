@@ -27,6 +27,17 @@ import { useToast } from '@/components/ui/use-toast';
 import type { ResultSection, CreateResultSectionDto, RichCell } from '@/lib/api/calibration-api';
 import type { InspectionResultSectionType } from '@equipment-management/schemas';
 import VisualTableEditor from './VisualTableEditor';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
 
 /**
  * 사용자에게 노출되는 결과 형식 (프론트엔드 전용)
@@ -147,6 +158,26 @@ export default function ResultSectionFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: pre-existing, resetForm is stable
   }, [open]);
 
+  // Phase 0A-ext: cancel/X/Esc 작성 데이터 가드 (모든 destructive 1단계 안전망)
+  const close = useFormDialogClose({
+    isDirty: () => {
+      // 새 섹션 작성 모드 — title 입력 / content / 표 셀 / 사진 첨부 중 하나라도 있으면 dirty
+      // edit 모드 — 사용자가 변경했는지 비교 (간소화: 항상 dirty로 처리하여 명시 confirm)
+      if (editTarget) {
+        // edit 모드는 사용자가 의도적으로 열었으므로 작성 중으로 간주
+        return true;
+      }
+      const hasTitleOrContent = title.trim() !== '' || content.trim() !== '';
+      const hasPhoto = !!documentId || photoFiles.length > 0;
+      const hasTable = tableRows.some((row) =>
+        row.some((c) => c.type === 'text' && c.value.trim() !== '')
+      );
+      const hasTableHeaders = tableHeaders.some((h) => h.trim() !== '');
+      return hasTitleOrContent || hasPhoto || hasTable || hasTableHeaders;
+    },
+    onConfirmClose: () => onOpenChange(false),
+  });
+
   // ── Photo upload ──
   const handlePhotoFilesChange = useCallback(
     async (files: UploadedFile[]) => {
@@ -204,6 +235,8 @@ export default function ResultSectionFormDialog({
         break;
     }
 
+    // Phase 0A-ext: submit 성공 → 다음 requestClose에서 confirm 우회
+    close.markCommitted();
     onSubmit(dto);
   };
 
@@ -217,7 +250,13 @@ export default function ResultSectionFormDialog({
   const isInlineTypeEntry = !!initialSectionType && !!editTarget;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        if (!newOpen) close.requestClose();
+        else onOpenChange(newOpen);
+      }}
+    >
       <DialogContent
         className={`max-h-[90vh] overflow-y-auto shadow-2xl ${sectionType === 'table' ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
         // Phase 0A: 다이얼로그 위 다이얼로그 — outside-click(부모 클릭)으로 인한
@@ -225,6 +264,11 @@ export default function ResultSectionFormDialog({
         // Phase 0B: shadow-2xl 로 elevation +1 (자식 dialog 시각 위계)
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
+        // Phase 0A-ext: Esc 작성 데이터 가드
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          close.requestClose();
+        }}
       >
         <DialogHeader>
           <DialogTitle>
@@ -327,7 +371,7 @@ export default function ResultSectionFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={close.requestClose}>
             {t('form.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
@@ -335,6 +379,32 @@ export default function ResultSectionFormDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Phase 0A-ext: cancel/X/Esc 작성 데이터 가드 */}
+      <AlertDialog
+        open={close.confirmOpen}
+        onOpenChange={(o) => {
+          if (!o) close.cancel();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('cancelConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('cancelConfirm.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={close.cancel}>
+              {t('cancelConfirm.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={close.confirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('cancelConfirm.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
