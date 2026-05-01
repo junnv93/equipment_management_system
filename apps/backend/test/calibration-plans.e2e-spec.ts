@@ -51,7 +51,7 @@ describe('CalibrationPlansController (e2e)', () => {
     }
 
     // lab_manager(admin)만 직접 장비 생성 가능 — technical_manager는 승인 워크플로우 경유
-    const equipmentId = await createTestEquipment(ctx.app, adminToken, {
+    const equipmentId = await createTestEquipment(ctx.app, {
       site: TEST_SITE,
       managementMethod: 'external_calibration',
       calibrationCycle: 12,

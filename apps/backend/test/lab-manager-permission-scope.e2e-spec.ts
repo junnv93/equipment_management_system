@@ -47,7 +47,7 @@ describe('UL-QP-18 §4.2/§4.3 직무분리: lab_manager 권한 스코프 (e2e)'
     );
 
     // setup용 테스트 장비 — fixture가 자체 systemAdmin 토큰 발급 (Step 24 패턴)
-    suwonEquipmentUuid = await createTestEquipment(ctx.app, labManagerToken, {
+    suwonEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E lab_manager scope test',
       site: 'suwon',
     });

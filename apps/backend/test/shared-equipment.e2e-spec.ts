@@ -189,7 +189,7 @@ describe('SharedEquipmentController (e2e)', () => {
     });
 
     it('should allow updating normal equipment', async () => {
-      const normalEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
+      const normalEquipmentUuid = await createTestEquipment(ctx.app);
 
       // 최신 version 조회
       const detail = await request(ctx.app.getHttpServer())
@@ -234,7 +234,7 @@ describe('SharedEquipmentController (e2e)', () => {
     });
 
     it('should allow deleting normal equipment', async () => {
-      const normalEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
+      const normalEquipmentUuid = await createTestEquipment(ctx.app);
 
       const deleteResponse = await request(ctx.app.getHttpServer())
         .delete(API_ENDPOINTS.EQUIPMENT.DELETE(normalEquipmentUuid))

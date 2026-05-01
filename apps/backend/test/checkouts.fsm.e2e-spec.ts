@@ -43,7 +43,7 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
   // ──────────────────────────────────────────────────────────
 
   async function createPendingCheckout(purpose = 'calibration'): Promise<{ id: string; version: number }> {
-    const eqId = await createTestEquipment(ctx.app, adminToken, {
+    const eqId = await createTestEquipment(ctx.app, {
       name: `FSM E2E Eq ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       teamId: TEAM_FCC_EMC_RF_SUWON_ID,
     });

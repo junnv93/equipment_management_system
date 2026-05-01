@@ -165,7 +165,7 @@ describe('AuditLogsController (e2e)', () => {
 
   describe('Audit Log Integration', () => {
     it('should create audit log when equipment is created', async () => {
-      await createTestEquipment(ctx.app, adminAccessToken);
+      await createTestEquipment(ctx.app);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 

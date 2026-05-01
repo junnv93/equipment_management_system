@@ -19,7 +19,7 @@ describe('NonConformancesController (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     accessToken = await loginAs(ctx.app, 'systemAdmin');
-    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+    testEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E Test Equipment for Non-Conformances',
     });
     tracker.track('equipment', testEquipmentUuid);
@@ -248,7 +248,7 @@ describe('NonConformancesController (e2e)', () => {
 
   describe('DELETE /non-conformances/:uuid', () => {
     it('should soft delete a non-conformance', async () => {
-      const deleteTestEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const deleteTestEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for NC Delete',
       });
 
@@ -297,7 +297,7 @@ describe('NonConformancesController (e2e)', () => {
 
   describe('Non-conforming equipment rental/checkout blocking', () => {
     it('should block rental of non-conforming equipment', async () => {
-      const blockTestEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const blockTestEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for NC Block Test',
       });
 
@@ -348,7 +348,7 @@ describe('NonConformancesController (e2e)', () => {
     let workflowTestRepairId: string;
 
     beforeAll(async () => {
-      workflowTestEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      workflowTestEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for Workflow',
       });
     });
@@ -426,7 +426,7 @@ describe('NonConformancesController (e2e)', () => {
     });
 
     it('should prevent closing damage type non-conformance without repair', async () => {
-      const noRepairEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const noRepairEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for No-Repair Test',
       });
 
@@ -485,7 +485,7 @@ describe('NonConformancesController (e2e)', () => {
     });
 
     it('should prevent linking multiple repairs to one non-conformance (1:1 relationship)', async () => {
-      const oneToOneEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const oneToOneEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for 1:1 Test',
       });
 
@@ -539,7 +539,7 @@ describe('NonConformancesController (e2e)', () => {
     });
 
     it('should prevent linking repair to closed non-conformance', async () => {
-      const closedNcEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const closedNcEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Test Equipment for Closed NC Test',
       });
 
@@ -642,7 +642,7 @@ describe('NonConformancesController (e2e)', () => {
 
     beforeAll(async () => {
       // 독립 equipment + NC — 다른 테스트와 격리
-      attachEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      attachEquipmentUuid = await createTestEquipment(ctx.app, {
         name: 'E2E Attachments Equipment',
       });
       tracker.track('equipment', attachEquipmentUuid);

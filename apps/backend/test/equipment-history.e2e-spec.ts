@@ -17,7 +17,7 @@ describe('EquipmentHistoryController (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     accessToken = await loginAs(ctx.app, 'systemAdmin');
-    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+    testEquipmentUuid = await createTestEquipment(ctx.app, {
       name: `History Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
     });
     tracker.track('equipment', testEquipmentUuid);
@@ -366,7 +366,7 @@ describe('EquipmentHistoryController (e2e)', () => {
   // ===================== 통합 테스트 =====================
   describe('Integration: Full History Workflow', () => {
     it('should complete full history workflow for equipment', async () => {
-      const equipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      const equipmentUuid = await createTestEquipment(ctx.app, {
         name: `Integration History Test ${crypto.randomBytes(4).toString('hex')}`,
       });
 

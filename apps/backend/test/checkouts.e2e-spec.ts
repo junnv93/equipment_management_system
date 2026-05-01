@@ -18,7 +18,7 @@ describe('CheckoutsController (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     accessToken = await loginAs(ctx.app, 'systemAdmin');
-    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+    testEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E Test Equipment for Checkout',
       teamId: TEAM_FCC_EMC_RF_SUWON_ID, // 관리자(lab_manager) 소속 팀 — 교정 반출은 동일 팀 장비만 가능
     });

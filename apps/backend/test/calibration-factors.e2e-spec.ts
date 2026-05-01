@@ -18,7 +18,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     accessToken = await loginAs(ctx.app, 'admin');
-    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+    testEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E Test Equipment for Calibration Factors',
     });
     tracker.track('equipment', testEquipmentUuid);

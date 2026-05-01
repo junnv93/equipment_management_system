@@ -32,18 +32,16 @@ const DEFAULT_EQUIPMENT = {
  * - `system_admin`만 승인 절차 우회하여 직접 등록 (equipment.controller.ts:208 명시 예외)
  *
  * fixture는 setup용이므로 호출부 역할(admin/manager/user)과 무관하게
- * 항상 system_admin 토큰을 내부 발급해 장비를 직접 등록한다.
- * 호출부의 토큰 인자는 더 이상 사용되지 않으나, 기존 호출부 호환을 위해 시그니처는 유지한다.
+ * 항상 system_admin 토큰을 내부 발급해 장비를 직접 등록한다 (verify-e2e Step 24
+ * fixture 권한 격리 패턴).
  *
  * @param app NestJS 테스트 앱 인스턴스
- * @param _token 더 이상 사용 안 함 — 헬퍼 내부에서 system_admin 토큰 자체 발급
  * @param overrides 장비 필드 오버라이드
  * @returns 생성된 장비의 UUID
  * @throws 장비 생성 실패 시 에러
  */
 export async function createTestEquipment(
   app: INestApplication,
-  _token: string,
   overrides?: Record<string, unknown>,
 ): Promise<string> {
   const creatorToken = await loginAs(app, 'systemAdmin');

@@ -35,12 +35,12 @@ describe('Site Permissions (e2e)', () => {
       // manager 로그인 실패 시 undefined
     }
 
-    suwonEquipmentUuid = await createTestEquipment(ctx.app, adminToken, {
+    suwonEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E Test Equipment - Suwon',
       site: 'suwon',
     });
 
-    uiwangEquipmentUuid = await createTestEquipment(ctx.app, adminToken, {
+    uiwangEquipmentUuid = await createTestEquipment(ctx.app, {
       name: 'E2E Test Equipment - Uiwang',
       site: 'uiwang',
     });
@@ -243,7 +243,7 @@ describe('Site Permissions (e2e)', () => {
 
     beforeAll(async () => {
       if (adminToken) {
-        rfEquipmentUuid = await createTestEquipment(ctx.app, adminToken, {
+        rfEquipmentUuid = await createTestEquipment(ctx.app, {
           name: 'E2E Test RF Equipment',
           modelName: 'RF Test Model',
           manufacturer: 'RF Manufacturer',

@@ -32,7 +32,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
     accessToken = await loginAs(ctx.app, 'manager');
 
     // 시드 장비 의존 대신 자체 생성 — createTestEquipment fixture는 자체 systemAdmin 토큰 발급
-    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
+    testEquipmentUuid = await createTestEquipment(ctx.app);
     tracker.track('equipment', testEquipmentUuid);
   }, 30000);
 
