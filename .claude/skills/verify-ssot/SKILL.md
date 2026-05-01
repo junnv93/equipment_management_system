@@ -2069,3 +2069,74 @@ grep -rn "/ (1000 \* 60 \* 60 \* 24)\|/ 86400000" \
 - `apps/frontend/lib/utils/calibration-status.ts` — 마이그레이션 완료 참조 (인라인 7줄 → 1줄, 2026-04-30)
 
 **발생 이력 (2026-04-30 신설)**: `calibration-status.ts`가 `calculateDaysRemaining`과 동일한 날짜 산술 로직을 7줄 인라인으로 중복 구현. `dday-utils.ts`의 타입 시그니처를 `string | Date`로 확장하고 인라인 코드를 1줄로 대체.
+
+---
+
+### Step 57: `RolePermissionMatrix` derived view 정책 — 직접 데이터 추가 금지 (2026-05-02 추가, senior-permission-ssot-20260501)
+
+`packages/shared-constants/src/role-permission-matrix.ts`의 `ROLE_PERMISSION_MATRIX`는 **`ROLE_PERMISSIONS`의 reverse-index view**다. matrix 자체가 SSOT가 아니며 module-load IIFE가 도출한 derived 결과. 매트릭스에 직접 데이터를 추가하면 **두 SSOT가 발생**하여 drift가 보장된다.
+
+**위반 패턴:**
+
+```typescript
+// ❌ WRONG — matrix 파일에 손수 매핑 추가
+export const ROLE_PERMISSION_MATRIX: RolePermissionMatrix = {
+  [Permission.NEW_PERMISSION]: ['system_admin'],  // ← 손수 추가
+  ...derivePermissionRoleMatrix(),
+};
+
+// ❌ WRONG — matrix import 위치에 두 번째 데이터 source
+import { CUSTOM_PERMISSION_MAPPING } from './custom-mappings';  // ← 외부 source
+```
+
+```typescript
+// ✅ CORRECT — ROLE_PERMISSIONS만이 source, matrix는 자동 도출
+// 신규 권한 추가 시:
+//   1. permissions.ts: Permission enum에 키 추가 + PERMISSION_LABELS(ko/en) 추가
+//   2. role-permissions.ts: ROLE_PERMISSIONS의 보유 역할에 추가
+//   3. matrix는 자동 반영 (수정 불필요)
+```
+
+**탐지:**
+
+```bash
+# 1. matrix 파일이 ROLE_PERMISSIONS + Permission 외 데이터 source import 검출
+grep -nE "^import" packages/shared-constants/src/role-permission-matrix.ts \
+  | grep -vE "(UserRole|Permission|ROLE_PERMISSIONS)"
+# 기대: 0건 (UserRole 타입 + Permission enum + ROLE_PERMISSIONS 외 import 0)
+
+# 2. matrix 파일에 직접 매핑(콜론 + 배열) 인라인 검출 — IIFE 외부에서 손수 매핑 추가 차단
+grep -nE "Permission\.\w+:\s*\[" packages/shared-constants/src/role-permission-matrix.ts
+# 기대: 0건 (모든 매핑은 derivePermissionRoleMatrix() 함수 내부에서 자동 도출)
+
+# 3. 양방향 query API SSOT 활용 — 신규 코드는 matrix 경유 권장
+grep -rn "ROLE_PERMISSIONS\[.*\]\.includes\|ROLE_PERMISSIONS\[.*\]\.filter" \
+  apps/backend/src apps/frontend/components apps/frontend/hooks \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "role-permissions.ts\|role-permission-matrix.ts\|node_modules"
+# 결과: 직접 인라인 사용처 발견 시 `getRolesWithPermission()` 또는 `roleHasPermission()` 경유로 격상 검토
+```
+
+**SSOT 의존성 체인:**
+- `Permission` enum (`permissions.ts`) — 권한 키 source
+- `UserRole` 타입 (`@equipment-management/schemas`) — 역할 키 source
+- `ROLE_PERMISSIONS` (`role-permissions.ts`) — 역할-권한 매핑 source (forward query)
+- `ROLE_PERMISSION_MATRIX` (`role-permission-matrix.ts`) — derived view (reverse query)
+- `getTokenForPermission` (`apps/backend/test/helpers/test-permission-token.ts`) — matrix 활용 헬퍼
+
+**위반 시 영향:**
+- matrix 손수 매핑 → `ROLE_PERMISSIONS` 갱신 시 두 곳 누락 위험 (CI 검증 부재)
+- 새 SSOT 데이터 source → drift 보장, dead permission 검출 무력화
+- matrix 외부 import → 빌드 환경별 resolve 차이로 frontend bundle bloat 가능성
+
+**자동 검증:**
+- Phase 1 spec (`packages/shared-constants/__tests__/role-permission-matrix.spec.ts`)이 `ROLE_PERMISSIONS`와 양방향 round-trip + Permission enum 완전성 검증
+- Phase 3 정적 분석기 R4 룰이 controller `@RequirePermissions(P_X)` ↔ matrix 정합 (dead permission) 검출
+
+**관련 파일:**
+- `packages/shared-constants/src/role-permission-matrix.ts` — derived view + IIFE
+- `packages/shared-constants/__tests__/role-permission-matrix.spec.ts` — 18 케이스 spec
+- `apps/backend/test/helpers/test-permission-token.ts` — matrix 활용 헬퍼
+- `apps/backend/scripts/verify-e2e-actor-alignment.ts` — R4 룰 (matrix consistency)
+
+**발생 이력 (2026-05-02 신설)**: senior-permission-ssot-20260501 sprint Phase 1에서 `ROLE_PERMISSIONS`의 reverse-index view 신설. 시니어 표준 자기 검토에서 SSOT 정책이 SKILL doc에 미반영된 점 발견하여 즉시 추가 (별도 sprint 이연 회피).

@@ -22,7 +22,7 @@
 - **verify-security** — OWASP Top 10 (access control, injection, CSP, auth, logging, SSRF)
 - **verify-i18n** — i18n 일관성 (en/ko key matching, empty translations, Zod hardcoded)
 - **verify-sql-safety** — SQL 안전성 (LIKE escaping, N+1, COUNT(DISTINCT) fan-out, RBAC INNER JOIN)
-- **verify-e2e** — E2E 테스트 패턴 + 아키텍처 커버리지 (auth fixtures, locator, CAS 복구, cache invalidation, site scope, global-setup)
+- **verify-e2e** — E2E 테스트 패턴 + 아키텍처 커버리지 (auth fixtures, locator, CAS 복구, cache invalidation, site scope, global-setup). Step 23/24/25는 `pnpm --filter backend run verify:e2e-actors` (ts-morph 정적 분석)으로 승격 — pre-push hook 자동 실행
 - **verify-seed-integrity** — Seed 3-way SSOT triangle (seed-test-new wiring + Phase 0 truncate + verification.ts checkCount)
 - **verify-workflows** — Cross-feature workflow E2E coverage (WF-01~WF-16, 역할, 상태 전이)
 - **verify-filters** — URL-driven filter SSOT (filter-utils, hooks, page.tsx server parsing)
