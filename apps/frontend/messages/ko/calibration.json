@@ -704,8 +704,8 @@
     "prefill": {
       "auto": "자동",
       "tooltip": "장비 마스터 데이터에서 자동 입력되었습니다. 수정 가능합니다.",
-      "usePreviousLabel": "직전 승인된 중간점검에서 항목·결과 섹션 불러오기",
-      "usePreviousDescription": "가장 최근 승인 완료된 중간점검의 {count}개 항목을 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다.",
+      "usePreviousLabel": "이 장비의 점검 양식에서 항목·결과 섹션 불러오기",
+      "usePreviousDescription": "현재 양식의 {count}개 항목 구조를 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다.",
       "toggleOff": {
         "title": "복사된 입력을 모두 삭제할까요?",
         "description": "현재 작성 중인 점검 항목 {itemCount}개와 결과 섹션 {sectionCount}개가 삭제됩니다. 되돌릴 수 없습니다.",
@@ -713,18 +713,23 @@
         "cancel": "취소"
       },
       "banner": {
-        "title": "이전 점검 구조를 가져왔습니다",
-        "description": "{summary} 구조가 복사되었습니다. 측정값은 모두 비어있으니 다시 입력하세요.",
+        "title": "양식 구조를 가져왔습니다",
+        "description": "{summary} 구조가 양식에서 복사되었습니다. 측정값은 모두 비어있으니 다시 입력하세요.",
         "partTable": "표 {count}개",
         "partPhoto": "사진 {count}개",
         "partText": "텍스트 {count}개",
-        "meta": "직전 승인 점검: {date}",
+        "meta": "양식 작성일: {date}",
         "dismiss": "안내 닫기"
       },
       "noSourceNotice": {
-        "title": "이전 점검을 가져올 수 없습니다",
-        "description": "직전 점검이 승인되지 않아 자동 채우기를 사용할 수 없습니다."
+        "title": "이 장비는 아직 양식이 없습니다",
+        "description": "첫 점검입니다. 빈 양식으로 시작하거나, 비슷한 장비의 검증된 양식을 가져올 수 있습니다."
       }
+    },
+    "template": {
+      "versionBadgeAria": "현재 양식 버전 v{version}, {date} 작성, {author}",
+      "missingBadge": "양식 부재 (첫 점검)",
+      "systemAuthor": "시스템"
     },
     "measurementEquipment": {
       "title": "측정 장비 List",
@@ -866,6 +871,24 @@
     "endpointDeprecated": "이 기능은 더 이상 지원되지 않습니다. 교정 등록 양식을 사용하세요.",
     "planItemNotExecuted": "실제 교정 기록이 연결되지 않은 항목은 확인할 수 없습니다.",
     "unknown": "알 수 없는 오류가 발생했습니다."
+  },
+  "planErrors": {
+    "title": "처리 실패",
+    "notFound": "교정계획서를 찾을 수 없습니다.",
+    "itemNotFound": "교정계획서 항목을 찾을 수 없습니다.",
+    "alreadyExists": "동일 연도/팀의 교정계획서가 이미 존재합니다.",
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요.",
+    "invalidStatusForReject": "검토 또는 승인 대기 상태의 계획서만 반려할 수 있습니다.",
+    "invalidStatusForSubmit": "초안(draft) 상태의 계획서만 검토 요청할 수 있습니다.",
+    "onlyApprovedCanConfirm": "승인된 계획서만 항목 확인이 가능합니다.",
+    "onlyApprovedCanCreateVersion": "승인된 계획서만 새 버전을 생성할 수 있습니다.",
+    "onlyDraftCanDelete": "초안(draft) 상태의 계획서만 삭제할 수 있습니다.",
+    "onlyDraftCanUpdate": "초안(draft) 상태의 계획서만 수정할 수 있습니다.",
+    "onlyDraftCanUpdateItem": "초안(draft) 상태의 계획서만 항목을 수정할 수 있습니다.",
+    "onlyPendingReviewCanReview": "검토 대기 상태의 계획서만 검토 완료할 수 있습니다.",
+    "onlyPendingApprovalCanApprove": "승인 대기 상태의 계획서만 최종 승인할 수 있습니다.",
+    "itemNotExecuted": "실제 교정 기록이 연결되지 않은 항목이 있어 처리할 수 없습니다.",
+    "nonExportableStatus": "승인된(approved) 상태의 교정계획서만 내보낼 수 있습니다."
   },
   "form": {
     "aria": {

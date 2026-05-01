@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import { CalibrationPlansService } from '../calibration-plans.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -316,7 +317,9 @@ describe('CalibrationPlansService', () => {
       ).rejects.toThrow(BadRequestException);
       await expect(
         service.confirmAllItems('plan-uuid-1', { confirmedBy: 'user-uuid-1', casVersion: 1 })
-      ).rejects.toMatchObject({ response: { code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM' } });
+      ).rejects.toMatchObject({
+        response: { code: ErrorCode.CalibrationPlanOnlyApprovedCanConfirm },
+      });
     });
 
     it('casVersion 불일치 → ConflictException(VERSION_CONFLICT)', async () => {

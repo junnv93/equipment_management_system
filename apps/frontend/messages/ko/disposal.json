@@ -167,5 +167,18 @@
     "noInfo": "정보 없음",
     "years": "{count}년 ",
     "months": "{count}개월"
+  },
+  "errors": {
+    "title": "처리 실패",
+    "rejectCommentRequired": "반려 코멘트는 {min}자 이상 입력해주세요.",
+    "reviewedNotFound": "검토 완료된 폐기 요청을 찾을 수 없습니다. 요청을 다시 조회해주세요.",
+    "pendingNotFound": "검토 대기 중인 폐기 요청을 찾을 수 없습니다.",
+    "reviewerNotFound": "검토자 정보를 확인할 수 없습니다. 다시 로그인해주세요.",
+    "teamScopeOnly": "같은 팀의 장비만 검토할 수 있습니다.",
+    "alreadyInProgress": "이미 폐기 요청이 진행 중입니다.",
+    "onlyRequesterCanCancel": "본인이 요청한 폐기만 취소할 수 있습니다.",
+    "requestNotFound": "폐기 요청을 찾을 수 없습니다.",
+    "equipmentNotFound": "장비를 찾을 수 없습니다.",
+    "userNotFound": "사용자를 찾을 수 없습니다."
   }
 }

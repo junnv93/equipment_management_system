@@ -23,7 +23,8 @@ import {
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
-import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
+import { CalibrationPlanStatusValues as CPStatus, ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
@@ -106,7 +107,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (!plan) {
       throw new NotFoundException({
-        code: 'CALIBRATION_PLAN_NOT_FOUND',
+        code: ErrorCode.CalibrationPlanNotFound,
         message: `Calibration plan UUID ${uuid} not found`,
       });
     }
@@ -139,7 +140,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (existing.length > 0) {
       throw new ConflictException({
-        code: 'CALIBRATION_PLAN_ALREADY_EXISTS',
+        code: ErrorCode.CalibrationPlanAlreadyExists,
         message: `Calibration plan for year ${year}, site ${siteId} already exists (version ${existing[0].version})`,
       });
     }
@@ -389,7 +390,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
         if (!row) {
           throw new NotFoundException({
-            code: 'CALIBRATION_PLAN_NOT_FOUND',
+            code: ErrorCode.CalibrationPlanNotFound,
             message: `Calibration plan UUID ${uuid} not found`,
           });
         }
@@ -448,7 +449,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.DRAFT) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_UPDATE',
+        code: ErrorCode.CalibrationPlanOnlyDraftCanUpdate,
         message: 'Only draft plans can be updated.',
       });
     }
@@ -477,7 +478,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.DRAFT) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_DELETE',
+        code: ErrorCode.CalibrationPlanOnlyDraftCanDelete,
         message: 'Only draft plans can be deleted.',
       });
     }
@@ -517,7 +518,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.DRAFT && plan.status !== CPStatus.REJECTED) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_INVALID_STATUS_FOR_SUBMIT',
+        code: ErrorCode.CalibrationPlanInvalidStatusForSubmit,
         message: 'Only draft or rejected plans can be submitted for review.',
       });
     }
@@ -572,7 +573,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.PENDING_REVIEW) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_PENDING_REVIEW_CAN_REVIEW',
+        code: ErrorCode.CalibrationPlanOnlyPendingReviewCanReview,
         message: 'Only pending review plans can be reviewed.',
       });
     }
@@ -627,7 +628,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.PENDING_APPROVAL) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_PENDING_APPROVAL_CAN_APPROVE',
+        code: ErrorCode.CalibrationPlanOnlyPendingApprovalCanApprove,
         message: 'Only pending approval plans can be approved.',
       });
     }
@@ -680,15 +681,19 @@ export class CalibrationPlansService extends VersionedBaseService {
     // 검토 대기 또는 승인 대기 상태에서만 반려 가능
     if (plan.status !== CPStatus.PENDING_REVIEW && plan.status !== CPStatus.PENDING_APPROVAL) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_INVALID_STATUS_FOR_REJECT',
+        code: ErrorCode.CalibrationPlanInvalidStatusForReject,
         message: 'Only pending review or pending approval plans can be rejected.',
       });
     }
 
-    if (!rejectDto.rejectionReason || rejectDto.rejectionReason.trim() === '') {
+    // Defense-in-depth fail-close: Zod에서 이미 .trim().min(REJECTION_REASON_MIN_LENGTH) 강제하나
+    // service layer는 controller 외 다른 호출자(admin script 등)도 진입점이라 동일 invariant 강제.
+    // disposal 도메인과 대칭 — 시스템 일관성 유지.
+    const trimmedReason = rejectDto.rejectionReason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_REJECTION_REASON_REQUIRED',
-        message: 'Rejection reason is required.',
+        code: ErrorCode.CalibrationPlanRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
       });
     }
 
@@ -749,7 +754,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     // 승인된 계획서만 항목 확인 가능
     if (plan.status !== CPStatus.APPROVED) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM',
+        code: ErrorCode.CalibrationPlanOnlyApprovedCanConfirm,
         message: 'Only approved plans can have items confirmed.',
       });
     }
@@ -769,7 +774,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'CALIBRATION_PLAN_ITEM_NOT_FOUND',
+        code: ErrorCode.CalibrationPlanItemNotFound,
         message: `Plan item UUID ${itemUuid} not found`,
       });
     }
@@ -777,7 +782,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     // Phase 5c: 실제 교정 기록 미연결 시 확인 차단 (정합성 게이트)
     if (!item.actualCalibrationId) {
       throw new UnprocessableEntityException({
-        code: 'PLAN_ITEM_NOT_EXECUTED',
+        code: ErrorCode.CalibrationPlanItemNotExecuted,
         message: 'Cannot confirm a plan item without a linked actual calibration record.',
       });
     }
@@ -810,7 +815,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.APPROVED) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM',
+        code: ErrorCode.CalibrationPlanOnlyApprovedCanConfirm,
         message: 'Only approved plans can have items confirmed.',
       });
     }
@@ -856,7 +861,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (plan.status !== CPStatus.DRAFT) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_UPDATE_ITEM',
+        code: ErrorCode.CalibrationPlanOnlyDraftCanUpdateItem,
         message: 'Only draft plans can have items updated.',
       });
     }
@@ -868,7 +873,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'CALIBRATION_PLAN_ITEM_NOT_FOUND',
+        code: ErrorCode.CalibrationPlanItemNotFound,
         message: `Plan item UUID ${itemUuid} not found`,
       });
     }
@@ -999,7 +1004,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (parent.status !== CPStatus.APPROVED) {
       throw new BadRequestException({
-        code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CREATE_VERSION',
+        code: ErrorCode.CalibrationPlanOnlyApprovedCanCreateVersion,
         message: 'Only approved plans can create a new version.',
       });
     }

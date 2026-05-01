@@ -578,6 +578,97 @@ disabled={rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_
 - `disposal-zod-defense-in-depth` (2026-05-01): disposal `opinion` `min(1)` + frontend `>= 10` → frontend 우회로 1자만 입력 통과 → defense-in-depth 격상으로 closure
 - `calibration-plan-rejectionReason-hardcoded-10` (2026-05-01): CalibrationPlanDetailClient 2곳에 `< 10` 하드코딩 + backend `min(1)` → SSOT 격상 + backend 격상으로 closure
 
+### Step 16: ErrorCode SSOT 강제 + service fail-close 비대칭 차단 (2026-05-02 추가)
+
+**탐지 대상**: `code: '[A-Z_]+'` 인라인 string literal 우회 (`packages/schemas/src/errors.ts` ErrorCode enum이 SSOT인데도 인라인 string으로 우회). 시니어 자기검토 갭 6 closure. 추가로 같은 도메인 의미의 service layer fail-close 강도 비대칭(`> 0` vs `>= MIN`) 회귀 차단.
+
+**원인 패턴**:
+- 새 도메인 에러 추가 시 ErrorCode enum 등록 누락 → 인라인 string으로 임시 처리 → 영구 답습
+- frontend가 backend code 응답을 type-safe하게 매칭 못함 (string literal 오타 silent fail)
+- 도메인 service layer fail-close 강도가 시스템 일관성 위반 (예: disposal `≥MIN` vs calibration-plan `> 0`)
+
+**검증 명령**:
+```bash
+# 1. disposal + calibration-plan 도메인 인라인 error code 0건 (격상 완료된 도메인)
+grep -rn "code: '[A-Z_]\+'" \
+  apps/backend/src/modules/equipment/services/disposal.service.ts \
+  apps/backend/src/modules/equipment/disposal.controller.ts \
+  apps/backend/src/modules/calibration-plans/calibration-plans.service.ts \
+  apps/backend/src/modules/calibration-plans/calibration-plans.controller.ts \
+  2>/dev/null
+# expected: 0 hits — ErrorCode enum 격상 완료
+
+# 2. ErrorCode enum 사용 카운트 (회귀 차단 — 격상 후 줄어들지 않아야)
+grep -c "ErrorCode\." apps/backend/src/modules/equipment/services/disposal.service.ts
+# expected: ≥ 8 (disposal 도메인 codes)
+grep -c "ErrorCode\." apps/backend/src/modules/calibration-plans/calibration-plans.service.ts
+# expected: ≥ 14 (calibration-plan 도메인 codes)
+
+# 3. service layer fail-close 비대칭 — rejectionReason length 검증 강도 일관성
+grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length" \
+  apps/backend/src/modules --include="*.service.ts" 2>/dev/null \
+  | grep -v ".spec.ts" | grep -v "__tests__"
+# 모든 reject service fail-close가 REJECTION_REASON_MIN_LENGTH 비교를 사용해야 함 (`> 0` 패턴 0건)
+
+# 4. 다른 도메인 인라인 error code (점진적 마이그레이션 추적)
+grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/null \
+  | grep -v ".spec.ts" | grep -v "__tests__" | wc -l
+# 본 sprint(2026-05-02): ~270 hits (disposal + calibration-plan 격상 후 잔존).
+# 이 수치는 시스템 마이그레이션 진행률 추적 metric — 점진적으로 0에 수렴해야 함.
+```
+
+**PASS 기준**:
+- 명령 1 (격상 완료된 도메인): 0 hits
+- 명령 2: 격상된 ErrorCode 사용 카운트 회귀 0 (줄어들지 않음)
+- 명령 3 (fail-close 비대칭): 0 hits 또는 모든 케이스가 REJECTION_REASON_MIN_LENGTH SSOT 사용
+- 명령 4 (시스템 진행률): 본 sprint 후 baseline 기록, 후속 sprint마다 감소 추세 확인
+
+**FAIL 기준**:
+- disposal/calibration-plan 도메인에서 인라인 `code: 'X'` 발견 → ErrorCode enum 등록 + ErrorCode.X 사용으로 격상
+- service fail-close가 빈 문자열만 체크하고 `>= REJECTION_REASON_MIN_LENGTH` 미적용 → disposal 패턴 따라 강화
+- ErrorCode enum 신규 추가 시 `errorCodeToStatusCode` 매핑 누락 → tsc Record 강제로 자동 차단(보조 검증)
+
+```typescript
+// ❌ WRONG — 인라인 string, frontend type-safe 매칭 불가
+throw new BadRequestException({
+  code: 'DISPOSAL_REJECT_COMMENT_REQUIRED',
+  message: '...',
+});
+
+// ✅ CORRECT — ErrorCode enum SSOT
+import { ErrorCode } from '@equipment-management/schemas';
+throw new BadRequestException({
+  code: ErrorCode.DisposalRejectCommentRequired,
+  message: '...',
+});
+```
+
+```typescript
+// ❌ WRONG — 비대칭 fail-close (disposal은 >=10, 본 도메인은 >0)
+if (!dto.rejectionReason || dto.rejectionReason.trim() === '') {
+  throw new BadRequestException(...);
+}
+
+// ✅ CORRECT — 시스템 일관성 (모든 도메인 공통 강도)
+const trimmed = dto.rejectionReason?.trim() ?? '';
+if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+  throw new BadRequestException({
+    code: ErrorCode.XxxRejectionReasonRequired,
+    message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+  });
+}
+```
+
+**예외**:
+- 격상되지 않은 도메인의 인라인 코드 (점진적 마이그레이션 — 명령 4의 카운트로 추적)
+- 외부 시스템 응답을 그대로 propagation하는 경우 (예: Azure AD 에러 코드)
+- 단순 enum literal 비교가 아닌 dynamic code (예: `error.code as string`) — 별도 정당화 주석
+
+**관련 사고**:
+- `disposal-zod-defense-in-depth` (2026-05-01): backend Zod 격상은 했으나 인라인 string literal 그대로 유지
+- `disposal-service-fail-close` (2026-05-02): service fail-close 추가했으나 calibration-plan 비대칭 미발견
+- `error-codes-ssot-system-wide` (2026-05-02): 시니어 자기검토 갭 5/6/8 closure — 본 Step 16 신설
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import { CalibrationPlansService } from '../calibration-plans.service';
 import type { CalibrationPlanDetail } from '../calibration-plans.types';
 
@@ -24,7 +25,7 @@ export class CalibrationPlanExportDataService {
       !EXPORTABLE_PLAN_STATUSES.includes(plan.status as (typeof EXPORTABLE_PLAN_STATUSES)[number])
     ) {
       throw new BadRequestException({
-        code: 'NON_EXPORTABLE_PLAN_STATUS',
+        code: ErrorCode.CalibrationPlanNonExportableStatus,
         message: `Status '${plan.status}' is not exportable. Only 'approved' plans can be exported.`,
       });
     }

@@ -117,6 +117,60 @@ export enum ErrorCode {
   // ============================================================================
   /** 승인 후 5분 경과 — 철회 가능 시간 초과. */
   RevocationWindowExpired = 'REVOCATION_WINDOW_EXPIRED',
+
+  // ============================================================================
+  // 폐기(Disposal) 도메인 (UL-QP-18-04)
+  // ============================================================================
+  /** 폐기 요청이 존재하지 않음. */
+  DisposalRequestNotFound = 'DISPOSAL_REQUEST_NOT_FOUND',
+  /** 검토 대기(pending) 상태 폐기 요청을 찾을 수 없음. */
+  DisposalPendingNotFound = 'DISPOSAL_PENDING_NOT_FOUND',
+  /** 검토 완료(reviewed) 상태 폐기 요청을 찾을 수 없음. */
+  DisposalReviewedNotFound = 'DISPOSAL_REVIEWED_NOT_FOUND',
+  /** 폐기 검토자(reviewer) 정보를 찾을 수 없음. */
+  DisposalReviewerNotFound = 'DISPOSAL_REVIEWER_NOT_FOUND',
+  /** 다른 팀 장비는 검토 불가 (lab_manager 제외). */
+  DisposalTeamScopeOnly = 'DISPOSAL_TEAM_SCOPE_ONLY',
+  /** 이미 폐기 요청이 진행 중. */
+  DisposalAlreadyInProgress = 'DISPOSAL_ALREADY_IN_PROGRESS',
+  /** 요청자 본인만 취소 가능. */
+  DisposalOnlyRequesterCanCancel = 'DISPOSAL_ONLY_REQUESTER_CAN_CANCEL',
+  /** 폐기 반려 코멘트가 최소 길이 미만 (frontend bypass 차단 fail-close). */
+  DisposalRejectCommentRequired = 'DISPOSAL_REJECT_COMMENT_REQUIRED',
+
+  // ============================================================================
+  // 교정계획서(Calibration Plan) 도메인 (UL-QP-18-09 / UL-QP-18-10)
+  // ============================================================================
+  /** 교정계획서를 찾을 수 없음. */
+  CalibrationPlanNotFound = 'CALIBRATION_PLAN_NOT_FOUND',
+  /** 교정계획서 항목을 찾을 수 없음. */
+  CalibrationPlanItemNotFound = 'CALIBRATION_PLAN_ITEM_NOT_FOUND',
+  /** 동일 연도/팀 교정계획서가 이미 존재함. */
+  CalibrationPlanAlreadyExists = 'CALIBRATION_PLAN_ALREADY_EXISTS',
+  /** 반려 사유가 최소 길이 미만 (defense-in-depth fail-close). */
+  CalibrationPlanRejectionReasonRequired = 'CALIBRATION_PLAN_REJECTION_REASON_REQUIRED',
+  /** 검토/승인 대기 상태가 아닌 계획서는 반려 불가. */
+  CalibrationPlanInvalidStatusForReject = 'CALIBRATION_PLAN_INVALID_STATUS_FOR_REJECT',
+  /** draft 상태가 아닌 계획서는 검토 요청 불가. */
+  CalibrationPlanInvalidStatusForSubmit = 'CALIBRATION_PLAN_INVALID_STATUS_FOR_SUBMIT',
+  /** 승인된 계획서만 항목 확인 가능. */
+  CalibrationPlanOnlyApprovedCanConfirm = 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM',
+  /** 승인된 계획서만 새 버전 생성 가능. */
+  CalibrationPlanOnlyApprovedCanCreateVersion = 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CREATE_VERSION',
+  /** draft 상태만 삭제 가능. */
+  CalibrationPlanOnlyDraftCanDelete = 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_DELETE',
+  /** draft 상태만 수정 가능. */
+  CalibrationPlanOnlyDraftCanUpdate = 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_UPDATE',
+  /** draft 상태만 항목 수정 가능. */
+  CalibrationPlanOnlyDraftCanUpdateItem = 'CALIBRATION_PLAN_ONLY_DRAFT_CAN_UPDATE_ITEM',
+  /** 검토 대기 상태만 검토 완료 가능. */
+  CalibrationPlanOnlyPendingReviewCanReview = 'CALIBRATION_PLAN_ONLY_PENDING_REVIEW_CAN_REVIEW',
+  /** 승인 대기 상태만 최종 승인 가능. */
+  CalibrationPlanOnlyPendingApprovalCanApprove = 'CALIBRATION_PLAN_ONLY_PENDING_APPROVAL_CAN_APPROVE',
+  /** 미실행 항목이 있는 계획서는 처리 불가. */
+  CalibrationPlanItemNotExecuted = 'PLAN_ITEM_NOT_EXECUTED',
+  /** 'approved' 외 상태의 계획서는 export 불가 (export 보안 게이트). */
+  CalibrationPlanNonExportableStatus = 'NON_EXPORTABLE_PLAN_STATUS',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
@@ -192,6 +246,33 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,
   [ErrorCode.ServiceUnavailable]: 503,
+
+  // 폐기(Disposal) 도메인
+  [ErrorCode.DisposalRequestNotFound]: 404,
+  [ErrorCode.DisposalPendingNotFound]: 404,
+  [ErrorCode.DisposalReviewedNotFound]: 404,
+  [ErrorCode.DisposalReviewerNotFound]: 404,
+  [ErrorCode.DisposalTeamScopeOnly]: 403,
+  [ErrorCode.DisposalAlreadyInProgress]: 409,
+  [ErrorCode.DisposalOnlyRequesterCanCancel]: 403,
+  [ErrorCode.DisposalRejectCommentRequired]: 400,
+
+  // 교정계획서(Calibration Plan) 도메인
+  [ErrorCode.CalibrationPlanNotFound]: 404,
+  [ErrorCode.CalibrationPlanItemNotFound]: 404,
+  [ErrorCode.CalibrationPlanAlreadyExists]: 409,
+  [ErrorCode.CalibrationPlanRejectionReasonRequired]: 400,
+  [ErrorCode.CalibrationPlanInvalidStatusForReject]: 400,
+  [ErrorCode.CalibrationPlanInvalidStatusForSubmit]: 400,
+  [ErrorCode.CalibrationPlanOnlyApprovedCanConfirm]: 400,
+  [ErrorCode.CalibrationPlanOnlyApprovedCanCreateVersion]: 400,
+  [ErrorCode.CalibrationPlanOnlyDraftCanDelete]: 400,
+  [ErrorCode.CalibrationPlanOnlyDraftCanUpdate]: 400,
+  [ErrorCode.CalibrationPlanOnlyDraftCanUpdateItem]: 400,
+  [ErrorCode.CalibrationPlanOnlyPendingReviewCanReview]: 400,
+  [ErrorCode.CalibrationPlanOnlyPendingApprovalCanApprove]: 400,
+  [ErrorCode.CalibrationPlanItemNotExecuted]: 400,
+  [ErrorCode.CalibrationPlanNonExportableStatus]: 400,
 };
 
 // 에러 응답 스키마

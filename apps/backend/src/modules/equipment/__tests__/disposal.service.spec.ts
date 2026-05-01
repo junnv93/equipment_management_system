@@ -10,6 +10,7 @@ import {
   approveDisposalSchema,
 } from '../dto/disposal.dto';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 
 const DRIZZLE_INSTANCE = 'DRIZZLE_INSTANCE';
 const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
@@ -233,7 +234,7 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
       } catch (e) {
         expect(e).toBeInstanceOf(BadRequestException);
         const response = (e as BadRequestException).getResponse() as { code?: string };
-        expect(response.code).toBe('DISPOSAL_REJECT_COMMENT_REQUIRED');
+        expect(response.code).toBe(ErrorCode.DisposalRejectCommentRequired);
       }
     });
 

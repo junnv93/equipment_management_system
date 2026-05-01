@@ -167,5 +167,18 @@
     "noInfo": "No info",
     "years": "{count} yr ",
     "months": "{count} mo"
+  },
+  "errors": {
+    "title": "Action Failed",
+    "rejectCommentRequired": "Rejection comment must be at least {min} characters.",
+    "reviewedNotFound": "No reviewed disposal request found. Please reload the page.",
+    "pendingNotFound": "No pending disposal request found.",
+    "reviewerNotFound": "Reviewer information not found. Please re-login.",
+    "teamScopeOnly": "Only equipment from the same team can be reviewed.",
+    "alreadyInProgress": "A disposal request is already in progress.",
+    "onlyRequesterCanCancel": "Only the requester can cancel this disposal.",
+    "requestNotFound": "Disposal request not found.",
+    "equipmentNotFound": "Equipment not found.",
+    "userNotFound": "User not found."
   }
 }

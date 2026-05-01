@@ -34,6 +34,7 @@ import { ReviewOpinionCard } from './ReviewOpinionCard';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/errors/equipment-errors';
+import { mapDisposalErrorToToast } from '@/lib/errors/disposal-errors';
 import {
   DISPOSAL_BUTTON_TOKENS,
   DISPOSAL_INFO_CARD_TOKENS,
@@ -89,10 +90,9 @@ export function DisposalApprovalDialog({
       handleClose();
     },
     onError: async (error: Error) => {
-      const errorMessage = error.message;
+      // SSOT: backend ErrorCode → i18n 매핑 (한국어 백엔드 메시지 우회)
       toast({
-        title: t('common.error'),
-        description: errorMessage,
+        ...mapDisposalErrorToToast(error, t),
         variant: 'destructive',
       });
       // ✅ 409 Conflict 시 자동 새로고침

@@ -28,6 +28,7 @@ import {
   DisposalReviewStatusValues as DRVal,
   EquipmentStatusValues as ESVal,
   UserRoleValues as URVal,
+  ErrorCode,
 } from '@equipment-management/schemas';
 import { DASHBOARD_ITEM_LIMIT, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import type { DisposalRequestWithRelations } from './disposal.types';
@@ -87,7 +88,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!equipmentItem) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
@@ -102,7 +103,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (existingRequest) {
       throw new ConflictException({
-        code: 'DISPOSAL_ALREADY_IN_PROGRESS',
+        code: ErrorCode.DisposalAlreadyInProgress,
         message: 'A disposal request is already in progress.',
       });
     }
@@ -182,7 +183,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!request) {
       throw new NotFoundException({
-        code: 'DISPOSAL_PENDING_NOT_FOUND',
+        code: ErrorCode.DisposalPendingNotFound,
         message: 'Pending disposal request not found.',
       });
     }
@@ -194,7 +195,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!equipmentItem) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
@@ -206,7 +207,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!reviewer) {
       throw new NotFoundException({
-        code: 'DISPOSAL_REVIEWER_NOT_FOUND',
+        code: ErrorCode.DisposalReviewerNotFound,
         message: `Reviewer not found. (ID: ${reviewedBy})`,
       });
     }
@@ -216,7 +217,7 @@ export class DisposalService extends VersionedBaseService {
     const isLabManager = reviewer.role === URVal.LAB_MANAGER;
     if (!isLabManager && equipmentItem.teamId && equipmentItem.teamId !== reviewer.teamId) {
       throw new ForbiddenException({
-        code: 'DISPOSAL_TEAM_SCOPE_ONLY',
+        code: ErrorCode.DisposalTeamScopeOnly,
         message: 'Can only review equipment from the same team.',
       });
     }
@@ -237,7 +238,7 @@ export class DisposalService extends VersionedBaseService {
           },
           '폐기요청',
           tx as AppDatabase,
-          'DISPOSAL_REQUEST_NOT_FOUND'
+          ErrorCode.DisposalRequestNotFound
         );
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
@@ -254,7 +255,7 @@ export class DisposalService extends VersionedBaseService {
           },
           '폐기요청',
           tx as AppDatabase,
-          'DISPOSAL_REQUEST_NOT_FOUND'
+          ErrorCode.DisposalRequestNotFound
         );
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -331,7 +332,7 @@ export class DisposalService extends VersionedBaseService {
       const trimmed = approveDto.comment?.trim() ?? '';
       if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
         throw new BadRequestException({
-          code: 'DISPOSAL_REJECT_COMMENT_REQUIRED',
+          code: ErrorCode.DisposalRejectCommentRequired,
           message: `반려 코멘트는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
         });
       }
@@ -347,7 +348,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!request) {
       throw new NotFoundException({
-        code: 'DISPOSAL_REVIEWED_NOT_FOUND',
+        code: ErrorCode.DisposalReviewedNotFound,
         message: 'Reviewed disposal request not found.',
       });
     }
@@ -370,7 +371,7 @@ export class DisposalService extends VersionedBaseService {
           },
           '폐기요청',
           tx as AppDatabase,
-          'DISPOSAL_REQUEST_NOT_FOUND'
+          ErrorCode.DisposalRequestNotFound
         );
 
         // 장비 상태를 'disposed'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -398,7 +399,7 @@ export class DisposalService extends VersionedBaseService {
           },
           '폐기요청',
           tx as AppDatabase,
-          'DISPOSAL_REQUEST_NOT_FOUND'
+          ErrorCode.DisposalRequestNotFound
         );
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -486,7 +487,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!request) {
       throw new NotFoundException({
-        code: 'DISPOSAL_PENDING_NOT_FOUND',
+        code: ErrorCode.DisposalPendingNotFound,
         message: 'Pending disposal request not found.',
       });
     }
@@ -494,7 +495,7 @@ export class DisposalService extends VersionedBaseService {
     // 2. 권한 검증 (요청자 본인만 취소 가능)
     if (request.requestedBy !== userId) {
       throw new ForbiddenException({
-        code: 'DISPOSAL_ONLY_REQUESTER_CAN_CANCEL',
+        code: ErrorCode.DisposalOnlyRequesterCanCancel,
         message: 'Only the requester can cancel this request.',
       });
     }
@@ -507,7 +508,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!currentEquipment) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
@@ -535,7 +536,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!current) {
           throw new NotFoundException({
-            code: 'DISPOSAL_REQUEST_NOT_FOUND',
+            code: ErrorCode.DisposalRequestNotFound,
             message: `Disposal request not found. (ID: ${request.id})`,
           });
         }
@@ -550,7 +551,7 @@ export class DisposalService extends VersionedBaseService {
         { status: ESVal.AVAILABLE },
         '장비',
         tx as AppDatabase,
-        'EQUIPMENT_NOT_FOUND'
+        ErrorCode.EquipmentNotFound
       );
     });
 
@@ -616,7 +617,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!currentUser) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User not found. (ID: ${userId})`,
       });
     }
@@ -766,7 +767,7 @@ export class DisposalService extends VersionedBaseService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }

@@ -704,8 +704,8 @@
     "prefill": {
       "auto": "Auto",
       "tooltip": "Auto-filled from equipment master data. You can edit this value.",
-      "usePreviousLabel": "Copy items and result sections from the most recent approved inspection",
-      "usePreviousDescription": "Automatically populates {count} items from the most recent approved intermediate inspection. Measurement values and judgments remain empty. Unchecking will clear them.",
+      "usePreviousLabel": "Copy items and result sections from this equipment's inspection template",
+      "usePreviousDescription": "Automatically populates {count} item(s) from the current template. Measurement values and judgments remain empty. Unchecking will clear them.",
       "toggleOff": {
         "title": "Discard copied entries?",
         "description": "{itemCount} inspection items and {sectionCount} result sections will be deleted. This cannot be undone.",
@@ -713,18 +713,23 @@
         "cancel": "Cancel"
       },
       "banner": {
-        "title": "Structure imported from previous inspection",
-        "description": "{summary} were copied. All measurement values are empty — please re-enter.",
+        "title": "Template structure imported",
+        "description": "{summary} were copied from the template. All measurement values are empty — please re-enter.",
         "partTable": "{count} table(s)",
         "partPhoto": "{count} photo(s)",
         "partText": "{count} text(s)",
-        "meta": "Last approved: {date}",
+        "meta": "Template created: {date}",
         "dismiss": "Dismiss"
       },
       "noSourceNotice": {
-        "title": "Previous inspection unavailable",
-        "description": "The most recent inspection was not approved, so auto-fill is disabled."
+        "title": "No template exists for this equipment",
+        "description": "First inspection. You can start with a blank form or pull a verified template from a similar equipment."
       }
+    },
+    "template": {
+      "versionBadgeAria": "Form version v{version}, created {date} by {author}",
+      "missingBadge": "No template (first inspection)",
+      "systemAuthor": "System"
     },
     "measurementEquipment": {
       "title": "Measurement Equipment List",
@@ -901,5 +906,23 @@
     "endpointDeprecated": "This feature is no longer supported. Please use the calibration registration form.",
     "planItemNotExecuted": "Items without a linked calibration record cannot be confirmed.",
     "unknown": "An unknown error occurred."
+  },
+  "planErrors": {
+    "title": "Action Failed",
+    "notFound": "Calibration plan not found.",
+    "itemNotFound": "Calibration plan item not found.",
+    "alreadyExists": "A calibration plan for the same year/team already exists.",
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
+    "invalidStatusForReject": "Only plans in pending review or pending approval status can be rejected.",
+    "invalidStatusForSubmit": "Only draft plans can be submitted for review.",
+    "onlyApprovedCanConfirm": "Only approved plans can have items confirmed.",
+    "onlyApprovedCanCreateVersion": "Only approved plans can create a new version.",
+    "onlyDraftCanDelete": "Only draft plans can be deleted.",
+    "onlyDraftCanUpdate": "Only draft plans can be updated.",
+    "onlyDraftCanUpdateItem": "Only draft plans can have items updated.",
+    "onlyPendingReviewCanReview": "Only plans in pending review status can be marked reviewed.",
+    "onlyPendingApprovalCanApprove": "Only plans in pending approval status can be finally approved.",
+    "itemNotExecuted": "Items without a linked calibration record cannot be processed.",
+    "nonExportableStatus": "Only approved calibration plans can be exported."
   }
 }

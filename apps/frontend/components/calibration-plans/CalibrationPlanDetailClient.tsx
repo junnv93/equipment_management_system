@@ -25,6 +25,7 @@ import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
+import { mapCalibrationPlanErrorToToast } from '@/lib/errors/calibration-plan-errors';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { isCalibrationPlanExportable } from '@/lib/utils/calibration-plan-exportability';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
@@ -224,9 +225,9 @@ export function CalibrationPlanDetailClient({
       setRejectionReason('');
     },
     onError: (error) => {
+      // SSOT: backend ErrorCode → i18n 매핑 (한국어 백엔드 메시지 우회)
       toast({
-        title: t('planDetail.toasts.rejectError'),
-        description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
+        ...mapCalibrationPlanErrorToToast(error, t),
         variant: 'destructive',
       });
       invalidateAfterChange();
