@@ -17,8 +17,10 @@ import {
 } from '@equipment-management/db/schema';
 import {
   ExtractedInspectionStructureSchema,
+  UserRoleEnum,
   type ExtractedInspectionStructure,
   type InspectionType,
+  type AuditLogUserRole,
 } from '@equipment-management/schemas';
 import { CACHE_EVENTS, type InspectionTemplateCachePayload } from '../../common/cache/cache-events';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -205,6 +207,7 @@ export class InspectionFormTemplatesService {
     equipmentId: string,
     input: UpsertInspectionTemplateInput,
     actorUserId: string | null,
+    actorName: string | null,
     actorRole: string | null
   ): Promise<InspectionFormTemplate> {
     // 0. 장비 존재 확인 (FK는 보장하지만 명시적 NotFound가 UX 명확)
@@ -294,11 +297,14 @@ export class InspectionFormTemplatesService {
     });
 
     // 6. audit log — forkChoice + supersededBy 추적
+    //    UL-QP-18 §7.5 양식 통제: actor 정확히 식별 (이름 + 역할).
+    //    userName: controller에서 req.user.name 주입 — 부재 시 'unknown' (DB 식별성 보존).
+    //    userRole: UserRoleEnum.safeParse — type cast 우회, 부적합 시 'unknown'.
     const action = current ? 'update' : 'create';
     await this.auditService.create({
       userId: actorUserId,
-      userName: actorUserId ? 'admin' : 'system',
-      userRole: actorUserId ? ((actorRole as 'system_admin') ?? 'unknown') : 'system',
+      userName: actorName ?? (actorUserId ? 'unknown' : 'system'),
+      userRole: this.resolveAuditUserRole(actorUserId, actorRole),
       action,
       entityType: 'inspection_form_template',
       entityId: result.id,
@@ -431,5 +437,25 @@ export class InspectionFormTemplatesService {
     if (typeof err !== 'object' || err === null) return false;
     const e = err as { code?: string };
     return e.code === '23505';
+  }
+
+  /**
+   * Audit log의 userRole 변환 — UserRoleEnum SSOT 경유.
+   * - actorUserId 부재: 'system' (시스템 호출, controller 우회)
+   * - actorRole이 UserRoleEnum.options에 포함되면 그대로 캐스트
+   * - 부적합 / null: 'unknown' (방어적 fallback)
+   *
+   * type cast `as 'system_admin'`을 사용했던 이전 구현은 다른 admin 역할
+   * (quality_manager, lab_manager) 케이스에서 부정확한 audit trail 생성.
+   * safeParse로 정확한 UserRole 보장.
+   */
+  private resolveAuditUserRole(
+    actorUserId: string | null,
+    actorRole: string | null
+  ): AuditLogUserRole {
+    if (!actorUserId) return 'system';
+    if (!actorRole) return 'unknown';
+    const parsed = UserRoleEnum.safeParse(actorRole);
+    return parsed.success ? parsed.data : 'unknown';
   }
 }

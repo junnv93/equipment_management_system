@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -12,7 +13,11 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { Permission } from '@equipment-management/shared-constants';
-import { type InspectionType } from '@equipment-management/schemas';
+import {
+  INSPECTION_TYPE_VALUES,
+  InspectionTypeEnum,
+  type InspectionType,
+} from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { InspectionFormTemplatesService } from './inspection-form-templates.service';
@@ -27,9 +32,15 @@ import { type GalleryQueryInput, GalleryQueryValidationPipe } from './dto/galler
  *
  * Routes:
  * - GET /api/equipment/:uuid/inspection-template/latest?type=intermediate|self
- *   → current template 조회 (모든 인증 사용자)
+ *   → current template 조회 (장비 조회 권한자라면 누구나 — 양식은 장비 종속 자원)
  * - POST /api/equipment/:uuid/inspection-template
  *   → SoftFork apply_forward 또는 admin 명시 수정 (Permission.MANAGE_INSPECTION_TEMPLATE)
+ *
+ * 권한 정책 결정 (Phase 1B-B-3 자기감사 수정):
+ * - 점검 양식(template)은 *장비의 종속 자원* — 장비를 볼 수 있는 사용자라면 양식 구조도 조회 가능.
+ * - VIEW_EQUIPMENT 권한 사용 — 모든 점검 작성 role(test_engineer / technical_manager /
+ *   quality_manager / lab_manager / system_admin)이 보유.
+ * - 이전 (VIEW_CALIBRATIONS) 사용은 self-inspection 작성자가 거부될 수 있는 미스매치 (수정됨).
  */
 @Controller('equipment')
 export class EquipmentInspectionTemplateController {
@@ -38,11 +49,11 @@ export class EquipmentInspectionTemplateController {
   /**
    * 현재 template 조회 — 부재 시 404. Frontend useLatestTemplate hook용.
    *
-   * 권한: VIEW_CALIBRATIONS or VIEW_SELF_INSPECTIONS — 점검 자체 조회 권한자라면 양식 구조도 조회 가능.
-   * 보수적으로 두 권한 중 하나라도 있으면 OK (점검 작성 흐름에서 자연스러운 노출).
+   * type 검증: INSPECTION_TYPE_VALUES SSOT 경유 (인라인 string 비교 금지).
+   * 부적절한 type → BadRequestException + 명시적 error code.
    */
   @Get(':uuid/inspection-template/latest')
-  @RequirePermissions(Permission.VIEW_CALIBRATIONS) // 중간점검 작성 흐름과 같은 권한
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async getLatest(
     @Param('uuid', ParseUUIDPipe) equipmentId: string,
     @Query('type') type: string
@@ -56,12 +67,15 @@ export class EquipmentInspectionTemplateController {
     createdBy: string | null;
     createdAt: Date;
   }> {
-    if (type !== 'intermediate' && type !== 'self') {
-      // type 검증 — Zod pipe 적용 못 함 (path param + simple query)
-      // 명시적 BadRequest로 변환되도록 throw
-      throw new Error(`Invalid type: ${type}. Must be 'intermediate' or 'self'.`);
+    const parsed = InspectionTypeEnum.safeParse(type);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: 'INVALID_INSPECTION_TYPE',
+        message: `Invalid inspection type. Must be one of: ${INSPECTION_TYPE_VALUES.join(', ')}.`,
+        received: type,
+      });
     }
-    const tpl = await this.service.getCurrentOrThrow(equipmentId, type);
+    const tpl = await this.service.getCurrentOrThrow(equipmentId, parsed.data);
     return {
       id: tpl.id,
       equipmentId: tpl.equipmentId,
@@ -81,6 +95,7 @@ export class EquipmentInspectionTemplateController {
    * 시스템 자동 호출(approve hook)은 controller 우회 — service.autoCreateIfAbsent 직접 호출.
    *
    * Server-side user extraction (Rule 2 보안): req.user.userId 사용, body 신뢰 금지.
+   * audit log에 actor name + role 모두 정확히 주입 (UL-QP-18 §7.5 양식 통제 추적).
    */
   @Post(':uuid/inspection-template')
   @HttpCode(HttpStatus.CREATED)
@@ -97,9 +112,16 @@ export class EquipmentInspectionTemplateController {
     createdAt: Date;
   }> {
     const actorUserId = req.user?.userId ?? null;
+    const actorName = req.user?.name ?? null;
     // JWT roles[]에서 첫 번째 역할 — audit log에 actorRole로 기록 (단일 role 가정)
     const actorRole = req.user?.roles?.[0] ?? null;
-    const created = await this.service.upsertNewVersion(equipmentId, body, actorUserId, actorRole);
+    const created = await this.service.upsertNewVersion(
+      equipmentId,
+      body,
+      actorUserId,
+      actorName,
+      actorRole
+    );
     return {
       id: created.id,
       version: created.version,
@@ -113,7 +135,7 @@ export class EquipmentInspectionTemplateController {
  * Inspection Form Templates — gallery endpoint (Phase 1B-B)
  *
  * Route: GET /api/inspection-templates/gallery
- *   → 비슷한 장비의 검증된 template 목록 (모든 인증 사용자 허용)
+ *   → 비슷한 장비의 검증된 template 목록 (장비 조회 권한자 모두 허용)
  */
 @Controller('inspection-templates')
 export class InspectionTemplatesGalleryController {
@@ -121,11 +143,11 @@ export class InspectionTemplatesGalleryController {
 
   /**
    * Gallery 매칭 — 첫 점검 + template 부재인 장비를 위한 reference 목록.
-   * 권한: 인증 사용자 (RequirePermissions 미사용 — auth guard만 통과).
+   * 권한: VIEW_EQUIPMENT — 점검 양식은 장비의 종속 자원 (작성 흐름 위계와 일관).
    * 매칭 이유(matchReason)는 frontend chip 표시용.
    */
   @Get('gallery')
-  @RequirePermissions(Permission.VIEW_CALIBRATIONS) // 인증 + 점검 흐름 사용자라는 최소 보증
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @UsePipes(GalleryQueryValidationPipe)
   async getGallery(@Query() query: GalleryQueryInput): Promise<{
     items: Array<{

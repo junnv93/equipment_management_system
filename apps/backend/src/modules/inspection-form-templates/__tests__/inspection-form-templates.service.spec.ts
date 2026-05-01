@@ -181,7 +181,7 @@ describe('InspectionFormTemplatesService', () => {
     it('장비 부재 시 NotFoundException', async () => {
       mockDb.select.mockReturnValueOnce(createSelectChain([])); // equipment lookup
       await expect(
-        service.upsertNewVersion('eq-uuid-1', validInput, 'user-1', 'system_admin')
+        service.upsertNewVersion('eq-uuid-1', validInput, 'user-1', 'Test Admin', 'system_admin')
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -195,6 +195,7 @@ describe('InspectionFormTemplatesService', () => {
           'eq-uuid-1',
           { ...validInput, supersededBy: 'tmpl-uuid-1' }, // current.id가 OTHER이므로 mismatch
           'user-1',
+          'Test Admin',
           'system_admin'
         )
       ).rejects.toThrow(BadRequestException);
@@ -210,6 +211,7 @@ describe('InspectionFormTemplatesService', () => {
           'eq-uuid-1',
           { ...validInput, version: 5 }, // expected = 2
           'user-1',
+          'Test Admin',
           'system_admin'
         )
       ).rejects.toThrow(BadRequestException);
@@ -232,6 +234,7 @@ describe('InspectionFormTemplatesService', () => {
         'eq-uuid-1',
         validInput,
         'user-1',
+        'Test Admin',
         'system_admin'
       );
 
@@ -245,9 +248,62 @@ describe('InspectionFormTemplatesService', () => {
         expect.objectContaining({
           action: 'update',
           entityType: 'inspection_form_template',
+          // 자기감사 수정: userName 하드코딩 제거 + UserRoleEnum.safeParse 검증
+          userName: 'Test Admin',
+          userRole: 'system_admin',
           details: expect.objectContaining({
             additionalInfo: expect.objectContaining({ forkChoice: 'apply_forward' }),
           }),
+        })
+      );
+    });
+
+    it('actorRole이 UserRole enum 외 값이면 audit userRole=unknown', async () => {
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([{ id: 'eq-uuid-1' }]))
+        .mockReturnValueOnce(createSelectChain([MOCK_TEMPLATE]));
+      mockDb.insert.mockReturnValueOnce({
+        values: jest.fn().mockReturnValue({
+          returning: jest
+            .fn()
+            .mockResolvedValue([{ ...MOCK_TEMPLATE, id: 'tmpl-uuid-2', version: 2 }]),
+        }),
+      });
+
+      await service.upsertNewVersion(
+        'eq-uuid-1',
+        validInput,
+        'user-1',
+        'Test User',
+        'INVALID_ROLE_X' // 부적합 role — type cast `as 'system_admin'` 시 오답이었음
+      );
+
+      expect(mockAuditService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userName: 'Test User',
+          userRole: 'unknown', // safeParse 실패 → 'unknown' (정확한 fallback)
+        })
+      );
+    });
+
+    it('actorName이 null이면 audit userName=unknown (system이 아님 — userId가 있음)', async () => {
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([{ id: 'eq-uuid-1' }]))
+        .mockReturnValueOnce(createSelectChain([MOCK_TEMPLATE]));
+      mockDb.insert.mockReturnValueOnce({
+        values: jest.fn().mockReturnValue({
+          returning: jest
+            .fn()
+            .mockResolvedValue([{ ...MOCK_TEMPLATE, id: 'tmpl-uuid-2', version: 2 }]),
+        }),
+      });
+
+      await service.upsertNewVersion('eq-uuid-1', validInput, 'user-1', null, 'system_admin');
+
+      expect(mockAuditService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userName: 'unknown',
+          userRole: 'system_admin',
         })
       );
     });
@@ -264,7 +320,7 @@ describe('InspectionFormTemplatesService', () => {
       });
 
       await expect(
-        service.upsertNewVersion('eq-uuid-1', validInput, 'user-1', 'system_admin')
+        service.upsertNewVersion('eq-uuid-1', validInput, 'user-1', 'Test Admin', 'system_admin')
       ).rejects.toThrow(ConflictException);
     });
   });
