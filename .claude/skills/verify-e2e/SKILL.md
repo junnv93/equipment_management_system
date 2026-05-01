@@ -835,6 +835,13 @@ grep -rn "waitForLoadState.*networkidle" apps/frontend/tests/e2e --include="*.sp
 
 ### Step 23: TestRole 4-place SSOT 정합성 (2026-05-01 추가, stale-contract-cleanup)
 
+> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
+> 본 Step의 grep 명령은 보조 수단으로 강등됨. 1차 검증은 자동 정적 분석:
+> ```bash
+> pnpm --filter backend run verify:e2e-actors  # R3 룰 = Step 23 strict
+> ```
+> pre-push hook이 자동 실행. R3 위반 시 push 차단.
+
 `apps/backend/test/helpers/test-auth.ts`의 `TestRole` 유니언 타입에 새 역할을 추가할 때, **반드시 다음 4곳의 `Record<TestRole, ...>` 매핑을 동시 갱신**해야 한다. 누락 시 `Record<TestRole, T>` 타입 강제로 컴파일 에러는 발생하나, `TEST_USER_DETAILS` 배열은 `as const` 튜플이라 타입 강제 없이 silent omission 위험.
 
 **4곳 SSOT (test-auth.ts):**
@@ -895,6 +902,12 @@ grep -c "id: TEST_USER_IDS\." apps/backend/test/helpers/test-auth.ts
 
 ### Step 24: Fixture 권한 격리 패턴 (2026-05-01 추가, stale-contract-cleanup)
 
+> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
+> ```bash
+> pnpm --filter backend run verify:e2e-actors  # R2 룰 = Step 24 (WARN: deprecation 진행 추적)
+> ```
+> Phase 5 codemod 완료 시 R2 WARN 자동 해소.
+
 `apps/backend/test/helpers/test-fixtures.ts`의 fixture 헬퍼(`createTestEquipment`, `createTestCheckout` 등)가 **호출부의 `token` 인자에 의존하면 도메인 권한 정책 변경 시 전체 fixture가 깨진다**. fixture는 setup용이므로 자체 권한 토큰을 발급해 호출부 역할과 분리해야 한다.
 
 **위반 패턴 (UL-QP-18 직무분리 commit 77cb3f37 후 발견):**
@@ -947,6 +960,13 @@ grep -A5 "^export async function create" apps/backend/test/helpers/test-fixtures
 ---
 
 ### Step 25: e2e spec actor token 적절성 — domain-permission spec은 system_admin 사용 금지 (2026-05-01 추가, stale-contract-cleanup)
+
+> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
+> ```bash
+> pnpm --filter backend run verify:e2e-actors  # R1 룰 = Step 25 strict
+> ```
+> pre-push hook이 자동 실행. setup 의도 화이트리스트: `loginAs(*, 'systemAdmin')` 직전
+> 1~5 라인에 `// setup` 또는 `// fixture` 의도 주석이 있으면 화이트리스트 (의도 명시 필수).
 
 E2E spec의 `accessToken = loginAs('systemAdmin')` 사용은 **모든 site/team/role scope 검증을 우회**한다. 도메인 권한·scope 검증을 본 의도로 하는 spec은 `'systemAdmin'` 대신 의도된 도메인 역할(`'admin'`/`'manager'`/`'user'`)을 사용해야 검증 의미가 보존된다.
 

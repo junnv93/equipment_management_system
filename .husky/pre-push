@@ -48,6 +48,9 @@ pnpm --filter frontend run lint
 echo "▶ pre-push: i18n call-sites parity..."
 node scripts/check-i18n-call-sites.mjs --all --quiet
 
+echo "▶ pre-push: e2e actor alignment (Step 23/24/25 invariants)..."
+pnpm --filter backend run verify:e2e-actors
+
 # ── ADR-0006 경로 기반 게이트 (routing 파일 변경 시에만 실행) ────────────────
 # 대상 파일: infra/nginx/, next.config.js, proxy.ts, api-routing.ts
 # 목적: Same-Origin Reverse-Proxy 4-layer SSOT 회귀 차단 (§J3)

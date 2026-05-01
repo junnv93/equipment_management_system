@@ -33,6 +33,7 @@
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
     "db:verify": "npx ts-node scripts/verify-migration.ts",
     "security:check-endpoints": "npx ts-node scripts/check-endpoint-annotations.ts",
+    "verify:e2e-actors": "tsx scripts/verify-e2e-actor-alignment.ts",
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts",
     "db:seed": "npx ts-node src/database/seed-test-new.ts",
     "db:reset": "bash scripts/db-reset.sh",
