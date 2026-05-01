@@ -34,7 +34,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 10 | `verify-security`       | both     | 보안 — Helmet CSP, Security Headers                       |
 | 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지, audit SSOT enum 동기화, CROSS_CUTTING_NAMESPACES+checkStructuralNamespaces 스크립트 구조(Step 17), SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트(Step 18), typed linting block stories ignores(Step 19) |
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
-| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지, test.use() describe 스코프 강제(Step 21) |
+| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지, test.use() describe 스코프 강제(Step 21), TestRole 4-place SSOT(Step 23), fixture 권한 격리(Step 24), scope spec actor 정합(Step 25) — Steps 23/24/25는 `pnpm --filter backend run verify:e2e-actors` pre-push 자동 승격 |
 | 14 | `verify-seed-integrity` | backend  | 시드 인프라 3자 SSOT 정합성 (seed-data↔seed-test-new↔verification) |
 | 15 | `verify-workflows`      | e2e      | 워크플로우 E2E 커버리지 — critical-workflows.md 대비 테스트 매핑    |
 | 16 | `verify-cache-events`   | backend  | 이벤트 기반 캐시 무효화 — 레지스트리 커버리지, 리스너 async, SSOT 패턴 |
