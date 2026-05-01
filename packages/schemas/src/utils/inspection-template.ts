@@ -1,8 +1,8 @@
+import type { InspectionResultSectionType } from '../enums/inspection-result-section';
 import type {
   CreateInspectionResultSectionShape,
   ExtractedInspectionStructure,
   InspectionItemFormShape,
-  InspectionResultSectionShape,
   RichCell,
   StructureDiff,
 } from '../types/inspection-template';
@@ -27,14 +27,25 @@ import type {
  * 직전 점검 source — frontend의 IntermediateInspection / SelfInspection 또는
  * backend의 inspection row + items + resultSections join 결과.
  *
- * loose typing: items/resultSections 필드만 필요 (다른 메타는 무시).
+ * Loose typing: 함수가 *실제로 사용하는 필드만* 명시 — createdAt/updatedAt 등은 제외.
+ * Backend(Date row) ↔ Frontend(string serialized) 양쪽 호환을 위함.
  */
 export interface InspectionTemplateSource {
   items?: Array<{
     checkItem?: string | null;
     checkCriteria?: string | null;
   }> | null;
-  resultSections?: InspectionResultSectionShape[] | null;
+  resultSections?: Array<{
+    sortOrder: number;
+    sectionType: InspectionResultSectionType;
+    title: string | null;
+    content?: string | null;
+    tableData: { headers: string[]; rows: string[][] } | null;
+    richTableData: { headers: string[]; rows: RichCell[][] } | null;
+    imageWidthCm: string | null;
+    imageHeightCm: string | null;
+    documentId?: string | null;
+  }> | null;
 }
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import {
@@ -17,8 +17,10 @@ import type { DocumentService } from '../../common/file-upload/document.service'
 import {
   CalibrationApprovalStatusValues,
   InspectionApprovalStatusValues,
+  extractStructureFromInspection,
   type DocumentType,
 } from '@equipment-management/schemas';
+import { InspectionFormTemplatesService } from '../inspection-form-templates/inspection-form-templates.service';
 import type { MulterFile } from '../../types/common.types';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -31,11 +33,13 @@ import type { UpdateInspectionInput } from './dto/update-inspection.dto';
 @Injectable()
 export class IntermediateInspectionsService extends VersionedBaseService {
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:';
+  private readonly logger = new Logger(IntermediateInspectionsService.name);
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly templateService: InspectionFormTemplatesService
   ) {
     super();
   }
@@ -506,7 +510,64 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     this.invalidateCache(id, existing.equipmentId);
 
+    // Build-Once Workflow auto-create hook (Phase 1B-B-2)
+    // 첫 승인 시 inspection_form_templates에 snapshot 자동 생성 (idempotent — 이미 있으면 skip).
+    // 실패 시 inspection 승인 자체는 성공 보장 (template hook은 비즈니스 로직 차단 X).
+    await this.tryAutoCreateTemplate(id, existing.equipmentId, userId);
+
     return updated;
+  }
+
+  /**
+   * Build-Once Workflow auto-create hook helper.
+   * approve 메서드에서만 호출 — 승인된 inspection의 items + sections를 source로 template 생성.
+   * fail-soft: error는 logger.error로 기록만, throw 안 함 (approve 결과 보존).
+   */
+  private async tryAutoCreateTemplate(
+    inspectionId: string,
+    equipmentId: string,
+    triggerUserId: string
+  ): Promise<void> {
+    try {
+      const [items, resultSections] = await Promise.all([
+        this.db
+          .select()
+          .from(intermediateInspectionItems)
+          .where(eq(intermediateInspectionItems.inspectionId, inspectionId))
+          .orderBy(intermediateInspectionItems.itemNumber),
+        this.db
+          .select()
+          .from(inspectionResultSections)
+          .where(
+            and(
+              eq(inspectionResultSections.inspectionId, inspectionId),
+              eq(inspectionResultSections.inspectionType, 'intermediate')
+            )
+          )
+          .orderBy(inspectionResultSections.sortOrder),
+      ]);
+
+      const structure = extractStructureFromInspection({
+        items,
+        // resultSections shape는 packages/schemas의 InspectionResultSectionShape와 호환 (structural typing)
+        resultSections,
+      });
+
+      await this.templateService.autoCreateIfAbsent({
+        equipmentId,
+        inspectionType: 'intermediate',
+        structure,
+        sourceInspectionId: inspectionId,
+        triggerActorUserId: triggerUserId,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Auto-create inspection template failed for inspection ${inspectionId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+        err instanceof Error ? err.stack : undefined
+      );
+    }
   }
 
   /**

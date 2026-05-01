@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -26,8 +27,10 @@ import type { MulterFile } from '../../types/common.types';
 import {
   SELF_INSPECTION_LEGACY_COLUMN_MAP,
   SelfInspectionStatusValues,
+  extractStructureFromInspection,
   type SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
+import { InspectionFormTemplatesService } from '../inspection-form-templates/inspection-form-templates.service';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -48,11 +51,13 @@ export interface SelfInspectionWithItems extends EquipmentSelfInspection {
 @Injectable()
 export class SelfInspectionsService extends VersionedBaseService {
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.SELF_INSPECTIONS;
+  private readonly logger = new Logger(SelfInspectionsService.name);
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly templateService: InspectionFormTemplatesService
   ) {
     super();
   }
@@ -448,7 +453,57 @@ export class SelfInspectionsService extends VersionedBaseService {
       .from(selfInspectionItems)
       .where(eq(selfInspectionItems.inspectionId, id))
       .orderBy(selfInspectionItems.itemNumber);
+
+    // Build-Once Workflow auto-create hook (Phase 1B-B-2)
+    // 첫 승인 시 inspection_form_templates에 snapshot 자동 생성 (idempotent — 이미 있으면 skip).
+    // 실패 시 inspection 승인 자체는 성공 보장.
+    await this.tryAutoCreateTemplate(id, existing.equipmentId, userId, items);
+
     return { ...updated, items };
+  }
+
+  /**
+   * Build-Once Workflow auto-create hook helper (self-inspection 버전).
+   * approve 메서드에서만 호출. fail-soft.
+   */
+  private async tryAutoCreateTemplate(
+    inspectionId: string,
+    equipmentId: string,
+    triggerUserId: string,
+    items: SelfInspectionItem[]
+  ): Promise<void> {
+    try {
+      const resultSections = await this.db
+        .select()
+        .from(inspectionResultSections)
+        .where(
+          and(
+            eq(inspectionResultSections.inspectionId, inspectionId),
+            eq(inspectionResultSections.inspectionType, 'self')
+          )
+        )
+        .orderBy(inspectionResultSections.sortOrder);
+
+      const structure = extractStructureFromInspection({
+        items,
+        resultSections,
+      });
+
+      await this.templateService.autoCreateIfAbsent({
+        equipmentId,
+        inspectionType: 'self',
+        structure,
+        sourceInspectionId: inspectionId,
+        triggerActorUserId: triggerUserId,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Auto-create self-inspection template failed for inspection ${inspectionId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+        err instanceof Error ? err.stack : undefined
+      );
+    }
   }
 
   /**

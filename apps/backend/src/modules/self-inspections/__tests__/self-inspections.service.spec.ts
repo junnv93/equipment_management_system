@@ -8,6 +8,7 @@ import {
 import { SelfInspectionsService } from '../self-inspections.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
+import { InspectionFormTemplatesService } from '../../inspection-form-templates/inspection-form-templates.service';
 
 // ---------------------------------------------------------------------------
 // Drizzle ORM chain mock
@@ -135,6 +136,11 @@ describe('SelfInspectionsService', () => {
         SelfInspectionsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        // Build-Once Workflow auto-create hook (Phase 1B-B-2): approve flow에서만 호출. mock noop.
+        {
+          provide: InspectionFormTemplatesService,
+          useValue: { autoCreateIfAbsent: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 

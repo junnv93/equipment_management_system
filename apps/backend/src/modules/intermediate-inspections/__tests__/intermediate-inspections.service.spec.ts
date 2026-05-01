@@ -4,6 +4,7 @@ import { IntermediateInspectionsService } from '../intermediate-inspections.serv
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
 import { InspectionApprovalStatusValues } from '@equipment-management/schemas';
+import { InspectionFormTemplatesService } from '../../inspection-form-templates/inspection-form-templates.service';
 
 const MOCK_INSPECTION = {
   id: 'insp-uuid-1',
@@ -100,6 +101,12 @@ describe('IntermediateInspectionsService', () => {
         IntermediateInspectionsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        // Build-Once Workflow auto-create hook (Phase 1B-B-2): approve flow에서만 호출
+        // mock noop — auto-create는 별도 unit test(inspection-form-templates.service.spec.ts)에서 검증
+        {
+          provide: InspectionFormTemplatesService,
+          useValue: { autoCreateIfAbsent: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 
