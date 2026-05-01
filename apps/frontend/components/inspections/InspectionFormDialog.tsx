@@ -64,11 +64,18 @@ import { templateStructureToPrefill } from '@/lib/inspection/template-source';
 import { buildCurrentStructure, diffFormAgainstTemplate } from '@/lib/inspection/structure-diff';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
-import { useLatestTemplate, useUpsertTemplate } from '@/hooks/use-inspection-template';
+import {
+  useLatestTemplate,
+  useUpsertTemplate,
+  useTemplateGallery,
+} from '@/hooks/use-inspection-template';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
 import type { ForkChoice, StructureDiff } from '@equipment-management/schemas';
+import { isGallerySkipped } from '@/lib/inspection/template-gallery-skip';
 import { SoftForkDialog } from './SoftForkDialog';
+import { TemplateGallery } from './TemplateGallery';
+import type { InspectionTemplateGalleryEntry } from '@/lib/api/inspection-template-api';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import { cn } from '@/lib/utils';
@@ -185,6 +192,10 @@ function InspectionFormDialogInner({
   const canApplyForward = can(Permission.MANAGE_INSPECTION_TEMPLATE);
   const upsertTemplateMutation = useUpsertTemplate(equipmentId);
 
+  // Phase 1B-F: TemplateGallery state — 첫 점검 + template 부재 + skip 미설정 시 자동 노출
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [hasShownGallery, setHasShownGallery] = useState(false);
+
   // Phase 0A-ext: cancel/X/Esc 닫기 시 작성 데이터 감지 + confirmation
   const close = useFormDialogClose({
     isDirty: () =>
@@ -244,6 +255,47 @@ function InspectionFormDialogInner({
     error: templateError,
   } = useLatestTemplate(equipmentId, 'intermediate', { enabled: open });
   const isTemplateMissing = isTemplateError && isNotFoundError(templateError);
+
+  /**
+   * Phase 1B-F: TemplateGallery — 첫 점검 + template 부재 시 비슷한 장비 양식 가져오기.
+   *
+   * Gallery 자동 노출 조건 (M-14.4):
+   * - dialog open
+   * - template 부재 (isTemplateMissing)
+   * - localStorage skip 플래그 미설정 (equipmentTypeId 별)
+   * - gallery items ≥ 1
+   * - hasShownGallery=false (한 세션 1회만)
+   *
+   * Gallery fetch는 위 조건 만족 시만 trigger (불필요 호출 방지).
+   */
+  const galleryEnabled =
+    open &&
+    isTemplateMissing &&
+    !hasShownGallery &&
+    !!equipment &&
+    !isGallerySkipped(equipment.equipmentType, 'intermediate');
+  const { data: galleryData } = useTemplateGallery(
+    {
+      inspectionType: 'intermediate',
+      modelName: equipment?.modelName ?? undefined,
+      classificationCode: equipment?.classificationCode ?? undefined,
+    },
+    { enabled: galleryEnabled }
+  );
+
+  // Gallery 자동 노출 — items 도착 시점
+  useEffect(() => {
+    if (!galleryEnabled) return;
+    if (!galleryData) return;
+    if (galleryData.items.length === 0) {
+      // 매칭 결과 0이면 노출 의미 없음 — 빈 양식 직접 시작
+      setHasShownGallery(true);
+      return;
+    }
+    setGalleryOpen(true);
+    setHasShownGallery(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: galleryData 도착 시 1회 trigger
+  }, [galleryEnabled, galleryData]);
 
   // Prefill from equipment master data when dialog opens
   useEffect(() => {
@@ -535,6 +587,36 @@ function InspectionFormDialogInner({
   const hasInvalidItems = items.some(
     (item) => !item.checkItem.trim() || !item.checkCriteria.trim()
   );
+
+  /**
+   * Phase 1B-F: Gallery 카드 선택 핸들러.
+   *
+   * - entry=null: 빈 양식 시작 (아무것도 안 함, 사용자가 직접 작성)
+   * - entry=template: template.structure로 prefill (templateStructureToPrefill 경유)
+   *
+   * Note: 선택된 template은 *원본 장비*의 양식이므로 새 inspection submit 시
+   * sourceInspectionId는 null. 첫 승인 시 backend가 새 template auto-create (1B-B hook)
+   * — 이 장비 자체의 v1 template 생성. 즉 gallery는 *prefill 도구*일 뿐 template 공유 X.
+   */
+  const handleGallerySelect = (entry: InspectionTemplateGalleryEntry | null) => {
+    if (!entry) return; // 빈 양식 시작 — Context는 isTemplateMissing 그대로 유지
+    const prefill = templateStructureToPrefill(entry.template.structure);
+    setItems(prefill.items);
+    setResultSections(prefill.resultSections);
+    applyTemplatePrefill({
+      template: {
+        // gallery에서 가져온 template은 *원본 장비*의 것이므로 표시는 빈 양식과 동일하게 처리.
+        // 이 장비의 첫 승인 시 backend가 새 template 생성 (this equipment v1).
+        // 따라서 id는 entry.template.id (참조용), version은 1로 표시 (사용자에게 "v1 시작" 의미).
+        id: entry.template.id,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        createdByName: null,
+      },
+      counts: prefill.counts,
+      sortOrders: prefill.sortOrders,
+    });
+  };
 
   const buildDto = (): CreateInspectionDto => ({
     inspectionDate,
@@ -1208,6 +1290,18 @@ function InspectionFormDialogInner({
           canApplyForward={canApplyForward}
           onChoice={handleForkChoice}
           isProcessing={upsertTemplateMutation.isPending || createMutation.isPending}
+          inspectionType="intermediate"
+        />
+      )}
+
+      {/* Phase 1B-F: TemplateGallery — 첫 점검 + template 부재 시 자동 노출 */}
+      {galleryData && (
+        <TemplateGallery
+          open={galleryOpen}
+          onOpenChange={setGalleryOpen}
+          items={galleryData.items}
+          onSelect={handleGallerySelect}
+          equipmentTypeId={equipment?.equipmentType}
           inspectionType="intermediate"
         />
       )}

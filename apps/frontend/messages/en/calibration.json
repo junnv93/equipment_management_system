@@ -731,6 +731,25 @@
       "missingBadge": "No template (first inspection)",
       "systemAuthor": "System"
     },
+    "gallery": {
+      "title": "Pull a template from similar equipment?",
+      "description": "This is the first inspection for this equipment. Reusing a verified template from the same model or classification can save time.",
+      "blankCard": {
+        "title": "Start with blank form",
+        "description": "Write the form from scratch."
+      },
+      "matchReason": {
+        "modelName": "Same model",
+        "classificationCode": "Same classification"
+      },
+      "cardMeta": "v{version} · {date}",
+      "cardAriaLabel": "Pull {equipmentName} template v{version} ({reason})",
+      "blankAriaLabel": "Start with blank form",
+      "skipNextTime": "Don't ask again for this equipment type",
+      "empty": "No template available from similar equipment.",
+      "cancel": "Close",
+      "cancelAriaLabel": "Close template gallery"
+    },
     "softFork": {
       "title": "Form structure changed",
       "description": "The current inspection's table/item structure differs from the registered template. How should this be handled?",

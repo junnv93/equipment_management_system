@@ -21,7 +21,9 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import {
   getLatestTemplate,
   upsertTemplate,
+  getTemplateGallery,
   type InspectionTemplateLatestResponse,
+  type InspectionTemplateGalleryEntry,
   type UpsertInspectionTemplateBody,
   type UpsertInspectionTemplateResponse,
 } from '@/lib/api/inspection-template-api';
@@ -92,6 +94,39 @@ export function useUpsertTemplate(equipmentId: string) {
         queryKey: queryKeys.inspectionTemplate.latest(equipmentId, variables.inspectionType),
       });
     },
+  });
+}
+
+/**
+ * Template Gallery 조회 — Phase 1B-F.
+ *
+ * 비슷한 장비의 검증된 template 목록 (modelName / classificationCode 매칭).
+ * 첫 점검 + template 부재 시 InspectionFormDialog가 자동 노출 trigger.
+ *
+ * SSOT:
+ * - QUERY_CONFIG.INSPECTION_TEMPLATE = STATIC (gallery도 거의 변경 없음)
+ * - queryKeys.inspectionTemplate.gallery — 호출자별 매칭 파라미터로 분리
+ *
+ * @param enabled — 호출자가 결정 (template 404 + Gallery 조건 만족 시만 fetch)
+ */
+export function useTemplateGallery(
+  params: {
+    inspectionType: 'intermediate' | 'self';
+    modelName?: string;
+    classificationCode?: string;
+    limit?: number;
+  },
+  options: { enabled?: boolean } = {}
+) {
+  const enabled = options.enabled ?? true;
+
+  return useQuery<{ items: InspectionTemplateGalleryEntry[] }>({
+    queryKey: enabled
+      ? queryKeys.inspectionTemplate.gallery(params)
+      : ['inspectionTemplate', 'gallery', 'disabled'],
+    queryFn: () => getTemplateGallery(params),
+    enabled,
+    ...QUERY_CONFIG.INSPECTION_TEMPLATE,
   });
 }
 
