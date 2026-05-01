@@ -62,6 +62,7 @@ import {
   extractStructureFromInspection,
   describeStructureCounts,
 } from '@/lib/inspection/template-utils';
+import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { cn } from '@/lib/utils';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -104,7 +105,20 @@ function deriveCalibrationValidityPeriod(
   return `${months}개월`;
 }
 
-export default function InspectionFormDialog({
+/**
+ * 외부 export — Provider wrap.
+ * Inner는 useInspectionForm() Consumer (Context state 접근).
+ * open=false 시 Inner의 useEffect가 resetAll() 호출 → Context state auto-reset.
+ */
+export default function InspectionFormDialog(props: InspectionFormDialogProps) {
+  return (
+    <InspectionFormProvider>
+      <InspectionFormDialogInner {...props} />
+    </InspectionFormProvider>
+  );
+}
+
+function InspectionFormDialogInner({
   open,
   onOpenChange,
   equipmentId,
@@ -116,6 +130,21 @@ export default function InspectionFormDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Phase 1A-b: prefill state는 InspectionFormContext SSOT로 통합.
+  // 분산 state(previousInspectionApplied/prefillCounts/prefillBannerDismissed) 제거.
+  const inspectionForm = useInspectionForm();
+  const {
+    state: inspectionFormState,
+    applyLatestPrefill,
+    resetLatestPrefill,
+    resetAll,
+    dismissBanner,
+    setMasterPrefilledFields,
+  } = inspectionForm;
+  const previousInspectionApplied = inspectionFormState.latest.applied;
+  const prefillCounts = inspectionFormState.latest.counts;
+  const prefillBannerDismissed = inspectionFormState.latest.bannerDismissed;
+
   // Form state — classification은 항상 "교정기기"로 고정 (중간점검은 교정기기 전용)
   const [inspectionDate, setInspectionDate] = useState('');
   const [inspectionCycle, setInspectionCycle] = useState('');
@@ -125,6 +154,7 @@ export default function InspectionFormDialog({
   const [items, setItems] = useState<InspectionItemForm[]>([]);
   const [resultSections, setResultSections] = useState<CreateResultSectionDto[]>([]);
   const [measurementEquipment, setMeasurementEquipment] = useState<MeasurementEquipmentForm[]>([]);
+  // Phase 1A-b: master data prefilled flag — 향후 Context로 통합 예정 (현재는 컴포넌트 state)
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
   /**
    * 직전 점검 prefill 사용 여부 (기본 on).
@@ -133,16 +163,18 @@ export default function InspectionFormDialog({
   const [usePreviousInspection, setUsePreviousInspection] = useState(true);
   /** Phase 0A: 토글 OFF 확인 다이얼로그 (작성 중 데이터 손실 방지) */
   const [pendingToggleOffConfirm, setPendingToggleOffConfirm] = useState(false);
-  /** 이번 dialog 세션에서 직전 점검 prefill 이 이미 적용됐는지 — 재적용 방지 */
-  const [previousInspectionApplied, setPreviousInspectionApplied] = useState(false);
-  /** Phase 1A: prefill banner 카운트 (banner 표시 여부와 무관하게 dismiss 추적) */
-  const [prefillCounts, setPrefillCounts] = useState<{
-    tables: number;
-    photos: number;
-    texts: number;
-  } | null>(null);
-  /** Phase 1A: banner dismiss 상태 */
-  const [prefillBannerDismissed, setPrefillBannerDismissed] = useState(false);
+
+  // Phase 1A-b: dialog 닫힐 때 Context state 자동 reset.
+  // (Provider unmount 패턴 대신 useEffect — Radix Dialog transition 호환)
+  useEffect(() => {
+    if (!open) resetAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: open=false 트리거 single shot
+  }, [open]);
+
+  // Phase 1A-b: master data prefilled fields → Context로 동기화 (향후 통합 위한 신호)
+  useEffect(() => {
+    setMasterPrefilledFields(Object.keys(prefilled).filter((k) => prefilled[k]));
+  }, [prefilled, setMasterPrefilledFields]);
 
   // Fetch equipment data for prefill
   const {
@@ -258,9 +290,13 @@ export default function InspectionFormDialog({
     setItems(extracted.items);
     setResultSections(extracted.resultSections);
     setPrefilled((prev) => ({ ...prev, previousInspection: true }));
-    setPreviousInspectionApplied(true);
-    setPrefillCounts(extracted.counts);
-    setPrefillBannerDismissed(false);
+    // Phase 1A-b: Context dispatch — applied/counts/sortOrders 동시 atomic update
+    applyLatestPrefill({
+      sourceInspectionId: latestInspection.id,
+      sourceInspectionDate: latestInspection.inspectionDate?.slice(0, 10) ?? '',
+      counts: extracted.counts,
+      sortOrders: extracted.resultSections.map((s) => s.sortOrder),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·latestInspection 변경 시만 실행
   }, [
     open,
@@ -279,10 +315,9 @@ export default function InspectionFormDialog({
     setItems([]);
     setResultSections([]);
     setPrefilled((prev) => ({ ...prev, previousInspection: false }));
-    setPreviousInspectionApplied(false);
     setUsePreviousInspection(false);
-    setPrefillCounts(null);
-    setPrefillBannerDismissed(false);
+    // Phase 1A-b: Context reset — applied/counts/sortOrders/userModifiedCells 일괄 초기화
+    resetLatestPrefill();
   };
 
   const handleTogglePreviousInspection = (checked: boolean) => {
@@ -344,10 +379,9 @@ export default function InspectionFormDialog({
     setResultSections([]);
     setMeasurementEquipment([]);
     setPrefilled({});
-    setPreviousInspectionApplied(false);
     setUsePreviousInspection(true);
-    setPrefillCounts(null);
-    setPrefillBannerDismissed(false);
+    // Phase 1A-b: Context state도 함께 초기화
+    resetAll();
   };
 
   const tErrors = useTranslations('errors');
@@ -577,7 +611,7 @@ export default function InspectionFormDialog({
             <button
               type="button"
               className={INSPECTION_PREFILL_NOTICE.dismissButton}
-              onClick={() => setPrefillBannerDismissed(true)}
+              onClick={dismissBanner}
               aria-label={t('intermediateInspection.prefill.banner.dismiss')}
             >
               <X className="h-3.5 w-3.5" />

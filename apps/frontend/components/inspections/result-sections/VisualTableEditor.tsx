@@ -11,6 +11,7 @@ import {
   INSPECTION_TABLE_PASTE_MODE,
   INSPECTION_KEYBOARD_HINT,
   INSPECTION_TABLE_FOCUS_RING,
+  INSPECTION_CELL_PROVENANCE,
   TRANSITION_PRESETS,
   type InspectionPasteMode,
 } from '@/lib/design-tokens';
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import DocumentImage from '@/components/shared/DocumentImage';
 import type { RichCell } from '@/lib/api/calibration-api';
+import { useInspectionForm } from '@/lib/inspection/form-context';
 
 // ============================================================================
 // Types
@@ -38,6 +40,12 @@ interface VisualTableEditorProps {
   headers: string[];
   rows: RichCell[][];
   onChange: (headers: string[], rows: RichCell[][]) => void;
+  /**
+   * Phase 1A-b: 결과 섹션의 sortOrder.
+   * InspectionFormContext의 셀 provenance 추적 키로 사용 (prefilled vs user-modified 시각).
+   * 부재 시 Context는 NO_OP — 셀 시각 미적용 (graceful fallback).
+   */
+  sortOrder?: number;
 }
 
 interface TableSnapshot {
@@ -61,12 +69,36 @@ const isMacPlatform = (): boolean => {
 // Component
 // ============================================================================
 
-export default function VisualTableEditor({ headers, rows, onChange }: VisualTableEditorProps) {
+export default function VisualTableEditor({
+  headers,
+  rows,
+  onChange,
+  sortOrder,
+}: VisualTableEditorProps) {
   const t = useTranslations('calibration.resultSections');
   const { toast } = useToast();
   const [focusedCell, setFocusedCell] = useState<{ r: number; c: number } | null>(null);
   const [showPasteArea, setShowPasteArea] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
+
+  // Phase 1A-b: InspectionFormContext consumer (Provider 부재 시 NO_OP).
+  // 셀 단위 provenance(prefilled vs user-modified) 시각 SSOT.
+  const inspectionForm = useInspectionForm();
+  const isProvenanceTracked = sortOrder !== undefined;
+  const trackedSortOrder = sortOrder ?? -1;
+  /** 셀 변경 시 Context에 marked — onChange 직전 호출 (idempotent) */
+  const markCellModifiedTracked = useCallback(
+    (ri: number, ci: number) => {
+      if (!isProvenanceTracked) return;
+      inspectionForm.markCellModified(trackedSortOrder, ri, ci);
+    },
+    [isProvenanceTracked, trackedSortOrder, inspectionForm]
+  );
+  /** 헤더/행/열 구조 변경 시 — 섹션 자체 user-modified로 마킹 */
+  const markSectionStructureModified = useCallback(() => {
+    if (!isProvenanceTracked) return;
+    inspectionForm.markSectionModified(trackedSortOrder);
+  }, [isProvenanceTracked, trackedSortOrder, inspectionForm]);
 
   // ── Phase 0A: Undo/Redo history (구조적 변경 단위만 보존) ──
 
@@ -140,61 +172,69 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
 
   const addColumn = useCallback(() => {
     pushHistory();
+    markSectionStructureModified();
     const newHeaders = [...headers, ''];
     const newRows = rows.map((row) => [...row, { type: 'text' as const, value: '' }]);
     onChange(newHeaders, newRows);
-  }, [headers, rows, onChange, pushHistory]);
+  }, [headers, rows, onChange, pushHistory, markSectionStructureModified]);
 
   const removeColumn = useCallback(
     (ci: number) => {
       if (headers.length <= 1) return;
       pushHistory();
+      markSectionStructureModified();
       const newHeaders = headers.filter((_, i) => i !== ci);
       const newRows = rows.map((row) => row.filter((_, i) => i !== ci));
       onChange(newHeaders, newRows);
     },
-    [headers, rows, onChange, pushHistory]
+    [headers, rows, onChange, pushHistory, markSectionStructureModified]
   );
 
   const updateHeader = useCallback(
     (ci: number, value: string) => {
       // 키 입력 단위 — history push 하지 않음 (Excel 패턴 / 디자인 리뷰 b9 "구조적 변경 보호")
+      // 헤더 텍스트는 구조적 의미라 변경 시 섹션 user-modified 마킹 (1C SoftFork 트리거 후보)
+      markSectionStructureModified();
       const newHeaders = [...headers];
       newHeaders[ci] = value;
       onChange(newHeaders, rows);
     },
-    [headers, rows, onChange]
+    [headers, rows, onChange, markSectionStructureModified]
   );
 
   // ── Row operations ──
 
   const addRow = useCallback(() => {
     pushHistory();
+    markSectionStructureModified();
     const newRow: RichCell[] = headers.map(() => ({ type: 'text' as const, value: '' }));
     onChange(headers, [...rows, newRow]);
-  }, [headers, rows, onChange, pushHistory]);
+  }, [headers, rows, onChange, pushHistory, markSectionStructureModified]);
 
   const removeRow = useCallback(
     (ri: number) => {
       pushHistory();
+      markSectionStructureModified();
       onChange(
         headers,
         rows.filter((_, i) => i !== ri)
       );
     },
-    [headers, rows, onChange, pushHistory]
+    [headers, rows, onChange, pushHistory, markSectionStructureModified]
   );
 
   // ── Cell operations ──
 
   const updateCell = useCallback(
     (ri: number, ci: number, cell: RichCell) => {
+      // Phase 1A-b: 셀 변경 → Context에 user-modified 마킹 (idempotent, prefilled section만 추적)
+      markCellModifiedTracked(ri, ci);
       const newRows = rows.map((row, r) =>
         r === ri ? row.map((c, i) => (i === ci ? cell : c)) : row
       );
       onChange(headers, newRows);
     },
-    [headers, rows, onChange]
+    [headers, rows, onChange, markCellModifiedTracked]
   );
 
   const toggleCellToImage = useCallback(
@@ -650,90 +690,113 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
           <tbody>
             {rows.map((row, ri) => (
               <tr key={ri} className={cn(INSPECTION_TABLE.stripe, INSPECTION_TABLE.rowHover)}>
-                {row.map((cell, ci) => (
-                  <td
-                    key={ci}
-                    className={cn(
-                      'relative border-r last:border-r-0 border-b p-0',
-                      // Phase 0B: focus ring 강화 (WCAG SC 1.4.11, 디자인 리뷰 b6/b11)
-                      focusedCell?.r === ri &&
-                        focusedCell?.c === ci &&
-                        INSPECTION_TABLE_FOCUS_RING.cell
-                    )}
-                    onClick={() => setFocusedCell({ r: ri, c: ci })}
-                  >
-                    {cell.type === 'text' ? (
-                      <Input
-                        value={cell.value}
-                        onChange={(e) =>
-                          updateCell(ri, ci, { type: 'text', value: e.target.value })
-                        }
-                        onFocus={() => setFocusedCell({ r: ri, c: ci })}
-                        onBlur={() => setFocusedCell(null)}
-                        // Phase 0A: 키보드 셀 이동 (Enter/↑↓ + IME 가드)
-                        onKeyDown={(e) => handleCellKeyDown(e, ri, ci)}
-                        // Phase 0A: data-cell attr + ref map 등록
-                        data-cell-r={ri}
-                        data-cell-c={ci}
-                        ref={(el) => {
-                          const key = cellKey(ri, ci);
-                          if (el) cellRefs.current.set(key, el);
-                          else cellRefs.current.delete(key);
-                        }}
-                        className={cn(
-                          'border-0 rounded-none bg-transparent h-9 px-2',
-                          'font-mono tabular-nums text-xs',
-                          'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-primary/5'
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center gap-1 px-1 h-9">
-                        {cell.documentId ? (
-                          <DocumentImage
-                            documentId={cell.documentId}
-                            alt={t('types.photo')}
-                            className="h-7 w-7 rounded object-cover border border-border/60"
-                            fallbackClassName="h-7 w-7"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                        <Button
+                {row.map((cell, ci) => {
+                  // Phase 1A-b: Context에서 셀 provenance 조회 (Provider 부재 시 false 반환)
+                  const isPrefilledCell = isProvenanceTracked
+                    ? inspectionForm.isPrefilledCell(trackedSortOrder, ri, ci)
+                    : false;
+                  const isUserModifiedCell = isProvenanceTracked
+                    ? inspectionForm.isUserModifiedCell(trackedSortOrder, ri, ci)
+                    : false;
+                  const provenanceClass = isUserModifiedCell
+                    ? INSPECTION_CELL_PROVENANCE.userModified
+                    : isPrefilledCell
+                      ? INSPECTION_CELL_PROVENANCE.prefilled
+                      : INSPECTION_CELL_PROVENANCE.empty;
+                  return (
+                    <td
+                      key={ci}
+                      className={cn(
+                        'relative border-r last:border-r-0 border-b p-0',
+                        // Phase 1A-b: 셀 provenance 시각 (sky/primary left border)
+                        provenanceClass,
+                        // Phase 0B: focus ring 강화 (WCAG SC 1.4.11, 디자인 리뷰 b6/b11)
+                        focusedCell?.r === ri &&
+                          focusedCell?.c === ci &&
+                          INSPECTION_TABLE_FOCUS_RING.cell
+                      )}
+                      onClick={() => setFocusedCell({ r: ri, c: ci })}
+                    >
+                      {/* Phase 1A-b: prefilled 셀 우상단 dot 마이크로 hint */}
+                      {isPrefilledCell && (
+                        <span
+                          className={INSPECTION_CELL_PROVENANCE.prefillDot}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {cell.type === 'text' ? (
+                        <Input
+                          value={cell.value}
+                          onChange={(e) =>
+                            updateCell(ri, ci, { type: 'text', value: e.target.value })
+                          }
+                          onFocus={() => setFocusedCell({ r: ri, c: ci })}
+                          onBlur={() => setFocusedCell(null)}
+                          // Phase 0A: 키보드 셀 이동 (Enter/↑↓ + IME 가드)
+                          onKeyDown={(e) => handleCellKeyDown(e, ri, ci)}
+                          // Phase 0A: data-cell attr + ref map 등록
+                          data-cell-r={ri}
+                          data-cell-c={ci}
+                          ref={(el) => {
+                            const key = cellKey(ri, ci);
+                            if (el) cellRefs.current.set(key, el);
+                            else cellRefs.current.delete(key);
+                          }}
+                          className={cn(
+                            'border-0 rounded-none bg-transparent h-9 px-2',
+                            'font-mono tabular-nums text-xs',
+                            'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-primary/5'
+                          )}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1 px-1 h-9">
+                          {cell.documentId ? (
+                            <DocumentImage
+                              documentId={cell.documentId}
+                              alt={t('types.photo')}
+                              className="h-7 w-7 rounded object-cover border border-border/60"
+                              fallbackClassName="h-7 w-7"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5 ml-auto shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCellToText(ri, ci);
+                            }}
+                            aria-label={t('types.text')}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Cell context menu: toggle to image */}
+                      {cell.type === 'text' && focusedCell?.r === ri && focusedCell?.c === ci && (
+                        <button
                           type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-5 w-5 ml-auto shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleCellToText(ri, ci);
+                            toggleCellToImage(ri, ci);
                           }}
-                          aria-label={t('types.text')}
+                          className={cn(
+                            'absolute bottom-0 right-0 z-10 h-5 w-5 rounded-tl-md',
+                            'bg-muted/80 hover:bg-primary/10 flex items-center justify-center',
+                            TRANSITION_PRESETS.fastBg
+                          )}
+                          title={t('types.photo')}
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Cell context menu: toggle to image */}
-                    {cell.type === 'text' && focusedCell?.r === ri && focusedCell?.c === ci && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCellToImage(ri, ci);
-                        }}
-                        className={cn(
-                          'absolute bottom-0 right-0 z-10 h-5 w-5 rounded-tl-md',
-                          'bg-muted/80 hover:bg-primary/10 flex items-center justify-center',
-                          TRANSITION_PRESETS.fastBg
-                        )}
-                        title={t('types.photo')}
-                      >
-                        <Upload className="h-2.5 w-2.5 text-muted-foreground" />
-                      </button>
-                    )}
-                  </td>
-                ))}
+                          <Upload className="h-2.5 w-2.5 text-muted-foreground" />
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
 
                 {/* Row delete button — Phase 0A: hit area 48×48 (WCAG SC 2.5.5, 디자인 리뷰 b6) */}
                 <td className="w-12 border-b text-center align-middle p-0">

@@ -285,6 +285,8 @@ export default function ResultSectionFormDialog({
               headers={tableHeaders}
               rows={tableRows}
               onChange={handleTableChange}
+              // Phase 1A-b: 셀 provenance Context 키 — editTarget의 sortOrder 또는 새 섹션의 nextSortOrder
+              sortOrder={editTarget ? editTarget.sortOrder : nextSortOrder}
             />
           )}
 
