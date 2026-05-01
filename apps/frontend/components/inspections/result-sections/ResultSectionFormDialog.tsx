@@ -38,6 +38,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { track } from '@/lib/analytics/track';
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 
 /**
  * 사용자에게 노출되는 결과 형식 (프론트엔드 전용)
@@ -175,7 +177,16 @@ export default function ResultSectionFormDialog({
       const hasTableHeaders = tableHeaders.some((h) => h.trim() !== '');
       return hasTitleOrContent || hasPhoto || hasTable || hasTableHeaders;
     },
-    onConfirmClose: () => onOpenChange(false),
+    onConfirmClose: () => {
+      // Phase 1A-c: confirm 시 analytics
+      track(ANALYTICS_EVENTS.INSPECTION_FORM_CLOSE_GUARDED, {
+        dialog: 'result_section_form',
+        action: 'discard',
+        sectionType,
+        isEdit: !!editTarget,
+      });
+      onOpenChange(false);
+    },
   });
 
   // ── Photo upload ──

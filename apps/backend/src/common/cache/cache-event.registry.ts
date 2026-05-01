@@ -482,4 +482,50 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
   },
+
+  // ─── Inspection Form Template (Phase 1B-backend, 사전 등록) ───
+  // frontend 1A-a/b/c 완료 — backend 출시 시 발행 시작.
+  // template create/update/version_up 시:
+  // - 해당 equipment의 inspection 상세 캐시 무효화 (invalidateEquipmentDetail)
+  // - template/intermediate/self inspection list 캐시 패턴 삭제
+  // - dashboard 카운트는 영향 없음 (template 자체는 inspection record 아님)
+  [CACHE_EVENTS.INSPECTION_TEMPLATE_CREATED]: {
+    actions: [
+      {
+        method: 'invalidateEquipmentDetail',
+        equipmentIdField: 'equipmentId',
+      },
+    ],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+    ],
+  },
+  [CACHE_EVENTS.INSPECTION_TEMPLATE_UPDATED]: {
+    actions: [
+      {
+        method: 'invalidateEquipmentDetail',
+        equipmentIdField: 'equipmentId',
+      },
+    ],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+    ],
+  },
+  [CACHE_EVENTS.INSPECTION_TEMPLATE_VERSION_UP]: {
+    actions: [
+      {
+        method: 'invalidateEquipmentDetail',
+        equipmentIdField: 'equipmentId',
+      },
+    ],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+    ],
+  },
 };

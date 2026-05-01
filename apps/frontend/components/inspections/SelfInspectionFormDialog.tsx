@@ -39,6 +39,9 @@ import {
 import CheckItemPresetSelect from './CheckItemPresetSelect';
 import { cn } from '@/lib/utils';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { InspectionFormProvider } from '@/lib/inspection/form-context';
+import { track } from '@/lib/analytics/track';
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import {
   Select,
   SelectContent,
@@ -93,7 +96,19 @@ interface SelfInspectionFormDialogProps {
   initialData?: SelfInspection;
 }
 
-export default function SelfInspectionFormDialog({
+/**
+ * 외부 export — Provider wrap (시스템 전반 일관성, InspectionFormDialog와 동일 패턴).
+ * 자체점검도 향후 prefill/template 적용 시 Context 활용.
+ */
+export default function SelfInspectionFormDialog(props: SelfInspectionFormDialogProps) {
+  return (
+    <InspectionFormProvider>
+      <SelfInspectionFormDialogInner {...props} />
+    </InspectionFormProvider>
+  );
+}
+
+function SelfInspectionFormDialogInner({
   open,
   onOpenChange,
   equipmentId,
@@ -144,7 +159,16 @@ export default function SelfInspectionFormDialog({
         items.some((it) => it.checkResult !== '');
       return hasUserInput;
     },
-    onConfirmClose: () => onOpenChange(false),
+    onConfirmClose: () => {
+      // Phase 1A-c: confirm 시 analytics
+      track(ANALYTICS_EVENTS.INSPECTION_FORM_CLOSE_GUARDED, {
+        dialog: 'self_inspection_form',
+        action: 'discard',
+        itemCount: items.filter((i) => i.checkResult !== '').length,
+        isEdit: !!initialData,
+      });
+      onOpenChange(false);
+    },
   });
 
   // edit/create 모드: dialog가 열릴 때 데이터 채우기

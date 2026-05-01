@@ -18,6 +18,47 @@
 export const ANALYTICS_EVENTS = {
   /** 사이드바 반출 메뉴 클릭 — pendingCount 동반 */
   SIDEBAR_CHECKOUTS_CLICK: 'sidebar.checkouts.click',
+
+  // ─── Inspection Form Workflow (Phase 1A 디자인 리뷰 §N + LIMS 표준) ───
+  // PII 금지: equipmentId / inspectionId 등 도메인 ID는 OK (PII 아님).
+  // 사용자 ID/이메일은 PII deny-list에서 차단 — track()에서 throw/drop.
+
+  /**
+   * 직전 점검 prefill 적용됨 — 표/사진/텍스트 카운트 동반.
+   * 호출 위치: InspectionFormDialog의 prefill effect (1A-a).
+   */
+  INSPECTION_PREFILL_USED: 'inspection.prefill.used',
+
+  /**
+   * Prefill 토글 OFF — 작성 중 데이터 삭제 confirmation 후 진행 (0A-3).
+   * 사용자 의도(데이터 폐기) 추적 — gallery 진입 또는 빈 양식 시작 분기 분석.
+   */
+  INSPECTION_PREFILL_TOGGLE_OFF: 'inspection.prefill.toggle_off',
+
+  /**
+   * Prefill banner dismissed — 사용자가 안내 닫음 (1A-a).
+   * UX 노이즈 측정 (자주 닫히면 banner 영향 작음).
+   */
+  INSPECTION_PREFILL_BANNER_DISMISSED: 'inspection.prefill.banner_dismissed',
+
+  /**
+   * Soft fork 결정 — Phase 1B-backend 출시 시 활성.
+   * 옵션: 'this_only' / 'apply_forward' / 'cancel' (사전 등록).
+   */
+  INSPECTION_SOFT_FORK: 'inspection.soft_fork',
+
+  /**
+   * Template gallery 카드 선택 — Phase 1D 출시 시 활성 (사전 등록).
+   * matchingReason: 'same_model' / 'same_classification' / 'same_measurement_area' / 'blank'.
+   */
+  INSPECTION_GALLERY_SELECTED: 'inspection.gallery.selected',
+
+  /**
+   * Cancel/X/Esc confirmation 진입 (0A-ext).
+   * dialog: 'inspection_form' / 'self_inspection_form' / 'result_section_form'.
+   * action: 'discard' / 'keep'.
+   */
+  INSPECTION_FORM_CLOSE_GUARDED: 'inspection.form.close_guarded',
 } as const;
 
 /** ANALYTICS_EVENTS 값들의 union type — track() 호출자 타입 좁히기 용 */

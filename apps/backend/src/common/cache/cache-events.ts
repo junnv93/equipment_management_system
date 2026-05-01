@@ -31,6 +31,14 @@ export const CACHE_EVENTS = {
   CALIBRATION_UPDATED: 'cache.calibration.updated',
   CALIBRATION_CERTIFICATE_UPLOADED: 'cache.calibration.certificateUploaded',
   CALIBRATION_CERTIFICATE_REVISED: 'cache.calibration.certificateRevised',
+
+  // ─── Inspection Form Template (Phase 1B-backend) ───
+  // 직전 점검 prefill source가 *전용 template DB*로 이동 (LIMS Template Snapshot 패턴).
+  // template create/update/version_up 시 InspectionFormDialog query invalidate.
+  // 미구현 시 사용자가 stale prefill 본 후 충돌 가능 → 1B-backend 출시 시 함께 활성화.
+  INSPECTION_TEMPLATE_CREATED: 'cache.inspection.template.created',
+  INSPECTION_TEMPLATE_UPDATED: 'cache.inspection.template.updated',
+  INSPECTION_TEMPLATE_VERSION_UP: 'cache.inspection.template.versionUp',
 } as const;
 
 export type CacheEventName = (typeof CACHE_EVENTS)[keyof typeof CACHE_EVENTS];
@@ -64,4 +72,22 @@ export interface CalibrationCachePayload {
   documentIds?: string[];
   /** 교정계획서 항목과 연결된 경우 planItemId. 연결된 계획서 캐시 무효화에 사용. */
   linkedPlanItemId?: string | null;
+}
+
+/**
+ * Inspection Form Template 캐시 이벤트 페이로드 (Phase 1B-backend).
+ *
+ * 디자인 리뷰 §N + LIMS Template Snapshot 패턴.
+ * frontend 1A-a/b는 이미 완료 — 1B-backend 출시 시 본 이벤트 발행 시작.
+ */
+export interface InspectionTemplateCachePayload {
+  templateId: string;
+  equipmentId: string;
+  inspectionType: 'intermediate' | 'self';
+  /** 변경된 version (auto-create는 1, 이후 +1) */
+  version: number;
+  /** 첫 승인 트리거 inspection (auto-create 시) */
+  sourceInspectionId?: string | null;
+  /** 명시 수정 trigger 사용자 (admin only) */
+  actorId: string | null;
 }

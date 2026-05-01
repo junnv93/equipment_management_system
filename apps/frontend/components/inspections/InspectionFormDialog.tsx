@@ -64,6 +64,8 @@ import {
 } from '@/lib/inspection/template-utils';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { track } from '@/lib/analytics/track';
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import { cn } from '@/lib/utils';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -174,7 +176,16 @@ function InspectionFormDialogInner({
       measurementEquipment.length > 0 ||
       overallResult !== '' ||
       remarks !== '',
-    onConfirmClose: () => onOpenChange(false),
+    onConfirmClose: () => {
+      // Phase 1A-c: confirm 시 analytics — 사용자가 작성 데이터 폐기
+      track(ANALYTICS_EVENTS.INSPECTION_FORM_CLOSE_GUARDED, {
+        dialog: 'inspection_form',
+        action: 'discard',
+        itemCount: items.length,
+        sectionCount: resultSections.length,
+      });
+      onOpenChange(false);
+    },
   });
 
   // Phase 1A-b: dialog 닫힐 때 Context state 자동 reset.
@@ -313,6 +324,14 @@ function InspectionFormDialogInner({
         counts: extractedStructure.counts,
         sortOrders: extractedStructure.resultSections.map((s) => s.sortOrder),
       });
+      // Phase 1A-c: analytics — prefill 적용 추적 (PII 없음, 카운트만)
+      track(ANALYTICS_EVENTS.INSPECTION_PREFILL_USED, {
+        inspectionType: 'intermediate',
+        tableCount: extractedStructure.counts.tables,
+        photoCount: extractedStructure.counts.photos,
+        textCount: extractedStructure.counts.texts,
+        itemCount: extractedStructure.items.length,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·extractedStructure 변경 시만 실행
   }, [open, usePreviousInspection, previousInspectionApplied, extractedStructure]);
@@ -350,6 +369,12 @@ function InspectionFormDialogInner({
   const confirmToggleOff = () => {
     performToggleOffReset();
     setPendingToggleOffConfirm(false);
+    // Phase 1A-c: analytics — prefill 토글 OFF 추적
+    track(ANALYTICS_EVENTS.INSPECTION_PREFILL_TOGGLE_OFF, {
+      inspectionType: 'intermediate',
+      itemCount: items.length,
+      sectionCount: resultSections.length,
+    });
   };
 
   const cancelToggleOff = () => {
@@ -640,7 +665,12 @@ function InspectionFormDialogInner({
             <button
               type="button"
               className={INSPECTION_PREFILL_NOTICE.dismissButton}
-              onClick={dismissBanner}
+              onClick={() => {
+                dismissBanner();
+                track(ANALYTICS_EVENTS.INSPECTION_PREFILL_BANNER_DISMISSED, {
+                  inspectionType: 'intermediate',
+                });
+              }}
               aria-label={t('intermediateInspection.prefill.banner.dismiss')}
             >
               <X className="h-3.5 w-3.5" />

@@ -70,6 +70,12 @@ export const CACHE_KEY_PREFIXES = {
 
   /** self-inspections.service.ts */
   SELF_INSPECTIONS: 'self-inspections:',
+
+  /** intermediate-inspections.service.ts (UL-QP-18-03) */
+  INTERMEDIATE_INSPECTIONS: 'intermediate-inspections:',
+
+  /** inspection-form-templates.service.ts (Phase 1B-backend, LIMS Template Snapshot) */
+  INSPECTION_FORM_TEMPLATES: 'inspection-form-templates:',
 } as const;
 
 /**
