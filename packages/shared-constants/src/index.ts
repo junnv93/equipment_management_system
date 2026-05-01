@@ -75,6 +75,14 @@ export {
   userHasPermission,
 } from './role-permissions';
 
+// 역할-권한 reverse-index 매트릭스 (DERIVED VIEW from ROLE_PERMISSIONS)
+export {
+  ROLE_PERMISSION_MATRIX,
+  getRolesWithPermission,
+  roleHasPermission,
+  type RolePermissionMatrix,
+} from './role-permission-matrix';
+
 // 권한 카테고리
 export {
   PERMISSION_CATEGORIES,
