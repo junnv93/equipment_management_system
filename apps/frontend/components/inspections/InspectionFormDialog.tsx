@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
@@ -286,38 +286,36 @@ function InspectionFormDialogInner({
    * SSOT: extractStructureFromInspection (lib/inspection/template-utils.ts)
    * 디자인 리뷰 §N: prefill 갭 80% 보완.
    */
-  useEffect(() => {
-    if (!open || !usePreviousInspection || previousInspectionApplied) return;
-    if (!latestInspection) return;
-    // resultSections fetch가 끝나기 전엔 대기 (값 비울 구조까지 함께 적용)
-    if (latestResultSections === undefined) return;
-    if (items.length > 0 || resultSections.length > 0) return; // 사용자가 이미 입력 시작
-
-    const extracted = extractStructureFromInspection({
+  // Phase 1A-c: extractStructureFromInspection useMemo 캐싱 — latestInspection/Sections 변경 시만 재실행
+  const extractedStructure = useMemo(() => {
+    if (!latestInspection || latestResultSections === undefined) return null;
+    return extractStructureFromInspection({
       items: latestInspection.items,
       resultSections: latestResultSections ?? [],
     });
+  }, [latestInspection, latestResultSections]);
 
-    if (extracted.items.length === 0 && extracted.resultSections.length === 0) return;
+  useEffect(() => {
+    if (!open || !usePreviousInspection || previousInspectionApplied) return;
+    if (!extractedStructure) return;
+    if (extractedStructure.items.length === 0 && extractedStructure.resultSections.length === 0)
+      return;
+    if (items.length > 0 || resultSections.length > 0) return; // 사용자가 이미 입력 시작
 
-    setItems(extracted.items);
-    setResultSections(extracted.resultSections);
+    setItems(extractedStructure.items);
+    setResultSections(extractedStructure.resultSections);
     setPrefilled((prev) => ({ ...prev, previousInspection: true }));
     // Phase 1A-b: Context dispatch — applied/counts/sortOrders 동시 atomic update
-    applyLatestPrefill({
-      sourceInspectionId: latestInspection.id,
-      sourceInspectionDate: latestInspection.inspectionDate?.slice(0, 10) ?? '',
-      counts: extracted.counts,
-      sortOrders: extracted.resultSections.map((s) => s.sortOrder),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·latestInspection 변경 시만 실행
-  }, [
-    open,
-    usePreviousInspection,
-    latestInspection,
-    latestResultSections,
-    previousInspectionApplied,
-  ]);
+    if (latestInspection) {
+      applyLatestPrefill({
+        sourceInspectionId: latestInspection.id,
+        sourceInspectionDate: latestInspection.inspectionDate?.slice(0, 10) ?? '',
+        counts: extractedStructure.counts,
+        sortOrders: extractedStructure.resultSections.map((s) => s.sortOrder),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·extractedStructure 변경 시만 실행
+  }, [open, usePreviousInspection, previousInspectionApplied, extractedStructure]);
 
   /**
    * 사용자가 체크박스를 off 하면 이전 점검에서 복사된 items/sections 를 초기화.

@@ -55,9 +55,18 @@ interface TableSnapshot {
 
 const HISTORY_LIMIT = 10;
 
+/**
+ * Phase 1A-c: shallow clone (성능 최적화)
+ *
+ * 모든 mutation(updateCell/addRow/removeRow/etc)은 새 cell/row 객체를 생성하므로
+ * cell 자체는 immutable로 취급 가능. deep clone (cell spread) 불필요.
+ *
+ * Before: 100x10 표 = 1000 cell spread 비용
+ * After:  100 row spread만 (cell reference 공유 안전)
+ */
 const cloneSnapshot = (headers: string[], rows: RichCell[][]): TableSnapshot => ({
   headers: [...headers],
-  rows: rows.map((row) => row.map((cell) => ({ ...cell }))),
+  rows: rows.map((row) => [...row]),
 });
 
 const isMacPlatform = (): boolean => {
