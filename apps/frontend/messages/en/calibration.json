@@ -731,6 +731,42 @@
       "missingBadge": "No template (first inspection)",
       "systemAuthor": "System"
     },
+    "softFork": {
+      "title": "Form structure changed",
+      "description": "The current inspection's table/item structure differs from the registered template. How should this be handled?",
+      "cancel": "Back to editing",
+      "cancelAriaLabel": "Cancel form change and return to editing",
+      "confirm": "Submit with selection",
+      "confirmAriaLabel": "Submit inspection with selected option",
+      "diff": {
+        "addedSummary": "+{count} added",
+        "removedSummary": "-{count} removed",
+        "changedSummary": "~{count} changed",
+        "showDetail": "Show details",
+        "hideDetail": "Hide",
+        "itemAdded": "Item added: {name}",
+        "itemRemoved": "Item removed: {name}",
+        "itemChanged": "Criteria changed: {name}",
+        "sectionAdded": "Section added: {type} {title}",
+        "sectionRemoved": "Section removed: {type} {title}",
+        "sectionTypeChanged": "Section type changed: {typeBefore} → {typeAfter}"
+      },
+      "option": {
+        "thisOnly": {
+          "title": "Use changed structure for this inspection only",
+          "description": "The template stays the same. Next inspection starts from the existing template."
+        },
+        "applyForward": {
+          "title": "Apply changes from next inspection (template v+1)",
+          "description": "Template is updated to a new version so future inspections start with the same structure.",
+          "descriptionDisabled": "Form control permission required (Quality Manager or Lab Manager)."
+        }
+      },
+      "conflict": {
+        "title": "Template was updated by another user",
+        "description": "The latest template has been refreshed. Review changes and submit again."
+      }
+    },
     "measurementEquipment": {
       "title": "Measurement Equipment List",
       "searchPlaceholder": "Search equipment (ID/name)",

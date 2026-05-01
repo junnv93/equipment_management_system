@@ -61,9 +61,14 @@ import {
 } from '@/lib/design-tokens';
 import { describeStructureCounts } from '@/lib/inspection/template-utils';
 import { templateStructureToPrefill } from '@/lib/inspection/template-source';
+import { buildCurrentStructure, diffFormAgainstTemplate } from '@/lib/inspection/structure-diff';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
-import { useLatestTemplate } from '@/hooks/use-inspection-template';
+import { useLatestTemplate, useUpsertTemplate } from '@/hooks/use-inspection-template';
+import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
+import type { ForkChoice, StructureDiff } from '@equipment-management/schemas';
+import { SoftForkDialog } from './SoftForkDialog';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import { cn } from '@/lib/utils';
@@ -171,6 +176,14 @@ function InspectionFormDialogInner({
   const [usePreviousInspection, setUsePreviousInspection] = useState(true);
   /** Phase 0A: 토글 OFF 확인 다이얼로그 (작성 중 데이터 손실 방지) */
   const [pendingToggleOffConfirm, setPendingToggleOffConfirm] = useState(false);
+
+  // Phase 1B-E: SoftForkDialog state — 표 구조 변경 감지 시 사용자 의사결정 대기
+  const [softForkOpen, setSoftForkOpen] = useState(false);
+  const [pendingDto, setPendingDto] = useState<CreateInspectionDto | null>(null);
+  const [softForkDiff, setSoftForkDiff] = useState<StructureDiff | null>(null);
+  const { can } = useAuth();
+  const canApplyForward = can(Permission.MANAGE_INSPECTION_TEMPLATE);
+  const upsertTemplateMutation = useUpsertTemplate(equipmentId);
 
   // Phase 0A-ext: cancel/X/Esc 닫기 시 작성 데이터 감지 + confirmation
   const close = useFormDialogClose({
@@ -523,39 +536,128 @@ function InspectionFormDialogInner({
     (item) => !item.checkItem.trim() || !item.checkCriteria.trim()
   );
 
+  const buildDto = (): CreateInspectionDto => ({
+    inspectionDate,
+    classification: 'calibrated',
+    ...(inspectionCycle ? { inspectionCycle } : {}),
+    ...(calibrationValidityPeriod ? { calibrationValidityPeriod } : {}),
+    ...(overallResult ? { overallResult } : {}),
+    ...(remarks ? { remarks } : {}),
+    ...(items.length > 0
+      ? {
+          items: items.map((item, idx) => ({
+            itemNumber: idx + 1,
+            checkItem: item.checkItem,
+            checkCriteria: item.checkCriteria,
+            ...(item.checkResult ? { checkResult: item.checkResult } : {}),
+            ...(item.judgment ? { judgment: item.judgment as InspectionJudgment } : {}),
+          })),
+        }
+      : {}),
+    ...(resultSections.length > 0 ? { resultSections } : {}),
+    ...(measurementEquipment.length > 0
+      ? {
+          measurementEquipment: measurementEquipment.map((me) => ({
+            equipmentId: me.equipmentId,
+            ...(me.calibrationDate ? { calibrationDate: me.calibrationDate } : {}),
+          })),
+        }
+      : {}),
+  });
+
+  /**
+   * Phase 1B-E: 제출 분기 — 표 구조 변경 감지 시 SoftForkDialog 노출.
+   *
+   * - template 부재 → 직접 제출 (첫 점검, gallery는 1B-F에서)
+   * - template 존재 + 변경 없음 → 직접 제출 (this_only 동등)
+   * - template 존재 + 변경 있음 → SoftForkDialog 노출 + dto 보관 (사용자 결정 대기)
+   */
   const handleSubmit = () => {
     if (!inspectionDate || hasInvalidItems) return;
+    const dto = buildDto();
 
-    const dto: CreateInspectionDto = {
-      inspectionDate,
-      classification: 'calibrated',
-      ...(inspectionCycle ? { inspectionCycle } : {}),
-      ...(calibrationValidityPeriod ? { calibrationValidityPeriod } : {}),
-      ...(overallResult ? { overallResult } : {}),
-      ...(remarks ? { remarks } : {}),
-      ...(items.length > 0
-        ? {
-            items: items.map((item, idx) => ({
-              itemNumber: idx + 1,
-              checkItem: item.checkItem,
-              checkCriteria: item.checkCriteria,
-              ...(item.checkResult ? { checkResult: item.checkResult } : {}),
-              ...(item.judgment ? { judgment: item.judgment as InspectionJudgment } : {}),
-            })),
-          }
-        : {}),
-      ...(resultSections.length > 0 ? { resultSections } : {}),
-      ...(measurementEquipment.length > 0
-        ? {
-            measurementEquipment: measurementEquipment.map((me) => ({
-              equipmentId: me.equipmentId,
-              ...(me.calibrationDate ? { calibrationDate: me.calibrationDate } : {}),
-            })),
-          }
-        : {}),
-    };
+    if (!latestTemplate) {
+      createMutation.mutate(dto);
+      return;
+    }
 
-    createMutation.mutate(dto);
+    const diff = diffFormAgainstTemplate(items, resultSections, latestTemplate.structure);
+    if (!diff.hasChanges) {
+      createMutation.mutate(dto);
+      return;
+    }
+
+    setPendingDto(dto);
+    setSoftForkDiff(diff);
+    setSoftForkOpen(true);
+  };
+
+  /**
+   * SoftForkDialog 사용자 선택 핸들러.
+   *
+   * - cancel: SoftForkDialog 자체 onCancel에서 setSoftForkOpen(false) — 추가 작업 없음
+   * - this_only: pendingDto로 createMutation 호출 (template 변경 안 함)
+   * - apply_forward: useUpsertTemplate(version+1) → 성공 시 createMutation
+   *
+   * CAS 409: useUpsertTemplate onError에서 isConflictError 체크 + toast + template refetch.
+   * 호출자(이 함수)는 pendingDto 보존 — 사용자가 다시 시도 가능.
+   */
+  const handleForkChoice = (choice: ForkChoice) => {
+    if (!pendingDto) return;
+    if (choice === 'cancel') {
+      // SoftForkDialog 내부에서 close — pendingDto는 보존 (다시 제출 시도 가능)
+      return;
+    }
+    if (choice === 'this_only') {
+      setSoftForkOpen(false);
+      createMutation.mutate(pendingDto);
+      return;
+    }
+    // apply_forward — template version+1 후 inspection submit
+    if (!latestTemplate) {
+      // 방어적: template fetch 후에만 SoftForkDialog 노출되므로 unreachable
+      return;
+    }
+    const dtoToSubmit = pendingDto;
+    // SoftForkDialog 노출 시점에 hasChanges=true가 보장되므로 buildCurrentStructure 직접 호출.
+    // (diffFormAgainstTemplate 재호출은 동일 함수 2회 실행 — 불필요)
+    const newStructure = buildCurrentStructure(items, resultSections);
+    upsertTemplateMutation.mutate(
+      {
+        inspectionType: 'intermediate',
+        version: latestTemplate.version + 1,
+        structure: newStructure,
+        supersededBy: latestTemplate.id,
+        sourceInspectionId: null,
+        forkChoice: 'apply_forward',
+      },
+      {
+        onSuccess: () => {
+          setSoftForkOpen(false);
+          createMutation.mutate(dtoToSubmit);
+        },
+        onError: (error) => {
+          if (isConflictError(error)) {
+            // CAS 409: SoftFork 카피가 표준 VERSION_CONFLICT보다 사용자 멘탈 모델에 정확
+            toast({
+              title: t('intermediateInspection.softFork.conflict.title'),
+              description: t('intermediateInspection.softFork.conflict.description'),
+              variant: 'destructive',
+            });
+            // stale template cache 제거 → 사용자가 dialog 다시 열면 fresh data
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.inspectionTemplate.latest(equipmentId, 'intermediate'),
+            });
+            // pendingDto는 보존 — 사용자가 다시 시도 가능
+            return;
+          }
+          toast({
+            variant: 'destructive',
+            description: t('intermediateInspection.toasts.createError'),
+          });
+        },
+      }
+    );
   };
 
   const renderPrefillBadge = (field: string) => {
@@ -1096,6 +1198,19 @@ function InspectionFormDialogInner({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Phase 1B-E: SoftForkDialog — 표 구조 변경 감지 시 사용자 의사결정 */}
+      {softForkDiff && (
+        <SoftForkDialog
+          open={softForkOpen}
+          onOpenChange={setSoftForkOpen}
+          diff={softForkDiff}
+          canApplyForward={canApplyForward}
+          onChoice={handleForkChoice}
+          isProcessing={upsertTemplateMutation.isPending || createMutation.isPending}
+          inspectionType="intermediate"
+        />
+      )}
     </Dialog>
   );
 }
