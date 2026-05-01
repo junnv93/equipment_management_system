@@ -447,6 +447,8 @@ export {
   INSPECTION_SECTION_TYPE_CHIP,
   INSPECTION_KIND_BADGE,
   type InspectionStatusKey,
+  // Phase 0C (P1 자체점검 정합성)
+  INSPECTION_CHECKITEM_ROW_STATE,
 } from './components/inspection';
 
 // ============================================================================

@@ -416,7 +416,41 @@ export const INSPECTION_SECTION_TYPE_CHIP = {
 } as const;
 
 // ============================================================================
-// 17. INSPECTION_KIND_BADGE — Phase 0B (분류 시각: 자체 vs 중간점검)
+// 17. INSPECTION_CHECKITEM_ROW_STATE — Phase 0C (자체점검 정합성)
+// ============================================================================
+
+/**
+ * 자체점검 항목 row 시각 (디자인 리뷰 b6/b7/b11)
+ *
+ * - row tint + left border 4px (pass/fail/na)
+ * - segmented control 합부 선택 (pass/fail/na 색·아이콘 강화)
+ * - WCAG 1.4.1 색만 의존 X — 아이콘·텍스트·border 보강
+ */
+export const INSPECTION_CHECKITEM_ROW_STATE = {
+  /** row 컨테이너 — 합부 선택 시 left border + bg tint */
+  rowBase: 'flex items-center gap-2 rounded-md border bg-card px-2 py-1.5 transition-colors',
+  rowPass: 'border-l-4 border-l-emerald-500 bg-emerald-50/40',
+  rowFail: 'border-l-4 border-l-rose-500 bg-rose-50/40',
+  rowNa: 'border-l-4 border-l-slate-400 bg-slate-50/40',
+  rowNone: '',
+  /** segmented control 단위 */
+  segGroup: 'inline-flex rounded-md border border-input shadow-sm overflow-hidden',
+  /** 각 segment button base (h-8 = 32px hit area) */
+  segItem:
+    'inline-flex h-8 min-w-[44px] items-center justify-center gap-1 px-2.5 text-xs font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+  segPass: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300',
+  segFail: 'bg-rose-100 text-rose-700 ring-1 ring-rose-300',
+  segNa: 'bg-slate-100 text-slate-700 ring-1 ring-slate-300',
+  segInactive: 'bg-background text-muted-foreground hover:bg-muted/50',
+  /** 정합성 alert (항목 fail 1+ + 종합 pass 시) */
+  consistencyAlert:
+    'flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm',
+  consistencyAlertTitle: 'font-medium text-destructive',
+  consistencyAlertBody: 'text-destructive/80 text-xs',
+} as const;
+
+// ============================================================================
+// 18. INSPECTION_KIND_BADGE — Phase 0B (분류 시각: 자체 vs 중간점검)
 // ============================================================================
 
 /**

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Check, X as XIcon, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,8 +23,11 @@ import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import {
   INSPECTION_KIND_BADGE,
   INSPECTION_STATUS_BADGE,
+  INSPECTION_CHECKITEM_ROW_STATE,
   getInspectionStatusBadgeClasses,
 } from '@/lib/design-tokens';
+import CheckItemPresetSelect from './CheckItemPresetSelect';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -224,6 +227,23 @@ export default function SelfInspectionFormDialog({
     items.length > 0 &&
     items.every((item) => item.checkItem && item.checkResult);
 
+  // Phase 0C: 종합결과↔항목결과 정합성 — 항목 fail 1+ 인데 종합 pass 면 alert
+  const failCount = items.filter((it) => it.checkResult === 'fail').length;
+  const showConsistencyAlert = failCount > 0 && overallResult === 'pass';
+
+  // Phase 0C: 프리셋에서 새 항목 추가 — checkCriteria는 자체점검 type 미지원이므로 무시
+  const handlePresetSelect = (checkItem: string) => {
+    setItems((prev) => [...prev, { checkItem, checkResult: '' }]);
+  };
+
+  // Phase 0C: segmented control row 시각 — 합부 값에 따라 left border + bg tint
+  const getRowStateClass = (judgment: string) => {
+    if (judgment === 'pass') return INSPECTION_CHECKITEM_ROW_STATE.rowPass;
+    if (judgment === 'fail') return INSPECTION_CHECKITEM_ROW_STATE.rowFail;
+    if (judgment === 'na') return INSPECTION_CHECKITEM_ROW_STATE.rowNa;
+    return INSPECTION_CHECKITEM_ROW_STATE.rowNone;
+  };
+
   const handleSubmit = () => {
     if (!isValid) return;
 
@@ -389,20 +409,55 @@ export default function SelfInspectionFormDialog({
             </div>
           </div>
 
-          {/* 점검 항목 */}
+          {/* 점검 항목 — Phase 0C: 정합성 alert + segmented + preset prominent */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">{t('selfInspection.checkItem')}</Label>
+            </div>
+
+            {/* Phase 0C: 종합↔항목 정합성 alert (role=alert, WCAG 4.1.3) */}
+            {showConsistencyAlert && (
+              <div role="alert" className={INSPECTION_CHECKITEM_ROW_STATE.consistencyAlert}>
+                <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <p className={INSPECTION_CHECKITEM_ROW_STATE.consistencyAlertTitle}>
+                    {t('selfInspection.consistencyAlert.title')}
+                  </p>
+                  <p className={INSPECTION_CHECKITEM_ROW_STATE.consistencyAlertBody}>
+                    {t('selfInspection.consistencyAlert.body', { failCount })}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 text-xs h-8"
+                  onClick={() => setOverallResult('fail')}
+                >
+                  {t('selfInspection.consistencyAlert.quickFixCta')}
+                </Button>
+              </div>
+            )}
+
+            {/* Phase 0C: 프리셋 + 직접 추가 — prominent 위치 (디자인 리뷰 b8) */}
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+              <CheckItemPresetSelect onSelect={(checkItem) => handlePresetSelect(checkItem)} />
               <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                 <Plus className="h-4 w-4 mr-1" />
-                {t('selfInspection.form.addItem')}
+                {t('selfInspection.preset.addCustomLabel')}
               </Button>
             </div>
 
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+                <div
+                  key={index}
+                  className={cn(
+                    INSPECTION_CHECKITEM_ROW_STATE.rowBase,
+                    getRowStateClass(item.checkResult)
+                  )}
+                >
+                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0 tabular-nums">
                     {index + 1}
                   </span>
                   <Input
@@ -411,25 +466,46 @@ export default function SelfInspectionFormDialog({
                     placeholder={t('selfInspection.form.itemNamePlaceholder')}
                     className="flex-1"
                   />
-                  <Select
-                    value={item.checkResult}
-                    onValueChange={(v) => handleItemChange(index, 'checkResult', v)}
+                  {/* Phase 0C: segmented control (pass/fail/na) — 색·아이콘 강화 (디자인 리뷰 b6/b11) */}
+                  <div
+                    role="radiogroup"
+                    aria-label={t('selfInspection.checkResult')}
+                    className={INSPECTION_CHECKITEM_ROW_STATE.segGroup}
                   >
-                    <SelectTrigger className="w-28">
-                      <SelectValue placeholder={t('selfInspection.form.selectJudgment')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pass">{t('selfInspection.judgment.pass')}</SelectItem>
-                      <SelectItem value="fail">{t('selfInspection.judgment.fail')}</SelectItem>
-                      <SelectItem value="na">{t('selfInspection.judgment.na')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    {(['pass', 'fail', 'na'] as const).map((value) => {
+                      const active = item.checkResult === value;
+                      const Icon = value === 'pass' ? Check : value === 'fail' ? XIcon : Minus;
+                      const activeClass =
+                        value === 'pass'
+                          ? INSPECTION_CHECKITEM_ROW_STATE.segPass
+                          : value === 'fail'
+                            ? INSPECTION_CHECKITEM_ROW_STATE.segFail
+                            : INSPECTION_CHECKITEM_ROW_STATE.segNa;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => handleItemChange(index, 'checkResult', value)}
+                          className={cn(
+                            INSPECTION_CHECKITEM_ROW_STATE.segItem,
+                            active ? activeClass : INSPECTION_CHECKITEM_ROW_STATE.segInactive
+                          )}
+                        >
+                          <Icon className="h-3 w-3" aria-hidden="true" />
+                          {t(`selfInspection.judgment.${value}` as Parameters<typeof t>[0])}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveItem(index)}
                     disabled={items.length <= 1}
+                    aria-label={t('selfInspection.form.removeItem')}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

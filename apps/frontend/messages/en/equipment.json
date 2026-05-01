@@ -323,10 +323,20 @@
       "rejectionAlertTitle": "Rejection reason",
       "viewFull": "View full"
     },
+    "consistencyAlert": {
+      "title": "Item results and overall result do not match",
+      "body": "{failCount} item(s) marked as Fail, but overall result is set to Pass. Please review the overall result.",
+      "quickFixCta": "Change overall result to Fail"
+    },
+    "preset": {
+      "groupLabel": "Common items",
+      "addCustomLabel": "Add custom"
+    },
     "form": {
       "title": "Self Inspection Record",
       "description": "Enter inspection results for each item",
       "addItem": "Add Item",
+      "removeItem": "Remove item",
       "itemNamePlaceholder": "Inspection item name",
       "selectResult": "Select result",
       "selectJudgment": "Judgment",
