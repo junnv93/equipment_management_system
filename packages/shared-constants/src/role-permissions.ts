@@ -233,6 +233,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
     Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
+    // 점검 양식 템플릿 (UL-QP-18 §7.5 양식 통제 — 품질책임자 핵심 책임)
+    Permission.MANAGE_INSPECTION_TEMPLATE,
   ],
 
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
@@ -331,6 +333,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
     Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
+    // 점검 양식 템플릿 (UL-QP-18 §7.5 — 시험소장도 양식 통제 권한)
+    Permission.MANAGE_INSPECTION_TEMPLATE,
     // 문서 업로드 (장비사진·수리이력 등 다목적)
     Permission.UPLOAD_DOCUMENT,
   ],

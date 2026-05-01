@@ -211,6 +211,14 @@ export enum Permission {
   REJECT_INTERMEDIATE_INSPECTION = 'reject:intermediate-inspection',
   DELETE_INTERMEDIATE_INSPECTION = 'delete:intermediate-inspection',
 
+  /**
+   * 점검 양식 템플릿 명시 수정 (UL-QP-18 §7.5 양식 통제).
+   * - auto-create는 시스템 권한 (서비스 내부 호출, 권한 체크 우회)
+   * - 명시 수정 (POST /api/equipment/:id/inspection-template) — admin only
+   * - SoftFork apply_forward 시에도 inspection 제출 권한 + 본 권한 동시 검사
+   */
+  MANAGE_INSPECTION_TEMPLATE = 'manage:inspection-template',
+
   // ============================================================================
   // 시스템 설정 관련 권한
   // ============================================================================
@@ -338,6 +346,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.APPROVE_INTERMEDIATE_INSPECTION]: '중간점검 승인',
   [Permission.REJECT_INTERMEDIATE_INSPECTION]: '중간점검 반려',
   [Permission.DELETE_INTERMEDIATE_INSPECTION]: '중간점검 삭제',
+  [Permission.MANAGE_INSPECTION_TEMPLATE]: '점검 양식 템플릿 관리',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.PERFORM_DATA_MIGRATION]: '데이터 마이그레이션 실행',
@@ -459,6 +468,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, string> = {
   [Permission.APPROVE_INTERMEDIATE_INSPECTION]: 'Approve Intermediate Inspection',
   [Permission.REJECT_INTERMEDIATE_INSPECTION]: 'Reject Intermediate Inspection',
   [Permission.DELETE_INTERMEDIATE_INSPECTION]: 'Delete Intermediate Inspection',
+  [Permission.MANAGE_INSPECTION_TEMPLATE]: 'Manage Inspection Template',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: 'Manage System Settings',
   [Permission.VIEW_SYSTEM_SETTINGS]: 'View System Settings',

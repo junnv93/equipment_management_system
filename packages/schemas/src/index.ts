@@ -57,6 +57,18 @@ export * from './validation';
 
 export { uuidString, optionalUuid, nullableOptionalUuid } from './utils/fields';
 
+// ============================================================
+// Inspection Template (UL-QP-18-03 / UL-QP-18-05 Build-Once Workflow)
+// ============================================================
+
+export * from './types/inspection-template';
+export {
+  extractStructureFromInspection,
+  describeStructureCounts,
+  diffStructures,
+  type InspectionTemplateSource,
+} from './utils/inspection-template';
+
 // Common base types
 export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from './common/base';
 

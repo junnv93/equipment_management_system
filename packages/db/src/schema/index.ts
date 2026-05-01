@@ -68,6 +68,9 @@ export * from './inspection-document-items';
 // 점검 결과 섹션 (중간점검/자체점검 동적 콘텐츠)
 export * from './inspection-result-sections';
 
+// 점검 양식 템플릿 (UL-QP-18-03 / UL-QP-18-05 Build-Once Workflow snapshot DB)
+export * from './inspection-form-templates';
+
 // 양식 템플릿 스키마 (스토리지 기반)
 export * from './form-templates';
 export * from './form-template-revisions';

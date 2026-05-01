@@ -351,6 +351,13 @@
       "when": 1746057600002,
       "tag": "0049_add_software_validation_quality_approval_comment",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1746144000000,
+      "tag": "0050_add_inspection_form_templates",
+      "breakpoints": true
     }
   ]
 }
