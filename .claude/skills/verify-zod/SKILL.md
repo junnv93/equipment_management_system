@@ -615,6 +615,23 @@ grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/nul
   | grep -v ".spec.ts" | grep -v "__tests__" | wc -l
 # 본 sprint(2026-05-02): ~270 hits (disposal + calibration-plan 격상 후 잔존).
 # 이 수치는 시스템 마이그레이션 진행률 추적 metric — 점진적으로 0에 수렴해야 함.
+
+# 5. Frontend mapper coverage — backend ErrorCode 추가 시 frontend mapper 누락 차단
+# (격상 완료된 도메인 한정: disposal + calibration-plan)
+# - `lib/errors/<domain>-errors.ts` 파일 존재 확인 + 매퍼 export 강제
+test -f apps/frontend/lib/errors/disposal-errors.ts && grep -c "mapDisposalErrorToToast" apps/frontend/lib/errors/disposal-errors.ts
+test -f apps/frontend/lib/errors/calibration-plan-errors.ts && grep -c "mapCalibrationPlanErrorToToast" apps/frontend/lib/errors/calibration-plan-errors.ts
+# expected: 각 1+
+
+# 6. Mapper 호출처 적용 — onError에서 mapper 사용 강제 (도메인 dialog/client)
+grep -c "mapDisposalErrorToToast\|disposal-errors" apps/frontend/components/equipment/disposal/DisposalApprovalDialog.tsx
+grep -c "mapCalibrationPlanErrorToToast\|calibration-plan-errors" apps/frontend/components/calibration-plans/CalibrationPlanDetailClient.tsx
+# expected: 각 ≥1 — onError에서 한국어 backend 메시지 노출 0
+
+# 7. i18n errors namespace ↔ ErrorCode enum 매핑 정합성 (도메인별)
+# disposal-errors.ts mapper의 i18n key가 ko/en disposal.json errors namespace에 모두 존재
+# (verify-i18n parity로 자동 보장 — Step 16 보강)
+# manual: grep "errors\." apps/frontend/lib/errors/disposal-errors.ts | extract keys → check messages/{ko,en}/disposal.json existence
 ```
 
 **PASS 기준**:
@@ -622,6 +639,9 @@ grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/nul
 - 명령 2: 격상된 ErrorCode 사용 카운트 회귀 0 (줄어들지 않음)
 - 명령 3 (fail-close 비대칭): 0 hits 또는 모든 케이스가 REJECTION_REASON_MIN_LENGTH SSOT 사용
 - 명령 4 (시스템 진행률): 본 sprint 후 baseline 기록, 후속 sprint마다 감소 추세 확인
+- 명령 5 (mapper SSOT 존재): 각 도메인 ≥ 1 export
+- 명령 6 (mapper 호출처 적용): 각 dialog/client ≥ 1 사용 — UX 갭 (한국어 backend 메시지 노출) 0건
+- 명령 7 (i18n namespace 정합성): mapper i18n key가 ko/en parity 만족 (verify-i18n과 시너지)
 
 **FAIL 기준**:
 - disposal/calibration-plan 도메인에서 인라인 `code: 'X'` 발견 → ErrorCode enum 등록 + ErrorCode.X 사용으로 격상
@@ -668,6 +688,7 @@ if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
 - `disposal-zod-defense-in-depth` (2026-05-01): backend Zod 격상은 했으나 인라인 string literal 그대로 유지
 - `disposal-service-fail-close` (2026-05-02): service fail-close 추가했으나 calibration-plan 비대칭 미발견
 - `error-codes-ssot-system-wide` (2026-05-02): 시니어 자기검토 갭 5/6/8 closure — 본 Step 16 신설
+- `manage-skills audit` (2026-05-02): mapper coverage(명령 5/6/7) 보강 — frontend mapper SSOT 패턴 회귀 차단 + UX 갭(한국어 backend 메시지 노출) 강제
 
 ## Exceptions
 
