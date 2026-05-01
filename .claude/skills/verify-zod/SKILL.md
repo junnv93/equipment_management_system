@@ -507,6 +507,77 @@ grep -A20 "ApproveValidationPipe\|QualityApproveValidationPipe" \
 - 정당화 없는 underscore prefix 파라미터 1건 이상
 - DTO 필드가 service 시그니처에 누락되어 사용자 입력 silent loss
 
+### Step 15: Frontend `< N` 하드코딩 ↔ Backend Zod `.min(N)` SSOT 동기화 강제 (REJECTION_REASON_MIN_LENGTH 동기화, VALIDATION_RULES 동기화) (2026-05-01 추가)
+
+**탐지 대상**: `rejectionReason`, `opinion`, `comment`, `reason`, `cause` 등 사용자 자유 텍스트 필드의 frontend ↔ backend 검증 강도 불일치 — `VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH` SSOT 미경유. frontend에 `< 10` 같은 매직 넘버 하드코딩이 박혀있고 backend Zod는 `.min(1)` 만 적용된 케이스(=defense-in-depth gap, frontend 우회 시 1자도 통과).
+
+**원인 패턴**:
+- frontend dialog가 `value.length < 10` 매직 넘버 하드코딩 (VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH 미사용)
+- backend Zod가 `min(1)` 만 사용 (frontend가 강제하므로 약하게 둠 — frontend bypass 시 무방비)
+- `.trim()` 누락 (whitespace bypass — Step 12와 시너지)
+- `.max()` 누락 (DoS — unbounded TEXT 입력)
+
+**검증 명령**:
+```bash
+# 1. frontend rejectionReason/opinion/comment 하드코딩 < 10 / >= 10 탐지 (VALIDATION_RULES 미사용)
+grep -rnE "(rejectionReason|opinion|comment|reason)\.(trim\(\)\.)?length\s*[<>=]+\s*10" \
+  apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" \
+  2>/dev/null | grep -v "VALIDATION_RULES" | grep -v "\.next" | grep -v "tests/"
+# expected: 0 hits — 모든 자유텍스트 length 비교는 VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH 경유
+
+# 2. backend Zod 자유텍스트 필드에 REJECTION_REASON_MIN_LENGTH 미사용 + min(1) 적용 탐지
+#    (도메인별 수동 검증 — frontend가 ≥10 강제 중인 도메인이라면 backend도 .min(REJECTION_REASON_MIN_LENGTH) 필요)
+grep -rnE "(rejectionReason|opinion):\s*z\.string\(\)" \
+  apps/backend/src/modules/*/dto --include="*.dto.ts" \
+  | grep "\.min(1[,)]" | grep -v "REJECTION_REASON_MIN_LENGTH"
+# expected: Tier 2 후속 sprint 후 0건. 발견 시 frontend ≥10 룰 추가 + backend 격상 페어링 필요
+
+# 3. backend Zod 자유텍스트 필드에 .max() 누락 탐지 (DoS 방어)
+grep -rnE "(rejectionReason|reasonDetail|opinion|comment):\s*z\.string\(\)" \
+  apps/backend/src/modules/*/dto --include="*.dto.ts" \
+  | grep -v "\.max(" | grep -v "//\|email()\|url()\|uuid()"
+# expected: 모든 자유텍스트 필드에 .max(LONG_TEXT_MAX_LENGTH) 또는 .max(N) 적용
+```
+
+**PASS 기준**:
+- 명령 1: 0건 (frontend 하드코딩 zero)
+- 명령 2: Tier 2 후속 sprint 진행에 따라 점진적으로 0건. 발견 시 tech-debt-tracker 등록 필수
+- 명령 3: 0건 또는 도메인 정책에 따른 의도적 제외 (`// allowed: text 무제한 — 첨부파일 path` 같은 정당화)
+
+**FAIL 기준**:
+- frontend `length < 10` / `>= 10` 하드코딩 1건 이상 → `VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH` SSOT 격상 + i18n `{min}` 파라미터화
+- backend `.min(1)` 만 적용된 자유텍스트 + frontend가 ≥10 강제 → backend `.trim().min(REJECTION_REASON_MIN_LENGTH).max(LONG_TEXT_MAX_LENGTH)` 격상
+
+```typescript
+// ❌ WRONG — frontend 우회 시 1자만 입력 통과 + whitespace + DoS
+rejectionReason: z.string().min(1, VM.approval.rejectReason.required)
+
+// ✅ CORRECT — defense-in-depth (Step 12 + Step 15)
+rejectionReason: z
+  .string()
+  .trim()
+  .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, VM.string.min('반려 사유', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH))
+  .max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH, VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH))
+```
+
+```tsx
+// ❌ WRONG — VALIDATION_RULES 미사용
+disabled={rejectionReason.trim().length < 10}
+
+// ✅ CORRECT — SSOT 경유
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+disabled={rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
+```
+
+**예외**:
+- 단순 placeholder 텍스트의 `(min. 10 characters)` 영문 라벨 — placeholder는 i18n에서 `{min}` 파라미터화 권장, 단 구현 부담 큰 경우 임시 허용
+- 파일 업로드 사이즈 / 시간 단위 / 분/초 등 도메인 단위가 길이 검증과 무관한 경우
+- 짧은 텍스트(예: 5자, 100자) — REJECTION_REASON_MIN_LENGTH(10) 외의 별도 규칙은 도메인 정의 필요
+
+**관련 사고**:
+- `disposal-zod-defense-in-depth` (2026-05-01): disposal `opinion` `min(1)` + frontend `>= 10` → frontend 우회로 1자만 입력 통과 → defense-in-depth 격상으로 closure
+- `calibration-plan-rejectionReason-hardcoded-10` (2026-05-01): CalibrationPlanDetailClient 2곳에 `< 10` 하드코딩 + backend `min(1)` → SSOT 격상 + backend 격상으로 closure
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

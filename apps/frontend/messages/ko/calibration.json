@@ -185,8 +185,8 @@
         "title": "반려",
         "description": "교정계획서를 반려하시겠습니까? 반려 사유를 입력해주세요.",
         "reasonLabel": "반려 사유 (필수)",
-        "reasonPlaceholder": "반려 사유를 입력하세요 (최소 10자)",
-        "reasonHint": "{count}/10자 이상 입력"
+        "reasonPlaceholder": "반려 사유를 입력하세요 (최소 {min}자)",
+        "reasonHint": "{count}/{min}자 이상 입력"
       }
     },
     "toasts": {

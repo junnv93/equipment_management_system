@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -53,10 +54,23 @@ export const ApproveCalibrationPlanValidationPipe = new ZodValidationPipe(
 /**
  * 교정계획서 반려 스키마 (품질책임자 또는 시험소장)
  * ⚠️ rejectedBy는 서버에서 JWT로 추출
+ *
+ * 반려 사유는 frontend `CalibrationPlanDetailClient`가 `>= REJECTION_REASON_MIN_LENGTH`로
+ * 강제하므로 Zod도 동일 기준으로 defense-in-depth 적용 (frontend 우회 차단).
  */
 export const rejectCalibrationPlanSchema = z.object({
   casVersion: z.number().int().positive(VM.number.positive('casVersion')),
-  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
+  rejectionReason: z
+    .string()
+    .trim()
+    .min(
+      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+      VM.string.min('반려 사유', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+    )
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 export type RejectCalibrationPlanInput = z.infer<typeof rejectCalibrationPlanSchema>;
@@ -139,8 +153,10 @@ export class RejectCalibrationPlanDto {
   casVersion: number;
 
   @ApiProperty({
-    description: '반려 사유 (필수)',
-    example: '교정 예정일 재검토 필요',
+    description: '반려 사유 (필수, 10자 이상 500자 이하)',
+    example: '교정 예정일 재검토 필요 — 1Q 시험 일정과 충돌함',
+    minLength: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+    maxLength: VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
   })
   rejectionReason: string;
 }

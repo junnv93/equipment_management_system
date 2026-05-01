@@ -185,8 +185,8 @@
         "title": "Reject",
         "description": "Reject this calibration plan? Please enter the reason for rejection.",
         "reasonLabel": "Rejection Reason (Required)",
-        "reasonPlaceholder": "Enter rejection reason (min. 10 characters)",
-        "reasonHint": "{count}/10 characters minimum"
+        "reasonPlaceholder": "Enter rejection reason (min. {min} characters)",
+        "reasonHint": "{count}/{min} characters minimum"
       }
     },
     "toasts": {

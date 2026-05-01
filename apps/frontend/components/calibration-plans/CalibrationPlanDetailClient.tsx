@@ -40,7 +40,11 @@ import {
   UserCheck,
   AlertCircle,
 } from 'lucide-react';
-import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  FRONTEND_ROUTES,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import {
   getActionButtonClasses,
@@ -532,7 +536,9 @@ export function CalibrationPlanDetailClient({
               aria-describedby="reject-reason-hint"
               className="mt-2"
               rows={3}
-              placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}
+              placeholder={t('planDetail.dialogs.reject.reasonPlaceholder', {
+                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+              })}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
             />
@@ -541,12 +547,15 @@ export function CalibrationPlanDetailClient({
               aria-live="polite"
               className={cn(
                 'text-xs mt-1 text-right',
-                rejectionReason.trim().length < 10
+                rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
                   ? 'text-muted-foreground'
                   : 'text-green-600 dark:text-green-400'
               )}
             >
-              {t('planDetail.dialogs.reject.reasonHint', { count: rejectionReason.trim().length })}
+              {t('planDetail.dialogs.reject.reasonHint', {
+                count: rejectionReason.trim().length,
+                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+              })}
             </p>
           </div>
           <DialogFooter>
@@ -556,7 +565,10 @@ export function CalibrationPlanDetailClient({
             <Button
               variant="destructive"
               onClick={() => rejectMutation.mutate()}
-              disabled={rejectMutation.isPending || rejectionReason.trim().length < 10}
+              disabled={
+                rejectMutation.isPending ||
+                rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
+              }
               loading={rejectMutation.isPending}
             >
               {t('planDetail.actions.reject')}
