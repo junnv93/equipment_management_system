@@ -9,7 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `senior-permission-ssot-20260501` | 시니어 권한 SSOT 통합 (별도 세션) | 2026-05-01 |
 | `inspection-template-build-once` | 중간/자체점검 Build-Once Workflow Phase 1B/1C/1D — Template Snapshot DB + Soft Fork + Gallery (LIMS 표준) | 2026-05-01 |
 
 ---
