@@ -10,6 +10,7 @@ import {
   INSPECTION_TABLE,
   INSPECTION_TABLE_PASTE_MODE,
   INSPECTION_KEYBOARD_HINT,
+  INSPECTION_TABLE_FOCUS_RING,
   TRANSITION_PRESETS,
   type InspectionPasteMode,
 } from '@/lib/design-tokens';
@@ -544,7 +545,7 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
             }}
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs-tight text-muted-foreground">
               {t('pasteMode.shortcutHint', {
                 shortcut: isMacPlatform() ? '⌘+Enter' : 'Ctrl+Enter',
               })}
@@ -623,17 +624,20 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                     )}
                   />
                   {headers.length > 1 && (
+                    // Phase 0B: 항상 노출 + 28×28 hit area (WCAG SC 2.4.7, 디자인 리뷰 b6)
                     <button
                       type="button"
                       onClick={() => removeColumn(ci)}
                       className={cn(
-                        'absolute -top-1 -right-1 z-10 h-4 w-4 rounded-full bg-destructive text-destructive-foreground',
-                        'flex items-center justify-center opacity-0 group-hover:opacity-100',
+                        'absolute -top-2 -right-2 z-10 flex h-7 w-7 items-center justify-center',
+                        'rounded-full bg-destructive text-destructive-foreground',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/60 focus-visible:ring-offset-1',
+                        'hover:scale-110',
                         TRANSITION_PRESETS.fastOpacity
                       )}
-                      aria-label={t('deleteSection')}
+                      aria-label={t('form.deleteColumn')}
                     >
-                      <X className="h-2.5 w-2.5" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </th>
@@ -651,9 +655,10 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                     key={ci}
                     className={cn(
                       'relative border-r last:border-r-0 border-b p-0',
+                      // Phase 0B: focus ring 강화 (WCAG SC 1.4.11, 디자인 리뷰 b6/b11)
                       focusedCell?.r === ri &&
                         focusedCell?.c === ci &&
-                        'ring-2 ring-inset ring-primary/40'
+                        INSPECTION_TABLE_FOCUS_RING.cell
                     )}
                     onClick={() => setFocusedCell({ r: ri, c: ci })}
                   >

@@ -691,10 +691,15 @@
     },
     "status": {
       "draft": "Draft",
-      "submitted": "Submitted",
-      "reviewed": "Reviewed",
+      "submitted": "Awaiting Review",
+      "reviewed": "Awaiting Approval",
       "approved": "Approved",
       "rejected": "Rejected"
+    },
+    "statusBadge": {
+      "ariaLabel": "Inspection stage: {status}",
+      "rejectionAlertTitle": "Rejection reason",
+      "viewFull": "View full"
     },
     "prefill": {
       "auto": "Auto",
@@ -784,6 +789,7 @@
       "addColumn": "Add Column",
       "addRow": "Add Row",
       "deleteRow": "Delete Row",
+      "deleteColumn": "Delete Column",
       "preview": "Preview",
       "applyPaste": "Apply Paste",
       "save": "Save",

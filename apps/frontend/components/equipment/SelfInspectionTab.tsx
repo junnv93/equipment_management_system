@@ -79,8 +79,8 @@ import {
 import {
   getJudgmentBadgeClasses,
   getSemanticBadgeClasses,
+  getInspectionStatusSemantic,
   MENU_ITEM_TOKENS,
-  type SemanticColorKey,
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import type { SelfInspectionStatus } from '@equipment-management/schemas';
@@ -94,13 +94,7 @@ interface SelfInspectionTabProps {
   equipment: Equipment;
 }
 
-/** 자체점검 결재 상태 → 시멘틱 색상 매핑 */
-const STATUS_SEMANTIC_MAP: Record<string, SemanticColorKey> = {
-  draft: 'neutral',
-  submitted: 'info',
-  approved: 'ok',
-  rejected: 'critical',
-};
+// 로컬 매핑 제거 — Phase 0B에서 INSPECTION_STATUS_SEMANTIC_MAP (SSOT) 사용
 
 /** 기존 고정 컬럼 fallback 항목 — i18n 키 사용 */
 const LEGACY_ITEM_KEYS = ['appearance', 'functionality', 'safety', 'calibrationStatus'] as const;
@@ -354,7 +348,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                         <span className="font-medium">{inspectionDateLabel}</span>
                         <Badge
                           className={getSemanticBadgeClasses(
-                            STATUS_SEMANTIC_MAP[approvalStatus] ?? 'neutral'
+                            getInspectionStatusSemantic(approvalStatus)
                           )}
                         >
                           {tSI(`statusLabel.${approvalStatus}`)}

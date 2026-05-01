@@ -219,9 +219,10 @@ export default function ResultSectionFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`max-h-[90vh] overflow-y-auto ${sectionType === 'table' ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
+        className={`max-h-[90vh] overflow-y-auto shadow-2xl ${sectionType === 'table' ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
         // Phase 0A: 다이얼로그 위 다이얼로그 — outside-click(부모 클릭)으로 인한
         // VisualTableEditor 셀 데이터 손실 방지. 명시적 cancel/Esc만 허용 (디자인 리뷰 b6)
+        // Phase 0B: shadow-2xl 로 elevation +1 (자식 dialog 시각 위계)
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >

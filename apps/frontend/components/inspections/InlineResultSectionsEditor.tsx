@@ -20,6 +20,7 @@ import {
   INSPECTION_SPACING,
   INSPECTION_SECTION_CARD,
   INSPECTION_INLINE_DELETE_CONFIRM,
+  INSPECTION_SECTION_TYPE_CHIP,
   ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -167,40 +168,35 @@ export default function InlineResultSectionsEditor({
               <CardContent className="p-3">
                 <ResultSectionPreview section={toPreviewSection(section, idx)} />
                 {isAwaitingType(section) && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <span className="text-xs text-muted-foreground self-center mr-1">
-                      {t('selectResultFormat')}:
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => handleSelectType(idx, 'table')}
-                    >
-                      <Table2 className="h-3 w-3" />
-                      {t('types.table')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => handleSelectType(idx, 'photo')}
-                    >
-                      <Image className="h-3 w-3" />
-                      {t('types.photo')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => handleSelectType(idx, 'text')}
-                    >
-                      <FileText className="h-3 w-3" />
-                      {t('types.text')}
-                    </Button>
+                  <div>
+                    <span className="text-xs text-muted-foreground">{t('selectResultFormat')}</span>
+                    {/* Phase 0B: 한국어 칩 라벨 길이 차이 균등화 (디자인 리뷰 b6, INSPECTION_SECTION_TYPE_CHIP) */}
+                    <div className={INSPECTION_SECTION_TYPE_CHIP.group}>
+                      <button
+                        type="button"
+                        className={INSPECTION_SECTION_TYPE_CHIP.chip}
+                        onClick={() => handleSelectType(idx, 'table')}
+                      >
+                        <Table2 className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        {t('types.table')}
+                      </button>
+                      <button
+                        type="button"
+                        className={INSPECTION_SECTION_TYPE_CHIP.chip}
+                        onClick={() => handleSelectType(idx, 'photo')}
+                      >
+                        <Image className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        {t('types.photo')}
+                      </button>
+                      <button
+                        type="button"
+                        className={INSPECTION_SECTION_TYPE_CHIP.chip}
+                        onClick={() => handleSelectType(idx, 'text')}
+                      >
+                        <FileText className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        {t('types.text')}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className={INSPECTION_SECTION_CARD.actions}>

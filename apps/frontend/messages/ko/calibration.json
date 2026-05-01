@@ -691,10 +691,15 @@
     },
     "status": {
       "draft": "작성 중",
-      "submitted": "제출됨",
-      "reviewed": "검토됨",
+      "submitted": "1차 검토 대기",
+      "reviewed": "최종 승인 대기",
       "approved": "승인됨",
       "rejected": "반려됨"
+    },
+    "statusBadge": {
+      "ariaLabel": "점검 단계: {status}",
+      "rejectionAlertTitle": "반려 사유",
+      "viewFull": "전체 보기"
     },
     "prefill": {
       "auto": "자동",
@@ -784,6 +789,7 @@
       "addColumn": "열 추가",
       "addRow": "행 추가",
       "deleteRow": "행 삭제",
+      "deleteColumn": "열 삭제",
       "preview": "미리보기",
       "applyPaste": "붙여넣기 적용",
       "save": "저장",

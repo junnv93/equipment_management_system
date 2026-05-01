@@ -437,6 +437,16 @@ export {
   INSPECTION_KEYBOARD_HINT,
   INSPECTION_INLINE_DELETE_CONFIRM,
   type InspectionPasteMode,
+  // Phase 0B (P1 시각 위계 + 인지 가이드)
+  INSPECTION_STATUS_BADGE,
+  INSPECTION_STATUS_SEMANTIC_MAP,
+  getInspectionStatusBadgeClasses,
+  getInspectionStatusSemantic,
+  INSPECTION_TABLE_FOCUS_RING,
+  INSPECTION_NESTED_DIALOG_BACKDROP,
+  INSPECTION_SECTION_TYPE_CHIP,
+  INSPECTION_KIND_BADGE,
+  type InspectionStatusKey,
 } from './components/inspection';
 
 // ============================================================================

@@ -59,8 +59,8 @@ import {
   getResultBadgeClasses,
   getSemanticBadgeClasses,
   getSemanticLeftBorderClasses,
+  getInspectionStatusSemantic,
   MENU_ITEM_TOKENS,
-  type SemanticColorKey,
 } from '@/lib/design-tokens';
 import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
 
@@ -69,14 +69,7 @@ const InspectionFormDialog = dynamic(
   { ssr: false }
 );
 
-/** 승인 상태 → 시멘틱 색상 키 매핑 */
-const APPROVAL_SEMANTIC_MAP: Record<InspectionApprovalStatus, SemanticColorKey> = {
-  draft: 'neutral',
-  submitted: 'info',
-  reviewed: 'purple',
-  approved: 'ok',
-  rejected: 'critical',
-};
+// 로컬 매핑 제거 — Phase 0B에서 INSPECTION_STATUS_SEMANTIC_MAP (SSOT) 사용
 
 interface IntermediateInspectionListProps {
   equipment: Equipment;
@@ -488,7 +481,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
                 </TableHeader>
                 <TableBody>
                   {inspections.map((inspection) => {
-                    const semanticColor = APPROVAL_SEMANTIC_MAP[inspection.approvalStatus];
+                    const semanticColor = getInspectionStatusSemantic(inspection.approvalStatus);
                     return (
                       <Fragment key={inspection.id}>
                         <TableRow
