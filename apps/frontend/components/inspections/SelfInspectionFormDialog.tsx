@@ -21,6 +21,11 @@ import {
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import {
+  INSPECTION_KIND_BADGE,
+  INSPECTION_STATUS_BADGE,
+  getInspectionStatusBadgeClasses,
+} from '@/lib/design-tokens';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -258,11 +263,54 @@ export default function SelfInspectionFormDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex flex-wrap items-center gap-2">
             {isEdit ? t('selfInspection.form.editTitle') : t('selfInspection.form.title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+            {/* Phase 0B: 분류 시각 (intermediate vs self), 디자인 리뷰 b8 */}
+            <span className={INSPECTION_KIND_BADGE.self}>{t('inspection.kindLabel.self')}</span>
+            {/* Phase 0B: status badge (isEdit 모드) — Nielsen IA-3 */}
+            {isEdit && initialData?.approvalStatus && (
+              <span
+                className={getInspectionStatusBadgeClasses(initialData.approvalStatus, 'lg')}
+                aria-label={t('selfInspection.statusBadge.ariaLabel', {
+                  status: t(
+                    `selfInspection.statusLabel.${initialData.approvalStatus}` as Parameters<
+                      typeof t
+                    >[0]
+                  ),
+                })}
+              >
+                {t(
+                  `selfInspection.statusLabel.${initialData.approvalStatus}` as Parameters<
+                    typeof t
+                  >[0]
+                )}
+              </span>
+            )}
           </DialogTitle>
           <DialogDescription>{t('selfInspection.form.description')}</DialogDescription>
+          {/* Phase 0B: 반려 사유 inline alert (role=status + aria-live=polite, 디자인 리뷰 b16) */}
+          {isEdit && initialData?.approvalStatus === 'rejected' && initialData?.rejectionReason && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={INSPECTION_STATUS_BADGE.rejectionAlert}
+            >
+              <div className="flex-1">
+                <strong className="text-destructive">
+                  {t('selfInspection.statusBadge.rejectionAlertTitle')}:
+                </strong>{' '}
+                <span className="text-muted-foreground">
+                  {initialData.rejectionReason.slice(
+                    0,
+                    INSPECTION_STATUS_BADGE.rejectionExcerptMax
+                  )}
+                  {initialData.rejectionReason.length >
+                    INSPECTION_STATUS_BADGE.rejectionExcerptMax && '…'}
+                </span>
+              </div>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">

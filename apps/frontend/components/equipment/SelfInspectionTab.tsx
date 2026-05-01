@@ -80,6 +80,7 @@ import {
   getJudgmentBadgeClasses,
   getSemanticBadgeClasses,
   getInspectionStatusSemantic,
+  INSPECTION_KIND_BADGE,
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
@@ -255,9 +256,11 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {tSI('title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+            {/* Phase 0B: 분류 시각 — 중간점검과 색·라벨 차이 (디자인 리뷰 b8) */}
+            <span className={INSPECTION_KIND_BADGE.self}>{t('inspection.kindLabel.self')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -274,9 +277,11 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {tSI('title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+            {/* Phase 0B: 분류 시각 — 중간점검과 색·라벨 차이 (디자인 리뷰 b8) */}
+            <span className={INSPECTION_KIND_BADGE.self}>{t('inspection.kindLabel.self')}</span>
           </CardTitle>
           {canSubmit && (
             <Button size="sm" onClick={() => setIsFormOpen(true)}>

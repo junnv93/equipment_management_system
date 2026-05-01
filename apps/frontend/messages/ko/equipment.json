@@ -314,9 +314,14 @@
     },
     "statusLabel": {
       "draft": "초안",
-      "submitted": "제출됨",
+      "submitted": "승인 대기",
       "approved": "승인됨",
       "rejected": "반려됨"
+    },
+    "statusBadge": {
+      "ariaLabel": "점검 단계: {status}",
+      "rejectionAlertTitle": "반려 사유",
+      "viewFull": "전체 보기"
     },
     "form": {
       "title": "자체점검 기록 작성",
@@ -411,7 +416,11 @@
     "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: {method})",
     "emptyDescription": "중간점검 결과를 관리하려면 점검 기록을 작성하세요.",
     "expand": "상세 펼치기",
-    "collapse": "상세 접기"
+    "collapse": "상세 접기",
+    "kindLabel": {
+      "intermediate": "중간점검",
+      "self": "자체점검"
+    }
   },
   "form": {
     "basicInfo": {

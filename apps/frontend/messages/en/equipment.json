@@ -314,9 +314,14 @@
     },
     "statusLabel": {
       "draft": "Draft",
-      "submitted": "Submitted",
+      "submitted": "Awaiting Approval",
       "approved": "Approved",
       "rejected": "Rejected"
+    },
+    "statusBadge": {
+      "ariaLabel": "Inspection stage: {status}",
+      "rejectionAlertTitle": "Rejection reason",
+      "viewFull": "View full"
     },
     "form": {
       "title": "Self Inspection Record",
@@ -411,7 +416,11 @@
     "notApplicable": "This equipment is not subject to inspection (Management method: {method})",
     "emptyDescription": "Create an inspection record to manage intermediate check results.",
     "expand": "Expand details",
-    "collapse": "Collapse details"
+    "collapse": "Collapse details",
+    "kindLabel": {
+      "intermediate": "Intermediate",
+      "self": "Self"
+    }
   },
   "form": {
     "basicInfo": {

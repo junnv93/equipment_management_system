@@ -56,6 +56,7 @@ import {
   INSPECTION_SPACING,
   INSPECTION_TABLE,
   INSPECTION_FOCUS,
+  INSPECTION_KIND_BADGE,
   getResultBadgeClasses,
   getSemanticBadgeClasses,
   getSemanticLeftBorderClasses,
@@ -422,9 +423,13 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {tEquip('inspection.intermediateTitle')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
+            {/* Phase 0B: 분류 시각 — 자체점검과 색·라벨 차이 (디자인 리뷰 b8) */}
+            <span className={INSPECTION_KIND_BADGE.intermediate}>
+              {tEquip('inspection.kindLabel.intermediate')}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -440,9 +445,13 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {tEquip('inspection.intermediateTitle')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
+            {/* Phase 0B: 분류 시각 — 자체점검과 색·라벨 차이 (디자인 리뷰 b8) */}
+            <span className={INSPECTION_KIND_BADGE.intermediate}>
+              {tEquip('inspection.kindLabel.intermediate')}
+            </span>
           </CardTitle>
           <Button size="sm" onClick={() => setIsFormOpen(true)}>
             <FileText className="h-4 w-4 mr-1" />
