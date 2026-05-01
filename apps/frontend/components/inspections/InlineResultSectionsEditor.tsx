@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Plus,
@@ -19,6 +19,7 @@ import {
   INSPECTION_EMPTY_STATE,
   INSPECTION_SPACING,
   INSPECTION_SECTION_CARD,
+  INSPECTION_INLINE_DELETE_CONFIRM,
   ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,8 @@ import type { CreateResultSectionDto } from '@/lib/api/calibration-api';
 import ResultSectionFormDialog from './result-sections/ResultSectionFormDialog';
 import ResultSectionPreview from './result-sections/ResultSectionPreview';
 import type { ResultSection } from '@/lib/api/calibration-api';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 interface InlineResultSectionsEditorProps {
   sections: CreateResultSectionDto[];
@@ -37,10 +40,13 @@ export default function InlineResultSectionsEditor({
   onChange,
 }: InlineResultSectionsEditorProps) {
   const t = useTranslations('calibration.resultSections');
+  const { toast } = useToast();
   const [formOpen, setFormOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   /** 인라인 타입 선택 시 초기 sectionType을 전달 */
   const [initialSectionType, setInitialSectionType] = useState<string | null>(null);
+  // Phase 0A: 5초 toast undo — 삭제된 섹션 snapshot 보존 (다중 삭제 시 가장 최근만 복원)
+  const undoSnapshotRef = useRef<CreateResultSectionDto[] | null>(null);
 
   const handleAdd = (dto: CreateResultSectionDto) => {
     if (editIndex !== null) {
@@ -55,9 +61,30 @@ export default function InlineResultSectionsEditor({
   };
 
   const handleRemove = (index: number) => {
+    // Phase 0A: 표 30셀 작성 후 1클릭 손실 방지 — 삭제 즉시 + 5초 toast undo
+    const snapshot = [...sections];
+    undoSnapshotRef.current = snapshot;
     const updated = sections.filter((_, i) => i !== index);
     // Re-index sortOrder
     onChange(updated.map((s, i) => ({ ...s, sortOrder: i })));
+    toast({
+      description: t('inlineDelete.toastDescription'),
+      duration: INSPECTION_INLINE_DELETE_CONFIRM.toastDurationMs,
+      action: (
+        <ToastAction
+          altText={t('inlineDelete.undo')}
+          onClick={() => {
+            const restore = undoSnapshotRef.current;
+            if (restore) {
+              onChange(restore);
+              undoSnapshotRef.current = null;
+            }
+          }}
+        >
+          {t('inlineDelete.undo')}
+        </ToastAction>
+      ),
+    });
   };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {

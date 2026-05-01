@@ -206,3 +206,83 @@ export const INSPECTION_PREFILL = {
   badge: 'ml-2 text-xs font-normal',
   icon: 'mr-1 h-3 w-3',
 } as const;
+
+// ============================================================================
+// 10. INSPECTION_TABLE_PASTE_MODE — Phase 0A (P0 데이터 안전성)
+// ============================================================================
+
+/**
+ * Paste-fill 동작 모드
+ *
+ * SSOT: VisualTableEditor의 paste 영역 라디오 + 모드별 placeholder/툴팁.
+ * - append (default): 기존 행 보존, 끝에 추가 — 데이터 보존 default
+ * - replace: 전체 덮어쓰기 — 기존 데이터 감지 시 destructive toast 강제
+ *
+ * WCAG: SC 3.3.4 (Error Prevention) — replace는 의도적 명시 + 행 수 표시
+ */
+export const INSPECTION_TABLE_PASTE_MODE = {
+  /** 모드 라디오 컨테이너 */
+  radioGroup: 'flex items-center gap-3 text-xs',
+  /** 모드 라디오 단위 (label + radio) */
+  radioItem: 'flex items-center gap-1.5',
+  /** append (default) 모드 라벨 */
+  appendLabel: 'text-muted-foreground',
+  /** replace (warning) 모드 라벨 + 경고 아이콘 강조 */
+  replaceLabel: 'text-warning-foreground font-medium',
+  /** replace 선택 시 행 수 표시 row */
+  replaceWarning:
+    'mt-1 flex items-center gap-1.5 text-xs text-warning-foreground bg-warning/10 border border-warning/30 rounded-md px-2 py-1',
+  /** replace 모드 placeholder (한국어 경고 톤) */
+  replacePlaceholder: '⚠ 기존 행이 모두 삭제됩니다. 헤더와 데이터를 모두 붙여넣으세요.',
+  /** append 모드 placeholder (한국어 친화) */
+  appendPlaceholder: '예: 주파수(GHz)\t이득(dB)\t규격\n1.0\t44.12\t45 ± 2.5',
+} as const;
+
+export type InspectionPasteMode = 'append' | 'replace';
+
+// ============================================================================
+// 11. INSPECTION_KEYBOARD_HINT — Phase 0A (P0 키보드 발견성)
+// ============================================================================
+
+/**
+ * VisualTableEditor toolbar 옆 키보드 단축키 힌트 bar
+ *
+ * - dismissible: 첫 진입 후 사용자가 닫으면 같은 세션에는 다시 보이지 않음
+ * - kbd 시각: 모노스페이스 + 작은 inline 코드 스타일
+ * - WCAG: SC 2.1.1 (Keyboard) Level A — 키보드 동선 발견성 보강
+ */
+export const INSPECTION_KEYBOARD_HINT = {
+  /** 힌트 bar 컨테이너 */
+  bar: 'flex items-center gap-2 text-xs text-muted-foreground tabular-nums',
+  /** 힌트 항목 */
+  item: 'inline-flex items-center gap-1',
+  /** kbd 키 시각 */
+  kbd: 'inline-flex items-center justify-center rounded border bg-muted px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-foreground/80',
+  /** dismiss 버튼 */
+  dismissButton: 'ml-auto text-muted-foreground/60 hover:text-foreground',
+} as const;
+
+// ============================================================================
+// 12. INSPECTION_INLINE_DELETE_CONFIRM — Phase 0A (P0 inline 삭제 안전망)
+// ============================================================================
+
+/**
+ * 결과 섹션 inline 삭제 후 5초 toast undo 패턴
+ *
+ * SSOT: 다이얼로그 띄우는 대신 즉시 삭제 + 5초 toast의 "되돌리기" action.
+ * - 표 30셀 작성 후 1클릭 손실은 paste-fill과 동등 P0
+ * - 토스트 자체는 useToast 사용. 토큰은 메시지/액션 카피와 표시 시각 SSOT.
+ *
+ * WCAG: SC 3.3.4 (Error Prevention)
+ */
+export const INSPECTION_INLINE_DELETE_CONFIRM = {
+  /** 토스트 표시 시간 (ms) */
+  toastDurationMs: 5000,
+  /** 토스트 컨테이너 variant — useToast 호출 시 사용 */
+  toastVariant: 'default' as const,
+  /** 토스트 액션 버튼 카피 i18n key 후보 (호출자에서 t() 적용) */
+  i18nKey: {
+    description: 'resultSections.inlineDelete.toastDescription',
+    action: 'resultSections.inlineDelete.undo',
+  },
+} as const;

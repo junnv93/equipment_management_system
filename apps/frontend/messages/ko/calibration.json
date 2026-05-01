@@ -700,7 +700,13 @@
       "auto": "자동",
       "tooltip": "장비 마스터 데이터에서 자동 입력되었습니다. 수정 가능합니다.",
       "usePreviousLabel": "직전 승인된 중간점검에서 항목·결과 섹션 불러오기",
-      "usePreviousDescription": "가장 최근 승인 완료된 중간점검의 {count}개 항목을 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다."
+      "usePreviousDescription": "가장 최근 승인 완료된 중간점검의 {count}개 항목을 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다.",
+      "toggleOff": {
+        "title": "복사된 입력을 모두 삭제할까요?",
+        "description": "현재 작성 중인 점검 항목 {itemCount}개와 결과 섹션 {sectionCount}개가 삭제됩니다. 되돌릴 수 없습니다.",
+        "action": "삭제하고 처음부터 작성",
+        "cancel": "취소"
+      }
     },
     "measurementEquipment": {
       "title": "측정 장비 List",
@@ -782,6 +788,32 @@
       "applyPaste": "붙여넣기 적용",
       "save": "저장",
       "cancel": "취소"
+    },
+    "pasteMode": {
+      "groupLabel": "붙여넣기 방식",
+      "appendLabel": "기존 행에 추가",
+      "appendDescription": "기존 데이터를 보존하고 마지막 행 아래에 추가합니다.",
+      "replaceLabel": "전체 덮어쓰기",
+      "replaceDescription": "기존 헤더와 모든 행이 새 데이터로 교체됩니다.",
+      "appendPlaceholder": "예: 주파수(GHz)\t이득(dB)\t규격\n1.0\t44.12\t45 ± 2.5",
+      "replacePlaceholder": "⚠ 기존 행이 모두 삭제됩니다. 헤더와 데이터를 모두 붙여넣으세요.",
+      "replaceWarning": "기존 데이터 {rowCount}행이 삭제됩니다.",
+      "confirmTitle": "기존 표 데이터를 덮어쓸까요?",
+      "confirmDescription": "현재 표에 입력된 {rowCount}행이 모두 삭제되고 붙여넣은 데이터로 교체됩니다.",
+      "confirmAction": "덮어쓰기",
+      "confirmCancel": "취소",
+      "shortcutHint": "{shortcut} 으로 적용"
+    },
+    "keyboardHints": {
+      "ariaLabel": "표 편집기 키보드 단축키",
+      "nextRow": "다음 행",
+      "cellNav": "셀 이동",
+      "undo": "되돌리기",
+      "dismiss": "힌트 숨기기"
+    },
+    "inlineDelete": {
+      "toastDescription": "결과 섹션을 삭제했습니다.",
+      "undo": "되돌리기"
     },
     "toasts": {
       "createSuccess": "섹션이 추가되었습니다.",

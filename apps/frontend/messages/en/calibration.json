@@ -700,7 +700,13 @@
       "auto": "Auto",
       "tooltip": "Auto-filled from equipment master data. You can edit this value.",
       "usePreviousLabel": "Copy items and result sections from the most recent approved inspection",
-      "usePreviousDescription": "Automatically populates {count} items from the most recent approved intermediate inspection. Measurement values and judgments remain empty. Unchecking will clear them."
+      "usePreviousDescription": "Automatically populates {count} items from the most recent approved intermediate inspection. Measurement values and judgments remain empty. Unchecking will clear them.",
+      "toggleOff": {
+        "title": "Discard copied entries?",
+        "description": "{itemCount} inspection items and {sectionCount} result sections will be deleted. This cannot be undone.",
+        "action": "Discard and start fresh",
+        "cancel": "Cancel"
+      }
     },
     "measurementEquipment": {
       "title": "Measurement Equipment List",
@@ -782,6 +788,32 @@
       "applyPaste": "Apply Paste",
       "save": "Save",
       "cancel": "Cancel"
+    },
+    "pasteMode": {
+      "groupLabel": "Paste mode",
+      "appendLabel": "Append to existing rows",
+      "appendDescription": "Preserve existing rows and append after the last row.",
+      "replaceLabel": "Replace all",
+      "replaceDescription": "Replace existing headers and all rows with new data.",
+      "appendPlaceholder": "e.g., Freq (GHz)\tGain (dB)\tSpec\n1.0\t44.12\t45 ± 2.5",
+      "replacePlaceholder": "⚠ All existing rows will be deleted. Paste headers and data together.",
+      "replaceWarning": "{rowCount} existing rows will be deleted.",
+      "confirmTitle": "Overwrite existing table data?",
+      "confirmDescription": "{rowCount} existing rows will be deleted and replaced with the pasted data.",
+      "confirmAction": "Overwrite",
+      "confirmCancel": "Cancel",
+      "shortcutHint": "{shortcut} to apply"
+    },
+    "keyboardHints": {
+      "ariaLabel": "Table editor keyboard shortcuts",
+      "nextRow": "next row",
+      "cellNav": "cell nav",
+      "undo": "undo",
+      "dismiss": "Hide hints"
+    },
+    "inlineDelete": {
+      "toastDescription": "Result section deleted.",
+      "undo": "Undo"
     },
     "toasts": {
       "createSuccess": "Section added.",

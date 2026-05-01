@@ -432,6 +432,11 @@ export {
   INSPECTION_TABLE,
   INSPECTION_FOCUS,
   INSPECTION_PREFILL,
+  // Phase 0A (P0 데이터 안전성)
+  INSPECTION_TABLE_PASTE_MODE,
+  INSPECTION_KEYBOARD_HINT,
+  INSPECTION_INLINE_DELETE_CONFIRM,
+  type InspectionPasteMode,
 } from './components/inspection';
 
 // ============================================================================

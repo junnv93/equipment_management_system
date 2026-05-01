@@ -1,14 +1,31 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, Upload, X } from 'lucide-react';
+import { Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { INSPECTION_SPACING, INSPECTION_TABLE, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  INSPECTION_SPACING,
+  INSPECTION_TABLE,
+  INSPECTION_TABLE_PASTE_MODE,
+  INSPECTION_KEYBOARD_HINT,
+  TRANSITION_PRESETS,
+  type InspectionPasteMode,
+} from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { documentApi } from '@/lib/api/document-api';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import DocumentImage from '@/components/shared/DocumentImage';
 import type { RichCell } from '@/lib/api/calibration-api';
 
@@ -22,6 +39,23 @@ interface VisualTableEditorProps {
   onChange: (headers: string[], rows: RichCell[][]) => void;
 }
 
+interface TableSnapshot {
+  headers: string[];
+  rows: RichCell[][];
+}
+
+const HISTORY_LIMIT = 10;
+
+const cloneSnapshot = (headers: string[], rows: RichCell[][]): TableSnapshot => ({
+  headers: [...headers],
+  rows: rows.map((row) => row.map((cell) => ({ ...cell }))),
+});
+
+const isMacPlatform = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+  return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
+};
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -33,26 +67,97 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
   const [showPasteArea, setShowPasteArea] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
 
+  // ── Phase 0A: Undo/Redo history (구조적 변경 단위만 보존) ──
+
+  const pastRef = useRef<TableSnapshot[]>([]);
+  const futureRef = useRef<TableSnapshot[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const recomputeUndoRedo = useCallback(() => {
+    setCanUndo(pastRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
+  }, []);
+
+  /** 구조적 변경 직전 snapshot 저장. updateCell/updateHeader 등 키 입력은 push 하지 않음. */
+  const pushHistory = useCallback(() => {
+    pastRef.current.push(cloneSnapshot(headers, rows));
+    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
+    futureRef.current = [];
+    recomputeUndoRedo();
+  }, [headers, rows, recomputeUndoRedo]);
+
+  const undoStructural = useCallback(() => {
+    const past = pastRef.current;
+    if (past.length === 0) return;
+    const previous = past.pop() as TableSnapshot;
+    futureRef.current.push(cloneSnapshot(headers, rows));
+    onChange(previous.headers, previous.rows);
+    recomputeUndoRedo();
+  }, [headers, rows, onChange, recomputeUndoRedo]);
+
+  const redoStructural = useCallback(() => {
+    const future = futureRef.current;
+    if (future.length === 0) return;
+    const next = future.pop() as TableSnapshot;
+    pastRef.current.push(cloneSnapshot(headers, rows));
+    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
+    onChange(next.headers, next.rows);
+    recomputeUndoRedo();
+  }, [headers, rows, onChange, recomputeUndoRedo]);
+
+  // ── Phase 0A: Paste mode (append default / replace warning) ──
+
+  const [pasteMode, setPasteMode] = useState<InspectionPasteMode>('append');
+  const [replaceConfirmText, setReplaceConfirmText] = useState<string | null>(null);
+
+  // ── Phase 0A: Keyboard shortcut hint bar (dismissible per session) ──
+
+  const [hintsDismissed, setHintsDismissed] = useState(false);
+  const undoShortcutLabel = useMemo(() => (isMacPlatform() ? '⌘Z' : 'Ctrl+Z'), []);
+
+  // ── Phase 0A: data-cell ref map for keyboard navigation ──
+
+  const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const cellKey = (ri: number, ci: number) => `${ri}:${ci}`;
+
+  const focusCell = useCallback((ri: number, ci: number) => {
+    const el = cellRefs.current.get(cellKey(ri, ci));
+    if (el) {
+      el.focus();
+      // place caret at end for predictable IME behavior
+      const len = el.value.length;
+      try {
+        el.setSelectionRange(len, len);
+      } catch {
+        // some inputs don't support setSelectionRange — ignore
+      }
+    }
+  }, []);
+
   // ── Column operations ──
 
   const addColumn = useCallback(() => {
+    pushHistory();
     const newHeaders = [...headers, ''];
     const newRows = rows.map((row) => [...row, { type: 'text' as const, value: '' }]);
     onChange(newHeaders, newRows);
-  }, [headers, rows, onChange]);
+  }, [headers, rows, onChange, pushHistory]);
 
   const removeColumn = useCallback(
     (ci: number) => {
       if (headers.length <= 1) return;
+      pushHistory();
       const newHeaders = headers.filter((_, i) => i !== ci);
       const newRows = rows.map((row) => row.filter((_, i) => i !== ci));
       onChange(newHeaders, newRows);
     },
-    [headers, rows, onChange]
+    [headers, rows, onChange, pushHistory]
   );
 
   const updateHeader = useCallback(
     (ci: number, value: string) => {
+      // 키 입력 단위 — history push 하지 않음 (Excel 패턴 / 디자인 리뷰 b9 "구조적 변경 보호")
       const newHeaders = [...headers];
       newHeaders[ci] = value;
       onChange(newHeaders, rows);
@@ -63,18 +168,20 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
   // ── Row operations ──
 
   const addRow = useCallback(() => {
+    pushHistory();
     const newRow: RichCell[] = headers.map(() => ({ type: 'text' as const, value: '' }));
     onChange(headers, [...rows, newRow]);
-  }, [headers, rows, onChange]);
+  }, [headers, rows, onChange, pushHistory]);
 
   const removeRow = useCallback(
     (ri: number) => {
+      pushHistory();
       onChange(
         headers,
         rows.filter((_, i) => i !== ri)
       );
     },
-    [headers, rows, onChange]
+    [headers, rows, onChange, pushHistory]
   );
 
   // ── Cell operations ──
@@ -99,6 +206,8 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
         if (!file) return;
         try {
           const doc = await documentApi.uploadDocument(file, 'inspection_photo');
+          // 셀 타입 변경은 구조적 변경 — undo로 복구 가능해야 함
+          pushHistory();
           updateCell(ri, ci, { type: 'image', documentId: doc.id });
         } catch {
           toast({ variant: 'destructive', description: t('toasts.error') });
@@ -106,25 +215,31 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
       };
       input.click();
     },
-    [updateCell, t, toast]
+    [updateCell, pushHistory, t, toast]
   );
 
   const toggleCellToText = useCallback(
     (ri: number, ci: number) => {
+      // 셀 타입 변경은 구조적 변경 — undo로 복구 가능해야 함
+      pushHistory();
       updateCell(ri, ci, { type: 'text', value: '' });
     },
-    [updateCell]
+    [updateCell, pushHistory]
   );
 
   // ── Paste fill ──
 
-  const handlePasteFill = useCallback(
-    (raw: string) => {
+  /**
+   * paste 영역 텍스트 → 헤더 + 행 배열로 파싱.
+   * delimiter: 탭 우선, 없으면 콤마.
+   */
+  const parsePasteText = useCallback(
+    (raw: string): { headers: string[]; rows: RichCell[][] } | null => {
       const lines = raw
         .split('\n')
         .map((l) => l.trim())
         .filter((l) => l.length > 0);
-      if (lines.length === 0) return;
+      if (lines.length === 0) return null;
 
       const delimiter = lines[0].includes('\t') ? '\t' : ',';
       const parsedHeaders = lines[0].split(delimiter).map((h) => h.trim());
@@ -141,13 +256,129 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
         return row.slice(0, colCount);
       });
 
-      onChange(parsedHeaders, paddedRows);
-      setShowPasteArea(false);
+      return { headers: parsedHeaders, rows: paddedRows };
     },
-    [onChange]
+    []
   );
 
+  const hasExistingTextData = useCallback(
+    (): boolean =>
+      rows.some((row) => row.some((cell) => cell.type === 'text' && cell.value.trim() !== '')),
+    [rows]
+  );
+
+  const applyPasteAppend = useCallback(
+    (parsed: { headers: string[]; rows: RichCell[][] }) => {
+      pushHistory();
+      // append 모드: 기존 헤더 보존, 행만 끝에 추가. 컬럼 수가 다르면 기존 헤더 기준으로 정규화.
+      const colCount = headers.length;
+      const normalizedRows = parsed.rows.map((row) => {
+        const out: RichCell[] = [...row];
+        while (out.length < colCount) out.push({ type: 'text', value: '' });
+        return out.slice(0, colCount);
+      });
+      onChange(headers, [...rows, ...normalizedRows]);
+      setShowPasteArea(false);
+    },
+    [headers, rows, onChange, pushHistory]
+  );
+
+  const applyPasteReplace = useCallback(
+    (parsed: { headers: string[]; rows: RichCell[][] }) => {
+      pushHistory();
+      onChange(parsed.headers, parsed.rows);
+      setShowPasteArea(false);
+    },
+    [onChange, pushHistory]
+  );
+
+  const handlePasteFill = useCallback(
+    (raw: string) => {
+      const parsed = parsePasteText(raw);
+      if (!parsed) return;
+      if (pasteMode === 'replace' && hasExistingTextData()) {
+        // confirmation 분기 — replace + 기존 데이터 → AlertDialog
+        setReplaceConfirmText(raw);
+        return;
+      }
+      if (pasteMode === 'replace') {
+        applyPasteReplace(parsed);
+      } else {
+        applyPasteAppend(parsed);
+      }
+    },
+    [pasteMode, parsePasteText, hasExistingTextData, applyPasteReplace, applyPasteAppend]
+  );
+
+  const confirmReplace = useCallback(() => {
+    if (replaceConfirmText === null) return;
+    const parsed = parsePasteText(replaceConfirmText);
+    if (parsed) applyPasteReplace(parsed);
+    setReplaceConfirmText(null);
+  }, [replaceConfirmText, parsePasteText, applyPasteReplace]);
+
+  const cancelReplace = useCallback(() => setReplaceConfirmText(null), []);
+
+  // ── Phase 0A: 키보드 셀 이동 (Enter / ArrowDown / ArrowUp) ──
+
+  const handleCellKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>, ri: number, ci: number) => {
+      // IME composition 가드 — 한글 합성 중에는 이동 트리거 안 함
+      if (e.nativeEvent.isComposing) return;
+
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        // submit 차단 + 다음 행 이동
+        if (ri < rows.length - 1) {
+          focusCell(ri + 1, ci);
+        } else {
+          // 마지막 행 → addRow 자동 호출 후 새 행으로 focus
+          addRow();
+          // addRow가 비동기 onChange로 새 row를 추가 → 다음 frame에 focus
+          requestAnimationFrame(() => focusCell(ri + 1, ci));
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (ri > 0) {
+          e.preventDefault();
+          focusCell(ri - 1, ci);
+        }
+      }
+      // 좌우는 브라우저 기본 Tab/Shift+Tab 동작 유지
+    },
+    [rows.length, focusCell, addRow]
+  );
+
+  // ── Phase 0A: Cmd/Ctrl+Z / Cmd+Shift+Z 단축키 ──
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod) return;
+      if (e.key === 'z' || e.key === 'Z') {
+        if (e.shiftKey) {
+          if (futureRef.current.length === 0) return;
+          e.preventDefault();
+          redoStructural();
+        } else {
+          if (pastRef.current.length === 0) return;
+          e.preventDefault();
+          undoStructural();
+        }
+      } else if (e.key === 'y' || e.key === 'Y') {
+        if (futureRef.current.length === 0) return;
+        e.preventDefault();
+        redoStructural();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [undoStructural, redoStructural]);
+
   // ── Render ──
+
+  const replacePreviewCount = rows.filter((row) =>
+    row.some((cell) => cell.type === 'text' && cell.value.trim() !== '')
+  ).length;
 
   return (
     <div className={INSPECTION_SPACING.group}>
@@ -161,7 +392,66 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
           <Plus className="h-3 w-3 mr-1" />
           {t('form.addRow')}
         </Button>
+
+        {/* Phase 0A: Undo / Redo */}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={undoStructural}
+          disabled={!canUndo}
+          aria-label={t('keyboardHints.undo')}
+          title={`${t('keyboardHints.undo')} (${undoShortcutLabel})`}
+          className="text-xs"
+        >
+          <Undo2 className="h-3 w-3" />
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={redoStructural}
+          disabled={!canRedo}
+          aria-label="redo"
+          title="redo"
+          className="text-xs"
+        >
+          <Redo2 className="h-3 w-3" />
+        </Button>
+
         <div className="flex-1" />
+
+        {/* Phase 0A: Keyboard hint bar (dismissible) */}
+        {!hintsDismissed && (
+          <div
+            className={INSPECTION_KEYBOARD_HINT.bar}
+            role="note"
+            aria-label={t('keyboardHints.ariaLabel')}
+          >
+            <span className={INSPECTION_KEYBOARD_HINT.item}>
+              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↵</kbd>
+              {t('keyboardHints.nextRow')}
+            </span>
+            <span className={INSPECTION_KEYBOARD_HINT.item}>
+              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↑↓</kbd>
+              {t('keyboardHints.cellNav')}
+            </span>
+            <span className={INSPECTION_KEYBOARD_HINT.item}>
+              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>{undoShortcutLabel}</kbd>
+              {t('keyboardHints.undo')}
+            </span>
+            <button
+              type="button"
+              className={INSPECTION_KEYBOARD_HINT.dismissButton}
+              onClick={() => setHintsDismissed(true)}
+              aria-label={t('keyboardHints.dismiss')}
+              title={t('keyboardHints.dismiss')}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <Button
           type="button"
           size="sm"
@@ -179,40 +469,138 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
       {/* Paste area (collapsible) */}
       {showPasteArea && (
         <div className={INSPECTION_SPACING.field}>
+          {/* Phase 0A: Mode 라디오 (append default / replace warning) */}
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs font-medium text-muted-foreground">
+              {t('pasteMode.groupLabel')}
+            </legend>
+            <div className={INSPECTION_TABLE_PASTE_MODE.radioGroup}>
+              <label className={INSPECTION_TABLE_PASTE_MODE.radioItem}>
+                <input
+                  type="radio"
+                  name="paste-mode"
+                  value="append"
+                  checked={pasteMode === 'append'}
+                  onChange={() => setPasteMode('append')}
+                  className="h-3 w-3 cursor-pointer"
+                />
+                <span
+                  className={
+                    pasteMode === 'append'
+                      ? 'font-medium text-foreground'
+                      : INSPECTION_TABLE_PASTE_MODE.appendLabel
+                  }
+                >
+                  {t('pasteMode.appendLabel')}
+                </span>
+              </label>
+              <label className={INSPECTION_TABLE_PASTE_MODE.radioItem}>
+                <input
+                  type="radio"
+                  name="paste-mode"
+                  value="replace"
+                  checked={pasteMode === 'replace'}
+                  onChange={() => setPasteMode('replace')}
+                  className="h-3 w-3 cursor-pointer"
+                />
+                <span
+                  className={
+                    pasteMode === 'replace'
+                      ? INSPECTION_TABLE_PASTE_MODE.replaceLabel
+                      : 'text-muted-foreground'
+                  }
+                >
+                  {t('pasteMode.replaceLabel')}
+                </span>
+              </label>
+            </div>
+            {pasteMode === 'replace' && replacePreviewCount > 0 && (
+              <div
+                className={INSPECTION_TABLE_PASTE_MODE.replaceWarning}
+                role="status"
+                aria-live="polite"
+              >
+                <span aria-hidden="true">⚠</span>
+                {t('pasteMode.replaceWarning', { rowCount: replacePreviewCount })}
+              </div>
+            )}
+          </fieldset>
+
           <textarea
             ref={pasteRef}
             className="w-full h-24 border rounded-md p-2 font-mono text-xs resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder="Freq (GHz)&#9;Gain (dB)&#9;Spec&#10;1.0&#9;44.12&#9;45 ± 2.5"
+            placeholder={
+              pasteMode === 'replace'
+                ? t('pasteMode.replacePlaceholder')
+                : t('pasteMode.appendPlaceholder')
+            }
             onKeyDown={(e) => {
+              // IME 가드 — 합성 중 Cmd/Ctrl+Enter 무시
+              if (e.nativeEvent.isComposing) return;
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 handlePasteFill(e.currentTarget.value);
               }
             }}
           />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowPasteArea(false)}
-              className="text-xs"
-            >
-              {t('form.cancel')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                if (pasteRef.current) handlePasteFill(pasteRef.current.value);
-              }}
-              className="text-xs"
-            >
-              {t('form.applyPaste')}
-            </Button>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-muted-foreground">
+              {t('pasteMode.shortcutHint', {
+                shortcut: isMacPlatform() ? '⌘+Enter' : 'Ctrl+Enter',
+              })}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowPasteArea(false)}
+                className="text-xs"
+              >
+                {t('form.cancel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (pasteRef.current) handlePasteFill(pasteRef.current.value);
+                }}
+                className="text-xs"
+              >
+                {t('form.applyPaste')}
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Phase 0A: Replace 모드 + 기존 데이터 → AlertDialog confirmation */}
+      <AlertDialog
+        open={replaceConfirmText !== null}
+        onOpenChange={(open) => {
+          if (!open) cancelReplace();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('pasteMode.confirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('pasteMode.confirmDescription', { rowCount: replacePreviewCount })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelReplace}>
+              {t('pasteMode.confirmCancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmReplace}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('pasteMode.confirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Visual table grid */}
       <div className={cn(INSPECTION_TABLE.wrapper, 'relative')}>
@@ -250,7 +638,7 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                   )}
                 </th>
               ))}
-              <th className="w-8 border-b bg-muted/50" />
+              <th className="w-12 border-b bg-muted/50" />
             </tr>
           </thead>
 
@@ -277,6 +665,16 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                         }
                         onFocus={() => setFocusedCell({ r: ri, c: ci })}
                         onBlur={() => setFocusedCell(null)}
+                        // Phase 0A: 키보드 셀 이동 (Enter/↑↓ + IME 가드)
+                        onKeyDown={(e) => handleCellKeyDown(e, ri, ci)}
+                        // Phase 0A: data-cell attr + ref map 등록
+                        data-cell-r={ri}
+                        data-cell-c={ci}
+                        ref={(el) => {
+                          const key = cellKey(ri, ci);
+                          if (el) cellRefs.current.set(key, el);
+                          else cellRefs.current.delete(key);
+                        }}
                         className={cn(
                           'border-0 rounded-none bg-transparent h-9 px-2',
                           'font-mono tabular-nums text-xs',
@@ -332,17 +730,17 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                   </td>
                 ))}
 
-                {/* Row delete button */}
-                <td className="w-8 border-b text-center">
+                {/* Row delete button — Phase 0A: hit area 48×48 (WCAG SC 2.5.5, 디자인 리뷰 b6) */}
+                <td className="w-12 border-b text-center align-middle p-0">
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    className="h-12 w-12 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/60"
                     onClick={() => removeRow(ri)}
                     aria-label={t('form.deleteRow')}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </td>
               </tr>

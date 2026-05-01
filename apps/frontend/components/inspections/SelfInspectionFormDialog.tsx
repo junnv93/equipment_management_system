@@ -251,7 +251,12 @@ export default function SelfInspectionFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? t('selfInspection.form.editTitle') : t('selfInspection.form.title')}

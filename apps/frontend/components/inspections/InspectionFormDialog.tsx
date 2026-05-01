@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import {
@@ -116,6 +126,8 @@ export default function InspectionFormDialog({
    * 사용자가 체크박스로 off 하면 복사된 items/sections 를 초기화.
    */
   const [usePreviousInspection, setUsePreviousInspection] = useState(true);
+  /** Phase 0A: 토글 OFF 확인 다이얼로그 (작성 중 데이터 손실 방지) */
+  const [pendingToggleOffConfirm, setPendingToggleOffConfirm] = useState(false);
   /** 이번 dialog 세션에서 직전 점검 prefill 이 이미 적용됐는지 — 재적용 방지 */
   const [previousInspectionApplied, setPreviousInspectionApplied] = useState(false);
 
@@ -234,14 +246,39 @@ export default function InspectionFormDialog({
    * 사용자가 수동으로 추가한 내용도 함께 지워지는 걸 피하기 위해
    * previousInspectionApplied 인 경우에만 동작.
    */
+  const performToggleOffReset = () => {
+    setItems([]);
+    setResultSections([]);
+    setPrefilled((prev) => ({ ...prev, previousInspection: false }));
+    setPreviousInspectionApplied(false);
+    setUsePreviousInspection(false);
+  };
+
   const handleTogglePreviousInspection = (checked: boolean) => {
-    setUsePreviousInspection(checked);
-    if (!checked && previousInspectionApplied) {
-      setItems([]);
-      setResultSections([]);
-      setPrefilled((prev) => ({ ...prev, previousInspection: false }));
-      setPreviousInspectionApplied(false);
+    if (checked) {
+      setUsePreviousInspection(true);
+      return;
     }
+    // OFF: 작성 중인 데이터가 있으면 confirmation, 없으면 즉시 OFF
+    if (previousInspectionApplied && (items.length > 0 || resultSections.length > 0)) {
+      setPendingToggleOffConfirm(true);
+      return;
+    }
+    setUsePreviousInspection(false);
+    if (previousInspectionApplied) {
+      performToggleOffReset();
+    }
+  };
+
+  const confirmToggleOff = () => {
+    performToggleOffReset();
+    setPendingToggleOffConfirm(false);
+  };
+
+  const cancelToggleOff = () => {
+    // 사용자가 취소 → 체크박스 상태 원복 (이미 ON이지만 명시적)
+    setUsePreviousInspection(true);
+    setPendingToggleOffConfirm(false);
   };
 
   const resetForm = () => {
@@ -448,7 +485,13 @@ export default function InspectionFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
+        // 명시적 cancel 버튼/X 버튼/Esc 키만 허용
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t('intermediateInspection.formTitle')}
@@ -794,6 +837,39 @@ export default function InspectionFormDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Phase 0A: prefill 토글 OFF 확인 (디자인 리뷰 b6 — 30셀 손실 방지) */}
+      <AlertDialog
+        open={pendingToggleOffConfirm}
+        onOpenChange={(open) => {
+          if (!open) cancelToggleOff();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('intermediateInspection.prefill.toggleOff.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('intermediateInspection.prefill.toggleOff.description', {
+                itemCount: items.length,
+                sectionCount: resultSections.length,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelToggleOff}>
+              {t('intermediateInspection.prefill.toggleOff.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleOff}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('intermediateInspection.prefill.toggleOff.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
