@@ -134,7 +134,7 @@ function InspectionFormDialogInner({
   const queryClient = useQueryClient();
 
   // Phase 1A-b: prefill state는 InspectionFormContext SSOT로 통합.
-  // 분산 state(previousInspectionApplied/prefillCounts/prefillBannerDismissed) 제거.
+  // Phase 0A-ext++: master state 이중 sourcing 제거 (addMasterPrefilledField 직접 호출)
   const inspectionForm = useInspectionForm();
   const {
     state: inspectionFormState,
@@ -142,7 +142,9 @@ function InspectionFormDialogInner({
     resetLatestPrefill,
     resetAll,
     dismissBanner,
-    setMasterPrefilledFields,
+    addMasterPrefilledField,
+    removeMasterPrefilledField,
+    isMasterPrefilledField,
   } = inspectionForm;
   const previousInspectionApplied = inspectionFormState.latest.applied;
   const prefillCounts = inspectionFormState.latest.counts;
@@ -157,8 +159,9 @@ function InspectionFormDialogInner({
   const [items, setItems] = useState<InspectionItemForm[]>([]);
   const [resultSections, setResultSections] = useState<CreateResultSectionDto[]>([]);
   const [measurementEquipment, setMeasurementEquipment] = useState<MeasurementEquipmentForm[]>([]);
-  // Phase 1A-b: master data prefilled flag — 향후 Context로 통합 예정 (현재는 컴포넌트 state)
-  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+  // Phase 0A-ext++: master data prefilled flag — Context master state 직접 사용 (이중 sourcing 제거)
+  // 기존 useState<Record<string, boolean>> + setMasterPrefilledFields useEffect 동기화 패턴 폐기.
+  // Provider 내부 useReducer state 단일 source.
   /**
    * 직전 점검 prefill 사용 여부 (기본 on).
    * 사용자가 체크박스로 off 하면 복사된 items/sections 를 초기화.
@@ -195,10 +198,7 @@ function InspectionFormDialogInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: open=false 트리거 single shot
   }, [open]);
 
-  // Phase 1A-b: master data prefilled fields → Context로 동기화 (향후 통합 위한 신호)
-  useEffect(() => {
-    setMasterPrefilledFields(Object.keys(prefilled).filter((k) => prefilled[k]));
-  }, [prefilled, setMasterPrefilledFields]);
+  // Phase 0A-ext++: prefilled state 제거됨 — 이중 sourcing 폐기. master는 Context 직접 호출.
 
   // Fetch equipment data for prefill
   const {
@@ -255,17 +255,15 @@ function InspectionFormDialogInner({
   useEffect(() => {
     if (!open || !equipment) return;
 
-    const newPrefilled: Record<string, boolean> = {};
-
     // 점검주기: 중간점검 주기 (intermediateCheckCycle) 사용, fallback으로 교정주기의 절반
     if (!inspectionCycle) {
       if (equipment.intermediateCheckCycle) {
         setInspectionCycle(`${equipment.intermediateCheckCycle}개월`);
-        newPrefilled.inspectionCycle = true;
+        addMasterPrefilledField('inspectionCycle');
       } else if (equipment.calibrationCycle) {
         const halfCycle = Math.round(Number(equipment.calibrationCycle) / 2);
         setInspectionCycle(`${halfCycle}개월`);
-        newPrefilled.inspectionCycle = true;
+        addMasterPrefilledField('inspectionCycle');
       }
     }
 
@@ -274,11 +272,9 @@ function InspectionFormDialogInner({
       const derived = deriveCalibrationValidityPeriod(equipment.calibrationCycle);
       if (derived) {
         setCalibrationValidityPeriod(derived);
-        newPrefilled.calibrationValidityPeriod = true;
+        addMasterPrefilledField('calibrationValidityPeriod');
       }
     }
-
-    setPrefilled((prev) => ({ ...prev, ...newPrefilled }));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: open/equipment 변경 시만 prefill 재실행
   }, [open, equipment]);
 
@@ -315,7 +311,7 @@ function InspectionFormDialogInner({
 
     setItems(extractedStructure.items);
     setResultSections(extractedStructure.resultSections);
-    setPrefilled((prev) => ({ ...prev, previousInspection: true }));
+    // previousInspection prefilled은 Context의 latest.applied=true로 추적 (별도 master field 불필요)
     // Phase 1A-b: Context dispatch — applied/counts/sortOrders 동시 atomic update
     if (latestInspection) {
       applyLatestPrefill({
@@ -344,7 +340,6 @@ function InspectionFormDialogInner({
   const performToggleOffReset = () => {
     setItems([]);
     setResultSections([]);
-    setPrefilled((prev) => ({ ...prev, previousInspection: false }));
     setUsePreviousInspection(false);
     // Phase 1A-b: Context reset — applied/counts/sortOrders/userModifiedCells 일괄 초기화
     resetLatestPrefill();
@@ -414,9 +409,8 @@ function InspectionFormDialogInner({
     setItems([]);
     setResultSections([]);
     setMeasurementEquipment([]);
-    setPrefilled({});
     setUsePreviousInspection(true);
-    // Phase 1A-b: Context state도 함께 초기화
+    // Phase 1A-b/0A-ext++: Context state(master + latest 모두) 초기화
     resetAll();
   };
 
@@ -594,7 +588,8 @@ function InspectionFormDialogInner({
   };
 
   const renderPrefillBadge = (field: string) => {
-    if (!prefilled[field]) return null;
+    // Phase 0A-ext++: Context master state 직접 조회 (이중 sourcing 제거)
+    if (!isMasterPrefilledField(field)) return null;
     return (
       <TooltipProvider>
         <Tooltip>
@@ -760,7 +755,7 @@ function InspectionFormDialogInner({
                   value={inspectionCycle}
                   onChange={(e) => {
                     setInspectionCycle(e.target.value);
-                    setPrefilled((prev) => ({ ...prev, inspectionCycle: false }));
+                    removeMasterPrefilledField('inspectionCycle');
                   }}
                   placeholder={t('intermediateInspection.inspectionCyclePlaceholder')}
                 />
@@ -774,7 +769,7 @@ function InspectionFormDialogInner({
                   value={calibrationValidityPeriod}
                   onChange={(e) => {
                     setCalibrationValidityPeriod(e.target.value);
-                    setPrefilled((prev) => ({ ...prev, calibrationValidityPeriod: false }));
+                    removeMasterPrefilledField('calibrationValidityPeriod');
                   }}
                   placeholder={t('intermediateInspection.validityPeriodPlaceholder')}
                 />
@@ -818,7 +813,7 @@ function InspectionFormDialogInner({
                     className="cursor-pointer text-sm font-medium"
                   >
                     {t('intermediateInspection.prefill.usePreviousLabel')}
-                    {prefilled.previousInspection && (
+                    {previousInspectionApplied && (
                       <Badge variant="secondary" className={cn(INSPECTION_PREFILL.badge, 'ml-2')}>
                         <Info className={INSPECTION_PREFILL.icon} />
                         {t('intermediateInspection.prefill.auto')}

@@ -79,6 +79,8 @@ type Action =
   | { type: 'mark-cell-modified'; sortOrder: number; ri: number; ci: number }
   | { type: 'mark-section-modified'; sortOrder: number }
   | { type: 'remove-section'; sortOrder: number }
+  | { type: 'add-master-field'; field: string }
+  | { type: 'remove-master-field'; field: string }
   | { type: 'set-master-fields'; fields: string[] }
   | { type: 'reset-all' };
 
@@ -158,6 +160,18 @@ function reducer(state: InspectionFormState, action: Action): InspectionFormStat
         },
       };
     }
+    case 'add-master-field': {
+      if (state.master.has(action.field)) return state; // referential equality 유지
+      const next = new Set(state.master);
+      next.add(action.field);
+      return { ...state, master: next };
+    }
+    case 'remove-master-field': {
+      if (!state.master.has(action.field)) return state;
+      const next = new Set(state.master);
+      next.delete(action.field);
+      return { ...state, master: next };
+    }
     case 'set-master-fields':
       return { ...state, master: new Set(action.fields) };
     case 'reset-all':
@@ -191,6 +205,10 @@ export interface InspectionFormContextValue {
 
   // ── master data actions ──
   setMasterPrefilledFields: (fields: string[]) => void;
+  /** 단일 마스터 필드 prefilled 표시 (장비 마스터에서 자동 입력 시 호출) */
+  addMasterPrefilledField: (field: string) => void;
+  /** 단일 마스터 필드 prefilled 해제 (사용자가 직접 비웠거나 reset 시) */
+  removeMasterPrefilledField: (field: string) => void;
 
   // ── lifecycle ──
   resetAll: () => void;
@@ -233,6 +251,12 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
   const setMasterPrefilledFields = useCallback<
     InspectionFormContextValue['setMasterPrefilledFields']
   >((fields) => dispatch({ type: 'set-master-fields', fields }), []);
+  const addMasterPrefilledField = useCallback<
+    InspectionFormContextValue['addMasterPrefilledField']
+  >((field) => dispatch({ type: 'add-master-field', field }), []);
+  const removeMasterPrefilledField = useCallback<
+    InspectionFormContextValue['removeMasterPrefilledField']
+  >((field) => dispatch({ type: 'remove-master-field', field }), []);
   const resetAll = useCallback(() => dispatch({ type: 'reset-all' }), []);
 
   // ── selectors (state-derived) ──
@@ -265,6 +289,8 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
       markSectionModified,
       removeSection,
       setMasterPrefilledFields,
+      addMasterPrefilledField,
+      removeMasterPrefilledField,
       resetAll,
       isPrefilledSection,
       isUserModifiedCell,
@@ -280,6 +306,8 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
       markSectionModified,
       removeSection,
       setMasterPrefilledFields,
+      addMasterPrefilledField,
+      removeMasterPrefilledField,
       resetAll,
       isPrefilledSection,
       isUserModifiedCell,
@@ -304,6 +332,8 @@ const NO_OP_VALUE: InspectionFormContextValue = {
   markSectionModified: () => {},
   removeSection: () => {},
   setMasterPrefilledFields: () => {},
+  addMasterPrefilledField: () => {},
+  removeMasterPrefilledField: () => {},
   resetAll: () => {},
   isPrefilledSection: () => false,
   isUserModifiedCell: () => false,
