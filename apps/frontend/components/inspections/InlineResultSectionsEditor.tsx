@@ -153,6 +153,24 @@ export default function InlineResultSectionsEditor({
           <LayoutList className={INSPECTION_EMPTY_STATE.icon} aria-hidden="true" />
           <p className={INSPECTION_EMPTY_STATE.title}>{t('empty')}</p>
           <p className={INSPECTION_EMPTY_STATE.description}>{t('emptyDescription')}</p>
+          {/* Phase 0B-12: 4-type chip preview — 어떤 형식의 결과를 추가할 수 있는지 학습 (디자인 리뷰 b8) */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <span aria-hidden="true">•</span>
+            <span className="inline-flex items-center gap-1">
+              <Table2 className="h-3 w-3" aria-hidden="true" />
+              {t('types.table')}
+            </span>
+            <span aria-hidden="true">•</span>
+            <span className="inline-flex items-center gap-1">
+              <Image className="h-3 w-3" aria-hidden="true" />
+              {t('types.photo')}
+            </span>
+            <span aria-hidden="true">•</span>
+            <span className="inline-flex items-center gap-1">
+              <FileText className="h-3 w-3" aria-hidden="true" />
+              {t('types.text')}
+            </span>
+          </div>
         </div>
       ) : (
         <div className={INSPECTION_SPACING.field}>

@@ -479,8 +479,14 @@ export const INSPECTION_CELL_PROVENANCE = {
  * - outOfSpec: spec 위반 (1B의 measurement 메타 의존) — rose-50 + ❌
  * - focus: 활성 셀 — INSPECTION_TABLE_FOCUS_RING과 연동
  *
- * 1A 적용 범위: empty / dirty / committed (out-of-spec은 1B-backend 의존, focus는 0B 연동).
- * WCAG SC 1.4.1 — 색만 의존 X, 아이콘 + border 보강.
+ * @deprecated-pending — 1A 시점에서는 *토큰 정의만* 사전 등록 (dead token 의도적).
+ * 실 적용은 다음 단계 의존:
+ * - empty/dirty/committed → useUndoableState commit 추적 도입 시 (별도 phase)
+ * - outOfSpec → Phase 1B-backend의 RichCell.unit/decimals/spec 메타 추가 후 활성
+ * - focus → 0B의 INSPECTION_TABLE_FOCUS_RING 이미 활성
+ *
+ * SSOT 측면: 토큰 사전 정의로 1B-backend 출시 시 시각 일관성 확보 (디자인 리뷰 WF-06 reference).
+ * WCAG SC 1.4.1 — 색만 의존 X, 아이콘 + border 보강 (적용 시).
  */
 export const INSPECTION_TABLE_CELL_STATE = {
   empty: 'bg-slate-50/40 dark:bg-slate-900/40',

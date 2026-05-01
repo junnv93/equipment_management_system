@@ -654,7 +654,7 @@ function SelfInspectionFormDialogInner({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Button variant="outline" onClick={close.requestClose}>
             {t('selfInspection.form.cancel')}
           </Button>
