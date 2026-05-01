@@ -1,6 +1,7 @@
 {
   "title": "Disposal Management",
   "subtitle": "Manage equipment disposal requests and approvals",
+  "charCountMin": "Min {min} characters required (current: {count})",
   "status": {
     "pending": "Requested",
     "under_review": "Under Review",
@@ -40,7 +41,6 @@
     "requester": "Requester:",
     "disposalReason": "Disposal Reason:",
     "reasonDetail": "Reason Detail:",
-    "charCount": "{count}/10 chars min (current: {count})",
     "rejectNotice": "To reject, enter a specific reason and click the Reject button again.",
     "error": "Processing Failed",
     "attachments": "Attachments:",

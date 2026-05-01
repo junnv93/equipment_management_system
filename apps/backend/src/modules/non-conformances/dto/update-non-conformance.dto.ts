@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { NonConformanceStatusEnum, VM, uuidString } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -15,9 +16,9 @@ const UpdatableNonConformanceStatusEnum = NonConformanceStatusEnum.extract(['ope
  */
 export const updateNonConformanceSchema = z.object({
   ...versionedSchema,
-  cause: z.string().min(1).optional(),
-  actionPlan: z.string().optional(),
-  correctionContent: z.string().optional(),
+  cause: z.string().trim().min(1).max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
+  actionPlan: z.string().trim().max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
+  correctionContent: z.string().trim().max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
   correctionDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, {

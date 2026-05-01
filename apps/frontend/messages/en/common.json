@@ -42,6 +42,9 @@
     "noData": "No data found",
     "total": "Total: {count} items"
   },
+  "charCounter": {
+    "ratio": "{count} / {max}"
+  },
   "validation": {
     "required": "This field is required",
     "minLength": "Minimum {min} characters required",

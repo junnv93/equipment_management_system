@@ -167,7 +167,11 @@ export {
 // Layer 2: Form Field (폼 필드 공통 SSOT — 전 도메인 재사용)
 // ============================================================================
 
-export { REQUIRED_FIELD_TOKENS, REQUIRED_FIELD_A11Y } from './form-field-tokens';
+export {
+  REQUIRED_FIELD_TOKENS,
+  REQUIRED_FIELD_A11Y,
+  CHAR_COUNTER_TOKENS,
+} from './form-field-tokens';
 
 // ============================================================================
 // Layer 3: Components (권장 - 즉시 사용 가능한 조합)

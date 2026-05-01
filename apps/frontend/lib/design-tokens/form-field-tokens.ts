@@ -58,3 +58,24 @@ export const REQUIRED_FIELD_A11Y = {
   required: true,
   'aria-required': 'true',
 } as const satisfies { required: true; 'aria-required': 'true' };
+
+/**
+ * 문자 수 카운터 임계값/색상 토큰 (SSOT)
+ *
+ * `<CharsCounter>` 컴포넌트 + 모든 폼 charCount 표시의 색상 전이 정책.
+ *
+ * 정책:
+ *   - 0 ~ warningRatio*max:    text-muted-foreground (REQUIRED_FIELD_TOKENS.charCount 기본)
+ *   - warningRatio*max ~ max:  text-warning          (≥80% 시각 경고)
+ *   - ≥ max:                   text-destructive      (한도 도달)
+ *
+ * 변경 시 globals.css의 --warning / --destructive 토큰과 일관성 유지.
+ */
+export const CHAR_COUNTER_TOKENS = {
+  /** warning 임계값 (count/max 가 이 비율 이상이면 색상 전이) */
+  warningRatio: 0.8,
+  /** warning 구간 텍스트 색상 클래스 */
+  warningClass: 'text-warning',
+  /** destructive(한도 도달) 구간 텍스트 색상 클래스 */
+  destructiveClass: 'text-destructive',
+} as const;

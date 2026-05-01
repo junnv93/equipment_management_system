@@ -5,6 +5,30 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-30 — tech-debt-batch-0501 (Mode 1 harness, 4건 + 8 architectural — iter 3)
+
+### tech-debt-batch-0501 — 완료 4건 (9/9 MUST PASS — iter 2) + 8 architectural fix (iter 3)
+
+#### iter 3 — Architecture-level 보강 (사용자 자가감사 후 수행, 8건)
+
+- [x] **[iter3 #1] CAUSE_MAX_LENGTH SSOT 격상** — ✅ NCEditDialog 로컬 상수 `CAUSE_MAX_LENGTH = 500` → `VALIDATION_RULES.LONG_TEXT_MAX_LENGTH` import. backend/frontend 동일 SSOT 사용.
+- [x] **[iter3 #2] Backend NC Zod defense-in-depth** — ✅ `create-non-conformance.dto.ts` (cause + actionPlan) + `update-non-conformance.dto.ts` (cause + actionPlan + correctionContent) 4 fields에 `.max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)` 추가. 프론트 클라이언트 우회 시도 차단. 35/35 unit test PASS.
+- [x] **[iter3 #3] Disposal hardcoded `>= 10` SSOT 통일** — ✅ DisposalRequestDialog/ApprovalDialog/ReviewDialog 4 hardcoded `>= 10`/`< 10` → `VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH` 통일 (8 hits). RejectModal과 동일 SSOT 정착.
+- [x] **[iter3 #4] disposal i18n {min} 파라미터화** — ✅ `charCountMin: "{min}자 이상 입력해주세요 (현재: {count}자)"` (ko) / `"Min {min} characters required (current: {count})"` (en). 호출자에서 `min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH` 전달. 비즈니스가 임계값 변경 시 i18n 수정 불필요.
+- [x] **[iter3 #5] ANALYTICS_EVENTS 레지스트리 신설** — ✅ `apps/frontend/lib/analytics/events.ts` 신설 (`ANALYTICS_EVENTS.SIDEBAR_CHECKOUTS_CLICK = 'sidebar.checkouts.click'` + `AnalyticsEventName` union type). 매직 스트링 → typed const SSOT. 이벤트 추가 시 단일 진입점.
+- [x] **[iter3 #6] NavRow FRONTEND_ROUTES + ANALYTICS_EVENTS + useCallback** — ✅ `'/checkouts'` 매직 스트링 → `FRONTEND_ROUTES.CHECKOUTS.LIST` SSOT. 이벤트명 → `ANALYTICS_EVENTS.SIDEBAR_CHECKOUTS_CLICK`. 핸들러 inline 클로저 → `useCallback([href, badge])` stable reference. 확장 가능한 `ANALYTICS_PREFIX_MAP` 패턴(다른 도메인 추가 시 매핑 등록만).
+- [x] **[iter3 #7] CHAR_COUNTER_TOKENS design-token 신설** — ✅ `lib/design-tokens/form-field-tokens.ts`에 `CHAR_COUNTER_TOKENS = { warningRatio: 0.8, warningClass: 'text-warning', destructiveClass: 'text-destructive' }` 추가. `index.ts` 통해 export. CharsCounter가 매직 넘버/클래스 대신 토큰 import.
+- [x] **[iter3 #8] CharsCounter unit test + verify-hardcoding Step 32 확장** — ✅ `components/common/__tests__/CharsCounter.test.tsx` 11 case PASS (임계값 5 + warningRatio override 1 + 텍스트 fallback 2 + a11y 2 + className composition 1). verify-hardcoding Step 32에 'role' 정책(k-anonymity 가드레일) + ANALYTICS_EVENTS 매직 스트링 차단 grep 추가.
+
+#### iter 1-2 — Contract MUST 9/9 (4건)
+
+- [x] **[2026-04-30 setqueryd-purge SHOULD] 🟢 LOW charsCount 5곳 SSOT 통합** — ✅ 2026-04-30 완료 (tech-debt-batch-0501). `<CharsCounter>` SSOT 신설(`apps/frontend/components/common/CharsCounter.tsx`, memo + `useTranslations('common')` 내부 + 글로벌 `common.charCountRatio` i18n 키 fallback + 80%/100% 임계값 자동 색상 토글 + `<span class="block">` aria-live `role="status"` + REQUIRED_FIELD_TOKENS.charCount 베이스). NCEditDialog 인라인 `{cause.length} / 500` 제거(CAUSE_MAX_LENGTH 상수 + `<CharsCounter />` children 생략). RejectModal 인라인 삼항분기(`text-warning`/`text-destructive`) 제거(CharsCounter + children에 `t('rejectModal.charsRemaining')` 위임). **설계 결정**: Disposal 3개는 "min-required hint" 시맨틱(`{count}/10자 이상`)으로 본 컴포넌트의 "ratio+warning" 시맨틱과 다름 → 통합 대상은 2곳, Disposal은 i18n 키 정리만.
+- [x] **[2026-04-30 sprint-4.5 SHOULD] S7 Sidebar pendingCount 분석 이벤트** — ✅ 2026-04-30 완료 (tech-debt-batch-0501). `NavRowWithSecondaryAction.tsx` `track('sidebar.checkouts.click', { pendingCount })` 추가, `href.startsWith('/checkouts')` prefix gate로 다른 nav 클릭 영향 없음. 두 분기(sibling-anchor + single-anchor) 메인 NavLink에 `onClick={handlePrimaryClick}` 연결. PII deny-list 위반 0(pendingCount는 숫자, role 미포함). `lib/analytics/track.ts` SSOT(`app:analytics` CustomEvent dispatch) 첫 sidebar 호출처.
+- [x] **[2026-04-30 sprint-4.5 SHOULD 후속] 🟢 LOW verify-bulk-action-bar-step-8-group-header** — ✅ 2026-04-30 완료 (tech-debt-batch-0501). `verify-bulk-action-bar/SKILL.md` Step 8(group header indeterminate, `getGroupRowIds`+`deriveGroupSelectionState`+`toCheckboxCheckedProp` SSOT + Radix `data-state="indeterminate"` 자동 `aria-checked="mixed"` 매핑 + grep 검증 명령) + Step 9(격리 fixture page 패턴, `app/(dashboard)/__visual__/<scenario>/page.tsx` 인라인 시드 + 네트워크/세션 의존 0 + grep 검증 명령) 신설. 안티패턴 4종 문서화.
+- [x] **[2026-04-30 batch-0501 부수] 🟢 LOW disposal-i18n-namespace-cleanup** — ✅ 2026-04-30 완료 (tech-debt-batch-0501). `disposal.json` 안의 `common.charCount` 키(중첩 `common` 서브네임스페이스가 글로벌 `common.json` 키처럼 보이는 혼동) 제거 + 최상위 `disposal.charCountMin` 신설(ko/en 양쪽). 3개 dialog(DisposalRequestDialog/DisposalApprovalDialog/DisposalReviewDialog) `t('common.charCount')` → `t('charCountMin')` 호출 변경. 글로벌 `common.charCountRatio` 키와 시맨틱 분리 명확화.
+
+---
+
 ## 2026-04-30 — tech-debt-batch-0430e (Mode 1 harness, 3건)
 
 ### tech-debt-batch-0430e — 완료 3건 (7/7 MUST PASS)

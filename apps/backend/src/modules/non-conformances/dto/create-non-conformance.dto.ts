@@ -8,6 +8,7 @@ import {
   VM,
   uuidString,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export { NonConformanceTypeEnum, NON_CONFORMANCE_TYPE_VALUES, type NonConformanceType };
@@ -23,9 +24,13 @@ export const createNonConformanceSchema = z.object({
     message: VM.date.invalidYMD,
   }),
   // discoveredBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  cause: z.string().min(1, VM.nonConformance.cause.required),
+  cause: z
+    .string()
+    .trim()
+    .min(1, VM.nonConformance.cause.required)
+    .max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH),
   ncType: NonConformanceTypeEnum,
-  actionPlan: z.string().optional(),
+  actionPlan: z.string().trim().max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH).optional(),
 });
 
 export type CreateNonConformanceInput = z.infer<typeof createNonConformanceSchema>;

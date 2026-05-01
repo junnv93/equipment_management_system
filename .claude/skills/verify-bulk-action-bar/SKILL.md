@@ -100,6 +100,77 @@ grep -rn "isComposing\|nativeEvent.isComposing" \
 # 기대: ≥1 (BulkActionBar 호출자 중 onKeyDown 가진 것은 모두)
 ```
 
+### Step 8 — Group header indeterminate (그룹 단위 마스터 체크박스)
+
+CheckoutGroupCard 등 행을 그룹화하는 컴포넌트에서 그룹 헤더 마스터 체크박스의 `none/indeterminate/all` 3상태 SSOT 사용.
+
+✅ **Required pattern** (`lib/checkouts/group-selection.ts` SSOT):
+```tsx
+import {
+  getGroupRowIds,
+  deriveGroupSelectionState,
+  toCheckboxCheckedProp,
+} from '@/lib/checkouts/group-selection';
+
+const rowIds = getGroupRowIds(group);
+const state = deriveGroupSelectionState(rowIds, selectedRowIds);
+// state: 'none' | 'indeterminate' | 'all'
+
+<Checkbox
+  checked={toCheckboxCheckedProp(state)}  // boolean | 'indeterminate'
+  onCheckedChange={(next) => onToggleGroup(rowIds, next === true)}
+  aria-checked={state === 'indeterminate' ? 'mixed' : state === 'all'}
+/>
+```
+
+Radix Checkbox는 `checked='indeterminate'`일 때 자동으로 `data-state="indeterminate"`를 부여하고 SR로 `aria-checked="mixed"`를 매핑한다.
+
+❌ 안티패턴:
+- 그룹 헤더가 ad-hoc `selectedRowIds.filter(id => rowIds.includes(id)).length` 삼항분기 — `getGroupRowIds` 우회
+- `<input type="checkbox" indeterminate>` HTML 기본 — controlled indeterminate 미지원
+- `aria-checked={state}` 로 'none'/'all'/'indeterminate' 그대로 전달 — WAI-ARIA spec 위반 (`true`/`false`/`mixed`만 허용)
+
+```bash
+# SSOT 사용 확인
+grep -rn "getGroupRowIds\|deriveGroupSelectionState\|toCheckboxCheckedProp" \
+  apps/frontend/components --include="*.tsx" 2>/dev/null | grep -v "__tests__"
+# 기대: 그룹 체크박스 사용 컴포넌트마다 ≥1 hit
+
+# data-state="indeterminate" Radix wiring
+grep -rn 'data-state="indeterminate"' apps/frontend/components apps/frontend/app --include="*.tsx" 2>/dev/null
+# 기대: 0 (Radix가 자동 부여, 직접 사용 금지)
+```
+
+### Step 9 — 격리 fixture page로 단독 검증
+
+부모 컴포넌트(예: CheckoutsTab) 통합 없이 그룹/체크박스 동작만 단독 검증할 때, `app/(dashboard)/__visual__/<scenario>/page.tsx` 격리 fixture 패턴 사용.
+
+✅ **Required pattern**:
+- 경로: `apps/frontend/app/(dashboard)/__visual__/<scenario>/page.tsx`
+- 목적: 실제 데이터/권한/네트워크 의존 없이 컴포넌트 prop API만 e2e/visual 검증
+- 시드 데이터는 page 내 `const FIXTURE_GROUPS = [...]` 인라인 — 백엔드 의존 0
+- E2E spec은 `__visual__/<scenario>` 경로로 직접 navigate
+
+```bash
+# 격리 fixture page 존재 확인
+ls apps/frontend/app/\(dashboard\)/__visual__/group-indeterminate/page.tsx
+# 기대: 존재
+
+# E2E spec이 fixture URL 사용
+grep -rn "__visual__/group-indeterminate\|/__visual__/" tests/e2e/ 2>/dev/null
+# 기대: ≥1 hit
+
+# 격리 fixture page는 server-only fetch 또는 useQuery 사용 금지 (시드 데이터 인라인이어야)
+grep -E "fetch\(|useQuery\(|getServerSession\(" \
+  apps/frontend/app/\(dashboard\)/__visual__/*/page.tsx 2>/dev/null
+# 기대: 0 (네트워크/세션 의존 0)
+```
+
+❌ 안티패턴:
+- `__visual__` 안에서 실제 API 호출 — fixture 격리 무력화
+- 시드 fixture를 `lib/`나 `__fixtures__/`에 분산 — page.tsx 단일 파일 검증 원칙 깨짐
+- E2E가 부모 컴포넌트 통합을 통해서만 컴포넌트 검증 — 격리 fixture 우회
+
 ## verify 명령 (모두 실행)
 
 ```bash

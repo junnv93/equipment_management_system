@@ -1,6 +1,7 @@
 {
   "title": "폐기 관리",
   "subtitle": "장비 폐기 신청 및 승인 관리",
+  "charCountMin": "{min}자 이상 입력해주세요 (현재: {count}자)",
   "status": {
     "pending": "신청 중",
     "under_review": "검토 중",
@@ -40,7 +41,6 @@
     "requester": "요청자:",
     "disposalReason": "폐기 사유:",
     "reasonDetail": "상세 사유:",
-    "charCount": "{count}/10자 이상 (현재: {count}자)",
     "rejectNotice": "요청을 반려하려면 구체적인 사유를 입력하고 다시 반려 버튼을 클릭해주세요.",
     "error": "처리 실패",
     "attachments": "첨부 파일:",

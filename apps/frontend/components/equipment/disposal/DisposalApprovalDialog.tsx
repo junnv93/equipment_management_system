@@ -40,6 +40,7 @@ import {
   CONTENT_TOKENS,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 interface DisposalApprovalDialogProps {
   open: boolean;
@@ -120,7 +121,7 @@ export function DisposalApprovalDialog({
   const handleReject = () => {
     if (!showRejectInput) {
       setShowRejectInput(true);
-    } else if (comment.length >= 10) {
+    } else if (comment.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
       mutation.mutate('reject');
     }
   };
@@ -209,7 +210,10 @@ export function DisposalApprovalDialog({
                   id="comment-hint"
                   className={`${DISPOSAL_INFO_CARD_TOKENS.rejectCount} ${CONTENT_TOKENS.numeric.tabular}`}
                 >
-                  {t('common.charCount', { count: comment.length })}
+                  {t('charCountMin', {
+                    count: comment.length,
+                    min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+                  })}
                 </p>
               )}
             </div>
@@ -233,7 +237,10 @@ export function DisposalApprovalDialog({
             <Button
               variant="outline"
               onClick={handleReject}
-              disabled={mutation.isPending || (showRejectInput && comment.length < 10)}
+              disabled={
+                mutation.isPending ||
+                (showRejectInput && comment.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+              }
               loading={mutation.isPending}
               className={DISPOSAL_BUTTON_TOKENS.reject}
             >

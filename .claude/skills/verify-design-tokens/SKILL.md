@@ -2170,6 +2170,72 @@ grep -rn "text-\[10px\]" apps/frontend/lib/design-tokens/ apps/frontend/componen
 
 **발생 이력 (2026-04-30):** `APPROVAL_CATEGORY_SIDEBAR_TOKENS.badge.completed`에 `text-[10px]` 발견. `MICRO_TYPO` 이미 import 되어 있었으므로 `${MICRO_TYPO.badge}` 보간 1줄 수정으로 해결.
 
+### Step 52: charCount 표시 패턴 — `<CharsCounter>` 호출자 강제 (2026-05-01 추가)
+
+폼 textarea의 character counter UI는 `<CharsCounter>` SSOT 컴포넌트(`components/common/CharsCounter.tsx`)를 통해서만 렌더해야 한다. 호출자가 인라인으로 색상 분기/임계값 계산/JSX를 작성하면 임계값 정책이 분산되고 SSOT 토큰(`CHAR_COUNTER_TOKENS`)이 우회된다.
+
+**위반 패턴 (NCEditDialog/RejectModal에서 발견, 2026-04-30 수정):**
+
+```tsx
+// ❌ WRONG — 인라인 매직 넘버 + 인라인 색상 분기
+<p className={value.length >= MAX * 0.8 ? 'text-warning' : 'text-muted-foreground'}>
+  {value.length} / {MAX}
+</p>
+
+// ❌ WRONG — 하드코딩된 임계값 계산
+<p className={`${REQUIRED_FIELD_TOKENS.charCount} ${
+  value.length >= MAX ? 'text-destructive'
+  : value.length >= Math.floor(MAX * 0.8) ? 'text-warning' : ''
+}`}>
+  {MAX - value.length} 남음
+</p>
+
+// ✅ CORRECT — CharsCounter 위임
+<CharsCounter count={value.length} max={MAX} />
+
+// ✅ CORRECT — 사용자 정의 텍스트 (children override)
+<CharsCounter count={value.length} max={MAX}>
+  {t('rejectModal.charsRemaining', { remaining: MAX - value.length })}
+</CharsCounter>
+```
+
+**탐지 (3가지 위반 시그니처):**
+
+```bash
+# 1. textarea + length 인라인 표시 (CharsCounter 미사용)
+grep -rnE "\{[a-zA-Z_]+\.length\}\s*/\s*[0-9]+" \
+  apps/frontend/components --include="*.tsx" 2>/dev/null \
+  | grep -v "node_modules\|__tests__\|CharsCounter"
+# 기대: 0건 (모든 ratio 표시는 CharsCounter 경유)
+
+# 2. charCount 컨텍스트의 인라인 text-warning/text-destructive 분기
+grep -rnE "(text-warning|text-destructive).*length\s*[<>=]" \
+  apps/frontend/components --include="*.tsx" 2>/dev/null \
+  | grep -v "node_modules\|__tests__\|CharsCounter\|RejectModal\|Disposal"
+# 기대: 0건 (CharsCounter가 임계값 분기 캡슐화)
+
+# 3. 매직 임계값 계산 — Math.floor(MAX * 0.8) 류 인라인 계산
+grep -rnE "Math\.floor\([A-Z_]*\.?[A-Z_]+_LENGTH\s*\*\s*0\." \
+  apps/frontend/components --include="*.tsx" 2>/dev/null \
+  | grep -v "node_modules\|__tests__\|CharsCounter"
+# 기대: 0건 (CharsCounter.warningRatio prop 또는 CHAR_COUNTER_TOKENS 사용)
+```
+
+**PASS:** 위 3개 grep 모두 0건 + `<CharsCounter>` 호출처 ≥1건.
+**FAIL:** 1건 이상 → `<CharsCounter count={...} max={...} />` 또는 `<CharsCounter ...>{customText}</CharsCounter>`로 교체.
+
+**예외:**
+- `CharsCounter.tsx` 자체 — 컴포넌트 정의이므로 인라인 색상 분기 OK
+- `__tests__/` — 테스트 파일은 매직 넘버 허용
+- "min-required hint" 시맨틱(Disposal `charCountMin`) — `{count} / {min}자 이상` 형식은 CharsCounter의 `count vs max` 시맨틱과 다름. 별도 표시 컴포넌트 사용 OK.
+
+**관련 파일:**
+- `apps/frontend/components/common/CharsCounter.tsx` — SSOT 컴포넌트
+- `apps/frontend/lib/design-tokens/form-field-tokens.ts` — `CHAR_COUNTER_TOKENS` (warningRatio/warningClass/destructiveClass)
+- `apps/frontend/components/common/__tests__/CharsCounter.test.tsx` — 11 case 임계값 회귀 방어
+
+**발생 이력 (2026-05-01):** tech-debt-batch-0501 iter 3에서 RejectModal 인라인 삼항분기 + NCEditDialog 인라인 `{cause.length} / 500`이 CharsCounter로 위임됨. 새 textarea 폼 추가 시 이 Step이 회귀 방어.
+
 **관련 파일:**
 - `apps/frontend/lib/design-tokens/semantic.ts` — `MICRO_TYPO.badge = 'text-2xs'` SSOT 정의
 - `apps/frontend/lib/design-tokens/components/approval.ts` — 참조 구현 (MICRO_TYPO.badge 보간)

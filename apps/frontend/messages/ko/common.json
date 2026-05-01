@@ -42,6 +42,9 @@
     "noData": "조회된 데이터가 없습니다",
     "total": "총 {count}건"
   },
+  "charCounter": {
+    "ratio": "{count} / {max}"
+  },
   "validation": {
     "required": "필수 항목입니다",
     "minLength": "최소 {min}자 이상 입력하세요",

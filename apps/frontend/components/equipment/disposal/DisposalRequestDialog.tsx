@@ -22,7 +22,11 @@ import type { DisposalReason } from '@equipment-management/schemas';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { DISPOSAL_BUTTON_TOKENS, CONTENT_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
-import { DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
+import {
+  DOCUMENT_FILE_RULES,
+  FILE_UPLOAD_LIMITS,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import { validateFile } from '@/lib/utils/file-validation';
 
 interface DisposalRequestDialogProps {
@@ -113,7 +117,8 @@ export function DisposalRequestDialog({
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const isValid = reason !== '' && reasonDetail.length >= 10;
+  const isValid =
+    reason !== '' && reasonDetail.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,7 +150,10 @@ export function DisposalRequestDialog({
               id="reasonDetail-hint"
               className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
             >
-              {t('common.charCount', { count: reasonDetail.length })}
+              {t('charCountMin', {
+                count: reasonDetail.length,
+                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+              })}
             </p>
           </div>
 

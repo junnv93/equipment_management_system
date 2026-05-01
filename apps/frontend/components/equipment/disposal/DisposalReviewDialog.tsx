@@ -30,6 +30,7 @@ import {
   CONTENT_TOKENS,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 interface DisposalReviewDialogProps {
   open: boolean;
@@ -95,12 +96,12 @@ export function DisposalReviewDialog({
   const handleReject = () => {
     if (!showRejectInput) {
       setShowRejectInput(true);
-    } else if (opinion.length >= 10) {
+    } else if (opinion.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
       mutation.mutate('reject');
     }
   };
 
-  const isValid = opinion.length >= 10;
+  const isValid = opinion.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,7 +186,10 @@ export function DisposalReviewDialog({
               id="opinion-hint"
               className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
             >
-              {t('common.charCount', { count: opinion.length })}
+              {t('charCountMin', {
+                count: opinion.length,
+                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+              })}
             </p>
           </div>
 

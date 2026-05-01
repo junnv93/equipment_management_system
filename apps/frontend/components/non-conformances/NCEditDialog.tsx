@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
@@ -13,6 +14,7 @@ import {
   CONFIRM_PREVIEW_TOKENS,
   NC_DIALOG_TOKENS,
 } from '@/lib/design-tokens';
+import { CharsCounter } from '@/components/common/CharsCounter';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+/** NC `cause` 필드 최대 길이 — 백엔드 Zod의 `.max()`와 동일 SSOT 사용. */
+const CAUSE_MAX_LENGTH = VALIDATION_RULES.LONG_TEXT_MAX_LENGTH;
 
 interface NCEditDialogProps {
   nc: NonConformance;
@@ -100,14 +105,14 @@ export default function NCEditDialog({ nc, open, onOpenChange }: NCEditDialogPro
             <Textarea
               id="nc-cause"
               value={cause}
-              onChange={(e) => setCause(e.target.value.slice(0, 500))}
-              maxLength={500}
+              onChange={(e) => setCause(e.target.value.slice(0, CAUSE_MAX_LENGTH))}
+              maxLength={CAUSE_MAX_LENGTH}
               placeholder={t('detail.editDialog.causePlaceholder')}
               className={REQUIRED_FIELD_TOKENS.inputBorder}
               rows={3}
               {...REQUIRED_FIELD_A11Y}
             />
-            <div className={REQUIRED_FIELD_TOKENS.charCount}>{cause.length} / 500</div>
+            <CharsCounter count={cause.length} max={CAUSE_MAX_LENGTH} />
           </div>
 
           {/* 조치 계획 — 선택 필드 */}

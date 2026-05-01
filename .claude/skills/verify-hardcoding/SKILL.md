@@ -820,6 +820,15 @@ grep -rn "track(.*{" apps/frontend/ \
 # PII deny-list 자체가 track.ts에 정의되어 있는지 확인
 grep -n "PII_DENY_KEYS" apps/frontend/lib/analytics/track.ts
 # 기대: 1건 이상 (deny-list 배열 + violatesPII 함수)
+
+# 이벤트명 매직 스트링 금지 — `ANALYTICS_EVENTS` 레지스트리 경유 강제
+grep -rn "track('[a-z]" apps/frontend/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|lib/analytics/\|__tests__"
+# 기대: 0건 (모든 호출은 `track(ANALYTICS_EVENTS.X, ...)` 형태)
+
+grep -n "ANALYTICS_EVENTS\b" apps/frontend/lib/analytics/events.ts
+# 기대: ≥1 hit (레지스트리 export 존재)
 ```
 
 **PASS**: `track()` 호출부 전체에 PII 키 0건, `PII_DENY_KEYS` 배열 track.ts 내 존재
@@ -827,6 +836,13 @@ grep -n "PII_DENY_KEYS" apps/frontend/lib/analytics/track.ts
 
 **관련 파일**:
 - `apps/frontend/lib/analytics/track.ts` — `PII_DENY_KEYS` 배열 + `violatesPII()` 런타임 검증
+- `apps/frontend/lib/analytics/events.ts` — 이벤트명 SSOT (`ANALYTICS_EVENTS` 레지스트리)
 - `apps/frontend/lib/analytics/__tests__/track.test.ts` — PII throw/drop 동작 회귀 테스트
+
+**'role' 정책 (2026-04-30 명문화)**: `'role'`(admin/lab_manager/test_engineer 등) 카테고리는 `PII_DENY_KEYS`에 포함되지 않음 — 사람을 직접 식별하지 않고 권한 분포 분석에 유효. 단, 다음 가드레일 적용:
+- ✅ 단독 props로 발행 가능: `track('checkout.approve', { role: 'lab_manager', count: 1 })`
+- ❌ 다른 식별 단서와 결합 금지: `{ role: 'lab_manager', teamId: 'X', timestamp: 'Y' }` 처럼 추론 가능한 결합은 PII와 동등 위험
+- ❌ 소수 인원 역할(예: system_admin) 단독 발행 금지 — k-anonymity 위반(역할 보유자 1명이면 즉시 식별)
+- 새 호출처에서 role을 사용하면 코드 리뷰에서 카테고리화 가능 여부 확인
 
 **발생 이력 (2026-04-30 신설)**: track() 신설 시 PII deny-list에 `'name'`을 포함했다가 컴포넌트명·설정명에도 흔히 쓰이는 키라 false-positive 발견. `firstName/lastName/displayName/fullName`으로 교체. 이 교체 이력이 "사람을 직접 식별하는 구체적 키만 등록" 원칙의 근거.
