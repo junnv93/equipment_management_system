@@ -323,6 +323,11 @@
       "rejectionAlertTitle": "반려 사유",
       "viewFull": "전체 보기"
     },
+    "template": {
+      "versionBadgeAria": "현재 양식 버전 v{version}, {date} 작성, {author}",
+      "missingBadge": "양식 부재 (첫 점검)",
+      "systemAuthor": "시스템"
+    },
     "consistencyAlert": {
       "title": "항목 결과와 종합결과가 일치하지 않습니다",
       "body": "항목 중 부적합({failCount}개)이 있는데 종합결과가 적합으로 설정되어 있습니다. 종합결과를 다시 확인하세요.",

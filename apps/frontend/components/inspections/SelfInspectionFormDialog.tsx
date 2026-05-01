@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { isConflictError } from '@/lib/api/error';
+import { isConflictError, isNotFoundError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
-import { Plus, Trash2, AlertCircle, Check, X as XIcon, Minus } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Check, X as XIcon, Minus, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,12 +34,14 @@ import {
   INSPECTION_KIND_BADGE,
   INSPECTION_STATUS_BADGE,
   INSPECTION_CHECKITEM_ROW_STATE,
+  INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
   getInspectionStatusBadgeClasses,
 } from '@/lib/design-tokens';
 import CheckItemPresetSelect from './CheckItemPresetSelect';
 import { cn } from '@/lib/utils';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
-import { InspectionFormProvider } from '@/lib/inspection/form-context';
+import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
+import { useLatestTemplate } from '@/hooks/use-inspection-template';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import {
@@ -121,6 +123,32 @@ function SelfInspectionFormDialogInner({
   const queryClient = useQueryClient();
 
   const isEdit = !!initialData;
+
+  // Phase 1B-D: template state — UL-QP-18-05 양식 통제 표시 (DialogHeader version badge)
+  // 자체점검 items는 DEFAULT_SELF_INSPECTION_ITEMS로 표준화 — items prefill 미적용,
+  // version badge만 표시하여 사용자가 어느 버전 양식인지 인지하도록 한다 (M-12.3 / M-14.1).
+  const { setTemplate, state: inspectionFormState } = useInspectionForm();
+  const currentTemplate = inspectionFormState.template;
+  const {
+    data: latestTemplate,
+    isError: isTemplateError,
+    error: templateError,
+  } = useLatestTemplate(equipmentId, 'self', { enabled: open && !isEdit });
+  const isTemplateMissing = isTemplateError && isNotFoundError(templateError);
+
+  useEffect(() => {
+    if (!latestTemplate) return;
+    setTemplate({
+      id: latestTemplate.id,
+      version: latestTemplate.version,
+      createdAt: latestTemplate.createdAt,
+      createdByName: latestTemplate.createdByName,
+    });
+    track(ANALYTICS_EVENTS.INSPECTION_TEMPLATE_VERSION_BADGE_VIEWED, {
+      inspectionType: 'self',
+      templateVersion: latestTemplate.version,
+    });
+  }, [latestTemplate, setTemplate]);
 
   const [inspectionDate, setInspectionDate] = useState('');
   const [overallResult, setOverallResult] = useState<SelfInspectionResult | ''>('');
@@ -358,6 +386,41 @@ function SelfInspectionFormDialogInner({
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
             {/* Phase 0B: 분류 시각 (intermediate vs self), 디자인 리뷰 b8 */}
             <span className={INSPECTION_KIND_BADGE.self}>{t('inspection.kindLabel.self')}</span>
+            {/* Phase 1B-D: template version badge — create 모드에서만 표시 */}
+            {!isEdit && currentTemplate ? (
+              <span
+                className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
+                aria-label={t('selfInspection.template.versionBadgeAria', {
+                  version: currentTemplate.version,
+                  date: currentTemplate.createdAt.slice(0, 10),
+                  author:
+                    currentTemplate.createdByName ?? t('selfInspection.template.systemAuthor'),
+                })}
+              >
+                <ClipboardList
+                  className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.icon}
+                  aria-hidden="true"
+                />
+                <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.version}>
+                  v{currentTemplate.version}
+                </span>
+                <span
+                  className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.separator}
+                  aria-hidden="true"
+                >
+                  ·
+                </span>
+                <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.meta}>
+                  {currentTemplate.createdAt.slice(0, 10)}
+                  {' · '}
+                  {currentTemplate.createdByName ?? t('selfInspection.template.systemAuthor')}
+                </span>
+              </span>
+            ) : !isEdit && isTemplateMissing ? (
+              <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.missing}>
+                {t('selfInspection.template.missingBadge')}
+              </span>
+            ) : null}
             {/* Phase 0B: status badge (isEdit 모드) — Nielsen IA-3 */}
             {isEdit && initialData?.approvalStatus && (
               <span

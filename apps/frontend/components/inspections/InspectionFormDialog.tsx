@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { isConflictError } from '@/lib/api/error';
+import { isConflictError, isNotFoundError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 import { Plus, Trash2, Info, ClipboardList, Wrench, AlertCircle, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -55,15 +55,15 @@ import {
   INSPECTION_EMPTY_STATE,
   INSPECTION_PREFILL,
   INSPECTION_PREFILL_NOTICE,
+  INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
   getJudgmentCardClasses,
   ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
-import {
-  extractStructureFromInspection,
-  describeStructureCounts,
-} from '@/lib/inspection/template-utils';
+import { describeStructureCounts } from '@/lib/inspection/template-utils';
+import { templateStructureToPrefill } from '@/lib/inspection/template-source';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { useLatestTemplate } from '@/hooks/use-inspection-template';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 import { cn } from '@/lib/utils';
@@ -138,7 +138,7 @@ function InspectionFormDialogInner({
   const inspectionForm = useInspectionForm();
   const {
     state: inspectionFormState,
-    applyLatestPrefill,
+    applyTemplatePrefill,
     resetLatestPrefill,
     resetAll,
     dismissBanner,
@@ -149,6 +149,8 @@ function InspectionFormDialogInner({
   const previousInspectionApplied = inspectionFormState.latest.applied;
   const prefillCounts = inspectionFormState.latest.counts;
   const prefillBannerDismissed = inspectionFormState.latest.bannerDismissed;
+  // Phase 1B-D: template state — DialogHeader version badge + 1B-E SoftFork base
+  const currentTemplate = inspectionFormState.template;
 
   // Form state — classification은 항상 "교정기기"로 고정 (중간점검은 교정기기 전용)
   const [inspectionDate, setInspectionDate] = useState('');
@@ -212,44 +214,23 @@ function InspectionFormDialogInner({
   });
 
   /**
-   * 장비별 직전 "승인 완료된" 점검 조회.
+   * Phase 1B-D: prefill source는 *template snapshot* — latestInspection 의존 제거.
    *
-   * 승인 상태(`approvalStatus === 'approved'`) 인 점검만 prefill 소스로 사용한다.
-   * draft / pending / reviewed / rejected 는 아직 검증되지 않았거나 반려된 상태라
-   * 신뢰할 수 없는 구조를 복사할 위험이 있음.
+   * Build-Once Workflow (UL-QP-18-03 LIMS 표준):
+   * - 첫 점검 *승인* 시 backend가 template auto-create (intermediate-inspections approve hook)
+   * - 이후 모든 점검은 *template.structure*에서 prefill — 직전 점검 상태와 무관
+   * - 직전이 *반려*여도 template은 영향받지 않음 (M-14.2 회귀 방지)
    *
-   * 백엔드는 DESC createdAt 로 정렬 — 앞에서부터 approved 인 첫 번째 항목이
-   * 가장 최근 승인된 점검이다. 같은 쿼리 결과를 재사용 (React Query 캐시 공유).
+   * Template 부재 케이스:
+   * - 신규 장비 (한 번도 점검 안 함) → showNoTemplateNotice 표시 + Phase 1B-F Gallery 진입
+   * - useLatestTemplate은 404 시 isError=true로 graceful 반환 (retry 비활성화)
    */
-  const { data: previousInspections } = useQuery({
-    queryKey: queryKeys.equipment.intermediateInspections(equipmentId),
-    queryFn: () => calibrationApi.intermediateInspections.listByEquipment(equipmentId),
-    enabled: open,
-  });
-  const latestInspectionId = previousInspections?.find(
-    (ins) => ins.approvalStatus === 'approved'
-  )?.id;
-  const { data: latestInspection } = useQuery({
-    queryKey: latestInspectionId
-      ? queryKeys.intermediateInspections.detail(latestInspectionId)
-      : ['intermediate-inspections', 'detail', 'disabled'],
-    queryFn: () =>
-      latestInspectionId
-        ? calibrationApi.intermediateInspections.detail(latestInspectionId)
-        : Promise.resolve(null),
-    enabled: open && !!latestInspectionId,
-  });
-  // Phase 1A: 직전 점검의 resultSections 별도 fetch — list endpoint에는 미포함
-  const { data: latestResultSections } = useQuery({
-    queryKey: latestInspectionId
-      ? queryKeys.intermediateInspections.resultSections(latestInspectionId)
-      : ['intermediate-inspections', 'result-sections', 'disabled'],
-    queryFn: () =>
-      latestInspectionId
-        ? calibrationApi.intermediateInspections.resultSections.list(latestInspectionId)
-        : Promise.resolve([]),
-    enabled: open && !!latestInspectionId && usePreviousInspection,
-  });
+  const {
+    data: latestTemplate,
+    isError: isTemplateError,
+    error: templateError,
+  } = useLatestTemplate(equipmentId, 'intermediate', { enabled: open });
+  const isTemplateMissing = isTemplateError && isNotFoundError(templateError);
 
   // Prefill from equipment master data when dialog opens
   useEffect(() => {
@@ -279,58 +260,48 @@ function InspectionFormDialogInner({
   }, [open, equipment]);
 
   /**
-   * 직전 점검 prefill — Phase 1A 확장:
-   * 같은 장비의 가장 최근 *승인된* 점검의 items + resultSections 구조 모두 복사.
-   * - items: checkItem / checkCriteria 만 복사 (값은 비움)
-   * - resultSections: richTableData / tableData / imageWidthCm/Height / title 구조 보존
-   *   · 표 셀 값 비움, image cell → text 빈 셀로 변환
-   *   · documentId(사진 첨부)는 매번 새로 → 비움
-   *   · content(텍스트)는 매번 새로 → 비움
-   * - measurementEquipment: 매번 달라질 수 있으므로 복사하지 않음
-   * 재적용 방지: previousInspectionApplied flag.
-   * 사용자가 체크박스를 off 로 바꾸면 items/sections 초기화 (AlertDialog confirm 후).
+   * Phase 1B-D: template prefill — Build-Once Workflow.
+   * Items + resultSections 구조를 template.structure에서 복사.
+   * - 값은 비움 (template은 value-stripped 저장)
+   * - measurementEquipment는 매번 달라질 수 있으므로 복사 안 함
+   * 재적용 방지: previousInspectionApplied flag (latest.applied 재사용 — Context SSOT 보존).
    *
-   * SSOT: extractStructureFromInspection (lib/inspection/template-utils.ts)
-   * 디자인 리뷰 §N: prefill 갭 80% 보완.
+   * SSOT: templateStructureToPrefill (lib/inspection/template-source.ts)
    */
-  // Phase 1A-c: extractStructureFromInspection useMemo 캐싱 — latestInspection/Sections 변경 시만 재실행
-  const extractedStructure = useMemo(() => {
-    if (!latestInspection || latestResultSections === undefined) return null;
-    return extractStructureFromInspection({
-      items: latestInspection.items,
-      resultSections: latestResultSections ?? [],
-    });
-  }, [latestInspection, latestResultSections]);
+  const templatePrefill = useMemo(() => {
+    if (!latestTemplate) return null;
+    return templateStructureToPrefill(latestTemplate.structure);
+  }, [latestTemplate]);
 
   useEffect(() => {
     if (!open || !usePreviousInspection || previousInspectionApplied) return;
-    if (!extractedStructure) return;
-    if (extractedStructure.items.length === 0 && extractedStructure.resultSections.length === 0)
-      return;
+    if (!latestTemplate || !templatePrefill) return;
+    if (templatePrefill.items.length === 0 && templatePrefill.resultSections.length === 0) return;
     if (items.length > 0 || resultSections.length > 0) return; // 사용자가 이미 입력 시작
 
-    setItems(extractedStructure.items);
-    setResultSections(extractedStructure.resultSections);
-    // previousInspection prefilled은 Context의 latest.applied=true로 추적 (별도 master field 불필요)
-    // Phase 1A-b: Context dispatch — applied/counts/sortOrders 동시 atomic update
-    if (latestInspection) {
-      applyLatestPrefill({
-        sourceInspectionId: latestInspection.id,
-        sourceInspectionDate: latestInspection.inspectionDate?.slice(0, 10) ?? '',
-        counts: extractedStructure.counts,
-        sortOrders: extractedStructure.resultSections.map((s) => s.sortOrder),
-      });
-      // Phase 1A-c: analytics — prefill 적용 추적 (PII 없음, 카운트만)
-      track(ANALYTICS_EVENTS.INSPECTION_PREFILL_USED, {
-        inspectionType: 'intermediate',
-        tableCount: extractedStructure.counts.tables,
-        photoCount: extractedStructure.counts.photos,
-        textCount: extractedStructure.counts.texts,
-        itemCount: extractedStructure.items.length,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: 이전 점검 복사는 체크박스·extractedStructure 변경 시만 실행
-  }, [open, usePreviousInspection, previousInspectionApplied, extractedStructure]);
+    setItems(templatePrefill.items);
+    setResultSections(templatePrefill.resultSections);
+    applyTemplatePrefill({
+      template: {
+        id: latestTemplate.id,
+        version: latestTemplate.version,
+        createdAt: latestTemplate.createdAt,
+        createdByName: latestTemplate.createdByName,
+      },
+      counts: templatePrefill.counts,
+      sortOrders: templatePrefill.sortOrders,
+    });
+    // Phase 1B-D analytics — template prefill applied (PII 미포함, 카운트만)
+    track(ANALYTICS_EVENTS.INSPECTION_TEMPLATE_USED, {
+      inspectionType: 'intermediate',
+      templateVersion: latestTemplate.version,
+      tableCount: templatePrefill.counts.tables,
+      photoCount: templatePrefill.counts.photos,
+      textCount: templatePrefill.counts.texts,
+      itemCount: templatePrefill.items.length,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: template prefill은 체크박스·template fetch 결과 변경 시만 실행
+  }, [open, usePreviousInspection, previousInspectionApplied, templatePrefill, latestTemplate]);
 
   /**
    * 사용자가 체크박스를 off 하면 이전 점검에서 복사된 items/sections 를 초기화.
@@ -395,10 +366,10 @@ function InspectionFormDialogInner({
       .join(' · ');
   })();
 
-  // Phase 1A: prefill 미동작 사유 — 직전 점검이 승인되지 않은 경우 안내
-  // (실측: 현재 latestInspection은 approvalStatus === 'approved' 만 반환)
+  // Phase 1B-D: template 부재 안내 — 신규 장비 (한 번도 점검 안 함).
+  // Phase 1B-F TemplateGallery가 이 케이스를 자동 노출.
   const showNoSourceNotice =
-    open && !latestInspection && usePreviousInspection && !previousInspectionApplied;
+    open && isTemplateMissing && usePreviousInspection && !previousInspectionApplied;
 
   const resetForm = () => {
     setInspectionDate('');
@@ -631,9 +602,46 @@ function InspectionFormDialogInner({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             {t('intermediateInspection.formTitle')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
+            {/* Phase 1B-D: template version badge — UL-QP-18 §7.5 양식 통제 */}
+            {currentTemplate ? (
+              <span
+                className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
+                aria-label={t('intermediateInspection.template.versionBadgeAria', {
+                  version: currentTemplate.version,
+                  date: currentTemplate.createdAt.slice(0, 10),
+                  author:
+                    currentTemplate.createdByName ??
+                    t('intermediateInspection.template.systemAuthor'),
+                })}
+              >
+                <ClipboardList
+                  className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.icon}
+                  aria-hidden="true"
+                />
+                <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.version}>
+                  v{currentTemplate.version}
+                </span>
+                <span
+                  className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.separator}
+                  aria-hidden="true"
+                >
+                  ·
+                </span>
+                <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.meta}>
+                  {currentTemplate.createdAt.slice(0, 10)}
+                  {' · '}
+                  {currentTemplate.createdByName ??
+                    t('intermediateInspection.template.systemAuthor')}
+                </span>
+              </span>
+            ) : isTemplateMissing ? (
+              <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.missing}>
+                {t('intermediateInspection.template.missingBadge')}
+              </span>
+            ) : null}
           </DialogTitle>
           {equipmentName && <DialogDescription>{equipmentName}</DialogDescription>}
         </DialogHeader>
@@ -649,10 +657,10 @@ function InspectionFormDialogInner({
                   summary: prefillBannerSummary,
                 })}
               </p>
-              {latestInspection && (
+              {inspectionFormState.latest.sourceInspectionDate && (
                 <p className={INSPECTION_PREFILL_NOTICE.meta}>
                   {t('intermediateInspection.prefill.banner.meta', {
-                    date: latestInspection.inspectionDate?.slice(0, 10) ?? '—',
+                    date: inspectionFormState.latest.sourceInspectionDate,
                   })}
                 </p>
               )}
@@ -798,8 +806,8 @@ function InspectionFormDialogInner({
               </div>
             </div>
 
-            {/* 직전 점검 prefill 토글 — 해당 장비에 이전 점검이 존재할 때만 노출 */}
-            {latestInspection && latestInspection.items && latestInspection.items.length > 0 && (
+            {/* Phase 1B-D: template prefill 토글 — 양식이 존재하고 items가 있을 때만 노출 */}
+            {templatePrefill && templatePrefill.items.length > 0 && (
               <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/30 p-3">
                 <Checkbox
                   id="use-previous-inspection"
@@ -822,7 +830,7 @@ function InspectionFormDialogInner({
                   </Label>
                   <p className="text-xs text-muted-foreground">
                     {t('intermediateInspection.prefill.usePreviousDescription', {
-                      count: latestInspection.items.length,
+                      count: templatePrefill.items.length,
                     })}
                   </p>
                 </div>

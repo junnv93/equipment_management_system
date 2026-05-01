@@ -17,6 +17,8 @@ import {
   INSPECTION_TYPE_VALUES,
   InspectionTypeEnum,
   type InspectionType,
+  type InspectionTemplateLatestResponse,
+  type UpsertInspectionTemplateResponse,
 } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -52,21 +54,17 @@ export class EquipmentInspectionTemplateController {
    * type 검증: INSPECTION_TYPE_VALUES SSOT 경유 (인라인 string 비교 금지).
    * 부적절한 type → BadRequestException + 명시적 error code.
    */
+  /**
+   * Response shape SSOT: `InspectionTemplateLatestResponse` (packages/schemas).
+   * Frontend api client(`getLatestTemplate`)도 동일 schema로 parse — backend ↔ frontend 단일 정의.
+   * createdAt은 Date 객체로 반환 — JSON 직렬화 시 ISO string (frontend Zod schema가 z.string() 검증).
+   */
   @Get(':uuid/inspection-template/latest')
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async getLatest(
     @Param('uuid', ParseUUIDPipe) equipmentId: string,
     @Query('type') type: string
-  ): Promise<{
-    id: string;
-    equipmentId: string;
-    inspectionType: InspectionType;
-    version: number;
-    structure: unknown;
-    sourceInspectionId: string | null;
-    createdBy: string | null;
-    createdAt: Date;
-  }> {
+  ): Promise<Omit<InspectionTemplateLatestResponse, 'createdAt'> & { createdAt: Date }> {
     const parsed = InspectionTypeEnum.safeParse(type);
     if (!parsed.success) {
       throw new BadRequestException({
@@ -75,15 +73,16 @@ export class EquipmentInspectionTemplateController {
         received: type,
       });
     }
-    const tpl = await this.service.getCurrentOrThrow(equipmentId, parsed.data);
+    const tpl = await this.service.getCurrentWithCreatorOrThrow(equipmentId, parsed.data);
     return {
       id: tpl.id,
       equipmentId: tpl.equipmentId,
       inspectionType: tpl.inspectionType,
       version: tpl.version,
-      structure: tpl.structure,
+      structure: tpl.structure as InspectionTemplateLatestResponse['structure'],
       sourceInspectionId: tpl.sourceInspectionId,
       createdBy: tpl.createdBy,
+      createdByName: tpl.createdByName,
       createdAt: tpl.createdAt,
     };
   }
@@ -105,12 +104,7 @@ export class EquipmentInspectionTemplateController {
     @Param('uuid', ParseUUIDPipe) equipmentId: string,
     @Body() body: UpsertInspectionTemplateInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<{
-    id: string;
-    version: number;
-    inspectionType: InspectionType;
-    createdAt: Date;
-  }> {
+  ): Promise<Omit<UpsertInspectionTemplateResponse, 'createdAt'> & { createdAt: Date }> {
     const actorUserId = req.user?.userId ?? null;
     const actorName = req.user?.name ?? null;
     // JWT roles[]에서 첫 번째 역할 — audit log에 actorRole로 기록 (단일 role 가정)

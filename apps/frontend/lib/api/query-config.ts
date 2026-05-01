@@ -307,6 +307,13 @@ export const QUERY_CONFIG = {
   /** 양식 템플릿 목록/이력 - STATIC (관리자 업로드 시에만 변경) */
   FORM_TEMPLATES: REFETCH_STRATEGIES.STATIC,
 
+  /**
+   * 점검 양식 template 스냅샷 (UL-QP-18-03/05 Build-Once Workflow) - STATIC.
+   * Template은 첫 점검 승인 시 시스템 auto-create + admin 명시 수정만 — 거의 변경 없음.
+   * Cache invalidation은 backend `INSPECTION_TEMPLATE_*` 이벤트 + 호출자 onSettled에서 처리.
+   */
+  INSPECTION_TEMPLATE: REFETCH_STRATEGIES.STATIC,
+
   /** 소프트웨어 유효성 확인 목록 - IMPORTANT (2분 폴링) */
   SOFTWARE_VALIDATION_LIST: REFETCH_STRATEGIES.IMPORTANT,
 
@@ -710,6 +717,25 @@ export const queryKeys = {
       [...queryKeys.formTemplates.all, 'search', formNumber] as const,
     /** 보존연한 만료로 소프트 아카이브된 양식 목록 (UL-QP-03 §11) */
     archived: () => [...queryKeys.formTemplates.all, 'archived'] as const,
+  },
+  /**
+   * Inspection Form Templates — UL-QP-18-03/05 Build-Once Workflow snapshot.
+   *
+   * - `latest`: 현재 template (supersededBy IS NULL) 단일 entity (Phase 1B-D 도입).
+   * - `gallery`: 비슷한 장비의 검증된 template 목록 (Phase 1B-F).
+   *
+   * staleTime은 호출자(useLatestTemplate / useTemplateGallery)에서 5min 적용.
+   * Cache invalidation은 backend `INSPECTION_TEMPLATE_*` 이벤트 → registry listener.
+   */
+  inspectionTemplate: {
+    all: ['inspectionTemplate'] as const,
+    latest: (equipmentId: string, type: 'intermediate' | 'self') =>
+      [...queryKeys.inspectionTemplate.all, 'latest', equipmentId, type] as const,
+    gallery: (params: {
+      inspectionType: 'intermediate' | 'self';
+      modelName?: string;
+      classificationCode?: string;
+    }) => [...queryKeys.inspectionTemplate.all, 'gallery', params] as const,
   },
   breadcrumbs: {
     all: ['breadcrumb'] as const,

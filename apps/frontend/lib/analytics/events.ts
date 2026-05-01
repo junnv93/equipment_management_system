@@ -59,6 +59,19 @@ export const ANALYTICS_EVENTS = {
    * action: 'discard' / 'keep'.
    */
   INSPECTION_FORM_CLOSE_GUARDED: 'inspection.form.close_guarded',
+
+  /**
+   * Template prefill applied — Phase 1B-D 출시.
+   * source: 'template' (latestInspection 의존 제거 후 단독 source).
+   * version: template.version (정수). PII 미포함.
+   */
+  INSPECTION_TEMPLATE_USED: 'inspection.template.used',
+
+  /**
+   * Version badge 노출 — DialogHeader에 v{N} 표시 (Phase 1B-D).
+   * 사용자가 양식 버전 인지 효과 측정 (LIMS 표준 — UL-QP-18 §7.5 양식 통제).
+   */
+  INSPECTION_TEMPLATE_VERSION_BADGE_VIEWED: 'inspection.template.version_badge_viewed',
 } as const;
 
 /** ANALYTICS_EVENTS 값들의 union type — track() 호출자 타입 좁히기 용 */

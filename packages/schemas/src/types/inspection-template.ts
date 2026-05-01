@@ -191,3 +191,70 @@ export type StructureDiff = z.infer<typeof StructureDiffSchema>;
 export const FORK_CHOICE_VALUES = ['this_only', 'apply_forward', 'cancel'] as const;
 export const ForkChoiceEnum = z.enum(FORK_CHOICE_VALUES);
 export type ForkChoice = z.infer<typeof ForkChoiceEnum>;
+
+// ============================================================================
+// API Response Schemas (Backend ↔ Frontend SSOT — Phase 1B-D)
+// ============================================================================
+
+/**
+ * GET /api/equipment/:uuid/inspection-template/latest 응답.
+ *
+ * SSOT: backend controller(`EquipmentInspectionTemplateController.getLatest`)와
+ * frontend api client(`getLatestTemplate`)가 본 schema에서 type을 import — shape 분기 방지.
+ *
+ * - createdBy: users.id (UUID) — 시스템 auto-create 시 null
+ * - createdByName: users.name leftJoin — 시스템은 null (UI에서 i18n "system" 라벨 표시)
+ * - createdAt: ISO 8601 string (Date 직렬화) — backend가 Date 객체로 반환하면 직렬화 후 string
+ * - structure: ExtractedInspectionStructure (jsonb 컬럼)
+ *
+ * Frontend는 axios response.data를 본 schema로 parse하여 defense-in-depth.
+ */
+export const InspectionTemplateLatestResponseSchema = z.object({
+  id: z.string(),
+  equipmentId: z.string(),
+  inspectionType: z.union([z.literal('intermediate'), z.literal('self')]),
+  version: z.number().int().min(1),
+  structure: ExtractedInspectionStructureSchema,
+  sourceInspectionId: z.string().nullable(),
+  createdBy: z.string().nullable(),
+  createdByName: z.string().nullable(),
+  /**
+   * ISO 8601 string. Backend가 Date 객체 반환 시 axios JSON 직렬화로 string됨.
+   * z.string()으로 정의하되 backend Date 인스턴스는 controller signature에서 별도 정의.
+   */
+  createdAt: z.string(),
+});
+export type InspectionTemplateLatestResponse = z.infer<
+  typeof InspectionTemplateLatestResponseSchema
+>;
+
+/**
+ * POST /api/equipment/:uuid/inspection-template body.
+ *
+ * SoftFork apply_forward 또는 admin 명시 수정 시 호출.
+ * - version: 새 version (현재 latest + 1) — backend CAS 검증
+ * - supersededBy: 현재 latest template id (CAS chain) — backend BadRequest 반환 시 stale base
+ * - forkChoice: audit log + 분석 추적용
+ */
+export const UpsertInspectionTemplateBodySchema = z.object({
+  inspectionType: z.union([z.literal('intermediate'), z.literal('self')]),
+  version: z.number().int().min(1),
+  structure: ExtractedInspectionStructureSchema,
+  supersededBy: z.string().nullable(),
+  sourceInspectionId: z.string().nullable(),
+  forkChoice: ForkChoiceEnum,
+});
+export type UpsertInspectionTemplateBody = z.infer<typeof UpsertInspectionTemplateBodySchema>;
+
+/**
+ * POST /api/equipment/:uuid/inspection-template 응답.
+ */
+export const UpsertInspectionTemplateResponseSchema = z.object({
+  id: z.string(),
+  version: z.number().int().min(1),
+  inspectionType: z.union([z.literal('intermediate'), z.literal('self')]),
+  createdAt: z.string(),
+});
+export type UpsertInspectionTemplateResponse = z.infer<
+  typeof UpsertInspectionTemplateResponseSchema
+>;

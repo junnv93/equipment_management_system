@@ -323,6 +323,11 @@
       "rejectionAlertTitle": "Rejection reason",
       "viewFull": "View full"
     },
+    "template": {
+      "versionBadgeAria": "Form version v{version}, created {date} by {author}",
+      "missingBadge": "No template (first inspection)",
+      "systemAuthor": "System"
+    },
     "consistencyAlert": {
       "title": "Item results and overall result do not match",
       "body": "{failCount} item(s) marked as Fail, but overall result is set to Pass. Please review the overall result.",

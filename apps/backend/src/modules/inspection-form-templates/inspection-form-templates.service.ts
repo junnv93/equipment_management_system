@@ -12,6 +12,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import {
   inspectionFormTemplates,
   equipment,
+  users,
   type InspectionFormTemplate,
   type NewInspectionFormTemplate,
 } from '@equipment-management/db/schema';
@@ -105,6 +106,45 @@ export class InspectionFormTemplatesService {
       });
     }
     return found;
+  }
+
+  /**
+   * 현재 template + 작성자 이름 — DialogHeader version badge용 (Phase 1B-D).
+   *
+   * SR text "v3, 2026-05-01 작성, 김철수" 표시를 위해 createdByName join.
+   * 시스템 auto-create는 createdBy=null → createdByName=null (UI에서 i18n "system" 라벨 표시).
+   *
+   * 비정규화는 후속(S-3) — 현재는 leftJoin (1+1 query, 사용자 이름 변경 시 즉시 반영).
+   */
+  async getCurrentWithCreatorOrThrow(
+    equipmentId: string,
+    inspectionType: InspectionType
+  ): Promise<InspectionFormTemplate & { createdByName: string | null }> {
+    const [row] = await this.db
+      .select({
+        template: inspectionFormTemplates,
+        creatorName: users.name,
+      })
+      .from(inspectionFormTemplates)
+      .leftJoin(users, eq(inspectionFormTemplates.createdBy, users.id))
+      .where(
+        and(
+          eq(inspectionFormTemplates.equipmentId, equipmentId),
+          eq(inspectionFormTemplates.inspectionType, inspectionType),
+          isNull(inspectionFormTemplates.supersededBy),
+          isNull(inspectionFormTemplates.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!row) {
+      throw new NotFoundException({
+        code: 'INSPECTION_TEMPLATE_NOT_FOUND',
+        message: `No current template for equipment ${equipmentId} type ${inspectionType}`,
+      });
+    }
+
+    return { ...row.template, createdByName: row.creatorName };
   }
 
   // ==========================================================================

@@ -418,6 +418,14 @@ export {
   type CalibrationTabType,
 } from './components/calibration';
 
+// Inspection Template (UL-QP-18-03/05 Build-Once Workflow — Phase 1B-D/E/F)
+export {
+  INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
+  INSPECTION_TEMPLATE_DIFF_TOKENS,
+  INSPECTION_TEMPLATE_FORK_RADIO_TOKENS,
+  INSPECTION_TEMPLATE_GALLERY_CARD_TOKENS,
+} from './components/inspection-template';
+
 // Inspection
 export {
   getJudgmentCardClasses,

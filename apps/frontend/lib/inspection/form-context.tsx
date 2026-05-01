@@ -42,9 +42,27 @@ export interface PrefillLatestState {
 /** 장비 마스터 데이터에서 자동 입력된 폼 필드 추적 */
 export type MasterPrefilledFields = ReadonlySet<string>;
 
+/**
+ * 현재 사용 중인 template 메타 — Phase 1B-D 도입.
+ *
+ * DialogHeader version badge 표시 + Phase 1B-E SoftFork 비교 base.
+ * 부재(없음/시스템 auto-create 직전): null — UI는 "양식 부재" fallback 표시.
+ */
+export interface TemplateState {
+  /** template entity id (UUID) — Phase 1B-E SoftFork upsert의 supersededBy 기준 */
+  id: string;
+  version: number;
+  /** ISO date — DialogHeader 메타 표시 */
+  createdAt: string;
+  /** users.name — 시스템 auto-create는 null (UI에서 i18n "system" 라벨) */
+  createdByName: string | null;
+}
+
 export interface InspectionFormState {
   latest: PrefillLatestState;
   master: MasterPrefilledFields;
+  /** 현재 양식 — Phase 1B-D 추가. null = 신규 장비 (Phase 1B-F Gallery 노출 후보). */
+  template: TemplateState | null;
 }
 
 const INITIAL_LATEST: PrefillLatestState = {
@@ -60,6 +78,7 @@ const INITIAL_LATEST: PrefillLatestState = {
 const INITIAL_STATE: InspectionFormState = {
   latest: INITIAL_LATEST,
   master: new Set(),
+  template: null,
 };
 
 // ============================================================================
@@ -74,6 +93,13 @@ type Action =
       counts: ExtractedStructure['counts'];
       sortOrders: number[];
     }
+  | {
+      /** Phase 1B-D: template snapshot prefill (1B-D 단독 source) */
+      type: 'apply-template';
+      template: TemplateState;
+      counts: ExtractedStructure['counts'];
+      sortOrders: number[];
+    }
   | { type: 'reset-latest' }
   | { type: 'dismiss-banner' }
   | { type: 'mark-cell-modified'; sortOrder: number; ri: number; ci: number }
@@ -82,6 +108,7 @@ type Action =
   | { type: 'add-master-field'; field: string }
   | { type: 'remove-master-field'; field: string }
   | { type: 'set-master-fields'; fields: string[] }
+  | { type: 'set-template'; template: TemplateState | null }
   | { type: 'reset-all' };
 
 function reducer(state: InspectionFormState, action: Action): InspectionFormState {
@@ -99,6 +126,24 @@ function reducer(state: InspectionFormState, action: Action): InspectionFormStat
           userModifiedCells: new Map(),
         },
       };
+    case 'apply-template':
+      // Phase 1B-D: template prefill — latest 흐름과 분리하지만 prefilled 셀 추적은 동일.
+      // sourceInspectionId 자리에는 template.id를 기록 (provenance — banner SR text 활용).
+      return {
+        ...state,
+        template: action.template,
+        latest: {
+          applied: true,
+          sourceInspectionId: `template:${action.template.id}`,
+          sourceInspectionDate: action.template.createdAt.slice(0, 10),
+          counts: action.counts,
+          bannerDismissed: false,
+          prefilledSortOrders: new Set(action.sortOrders),
+          userModifiedCells: new Map(),
+        },
+      };
+    case 'set-template':
+      return { ...state, template: action.template };
     case 'reset-latest':
       return { ...state, latest: INITIAL_LATEST };
     case 'dismiss-banner':
@@ -195,6 +240,14 @@ export interface InspectionFormContextValue {
     counts: ExtractedStructure['counts'];
     sortOrders: number[];
   }) => void;
+  /** Phase 1B-D: template prefill — latestInspection 의존 제거 후 단독 source */
+  applyTemplatePrefill: (params: {
+    template: TemplateState;
+    counts: ExtractedStructure['counts'];
+    sortOrders: number[];
+  }) => void;
+  /** Template 메타만 설정 (prefill은 별도) — 1B-E divergence 추적 등 */
+  setTemplate: (template: TemplateState | null) => void;
   resetLatestPrefill: () => void;
   dismissBanner: () => void;
 
@@ -232,6 +285,14 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
 
   const applyLatestPrefill = useCallback<InspectionFormContextValue['applyLatestPrefill']>(
     (params) => dispatch({ type: 'apply-latest', ...params }),
+    []
+  );
+  const applyTemplatePrefill = useCallback<InspectionFormContextValue['applyTemplatePrefill']>(
+    (params) => dispatch({ type: 'apply-template', ...params }),
+    []
+  );
+  const setTemplate = useCallback<InspectionFormContextValue['setTemplate']>(
+    (template) => dispatch({ type: 'set-template', template }),
     []
   );
   const resetLatestPrefill = useCallback(() => dispatch({ type: 'reset-latest' }), []);
@@ -283,6 +344,8 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       applyLatestPrefill,
+      applyTemplatePrefill,
+      setTemplate,
       resetLatestPrefill,
       dismissBanner,
       markCellModified,
@@ -300,6 +363,8 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
     [
       state,
       applyLatestPrefill,
+      applyTemplatePrefill,
+      setTemplate,
       resetLatestPrefill,
       dismissBanner,
       markCellModified,
@@ -326,6 +391,8 @@ export function InspectionFormProvider({ children }: { children: ReactNode }) {
 const NO_OP_VALUE: InspectionFormContextValue = {
   state: INITIAL_STATE,
   applyLatestPrefill: () => {},
+  applyTemplatePrefill: () => {},
+  setTemplate: () => {},
   resetLatestPrefill: () => {},
   dismissBanner: () => {},
   markCellModified: () => {},
