@@ -41,6 +41,8 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   cable_loss_measurement: (id) => `/cables/${id}?tab=measurements`,
   self_inspection: (id) => `/equipment/${id}?tab=self-inspection`,
   form_template: () => `/reports/form-templates`,
+  // 점검 양식 템플릿: 장비 상세의 점검 탭으로 deep-link (template ID는 detail 화면에서 처리)
+  inspection_form_template: (id) => `/equipment/${id}?tab=inspection-template`,
   inspection_result_section: (id) => `/calibration/intermediate-checks?selected=${id}`,
   data_migration_session: () => `/admin/data-migration`,
 };

@@ -558,6 +558,19 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
+  // 점검 양식 템플릿 (UL-QP-18-03 / UL-QP-18-05 Build-Once Workflow snapshot DB)
+  // ============================================================================
+  INSPECTION_TEMPLATE: {
+    /** 현재 template (supersededBy IS NULL AND deletedAt IS NULL) 조회 — 부재 시 404 */
+    LATEST: (equipmentId: string, type: 'intermediate' | 'self') =>
+      `/api/equipment/${equipmentId}/inspection-template/latest?type=${type}`,
+    /** Admin 명시 수정 / SoftFork apply_forward 시 호출 (POST → version+1) */
+    UPSERT: (equipmentId: string) => `/api/equipment/${equipmentId}/inspection-template`,
+    /** Template gallery — 비슷한 장비의 검증된 template 목록 (모든 인증 사용자 허용) */
+    GALLERY: '/api/inspection-templates/gallery',
+  },
+
+  // ============================================================================
   // 양식 템플릿 관리
   // ============================================================================
   FORM_TEMPLATES: {
