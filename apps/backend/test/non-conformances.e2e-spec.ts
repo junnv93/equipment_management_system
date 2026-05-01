@@ -13,12 +13,12 @@ describe('NonConformancesController (e2e)', () => {
   let accessToken: string;
   const createdNonConformanceIds: string[] = [];
   let testEquipmentUuid: string;
-  const testUserId = TEST_USER_IDS.admin;
+  const testUserId = TEST_USER_IDS.systemAdmin;
   const tracker = new ResourceTracker();
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
       name: 'E2E Test Equipment for Non-Conformances',
     });

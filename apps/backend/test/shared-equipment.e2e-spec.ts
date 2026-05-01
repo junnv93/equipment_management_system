@@ -13,7 +13,7 @@ describe('SharedEquipmentController (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
   });
 
   afterAll(async () => {

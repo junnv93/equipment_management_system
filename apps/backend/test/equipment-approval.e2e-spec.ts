@@ -12,6 +12,7 @@ describe('Equipment Approval Process (e2e)', () => {
   let testOperatorToken: string;
   let technicalManagerToken: string;
   let siteAdminToken: string;
+  let systemAdminToken: string;
   const createdRequestUuids: string[] = [];
   const createdEquipmentUuids: string[] = [];
   const testUploadDir = path.join(process.cwd(), 'test-uploads');
@@ -24,6 +25,8 @@ describe('Equipment Approval Process (e2e)', () => {
     siteAdminToken = await loginAs(ctx.app, 'admin');
     technicalManagerToken = await loginAs(ctx.app, 'manager').catch(() => siteAdminToken);
     testOperatorToken = await loginAs(ctx.app, 'user').catch(() => siteAdminToken);
+    // UL-QP-18 직무분리: system_admin만 장비 직접 등록·승인 가능 (CREATE_EQUIPMENT + 승인 우회)
+    systemAdminToken = await loginAs(ctx.app, 'systemAdmin').catch(() => siteAdminToken);
   });
 
   afterAll(async () => {
@@ -120,7 +123,7 @@ describe('Equipment Approval Process (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .post(API_ENDPOINTS.EQUIPMENT.CREATE)
-        .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
+        .set('Authorization', `Bearer ${systemAdminToken}`)
         .send(equipmentData);
 
       expect(response.status).toBe(201);
@@ -235,9 +238,10 @@ describe('Equipment Approval Process (e2e)', () => {
     let uploadTestEquipmentUuid: string;
 
     beforeAll(async () => {
+      // UL-QP-18 직무분리: 직접 등록은 system_admin만 가능 (lab_manager는 VIEW만)
       const createResponse = await request(ctx.app.getHttpServer())
         .post(API_ENDPOINTS.EQUIPMENT.CREATE)
-        .set('Authorization', `Bearer ${siteAdminToken}`)
+        .set('Authorization', `Bearer ${systemAdminToken}`)
         .send({
           name: 'E2E 업로드 테스트 장비',
           managementNumber: `E2E-UPLOAD-${Date.now()}`,
@@ -476,7 +480,7 @@ describe('Equipment Approval Process (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .post(API_ENDPOINTS.EQUIPMENT.CREATE)
-        .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
+        .set('Authorization', `Bearer ${systemAdminToken}`)
         .send(completeData);
 
       expect([201, 200, 400]).toContain(response.status);

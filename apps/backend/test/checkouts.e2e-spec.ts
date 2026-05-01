@@ -3,7 +3,7 @@
 import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
+import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
 import { TEAM_FCC_EMC_RF_SUWON_ID } from '../src/database/utils/uuid-constants';
@@ -13,12 +13,11 @@ describe('CheckoutsController (e2e)', () => {
   let accessToken: string;
   const createdCheckoutIds: string[] = [];
   let testEquipmentUuid: string;
-  const testApproverId = TEST_USER_IDS.admin;
   const tracker = new ResourceTracker();
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
       name: 'E2E Test Equipment for Checkout',
       teamId: TEAM_FCC_EMC_RF_SUWON_ID, // 관리자(lab_manager) 소속 팀 — 교정 반출은 동일 팀 장비만 가능

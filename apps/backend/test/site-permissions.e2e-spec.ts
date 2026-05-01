@@ -10,6 +10,7 @@ import { createTestEquipment } from './helpers/test-fixtures';
 describe('Site Permissions (e2e)', () => {
   let ctx: TestAppContext;
   let adminToken: string;
+  let labManagerToken: string;
   let testOperatorToken: string | undefined;
   let managerToken: string | undefined;
   let suwonEquipmentUuid: string;
@@ -17,7 +18,10 @@ describe('Site Permissions (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    adminToken = await loginAs(ctx.app, 'admin');
+    // setup용 systemAdmin: 인프라 setup(equipment 생성/삭제) 전용 — UL-QP-18 직무분리로 lab_manager는 CREATE_EQUIPMENT 없음
+    adminToken = await loginAs(ctx.app, 'systemAdmin');
+    // lab_manager site-scope 검증 전용: 시스템관리자가 아닌 site-scoped 역할이 cross-site 조회 시 403/필터링 동작 확인
+    labManagerToken = await loginAs(ctx.app, 'admin');
 
     try {
       testOperatorToken = await loginAs(ctx.app, 'user');
@@ -136,10 +140,11 @@ describe('Site Permissions (e2e)', () => {
     });
 
     it('사이트 필터로 특정 사이트 장비만 조회 가능해야 함', async () => {
-      // 수원 사이트 장비만 조회 (admin=lab_manager, site=suwon → 본인 사이트)
+      // lab_manager(site=suwon) site-scope 검증: 본 테스트 의도는 cross-site 접근 통제이므로 systemAdmin이 아닌 lab_manager 토큰 필수
+      // 수원 사이트 장비만 조회 (lab_manager site=suwon → 본인 사이트)
       const suwonResponse = await request(ctx.app.getHttpServer())
         .get(`${API_ENDPOINTS.EQUIPMENT.LIST}?site=suwon&pageSize=100`)
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Authorization', `Bearer ${labManagerToken}`)
         .expect(200);
 
       const suwonItems = suwonResponse.body.items || suwonResponse.body.data?.items || [];
@@ -152,12 +157,12 @@ describe('Site Permissions (e2e)', () => {
         });
       }
 
-      // 의왕 사이트 장비만 조회 — lab_manager(suwon)는 uiwang 조회 시 403 가능
+      // 의왕 사이트 장비만 조회 — lab_manager(suwon)는 uiwang 조회 시 403/필터링
       const uiwangResponse = await request(ctx.app.getHttpServer())
         .get(`${API_ENDPOINTS.EQUIPMENT.LIST}?site=uiwang&pageSize=100`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set('Authorization', `Bearer ${labManagerToken}`);
 
-      // lab_manager scope=site → 타 사이트 조회 시 403, system_admin이면 200
+      // lab_manager scope=site → 타 사이트 조회 시 403 또는 필터된 0건
       if (uiwangResponse.status === 200) {
         const uiwangItems =
           uiwangResponse.body.items || uiwangResponse.body.data?.items || [];
@@ -180,7 +185,7 @@ describe('Site Permissions (e2e)', () => {
       // 사이트 필터 없으면 본인 사이트 장비 조회 (lab_manager → site scope)
       const allSitesResponse = await request(ctx.app.getHttpServer())
         .get(API_ENDPOINTS.EQUIPMENT.LIST)
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Authorization', `Bearer ${labManagerToken}`)
         .expect(200);
 
       const allSitesItems =

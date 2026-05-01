@@ -16,7 +16,7 @@ describe('EquipmentHistoryController (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
       name: `History Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
     });

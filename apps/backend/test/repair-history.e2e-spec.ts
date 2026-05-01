@@ -16,7 +16,7 @@ describe('RepairHistoryController (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
       name: 'E2E Test Equipment for Repair History',
     });

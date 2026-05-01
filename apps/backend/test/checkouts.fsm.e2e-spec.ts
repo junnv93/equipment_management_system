@@ -29,7 +29,7 @@ describe('CheckoutsController FSM Guards (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    adminToken = await loginAs(ctx.app, 'admin');
+    adminToken = await loginAs(ctx.app, 'systemAdmin');
     userToken = await loginAs(ctx.app, 'user');
   });
 

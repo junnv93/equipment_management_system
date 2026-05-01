@@ -5,17 +5,26 @@ import {
   USER_LAB_MANAGER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_TEST_ENGINEER_SUWON_ID,
+  USER_SYSTEM_ADMIN_ID,
   TEAM_FCC_EMC_RF_SUWON_ID,
 } from '../../src/database/utils/uuid-constants';
 
-/** 테스트 사용자 역할 */
-export type TestRole = 'admin' | 'manager' | 'user';
+/**
+ * 테스트 사용자 역할
+ *
+ * - `admin` → lab_manager (시험소장: 승인/검토 권한 중심)
+ * - `manager` → technical_manager (기술책임자: 등록/반출 신청 권한)
+ * - `user` → test_engineer (시험실무자: 등록/반출 신청 권한)
+ * - `systemAdmin` → system_admin (전권자: fixture setup용 — 승인 워크플로/팀 스코프 우회)
+ */
+export type TestRole = 'admin' | 'manager' | 'user' | 'systemAdmin';
 
 /** TestRole → canonical UserRole 매핑 (shared-constants DEFAULT_ROLE_EMAILS 키) */
 const CANONICAL_ROLE: Record<TestRole, string> = {
   admin: 'lab_manager',
   manager: 'technical_manager',
   user: 'test_engineer',
+  systemAdmin: 'system_admin',
 };
 
 /** 역할별 테스트 사용자 이메일 — DEFAULT_ROLE_EMAILS SSOT에서 파생 */
@@ -23,6 +32,7 @@ export const TEST_USERS: Record<TestRole, { email: string }> = {
   admin: { email: DEFAULT_ROLE_EMAILS['lab_manager'] },
   manager: { email: DEFAULT_ROLE_EMAILS['technical_manager'] },
   user: { email: DEFAULT_ROLE_EMAILS['test_engineer'] },
+  systemAdmin: { email: DEFAULT_ROLE_EMAILS['system_admin'] },
 };
 
 /**
@@ -35,6 +45,7 @@ export const TEST_USER_IDS: Record<TestRole, string> = {
   admin: USER_LAB_MANAGER_SUWON_ID,
   manager: USER_TECHNICAL_MANAGER_SUWON_ID,
   user: USER_TEST_ENGINEER_SUWON_ID,
+  systemAdmin: USER_SYSTEM_ADMIN_ID,
 };
 
 /**
@@ -70,6 +81,15 @@ export const TEST_USER_DETAILS = [
     role: 'test_engineer',
     site: 'suwon',
     location: '수원랩',
+    teamId: TEAM_FCC_EMC_RF_SUWON_ID,
+  },
+  {
+    id: TEST_USER_IDS.systemAdmin,
+    email: TEST_USERS.systemAdmin.email,
+    name: '시스템 관리자',
+    role: 'system_admin',
+    site: 'suwon',
+    location: '본사',
     teamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 ] as const;

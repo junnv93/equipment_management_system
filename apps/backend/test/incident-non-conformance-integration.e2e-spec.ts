@@ -19,7 +19,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    accessToken = await loginAs(ctx.app, 'systemAdmin');
 
     // DB 인스턴스 가져오기
     db = ctx.module.get<AppDatabase>('DRIZZLE_INSTANCE');

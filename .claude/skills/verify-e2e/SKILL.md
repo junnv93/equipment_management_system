@@ -833,6 +833,170 @@ grep -rn "waitForLoadState.*networkidle" apps/frontend/tests/e2e --include="*.sp
 
 ---
 
+### Step 23: TestRole 4-place SSOT 정합성 (2026-05-01 추가, stale-contract-cleanup)
+
+`apps/backend/test/helpers/test-auth.ts`의 `TestRole` 유니언 타입에 새 역할을 추가할 때, **반드시 다음 4곳의 `Record<TestRole, ...>` 매핑을 동시 갱신**해야 한다. 누락 시 `Record<TestRole, T>` 타입 강제로 컴파일 에러는 발생하나, `TEST_USER_DETAILS` 배열은 `as const` 튜플이라 타입 강제 없이 silent omission 위험.
+
+**4곳 SSOT (test-auth.ts):**
+
+```typescript
+// 1. CANONICAL_ROLE: TestRole → canonical UserRole
+const CANONICAL_ROLE: Record<TestRole, string> = {
+  admin: 'lab_manager',
+  manager: 'technical_manager',
+  user: 'test_engineer',
+  systemAdmin: 'system_admin',  // ← 신규 추가 시
+};
+
+// 2. TEST_USERS: TestRole → email
+export const TEST_USERS: Record<TestRole, { email: string }> = {
+  // ... systemAdmin: { email: DEFAULT_ROLE_EMAILS['system_admin'] }
+};
+
+// 3. TEST_USER_IDS: TestRole → UUID
+export const TEST_USER_IDS: Record<TestRole, string> = {
+  // ... systemAdmin: USER_SYSTEM_ADMIN_ID
+};
+
+// 4. TEST_USER_DETAILS: 시드 entry array (jest-global-setup이 사용)
+export const TEST_USER_DETAILS = [
+  // ... { id: TEST_USER_IDS.systemAdmin, email: ..., role: 'system_admin', site, location, teamId }
+] as const;
+```
+
+**탐지:**
+
+```bash
+# TestRole 정의 확인
+grep -n "export type TestRole" apps/backend/test/helpers/test-auth.ts
+# 출력 예: export type TestRole = 'admin' | 'manager' | 'user' | 'systemAdmin';
+
+# 4곳 매핑 entry 수 일치 확인 (TestRole 멤버 수 = N이면 각 매핑도 N entry)
+grep -c "^\s*\(admin\|manager\|user\|systemAdmin\):" apps/backend/test/helpers/test-auth.ts
+# 정합 시: CANONICAL_ROLE(N) + TEST_USERS(N) + TEST_USER_IDS(N) = 3N 출력
+
+# TEST_USER_DETAILS 배열 길이 = TestRole 멤버 수 일치 확인
+grep -c "id: TEST_USER_IDS\." apps/backend/test/helpers/test-auth.ts
+# 결과 = TestRole 멤버 수와 일치해야 PASS
+```
+
+**SSOT 의존성:**
+- `DEFAULT_ROLE_EMAILS[<canonical_role>]` (`packages/shared-constants/src/test-users.ts`) — email 파생
+- `USER_<ROLE>_ID` 상수 (`apps/backend/src/database/utils/uuid-constants.ts`) — UUID 파생
+
+**위반 시 영향:** 
+- CANONICAL_ROLE 누락 → `loginAs(app, '<role>')` 런타임 실패 (`canonicalRole === undefined`)
+- TEST_USER_IDS 누락 → spec 파일에서 `TEST_USER_IDS.<role>` undefined → silent test 실패
+- TEST_USER_DETAILS 누락 → jest-global-setup이 해당 사용자 시딩 안 함 → loginAs() 401
+
+**발생 이력 (2026-05-01):** stale-contract-cleanup 세션에서 `systemAdmin` 추가 시 4곳 동시 갱신 필요. `Record<TestRole, ...>` 강제로 1-3은 자동 검증되나 TEST_USER_DETAILS는 array length 수동 확인 필요.
+
+---
+
+### Step 24: Fixture 권한 격리 패턴 (2026-05-01 추가, stale-contract-cleanup)
+
+`apps/backend/test/helpers/test-fixtures.ts`의 fixture 헬퍼(`createTestEquipment`, `createTestCheckout` 등)가 **호출부의 `token` 인자에 의존하면 도메인 권한 정책 변경 시 전체 fixture가 깨진다**. fixture는 setup용이므로 자체 권한 토큰을 발급해 호출부 역할과 분리해야 한다.
+
+**위반 패턴 (UL-QP-18 직무분리 commit 77cb3f37 후 발견):**
+
+```typescript
+// ❌ WRONG — 호출부 token에 의존, lab_manager가 CREATE_EQUIPMENT 권한 박탈되면 전체 fixture 회귀
+export async function createTestEquipment(app, token: string, overrides?) {
+  const response = await request(app.getHttpServer())
+    .post(API_ENDPOINTS.EQUIPMENT.CREATE)
+    .set('Authorization', `Bearer ${token}`)  // ← 호출부 권한 의존
+    .send(data);
+  // ...
+}
+```
+
+```typescript
+// ✅ CORRECT — fixture가 자체 setup token 발급 (system_admin 권한 우회)
+export async function createTestEquipment(app, _token: string, overrides?) {
+  // UL-QP-18 직무분리: system_admin만 직접 등록 가능 (승인 워크플로 우회)
+  const creatorToken = await loginAs(app, 'systemAdmin');
+  const response = await request(app.getHttpServer())
+    .post(API_ENDPOINTS.EQUIPMENT.CREATE)
+    .set('Authorization', `Bearer ${creatorToken}`)  // ← 자체 발급 토큰
+    .send(data);
+  // ...
+}
+```
+
+**탐지:**
+
+```bash
+# fixture 헬퍼 내부에서 인자 token을 직접 사용 + loginAs() 호출 0건 패턴 (위반)
+grep -A20 "^export async function create" apps/backend/test/helpers/test-fixtures.ts \
+  | grep -B5 "Bearer \${token}" \
+  | grep -v "loginAs"
+# 결과: 0건 PASS, 1+건이면 WARN (fixture가 호출부 token 의존)
+
+# fixture가 자체 loginAs 발급 패턴 확인
+grep -A5 "^export async function create" apps/backend/test/helpers/test-fixtures.ts \
+  | grep "loginAs(app,"
+# 결과: 자체 토큰 발급 패턴 확인
+```
+
+**예외:**
+- fixture가 권한 자체를 검증하는 케이스 (예: `assertCannotCreate(token)`) — 의도적 token 인자 사용 허용
+- DB 직접 시딩 fixture (request 미호출) — token 무관
+
+**발생 이력 (2026-04-30):** UL-QP-18 직무분리(commit `77cb3f37`) 후 `lab_manager` (admin)가 `CREATE_EQUIPMENT` 권한 박탈. `createTestEquipment(app, accessToken)` 호출 시 14 e2e suite cascading 실패. fixture를 `loginAs(app, 'systemAdmin')` 자체 발급으로 전환하여 해결. `_token` 인자는 시그니처 호환성 위해 보존(deprecation 이연).
+
+---
+
+### Step 25: e2e spec actor token 적절성 — domain-permission spec은 system_admin 사용 금지 (2026-05-01 추가, stale-contract-cleanup)
+
+E2E spec의 `accessToken = loginAs('systemAdmin')` 사용은 **모든 site/team/role scope 검증을 우회**한다. 도메인 권한·scope 검증을 본 의도로 하는 spec은 `'systemAdmin'` 대신 의도된 도메인 역할(`'admin'`/`'manager'`/`'user'`)을 사용해야 검증 의미가 보존된다.
+
+**위반 패턴 (site-permissions.e2e-spec.ts에서 발견):**
+
+```typescript
+// ❌ WRONG — site-scope 검증 spec인데 system_admin 사용 → cross-site 차단 분기가 dead code화
+adminToken = await loginAs(ctx.app, 'systemAdmin');
+const uiwangResponse = await request(...).get('/equipment?site=uiwang')
+  .set('Authorization', `Bearer ${adminToken}`);
+if (uiwangResponse.status === 200) { ... } 
+else { expect(uiwangResponse.status).toBe(403); }  // ← system_admin이면 항상 200, 이 분기 절대 실행 안 됨
+```
+
+```typescript
+// ✅ CORRECT — site-scope 검증은 site-scoped 역할(lab_manager) 토큰 사용
+adminToken = await loginAs(ctx.app, 'systemAdmin');     // setup용 (cross-site 인프라 셋업)
+labManagerToken = await loginAs(ctx.app, 'admin');     // 검증용 (site-scoped 역할)
+const uiwangResponse = await request(...).get('/equipment?site=uiwang')
+  .set('Authorization', `Bearer ${labManagerToken}`);  // ← lab_manager가 cross-site 차단되는지 검증
+```
+
+**탐지:**
+
+```bash
+# permission/scope/role-constraint spec에서 systemAdmin actor 사용 탐지
+grep -l "site-permissions\|role-constraint\|permission" apps/backend/test/*.e2e-spec.ts \
+  | xargs grep -l "loginAs(ctx.app, 'systemAdmin')"
+# 결과: 0건이면 PASS, 1+건이면 spec 의도 재검토 필요
+
+# 워크플로 spec(systemAdmin OK) vs permission spec(systemAdmin 금지) 분리
+grep -rn "loginAs(ctx.app, 'systemAdmin')" apps/backend/test/*.e2e-spec.ts | \
+  grep -E "(site-permissions|role-constraint|permission)" 
+# 결과: 0건이면 PASS
+```
+
+**적절한 token 매핑 가이드:**
+
+| Spec 의도 | actor token | 근거 |
+|---|---|---|
+| 워크플로 검증 (NC 생성, checkout 워크플로 등) | `'systemAdmin'` | scope 검증 무관, fixture 일관성 |
+| Site-scope 검증 (cross-site 차단) | `'admin'` (lab_manager) | site-scoped 역할 |
+| Team-scope 검증 (cross-team 차단) | `'manager'`/`'user'` | team-scoped 역할 |
+| Role-constraint 검증 (managerId 지정 등) | `'manager'` (technical_manager) | UPDATE 권한 보유 + scope 준수 |
+| Setup/cleanup (fixture 외 직접 호출) | `'systemAdmin'` | 권한 우회 setup 전용 |
+
+**발생 이력 (2026-04-30):** stale-contract-cleanup 세션에서 8 spec 일괄 `'admin'` → `'systemAdmin'` 교체 후 verify-e2e Agent가 `site-permissions.e2e-spec.ts:175` else 분기 dead code화 + `manager-role-constraint.e2e-spec.ts:30` 행위자 검증 약화 발견. labManagerToken/manager 토큰으로 분리 수정.
+
+---
+
 ### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion (2026-04-24 추가)
 
 `getBackendTokenByEmail`을 사용하는 E2E spec은 다음 패턴을 준수해야 한다.

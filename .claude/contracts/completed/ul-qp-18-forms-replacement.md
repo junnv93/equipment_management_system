@@ -46,7 +46,7 @@ UL-QP-18-01 시험설비 관리대장 / UL-QP-18-03 중간점검표 / UL-QP-18-0
   - `intermediate-inspection-export-data.service.ts` + `intermediate-inspection-renderer.service.ts`
   - `self-inspection-export-data.service.ts` + `self-inspection-renderer.service.ts`
   - `equipment-registry-data.service.ts` + `equipment-registry-renderer.service.ts`
-- [ ] M-P3-b: `xlsx-helper.ts` 신규 존재, ≥4 함수 export (loadWorkbookByName / applyRowStyles / writeDataRow / clearTrailingRows).
+- [ ] M-P3-b: `xlsx-helper.ts` 신규 존재, ≥4 함수 export (loadWorksheetByName / captureRowStyles / writeDataRow / clearTrailingRows).
 - [ ] M-P3-c: `form-template-export.service.ts` 행수 축소 (기존 2168 → 목표 1500 이하).
 - [ ] M-P3-d: `form-template-export.service.ts`에서 인라인 `MANAGEMENT_METHOD_LABELS`/`STATUS_TO_AVAILABILITY` private 상수 2개 **제거** 확인.
 - [ ] M-P3-e: 각 renderer 서비스가 `@equipment-management/schemas`에서 라벨 import.

@@ -7,13 +7,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Active (진행 중)
 
-| slug | 남은 체크박스 | 설명 |
-|------|------------|------|
-| `completed-ar13-self-inspection-approval` | 6 | ar13-self-inspection-approval |
-| `nc-design-review-phases` | 13 | (설명 없음) |
-| `dashboard-role-layout` | 33 | dashboard-role-layout |
-| `ul-qp-18-forms-replacement` | 59 | (설명 없음) |
-| `e2e-63-fixes` | 20 | (설명 없음) |
+(없음 — 2026-04-30 stale-contract-cleanup 세션에서 4건 일괄 아카이브)
 
 ---
 
@@ -51,4 +45,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 187개. 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 192개 (2026-04-30: completed-ar13-self-inspection-approval + nc-design-review-phases + dashboard-role-layout + ul-qp-18-forms-replacement + e2e-63-fixes 일괄 이동 — stale-contract-cleanup 세션). 검색: `ls .claude/contracts/completed/ | grep <slug>`

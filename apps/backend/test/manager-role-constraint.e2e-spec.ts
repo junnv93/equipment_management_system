@@ -26,10 +26,12 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    // globalSetup이 lab_manager 역할 사용자를 시딩하므로 loginAs 직접 사용 가능
-    accessToken = await loginAs(ctx.app, 'admin');
+    // UL-QP-18 직무분리: technical_manager(suwon)가 UPDATE_EQUIPMENT 권한 보유 + site/team scope 준수
+    // systemAdmin은 모든 scope 우회 → 본 spec 의도(equipmentManager 지정 시 site mismatch/role insufficient 검증)와 부합 안 함
+    // technical_manager는 같은 site/team에서 PATCH 가능, cross-site managerId 지정 시 EQUIPMENT_MANAGER_SITE_MISMATCH 정상 발생
+    accessToken = await loginAs(ctx.app, 'manager');
 
-    // 시드 장비 의존 대신 자체 생성 — 테스트 자급자족
+    // 시드 장비 의존 대신 자체 생성 — createTestEquipment fixture는 자체 systemAdmin 토큰 발급
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
     tracker.track('equipment', testEquipmentUuid);
   }, 30000);
