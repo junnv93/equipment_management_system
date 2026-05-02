@@ -5,6 +5,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { SoftwareValidationsService } from '../software-validations.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -481,7 +483,7 @@ describe('SoftwareValidationsService', () => {
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
       mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
 
-      await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '미달');
+      await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '미달 — 재검증 필요 사유');
 
       expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('rejected'),
@@ -496,15 +498,15 @@ describe('SoftwareValidationsService', () => {
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
       mockDb.select.mockReturnValueOnce(createSelectChain([{ name: '소프트웨어 A' }]));
 
-      await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '기준 미달');
+      await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '기준 미달 — 재검증 필요');
 
       expect(mockEventEmitter.emitAsync).toHaveBeenCalled();
     });
 
     it('draft/quality_approved 상태에서 BadRequestException을 던진다', async () => {
-      await expect(service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '이유')).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '이유 명시 — 재제출 필요')
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -557,5 +559,26 @@ describe('SoftwareValidationsService', () => {
       const result = await service.findAll({ site: 'suwon' } as never);
       expect(result).toEqual({ data: [], total: 0 });
     });
+  });
+
+  describe('reject() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])(
+      '%s — SoftwareValidationRejectionReasonRequired BadRequestException',
+      async (_label, reason) => {
+        try {
+          await service.reject('validation-uuid-1', 1, 'rejector-1', reason);
+          throw new Error('expected BadRequestException');
+        } catch (e) {
+          expect(e).toBeInstanceOf(BadRequestException);
+          const response = (e as BadRequestException).getResponse() as { code?: string };
+          expect(response.code).toBe(ErrorCode.SoftwareValidationRejectionReasonRequired);
+        }
+      }
+    );
   });
 });

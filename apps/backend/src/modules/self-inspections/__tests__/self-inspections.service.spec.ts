@@ -5,6 +5,8 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { SelfInspectionsService } from '../self-inspections.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
@@ -404,7 +406,7 @@ describe('SelfInspectionsService', () => {
         approvalStatus: 'rejected',
         rejectedBy: OTHER_USER_ID,
         rejectedAt: new Date(),
-        rejectionReason: '점검 항목 누락',
+        rejectionReason: '점검 항목 누락 — 재검토 필요',
         version: 3,
       };
       (mockDb.select as jest.Mock)
@@ -413,10 +415,15 @@ describe('SelfInspectionsService', () => {
       (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([rejectedInspection]));
       (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
-      const result = await service.reject(INSPECTION_ID, 2, OTHER_USER_ID, '점검 항목 누락');
+      const result = await service.reject(
+        INSPECTION_ID,
+        2,
+        OTHER_USER_ID,
+        '점검 항목 누락 — 재검토 필요'
+      );
 
       expect(result.approvalStatus).toBe('rejected');
-      expect(result.rejectionReason).toBe('점검 항목 누락');
+      expect(result.rejectionReason).toBe('점검 항목 누락 — 재검토 필요');
     });
 
     it('should throw BadRequestException when not in submitted status', async () => {
@@ -439,7 +446,7 @@ describe('SelfInspectionsService', () => {
         ...MOCK_INSPECTION,
         approvalStatus: 'rejected',
         rejectedBy: OTHER_USER_ID,
-        rejectionReason: '점검 항목 누락',
+        rejectionReason: '점검 항목 누락 — 재검토 필요',
         version: 3,
       };
       (mockDb.select as jest.Mock)
@@ -546,6 +553,24 @@ describe('SelfInspectionsService', () => {
       await expect(service.getEquipmentSiteInfoBySelfInspectionId('non-existent')).rejects.toThrow(
         NotFoundException
       );
+    });
+  });
+
+  describe('reject() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])('%s — SelfInspectionRejectionReasonRequired BadRequestException', async (_label, reason) => {
+      try {
+        await service.reject('inspection-uuid-1', 1, 'user-1', reason);
+        throw new Error('expected BadRequestException');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        const response = (e as BadRequestException).getResponse() as { code?: string };
+        expect(response.code).toBe(ErrorCode.SelfInspectionRejectionReasonRequired);
+      }
     });
   });
 });

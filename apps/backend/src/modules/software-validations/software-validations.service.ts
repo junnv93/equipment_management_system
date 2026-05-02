@@ -6,11 +6,15 @@ import {
   testSoftware,
   type SoftwareValidation,
 } from '@equipment-management/db/schema';
-import { ValidationStatusValues } from '@equipment-management/schemas';
+import { ValidationStatusValues, ErrorCode } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
-import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  DEFAULT_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { CACHE_EVENTS } from '../../common/cache/cache-events';
@@ -511,6 +515,15 @@ export class SoftwareValidationsService extends VersionedBaseService {
     rejectedById: string,
     reason: string
   ): Promise<SoftwareValidation> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단
+    const trimmedReason = reason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.SoftwareValidationRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const existing = await this.findOne(id);
 
     if (
@@ -518,7 +531,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       existing.status !== ValidationStatusValues.APPROVED
     ) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationInvalidStatusTransition,
         message: 'Only submitted or approved validations can be rejected.',
       });
     }
@@ -531,7 +544,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
         status: ValidationStatusValues.REJECTED,
         rejectedBy: rejectedById,
         rejectedAt: new Date(),
-        rejectionReason: reason,
+        rejectionReason: trimmedReason,
       },
       '소프트웨어 유효성 확인',
       undefined,

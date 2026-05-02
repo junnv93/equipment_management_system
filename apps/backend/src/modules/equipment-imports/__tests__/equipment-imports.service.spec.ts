@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { EquipmentImportsService } from '../equipment-imports.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { CheckoutsService } from '../../checkouts/checkouts.service';
@@ -236,9 +238,34 @@ describe('EquipmentImportsService', () => {
       await expect(
         service.reject('import-uuid-1', 'approver-1', {
           version: 1,
-          rejectionReason: '불필요',
+          rejectionReason: '장비 반입 사양 불일치 — 재요청 필요', // 10+ 자
         } as never)
       ).rejects.toThrow(BadRequestException);
+    });
+
+    // 5-layer defense-in-depth fail-close: rejectionReason ≥10자 강제
+    describe('rejectionReason fail-close (REJECTION_REASON_MIN_LENGTH)', () => {
+      const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+      it.each([
+        ['빈 문자열', ''],
+        ['공백만 (trim 후 0자)', '   '],
+        [`${MIN - 1}자 (boundary)`, 'a'.repeat(MIN - 1)],
+      ])(
+        '%s — EquipmentImportRejectionReasonRequired BadRequestException',
+        async (_label, reason) => {
+          try {
+            await service.reject('import-uuid-1', 'approver-1', {
+              version: 1,
+              rejectionReason: reason,
+            } as never);
+            throw new Error('expected BadRequestException');
+          } catch (e) {
+            expect(e).toBeInstanceOf(BadRequestException);
+            const response = (e as BadRequestException).getResponse() as { code?: string };
+            expect(response.code).toBe(ErrorCode.EquipmentImportRejectionReasonRequired);
+          }
+        }
+      );
     });
   });
 

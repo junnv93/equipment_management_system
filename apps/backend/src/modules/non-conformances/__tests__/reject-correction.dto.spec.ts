@@ -14,16 +14,19 @@ describe('rejectCorrectionSchema — rejectionReason 검증', () => {
   it('should trim and accept valid rejectionReason', () => {
     const result = rejectCorrectionSchema.safeParse({
       version: 1,
-      rejectionReason: '  재검토 필요  ',
+      rejectionReason: '  재검토 필요 — 추가 검토 요망  ',
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.rejectionReason).toBe('재검토 필요');
+      expect(result.data.rejectionReason).toBe('재검토 필요 — 추가 검토 요망');
     }
   });
 
   it('should accept valid rejectionReason without spaces', () => {
-    const result = rejectCorrectionSchema.safeParse({ version: 1, rejectionReason: 'test reason' });
+    const result = rejectCorrectionSchema.safeParse({
+      version: 1,
+      rejectionReason: 'test reason placeholder',
+    });
     expect(result.success).toBe(true);
   });
 });

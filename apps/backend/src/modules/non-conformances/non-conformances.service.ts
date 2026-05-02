@@ -24,6 +24,7 @@ import {
   CACHE_TTL,
   DEFAULT_PAGE_SIZE,
   EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
+  VALIDATION_RULES,
 } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { CACHE_EVENTS, type NCAttachmentCachePayload } from '../../common/cache/cache-events';
@@ -35,6 +36,7 @@ import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { equipmentBelongsToSite, equipmentBelongsToTeam } from '../../common/utils/site-filter';
 import {
   EquipmentStatusEnum,
+  ErrorCode,
   NonConformanceStatusValues as NonConformanceStatus,
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
@@ -165,7 +167,7 @@ export class NonConformancesService extends VersionedBaseService {
     const allowed = VALID_TRANSITIONS[currentStatus];
     if (!allowed || !allowed.includes(targetStatus)) {
       throw new BadRequestException({
-        code: 'NC_INVALID_TRANSITION',
+        code: ErrorCode.NonConformanceInvalidTransition,
         message: `Status transition not allowed: ${currentStatus} → ${targetStatus}. Allowed: ${currentStatus} → [${allowed?.join(', ') || 'none'}]`,
       });
     }
@@ -848,6 +850,15 @@ export class NonConformancesService extends VersionedBaseService {
     dto: RejectCorrectionDto,
     rejectedBy: string
   ): Promise<NonConformance> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단
+    const trimmedReason = dto.rejectionReason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.NonConformanceRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const nonConformance = await this.findOne(id);
 
     // 중앙화된 상태 전이 검증
@@ -862,7 +873,7 @@ export class NonConformancesService extends VersionedBaseService {
         status: NonConformanceStatus.OPEN,
         rejectedBy,
         rejectedAt: new Date(),
-        rejectionReason: dto.rejectionReason,
+        rejectionReason: trimmedReason,
       },
       'Non-conformance'
     );

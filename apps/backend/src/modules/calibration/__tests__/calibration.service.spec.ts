@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { DocumentTypeValues } from '@equipment-management/schemas';
+import { DocumentTypeValues, ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { CalibrationService } from '../calibration.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import {
@@ -277,6 +278,27 @@ describe('CalibrationService', () => {
           version: 1,
         } as never)
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('rejectCalibration() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])('%s — CalibrationRejectionReasonRequired BadRequestException', async (_label, reason) => {
+      try {
+        await service.rejectCalibration('cal-uuid-1', {
+          rejectionReason: reason,
+          version: 1,
+        } as never);
+        throw new Error('expected BadRequestException');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        const response = (e as BadRequestException).getResponse() as { code?: string };
+        expect(response.code).toBe(ErrorCode.CalibrationRejectionReasonRequired);
+      }
     });
   });
 

@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { IntermediateInspectionsService } from '../intermediate-inspections.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
@@ -437,7 +439,7 @@ describe('IntermediateInspectionsService', () => {
         mockUpdateChain({ ...submitted, approvalStatus: InspectionApprovalStatusValues.REJECTED })
       );
 
-      await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '기준 미달');
+      await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '기준 미달 — 재점검 필요');
       expect(mockDb.update).toHaveBeenCalled();
     });
 
@@ -454,7 +456,7 @@ describe('IntermediateInspectionsService', () => {
         mockUpdateChain({ ...reviewed, approvalStatus: InspectionApprovalStatusValues.REJECTED })
       );
 
-      await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '미달');
+      await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '미달 — 재점검 필요 사유');
       expect(mockDb.update).toHaveBeenCalled();
     });
 
@@ -464,9 +466,9 @@ describe('IntermediateInspectionsService', () => {
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
 
-      await expect(service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '이유')).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '이유 명시 — 재제출 필요')
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -593,5 +595,26 @@ describe('IntermediateInspectionsService', () => {
       const result = await service.remove('insp-uuid-1', true);
       expect(result.success).toBe(true);
     });
+  });
+
+  describe('reject() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])(
+      '%s — IntermediateInspectionRejectionReasonRequired BadRequestException',
+      async (_label, reason) => {
+        try {
+          await service.reject('inspection-uuid-1', 1, 'user-1', reason);
+          throw new Error('expected BadRequestException');
+        } catch (e) {
+          expect(e).toBeInstanceOf(BadRequestException);
+          const response = (e as BadRequestException).getResponse() as { code?: string };
+          expect(response.code).toBe(ErrorCode.IntermediateInspectionRejectionReasonRequired);
+        }
+      }
+    );
   });
 });

@@ -21,6 +21,7 @@ import {
   EquipmentImportStatusValues as EIVal,
   EquipmentStatusValues as ESVal,
   CheckoutPurposeValues,
+  ErrorCode,
   generateTemporaryManagementNumber,
   SITE_TO_CODE,
   TEMPORARY_EQUIPMENT_PREFIX,
@@ -365,12 +366,23 @@ export class EquipmentImportsService extends VersionedBaseService {
   /**
    * 장비 반입 거절
    * pending → rejected
+   *
+   * 5-layer defense-in-depth: Zod DTO에서 1차 검증되지만, 서비스 직접 호출(internal)
+   * 우회를 차단하기 위해 reject 사유 길이 fail-close 추가.
    */
   async reject(
     id: string,
     approverId: string,
     dto: RejectEquipmentImportDto
   ): Promise<EquipmentImport> {
+    const trimmed = dto.rejectionReason?.trim() ?? '';
+    if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.EquipmentImportRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     // ✅ CAS + precondition atomicity (approve 와 동일 원칙)
     const updated = await this.updateWithVersion<EquipmentImport>(
       equipmentImports,
@@ -380,7 +392,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         status: EIVal.REJECTED as EquipmentImportStatus,
         approverId,
         approvedAt: new Date(),
-        rejectionReason: dto.rejectionReason,
+        rejectionReason: trimmed,
       },
       'Equipment import',
       undefined,
@@ -390,7 +402,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         {
           column: equipmentImports.status,
           expected: EIVal.PENDING,
-          errorCode: 'IMPORT_ONLY_PENDING_CAN_REJECT',
+          errorCode: ErrorCode.EquipmentImportOnlyPendingCanReject,
           errorMessage: 'Only pending import requests can be rejected.',
         },
       ]

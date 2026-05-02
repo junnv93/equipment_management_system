@@ -32,6 +32,7 @@ import {
   type DocumentType,
   CalibrationPlanStatusValues,
   DocumentTypeValues,
+  ErrorCode,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
@@ -41,6 +42,7 @@ import {
   DEFAULT_PAGE_SIZE,
   SELECTOR_PAGE_SIZE,
   EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
+  VALIDATION_RULES,
 } from '@equipment-management/shared-constants';
 import {
   getUtcStartOfDay,
@@ -1619,19 +1621,21 @@ export class CalibrationService extends VersionedBaseService {
    * ✅ 인메모리 동기화 코드 제거 (DB가 유일한 소스)
    */
   async rejectCalibration(id: string, rejectDto: RejectCalibrationDto): Promise<CalibrationRecord> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단 (DB 조회 전 fail-close)
+    const trimmedReason = rejectDto.rejectionReason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const calibration = await this.findOne(id);
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
       throw new BadRequestException({
-        code: 'CALIBRATION_ONLY_PENDING_CAN_REJECT',
+        code: ErrorCode.CalibrationOnlyPendingCanReject,
         message: 'Only pending calibrations can be rejected.',
-      });
-    }
-
-    if (!rejectDto.rejectionReason) {
-      throw new BadRequestException({
-        code: 'CALIBRATION_REJECTION_REASON_REQUIRED',
-        message: 'Rejection reason is required.',
       });
     }
 
@@ -1644,7 +1648,7 @@ export class CalibrationService extends VersionedBaseService {
       rejectDto.version,
       {
         approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
-        rejectionReason: rejectDto.rejectionReason,
+        rejectionReason: trimmedReason,
       },
       'Calibration record'
     );

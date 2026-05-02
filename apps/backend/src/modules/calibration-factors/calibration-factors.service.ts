@@ -9,11 +9,12 @@ import {
   ApproveCalibrationFactorDto,
   RejectCalibrationFactorDto,
 } from './dto/approve-calibration-factor.dto';
-import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
+import { CalibrationFactorApprovalStatusValues, ErrorCode } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
   DEFAULT_PAGE_SIZE,
   QUERY_SAFETY_LIMITS,
+  VALIDATION_RULES,
 } from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
@@ -455,11 +456,20 @@ export class CalibrationFactorsService extends VersionedBaseService {
     id: string,
     rejectDto: RejectCalibrationFactorDto & { approverId: string }
   ): Promise<CalibrationFactorRecord> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단 (DB 조회 전 fail-close)
+    const trimmedReason = rejectDto.rejectionReason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationFactorRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
       throw new BadRequestException({
-        code: 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_REJECT',
+        code: ErrorCode.CalibrationFactorOnlyPendingCanReject,
         message: 'Only pending calibration factors can be rejected.',
       });
     }
@@ -472,7 +482,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
       rejectDto.version,
       {
         approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
-        approverComment: rejectDto.rejectionReason,
+        approverComment: trimmedReason,
       },
       '보정계수'
     );

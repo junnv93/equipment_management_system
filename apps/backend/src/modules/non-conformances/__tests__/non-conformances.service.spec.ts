@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { NonConformancesService } from '../non-conformances.service';
 import { NonConformanceStatus } from '../dto/non-conformance-query.dto';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -497,7 +499,7 @@ describe('NonConformancesService', () => {
         equipmentId: 'eq-uuid',
         version: 1,
       };
-      const dto = { version: 1, rejectionReason: '재검토 필요' };
+      const dto = { version: 1, rejectionReason: '재검토 필요 — 보고서 보완' };
 
       // Mock findOne
       mockCacheService.getOrSet.mockResolvedValueOnce(correctedNc);
@@ -527,7 +529,11 @@ describe('NonConformancesService', () => {
       mockCacheService.getOrSet.mockResolvedValueOnce(closedNc);
 
       await expect(
-        service.rejectCorrection('nc-uuid', { version: 1, rejectionReason: 'test' }, 'user')
+        service.rejectCorrection(
+          'nc-uuid',
+          { version: 1, rejectionReason: 'test reason placeholder' },
+          'user'
+        )
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -638,6 +644,28 @@ describe('NonConformancesService', () => {
         BadRequestException
       );
       expect(mockDocumentService.deleteDocument).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('rejectCorrection() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])('%s — NonConformanceRejectionReasonRequired BadRequestException', async (_label, reason) => {
+      try {
+        await service.rejectCorrection(
+          'nc-uuid-1',
+          { rejectionReason: reason, version: 1 } as never,
+          'rejector-1'
+        );
+        throw new Error('expected BadRequestException');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        const response = (e as BadRequestException).getResponse() as { code?: string };
+        expect(response.code).toBe(ErrorCode.NonConformanceRejectionReasonRequired);
+      }
     });
   });
 });

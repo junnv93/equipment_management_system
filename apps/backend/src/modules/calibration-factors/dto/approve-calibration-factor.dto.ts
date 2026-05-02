@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -25,7 +26,17 @@ export const ApproveCalibrationFactorValidationPipe = new ZodValidationPipe(
  */
 export const rejectCalibrationFactorSchema = z.object({
   // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
+  rejectionReason: z
+    .string()
+    .trim()
+    .min(
+      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+      VM.string.min('반려 사유', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+    )
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
   ...versionedSchema,
 });
 

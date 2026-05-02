@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
@@ -273,7 +275,7 @@ describe('CalibrationFactorsService', () => {
 
       const result = await service.reject('cf-uuid-001', {
         approverId: 'approver-uuid',
-        rejectionReason: '범위 초과',
+        rejectionReason: '범위 초과 — 재교정 필요',
         version: 1,
       });
 
@@ -288,7 +290,7 @@ describe('CalibrationFactorsService', () => {
       await expect(
         service.reject('cf-uuid-001', {
           approverId: 'approver-uuid',
-          rejectionReason: '재시도',
+          rejectionReason: '재시도 — 보정계수 재계산',
           version: 1,
         })
       ).rejects.toThrow(BadRequestException);
@@ -340,5 +342,30 @@ describe('CalibrationFactorsService', () => {
       expect(Array.isArray(result.registry)).toBe(true);
       expect(result.generatedAt).toBeDefined();
     });
+  });
+
+  describe('reject() — REJECTION_REASON_MIN_LENGTH fail-close', () => {
+    const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+    it.each([
+      ['빈 문자열', ''],
+      ['공백만', '   '],
+      [`${MIN - 1}자`, 'a'.repeat(MIN - 1)],
+    ])(
+      '%s — CalibrationFactorRejectionReasonRequired BadRequestException',
+      async (_label, reason) => {
+        try {
+          await service.reject('factor-uuid-1', {
+            rejectionReason: reason,
+            version: 1,
+            approverId: 'approver-1',
+          } as never);
+          throw new Error('expected BadRequestException');
+        } catch (e) {
+          expect(e).toBeInstanceOf(BadRequestException);
+          const response = (e as BadRequestException).getResponse() as { code?: string };
+          expect(response.code).toBe(ErrorCode.CalibrationFactorRejectionReasonRequired);
+        }
+      }
+    );
   });
 });

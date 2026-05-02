@@ -17,6 +17,7 @@ import type { DocumentService } from '../../common/file-upload/document.service'
 import {
   CalibrationApprovalStatusValues,
   InspectionApprovalStatusValues,
+  ErrorCode,
   extractStructureFromInspection,
   type DocumentType,
 } from '@equipment-management/schemas';
@@ -25,7 +26,7 @@ import type { MulterFile } from '../../types/common.types';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 import type { CreateInspectionInput } from './dto/create-inspection.dto';
 import type { UpdateInspectionInput } from './dto/update-inspection.dto';
@@ -579,6 +580,15 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     userId: string,
     reason: string
   ): Promise<IntermediateInspection> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단
+    const trimmedReason = reason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.IntermediateInspectionRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const existing = await this.findOne(id);
 
     if (
@@ -586,7 +596,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       existing.approvalStatus !== InspectionApprovalStatusValues.REVIEWED
     ) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionInvalidStatusTransition,
         message: 'Only submitted or reviewed inspections can be rejected.',
       });
     }
@@ -599,7 +609,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
         approvalStatus: InspectionApprovalStatusValues.REJECTED,
         rejectedAt: new Date(),
         rejectedBy: userId,
-        rejectionReason: reason,
+        rejectionReason: trimmedReason,
       },
       '중간점검',
       undefined,

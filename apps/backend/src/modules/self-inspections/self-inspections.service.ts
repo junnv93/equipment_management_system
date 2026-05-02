@@ -27,6 +27,7 @@ import type { MulterFile } from '../../types/common.types';
 import {
   SELF_INSPECTION_LEGACY_COLUMN_MAP,
   SelfInspectionStatusValues,
+  ErrorCode,
   extractStructureFromInspection,
   type SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
@@ -37,6 +38,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
   CACHE_TTL,
   SELF_INSPECTION_DATA_SCOPE,
+  VALIDATION_RULES,
   type UserScopeContext,
 } from '@equipment-management/shared-constants';
 import { buildScopePredicate } from '../../common/scope/scope-sql-builder';
@@ -516,11 +518,20 @@ export class SelfInspectionsService extends VersionedBaseService {
     userId: string,
     reason: string
   ): Promise<SelfInspectionWithItems> {
+    // 5-layer defense-in-depth: Zod DTO + service 직접 호출 우회 차단
+    const trimmedReason = reason?.trim() ?? '';
+    if (trimmedReason.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.SelfInspectionRejectionReasonRequired,
+        message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     const existing = await this.findById(id);
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionInvalidStatusTransition,
         message: 'Only submitted inspections can be rejected.',
       });
     }
@@ -533,7 +544,7 @@ export class SelfInspectionsService extends VersionedBaseService {
         approvalStatus: SelfInspectionStatusValues.REJECTED,
         rejectedAt: new Date(),
         rejectedBy: userId,
-        rejectionReason: reason,
+        rejectionReason: trimmedReason,
       },
       'Self-inspection',
       undefined,
