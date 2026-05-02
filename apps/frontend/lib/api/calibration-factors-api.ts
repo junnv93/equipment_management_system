@@ -65,7 +65,7 @@ export interface CreateCalibrationFactorDto {
 }
 
 export interface ApproveCalibrationFactorDto {
-  approverComment: string;
+  approverComment?: string;
   version: number;
 }
 

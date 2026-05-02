@@ -48,7 +48,7 @@ import {
   resolveDataScope,
 } from '@equipment-management/shared-constants';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import { UserRoleValues, AttachmentTypeEnum } from '@equipment-management/schemas';
+import { UserRoleValues, AttachmentTypeEnum, ErrorCode } from '@equipment-management/schemas';
 import {
   type UserRole,
   type DocumentType,
@@ -180,7 +180,7 @@ export class EquipmentController {
     if (!isSystemAdmin) {
       if (userSite && createEquipmentDto.site && createEquipmentDto.site !== userSite) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_SITE_SCOPE_ONLY',
+          code: ErrorCode.EquipmentSiteScopeOnly,
           message: `Can only register equipment for your own site (${userSite}).`,
         });
       }
@@ -190,7 +190,7 @@ export class EquipmentController {
         String(createEquipmentDto.teamId) !== String(userTeamId)
       ) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_TEAM_SCOPE_ONLY',
+          code: ErrorCode.EquipmentTeamScopeOnly,
           message: 'Can only register equipment for your own team.',
         });
       }
@@ -288,7 +288,7 @@ export class EquipmentController {
   }> {
     if (!managementNumber || managementNumber.trim() === '') {
       throw new BadRequestException({
-        code: 'EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED',
+        code: ErrorCode.EquipmentManagementNumberRequired,
         message: 'Management number is required.',
       });
     }
@@ -428,7 +428,7 @@ export class EquipmentController {
     // 공용장비 수정 차단
     if (existingEquipment.isShared) {
       throw new ForbiddenException({
-        code: 'EQUIPMENT_SHARED_CANNOT_UPDATE',
+        code: ErrorCode.EquipmentSharedCannotUpdate,
         message: '공용장비는 수정할 수 없습니다.',
       });
     }
@@ -516,7 +516,7 @@ export class EquipmentController {
     enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
     if (existingEquipment.isShared) {
       throw new ForbiddenException({
-        code: 'EQUIPMENT_SHARED_CANNOT_DELETE',
+        code: ErrorCode.EquipmentSharedCannotDelete,
         message: '공용장비는 삭제할 수 없습니다.',
       });
     }
@@ -785,14 +785,14 @@ export class EquipmentController {
   }> {
     if (!file) {
       throw new BadRequestException({
-        code: 'EQUIPMENT_FILE_REQUIRED',
+        code: ErrorCode.EquipmentFileRequired,
         message: 'File is required.',
       });
     }
 
     if (!attachmentType) {
       throw new BadRequestException({
-        code: 'EQUIPMENT_ATTACHMENT_TYPE_REQUIRED',
+        code: ErrorCode.EquipmentAttachmentTypeRequired,
         message: 'Attachment type is required.',
       });
     }

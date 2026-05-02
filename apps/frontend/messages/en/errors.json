@@ -81,6 +81,47 @@
     "solutions": ["Check if the equipment ID is correct", "The equipment may have been deleted"],
     "actionLabel": "Go to Equipment List"
   },
+  "EQUIPMENT_SITE_SCOPE_ONLY": {
+    "title": "Site Access Restricted",
+    "message": "You can only register equipment for your own site.",
+    "solutions": [
+      "Only equipment belonging to your site can be registered",
+      "Contact the system administrator to register equipment for other sites"
+    ]
+  },
+  "EQUIPMENT_TEAM_SCOPE_ONLY": {
+    "title": "Team Access Restricted",
+    "message": "You can only register equipment for your own team.",
+    "solutions": [
+      "Only equipment belonging to your team can be registered",
+      "Contact the system administrator to register equipment for other teams"
+    ]
+  },
+  "EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED": {
+    "title": "Management Number Required",
+    "message": "A management number must be provided.",
+    "solutions": ["Please fill in the management number field"]
+  },
+  "EQUIPMENT_SHARED_CANNOT_UPDATE": {
+    "title": "Cannot Update Shared Equipment",
+    "message": "Shared equipment cannot be modified.",
+    "solutions": ["Contact the system administrator if you need to modify shared equipment"]
+  },
+  "EQUIPMENT_SHARED_CANNOT_DELETE": {
+    "title": "Cannot Delete Shared Equipment",
+    "message": "Shared equipment cannot be deleted.",
+    "solutions": ["Contact the system administrator if you need to delete shared equipment"]
+  },
+  "EQUIPMENT_FILE_REQUIRED": {
+    "title": "File Required",
+    "message": "An attachment file must be uploaded.",
+    "solutions": ["Please select a file and try again"]
+  },
+  "EQUIPMENT_ATTACHMENT_TYPE_REQUIRED": {
+    "title": "Attachment Type Required",
+    "message": "An attachment type must be specified.",
+    "solutions": ["Please select an attachment type and try again"]
+  },
   "FORM_TEMPLATE_NOT_FOUND": {
     "title": "Form Template Not Found",
     "message": "The form template file is not available in storage.",

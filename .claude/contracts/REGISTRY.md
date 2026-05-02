@@ -9,7 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `equipment-controller-errorcode-ssot` | equipment controller 인라인 에러코드 7건 격상 + orphaned 3건 제거 | 2026-05-02 |
 
 ---
 
@@ -47,4 +46,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 192개 (2026-04-30: completed-ar13-self-inspection-approval + nc-design-review-phases + dashboard-role-layout + ul-qp-18-forms-replacement + e2e-63-fixes 일괄 이동 — stale-contract-cleanup 세션). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 193개 (2026-05-02: +equipment-controller-errorcode-ssot). 검색: `ls .claude/contracts/completed/ | grep <slug>`

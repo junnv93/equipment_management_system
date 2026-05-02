@@ -25,10 +25,14 @@ export enum ErrorCode {
   // ============================================================================
   // 장비 관련 에러
   // ============================================================================
-  EquipmentNotAvailable = 'EQUIPMENT_NOT_AVAILABLE',
-  EquipmentAlreadyAssigned = 'EQUIPMENT_ALREADY_ASSIGNED',
-  EquipmentMaintenance = 'EQUIPMENT_MAINTENANCE',
   EquipmentNotFound = 'EQUIPMENT_NOT_FOUND',
+  EquipmentSiteScopeOnly = 'EQUIPMENT_SITE_SCOPE_ONLY',
+  EquipmentTeamScopeOnly = 'EQUIPMENT_TEAM_SCOPE_ONLY',
+  EquipmentManagementNumberRequired = 'EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED',
+  EquipmentSharedCannotUpdate = 'EQUIPMENT_SHARED_CANNOT_UPDATE',
+  EquipmentSharedCannotDelete = 'EQUIPMENT_SHARED_CANNOT_DELETE',
+  EquipmentFileRequired = 'EQUIPMENT_FILE_REQUIRED',
+  EquipmentAttachmentTypeRequired = 'EQUIPMENT_ATTACHMENT_TYPE_REQUIRED',
   DuplicateManagementNumber = 'DUPLICATE_MANAGEMENT_NUMBER',
   DuplicateSerialNumber = 'DUPLICATE_SERIAL_NUMBER',
 
@@ -293,10 +297,14 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.InternalServerError]: 500,
 
   // 장비 관련 에러
-  [ErrorCode.EquipmentNotAvailable]: 400,
-  [ErrorCode.EquipmentAlreadyAssigned]: 409,
-  [ErrorCode.EquipmentMaintenance]: 400,
   [ErrorCode.EquipmentNotFound]: 404,
+  [ErrorCode.EquipmentSiteScopeOnly]: 403,
+  [ErrorCode.EquipmentTeamScopeOnly]: 403,
+  [ErrorCode.EquipmentManagementNumberRequired]: 400,
+  [ErrorCode.EquipmentSharedCannotUpdate]: 403,
+  [ErrorCode.EquipmentSharedCannotDelete]: 403,
+  [ErrorCode.EquipmentFileRequired]: 400,
+  [ErrorCode.EquipmentAttachmentTypeRequired]: 400,
   [ErrorCode.DuplicateManagementNumber]: 409,
   [ErrorCode.DuplicateSerialNumber]: 409,
 
