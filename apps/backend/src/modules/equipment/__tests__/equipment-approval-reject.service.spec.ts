@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EquipmentApprovalService } from '../services/equipment-approval.service';
 import { EquipmentService } from '../equipment.service';
@@ -53,13 +52,22 @@ describe('equipment-approval-reject — defense-in-depth boundary matrix', () =>
       expect(result.success).toBe(false);
     });
 
-    it('trims surrounding whitespace before length check', () => {
+    it('trims surrounding whitespace before length check — reject', () => {
       // 앞뒤 공백 포함 MIN+1자 → trim 후 MIN-1자 → reject
       const result = rejectRequestSchema.safeParse({
         ...baseValid,
         rejectionReason: ` ${'a'.repeat(MIN - 1)} `,
       });
       expect(result.success).toBe(false);
+    });
+
+    it('trims surrounding whitespace before length check — accept (trim 후 정확히 MIN)', () => {
+      // 앞뒤 공백 2자 포함 MIN+2자 → trim 후 MIN자 → accept (.trim().min(MIN) 순서 검증)
+      const result = rejectRequestSchema.safeParse({
+        ...baseValid,
+        rejectionReason: ` ${'a'.repeat(MIN)} `,
+      });
+      expect(result.success).toBe(true);
     });
   });
 
