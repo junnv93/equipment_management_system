@@ -775,7 +775,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     });
     if (!item) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }

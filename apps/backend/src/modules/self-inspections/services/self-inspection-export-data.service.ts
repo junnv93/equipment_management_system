@@ -15,7 +15,7 @@ import type {
   EquipmentClassification,
   SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
-import { DocumentStatusValues } from '@equipment-management/schemas';
+import { DocumentStatusValues, ErrorCode } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import type { InspectionResultSectionPreFetched } from '../../reports/docx-xml-helper';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -135,7 +135,7 @@ export class SelfInspectionExportDataService {
 
     if (!eqRow) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: 'Equipment not found or not accessible from your site.',
       });
     }

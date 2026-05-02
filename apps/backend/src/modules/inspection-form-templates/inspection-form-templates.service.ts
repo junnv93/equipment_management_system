@@ -17,6 +17,7 @@ import {
   type NewInspectionFormTemplate,
 } from '@equipment-management/db/schema';
 import {
+  ErrorCode,
   ExtractedInspectionStructureSchema,
   UserRoleEnum,
   type ExtractedInspectionStructure,
@@ -258,7 +259,7 @@ export class InspectionFormTemplatesService {
       .limit(1);
     if (!eq0) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment ${equipmentId} not found`,
       });
     }

@@ -104,7 +104,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (!eqRow) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment ${equipmentId} not found.`,
       });
     }
@@ -677,7 +677,7 @@ export class SelfInspectionsService extends VersionedBaseService {
     });
     if (!item) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
