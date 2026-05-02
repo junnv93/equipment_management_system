@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 ==========
@@ -9,7 +10,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 일괄 반려 스키마 (Sprint 4.5 U-01)
  * ✅ Rule 2: approverId는 서버에서 req.user.userId로 추출 (DTO에 미포함)
  * ✅ Rule 0: ids는 uuid 배열로 Zod 검증 (min 1, max 50)
- * ✅ reason: 단건 reject와 동등 수준 — required + max 500
+ * ✅ reason: 단건 reject와 동일 최소 길이(REJECTION_REASON_MIN_LENGTH) + LONG_TEXT_MAX_LENGTH
  *
  * 단건 reject의 fail-close 순서(scope → FSM → reason validation)를 그대로
  * 활용하기 위해 service는 Promise.allSettled로 단건 reject()를 감쌈.
@@ -22,8 +23,14 @@ export const bulkRejectSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, VM.approval.rejectReason.required)
-    .max(500, VM.string.max('반려 사유', 500)),
+    .min(
+      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+      VM.string.min('반려 사유', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+    )
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 export type BulkRejectInput = z.infer<typeof bulkRejectSchema>;
@@ -40,8 +47,8 @@ export class BulkRejectDto {
   ids: string[];
 
   @ApiProperty({
-    description: '공통 반려 사유 (모든 항목에 동일 적용, 최대 500자)',
-    example: '계측 일정 미충족',
+    description: `공통 반려 사유 (모든 항목에 동일 적용, ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 ${VALIDATION_RULES.LONG_TEXT_MAX_LENGTH}자 이하)`,
+    example: '계측 일정 미충족으로 인해 반려합니다.',
   })
   reason: string;
 }

@@ -10,7 +10,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 /**
  * 승인 철회 스키마
  * ✅ Rule 2: approverId는 서버에서 req.user.userId로 추출 (DTO에 미포함)
- * ✅ fail-close: scope → FSM(approved+5분이내) → domain(approvedBy===approverId) 순
+ * ✅ fail-close: scope → FSM(approved) → reason(min길이) → time-window(5분) → domain(approvedBy===approverId) 순
  */
 export const revokeApprovalSchema = z.object({
   ...versionedSchema,
