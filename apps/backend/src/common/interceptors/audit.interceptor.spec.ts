@@ -165,6 +165,41 @@ describe('AuditInterceptor — access_denied path', () => {
     expect(auditService.create).not.toHaveBeenCalled();
   });
 
+  it('Handler-level Forbidden 후 request.__auditLogged === true 마킹 (GlobalExceptionFilter dedup 시그널)', async () => {
+    const request = {
+      method: 'PATCH',
+      url: '/api/equipment',
+      originalUrl: '/api/equipment',
+      params: { uuid: VALID_UUID },
+      body: {},
+      query: {},
+      headers: {},
+      user: { userId: USER_UUID, name: 'X', roles: ['admin'] },
+      ip: '10.0.0.1',
+    };
+    reflector.get.mockImplementation((key: string) => {
+      if (key === SKIP_AUDIT_KEY) return false;
+      if (key === AUDIT_LOG_KEY) return { action: 'update', entityType: 'equipment' };
+      return undefined;
+    });
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => ({}),
+    } as unknown as import('@nestjs/common').ExecutionContext;
+    const callHandler = {
+      handle: () => throwError(() => new ForbiddenException('scope mismatch')),
+    };
+
+    await expect(
+      firstValueFrom(interceptor.intercept(ctx, callHandler as never))
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await flushMicrotasks();
+
+    expect(auditService.create).toHaveBeenCalledTimes(1);
+    // GlobalExceptionFilter dedup 플래그가 설정되어야 함
+    expect((request as Record<string, unknown>).__auditLogged).toBe(true);
+  });
+
   it('성공 응답 경로는 기존대로 정상 audit (회귀 방지)', async () => {
     const ctx = makeContext({
       method: 'POST',

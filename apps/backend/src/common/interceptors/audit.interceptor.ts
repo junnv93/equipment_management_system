@@ -16,19 +16,19 @@ import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
 import { AuditService } from '../../modules/audit/audit.service';
 import type {
   AuditAction,
+  AuditEntityType,
   AuditLogUserRole,
   CreateAuditLogDto,
 } from '@equipment-management/schemas';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
+import { extractAuditEntityId, inferEntityTypeFromPath } from '../utils/audit-entity-id.util';
 
 /** 감사 로그 details JSON 최대 크기 (바이트) */
 const AUDIT_DETAILS_MAX_SIZE = 32_768; // 32KB
 /** 배열 truncate 임계값 */
 const AUDIT_ARRAY_MAX_LENGTH = 5;
-/** UUID v4 형식 검증 (entityId NOT NULL 제약 충족 여부 사전 판정) */
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -156,10 +156,13 @@ export class AuditInterceptor implements NestInterceptor {
     request: AuthenticatedRequest,
     err: HttpException
   ): Promise<void> {
+    // GlobalExceptionFilter dedup 시그널 — 인터셉터가 먼저 기록했음을 filter에 알림
+    (request as unknown as Record<string, unknown>).__auditLogged = true;
+
     const user: JwtUser | undefined = request.user;
     const ipAddress = this.getClientIp(request);
 
-    const extractedId = this.extractEntityIdFromParams(request);
+    const extractedId = extractAuditEntityId(request);
     const useSentinel = !extractedId;
     const entityId = extractedId ?? SYSTEM_USER_UUID;
     // sentinel fallback 시 path-based 사람-readable identifier 를 entityName 에 보존.
@@ -209,17 +212,6 @@ export class AuditInterceptor implements NestInterceptor {
   }
 
   /**
-   * params 에서 UUID 형식 식별자만 추출 (uuid > id 우선)
-   * audit_logs.entityId 가 uuid NOT NULL 이므로 형식 검증 필수.
-   * 추출 실패 시 호출자가 SYSTEM_USER_UUID sentinel 로 fallback.
-   */
-  private extractEntityIdFromParams(request: AuthenticatedRequest): string | undefined {
-    const params = (request.params ?? {}) as Record<string, string | undefined>;
-    const candidates = [params.uuid, params.id, params.entityId];
-    return candidates.find((c): c is string => typeof c === 'string' && UUID_REGEX.test(c));
-  }
-
-  /**
    * 기본 감사 로그 메타데이터 생성 (경로 기반 추론)
    *
    * 예: POST /api/equipment → { action: 'create', entityType: 'equipment', entityIdPath: 'response.id' }
@@ -228,11 +220,7 @@ export class AuditInterceptor implements NestInterceptor {
     request: AuthenticatedRequest,
     httpMethod: string
   ): AuditLogMetadata {
-    const path = request.route?.path || request.url;
-    const segments = path.split('/').filter(Boolean);
-
-    // 마지막 경로 세그먼트를 엔티티 타입으로 추론
-    const entityType = segments[segments.length - 1]?.replace(/^api$/, 'unknown') || 'unknown';
+    const entityType = inferEntityTypeFromPath(request) as AuditEntityType;
 
     // HTTP 메서드를 액션으로 변환
     const actionMap: Record<string, AuditAction> = {
@@ -242,15 +230,10 @@ export class AuditInterceptor implements NestInterceptor {
     };
     const action = (actionMap[httpMethod] || 'create') as AuditLogMetadata['action'];
 
-    // 엔티티 ID 경로 추론
-    // - 응답에 id/uuid가 있으면 사용
-    // - 없으면 params.uuid/params.id 시도
-    const entityIdPath = 'response.id';
-
     return {
       action,
       entityType,
-      entityIdPath,
+      entityIdPath: 'response.id',
     };
   }
 

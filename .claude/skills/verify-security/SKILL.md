@@ -43,6 +43,9 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 | `apps/backend/src/common/decorators/site-scoped.decorator.ts` | @SiteScoped() 데코레이터 |
 | `apps/backend/src/common/interceptors/site-scope.interceptor.ts` | SiteScopeInterceptor |
 | `apps/backend/src/common/utils/enforce-site-access.ts` | 크로스 사이트/팀 접근 제어 |
+| `apps/backend/src/common/constants/security-auditable-codes.ts` | SECURITY_AUDITABLE_CODES SSOT |
+| `apps/backend/src/common/utils/audit-entity-id.util.ts` | audit 엔티티 ID 추출 유틸 |
+| `apps/backend/src/common/filters/error.filter.ts` | GlobalExceptionFilter (APP_FILTER DI) |
 
 ## Workflow
 
@@ -110,6 +113,62 @@ grep -rn "items\.some\|filter\.site.*some\|some.*filter\.site" \
 
 **PASS:** some() 사용 서비스 전부 빈 배열 deny-by-default 가드 보유. **FAIL:** 가드 없이 some() 직접 사용.
 
+### Step 12: server-only 설정 파일 빌드타임 경계 (2026-04-29 추가)
+
+서버 전용 설정 파일(`api-config.server.ts` 등)에 `import 'server-only'`가 선언되어 있어야 하며,
+Client Component 파일에서 해당 파일을 import해선 안 된다.
+
+```bash
+# server-only import 선언 확인
+grep -n "import 'server-only'" apps/frontend/lib/config/api-config.server.ts
+
+# Client Component에서 api-config.server import 0건
+grep -rn "api-config\.server" apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "api-config\.server\.ts"
+```
+
+**PASS:** `import 'server-only'` 선언 존재 + Client 파일 import 0건. **FAIL:** 미선언 또는 Client import ≥1건.
+
+### Step 13: GlobalExceptionFilter APP_FILTER DI 등록 (2026-05-02 추가)
+
+`GlobalExceptionFilter`는 `main.ts`의 `useGlobalFilters(new ...)` 직접 등록이 아닌
+`APP_FILTER` 프로바이더(DI 컨테이너)로 등록해야 한다. 직접 등록 시 `AuditService` 등 DI 의존성 주입 불가.
+
+```bash
+# main.ts에 useGlobalFilters(GlobalExceptionFilter) 없어야 함 (0건 = PASS)
+grep -n "useGlobalFilters.*GlobalExceptionFilter\|new GlobalExceptionFilter" \
+  apps/backend/src/main.ts
+
+# app.module.ts에 APP_FILTER provider 등록 확인
+grep -n "APP_FILTER\|GlobalExceptionFilter" apps/backend/src/app.module.ts
+```
+
+**PASS:** `main.ts` 0건 + `app.module.ts`에 `APP_FILTER` + `GlobalExceptionFilter` 확인.
+**FAIL:** `main.ts`에 `useGlobalFilters(new GlobalExceptionFilter())` 잔존.
+
+### Step 14: SECURITY_AUDITABLE_CODES SSOT 로컬 재정의 금지 (2026-05-02 추가)
+
+`GlobalExceptionFilter`와 `AuditInterceptor`가 공유하는 보안 감사 대상 `ErrorCode` 집합은
+`security-auditable-codes.ts`에서만 정의되어야 한다. 각 파일에서 로컬 `new Set<ErrorCode>` 재정의 시 드리프트 위험.
+
+```bash
+# security-auditable-codes.ts 외 로컬 Set<ErrorCode> 재정의 탐지 (0건 = PASS)
+grep -rn "new Set<ErrorCode>\|new Set(\[ErrorCode" \
+  apps/backend/src/common/ --include="*.ts" \
+  | grep -v "security-auditable-codes\.ts" | grep -v "spec\.ts"
+
+# SECURITY_AUDITABLE_CODES는 단 1곳에서만 export (소스 일관성)
+grep -rn "export.*SECURITY_AUDITABLE_CODES" apps/backend/src/ --include="*.ts"
+
+# filter와 interceptor 모두 import 확인
+grep -rn "SECURITY_AUDITABLE_CODES" apps/backend/src/common/ --include="*.ts" \
+  | grep -v "spec\.ts"
+```
+
+**PASS:** 로컬 `new Set<ErrorCode>` 0건 + filter/interceptor 양쪽 import 확인.
+**FAIL:** `security-auditable-codes.ts` 외에 `new Set<ErrorCode>` 재정의 ≥1건.
+
 ## Output Format
 
 ```markdown
@@ -126,6 +185,9 @@ grep -rn "items\.some\|filter\.site.*some\|some.*filter\.site" \
 | 9   | SSR X-Internal-Api-Key      | PASS/FAIL | 헤더 전송 코드 존재 여부                   |
 | 10  | enforceSiteAccess 팀 격리   | PASS/FAIL | entityTeamId 전달 여부                     |
 | 11  | ExportDataService deny-by-default | PASS/FAIL | items.some() 전 빈 배열 가드 누락 서비스   |
+| 12  | server-only 빌드타임 경계          | PASS/FAIL | api-config.server.ts import 'server-only' + Client import 0건 |
+| 13  | GlobalExceptionFilter APP_FILTER DI | PASS/FAIL | main.ts 직접 등록 0건 + app.module.ts APP_FILTER 등록 |
+| 14  | SECURITY_AUDITABLE_CODES SSOT      | PASS/FAIL | 로컬 new Set<ErrorCode> 재정의 0건 |
 ```
 
 ## Exceptions

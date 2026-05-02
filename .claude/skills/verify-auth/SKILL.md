@@ -33,6 +33,9 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/database/utils/uuid-constants.ts` | SYSTEM_USER_UUID |
 | `apps/backend/src/common/utils/enforce-site-access.ts` | 크로스 사이트 접근 제어 |
 | `packages/shared-constants/src/permissions.ts` | Permission enum |
+| `apps/backend/src/common/constants/security-auditable-codes.ts` | SECURITY_AUDITABLE_CODES SSOT |
+| `apps/backend/src/common/utils/audit-entity-id.util.ts` | audit entityId 추출 유틸 (extractAuditEntityId, resolveAuditEntityIdWithSentinel) |
+| `apps/backend/src/common/interceptors/audit.interceptor.ts` | AuditInterceptor (__auditLogged dedup) |
 
 ## Workflow
 
@@ -122,6 +125,7 @@ grep -n "getPermissions\|roles\[0\]" \
 | 14  | jwt.strategy.ts permissions 파생 | PASS/FAIL | derivePermissionsFromRoles 사용 여부 |
 | 15  | FileInterceptor 비업로드 권한 오용 | PASS/FAIL | UPLOAD_*/MANAGE_* 외 권한으로 업로드 게이팅한 엔드포인트 목록 |
 | 16  | 백엔드 role 리터럴 직접 비교       | PASS/WARN | controller에서 'system_admin' 등 리터럴 === 비교 건수 |
+| 17  | __auditLogged dedup 플래그        | PASS/FAIL | interceptor 설정 + filter 체크 양쪽 불변성 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
@@ -269,6 +273,27 @@ req.user?.roles?.some((r) => r === UserRoleValues.SYSTEM_ADMIN || r === UserRole
 ```
 
 **예외:** 타입 내로잉이 아닌 순수 타입 단언용 `satisfies` / `as` 컨텍스트는 허용.
+
+### Step 17: `__auditLogged` dedup 플래그 불변성 (2026-05-02 추가)
+
+`AuditInterceptor`가 Handler-level 403을 감사 기록한 뒤 `request.__auditLogged = true`를 설정하면,
+`GlobalExceptionFilter`는 이 플래그를 체크하여 중복 감사를 스킵해야 한다.
+두 불변성이 모두 성립해야 이중 audit_logs 생성이 방지된다.
+
+```bash
+# AuditInterceptor에 __auditLogged = true 마킹 확인
+grep -n "__auditLogged" \
+  apps/backend/src/common/interceptors/audit.interceptor.ts
+
+# GlobalExceptionFilter에 __auditLogged 체크 확인
+grep -n "__auditLogged" \
+  apps/backend/src/common/filters/error.filter.ts
+```
+
+**PASS:** `audit.interceptor.ts`에 `= true` 할당 + `error.filter.ts`에 참조 확인.
+**FAIL:** 어느 한 쪽이라도 누락되면 이중 감사 또는 Guard-level 403 미감사 위험.
+
+**배경:** NestJS 실행 순서 — Middleware → Guards → Interceptors → Handler. Guard가 throw하면 Interceptor를 건너뛰고 ExceptionFilter 직행. Interceptor tap.error는 Handler 이후만 실행. Guard-level 403을 GlobalExceptionFilter만 잡으며, Handler-level은 Interceptor가 먼저 잡으므로 dedup 필요.
 
 ## Exceptions
 

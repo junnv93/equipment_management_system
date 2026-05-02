@@ -6,10 +6,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { InternalApiThrottlerGuard } from './common/guards/internal-api-throttler.guard';
 import { THROTTLER_CONFIGS } from './common/config/throttle.constants';
 import { validateEnv } from './config/env.validation';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { SiteScopeInterceptor } from './common/interceptors/site-scope.interceptor';
+import { GlobalExceptionFilter } from './common/filters/error.filter';
 import { EquipmentModule } from './modules/equipment/equipment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -106,6 +107,11 @@ import { SecurityModule } from './modules/security/security.module';
   controllers: [],
   providers: [
     HelmetConfigService,
+    // 글로벌 예외 필터 — APP_FILTER로 DI 등록 (AuditService 주입, AuditModule @Global() 보장)
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

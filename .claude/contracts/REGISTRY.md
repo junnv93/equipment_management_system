@@ -9,7 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `inspection-template-build-once` | 중간/자체점검 Build-Once Workflow Phase 1B/1C/1D — Template Snapshot DB + Soft Fork + Gallery (LIMS 표준) | 2026-05-01 |
+| `tier-2-rejectmodal-ssot-integration` | 7 도메인 reject Dialog → RejectModal SSOT 통합 + 5-layer defense-in-depth 페어링 격상 (Zod / Service fail-close / ErrorCode / mapper / i18n) | 2026-05-02 |
 
 ---
 

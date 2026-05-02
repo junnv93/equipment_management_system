@@ -11,7 +11,6 @@ import { LoggerService } from './common/logger/logger.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
-import { GlobalExceptionFilter } from './common/filters/error.filter';
 import { FormTemplateService } from './modules/reports/form-template.service';
 
 // NestJS app 참조 — process 핸들러에서 graceful close에 사용
@@ -89,9 +88,6 @@ async function bootstrap(): Promise<void> {
     new LoggingInterceptor(loggerService, monitoringService),
     new ErrorInterceptor(loggerService, monitoringService)
   );
-
-  // 글로벌 예외 필터 등록
-  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // CORS 설정 — Same-Origin Reverse-Proxy 모델 (ADR-0006)
   //
