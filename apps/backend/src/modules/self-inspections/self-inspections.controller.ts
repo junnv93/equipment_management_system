@@ -25,7 +25,7 @@ import {
 } from '@equipment-management/shared-constants';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { ErrorCode, UserRoleValues } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -440,7 +440,10 @@ export class SelfInspectionsController {
     @Body('title') title?: string
   ): Promise<InspectionResultSection> {
     if (!file) {
-      throw new BadRequestException({ code: 'FILE_REQUIRED', message: 'CSV file is required.' });
+      throw new BadRequestException({
+        code: ErrorCode.FileRequired,
+        message: 'CSV file is required.',
+      });
     }
     const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);

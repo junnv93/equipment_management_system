@@ -56,6 +56,7 @@ import type {
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { MulterFile } from '../../types/common.types';
 import type { InspectionDocumentItem } from '@equipment-management/db/schema';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * 장비별 중간점검 생성/조회 (nested route)
@@ -465,7 +466,10 @@ export class IntermediateInspectionsController {
     @Body('title') title?: string
   ): Promise<InspectionResultSection> {
     if (!file) {
-      throw new BadRequestException({ code: 'FILE_REQUIRED', message: 'CSV file is required.' });
+      throw new BadRequestException({
+        code: ErrorCode.FileRequired,
+        message: 'CSV file is required.',
+      });
     }
     const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
