@@ -169,6 +169,41 @@ grep -rn "SECURITY_AUDITABLE_CODES" apps/backend/src/common/ --include="*.ts" \
 **PASS:** 로컬 `new Set<ErrorCode>` 0건 + filter/interceptor 양쪽 import 확인.
 **FAIL:** `security-auditable-codes.ts` 외에 `new Set<ErrorCode>` 재정의 ≥1건.
 
+### Step 15: scope/소유권 위반 ErrorCode → HTTP 403 + SECURITY_AUDITABLE_CODES 등록 (2026-05-02 추가)
+
+소유권 위반(`*WithdrawNotSubmitter`, `*OnlyRequesterCanCancel`)은 유효성 오류(400)가 아닌
+권한 위반(403)이다. service 레이어에서 `BadRequestException`으로 던지면 HTTP 의미론 위반 +
+감사 로그 누락 이중 gap 발생 (2026-05-02 intermediate/self/equipment-import 3건 수정 사례).
+
+```bash
+# 소유권/scope 위반 ErrorCode가 BadRequestException으로 throw되는 케이스 탐지 (0건 = PASS)
+# 패턴: *NotSubmitter, *OnlyRequesterCan, *OnlyXxxCan naming의 scope 코드
+grep -rn "throw new BadRequestException" apps/backend/src/modules --include="*.service.ts" -A5 \
+  | grep -E "NotSubmitter|OnlyRequesterCan|OnlyXxxCan"
+
+# scope 위반 코드가 errorCodeToStatusCode에서 403 외 다른 값으로 매핑됐는지 탐지
+# (NotSubmitter/OnlyRequesterCanCancel 패턴 코드 라인이 403 포함 여부 교차 확인)
+python3 -c "
+import re
+with open('packages/schemas/src/errors.ts') as f:
+    content = f.read()
+# errorCodeToStatusCode 블록 추출
+block_match = re.search(r'errorCodeToStatusCode[^{]*{(.+?)^}', content, re.DOTALL | re.MULTILINE)
+if block_match:
+    block = block_match.group(1)
+    for line in block.splitlines():
+        if re.search(r'NotSubmitter|OnlyRequesterCan', line) and '403' not in line:
+            print('FAIL (non-403):', line.strip())
+" 2>/dev/null || echo "(python3 없으면 수동 검토)"
+
+# SECURITY_AUDITABLE_CODES에 scope 위반 코드 등록 여부 확인
+grep -n "NotSubmitter\|OnlyRequesterCanCancel" \
+  apps/backend/src/common/constants/security-auditable-codes.ts
+```
+
+**PASS:** service `BadRequestException` scope throw 0건 + 모든 scope 코드 403 매핑 + `SECURITY_AUDITABLE_CODES` 등록 확인.
+**FAIL:** `BadRequestException`으로 scope 위반 throw ≥1건 OR 403 매핑 누락 OR `SECURITY_AUDITABLE_CODES` 미등록.
+
 ## Output Format
 
 ```markdown
@@ -188,6 +223,7 @@ grep -rn "SECURITY_AUDITABLE_CODES" apps/backend/src/common/ --include="*.ts" \
 | 12  | server-only 빌드타임 경계          | PASS/FAIL | api-config.server.ts import 'server-only' + Client import 0건 |
 | 13  | GlobalExceptionFilter APP_FILTER DI | PASS/FAIL | main.ts 직접 등록 0건 + app.module.ts APP_FILTER 등록 |
 | 14  | SECURITY_AUDITABLE_CODES SSOT      | PASS/FAIL | 로컬 new Set<ErrorCode> 재정의 0건 |
+| 15  | scope 위반 ErrorCode 403 + 감사 등록 | PASS/FAIL | BadRequestException scope throw 0건 + 403 매핑 + SECURITY_AUDITABLE_CODES 등록 |
 ```
 
 ## Exceptions
