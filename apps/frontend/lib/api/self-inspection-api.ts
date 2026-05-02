@@ -14,6 +14,8 @@ export interface SelfInspectionItem {
   inspectionId: string;
   itemNumber: number;
   checkItem: string;
+  measurement: string | null;
+  criteria: string | null;
   checkResult: SelfInspectionItemJudgment;
 }
 
@@ -54,6 +56,8 @@ export interface SelfInspection {
 export interface SelfInspectionItemInput {
   itemNumber: number;
   checkItem: string;
+  measurement?: string;
+  criteria?: string;
   checkResult: SelfInspectionItemJudgment;
 }
 

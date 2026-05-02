@@ -10,6 +10,8 @@ import {
 const selfInspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
   checkItem: z.string().min(1).max(300),
+  measurement: z.string().trim().max(100).optional(),
+  criteria: z.string().trim().max(200).optional(),
   checkResult: SelfInspectionItemJudgmentEnum,
   detailedResult: z.string().optional(),
 });

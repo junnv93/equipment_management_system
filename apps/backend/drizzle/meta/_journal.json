@@ -358,6 +358,13 @@
       "when": 1746144000000,
       "tag": "0050_add_inspection_form_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1746230400000,
+      "tag": "0051_add_self_inspection_items_measurement_criteria",
+      "breakpoints": true
     }
   ]
 }

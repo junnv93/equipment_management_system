@@ -154,6 +154,8 @@ export const selfInspectionItems = pgTable(
       .references(() => equipmentSelfInspections.id, { onDelete: 'cascade' }),
     itemNumber: integer('item_number').notNull(),
     checkItem: varchar('check_item', { length: 300 }).notNull(),
+    measurement: varchar('measurement', { length: 100 }),
+    criteria: varchar('criteria', { length: 200 }),
     checkResult: varchar('check_result', { length: 10 })
       .$type<SelfInspectionItemJudgment>()
       .notNull(),

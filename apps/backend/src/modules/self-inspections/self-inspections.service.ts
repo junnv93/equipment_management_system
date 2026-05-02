@@ -156,6 +156,8 @@ export class SelfInspectionsService extends VersionedBaseService {
             inspectionId: created.id,
             itemNumber: item.itemNumber,
             checkItem: item.checkItem,
+            measurement: item.measurement ?? null,
+            criteria: item.criteria ?? null,
             checkResult: item.checkResult,
             detailedResult: item.detailedResult ?? null,
           }))
@@ -259,7 +261,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionOnlyDraftCanUpdate,
         message: 'Only draft inspections can be modified.',
       });
     }
@@ -317,6 +319,8 @@ export class SelfInspectionsService extends VersionedBaseService {
               inspectionId: id,
               itemNumber: item.itemNumber,
               checkItem: item.checkItem,
+              measurement: item.measurement ?? null,
+              criteria: item.criteria ?? null,
               checkResult: item.checkResult,
               detailedResult: item.detailedResult ?? null,
             }))
@@ -348,7 +352,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionOnlyDraftCanSubmit,
         message: 'Only draft inspections can be submitted.',
       });
     }
@@ -384,14 +388,14 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionOnlySubmittedCanWithdraw,
         message: 'Only submitted inspections can be withdrawn.',
       });
     }
 
     if (existing.submittedBy !== userId) {
       throw new ForbiddenException({
-        code: 'NOT_SUBMITTER',
+        code: ErrorCode.SelfInspectionWithdrawNotSubmitter,
         message: 'Only the submitter can withdraw a submitted inspection.',
       });
     }
@@ -428,7 +432,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionOnlySubmittedCanApprove,
         message: 'Only submitted inspections can be approved.',
       });
     }
@@ -570,7 +574,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== SelfInspectionStatusValues.REJECTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SelfInspectionOnlyRejectedCanResubmit,
         message: 'Only rejected inspections can be resubmitted.',
       });
     }

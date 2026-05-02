@@ -9,7 +9,8 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| — | (없음) | — |
+| `tier2-fsm-invalid-status-transition` | 7 도메인 FSM inline 전멸 — INVALID_STATUS_TRANSITION 16건 + NOT_SUBMITTER 2건 + 도메인 FSM 19건 → ErrorCode SSOT 5-layer 격상 (34 신규 코드) | 2026-05-02 |
+| `inspection-pr2-pr3-closure` | 자체점검 ToggleGroup primitive + 4-grid + measurement/criteria 5-layer + 중간점검 status badge | 2026-05-02 |
 
 ---
 
