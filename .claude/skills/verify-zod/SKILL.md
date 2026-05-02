@@ -626,15 +626,21 @@ grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length
 # 4. 다른 도메인 인라인 error code (점진적 마이그레이션 추적)
 grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/null \
   | grep -v ".spec.ts" | grep -v "__tests__" | wc -l
-# 2026-05-02 equipment services 격상 후 baseline: ~203 hits (equipment services -51건).
-# 이 수치는 시스템 마이그레이션 진행률 추적 metric — 점진적으로 0에 수렴해야 함.
+# 2026-05-03 backend-errorcode-full-closure 전멸 완료: 0건.
+# 이 수치는 회귀 탐지 metric — 0 유지 필수. 신규 code: 'X' 발견 시 즉시 FAIL.
 
 # 5. Frontend mapper coverage — backend ErrorCode 추가 시 frontend mapper 누락 차단
-# (격상 완료된 도메인: disposal + calibration-plan + equipment)
+# (격상 완료된 도메인: 전 도메인 — backend-errorcode-full-closure 2026-05-03)
 # - `lib/errors/<domain>-errors.ts` 파일 존재 확인 + 매퍼 export 강제
 test -f apps/frontend/lib/errors/disposal-errors.ts && grep -c "mapDisposalErrorToToast" apps/frontend/lib/errors/disposal-errors.ts
 test -f apps/frontend/lib/errors/calibration-plan-errors.ts && grep -c "mapCalibrationPlanErrorToToast" apps/frontend/lib/errors/calibration-plan-errors.ts
 test -f apps/frontend/lib/errors/equipment-errors.ts && grep -c "mapBackendErrorCode" apps/frontend/lib/errors/equipment-errors.ts
+test -f apps/frontend/lib/errors/non-conformance-errors.ts && grep -c "mapNonConformanceErrorToToast" apps/frontend/lib/errors/non-conformance-errors.ts
+test -f apps/frontend/lib/errors/cables-errors.ts && grep -c "mapCableErrorToToast" apps/frontend/lib/errors/cables-errors.ts
+test -f apps/frontend/lib/errors/checkout-errors.ts && grep -c "mapCheckoutErrorToToast" apps/frontend/lib/errors/checkout-errors.ts
+test -f apps/frontend/lib/errors/notification-errors.ts && grep -c "mapNotificationErrorToToast" apps/frontend/lib/errors/notification-errors.ts
+test -f apps/frontend/lib/errors/team-errors.ts && grep -c "mapTeamErrorToToast" apps/frontend/lib/errors/team-errors.ts
+test -f apps/frontend/lib/errors/user-errors.ts && grep -c "mapUserErrorToToast" apps/frontend/lib/errors/user-errors.ts
 # expected: 각 1+
 
 # 6. Mapper 호출처 적용 — onError에서 mapper 사용 강제 (도메인 dialog/client)
@@ -698,7 +704,7 @@ if (gaps.length > 0) {
 - 명령 1 (격상 완료된 도메인): 0 hits
 - 명령 2: 격상된 ErrorCode 사용 카운트 회귀 0 (줄어들지 않음)
 - 명령 3 (fail-close 비대칭): 0 hits 또는 모든 케이스가 REJECTION_REASON_MIN_LENGTH SSOT 사용
-- 명령 4 (시스템 진행률): 본 sprint 후 baseline 기록, 후속 sprint마다 감소 추세 확인
+- 명령 4 (시스템 진행률): 0건 = 전멸 달성 (2026-05-03). 증가 시 즉시 FAIL — 회귀 탐지
 - 명령 5 (mapper SSOT 존재): 각 도메인 ≥ 1 export
 - 명령 6 (mapper 호출처 적용): 각 dialog/client ≥ 1 사용 — UX 갭 (한국어 backend 메시지 노출) 0건
 - 명령 7 (i18n namespace 정합성): mapper i18n key가 ko/en parity 만족 (verify-i18n과 시너지)
