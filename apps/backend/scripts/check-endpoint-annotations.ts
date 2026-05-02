@@ -81,6 +81,9 @@ const PUBLIC_WHITELIST_PATTERNS: string[] = [
 
   // 헬스체크 — /health 공개 엔드포인트 (로드 밸런서, 모니터링 시스템용)
   'monitoring.controller.ts',
+
+  // CSP 위반 수집 — 브라우저가 인증 없이 POST하는 Report-To 엔드포인트 (RFC 7230, CSP Level 3)
+  'security.controller.ts',
 ];
 
 // ─── 3. 입력 검증 누락 감지 설정 ────────────────────────────────────────────
@@ -97,6 +100,10 @@ const BODY_PIPE_EXEMPTED_CONTROLLERS: Record<string, string> = {
   // auth.controller.ts: @Post('refresh')는 @Body('refresh_token') — 단일 필드 추출 (JWT 자체가 검증됨)
   // @Post('logout')는 @Body('refresh_token') — 단일 필드 추출
   'auth/auth.controller.ts': '단일 필드 추출(@Body("refresh_token")) — JWT 서비스가 직접 검증',
+
+  // security.controller.ts: @Body() body: unknown — CSP 위반 보고서는 브라우저 구현마다 스펙이 달라
+  // 고정 스키마 검증 불가 (legacy report-uri vs Reporting API 양형 수용 필수, RFC 7230 / CSP Level 3)
+  'security/security.controller.ts': '@Body() unknown — 브라우저 CSP 보고서는 스키마 미고정, 로깅만 수행',
 };
 
 // ─── 3. 유틸리티 함수 ───────────────────────────────────────────────────────

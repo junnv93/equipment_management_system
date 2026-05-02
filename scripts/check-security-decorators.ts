@@ -31,8 +31,15 @@ const HTTP_METHOD_REGEX = /@(Get|Post|Put|Patch|Delete)\s*\(/;
 const SECURITY_DECORATOR_REGEX =
   /@(RequirePermissions|SkipPermissions|Public|InternalServiceOnly|SseAuthenticated)\s*\(/;
 
-/** 메서드 선언 패턴 — async foo( 또는 foo( (들여쓰기 있음, 데코레이터 아님) */
-const METHOD_DECL_REGEX = /^\s+(?:async\s+)?(\w+)\s*\(/;
+/**
+ * 메서드 선언 패턴 — async foo( 또는 foo( (들여쓰기 있음, 데코레이터 아님)
+ *
+ * [a-z]\w* — 소문자 시작만 허용. FilesInterceptor/FileInterceptor 등 PascalCase
+ * 팩토리 함수 호출이 @UseInterceptors(...) 내부에서 여러 줄로 쓰일 때
+ * 메서드 선언으로 오인하는 false positive를 방지한다.
+ * NestJS 컨트롤러 메서드는 컨벤션상 반드시 camelCase(소문자 시작)이다.
+ */
+const METHOD_DECL_REGEX = /^\s+(?:async\s+)?([a-z]\w*)\s*\(/;
 
 interface Violation {
   file: string;
