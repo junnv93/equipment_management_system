@@ -8,7 +8,7 @@ const dataPointSchema = z.object({
 });
 
 export const createMeasurementSchema = z.object({
-  measurementDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다'),
+  measurementDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD),
   measurementEquipmentId: optionalUuid(),
   notes: z.string().optional(),
   dataPoints: z.array(dataPointSchema).min(1, '최소 1개의 데이터 포인트가 필요합니다'),

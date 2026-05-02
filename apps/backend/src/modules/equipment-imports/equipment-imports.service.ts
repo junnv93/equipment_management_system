@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Inject,
   Logger,
   forwardRef,
@@ -748,9 +749,9 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // 본인만 취소 가능
+    // 본인만 취소 가능 (소유권 위반 = 403 Forbidden)
     if (equipmentImport.requesterId !== userId) {
-      throw new BadRequestException({
+      throw new ForbiddenException({
         code: ErrorCode.EquipmentImportOnlyRequesterCanCancel,
         message: 'Only the requester can cancel their own import request.',
       });

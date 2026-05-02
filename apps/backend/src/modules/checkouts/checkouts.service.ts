@@ -3517,6 +3517,14 @@ export class CheckoutsService extends VersionedBaseService {
     // ① scope 먼저 — 스코프 외 사용자에게 도메인 상태 노출 방지 (보안 fail-close)
     await this.enforceScopeFromCheckout(checkout, req);
 
+    // ⓪ domain input fail-close — reason 최소 길이 (Zod 이중 방어)
+    if (!dto.reason || dto.reason.trim().length < VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.RevocationReasonRequired,
+        message: `Revocation reason must be at least ${VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH} characters`,
+      });
+    }
+
     // ② FSM 상태 검증 — approved 상태여야 함
     // assertFsmAction 미사용: revoke는 FSM 전이표에 없는 관리 액션이므로 직접 상태 체크
     if (checkout.status !== (CSVal.APPROVED as CheckoutStatus)) {

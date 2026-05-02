@@ -17,6 +17,9 @@ export const VALIDATION_RULES = {
   /** 반려/거부 사유 최소 글자 수 */
   REJECTION_REASON_MIN_LENGTH: 10,
 
+  /** 승인 철회 사유 최소 글자 수 (UL-QP-18 철회 기록 정책) */
+  REVOCATION_REASON_MIN_LENGTH: 10,
+
   /** 장비 반입 기본 반납 예정일 (일) */
   DEFAULT_RETURN_DAYS: 7,
 

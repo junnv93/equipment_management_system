@@ -109,7 +109,7 @@ export class LocationHistoryResponseDto {
  */
 export const createMaintenanceHistorySchema = z.object({
   performedAt: dateStringSchema,
-  content: z.string().min(1, '내용을 입력해주세요'),
+  content: z.string().min(1, VM.required('내용')),
 });
 
 export type CreateMaintenanceHistoryInput = z.infer<typeof createMaintenanceHistorySchema>;
@@ -167,12 +167,12 @@ export class MaintenanceHistoryResponseDto {
 export const createIncidentHistorySchema = z.object({
   occurredAt: dateStringSchema,
   incidentType: IncidentTypeEnum,
-  content: z.string().min(1, '내용을 입력해주세요').max(500, '내용은 500자 이하로 입력해주세요'),
+  content: z.string().min(1, VM.required('내용')).max(500, VM.string.max('내용', 500)),
 
   // 부적합 생성 관련 필드 (선택)
   createNonConformance: z.boolean().optional(),
   changeEquipmentStatus: z.boolean().optional(),
-  actionPlan: z.string().max(500, '조치 계획은 500자 이하로 입력해주세요').optional(),
+  actionPlan: z.string().max(500, VM.string.max('조치 계획', 500)).optional(),
 });
 
 export type CreateIncidentHistoryInput = z.infer<typeof createIncidentHistorySchema>;

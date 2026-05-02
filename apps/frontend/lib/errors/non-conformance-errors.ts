@@ -51,3 +51,7 @@ export function mapNonConformanceErrorToToast(error: unknown, t: TranslationFunc
     description: error instanceof Error ? error.message : String(error),
   };
 }
+
+export function mapBackendErrorCode(code?: string): string {
+  return code ?? 'UNKNOWN_ERROR';
+}

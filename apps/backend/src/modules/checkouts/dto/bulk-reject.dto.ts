@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 ==========
@@ -15,13 +16,14 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  */
 export const bulkRejectSchema = z.object({
   ids: z
-    .array(z.string().uuid('유효한 UUID 형식이어야 합니다'))
+    .array(z.string().uuid(VM.uuid.generic))
     .min(1, '최소 1건 이상 선택해야 합니다')
     .max(50, '최대 50건까지 일괄 반려할 수 있습니다'),
   reason: z
     .string()
-    .min(1, '반려 사유는 필수입니다')
-    .max(500, '반려 사유는 최대 500자까지 입력 가능합니다'),
+    .trim()
+    .min(1, VM.approval.rejectReason.required)
+    .max(500, VM.string.max('반려 사유', 500)),
 });
 
 export type BulkRejectInput = z.infer<typeof bulkRejectSchema>;

@@ -15,6 +15,8 @@ const CHECKOUT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.CheckoutAlreadyApproved]: 'errors.alreadyApproved',
   [ErrorCode.CheckoutNotPending]: 'errors.notPending',
   [ErrorCode.VersionConflict]: 'errors.versionConflict',
+  [ErrorCode.RevocationWindowExpired]: 'errors.revocationWindowExpired',
+  [ErrorCode.RevocationReasonRequired]: 'errors.revocationReasonRequired',
 };
 
 export function mapCheckoutErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {

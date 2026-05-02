@@ -123,6 +123,8 @@ export enum ErrorCode {
   // ============================================================================
   /** 승인 후 5분 경과 — 철회 가능 시간 초과. */
   RevocationWindowExpired = 'REVOCATION_WINDOW_EXPIRED',
+  /** 철회 사유 미입력 또는 최소 길이 미달. */
+  RevocationReasonRequired = 'REVOCATION_REASON_REQUIRED',
 
   // ============================================================================
   // 폐기(Disposal) 도메인 (UL-QP-18-04)
@@ -738,6 +740,7 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
 
   // 승인 철회
   [ErrorCode.RevocationWindowExpired]: 403,
+  [ErrorCode.RevocationReasonRequired]: 400,
 
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,

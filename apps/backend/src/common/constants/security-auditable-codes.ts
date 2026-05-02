@@ -3,7 +3,7 @@ import { ErrorCode } from '@equipment-management/schemas';
 /**
  * 보안 감사 대상 ErrorCode SSOT
  *
- * GlobalExceptionFilter + AuditInterceptor 양쪽에서 참조.
+ * GlobalExceptionFilter에서 참조 (보안 이벤트 감사 로그 기록 트리거).
  * 새 fail-close / scope / 권한 코드 추가 시 이 파일 단일 갱신.
  *
  * 포함 기준:
@@ -29,6 +29,7 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.CannotSelfApprove,
   ErrorCode.FormHistoryDownloadForbidden,
   ErrorCode.RevocationWindowExpired,
+  ErrorCode.RevocationReasonRequired,
   ErrorCode.IntermediateInspectionWithdrawNotSubmitter,
   ErrorCode.SelfInspectionWithdrawNotSubmitter,
   ErrorCode.EquipmentImportOnlyRequesterCanCancel,

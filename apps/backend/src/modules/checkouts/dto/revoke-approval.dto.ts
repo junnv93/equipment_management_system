@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 ==========
@@ -12,7 +14,17 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const revokeApprovalSchema = z.object({
   ...versionedSchema,
-  reason: z.string().trim().min(1, '철회 사유를 입력해주세요'),
+  reason: z
+    .string()
+    .trim()
+    .min(
+      VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH,
+      VM.string.min('철회 사유', VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH)
+    )
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('철회 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 export type RevokeApprovalInput = z.infer<typeof revokeApprovalSchema>;

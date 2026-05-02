@@ -8,6 +8,7 @@
  *   - bulk-approve와 의도적 비대칭 (reason required vs commonReason optional)
  */
 
+import { VM } from '@equipment-management/schemas';
 import { bulkRejectSchema } from '../dto/bulk-reject.dto';
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
@@ -65,7 +66,7 @@ describe('bulkRejectSchema', () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('필수');
+        expect(result.error.issues[0].message).toBe(VM.approval.rejectReason.required);
       }
     });
 
@@ -85,7 +86,7 @@ describe('bulkRejectSchema', () => {
       const result = bulkRejectSchema.safeParse({ ids: [VALID_UUID], reason });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('최대 500자');
+        expect(result.error.issues[0].message).toBe(VM.string.max('반려 사유', 500));
       }
     });
   });
