@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isConflictError, isNotFoundError } from '@/lib/api/error';
@@ -91,6 +91,112 @@ interface SelfInspectionItemForm {
   criteria: string;
   checkResult: SelfInspectionItemJudgment | '';
 }
+
+// ── CheckItemRow — items.map 성능 최적화 (React.memo + 안정 콜백) ──
+
+interface CheckItemRowProps {
+  item: SelfInspectionItemForm;
+  index: number;
+  /** items.length <= 1 일 때 삭제 버튼 비활성 */
+  isLast: boolean;
+  onItemChange: (index: number, field: keyof SelfInspectionItemForm, value: string) => void;
+  onRemove: (index: number) => void;
+}
+
+const CheckItemRow = memo(function CheckItemRow({
+  item,
+  index,
+  isLast,
+  onItemChange,
+  onRemove,
+}: CheckItemRowProps) {
+  const t = useTranslations('equipment');
+
+  const rowStateClass =
+    item.checkResult === 'pass'
+      ? INSPECTION_CHECKITEM_ROW_STATE.rowPass
+      : item.checkResult === 'fail'
+        ? INSPECTION_CHECKITEM_ROW_STATE.rowFail
+        : item.checkResult === 'na'
+          ? INSPECTION_CHECKITEM_ROW_STATE.rowNa
+          : INSPECTION_CHECKITEM_ROW_STATE.rowNone;
+
+  return (
+    <div
+      className={cn(
+        INSPECTION_CHECKITEM_ROW_STATE.rowBaseDecoration,
+        INSPECTION_CHECKITEM_ROW_GRID.containerCols,
+        rowStateClass
+      )}
+    >
+      <span className={INSPECTION_CHECKITEM_ROW_GRID.cellIndex}>{index + 1}</span>
+      <Input
+        value={item.checkItem}
+        onChange={(e) => onItemChange(index, 'checkItem', e.target.value)}
+        placeholder={t('selfInspection.form.itemNamePlaceholder')}
+        aria-label={t('selfInspection.checkItem')}
+      />
+      <Input
+        value={item.measurement}
+        onChange={(e) => onItemChange(index, 'measurement', e.target.value)}
+        placeholder={t('selfInspection.measurementPlaceholder')}
+        aria-label={t('selfInspection.measurementLabel', { itemNumber: index + 1 })}
+        maxLength={SELF_INSPECTION_MEASUREMENT_MAX_LENGTH}
+        className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
+      />
+      <Input
+        value={item.criteria}
+        onChange={(e) => onItemChange(index, 'criteria', e.target.value)}
+        placeholder={t('selfInspection.criteriaPlaceholder')}
+        aria-label={t('selfInspection.criteriaLabel', { itemNumber: index + 1 })}
+        maxLength={SELF_INSPECTION_CRITERIA_MAX_LENGTH}
+        className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
+      />
+      <ToggleGroup
+        type="single"
+        value={item.checkResult}
+        onValueChange={(v) => {
+          if (v === 'pass' || v === 'fail' || v === 'na') {
+            onItemChange(index, 'checkResult', v);
+          }
+        }}
+        aria-label={t('selfInspection.checkResultRowAriaLabel', { itemNumber: index + 1 })}
+        className={INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.groupRoot}
+      >
+        {(['pass', 'fail', 'na'] as const).map((value) => {
+          const Icon = value === 'pass' ? Check : value === 'fail' ? XIcon : Minus;
+          const itemClass =
+            value === 'pass'
+              ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemPass
+              : value === 'fail'
+                ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemFail
+                : INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemNa;
+          return (
+            <ToggleGroupItem
+              key={value}
+              value={value}
+              className={cn(INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemBase, itemClass)}
+            >
+              <Icon className="h-3 w-3" aria-hidden="true" />
+              {t(`selfInspection.judgment.${value}` as Parameters<typeof t>[0])}
+            </ToggleGroupItem>
+          );
+        })}
+      </ToggleGroup>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onRemove(index)}
+        disabled={isLast}
+        aria-label={t('selfInspection.form.removeItem')}
+        className="h-7 w-7 p-0"
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+});
 
 interface SpecialNoteForm {
   content: string;
@@ -326,13 +432,16 @@ function SelfInspectionFormDialogInner({
     ]);
   };
 
-  const handleRemoveItem = (index: number) => {
+  const handleRemoveItem = useCallback((index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  const handleItemChange = (index: number, field: keyof SelfInspectionItemForm, value: string) => {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
-  };
+  const handleItemChange = useCallback(
+    (index: number, field: keyof SelfInspectionItemForm, value: string) => {
+      setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+    },
+    []
+  );
 
   const isValid =
     inspectionDate &&
@@ -349,14 +458,6 @@ function SelfInspectionFormDialogInner({
   // Phase 0C: 프리셋에서 새 항목 추가 — checkCriteria는 자체점검 type 미지원이므로 무시
   const handlePresetSelect = (checkItem: string) => {
     setItems((prev) => [...prev, { checkItem, measurement: '', criteria: '', checkResult: '' }]);
-  };
-
-  // Phase 0C: segmented control row 시각 — 합부 값에 따라 left border + bg tint
-  const getRowStateClass = (judgment: string) => {
-    if (judgment === 'pass') return INSPECTION_CHECKITEM_ROW_STATE.rowPass;
-    if (judgment === 'fail') return INSPECTION_CHECKITEM_ROW_STATE.rowFail;
-    if (judgment === 'na') return INSPECTION_CHECKITEM_ROW_STATE.rowNa;
-    return INSPECTION_CHECKITEM_ROW_STATE.rowNone;
   };
 
   const handleSubmit = () => {
@@ -634,85 +735,14 @@ function SelfInspectionFormDialogInner({
 
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div
+                <CheckItemRow
                   key={index}
-                  className={cn(
-                    INSPECTION_CHECKITEM_ROW_STATE.rowBaseDecoration,
-                    INSPECTION_CHECKITEM_ROW_GRID.containerCols,
-                    getRowStateClass(item.checkResult)
-                  )}
-                >
-                  <span className={INSPECTION_CHECKITEM_ROW_GRID.cellIndex}>{index + 1}</span>
-                  <Input
-                    value={item.checkItem}
-                    onChange={(e) => handleItemChange(index, 'checkItem', e.target.value)}
-                    placeholder={t('selfInspection.form.itemNamePlaceholder')}
-                    aria-label={t('selfInspection.checkItem')}
-                  />
-                  <Input
-                    value={item.measurement}
-                    onChange={(e) => handleItemChange(index, 'measurement', e.target.value)}
-                    placeholder={t('selfInspection.measurementPlaceholder')}
-                    aria-label={t('selfInspection.measurementLabel', { itemNumber: index + 1 })}
-                    maxLength={SELF_INSPECTION_MEASUREMENT_MAX_LENGTH}
-                    className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
-                  />
-                  <Input
-                    value={item.criteria}
-                    onChange={(e) => handleItemChange(index, 'criteria', e.target.value)}
-                    placeholder={t('selfInspection.criteriaPlaceholder')}
-                    aria-label={t('selfInspection.criteriaLabel', { itemNumber: index + 1 })}
-                    maxLength={SELF_INSPECTION_CRITERIA_MAX_LENGTH}
-                    className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
-                  />
-                  <ToggleGroup
-                    type="single"
-                    value={item.checkResult}
-                    onValueChange={(v) => {
-                      if (v === 'pass' || v === 'fail' || v === 'na') {
-                        handleItemChange(index, 'checkResult', v);
-                      }
-                    }}
-                    aria-label={t('selfInspection.checkResultRowAriaLabel', {
-                      itemNumber: index + 1,
-                    })}
-                    className={INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.groupRoot}
-                  >
-                    {(['pass', 'fail', 'na'] as const).map((value) => {
-                      const Icon = value === 'pass' ? Check : value === 'fail' ? XIcon : Minus;
-                      const itemClass =
-                        value === 'pass'
-                          ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemPass
-                          : value === 'fail'
-                            ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemFail
-                            : INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemNa;
-                      return (
-                        <ToggleGroupItem
-                          key={value}
-                          value={value}
-                          className={cn(
-                            INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemBase,
-                            itemClass
-                          )}
-                        >
-                          <Icon className="h-3 w-3" aria-hidden="true" />
-                          {t(`selfInspection.judgment.${value}` as Parameters<typeof t>[0])}
-                        </ToggleGroupItem>
-                      );
-                    })}
-                  </ToggleGroup>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveItem(index)}
-                    disabled={items.length <= 1}
-                    aria-label={t('selfInspection.form.removeItem')}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                  item={item}
+                  index={index}
+                  isLast={items.length <= 1}
+                  onItemChange={handleItemChange}
+                  onRemove={handleRemoveItem}
+                />
               ))}
             </div>
           </div>
