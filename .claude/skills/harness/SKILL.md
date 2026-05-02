@@ -178,6 +178,11 @@ mv .claude/contracts/{slug}.md \
 # REGISTRY.md Active 섹션에서 해당 행 삭제
 # SHOULD 실패 항목이 있으면 tech-debt-tracker.md에 추가
 # 형식: - [ ] {이슈} — {파일:라인} — {날짜}
+
+# tech-debt-tracker.md [x] 항목 정리
+# [x]로 완료 표시된 항목은 git 이력으로 충분 — 아카이브 이동 불필요
+grep -c "^- \[x\]" .claude/exec-plans/tech-debt-tracker.md 2>/dev/null | grep -v "^0$" && \
+  sed -i '/^- \[x\]/d' .claude/exec-plans/tech-debt-tracker.md || true
 ```
 
 Mode 1은 plan 파일 없으므로 생략. contract 이동은 Mode 1/2 모두 적용.

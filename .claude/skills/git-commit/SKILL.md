@@ -15,6 +15,17 @@ description: Analyzes git changes to generate conventional commit messages and a
 
 ## 워크플로우
 
+### Step 0: tech-debt-tracker.md 완료 항목 정리
+
+커밋 전 선행 정리. `[x]` 항목이 있으면 삭제한다 — 아카이브 이동 불필요, git 이력이 기록.
+
+```bash
+grep -c "^- \[x\]" .claude/exec-plans/tech-debt-tracker.md 2>/dev/null | grep -v "^0$" && \
+  sed -i '/^- \[x\]/d' .claude/exec-plans/tech-debt-tracker.md || true
+```
+
+`[x]` 항목이 없으면 스킵.
+
 ### Step 1: 세션 변경 파일 파악 (필수 선행 단계)
 
 **먼저 이번 대화 컨텍스트에서 Edit/Write 도구로 실제 작업한 파일 목록을 추출합니다.**
