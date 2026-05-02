@@ -6,6 +6,7 @@
  *   — 호출자 useTranslations('checkouts') 사용
  */
 import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { extractErrorCode, type ErrorToast } from './disposal-errors';
 
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
@@ -19,6 +20,13 @@ const CHECKOUT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.RevocationReasonRequired]: 'errors.revocationReasonRequired',
 };
 
+const CHECKOUT_ERROR_I18N_VARS: Partial<Record<ErrorCode, Record<string, string | number | Date>>> =
+  {
+    [ErrorCode.RevocationReasonRequired]: {
+      min: VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH,
+    },
+  };
+
 export function mapCheckoutErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
@@ -26,7 +34,7 @@ export function mapCheckoutErrorToToast(error: unknown, t: TranslationFunction):
   if (errorCode && CHECKOUT_ERROR_I18N_KEYS[errorCode]) {
     return {
       title: t('errors.title'),
-      description: t(CHECKOUT_ERROR_I18N_KEYS[errorCode]!),
+      description: t(CHECKOUT_ERROR_I18N_KEYS[errorCode]!, CHECKOUT_ERROR_I18N_VARS[errorCode]),
     };
   }
 

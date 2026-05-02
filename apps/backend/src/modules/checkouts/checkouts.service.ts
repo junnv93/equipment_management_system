@@ -3499,7 +3499,7 @@ export class CheckoutsService extends VersionedBaseService {
 
   /**
    * 승인 철회 — approved 상태 + 승인 후 5분 이내 + 본인 승인만 철회 가능.
-   * ✅ fail-close 순서: scope → FSM(approved+5분) → domain(approvedBy===approverId)
+   * ✅ fail-close 순서: scope → FSM(approved) → reason(min길이) → time-window(5분) → domain(approvedBy===approverId)
    * ✅ CAS: version 불일치 → 409 VersionConflict
    * ✅ AuditLog: revokedBy, revokeReason, previousApprovedAt
    * ✅ Rule 2: approverId = extractUserId(req)
@@ -3517,15 +3517,7 @@ export class CheckoutsService extends VersionedBaseService {
     // ① scope 먼저 — 스코프 외 사용자에게 도메인 상태 노출 방지 (보안 fail-close)
     await this.enforceScopeFromCheckout(checkout, req);
 
-    // ⓪ domain input fail-close — reason 최소 길이 (Zod 이중 방어)
-    if (!dto.reason || dto.reason.trim().length < VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH) {
-      throw new BadRequestException({
-        code: ErrorCode.RevocationReasonRequired,
-        message: `Revocation reason must be at least ${VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH} characters`,
-      });
-    }
-
-    // ② FSM 상태 검증 — approved 상태여야 함
+    // ② FSM 상태 검증 — approved 상태여야 함 (scope → FSM → domain 원칙)
     // assertFsmAction 미사용: revoke는 FSM 전이표에 없는 관리 액션이므로 직접 상태 체크
     if (checkout.status !== (CSVal.APPROVED as CheckoutStatus)) {
       throw new BadRequestException({
@@ -3534,7 +3526,15 @@ export class CheckoutsService extends VersionedBaseService {
       });
     }
 
-    // ③ 승인 철회 윈도우 검증 — APPROVAL_REVOCATION_WINDOW_MS (SSOT)
+    // ③ input fail-close — reason 최소 길이 (Zod 이중 방어, FSM 통과 후)
+    if (!dto.reason || dto.reason.trim().length < VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH) {
+      throw new BadRequestException({
+        code: ErrorCode.RevocationReasonRequired,
+        message: `Revocation reason must be at least ${VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH} characters`,
+      });
+    }
+
+    // ④ 승인 철회 윈도우 검증 — APPROVAL_REVOCATION_WINDOW_MS (SSOT)
     const approvedAt = checkout.approvedAt;
     if (!approvedAt || Date.now() - approvedAt.getTime() > APPROVAL_REVOCATION_WINDOW_MS) {
       throw new ForbiddenException({
@@ -3543,7 +3543,7 @@ export class CheckoutsService extends VersionedBaseService {
       });
     }
 
-    // ④ domain — 본인이 승인한 건만 철회 가능
+    // ⑤ domain — 본인이 승인한 건만 철회 가능
     if (checkout.approverId !== approverId) {
       throw new ForbiddenException({
         code: ErrorCode.Forbidden,
