@@ -26,7 +26,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 2  | `verify-auth`           | backend  | 인증/인가 — req.user.userId, @RequirePermissions         |
 | 3  | `verify-zod`            | backend  | Zod 검증 — ZodValidationPipe, Query targets              |
 | 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 로컬 재정의 금지, config 파생 boolean → 수치 SSOT(Step 32), isPurposeCompatibleWithEquipment USER_SELECTABLE_PURPOSES guard(Step 47), switch+assertNever exhaustiveness(Step 48), UI 도메인 타입 SSOT+위임 re-export(Step 49), Visual layer ↔ domain SSOT 분리 named constant(Step 52, Sprint 4.5 U-09), ESLint ImportExpression dynamic import selector(Step 22f), useRowSelection SSOT(Step 55), calculateDaysRemaining SSOT(Step 56) |
-| 5  | `verify-hardcoding`     | both     | 하드코딩 탐지 — API 경로, queryKeys, 환경변수             |
+| 5  | `verify-hardcoding`     | both     | 하드코딩 탐지 — API 경로, queryKeys, 환경변수, optimistic fallback `pageSize`(Step 17b), `useOptimisticMutation` `invalidateKeys` 인라인 배열 → `*CacheInvalidation` 클래스 SSOT(Step 33)             |
 | 6  | `verify-frontend-state` | frontend | 상태 관리 — TanStack Query, 동적 import, ActiveDialog discriminated union(Step 34), runWithConcurrency worker pool + backend bulk endpoint delegation 예외(Step 35), sessionStorage TTL+try/catch+one-shot(Step 37, Sprint 4.5 U-07)  |
 | 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState            |
 | 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT                                     |
