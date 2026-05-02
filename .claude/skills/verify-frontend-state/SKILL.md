@@ -1333,5 +1333,5 @@ grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoS
 
 **관련 파일:**
 - `apps/frontend/hooks/use-undoable-state.ts` — SSOT 정의 (2026-05-02, inspection-undo-hook-extraction-reject-spec)
-- `apps/frontend/hooks/__tests__/use-undoable-state.test.ts` — 8개 케이스: push→undo 복원, push→undo→redo, limit shift, 빈 stack no-op, 참조 안정성
+- `apps/frontend/hooks/__tests__/use-undoable-state.test.ts` — 7개 케이스: push→undo 복원, push→undo→redo, limit shift, 빈 stack undo no-op, 빈 stack redo no-op, push redo 스택 초기화, 참조 안정성
 - `apps/frontend/components/inspections/result-sections/VisualTableEditor.tsx` — 참조 구현 (인라인 56줄 → 위임 8줄)

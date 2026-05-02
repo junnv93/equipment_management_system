@@ -751,6 +751,61 @@ if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
 - `error-codes-ssot-system-wide` (2026-05-02): 시니어 자기검토 갭 5/6/8 closure — 본 Step 16 신설
 - `manage-skills audit` (2026-05-02): mapper coverage(명령 5/6/7) 보강 — frontend mapper SSOT 패턴 회귀 차단 + UX 갭(한국어 backend 메시지 노출) 강제
 
+---
+
+### Step 17: `.trim().min(N)` 경계 케이스 spec 대칭성 — reject + accept 양방향 필수 (2026-05-02 추가)
+
+**배경**: `.trim().min(N)` 체인의 순서 정합성을 검증하려면 `trim→reject` 케이스 하나만으론 불충분. `.min()`이 trim 이전에 실행되는 버그는 `trim→reject` spec을 통과시킨다. `trim→accept` 케이스가 `.trim().min(N)` 순서를 동시에 증명한다.
+
+**규칙**: `.trim().min(N)` 또는 `.trim().min(N)` 패턴을 테스트하는 spec은 다음 두 케이스를 **모두** 포함해야 한다.
+
+| 케이스 | 입력 | trim 후 길이 | 기대 |
+|--------|------|-------------|------|
+| trim→reject | `` ` ${'a'.repeat(N - 1)} ` `` | N-1 (< N) | `success: false` |
+| trim→accept | `` ` ${'a'.repeat(N)} ` `` | N (= MIN) | `success: true` |
+
+**탐지 명령**:
+
+```bash
+# .trim().min(N) schema를 테스트하는 spec 파일 목록
+SPEC_FILES=$(grep -rl "trim()\|\.trim()" \
+  apps/backend/src --include="*.spec.ts" \
+  apps/frontend --include="*.test.ts" \
+  2>/dev/null)
+
+# 각 spec 파일에서 trim→reject만 있고 trim→accept 없는 파일 탐지
+for f in $SPEC_FILES; do
+  REJECT=$(grep -c "trim.*reject\|rejects.*trim\|trim.*0\b\|trim → 0" "$f" 2>/dev/null || echo 0)
+  ACCEPT=$(grep -c "trim.*accept\|accepts.*trim\|trim 후.*MIN자.*accept\|trim.*정확히.*MIN" "$f" 2>/dev/null || echo 0)
+  if [ "$REJECT" -gt 0 ] && [ "$ACCEPT" -eq 0 ]; then
+    echo "TRIM_ASYMMETRIC: $f — trim→reject 있음, trim→accept 없음"
+  fi
+done
+```
+
+**PASS 기준**: trim 관련 spec 파일마다 `trim→reject` + `trim→accept` 케이스 쌍 존재.
+
+**FAIL 기준**: `trim→reject`만 있고 `trim→accept` 누락 → Evaluator iter 1에서 발견 시 M-FAIL 처리.
+
+**올바른 패턴** (equipment-approval-reject.service.spec.ts, 2026-05-02):
+
+```typescript
+it('trims surrounding whitespace before length check — reject', () => {
+  // 앞뒤 공백 포함 MIN+1자 → trim 후 MIN-1자 → reject
+  const result = schema.safeParse({ rejectionReason: ` ${'a'.repeat(MIN - 1)} ` });
+  expect(result.success).toBe(false);
+});
+
+it('trims surrounding whitespace before length check — accept (trim 후 정확히 MIN)', () => {
+  // 앞뒤 공백 2자 포함 MIN+2자 → trim 후 MIN자 → accept (.trim().min(MIN) 순서 검증)
+  const result = schema.safeParse({ rejectionReason: ` ${'a'.repeat(MIN)} ` });
+  expect(result.success).toBe(true);
+});
+```
+
+**관련 사고**:
+- `inspection-undo-hook-extraction-reject-spec` (2026-05-02): Evaluator iter 1 M1 FAIL — trim→accept 케이스 누락. iter 2에서 추가 후 PASS.
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
