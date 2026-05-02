@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ErrorCode } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { IntermediateInspectionsService } from '../intermediate-inspections.service';
@@ -495,7 +500,7 @@ describe('IntermediateInspectionsService', () => {
       expect(mockDb.update).toHaveBeenCalled();
     });
 
-    it('제출자 불일치 시 BadRequestException을 던진다', async () => {
+    it('제출자 불일치 시 ForbiddenException을 던진다', async () => {
       const submitted = {
         ...MOCK_INSPECTION,
         approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
@@ -507,7 +512,7 @@ describe('IntermediateInspectionsService', () => {
         .mockReturnValueOnce(createSelectChain([]));
 
       await expect(service.withdraw('insp-uuid-1', 1, 'user-uuid-1')).rejects.toThrow(
-        BadRequestException
+        ForbiddenException
       );
     });
 

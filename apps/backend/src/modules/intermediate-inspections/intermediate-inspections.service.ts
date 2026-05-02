@@ -1,4 +1,11 @@
-import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import {
@@ -635,7 +642,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     }
 
     if (existing.submittedBy !== userId) {
-      throw new BadRequestException({
+      throw new ForbiddenException({
         code: ErrorCode.IntermediateInspectionWithdrawNotSubmitter,
         message: 'Only the submitter can withdraw a submitted inspection.',
       });

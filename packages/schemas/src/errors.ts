@@ -509,12 +509,12 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.IntermediateInspectionOnlyReviewedCanApprove]: 400,
   [ErrorCode.IntermediateInspectionOnlySubmittedCanWithdraw]: 400,
   [ErrorCode.IntermediateInspectionOnlyRejectedCanResubmit]: 400,
-  [ErrorCode.IntermediateInspectionWithdrawNotSubmitter]: 400,
+  [ErrorCode.IntermediateInspectionWithdrawNotSubmitter]: 403,
   // self-inspections
   [ErrorCode.SelfInspectionOnlyDraftCanUpdate]: 400,
   [ErrorCode.SelfInspectionOnlyDraftCanSubmit]: 400,
   [ErrorCode.SelfInspectionOnlySubmittedCanWithdraw]: 400,
-  [ErrorCode.SelfInspectionWithdrawNotSubmitter]: 400,
+  [ErrorCode.SelfInspectionWithdrawNotSubmitter]: 403,
   [ErrorCode.SelfInspectionOnlySubmittedCanApprove]: 400,
   [ErrorCode.SelfInspectionOnlyRejectedCanResubmit]: 400,
   // software-validations
@@ -539,7 +539,7 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.EquipmentImportNoLinkedEquipment]: 400,
   [ErrorCode.EquipmentImportOnlyReceivedCanReturn]: 400,
   [ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel]: 400,
-  [ErrorCode.EquipmentImportOnlyRequesterCanCancel]: 400,
+  [ErrorCode.EquipmentImportOnlyRequesterCanCancel]: 403,
   [ErrorCode.EquipmentImportDetailNotFound]: 404,
   // non-conformances FSM
   [ErrorCode.NcClosedCannotUpdate]: 400,
