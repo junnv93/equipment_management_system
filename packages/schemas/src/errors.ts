@@ -171,6 +171,114 @@ export enum ErrorCode {
   CalibrationPlanItemNotExecuted = 'PLAN_ITEM_NOT_EXECUTED',
   /** 'approved' 외 상태의 계획서는 export 불가 (export 보안 게이트). */
   CalibrationPlanNonExportableStatus = 'NON_EXPORTABLE_PLAN_STATUS',
+
+  // ============================================================================
+  // Reject 사유 길이 SSOT — 7개 도메인 reject defense-in-depth fail-close
+  // (frontend `RejectReasonSchema` ≥10자 룰의 backend 페어링)
+  // ============================================================================
+  /** 장비 반입 반려 사유가 최소 길이 미만 (frontend bypass 차단 fail-close). */
+  EquipmentImportRejectionReasonRequired = 'EQUIPMENT_IMPORT_REJECTION_REASON_REQUIRED',
+  /** 교정 기록 반려 사유가 최소 길이 미만. */
+  CalibrationRejectionReasonRequired = 'CALIBRATION_REJECTION_REASON_REQUIRED',
+  /** 교정 인자 반려 사유가 최소 길이 미만. */
+  CalibrationFactorRejectionReasonRequired = 'CALIBRATION_FACTOR_REJECTION_REASON_REQUIRED',
+  /** 시험용 소프트웨어 유효성 확인 반려 사유가 최소 길이 미만. */
+  SoftwareValidationRejectionReasonRequired = 'SOFTWARE_VALIDATION_REJECTION_REASON_REQUIRED',
+  /** 중간 점검 반려 사유가 최소 길이 미만. */
+  IntermediateInspectionRejectionReasonRequired = 'INTERMEDIATE_INSPECTION_REJECTION_REASON_REQUIRED',
+  /** 자체 점검 반려 사유가 최소 길이 미만. */
+  SelfInspectionRejectionReasonRequired = 'SELF_INSPECTION_REJECTION_REASON_REQUIRED',
+  /** 부적합 시정 반려 사유가 최소 길이 미만. */
+  NonConformanceRejectionReasonRequired = 'NON_CONFORMANCE_REJECTION_REASON_REQUIRED',
+
+  // ============================================================================
+  // FSM 상태 전이 ErrorCode — 7 도메인 reject/transition 흐름 SSOT
+  // (sprint tier-2-rejectmodal-ssot iter 2: 인접 inline 코드 시스템 전반 격상)
+  // ============================================================================
+  /** equipment-imports: pending 상태만 반려 가능 (CAS precondition). */
+  EquipmentImportOnlyPendingCanReject = 'IMPORT_ONLY_PENDING_CAN_REJECT',
+  /** calibration: pending_approval 상태만 반려 가능. */
+  CalibrationOnlyPendingCanReject = 'CALIBRATION_ONLY_PENDING_CAN_REJECT',
+  /** calibration-factors: pending 상태만 반려 가능. */
+  CalibrationFactorOnlyPendingCanReject = 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_REJECT',
+  /** software-validations: 상태 전이 불가 (submitted/approved → rejected 외). */
+  SoftwareValidationInvalidStatusTransition = 'SOFTWARE_VALIDATION_INVALID_STATUS_TRANSITION',
+  /** intermediate-inspections: 상태 전이 불가. */
+  IntermediateInspectionInvalidStatusTransition = 'INTERMEDIATE_INSPECTION_INVALID_STATUS_TRANSITION',
+  /** self-inspections: 상태 전이 불가. */
+  SelfInspectionInvalidStatusTransition = 'SELF_INSPECTION_INVALID_STATUS_TRANSITION',
+  /** non-conformances: NC 상태 전이 불가 (validateTransition 헬퍼). */
+  NonConformanceInvalidTransition = 'NC_INVALID_TRANSITION',
+
+  // ============================================================================
+  // 장비 서비스 도메인 에러 (equipment.service.ts)
+  // ============================================================================
+  /** 교정 기한 날짜 형식 오류 (calibrationDue). */
+  EquipmentInvalidCalibrationDue = 'EQUIPMENT_INVALID_CALIBRATION_DUE',
+  /** 교정 기한 이후 날짜가 기한보다 이전 (calibrationDueAfter < calibrationDue). */
+  EquipmentInvalidCalibrationDueAfter = 'EQUIPMENT_INVALID_CALIBRATION_DUE_AFTER',
+  /** 담당자 UUID가 존재하지 않음. */
+  EquipmentManagerNotFound = 'EQUIPMENT_MANAGER_NOT_FOUND',
+  /** 담당자 역할이 manager 이상이어야 함. */
+  EquipmentManagerRoleInsufficient = 'EQUIPMENT_MANAGER_ROLE_INSUFFICIENT',
+  /** 담당자와 장비 사이트가 다름. */
+  EquipmentManagerSiteMismatch = 'EQUIPMENT_MANAGER_SITE_MISMATCH',
+  /** 장비 관리번호 중복 (사이트 내). */
+  EquipmentManagementNumberDuplicate = 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+  /** site 정보 없이 장비 생성 불가. */
+  EquipmentSiteRequired = 'EQUIPMENT_SITE_REQUIRED',
+  /** 교정 기한 초과 상태로 인한 작업 차단. */
+  EquipmentCalibrationOverdueStatusBlock = 'EQUIPMENT_CALIBRATION_OVERDUE_STATUS_BLOCK',
+
+  // ============================================================================
+  // 장비 승인 서비스 에러 (equipment-approval.service.ts)
+  // ============================================================================
+  /** 장비 승인 요청 생성 실패 (internal). */
+  EquipmentRequestCreateFailed = 'EQUIPMENT_REQUEST_CREATE_FAILED',
+  /** 장비 승인 요청 수정 실패 (internal). */
+  EquipmentRequestUpdateFailed = 'EQUIPMENT_REQUEST_UPDATE_FAILED',
+  /** 장비 승인 요청 삭제 실패 (internal). */
+  EquipmentRequestDeleteFailed = 'EQUIPMENT_REQUEST_DELETE_FAILED',
+  /** 장비 승인 요청 조회 권한 없음. */
+  EquipmentRequestNoViewPermission = 'EQUIPMENT_REQUEST_NO_VIEW_PERMISSION',
+  /** 장비 승인 요청 목록 조회 실패 (internal). */
+  EquipmentRequestListFailed = 'EQUIPMENT_REQUEST_LIST_FAILED',
+  /** 장비 UUID 없이 요청 불가. */
+  EquipmentRequestNoEquipmentId = 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
+  /** 장비 승인 요청을 찾을 수 없음. */
+  EquipmentRequestNotFound = 'EQUIPMENT_REQUEST_NOT_FOUND',
+  /** 장비 승인 요청 조회 실패 (internal). */
+  EquipmentRequestFetchFailed = 'EQUIPMENT_REQUEST_FETCH_FAILED',
+  /** 승인 권한 없음. */
+  EquipmentRequestNoApprovePermission = 'EQUIPMENT_REQUEST_NO_APPROVE_PERMISSION',
+  /** 이미 처리된 요청 재처리 불가. */
+  EquipmentRequestAlreadyProcessed = 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
+  /** 본인 요청 셀프 승인 금지. */
+  EquipmentRequestSelfApprovalForbidden = 'EQUIPMENT_REQUEST_SELF_APPROVAL_FORBIDDEN',
+  /** 팀 스코프 위반 (다른 팀 요청 처리 불가). */
+  EquipmentRequestTeamScopeViolation = 'EQUIPMENT_REQUEST_TEAM_SCOPE_VIOLATION',
+  /** 장비 승인 처리 실패 (internal). */
+  EquipmentRequestApproveFailed = 'EQUIPMENT_REQUEST_APPROVE_FAILED',
+  /** 반려 권한 없음. */
+  EquipmentRequestNoRejectPermission = 'EQUIPMENT_REQUEST_NO_REJECT_PERMISSION',
+  /** 반려 사유 필수. */
+  EquipmentRequestRejectionReasonRequired = 'EQUIPMENT_REQUEST_REJECTION_REASON_REQUIRED',
+  /** 본인 요청 셀프 반려 금지. */
+  EquipmentRequestSelfRejectionForbidden = 'EQUIPMENT_REQUEST_SELF_REJECTION_FORBIDDEN',
+  /** 장비 반려 처리 실패 (internal). */
+  EquipmentRequestRejectFailed = 'EQUIPMENT_REQUEST_REJECT_FAILED',
+
+  // ============================================================================
+  // 이력/첨부/수리 도메인 에러
+  // ============================================================================
+  /** 장비 이력을 찾을 수 없음. */
+  HistoryNotFound = 'HISTORY_NOT_FOUND',
+  /** 부적합 사고 유형이 유효하지 않음. */
+  NcInvalidIncidentType = 'NC_INVALID_INCIDENT_TYPE',
+  /** 수리 이력을 찾을 수 없음. */
+  RepairHistoryNotFound = 'REPAIR_HISTORY_NOT_FOUND',
+  /** 첨부 파일을 찾을 수 없음. */
+  AttachmentNotFound = 'ATTACHMENT_NOT_FOUND',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
@@ -273,6 +381,59 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.CalibrationPlanOnlyPendingApprovalCanApprove]: 400,
   [ErrorCode.CalibrationPlanItemNotExecuted]: 400,
   [ErrorCode.CalibrationPlanNonExportableStatus]: 400,
+
+  // Reject 사유 길이 fail-close (7 도메인)
+  [ErrorCode.EquipmentImportRejectionReasonRequired]: 400,
+  [ErrorCode.CalibrationRejectionReasonRequired]: 400,
+  [ErrorCode.CalibrationFactorRejectionReasonRequired]: 400,
+  [ErrorCode.SoftwareValidationRejectionReasonRequired]: 400,
+  [ErrorCode.IntermediateInspectionRejectionReasonRequired]: 400,
+  [ErrorCode.SelfInspectionRejectionReasonRequired]: 400,
+  [ErrorCode.NonConformanceRejectionReasonRequired]: 400,
+
+  // FSM 상태 전이 ErrorCode (iter 2: 7 도메인 시스템 전반 격상)
+  [ErrorCode.EquipmentImportOnlyPendingCanReject]: 400,
+  [ErrorCode.CalibrationOnlyPendingCanReject]: 400,
+  [ErrorCode.CalibrationFactorOnlyPendingCanReject]: 400,
+  [ErrorCode.SoftwareValidationInvalidStatusTransition]: 400,
+  [ErrorCode.IntermediateInspectionInvalidStatusTransition]: 400,
+  [ErrorCode.SelfInspectionInvalidStatusTransition]: 400,
+  [ErrorCode.NonConformanceInvalidTransition]: 400,
+
+  // 장비 서비스 도메인 에러
+  [ErrorCode.EquipmentInvalidCalibrationDue]: 400,
+  [ErrorCode.EquipmentInvalidCalibrationDueAfter]: 400,
+  [ErrorCode.EquipmentManagerNotFound]: 400,
+  [ErrorCode.EquipmentManagerRoleInsufficient]: 400,
+  [ErrorCode.EquipmentManagerSiteMismatch]: 400,
+  [ErrorCode.EquipmentManagementNumberDuplicate]: 409,
+  [ErrorCode.EquipmentSiteRequired]: 400,
+  [ErrorCode.EquipmentCalibrationOverdueStatusBlock]: 400,
+
+  // 장비 승인 서비스 에러
+  [ErrorCode.EquipmentRequestCreateFailed]: 500,
+  [ErrorCode.EquipmentRequestUpdateFailed]: 500,
+  [ErrorCode.EquipmentRequestDeleteFailed]: 500,
+  [ErrorCode.EquipmentRequestNoViewPermission]: 403,
+  [ErrorCode.EquipmentRequestListFailed]: 500,
+  [ErrorCode.EquipmentRequestNoEquipmentId]: 400,
+  [ErrorCode.EquipmentRequestNotFound]: 404,
+  [ErrorCode.EquipmentRequestFetchFailed]: 500,
+  [ErrorCode.EquipmentRequestNoApprovePermission]: 403,
+  [ErrorCode.EquipmentRequestAlreadyProcessed]: 409,
+  [ErrorCode.EquipmentRequestSelfApprovalForbidden]: 403,
+  [ErrorCode.EquipmentRequestTeamScopeViolation]: 403,
+  [ErrorCode.EquipmentRequestApproveFailed]: 500,
+  [ErrorCode.EquipmentRequestNoRejectPermission]: 403,
+  [ErrorCode.EquipmentRequestRejectionReasonRequired]: 400,
+  [ErrorCode.EquipmentRequestSelfRejectionForbidden]: 403,
+  [ErrorCode.EquipmentRequestRejectFailed]: 500,
+
+  // 이력/첨부/수리 도메인 에러
+  [ErrorCode.HistoryNotFound]: 404,
+  [ErrorCode.NcInvalidIncidentType]: 400,
+  [ErrorCode.RepairHistoryNotFound]: 404,
+  [ErrorCode.AttachmentNotFound]: 404,
 };
 
 // 에러 응답 스키마

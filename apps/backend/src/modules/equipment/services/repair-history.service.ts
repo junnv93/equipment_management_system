@@ -9,7 +9,7 @@ import {
 } from '../dto/repair-history.dto';
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
 import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
-import { RepairResultValues } from '@equipment-management/schemas';
+import { ErrorCode, RepairResultValues } from '@equipment-management/schemas';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CACHE_EVENTS, type RepairHistoryCachePayload } from '../../../common/cache/cache-events';
 
@@ -40,7 +40,7 @@ export class RepairHistoryService {
     });
     if (!item) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
@@ -61,7 +61,7 @@ export class RepairHistoryService {
       .limit(1);
     if (!result) {
       throw new NotFoundException({
-        code: 'REPAIR_HISTORY_NOT_FOUND',
+        code: ErrorCode.RepairHistoryNotFound,
         message: `Repair history ${repairHistoryId} not found.`,
       });
     }
@@ -143,7 +143,7 @@ export class RepairHistoryService {
 
     if (!record) {
       throw new NotFoundException({
-        code: 'REPAIR_HISTORY_NOT_FOUND',
+        code: ErrorCode.RepairHistoryNotFound,
         message: `Repair history not found: ${uuid}`,
       });
     }

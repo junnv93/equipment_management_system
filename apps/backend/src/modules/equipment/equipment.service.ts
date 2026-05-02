@@ -13,6 +13,7 @@ import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
 import {
+  ErrorCode,
   EquipmentStatus,
   EquipmentStatusEnum,
   EquipmentStatusValues as ESVal,
@@ -241,7 +242,7 @@ export class EquipmentService extends VersionedBaseService {
 
       if (isNaN(days)) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_INVALID_CALIBRATION_DUE',
+          code: ErrorCode.EquipmentInvalidCalibrationDue,
           message: `calibrationDue must be a number: ${calibrationDue}`,
         });
       }
@@ -282,7 +283,7 @@ export class EquipmentService extends VersionedBaseService {
 
       if (isNaN(afterDays)) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_INVALID_CALIBRATION_DUE_AFTER',
+          code: ErrorCode.EquipmentInvalidCalibrationDueAfter,
           message: `calibrationDueAfter must be a number: ${calibrationDueAfter}`,
         });
       }
@@ -649,19 +650,19 @@ export class EquipmentService extends VersionedBaseService {
       const user = userMap.get(id!);
       if (!user) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_MANAGER_NOT_FOUND',
+          code: ErrorCode.EquipmentManagerNotFound,
           message: `${label}로 지정된 사용자를 찾을 수 없습니다. (ID: ${id})`,
         });
       }
       if (!isEligibleAsEquipmentManager(user.role as UserRole)) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_MANAGER_ROLE_INSUFFICIENT',
+          code: ErrorCode.EquipmentManagerRoleInsufficient,
           message: `${label}는 기술책임자 이상만 지정할 수 있습니다. (현재: ${user.name}, 역할: ${user.role})`,
         });
       }
       if (user.site !== equipmentSite) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_MANAGER_SITE_MISMATCH',
+          code: ErrorCode.EquipmentManagerSiteMismatch,
           message: `${label}는 장비와 같은 사이트 소속이어야 합니다. (장비: ${equipmentSite}, 사용자: ${user.site})`,
         });
       }
@@ -687,7 +688,7 @@ export class EquipmentService extends VersionedBaseService {
 
       if (existingEquipment) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+          code: ErrorCode.EquipmentManagementNumberDuplicate,
           message: `관리번호 ${createEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`,
         });
       }
@@ -695,7 +696,7 @@ export class EquipmentService extends VersionedBaseService {
       // 사이트 필드 검증: 필수 필드
       if (!createEquipmentDto.site) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_SITE_REQUIRED',
+          code: ErrorCode.EquipmentSiteRequired,
           message: 'Site information is required.',
         });
       }
@@ -1068,7 +1069,7 @@ export class EquipmentService extends VersionedBaseService {
 
           if (!equipmentData) {
             throw new NotFoundException({
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: ErrorCode.EquipmentNotFound,
               message: `Equipment with UUID ${uuid} not found.`,
             });
           }
@@ -1143,7 +1144,7 @@ export class EquipmentService extends VersionedBaseService {
 
           if (!equipmentData) {
             throw new NotFoundException({
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: ErrorCode.EquipmentNotFound,
               message: `Equipment with management number ${managementNumber} not found.`,
             });
           }
@@ -1248,7 +1249,7 @@ export class EquipmentService extends VersionedBaseService {
       for (const uuid of missedUuids) {
         if (!result.has(uuid)) {
           throw new BadRequestException({
-            code: 'EQUIPMENT_NOT_FOUND',
+            code: ErrorCode.EquipmentNotFound,
             message: `Equipment with UUID ${uuid} not found.`,
           });
         }
@@ -1328,7 +1329,7 @@ export class EquipmentService extends VersionedBaseService {
 
         if (duplicateCheck) {
           throw new BadRequestException({
-            code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+            code: ErrorCode.EquipmentManagementNumberDuplicate,
             message: `관리번호 ${updateEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`,
           });
         }
@@ -1549,7 +1550,7 @@ export class EquipmentService extends VersionedBaseService {
       const overdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       throw new BadRequestException({
-        code: 'EQUIPMENT_CALIBRATION_OVERDUE_STATUS_BLOCK',
+        code: ErrorCode.EquipmentCalibrationOverdueStatusBlock,
         message: `Equipment overdue by ${overdueDays} day(s) cannot be changed to "available" status. Please register a calibration record to update the next calibration date.`,
       });
     }

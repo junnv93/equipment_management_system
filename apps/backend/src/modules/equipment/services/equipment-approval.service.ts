@@ -16,6 +16,7 @@ import {
   users,
 } from '@equipment-management/db/schema';
 import {
+  ErrorCode,
   UserRoleValues,
   ApprovalStatusValues,
   RequestTypeValues,
@@ -79,7 +80,7 @@ export class EquipmentApprovalService {
 
       if (!user) {
         throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.UserNotFound,
           message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
         });
       }
@@ -121,7 +122,7 @@ export class EquipmentApprovalService {
     } catch (error) {
       this.logger.error(`Failed to create equipment request`, error);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_CREATE_FAILED',
+        code: ErrorCode.EquipmentRequestCreateFailed,
         message: 'Failed to create equipment registration request.',
       });
     }
@@ -141,7 +142,7 @@ export class EquipmentApprovalService {
       const existingEquipment = await this.equipmentService.findOne(equipmentUuid);
       if (!existingEquipment) {
         throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
+          code: ErrorCode.EquipmentNotFound,
           message: 'Equipment not found.',
         });
       }
@@ -153,7 +154,7 @@ export class EquipmentApprovalService {
 
       if (!user) {
         throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.UserNotFound,
           message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
         });
       }
@@ -186,7 +187,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to create equipment update request: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_UPDATE_FAILED',
+        code: ErrorCode.EquipmentRequestUpdateFailed,
         message: 'Failed to create equipment update request.',
       });
     }
@@ -204,7 +205,7 @@ export class EquipmentApprovalService {
       const existingEquipment = await this.equipmentService.findOne(equipmentUuid);
       if (!existingEquipment) {
         throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
+          code: ErrorCode.EquipmentNotFound,
           message: 'Equipment not found.',
         });
       }
@@ -216,7 +217,7 @@ export class EquipmentApprovalService {
 
       if (!user) {
         throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.UserNotFound,
           message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
         });
       }
@@ -240,7 +241,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to create equipment delete request: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_DELETE_FAILED',
+        code: ErrorCode.EquipmentRequestDeleteFailed,
         message: 'Failed to create equipment delete request.',
       });
     }
@@ -261,7 +262,7 @@ export class EquipmentApprovalService {
 
       if (!isTechnicalManager) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_NO_VIEW_PERMISSION',
+          code: ErrorCode.EquipmentRequestNoViewPermission,
           message: 'No permission to view pending approval list.',
         });
       }
@@ -297,7 +298,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to find pending requests: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_LIST_FAILED',
+        code: ErrorCode.EquipmentRequestListFailed,
         message: 'Failed to fetch pending approval list.',
       });
     }
@@ -309,7 +310,7 @@ export class EquipmentApprovalService {
   private requireEquipmentId(equipmentId: string | null): string {
     if (!equipmentId) {
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
+        code: ErrorCode.EquipmentRequestNoEquipmentId,
         message: 'Equipment ID is missing.',
       });
     }
@@ -339,7 +340,7 @@ export class EquipmentApprovalService {
 
       if (!request) {
         throw new NotFoundException({
-          code: 'EQUIPMENT_REQUEST_NOT_FOUND',
+          code: ErrorCode.EquipmentRequestNotFound,
           message: 'Equipment request not found.',
         });
       }
@@ -365,7 +366,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to find request: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_FETCH_FAILED',
+        code: ErrorCode.EquipmentRequestFetchFailed,
         message: 'Failed to fetch equipment request.',
       });
     }
@@ -386,7 +387,7 @@ export class EquipmentApprovalService {
 
       if (!canApprove) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_NO_APPROVE_PERMISSION',
+          code: ErrorCode.EquipmentRequestNoApprovePermission,
           message: 'No permission to approve this request.',
         });
       }
@@ -397,7 +398,7 @@ export class EquipmentApprovalService {
       // 이미 처리된 요청인지 확인
       if (request.approvalStatus !== ApprovalStatusValues.PENDING_APPROVAL) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
+          code: ErrorCode.EquipmentRequestAlreadyProcessed,
           message: 'This request has already been processed.',
         });
       }
@@ -405,7 +406,7 @@ export class EquipmentApprovalService {
       // UL-QP-18 §6.2.2 직무분리: 자기 요청 자기 승인 금지
       if (request.requestedBy === approvedBy) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_SELF_APPROVAL_FORBIDDEN',
+          code: ErrorCode.EquipmentRequestSelfApprovalForbidden,
           message: '자신이 요청한 장비 등록을 직접 승인할 수 없습니다.',
         });
       }
@@ -417,7 +418,7 @@ export class EquipmentApprovalService {
 
       if (!approver) {
         throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.UserNotFound,
           message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
         });
       }
@@ -428,7 +429,7 @@ export class EquipmentApprovalService {
       });
       if (!requester || approver.teamId !== requester.teamId) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_TEAM_SCOPE_VIOLATION',
+          code: ErrorCode.EquipmentRequestTeamScopeViolation,
           message: '같은 팀의 요청만 승인할 수 있습니다.',
         });
       }
@@ -473,7 +474,7 @@ export class EquipmentApprovalService {
           });
           if (!currentEquipment) {
             throw new NotFoundException({
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: ErrorCode.EquipmentNotFound,
               message: 'Equipment not found.',
             });
           }
@@ -489,7 +490,7 @@ export class EquipmentApprovalService {
           });
           if (!currentEquipment) {
             throw new NotFoundException({
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: ErrorCode.EquipmentNotFound,
               message: 'Equipment not found.',
             });
           }
@@ -527,7 +528,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to approve request: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_APPROVE_FAILED',
+        code: ErrorCode.EquipmentRequestApproveFailed,
         message: 'Failed to approve equipment request.',
       });
     }
@@ -549,7 +550,7 @@ export class EquipmentApprovalService {
 
       if (!canReject) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_NO_REJECT_PERMISSION',
+          code: ErrorCode.EquipmentRequestNoRejectPermission,
           message: 'No permission to reject this request.',
         });
       }
@@ -557,7 +558,7 @@ export class EquipmentApprovalService {
       // 반려 사유 필수
       if (!rejectionReason || rejectionReason.trim().length === 0) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_REQUEST_REJECTION_REASON_REQUIRED',
+          code: ErrorCode.EquipmentRequestRejectionReasonRequired,
           message: 'Rejection reason is required.',
         });
       }
@@ -568,7 +569,7 @@ export class EquipmentApprovalService {
       // 이미 처리된 요청인지 확인
       if (request.approvalStatus !== ApprovalStatusValues.PENDING_APPROVAL) {
         throw new BadRequestException({
-          code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
+          code: ErrorCode.EquipmentRequestAlreadyProcessed,
           message: 'This request has already been processed.',
         });
       }
@@ -576,7 +577,7 @@ export class EquipmentApprovalService {
       // UL-QP-18 §6.2.2 직무분리: 자기 요청 자기 반려 금지
       if (request.requestedBy === approvedBy) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_SELF_REJECTION_FORBIDDEN',
+          code: ErrorCode.EquipmentRequestSelfRejectionForbidden,
           message: '자신이 요청한 장비 등록을 직접 반려할 수 없습니다.',
         });
       }
@@ -588,7 +589,7 @@ export class EquipmentApprovalService {
 
       if (!approver) {
         throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.UserNotFound,
           message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
         });
       }
@@ -599,7 +600,7 @@ export class EquipmentApprovalService {
       });
       if (!requester || approver.teamId !== requester.teamId) {
         throw new ForbiddenException({
-          code: 'EQUIPMENT_REQUEST_TEAM_SCOPE_VIOLATION',
+          code: ErrorCode.EquipmentRequestTeamScopeViolation,
           message: '같은 팀의 요청만 반려할 수 있습니다.',
         });
       }
@@ -653,7 +654,7 @@ export class EquipmentApprovalService {
       }
       this.logger.error(`Failed to reject request: ${error}`);
       throw new BadRequestException({
-        code: 'EQUIPMENT_REQUEST_REJECT_FAILED',
+        code: ErrorCode.EquipmentRequestRejectFailed,
         message: 'Failed to reject equipment request.',
       });
     }

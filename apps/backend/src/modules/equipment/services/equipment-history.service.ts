@@ -13,6 +13,7 @@ import {
 } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
+  ErrorCode,
   EquipmentStatusEnum,
   NonConformanceStatusEnum,
   NonConformanceTypeEnum,
@@ -72,7 +73,7 @@ export class EquipmentHistoryService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentId})`,
       });
     }
@@ -94,7 +95,7 @@ export class EquipmentHistoryService {
       .limit(1);
     if (!result)
       throw new NotFoundException({
-        code: 'HISTORY_NOT_FOUND',
+        code: ErrorCode.HistoryNotFound,
         message: `Location history ${historyId} not found.`,
       });
     return result;
@@ -111,7 +112,7 @@ export class EquipmentHistoryService {
       .limit(1);
     if (!result)
       throw new NotFoundException({
-        code: 'HISTORY_NOT_FOUND',
+        code: ErrorCode.HistoryNotFound,
         message: `Maintenance history ${historyId} not found.`,
       });
     return result;
@@ -128,7 +129,7 @@ export class EquipmentHistoryService {
       .limit(1);
     if (!result)
       throw new NotFoundException({
-        code: 'HISTORY_NOT_FOUND',
+        code: ErrorCode.HistoryNotFound,
         message: `Incident history ${historyId} not found.`,
       });
     return result;
@@ -186,7 +187,7 @@ export class EquipmentHistoryService {
    * CAS 적용: expectedVersion 전달 시 낙관적 잠금 체크.
    * CAS 미적용: expectedVersion 생략 시 직접 UPDATE (내부 호출용).
    *
-   * @throws ConflictException CAS 실패 시 (code: 'VERSION_CONFLICT')
+   * @throws ConflictException CAS 실패 시 (ErrorCode.VersionConflict)
    */
   private async syncEquipmentLocation(
     queryRunner: AppDatabase,
@@ -293,7 +294,7 @@ export class EquipmentHistoryService {
     });
     if (!currentEquipment) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment not found. (ID: ${equipmentUuid})`,
       });
     }
@@ -711,7 +712,7 @@ export class EquipmentHistoryService {
         // damage/malfunction만 부적합 생성 가능 (검증)
         if (!['damage', 'malfunction'].includes(dto.incidentType)) {
           throw new BadRequestException({
-            code: 'NC_INVALID_INCIDENT_TYPE',
+            code: ErrorCode.NcInvalidIncidentType,
             message:
               'Non-conformance can only be created for damage or malfunction incident types.',
           });

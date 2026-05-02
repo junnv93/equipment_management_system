@@ -5,6 +5,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { MulterFile } from '../../../types/common.types';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { AttachmentType } from '@equipment-management/schemas';
 import { QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
 
@@ -107,7 +108,7 @@ export class EquipmentAttachmentService {
 
     if (!attachment) {
       throw new NotFoundException({
-        code: 'ATTACHMENT_NOT_FOUND',
+        code: ErrorCode.AttachmentNotFound,
         message: `Attachment UUID ${uuid} not found.`,
       });
     }
