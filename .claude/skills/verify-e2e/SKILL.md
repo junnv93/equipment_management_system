@@ -1017,6 +1017,78 @@ grep -rn "loginAs(ctx.app, 'systemAdmin')" apps/backend/test/*.e2e-spec.ts | \
 
 ---
 
+### Step 26: 도메인 e2e helper SSOT 분리 + value-based selector for prefilled forms (2026-05-02 추가, inspection-template-1bg)
+
+prefill된 폼 + 도메인별 helper 누적은 시스템 정합성을 깨뜨리는 두 가지 anti-pattern이다.
+
+**26a: 도메인 e2e helper SSOT 분리**
+
+`workflow-helpers.ts`는 *cross-domain generic* helper(`apiGet/apiPost`, `extractId/Version`, `clearBackendCache`)에 한정. 도메인별 API 헬퍼 (≥3 함수)는 `helpers/<domain>-helpers.ts`로 분리하여 SSOT 유지. workflow-helpers.ts에 모든 도메인 헬퍼가 누적되면 1500+ lines 비대화 → 도메인 추가 시 충돌.
+
+```typescript
+// ✅ CORRECT — 도메인별 helper file
+// helpers/inspection-template-helpers.ts
+export async function getInspectionTemplate(...) {...}
+export async function upsertInspectionTemplate(...) {...}
+export async function resetInspectionTemplates(...) {...}
+export async function findCurrentTemplateId(...) {...}  // DB 직접 검증용
+
+// ❌ WRONG — workflow-helpers.ts에 도메인 helper 누적
+// (이미 1276 lines — 새 도메인 helper 추가 시 분리 필수)
+```
+
+**26b: prefill 폼에서 `input[value=""]` 위치 의존 selector 금지**
+
+REFERENCE_TEMPLATE_STRUCTURE 같은 prefill source가 있는 폼에서 `dialog.locator('input[value=""]').first()` / `.nth(N)` 패턴은 *DOM 순서 의존*으로 brittle. inspectionDate(빈 시작) + items[*].checkResult(prefill 후 비워짐) + 추가 input이 모두 매칭되어 의도와 다른 input 채움 → false PASS 또는 silent fail.
+
+```typescript
+// ❌ WRONG — DOM 순서 의존 (inspectionDate / 다른 빈 input과 충돌)
+const newItemInputs = dialog.locator('input[value=""]');
+await newItemInputs.first().fill('새 항목');
+await newItemInputs.nth(1).fill('새 기준');
+
+// ✅ CORRECT — value-based selector + rename trigger (정확히 1개 input 매칭)
+await dialog.locator('input[value="WF-19f 외관 검사"]').fill('WF-19f 외관 검사 (변경됨)');
+```
+
+**26c: backend hook fail-soft 회귀 가드 — DB 직접 검증**
+
+승인 시 `templateService.autoCreateIfAbsent` 같은 *fail-soft* hook(approve 자체는 성공해도 hook 실패는 logger만)은 UI 검증만으로 catch 못함. *helper 작성 후 사용 안 함* 분리는 단편 처리 — spec에서 직접 호출.
+
+```typescript
+// ✅ CORRECT — UI 검증 전 DB 직접 확인
+const templateId = await findCurrentTemplateId(equipmentId, 'intermediate');
+expect(templateId, 'approve hook 후 template auto-create row 존재해야 함').not.toBeNull();
+await openInspectionDialog(page);
+await expect(dialog.getByText(/v1/)).toBeVisible();
+```
+
+**탐지 명령:**
+
+```bash
+# 26a: workflow-helpers.ts 라인 수 (≥1500 시 도메인 분리 검토 권고)
+wc -l apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts
+
+# 26b: brittle empty-value selector — 0건 강제
+grep -rn 'input\[value=""\]' apps/frontend/tests/e2e/ --include="*.spec.ts"
+# 결과: 0건이면 PASS, 1+건이면 value-based selector로 교체
+
+# 26c: 도메인별 helper SSOT 패턴 — 신규 도메인 helper 신설 시 inspection-template-helpers.ts 패턴 정합 (top-level 주석 + workflow-helpers 재사용 + DB 직접 query helper 포함)
+ls apps/frontend/tests/e2e/workflows/helpers/*-helpers.ts
+```
+
+**26d: 도메인 변경 후 legacy spec rewrite 패턴**
+
+도메인 메커니즘 변경(예: latestInspection prefill → template snapshot prefill)으로 기존 spec이 fail 상태가 되면 *단순 삭제 또는 skip 회피*. *의도(회귀 가드)는 유지하면서 메커니즘만 정합화*하는 rewrite가 시니어 표준. WF-19d.spec.ts (2026-05-02): legacy "직전 승인 점검 토글" 검증 → "template 기반 prefill regression" 정합 rewrite.
+
+**26e: backend 양면 도메인 페어링 (intermediate/self) 회귀 가드**
+
+같은 backend hook이 두 도메인(intermediate-inspections + self-inspections)에서 작동 시 e2e도 양면 spec 페어링 필수. 한쪽만 cover하면 *시스템 정합성* 단편. 2026-05-02 발견: wf-19* 시리즈가 intermediate만 cover → wf-20c-self-inspection-template-badge.spec.ts 추가.
+
+**발생 이력 (2026-05-02):** inspection-template-1bg Mode 1 harness iter 1 PASS 후 시니어 자기검토에서 self-inspection 누락 + brittle selector + helper 작성-사용 분리 4건 발견. 26a-e 모두 closure.
+
+---
+
 ### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion (2026-04-24 추가)
 
 `getBackendTokenByEmail`을 사용하는 E2E spec은 다음 패턴을 준수해야 한다.
