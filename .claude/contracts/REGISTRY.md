@@ -9,6 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
+| — | (없음) | — |
 
 ---
 
@@ -46,4 +47,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 193개 (2026-05-02: +equipment-controller-errorcode-ssot). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 194개 (2026-05-02: +equipment-controller-errorcode-ssot, +equipment-domain-errorcode-closure). 검색: `ls .claude/contracts/completed/ | grep <slug>`

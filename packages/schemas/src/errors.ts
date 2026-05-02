@@ -33,6 +33,8 @@ export enum ErrorCode {
   EquipmentSharedCannotDelete = 'EQUIPMENT_SHARED_CANNOT_DELETE',
   EquipmentFileRequired = 'EQUIPMENT_FILE_REQUIRED',
   EquipmentAttachmentTypeRequired = 'EQUIPMENT_ATTACHMENT_TYPE_REQUIRED',
+  EquipmentFormDataParseFailed = 'FORM_DATA_PARSE_FAILED',
+  EquipmentInvalidManagementNumber = 'INVALID_MANAGEMENT_NUMBER',
   DuplicateManagementNumber = 'DUPLICATE_MANAGEMENT_NUMBER',
   DuplicateSerialNumber = 'DUPLICATE_SERIAL_NUMBER',
 
@@ -305,6 +307,8 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.EquipmentSharedCannotDelete]: 403,
   [ErrorCode.EquipmentFileRequired]: 400,
   [ErrorCode.EquipmentAttachmentTypeRequired]: 400,
+  [ErrorCode.EquipmentFormDataParseFailed]: 400,
+  [ErrorCode.EquipmentInvalidManagementNumber]: 400,
   [ErrorCode.DuplicateManagementNumber]: 409,
   [ErrorCode.DuplicateSerialNumber]: 409,
 

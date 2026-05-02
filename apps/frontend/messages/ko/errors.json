@@ -116,6 +116,19 @@
     "message": "첨부 파일 유형을 지정해야 합니다.",
     "solutions": ["첨부 유형을 선택한 후 다시 시도해주세요"]
   },
+  "FORM_DATA_PARSE_FAILED": {
+    "title": "데이터 파싱 오류",
+    "message": "폼 데이터를 처리하는 중 오류가 발생했습니다.",
+    "solutions": [
+      "입력 데이터를 확인하고 다시 시도해주세요",
+      "문제가 지속되면 시스템 관리자에게 문의하세요"
+    ]
+  },
+  "INVALID_MANAGEMENT_NUMBER": {
+    "title": "관리번호 형식 오류",
+    "message": "올바른 관리번호 형식이 아닙니다.",
+    "solutions": ["관리번호 형식: XXX-XYYYY (예: SUW-E0001, UIW-E0001)"]
+  },
   "FORM_TEMPLATE_NOT_FOUND": {
     "title": "양식 파일 없음",
     "message": "양식 템플릿 파일이 스토리지에 없습니다.",

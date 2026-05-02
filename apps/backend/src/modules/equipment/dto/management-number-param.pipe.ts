@@ -4,7 +4,7 @@ import {
   PipeTransform,
   type ArgumentMetadata,
 } from '@nestjs/common';
-import { parseManagementNumber } from '@equipment-management/schemas';
+import { parseManagementNumber, ErrorCode } from '@equipment-management/schemas';
 
 /**
  * `@Param('mgmt', ParseManagementNumberPipe)`로 사용.
@@ -22,7 +22,7 @@ export class ParseManagementNumberPipe implements PipeTransform<string, string> 
   transform(value: unknown, _metadata: ArgumentMetadata): string {
     if (typeof value !== 'string' || value.trim() === '') {
       throw new BadRequestException({
-        code: 'INVALID_MANAGEMENT_NUMBER',
+        code: ErrorCode.EquipmentInvalidManagementNumber,
         message: 'Management number is required.',
       });
     }
@@ -31,7 +31,7 @@ export class ParseManagementNumberPipe implements PipeTransform<string, string> 
 
     if (!parseManagementNumber(trimmed)) {
       throw new BadRequestException({
-        code: 'INVALID_MANAGEMENT_NUMBER',
+        code: ErrorCode.EquipmentInvalidManagementNumber,
         message: `"${trimmed}" is not a valid management number. Expected format: SUW-E0001.`,
       });
     }

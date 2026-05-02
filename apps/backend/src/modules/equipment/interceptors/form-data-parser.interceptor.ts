@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * FormData 파서 인터셉터
@@ -31,7 +32,7 @@ export class FormDataParserInterceptor implements NestInterceptor {
             `FormData JSON parse failed: ${error instanceof Error ? error.message : String(error)}`
           );
           throw new BadRequestException({
-            code: 'FORM_DATA_PARSE_FAILED',
+            code: ErrorCode.EquipmentFormDataParseFailed,
             message: 'Invalid JSON in form data field.',
           });
         }

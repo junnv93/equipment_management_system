@@ -122,6 +122,19 @@
     "message": "An attachment type must be specified.",
     "solutions": ["Please select an attachment type and try again"]
   },
+  "FORM_DATA_PARSE_FAILED": {
+    "title": "Data Parse Error",
+    "message": "An error occurred while processing the form data.",
+    "solutions": [
+      "Check your input data and try again",
+      "Contact the system administrator if the problem persists"
+    ]
+  },
+  "INVALID_MANAGEMENT_NUMBER": {
+    "title": "Invalid Management Number Format",
+    "message": "The management number format is not valid.",
+    "solutions": ["Management number format: XXX-XYYYY (e.g. SUW-E0001, UIW-E0001)"]
+  },
   "FORM_TEMPLATE_NOT_FOUND": {
     "title": "Form Template Not Found",
     "message": "The form template file is not available in storage.",

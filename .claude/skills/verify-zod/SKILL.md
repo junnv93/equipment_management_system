@@ -601,9 +601,11 @@ grep -rn "code: '[A-Z_]\+'" \
   apps/backend/src/modules/equipment/services/equipment-attachment.service.ts \
   apps/backend/src/modules/equipment/services/equipment-history.service.ts \
   apps/backend/src/modules/equipment/services/repair-history.service.ts \
+  apps/backend/src/modules/equipment/equipment.controller.ts \
+  apps/backend/src/modules/equipment/interceptors/form-data-parser.interceptor.ts \
+  apps/backend/src/modules/equipment/dto/management-number-param.pipe.ts \
   2>/dev/null | grep -v "//"
-# expected: 0 hits — ErrorCode enum 격상 완료
-# 미격상: equipment.controller.ts / interceptors / dto (10건 — 다음 스프린트 대상)
+# expected: 0 hits — ErrorCode enum 격상 완료 (2026-05-02 equipment-domain-errorcode-closure)
 
 # 2. ErrorCode enum 사용 카운트 (회귀 차단 — 격상 후 줄어들지 않아야)
 grep -c "ErrorCode\." apps/backend/src/modules/equipment/services/disposal.service.ts
@@ -642,7 +644,7 @@ grep -c "mapCalibrationPlanErrorToToast\|calibration-plan-errors" apps/frontend/
 
 # 7. i18n errors namespace ↔ ErrorCode enum 매핑 정합성 (도메인별)
 # disposal-errors.ts mapper의 i18n key가 ko/en disposal.json errors namespace에 모두 존재
-# (verify-i18n parity로 자동 보장 — Step 16 보강)
+# (verify-i18n parity로 자동 보장 — Step 16 보강 / 2026-05-02 equipment-domain-errorcode-closure로 equipment 완전 종결)
 # manual: grep "errors\." apps/frontend/lib/errors/disposal-errors.ts | extract keys → check messages/{ko,en}/disposal.json existence
 
 # 8. Mapper Partial Record completeness — ErrorCode가 errorCodeToStatusCode에 등록됐지만

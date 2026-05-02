@@ -12,7 +12,7 @@ import { versionedSchema } from '../../../common/dto/base-versioned.dto';
  */
 export const approveCalibrationFactorSchema = z.object({
   // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  approverComment: z.string().min(1, VM.approval.approverComment.required),
+  approverComment: z.string().optional(),
   ...versionedSchema,
 });
 
@@ -51,10 +51,11 @@ export class ApproveCalibrationFactorDto {
   // approverId: 서버에서 JWT 추출 (Rule 2)
 
   @ApiProperty({
-    description: '승인자 코멘트',
+    description: '승인자 코멘트 (선택)',
     example: '보정계수 검토 완료',
+    required: false,
   })
-  approverComment: string;
+  approverComment?: string;
 
   @ApiProperty({
     description: 'Optimistic locking version (필수)',
