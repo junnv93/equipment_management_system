@@ -311,7 +311,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
         if (!record) {
           throw new NotFoundException({
-            code: 'INTERMEDIATE_INSPECTION_NOT_FOUND',
+            code: ErrorCode.IntermediateInspectionNotFound,
             message: `Intermediate inspection with UUID ${id} not found.`,
           });
         }
@@ -374,7 +374,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
         updateData,
         '중간점검',
         tx,
-        'INTERMEDIATE_INSPECTION_NOT_FOUND'
+        ErrorCode.IntermediateInspectionNotFound
       );
 
       // 항목 교체 (전체 삭제 후 재삽입)
@@ -447,7 +447,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -479,7 +479,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -513,7 +513,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -620,7 +620,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -659,7 +659,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -693,7 +693,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       '중간점검',
       undefined,
-      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      ErrorCode.IntermediateInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -796,7 +796,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       .limit(1);
     if (!result) {
       throw new NotFoundException({
-        code: 'INTERMEDIATE_INSPECTION_NOT_FOUND',
+        code: ErrorCode.IntermediateInspectionNotFound,
         message: `Intermediate inspection ${inspectionId} not found.`,
       });
     }

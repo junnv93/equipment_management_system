@@ -100,7 +100,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (!sw) {
       throw new NotFoundException({
-        code: 'TEST_SOFTWARE_NOT_FOUND',
+        code: ErrorCode.TestSoftwareNotFound,
         message: `Test software with UUID ${testSoftwareId} not found.`,
       });
     }
@@ -253,7 +253,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
         if (!record) {
           throw new NotFoundException({
-            code: 'SOFTWARE_VALIDATION_NOT_FOUND',
+            code: ErrorCode.SoftwareValidationNotFound,
             message: `Software validation with UUID ${id} not found.`,
           });
         }
@@ -323,7 +323,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       updateData,
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);
@@ -355,7 +355,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       },
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);
@@ -415,7 +415,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       },
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);
@@ -479,7 +479,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       },
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);
@@ -548,7 +548,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       },
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);
@@ -601,7 +601,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       },
       '소프트웨어 유효성 확인',
       undefined,
-      'SOFTWARE_VALIDATION_NOT_FOUND'
+      ErrorCode.SoftwareValidationNotFound
     );
 
     this.invalidateCache(id, existing.testSoftwareId);

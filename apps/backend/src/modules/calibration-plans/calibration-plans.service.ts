@@ -462,7 +462,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       updateData,
       '교정계획서',
       undefined,
-      'CALIBRATION_PLAN_NOT_FOUND',
+      ErrorCode.CalibrationPlanNotFound,
       'casVersion'
     );
 
@@ -540,7 +540,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       },
       '교정계획서',
       undefined,
-      'CALIBRATION_PLAN_NOT_FOUND',
+      ErrorCode.CalibrationPlanNotFound,
       'casVersion'
     );
 
@@ -595,7 +595,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       },
       '교정계획서',
       undefined,
-      'CALIBRATION_PLAN_NOT_FOUND',
+      ErrorCode.CalibrationPlanNotFound,
       'casVersion'
     );
 
@@ -647,7 +647,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       },
       '교정계획서',
       undefined,
-      'CALIBRATION_PLAN_NOT_FOUND',
+      ErrorCode.CalibrationPlanNotFound,
       'casVersion'
     );
 
@@ -715,7 +715,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       },
       '교정계획서',
       undefined,
-      'CALIBRATION_PLAN_NOT_FOUND',
+      ErrorCode.CalibrationPlanNotFound,
       'casVersion'
     );
 

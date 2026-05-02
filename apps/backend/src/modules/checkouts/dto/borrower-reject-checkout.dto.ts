@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -13,7 +14,11 @@ import { VM } from '@equipment-management/schemas';
  */
 export const borrowerRejectCheckoutSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  reason: z.string().trim().min(1, VM.approval.rejectReason.required),
+  reason: z
+    .string()
+    .trim()
+    .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, VM.approval.rejectReason.required)
+    .max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH),
 });
 
 export type BorrowerRejectCheckoutInput = z.infer<typeof borrowerRejectCheckoutSchema>;

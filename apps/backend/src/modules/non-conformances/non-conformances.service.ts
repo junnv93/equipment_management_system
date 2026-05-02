@@ -204,7 +204,7 @@ export class NonConformancesService extends VersionedBaseService {
 
       if (!currentEquip) {
         throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
+          code: ErrorCode.EquipmentNotFound,
           message: `Equipment UUID ${createDto.equipmentId} not found`,
         });
       }
@@ -506,7 +506,7 @@ export class NonConformancesService extends VersionedBaseService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment UUID ${equipmentId} not found`,
       });
     }
@@ -591,7 +591,7 @@ export class NonConformancesService extends VersionedBaseService {
 
         if (!nonConformance) {
           throw new NotFoundException({
-            code: 'NC_NOT_FOUND',
+            code: ErrorCode.NonConformanceNotFound,
             message: `Non-conformance ID ${id} not found`,
           });
         }
@@ -733,7 +733,7 @@ export class NonConformancesService extends VersionedBaseService {
           },
           'Non-conformance',
           tx,
-          'NC_NOT_FOUND'
+          ErrorCode.NonConformanceNotFound
         );
 
         // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
@@ -914,7 +914,7 @@ export class NonConformancesService extends VersionedBaseService {
       { deletedAt: new Date() },
       'Non-conformance',
       undefined,
-      'NC_NOT_FOUND'
+      ErrorCode.NonConformanceNotFound
     );
 
     // detail + list 캐시 무효화
@@ -966,7 +966,7 @@ export class NonConformancesService extends VersionedBaseService {
       },
       'Non-conformance',
       undefined,
-      'NC_NOT_FOUND'
+      ErrorCode.NonConformanceNotFound
     );
 
     this.cacheService.delete(this.buildCacheKey('detail', { id: ncId }));
@@ -1016,7 +1016,7 @@ export class NonConformancesService extends VersionedBaseService {
       },
       'Non-conformance',
       undefined,
-      'NC_NOT_FOUND'
+      ErrorCode.NonConformanceNotFound
     );
 
     this.cacheService.delete(this.buildCacheKey('detail', { id }));

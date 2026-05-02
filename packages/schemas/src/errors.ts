@@ -376,6 +376,25 @@ export enum ErrorCode {
   AttachmentNotFound = 'ATTACHMENT_NOT_FOUND',
 
   // ============================================================================
+  // 도메인 NOT_FOUND — updateWithVersion notFoundCode SSOT
+  // (versioned-base.service.ts 호출자가 ErrorCode enum 값으로 참조)
+  // ============================================================================
+  /** 케이블 기록을 찾을 수 없음. */
+  CableNotFound = 'CABLE_NOT_FOUND',
+  /** 부적합(NC) 기록을 찾을 수 없음. */
+  NonConformanceNotFound = 'NC_NOT_FOUND',
+  /** 시험용 소프트웨어 유효성 확인 기록을 찾을 수 없음. */
+  SoftwareValidationNotFound = 'SOFTWARE_VALIDATION_NOT_FOUND',
+  /** 시험용 소프트웨어를 찾을 수 없음. */
+  TestSoftwareNotFound = 'TEST_SOFTWARE_NOT_FOUND',
+  /** 중간 점검 기록을 찾을 수 없음. */
+  IntermediateInspectionNotFound = 'INTERMEDIATE_INSPECTION_NOT_FOUND',
+  /** 자체 점검 기록을 찾을 수 없음. */
+  SelfInspectionNotFound = 'SELF_INSPECTION_NOT_FOUND',
+  /** 점검 계획을 찾을 수 없음. */
+  TestPlanNotFound = 'TEST_PLAN_NOT_FOUND',
+
+  // ============================================================================
   // 공통 기본 에러 (versioned-base.service.ts 기본값)
   // ============================================================================
   /** 도메인 지정 에러 코드 없을 때 updateWithVersion 기본 notFoundCode */
@@ -585,6 +604,15 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.NcInvalidIncidentType]: 400,
   [ErrorCode.RepairHistoryNotFound]: 404,
   [ErrorCode.AttachmentNotFound]: 404,
+
+  // 도메인 NOT_FOUND (updateWithVersion notFoundCode SSOT)
+  [ErrorCode.CableNotFound]: 404,
+  [ErrorCode.NonConformanceNotFound]: 404,
+  [ErrorCode.SoftwareValidationNotFound]: 404,
+  [ErrorCode.TestSoftwareNotFound]: 404,
+  [ErrorCode.IntermediateInspectionNotFound]: 404,
+  [ErrorCode.SelfInspectionNotFound]: 404,
+  [ErrorCode.TestPlanNotFound]: 404,
 
   // 공통 기본 에러
   [ErrorCode.EntityNotFound]: 404,

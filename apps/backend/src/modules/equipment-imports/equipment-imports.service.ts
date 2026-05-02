@@ -330,7 +330,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       },
       'Equipment import',
       undefined,
-      'IMPORT_NOT_FOUND',
+      ErrorCode.EquipmentImportNotFound,
       'version',
       [
         {
@@ -396,7 +396,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       },
       'Equipment import',
       undefined,
-      'IMPORT_NOT_FOUND',
+      ErrorCode.EquipmentImportNotFound,
       'version',
       [
         {
@@ -620,7 +620,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       { status: EIVal.RETURN_REQUESTED as EquipmentImportStatus },
       'Equipment import',
       undefined,
-      'IMPORT_NOT_FOUND',
+      ErrorCode.EquipmentImportNotFound,
       'version',
       [
         {
@@ -831,7 +831,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
           if (!currentEquip) {
             throw new ConflictException({
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: ErrorCode.EquipmentNotFound,
               message: 'Linked equipment not found during return completion.',
             });
           }

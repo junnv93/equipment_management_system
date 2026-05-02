@@ -18,7 +18,7 @@ import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
-import { SoftwareAvailabilityEnum } from '@equipment-management/schemas';
+import { ErrorCode, SoftwareAvailabilityEnum } from '@equipment-management/schemas';
 import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 
 /** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
@@ -266,7 +266,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
         if (!record) {
           throw new NotFoundException({
-            code: 'TEST_SOFTWARE_NOT_FOUND',
+            code: ErrorCode.TestSoftwareNotFound,
             message: `Test software with UUID ${id} not found.`,
           });
         }
@@ -360,7 +360,7 @@ export class TestSoftwareService extends VersionedBaseService {
       updateData,
       '시험용 소프트웨어',
       undefined,
-      'TEST_SOFTWARE_NOT_FOUND'
+      ErrorCode.TestSoftwareNotFound
     );
 
     this.invalidateCache(id);
@@ -397,7 +397,7 @@ export class TestSoftwareService extends VersionedBaseService {
       { availability: newAvailability },
       '시험용 소프트웨어',
       undefined,
-      'TEST_SOFTWARE_NOT_FOUND'
+      ErrorCode.TestSoftwareNotFound
     );
 
     this.invalidateCache(id);

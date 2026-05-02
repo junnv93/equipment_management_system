@@ -235,7 +235,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
         if (!row) {
           throw new NotFoundException({
-            code: 'SELF_INSPECTION_NOT_FOUND',
+            code: ErrorCode.SelfInspectionNotFound,
             message: `Self-inspection ${id} not found.`,
           });
         }
@@ -305,7 +305,7 @@ export class SelfInspectionsService extends VersionedBaseService {
         updateData,
         'Self-inspection',
         tx,
-        'SELF_INSPECTION_NOT_FOUND'
+        ErrorCode.SelfInspectionNotFound
       );
 
       // items가 있으면 전체 교체 (cascade delete 후 재삽입)
@@ -368,7 +368,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       },
       'Self-inspection',
       undefined,
-      'SELF_INSPECTION_NOT_FOUND'
+      ErrorCode.SelfInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -411,7 +411,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       },
       'Self-inspection',
       undefined,
-      'SELF_INSPECTION_NOT_FOUND'
+      ErrorCode.SelfInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -450,7 +450,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       },
       'Self-inspection',
       undefined,
-      'SELF_INSPECTION_NOT_FOUND'
+      ErrorCode.SelfInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -552,7 +552,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       },
       'Self-inspection',
       undefined,
-      'SELF_INSPECTION_NOT_FOUND'
+      ErrorCode.SelfInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -591,7 +591,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       },
       'Self-inspection',
       undefined,
-      'SELF_INSPECTION_NOT_FOUND'
+      ErrorCode.SelfInspectionNotFound
     );
 
     this.invalidateCache(id, existing.equipmentId);
@@ -695,7 +695,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       .limit(1);
     if (!result) {
       throw new NotFoundException({
-        code: 'SELF_INSPECTION_NOT_FOUND',
+        code: ErrorCode.SelfInspectionNotFound,
         message: `Self-inspection ${selfInspectionId} not found.`,
       });
     }

@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { VersionedBaseService } from '../versioned-base.service';
 import type { AppDatabase } from '@equipment-management/db';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * VersionedBaseService.updateWithVersion CAS + onVersionConflict hook 계약 검증
@@ -127,7 +128,7 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
           { status: 'submitted' },
           'TestPlan',
           undefined,
-          'TEST_PLAN_NOT_FOUND',
+          ErrorCode.TestPlanNotFound,
           'casVersion'
         );
       }

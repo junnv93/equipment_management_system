@@ -13,6 +13,7 @@ import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CABLES_CACHE_PREFIX } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import type { CreateCableInput } from './dto/create-cable.dto';
 import type { UpdateCableInput } from './dto/update-cable.dto';
@@ -171,7 +172,7 @@ export class CablesService extends VersionedBaseService {
 
         if (!record) {
           throw new NotFoundException({
-            code: 'CABLE_NOT_FOUND',
+            code: ErrorCode.CableNotFound,
             message: `Cable with UUID ${id} not found.`,
           });
         }
@@ -228,7 +229,7 @@ export class CablesService extends VersionedBaseService {
       updateData,
       '케이블',
       undefined,
-      'CABLE_NOT_FOUND'
+      ErrorCode.CableNotFound
     );
 
     this.invalidateCache(id);
@@ -253,7 +254,7 @@ export class CablesService extends VersionedBaseService {
 
     if (!cable) {
       throw new NotFoundException({
-        code: 'CABLE_NOT_FOUND',
+        code: ErrorCode.CableNotFound,
         message: `Cable with UUID ${cableId} not found.`,
       });
     }

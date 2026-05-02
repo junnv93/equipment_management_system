@@ -1377,7 +1377,7 @@ export class EquipmentService extends VersionedBaseService {
           updateData as Record<string, unknown>,
           '장비',
           tx,
-          'EQUIPMENT_NOT_FOUND'
+          ErrorCode.EquipmentNotFound
         );
 
         // 2. 위치 변경 감지 → 이력 INSERT + equipment.location SSOT 동기화
@@ -1577,7 +1577,7 @@ export class EquipmentService extends VersionedBaseService {
         { isActive: false },
         '장비',
         undefined,
-        'EQUIPMENT_NOT_FOUND'
+        ErrorCode.EquipmentNotFound
       );
 
       // 캐시 무효화 (삭제된 장비)
@@ -1659,7 +1659,7 @@ export class EquipmentService extends VersionedBaseService {
         updateData as Record<string, unknown>,
         '장비',
         undefined,
-        'EQUIPMENT_NOT_FOUND'
+        ErrorCode.EquipmentNotFound
       );
 
       // 캐시 무효화 (상태 변경된 장비)

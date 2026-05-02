@@ -51,6 +51,7 @@ import {
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
+  VALIDATION_RULES,
   CHECKOUT_DATA_SCOPE,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
@@ -2193,7 +2194,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // ✅ Domain: reason 검증 — scope/FSM/identity 이후 (보안 fail-close 순서 준수)
-      if (!dto.reason || dto.reason.trim().length === 0) {
+      if (!dto.reason || dto.reason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
         throw new BadRequestException({
           code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
           message: 'Rejection reason is required',
@@ -2281,7 +2282,10 @@ export class CheckoutsService extends VersionedBaseService {
       this.assertFsmAction(checkout, 'reject', rejectPermissions);
 
       // 반려 사유 필수 검증
-      if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
+      if (
+        !rejectDto.reason ||
+        rejectDto.reason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
+      ) {
         throw new BadRequestException({
           code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
           message: 'Rejection reason is required',
@@ -2822,7 +2826,10 @@ export class CheckoutsService extends VersionedBaseService {
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
       this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
-      if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
+      if (
+        !rejectReturnDto.reason ||
+        rejectReturnDto.reason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
+      ) {
         throw new BadRequestException({
           code: CheckoutErrorCode.REJECTION_REASON_REQUIRED,
           message: 'Rejection reason is required',
