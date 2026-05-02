@@ -49,6 +49,9 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
+    env:
+      # secrets는 step if: 조건에서 직접 참조 불가 — job-level env로 boolean 파생 후 사용
+      HAS_SOPS_KEY: ${{ secrets.SOPS_AGE_KEY != '' }}
     # secret-scan과 병렬 실행 — 시크릿 스캔은 독립 게이트로, 코드 품질 파이프라인을 차단하지 않음
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -176,7 +179,7 @@ jobs:
         # SOPS_AGE_KEY 미등록 시 경고 출력 (silently skip 방지).
         # 1인 solo 프로젝트에서는 intentional — fork/신규 레포 셋업 시 경고로 인지 가능.
         # secret 등록: GitHub 레포 Settings → Secrets → SOPS_AGE_KEY
-        if: ${{ secrets.SOPS_AGE_KEY == '' }}
+        if: env.HAS_SOPS_KEY != 'true'
         run: |
           echo "::warning title=SOPS 검증 SKIPPED::SOPS_AGE_KEY secret가 GitHub에 등록되지 않았습니다."
           echo "::warning::lan.env.sops.yaml / prod.env.sops.yaml 검증이 이 실행에서 건너뜁니다."
@@ -184,7 +187,7 @@ jobs:
 
       - name: Infra — SOPS 바이너리 설치
         # 다음 2개 step (lan, prod) 에서 공용. 단일 설치로 빌드 시간 절약.
-        if: ${{ secrets.SOPS_AGE_KEY != '' }}
+        if: env.HAS_SOPS_KEY == 'true'
         run: |
           curl -fsSL -o /usr/local/bin/sops \
             "https://github.com/getsops/sops/releases/download/${{ env.SOPS_VERSION }}/sops-${{ env.SOPS_VERSION }}.linux.amd64"
@@ -194,7 +197,7 @@ jobs:
         # 1) 복호화 가능성 (값 노출 없이 $RUNNER_TEMP 하위 tmpfile 로만)
         # 2) 복호화된 .env 파일의 키 집합이 env.validation.ts envSchema 의 required 와 일치하는지
         # 두 번째 검증은 verify-env-sync --file 로 위임하여 pre-push 와 동일한 2-tier scan 재사용.
-        if: ${{ secrets.SOPS_AGE_KEY != '' }}
+        if: env.HAS_SOPS_KEY == 'true'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
@@ -205,7 +208,7 @@ jobs:
           echo "lan.env.sops.yaml: decrypt + envSchema sync OK"
 
       - name: Infra — SOPS (prod.env.sops.yaml) 복호화 + envSchema 동기화 검증
-        if: ${{ secrets.SOPS_AGE_KEY != '' }}
+        if: env.HAS_SOPS_KEY == 'true'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |

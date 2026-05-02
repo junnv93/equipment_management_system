@@ -31,9 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: pnpm/action-setup@a7487ba4b53252b86d2b92fa9c797d928c33c48f # v4
-        with:
-          version: 9
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
       - uses: actions/setup-node@v4
         with:
@@ -54,6 +52,7 @@ jobs:
           NEXTAUTH_SECRET: ci-bundle-secret-not-for-production
           API_URL: http://localhost:3001
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          INTERNAL_BACKEND_URL: http://localhost:3001
           ENABLE_LOCAL_AUTH: 'true'
 
       - name: Check bundle size thresholds

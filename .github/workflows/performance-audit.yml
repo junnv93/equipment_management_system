@@ -30,9 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: pnpm/action-setup@a7487ba4b53252b86d2b92fa9c797d928c33c48f # v4
-        with:
-          version: 9
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
       - uses: actions/setup-node@v4
         with:
@@ -50,19 +48,22 @@ jobs:
           NEXTAUTH_SECRET: ci-lighthouse-secret-not-for-production
           API_URL: http://localhost:3001
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          INTERNAL_BACKEND_URL: http://localhost:3001
           ENABLE_LOCAL_AUTH: 'true'
 
+      - name: Install Lighthouse CI CLI
+        # treosh/lighthouse-ci-action@v12은 저장소 액션 허용 목록 밖 — @lhci/cli npm 직접 실행으로 대체
+        run: npm install -g @lhci/cli
+
       - name: Run Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          configPath: .lighthouserc.js
-          uploadArtifacts: true
-          temporaryPublicStorage: false
+        # lhci autorun은 .lighthouserc.js의 startServerCommand로 Next.js 서버를 직접 기동
+        run: lhci autorun
         env:
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: ci-lighthouse-secret-not-for-production
           API_URL: http://localhost:3001
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          INTERNAL_BACKEND_URL: http://localhost:3001
           ENABLE_LOCAL_AUTH: 'true'
 
       - name: Upload Lighthouse reports

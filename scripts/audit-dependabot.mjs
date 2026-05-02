@@ -88,6 +88,23 @@ try {
     { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
   );
 } catch (e) {
+  const errText = [e.message, typeof e.stderr === 'string' ? e.stderr : e.stderr?.toString()]
+    .filter(Boolean)
+    .join(' ');
+  if (errText.includes('HTTP 403') || errText.includes('Resource not accessible')) {
+    console.warn(
+      '\n⚠  Dependabot alerts API returned HTTP 403 — skipping lockfile-matched audit.\n' +
+        '   Possible causes:\n' +
+        '   1. Dependabot alerts not enabled in repo settings\n' +
+        '      → Settings → Code security and analysis → Dependabot alerts → Enable\n' +
+        '   2. GITHUB_TOKEN lacks required permissions\n' +
+        '      → Ensure the workflow job has `security-events: read` in permissions:\n' +
+        '\n' +
+        '   Cannot classify real vs. phantom alerts without API access.\n' +
+        '   Run `pnpm audit:dependabot` locally with `gh auth login` for full results.\n'
+    );
+    process.exit(0);
+  }
   die(`gh api failed: ${e.message}. Is gh CLI installed and authenticated?`);
 }
 
