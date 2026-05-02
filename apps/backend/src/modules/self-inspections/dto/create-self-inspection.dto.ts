@@ -5,13 +5,15 @@ import {
   SelfInspectionItemJudgmentEnum,
   SelfInspectionResultEnum,
   SpecialNoteSchema,
+  SELF_INSPECTION_MEASUREMENT_MAX_LENGTH,
+  SELF_INSPECTION_CRITERIA_MAX_LENGTH,
 } from '@equipment-management/schemas';
 
 const selfInspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
   checkItem: z.string().min(1).max(300),
-  measurement: z.string().trim().max(100).optional(),
-  criteria: z.string().trim().max(200).optional(),
+  measurement: z.string().trim().max(SELF_INSPECTION_MEASUREMENT_MAX_LENGTH).optional(),
+  criteria: z.string().trim().max(SELF_INSPECTION_CRITERIA_MAX_LENGTH).optional(),
   checkResult: SelfInspectionItemJudgmentEnum,
   detailedResult: z.string().optional(),
 });

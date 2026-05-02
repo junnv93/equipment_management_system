@@ -593,7 +593,7 @@ export const INSPECTION_CHECKITEM_ROW_GRID = {
  * 종합결과 ToggleGroup 전용 토큰 (size lg, pass/fail 2개 옵션).
  *
  * Mission PR-3 명세 — `<Select>` → `<ToggleGroup type="single" size="lg">` 전환.
- * - h-10 minimum (44px hit area, WCAG SC 2.5.5)
+ * - h-11 = 44px (WCAG SC 2.5.5 AAA Target Size 충족)
  * - 활성 상태 색은 `judgmentToggle.itemPass/itemFail` 재사용
  *
  * SSOT: SelfInspectionFormDialog 종합결과 영역 className.
@@ -601,9 +601,9 @@ export const INSPECTION_CHECKITEM_ROW_GRID = {
 export const INSPECTION_OVERALL_RESULT_TOGGLE = {
   /** ToggleGroup root */
   groupRoot: 'inline-flex w-full rounded-md border border-input shadow-sm overflow-hidden',
-  /** 각 ToggleGroupItem (size lg = h-10) */
+  /** 각 ToggleGroupItem (WCAG 2.5.5 AAA — h-11 = 44px hit area) */
   itemBase:
-    'flex-1 inline-flex h-10 items-center justify-center gap-1.5 px-3 text-sm font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+    'flex-1 inline-flex h-11 items-center justify-center gap-1.5 px-3 text-sm font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
   /** 활성/비활성 색 (pass) — Tailwind primitive → dark mode 명시적 오버라이드 필요 */
   itemPass:
     'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 dark:data-[state=on]:bg-emerald-950/30 dark:data-[state=on]:text-emerald-400 dark:data-[state=on]:ring-emerald-800 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',

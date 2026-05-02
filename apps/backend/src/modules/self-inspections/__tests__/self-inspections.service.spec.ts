@@ -183,6 +183,77 @@ describe('SelfInspectionsService', () => {
 
       await expect(service.create(EQUIPMENT_ID, dto, USER_ID)).rejects.toThrow(NotFoundException);
     });
+
+    // -----------------------------------------------------------------------
+    // Phase PR-3 (2026-05-02): measurement/criteria 통과 검증
+    // -----------------------------------------------------------------------
+    it('should propagate measurement and criteria fields to insert payload', async () => {
+      const dtoWithMeasurement = {
+        inspectionDate: '2026-01-15',
+        overallResult: 'pass' as const,
+        inspectionCycle: 6,
+        items: [
+          {
+            itemNumber: 1,
+            checkItem: '출력 특성 점검',
+            measurement: '44.12 dB',
+            criteria: '45 ± 2.5 dB',
+            checkResult: 'pass' as const,
+          },
+        ],
+      };
+      const itemsWithMeta = [
+        {
+          id: 'item-uuid-meas-1',
+          inspectionId: INSPECTION_ID,
+          itemNumber: 1,
+          checkItem: '출력 특성 점검',
+          measurement: '44.12 dB',
+          criteria: '45 ± 2.5 dB',
+          checkResult: 'pass',
+        },
+      ];
+
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain([MOCK_EQUIPMENT]));
+      const txInsertChain = createDrizzleChain([MOCK_INSPECTION]);
+      const txItemsChain = createDrizzleChain(itemsWithMeta);
+      (mockDb.insert as jest.Mock)
+        .mockReturnValueOnce(txInsertChain)
+        .mockReturnValueOnce(txItemsChain);
+
+      const result = await service.create(EQUIPMENT_ID, dtoWithMeasurement, USER_ID);
+
+      // service.create()가 insert(selfInspectionItems).values([{ measurement, criteria }]) 호출
+      const itemsValuesCall = (txItemsChain.values as jest.Mock).mock.calls[0]?.[0];
+      expect(Array.isArray(itemsValuesCall)).toBe(true);
+      expect(itemsValuesCall[0]).toMatchObject({
+        measurement: '44.12 dB',
+        criteria: '45 ± 2.5 dB',
+      });
+      expect(result.items).toEqual(itemsWithMeta);
+    });
+
+    it('should map missing measurement/criteria to null', async () => {
+      const dtoNoMeta = {
+        inspectionDate: '2026-01-15',
+        overallResult: 'pass' as const,
+        inspectionCycle: 6,
+        items: [{ itemNumber: 1, checkItem: '외관검사', checkResult: 'pass' as const }],
+      };
+
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain([MOCK_EQUIPMENT]));
+      const txInsertChain = createDrizzleChain([MOCK_INSPECTION]);
+      const txItemsChain = createDrizzleChain(MOCK_ITEMS);
+      (mockDb.insert as jest.Mock)
+        .mockReturnValueOnce(txInsertChain)
+        .mockReturnValueOnce(txItemsChain);
+
+      await service.create(EQUIPMENT_ID, dtoNoMeta, USER_ID);
+
+      const itemsValuesCall = (txItemsChain.values as jest.Mock).mock.calls[0]?.[0];
+      expect(itemsValuesCall[0].measurement).toBeNull();
+      expect(itemsValuesCall[0].criteria).toBeNull();
+    });
   });
 
   // -----------------------------------------------------------------------

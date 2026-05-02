@@ -69,7 +69,11 @@ import type {
   SelfInspectionItemJudgment,
   SelfInspectionResult,
 } from '@equipment-management/schemas';
-import { DEFAULT_SELF_INSPECTION_ITEMS } from '@equipment-management/schemas';
+import {
+  DEFAULT_SELF_INSPECTION_ITEMS,
+  SELF_INSPECTION_MEASUREMENT_MAX_LENGTH,
+  SELF_INSPECTION_CRITERIA_MAX_LENGTH,
+} from '@equipment-management/schemas';
 
 /**
  * equipment.calibrationRequired → EquipmentClassification 매핑.
@@ -520,7 +524,6 @@ function SelfInspectionFormDialogInner({
               >
                 <ToggleGroupItem
                   value="pass"
-                  aria-label={t('selfInspection.judgment.pass')}
                   className={cn(
                     INSPECTION_OVERALL_RESULT_TOGGLE.itemBase,
                     INSPECTION_OVERALL_RESULT_TOGGLE.itemPass
@@ -531,7 +534,6 @@ function SelfInspectionFormDialogInner({
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="fail"
-                  aria-label={t('selfInspection.judgment.fail')}
                   className={cn(
                     INSPECTION_OVERALL_RESULT_TOGGLE.itemBase,
                     INSPECTION_OVERALL_RESULT_TOGGLE.itemFail
@@ -651,16 +653,16 @@ function SelfInspectionFormDialogInner({
                     value={item.measurement}
                     onChange={(e) => handleItemChange(index, 'measurement', e.target.value)}
                     placeholder={t('selfInspection.measurementPlaceholder')}
-                    aria-label={t('selfInspection.measurementLabel')}
-                    maxLength={100}
+                    aria-label={t('selfInspection.measurementLabel', { itemNumber: index + 1 })}
+                    maxLength={SELF_INSPECTION_MEASUREMENT_MAX_LENGTH}
                     className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
                   />
                   <Input
                     value={item.criteria}
                     onChange={(e) => handleItemChange(index, 'criteria', e.target.value)}
                     placeholder={t('selfInspection.criteriaPlaceholder')}
-                    aria-label={t('selfInspection.criteriaLabel')}
-                    maxLength={200}
+                    aria-label={t('selfInspection.criteriaLabel', { itemNumber: index + 1 })}
+                    maxLength={SELF_INSPECTION_CRITERIA_MAX_LENGTH}
                     className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
                   />
                   <ToggleGroup
@@ -671,7 +673,9 @@ function SelfInspectionFormDialogInner({
                         handleItemChange(index, 'checkResult', v);
                       }
                     }}
-                    aria-label={t('selfInspection.checkResult')}
+                    aria-label={t('selfInspection.checkResultRowAriaLabel', {
+                      itemNumber: index + 1,
+                    })}
                     className={INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.groupRoot}
                   >
                     {(['pass', 'fail', 'na'] as const).map((value) => {
@@ -686,9 +690,6 @@ function SelfInspectionFormDialogInner({
                         <ToggleGroupItem
                           key={value}
                           value={value}
-                          aria-label={t(
-                            `selfInspection.judgment.${value}` as Parameters<typeof t>[0]
-                          )}
                           className={cn(
                             INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemBase,
                             itemClass

@@ -306,10 +306,11 @@
     "itemNumber": "No.",
     "checkItem": "Check Item",
     "checkResult": "Result",
-    "measurementLabel": "Measurement",
+    "measurementLabel": "Measurement (item {itemNumber})",
     "measurementPlaceholder": "e.g. 44.12 dB",
-    "criteriaLabel": "Criteria",
+    "criteriaLabel": "Criteria (item {itemNumber})",
     "criteriaPlaceholder": "e.g. 45 ± 2.5 dB",
+    "checkResultRowAriaLabel": "Item {itemNumber} judgment",
     "remarks": "Remarks",
     "judgment": {
       "pass": "Pass",
@@ -1603,6 +1604,8 @@
     "emptySearch": "No search results"
   },
   "errors": {
+    "title": "Action Failed",
+    "genericError": "An error occurred. Please try again.",
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
     "invalidStatusForReject": "Cannot reject from current status.",
     "selfInspection": {

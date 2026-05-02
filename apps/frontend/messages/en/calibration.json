@@ -951,6 +951,7 @@
   },
   "errors": {
     "title": "Action Failed",
+    "genericError": "An error occurred. Please try again.",
     "fileRequired": "Calibration certificate file is required.",
     "certificateRequired": "A calibration_certificate document type is required.",
     "documentTypeCountMismatch": "Document type count does not match the number of files.",

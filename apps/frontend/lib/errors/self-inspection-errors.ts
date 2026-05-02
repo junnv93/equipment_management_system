@@ -49,6 +49,6 @@ export function mapSelfInspectionErrorToToast(error: unknown, t: TranslationFunc
 
   return {
     title: t('errors.title'),
-    description: error instanceof Error ? error.message : String(error),
+    description: t('errors.genericError'),
   };
 }

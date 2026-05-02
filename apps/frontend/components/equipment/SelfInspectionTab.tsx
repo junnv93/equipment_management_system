@@ -75,7 +75,6 @@ import {
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import RejectModal from '@/components/approvals/RejectModal';
-import { useToast } from '@/components/ui/use-toast';
 import { mapSelfInspectionErrorToToast } from '@/lib/errors/self-inspection-errors';
 import type { SelfInspectionStatus } from '@equipment-management/schemas';
 
@@ -104,7 +103,6 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const [editTarget, setEditTarget] = useState<SelfInspection | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SelfInspection | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SelfInspection | null>(null);
-  const { toast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const canSubmit = can(Permission.SUBMIT_SELF_INSPECTION);
@@ -149,7 +147,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('submitted'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.submitSuccess'),
-    errorMessage: tSI('toast.submitError'),
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
   });
 
   const withdrawMutation = useOptimisticMutation<
@@ -162,7 +160,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.withdrawSuccess'),
-    errorMessage: tSI('toast.withdrawError'),
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
   });
 
   const approveMutation = useOptimisticMutation<
@@ -175,7 +173,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('approved'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.approveSuccess'),
-    errorMessage: tSI('toast.approveError'),
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
   });
 
   const rejectMutation = useOptimisticMutation<
@@ -195,15 +193,11 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     }),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.rejectSuccess'),
-    errorMessage: tSI('toast.rejectError'),
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
     onSuccessCallback: () => {
       setRejectTarget(null);
     },
     onErrorCallback: (error: unknown) => {
-      // 5-layer defense-in-depth: ErrorCode 매핑된 i18n 메시지 표시
-      const { title, description } = mapSelfInspectionErrorToToast(error, t);
-      toast({ title, description, variant: 'destructive' });
-      // CAS 충돌 시 reject 모달 닫기 (기존 동작 보존)
       if (isConflictError(error)) setRejectTarget(null);
     },
   });
@@ -218,7 +212,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.resubmitSuccess'),
-    errorMessage: tSI('toast.resubmitError'),
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
   });
 
   const deleteMutation = useOptimisticMutation<void, { id: string }, SelfInspectionCache>({

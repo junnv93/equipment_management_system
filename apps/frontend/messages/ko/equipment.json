@@ -306,10 +306,11 @@
     "itemNumber": "번호",
     "checkItem": "점검 항목",
     "checkResult": "점검 결과",
-    "measurementLabel": "측정값",
+    "measurementLabel": "측정값 (항목 {itemNumber})",
     "measurementPlaceholder": "예: 44.12 dB",
-    "criteriaLabel": "기준",
+    "criteriaLabel": "기준 (항목 {itemNumber})",
     "criteriaPlaceholder": "예: 45 ± 2.5 dB",
+    "checkResultRowAriaLabel": "항목 {itemNumber} 판정",
     "remarks": "비고",
     "judgment": {
       "pass": "적합",
@@ -1603,6 +1604,8 @@
     "emptySearch": "검색 결과가 없습니다"
   },
   "errors": {
+    "title": "처리 실패",
+    "genericError": "처리 중 오류가 발생했습니다. 다시 시도하세요.",
     "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요.",
     "invalidStatusForReject": "현재 상태에서 반려할 수 없습니다.",
     "selfInspection": {

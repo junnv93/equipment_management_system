@@ -64,6 +64,25 @@ export const DEFAULT_SELF_INSPECTION_ITEMS = [
   '기능 점검',
 ] as const;
 
+// ============================================================================
+// 자체점검 항목 길이 제약 (SSOT)
+// ============================================================================
+
+/**
+ * SSOT — DB varchar 길이 + Zod max + Frontend Input maxLength 4-layer 동시 강제.
+ *
+ * - measurement: 측정값 (예: "44.12 dB", "12.3 V") — 단위·숫자 포함 짧은 텍스트
+ * - criteria: 기준 (예: "45 ± 2.5 dB", "10 ~ 15 V") — 범위·허용 오차 표현 가능
+ *
+ * 변경 시 영향:
+ * - packages/db/src/schema/equipment-self-inspections.ts varchar 길이
+ * - apps/backend/src/modules/self-inspections/dto/{create,update}-self-inspection.dto.ts Zod .max()
+ * - apps/frontend/components/inspections/SelfInspectionFormDialog.tsx Input maxLength
+ * - DB 마이그레이션 (varchar 변경 시 별도 sql)
+ */
+export const SELF_INSPECTION_MEASUREMENT_MAX_LENGTH = 100;
+export const SELF_INSPECTION_CRITERIA_MAX_LENGTH = 200;
+
 /**
  * 유연 항목명 → 기존 고정 컬럼 매핑 (하위 호환용 SSOT)
  * key: selfInspectionItems.checkItem, value: equipmentSelfInspections 고정 컬럼명

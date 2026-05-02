@@ -127,7 +127,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('submitted'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.submitSuccess'),
-    errorMessage: t('intermediateInspection.toasts.submitError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
   });
 
   const reviewMutation = useOptimisticMutation<
@@ -140,7 +140,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('reviewed'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.reviewSuccess'),
-    errorMessage: t('intermediateInspection.toasts.reviewError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
   });
 
   const approveMutation = useOptimisticMutation<
@@ -153,7 +153,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('approved'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.approveSuccess'),
-    errorMessage: t('intermediateInspection.toasts.approveError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
   });
 
   const rejectMutation = useOptimisticMutation<
@@ -170,13 +170,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
       ),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.rejectSuccess'),
-    errorMessage: t('intermediateInspection.toasts.rejectError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
     onSuccessCallback: () => {
       setRejectingTarget(null);
-    },
-    onErrorCallback: (error: unknown) => {
-      const { title, description } = mapIntermediateInspectionErrorToToast(error, t);
-      toast({ title, description, variant: 'destructive' });
     },
   });
 
@@ -190,7 +186,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.withdrawSuccess'),
-    errorMessage: t('intermediateInspection.toasts.withdrawError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
   });
 
   const resubmitMutation = useOptimisticMutation<
@@ -203,7 +199,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.resubmitSuccess'),
-    errorMessage: t('intermediateInspection.toasts.resubmitError'),
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
   });
 
   const deleteMutation = useOptimisticMutation<
