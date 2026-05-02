@@ -84,7 +84,6 @@ jobs:
           # Next.js 빌드에 필요한 플레이스홀더 (main.yml build job과 동일 패턴)
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_API_URL: http://localhost:3001
           INTERNAL_BACKEND_URL: http://localhost:3001
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 

@@ -48,8 +48,6 @@ jobs:
         env:
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: ci-a11y-secret-not-for-production
-          API_URL: http://localhost:3001
-          NEXT_PUBLIC_API_URL: http://localhost:3001
           INTERNAL_BACKEND_URL: http://localhost:3001
           ENABLE_LOCAL_AUTH: 'true'
 
@@ -59,8 +57,6 @@ jobs:
           PORT: 3000
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: ci-a11y-secret-not-for-production
-          API_URL: http://localhost:3001
-          NEXT_PUBLIC_API_URL: http://localhost:3001
           INTERNAL_BACKEND_URL: http://localhost:3001
           ENABLE_LOCAL_AUTH: 'true'
 

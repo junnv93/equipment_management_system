@@ -121,7 +121,7 @@ jobs:
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_API_URL: http://localhost:3001
+          INTERNAL_BACKEND_URL: http://localhost:3001
 
       - name: Wait for services
         run: |

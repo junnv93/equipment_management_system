@@ -355,7 +355,7 @@ jobs:
           # Next.js 빌드 시 필요한 플레이스홀더 환경 변수
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_API_URL: http://localhost:3001
+          INTERNAL_BACKEND_URL: http://localhost:3001
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
   # ─────────────────────────────────────────────
