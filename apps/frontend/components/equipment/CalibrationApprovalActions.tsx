@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { mapCalibrationErrorToToast } from '@/lib/errors/calibration-errors';
 import { CalibrationApprovalStatusValues as CASVal } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { getCalibrationActionButtonClasses } from '@/lib/design-tokens';
 
 interface CalibrationApprovalActionsProps {
@@ -117,7 +117,7 @@ export function CalibrationApprovalActions({
         }}
         title={t('calibrationHistoryTab.approval.reject')}
         description={t('calibrationHistoryTab.approval.rejectDescription', {
-          default: t('calibrationHistoryTab.approval.reject'),
+          min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
         })}
       />
     </>
