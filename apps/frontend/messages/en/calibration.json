@@ -950,6 +950,7 @@
     "intermediateCheckDateInvalid": "Intermediate check date must be between the calibration date and next calibration date."
   },
   "errors": {
+    "title": "Action Failed",
     "fileRequired": "Calibration certificate file is required.",
     "certificateRequired": "A calibration_certificate document type is required.",
     "documentTypeCountMismatch": "Document type count does not match the number of files.",

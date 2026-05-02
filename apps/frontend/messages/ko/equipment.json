@@ -1429,7 +1429,14 @@
     "currentTablePeriod": "적용 기간",
     "currentTableApprovedDate": "승인일",
     "emptyTitle": "적용 중인 보정계수가 없습니다",
-    "emptyDescription": "새로운 보정계수를 등록해주세요"
+    "emptyDescription": "새로운 보정계수를 등록해주세요",
+    "pendingTableActions": "액션",
+    "approveButton": "승인",
+    "rejectButton": "반려",
+    "approveSuccess": "보정계수가 승인되었습니다.",
+    "rejectSuccess": "보정계수가 반려되었습니다.",
+    "rejectTitle": "보정계수 반려",
+    "rejectDescription": "반려 사유를 {min}자 이상 입력하세요."
   },
   "sharedBanner": {
     "title": "공용장비 안내",

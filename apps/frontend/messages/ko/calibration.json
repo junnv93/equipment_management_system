@@ -915,6 +915,7 @@
     }
   },
   "errors": {
+    "title": "처리 실패",
     "fileRequired": "교정성적서 파일이 필요합니다.",
     "certificateRequired": "교정성적서(calibration_certificate) 문서 타입이 필요합니다.",
     "documentTypeCountMismatch": "문서 타입 개수가 파일 개수와 일치하지 않습니다.",

@@ -2,8 +2,12 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
+import RejectModal from '@/components/approvals/RejectModal';
+import { mapCalibrationFactorErrorToToast } from '@/lib/errors/calibration-factor-errors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,14 +39,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import calibrationFactorsApi, {
+  type CalibrationFactor,
   CalibrationFactorType,
   FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
+import type { PaginatedResponse } from '@/lib/api/types';
 import { CALIBRATION_FACTOR_TYPE_VALUES } from '@equipment-management/schemas';
 import { queryKeys } from '@/lib/api/query-config';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
-import { Plus, Calculator, Clock } from 'lucide-react';
+import { Permission, VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { Plus, Calculator, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
@@ -50,6 +57,7 @@ import {
   getPageContainerClasses,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
+  getCalibrationActionButtonClasses,
   CODE_INLINE_TOKENS,
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -72,11 +80,14 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const { can } = useAuth();
   const t = useTranslations('equipment.calibrationFactorsClient');
   const tCal = useTranslations('calibration');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
+  const canApprove = can(Permission.APPROVE_CALIBRATION_FACTOR);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [rejectingFactorId, setRejectingFactorId] = useState<string | null>(null);
   const [newFactor, setNewFactor] = useState({
     factorType: '' as CalibrationFactorType | '',
     factorName: '',
@@ -104,6 +115,64 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
     queryKey: queryKeys.calibrationFactors.allByEquipment(equipmentId),
     queryFn: () => calibrationFactorsApi.getCalibrationFactors({ equipmentId }),
     enabled: !!equipmentId,
+  });
+
+  // 보정계수 승인 뮤테이션 (권한: APPROVE_CALIBRATION_FACTOR)
+  const approveFactorMutation = useOptimisticMutation<
+    CalibrationFactor,
+    { id: string; version: number },
+    PaginatedResponse<CalibrationFactor>
+  >({
+    mutationFn: ({ id, version }) =>
+      calibrationFactorsApi.approveCalibrationFactor(id, { version }),
+    queryKey: queryKeys.calibrationFactors.allByEquipment(equipmentId),
+    optimisticUpdate: (old, { id }) => ({
+      ...(old ?? {
+        data: [],
+        meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
+      }),
+      data: (old?.data ?? []).map((f) =>
+        f.id === id ? { ...f, approvalStatus: CFASVal.APPROVED } : f
+      ),
+    }),
+    invalidateKeys: [
+      queryKeys.calibrationFactors.all,
+      queryKeys.dashboard.all,
+      queryKeys.approvals.countsAll,
+      queryKeys.notifications.all,
+    ],
+    successMessage: t('approveSuccess'),
+  });
+
+  // 보정계수 반려 뮤테이션 (권한: APPROVE_CALIBRATION_FACTOR)
+  const rejectFactorMutation = useOptimisticMutation<
+    CalibrationFactor,
+    { id: string; version: number; rejectionReason: string },
+    PaginatedResponse<CalibrationFactor>
+  >({
+    mutationFn: ({ id, version, rejectionReason }) =>
+      calibrationFactorsApi.rejectCalibrationFactor(id, { version, rejectionReason }),
+    queryKey: queryKeys.calibrationFactors.allByEquipment(equipmentId),
+    optimisticUpdate: (old, { id }) => ({
+      ...(old ?? {
+        data: [],
+        meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
+      }),
+      data: (old?.data ?? []).map((f) =>
+        f.id === id ? { ...f, approvalStatus: CFASVal.REJECTED } : f
+      ),
+    }),
+    invalidateKeys: [
+      queryKeys.calibrationFactors.all,
+      queryKeys.dashboard.all,
+      queryKeys.approvals.countsAll,
+      queryKeys.notifications.all,
+    ],
+    successMessage: t('rejectSuccess'),
+    onErrorCallback: (error: unknown) => {
+      const { title, description } = mapCalibrationFactorErrorToToast(error, tCal);
+      toast({ title, description, variant: 'destructive' });
+    },
   });
 
   // 보정계수 생성 뮤테이션
@@ -187,6 +256,10 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const currentFactors = equipmentFactors?.factors || [];
   const pendingFactors =
     allFactors?.data?.filter((f) => f.approvalStatus === CFASVal.PENDING) || [];
+  const rejectingFactor = rejectingFactorId
+    ? (pendingFactors.find((f) => f.id === rejectingFactorId) ?? null)
+    : null;
+  const isFactorActionPending = approveFactorMutation.isPending || rejectFactorMutation.isPending;
 
   if (isLoading) {
     return null; // loading.tsx에서 처리
@@ -345,6 +418,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                   <TableHead>{t('pendingTableEffectiveDate')}</TableHead>
                   <TableHead>{t('pendingTableRequestDate')}</TableHead>
                   <TableHead>{t('pendingTableStatus')}</TableHead>
+                  {canApprove && <TableHead>{t('pendingTableActions')}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -370,6 +444,39 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                         )}
                       </Badge>
                     </TableCell>
+                    {canApprove && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={getCalibrationActionButtonClasses('approve')}
+                            disabled={isFactorActionPending}
+                            loading={approveFactorMutation.isPending}
+                            onClick={() =>
+                              approveFactorMutation.mutate({
+                                id: factor.id,
+                                version: factor.version,
+                              })
+                            }
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            {t('approveButton')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={getCalibrationActionButtonClasses('reject')}
+                            disabled={isFactorActionPending}
+                            loading={rejectFactorMutation.isPending}
+                            onClick={() => setRejectingFactorId(factor.id)}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            {t('rejectButton')}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -441,6 +548,26 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
           )}
         </CardContent>
       </Card>
+
+      {canApprove && (
+        <RejectModal
+          mode="domain"
+          isOpen={rejectingFactorId !== null}
+          onClose={() => setRejectingFactorId(null)}
+          onConfirm={async (reason: string) => {
+            if (!rejectingFactor) return;
+            await rejectFactorMutation.mutateAsync({
+              id: rejectingFactor.id,
+              version: rejectingFactor.version,
+              rejectionReason: reason,
+            });
+          }}
+          title={t('rejectTitle')}
+          description={t('rejectDescription', {
+            min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+          })}
+        />
+      )}
     </div>
   );
 }

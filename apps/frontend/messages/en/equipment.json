@@ -1429,7 +1429,14 @@
     "currentTablePeriod": "Effective Period",
     "currentTableApprovedDate": "Approved Date",
     "emptyTitle": "No active calibration factors",
-    "emptyDescription": "Register a new calibration factor"
+    "emptyDescription": "Register a new calibration factor",
+    "pendingTableActions": "Actions",
+    "approveButton": "Approve",
+    "rejectButton": "Reject",
+    "approveSuccess": "Calibration factor approved.",
+    "rejectSuccess": "Calibration factor rejected.",
+    "rejectTitle": "Reject Calibration Factor",
+    "rejectDescription": "Please provide a rejection reason ({min} characters or more)."
   },
   "sharedBanner": {
     "title": "Shared Equipment Notice",
