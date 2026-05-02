@@ -502,6 +502,72 @@ if (blockStr.includes('stories')) {
 
 **발생 이력 (2026-04-30 신설)**: sv-system-wide-completion harness — `NextStepPanel.stories.tsx`의 `parserOptions.project` 파싱 오류. ESLint flat config에서 inner ignores는 global ignores와 독립 동작함을 확인. Typed linting 블록 ignores에 `'**/*.stories.{ts,tsx}'`를 별도 추가하여 해결.
 
+### Step 20: 도메인 mapper `errors.title/errors.genericError` baseline 키 존재 확인 (2026-05-03 추가)
+
+**배경**: `lib/errors/<domain>-errors.ts` mapper 파일은 fallback 경로에서 `t('errors.title')`과 `t('errors.genericError')`를 호출한다. 이 baseline 키가 해당 namespace i18n 파일에 존재하지 않으면 모든 에러 상황에서 raw key(`errors.title`)가 노출된다. 이번 세션(2026-05-03)에서 `non-conformances.json`과 `software.json`이 이 키를 누락한 채 mapper가 이미 호출하고 있었던 pre-existing gap을 수정하면서 탐지 규칙으로 등록.
+
+**검증 명령**:
+
+```bash
+node -e "
+const fs = require('fs');
+// mapper 파일 → 사용 namespace 매핑 (useTranslations 네임스페이스 기준)
+const MAPPER_NS = [
+  ['apps/frontend/lib/errors/disposal-errors.ts',                  'disposal'],
+  ['apps/frontend/lib/errors/calibration-plan-errors.ts',          'calibration-plans'],
+  ['apps/frontend/lib/errors/non-conformance-errors.ts',           'non-conformances'],
+  ['apps/frontend/lib/errors/cables-errors.ts',                    'cables'],
+  ['apps/frontend/lib/errors/test-software-errors.ts',             'software'],
+  ['apps/frontend/lib/errors/software-validation-errors.ts',       'software'],
+  ['apps/frontend/lib/errors/self-inspection-errors.ts',           'equipment'],
+  ['apps/frontend/lib/errors/intermediate-inspection-errors.ts',   'calibration'],
+  ['apps/frontend/lib/errors/checkout-errors.ts',                  'checkouts'],
+  ['apps/frontend/lib/errors/notification-errors.ts',              'notifications'],
+  ['apps/frontend/lib/errors/team-errors.ts',                      'teams'],
+  ['apps/frontend/lib/errors/user-errors.ts',                      'users'],
+];
+const BASELINE_KEYS = ['errors.title', 'errors.genericError'];
+const locales = ['ko', 'en'];
+
+function getNestedValue(obj, dotPath) {
+  return dotPath.split('.').reduce((o, k) => o?.[k], obj);
+}
+
+let allPass = true;
+for (const [mapperFile, ns] of MAPPER_NS) {
+  if (!fs.existsSync(mapperFile)) continue;
+  const mapperSrc = fs.readFileSync(mapperFile, 'utf8');
+  const callsErrorsTitle = mapperSrc.includes(\"t('errors.title')\");
+  if (!callsErrorsTitle) continue; // mapper가 errors.title을 호출하지 않으면 스킵
+  for (const locale of locales) {
+    const jsonFile = \`apps/frontend/messages/\${locale}/\${ns}.json\`;
+    if (!fs.existsSync(jsonFile)) { console.log('WARN: ' + jsonFile + ' 없음 (namespace 미확정)'); continue; }
+    const json = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+    for (const key of BASELINE_KEYS) {
+      if (!getNestedValue(json, key)) {
+        console.log('FAIL: ' + locale + '/' + ns + '.json 에 ' + key + ' 누락 — mapper: ' + mapperFile);
+        allPass = false;
+      }
+    }
+  }
+}
+if (allPass) console.log('PASS: 모든 active mapper namespace에 errors.title/errors.genericError 존재');
+" 2>/dev/null
+```
+
+**PASS**: 모든 active mapper 파일이 참조하는 namespace i18n 파일에 `errors.title`과 `errors.genericError` 키 존재.
+**FAIL**: 누락 locale/namespace/key → 해당 JSON 파일에 `errors.title` + `errors.genericError` 추가.
+
+**MAPPER_NS 업데이트 규칙**:
+- 새 domain mapper 파일(`lib/errors/<domain>-errors.ts`)이 생성될 때 MAPPER_NS 배열에 추가.
+- mapper의 `useTranslations` 호출 namespace를 컴포넌트 호출처 grep으로 확인 후 등재.
+
+**예외**:
+- mapper 파일이 `t('errors.title')` 대신 fallback을 `error.message`로만 처리하면 baseline 키 불필요 — 스킵.
+- `checkout-errors.ts`, `team-errors.ts`, `user-errors.ts`, `notification-errors.ts`는 tech-debt 파일로 파일 미존재 시 자동 스킵.
+
+**발생 이력 (2026-05-03 신설)**: `notfound-direct-throw-closure` Phase C — `non-conformances.json`과 `software.json`에서 mapper가 이미 `t('errors.title')` + `t('errors.genericError')`를 호출하고 있었으나 키 미존재 상태였던 pre-existing gap 발견. 해당 세션에서 수정하면서 이 검증 step 등록.
+
 ## Output Format
 
 ```markdown
@@ -526,6 +592,7 @@ if (blockStr.includes('stories')) {
 | 17  | check-i18n-call-sites.mjs 구조 — CROSS_CUTTING_NAMESPACES + checkStructuralNamespaces | PASS/FAIL | 상수 누락, common/errors 미포함, 함수 정의 부재 위치 |
 | 18  | components/shared/ 도메인 namespace 결합 차단 — SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트 | PASS/FAIL | 상수 없음, shared glob 미적용, negative lookahead 누락 namespace 목록 |
 | 19  | ESLint typed linting 블록 inner ignores — `**/*.stories.{ts,tsx}` 포함 확인 | PASS/FAIL/INFO | stories 패턴 누락 시 파싱 오류 경로, typed linting block 없으면 INFO |
+| 20  | 도메인 mapper `errors.title/errors.genericError` baseline 키 존재 확인 | PASS/FAIL/WARN | 누락 locale/namespace/key 목록, mapper 파일 미존재 시 자동 스킵 |
 ```
 
 ## Exceptions

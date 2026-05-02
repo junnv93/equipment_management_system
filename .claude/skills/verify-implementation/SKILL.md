@@ -32,7 +32,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT                                     |
 | 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer, Dialog ARIA 입력 검증 패턴(Step 49), 내비게이션 list 시맨틱 `<ul role="list">` + `<li>`(Step 50) |
 | 10 | `verify-security`       | both     | 보안 — Helmet CSP, Security Headers, scope 위반 ErrorCode 403+감사등록 3중 확인(Step 15) |
-| 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지, audit SSOT enum 동기화, CROSS_CUTTING_NAMESPACES+checkStructuralNamespaces 스크립트 구조(Step 17), SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트(Step 18), typed linting block stories ignores(Step 19) |
+| 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지, audit SSOT enum 동기화, CROSS_CUTTING_NAMESPACES+checkStructuralNamespaces 스크립트 구조(Step 17), SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트(Step 18), typed linting block stories ignores(Step 19), domain mapper `errors.title/errors.genericError` baseline 키 존재(Step 20) |
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
 | 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지, test.use() describe 스코프 강제(Step 21), TestRole 4-place SSOT(Step 23), fixture 권한 격리(Step 24), scope spec actor 정합(Step 25) — Steps 23/24/25는 `pnpm --filter backend run verify:e2e-actors` pre-push 자동 승격, 도메인 e2e helper SSOT 분리(Step 26a)+value-based selector for prefilled forms(26b)+backend hook fail-soft 회귀 가드(26c)+legacy spec rewrite 정합화(26d)+intermediate/self 양면 페어링(26e) |
 | 14 | `verify-seed-integrity` | backend  | 시드 인프라 3자 SSOT 정합성 (seed-data↔seed-test-new↔verification) |

@@ -641,7 +641,17 @@ test -f apps/frontend/lib/errors/checkout-errors.ts && grep -c "mapCheckoutError
 test -f apps/frontend/lib/errors/notification-errors.ts && grep -c "mapNotificationErrorToToast" apps/frontend/lib/errors/notification-errors.ts
 test -f apps/frontend/lib/errors/team-errors.ts && grep -c "mapTeamErrorToToast" apps/frontend/lib/errors/team-errors.ts
 test -f apps/frontend/lib/errors/user-errors.ts && grep -c "mapUserErrorToToast" apps/frontend/lib/errors/user-errors.ts
+test -f apps/frontend/lib/errors/test-software-errors.ts && grep -c "mapTestSoftwareErrorToToast" apps/frontend/lib/errors/test-software-errors.ts
+test -f apps/frontend/lib/errors/software-validation-errors.ts && grep -c "mapSoftwareValidationErrorToToast" apps/frontend/lib/errors/software-validation-errors.ts
+test -f apps/frontend/lib/errors/self-inspection-errors.ts && grep -c "mapSelfInspectionErrorToToast" apps/frontend/lib/errors/self-inspection-errors.ts
+test -f apps/frontend/lib/errors/intermediate-inspection-errors.ts && grep -c "mapIntermediateInspectionErrorToToast" apps/frontend/lib/errors/intermediate-inspection-errors.ts
 # expected: 각 1+
+
+# 5b. Dead legacy local ErrorCode enum 탐지 (WARN 등급) — 2026-05-03 추가
+# mapper 파일 내 `export enum *ErrorCode` 로컬 선언은 packages/schemas ErrorCode SSOT 우회.
+# SoftwareValidationErrorCode + getSoftwareValidationErrorMessageKey() 패턴이 발생 사례.
+grep -rn "^export enum.*ErrorCode\b" apps/frontend/lib/errors/ --include="*.ts" 2>/dev/null
+# expected: 0건 — 레거시 로컬 enum 발견 시 WARN + tech-debt 등록 권고
 
 # 6. Mapper 호출처 적용 — onError에서 mapper 사용 강제 (도메인 dialog/client)
 grep -c "mapDisposalErrorToToast\|disposal-errors" apps/frontend/components/equipment/disposal/DisposalApprovalDialog.tsx
@@ -671,6 +681,7 @@ const mappers = [
   ['EquipmentImport', 'apps/frontend/lib/errors/equipment-import-errors.ts'],
   ['NonConformance', 'apps/frontend/lib/errors/non-conformance-errors.ts'],
   ['SelfInspection', 'apps/frontend/lib/errors/self-inspection-errors.ts'],
+  ['TestSoftware', 'apps/frontend/lib/errors/test-software-errors.ts'],
   ['Calibration', 'apps/frontend/lib/errors/calibration-errors.ts'],
   ['Disposal', 'apps/frontend/lib/errors/disposal-errors.ts'],
 ];
@@ -706,6 +717,7 @@ if (gaps.length > 0) {
 - 명령 3 (fail-close 비대칭): 0 hits 또는 모든 케이스가 REJECTION_REASON_MIN_LENGTH SSOT 사용
 - 명령 4 (시스템 진행률): 0건 = 전멸 달성 (2026-05-03). 증가 시 즉시 FAIL — 회귀 탐지
 - 명령 5 (mapper SSOT 존재): 각 도메인 ≥ 1 export
+- 명령 5b (dead legacy enum): `export enum *ErrorCode` 0건. ≥1건 발견 시 WARN (FAIL 아님) + tech-debt 등록 권고
 - 명령 6 (mapper 호출처 적용): 각 dialog/client ≥ 1 사용 — UX 갭 (한국어 backend 메시지 노출) 0건
 - 명령 7 (i18n namespace 정합성): mapper i18n key가 ko/en parity 만족 (verify-i18n과 시너지)
 - 명령 8 (mapper Partial Record completeness): reject 흐름 ErrorCode(`*RejectionReasonRequired`/`*InvalidStatusTransition`/`*OnlyPendingCanReject`/`*InvalidTransition`)가 각 도메인 mapper에 등재 — silent fallback (generic `error.message` 노출) 0건 강제. **2026-05-02 tier-2-rejectmodal-ssot iter 2 WARN-H5 closure**: ErrorCode enum + errorCodeToStatusCode 등록만 있고 mapper Partial Record 미등재 시 i18n 메시지 노출 안 됨 → 검증 자동화.
