@@ -294,7 +294,6 @@ function InspectionFormDialogInner({
     }
     setGalleryOpen(true);
     setHasShownGallery(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: galleryData 도착 시 1회 trigger
   }, [galleryEnabled, galleryData]);
 
   // Prefill from equipment master data when dialog opens
