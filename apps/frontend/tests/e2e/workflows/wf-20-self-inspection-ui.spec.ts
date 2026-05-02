@@ -48,24 +48,30 @@ const ROW_ACTION_PATTERN = {
   delete: /자체점검 기록 삭제$/,
 } as const;
 
-/** 종합결과 + 모든 항목을 "적합"으로 채운다 (Step 1, Step 2 공통) */
+/** 종합결과 + 모든 항목을 "적합"으로 채운다 (Step 1, Step 2 공통)
+ *
+ * Phase PR-3 (2026-05-02): 종합결과/항목 판정이 `<Select>` → `<ToggleGroup>`로 전환.
+ * - 종합결과: ToggleGroup root에 aria-label="종합결과 선택 (적합 또는 부적합)" → 내부 ToggleGroupItem(button) 클릭
+ * - 항목 판정: 행마다 ToggleGroup root에 aria-label="점검 결과" → ToggleGroupItem(button) 클릭
+ */
 async function fillSelfInspectionForm(page: Page, dialog: Locator, isoDate: string) {
   await dialog.locator('input[type="date"]').first().fill(isoDate);
 
-  // 종합결과 — shadcn Select 트리거 클릭 후 옵션 선택
-  await dialog.getByText(L.selectResult).click();
-  await page.getByRole('option', { name: L.pass, exact: true }).click();
+  // 종합결과 — ToggleGroup primitive: aria-label로 group 좁힘 후 적합 button 클릭
+  const overallResultGroup = dialog.getByRole('group', {
+    name: '종합결과 선택 (적합 또는 부적합)',
+  });
+  await overallResultGroup.getByRole('button', { name: L.pass, exact: true }).click();
 
   // DEFAULT_SELF_INSPECTION_ITEMS 자동 시드 — 4 카테고리 강제 검증 후 모두 pass
-  const judgmentTriggers = dialog.getByRole('combobox').filter({ hasText: '판정' });
+  const judgmentGroups = dialog.getByRole('group', { name: '점검 결과' });
   await expect(
-    judgmentTriggers,
+    judgmentGroups,
     `시드 항목이 ${DEFAULT_SELF_INSPECTION_ITEMS.length}개여야 함`
   ).toHaveCount(DEFAULT_SELF_INSPECTION_ITEMS.length);
 
   for (let i = 0; i < DEFAULT_SELF_INSPECTION_ITEMS.length; i++) {
-    await dialog.getByRole('combobox').filter({ hasText: '판정' }).first().click();
-    await page.getByRole('option', { name: L.pass, exact: true }).first().click();
+    await judgmentGroups.nth(i).getByRole('button', { name: L.pass, exact: true }).click();
   }
 }
 

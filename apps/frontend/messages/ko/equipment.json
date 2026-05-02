@@ -306,11 +306,18 @@
     "itemNumber": "번호",
     "checkItem": "점검 항목",
     "checkResult": "점검 결과",
+    "measurementLabel": "측정값",
+    "measurementPlaceholder": "예: 44.12 dB",
+    "criteriaLabel": "기준",
+    "criteriaPlaceholder": "예: 45 ± 2.5 dB",
     "remarks": "비고",
     "judgment": {
       "pass": "적합",
       "fail": "부적합",
       "na": "해당없음"
+    },
+    "overallResultToggle": {
+      "ariaLabel": "종합결과 선택 (적합 또는 부적합)"
     },
     "statusLabel": {
       "draft": "초안",

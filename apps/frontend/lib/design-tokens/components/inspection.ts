@@ -509,6 +509,9 @@ export const INSPECTION_TABLE_CELL_STATE = {
  * - row tint + left border 4px (pass/fail/na)
  * - segmented control 합부 선택 (pass/fail/na 색·아이콘 강화)
  * - WCAG 1.4.1 색만 의존 X — 아이콘·텍스트·border 보강
+ *
+ * Phase PR-3 (2026-05-02): ToggleGroup primitive(@radix-ui/react-toggle-group) 도입.
+ * 신규 키 `judgmentToggle` 사용 권장. 기존 `seg*` 키는 backward compat 유지.
  */
 export const INSPECTION_CHECKITEM_ROW_STATE = {
   /** row 컨테이너 — 합부 선택 시 left border + bg tint */
@@ -517,20 +520,94 @@ export const INSPECTION_CHECKITEM_ROW_STATE = {
   rowFail: 'border-l-4 border-l-rose-500 bg-rose-50/40',
   rowNa: 'border-l-4 border-l-slate-400 bg-slate-50/40',
   rowNone: '',
-  /** segmented control 단위 */
+  /** @deprecated — Phase PR-3에서 ToggleGroup primitive(`judgmentToggle`) 권장 */
   segGroup: 'inline-flex rounded-md border border-input shadow-sm overflow-hidden',
-  /** 각 segment button base (h-8 = 32px hit area) */
+  /** @deprecated — Phase PR-3에서 ToggleGroup primitive(`judgmentToggle`) 권장 */
   segItem:
     'inline-flex h-8 min-w-[44px] items-center justify-center gap-1 px-2.5 text-xs font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-  segPass: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300',
-  segFail: 'bg-rose-100 text-rose-700 ring-1 ring-rose-300',
-  segNa: 'bg-slate-100 text-slate-700 ring-1 ring-slate-300',
-  segInactive: 'bg-background text-muted-foreground hover:bg-muted/50',
+  /** @deprecated */ segPass: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300',
+  /** @deprecated */ segFail: 'bg-rose-100 text-rose-700 ring-1 ring-rose-300',
+  /** @deprecated */ segNa: 'bg-slate-100 text-slate-700 ring-1 ring-slate-300',
+  /** @deprecated */ segInactive: 'bg-background text-muted-foreground hover:bg-muted/50',
   /** 정합성 alert (항목 fail 1+ + 종합 pass 시) */
   consistencyAlert:
     'flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm',
   consistencyAlertTitle: 'font-medium text-destructive',
   consistencyAlertBody: 'text-destructive/80 text-xs',
+  /**
+   * Phase PR-3 ToggleGroup primitive 호환 클래스 (Radix data-state="on"/"off").
+   * - groupRoot: `<ToggleGroup>` root에 부착 (visual containment + border + 32px hit)
+   * - itemBase: 각 `<ToggleGroupItem>` 공통 클래스 (size sm 기준 32px 높이)
+   * - itemPass/Fail/Na: data-state="on" 시 색상 (data-state attribute selector)
+   *
+   * Tailwind data-* selector: `data-[state=on]:bg-...`
+   */
+  judgmentToggle: {
+    groupRoot: 'inline-flex rounded-md border border-input shadow-sm overflow-hidden',
+    /** WCAG 2.5.5 Target Size: 44px min hit area (h-8 32px + padding은 hit area 외) */
+    itemBase:
+      'inline-flex h-8 min-w-[44px] items-center justify-center gap-1 px-2.5 text-xs font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+    itemPass:
+      'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+    itemFail:
+      'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+    itemNa:
+      'data-[state=on]:bg-slate-100 data-[state=on]:text-slate-700 data-[state=on]:ring-1 data-[state=on]:ring-slate-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+  },
+} as const;
+
+// ============================================================================
+// 20b. INSPECTION_CHECKITEM_ROW_GRID — Phase PR-3 (자체점검 6-cell row)
+// ============================================================================
+
+/**
+ * 자체점검 항목 row 6-cell grid (Mission PR-3 명세).
+ *
+ * 컬럼 구성: # / 항목 / 측정값 / 기준 / 판정 / 삭제
+ * - desktop: 6-grid (28px / 1.5fr / 0.8fr / 1fr / 180px / 28px)
+ * - mobile (< 760px): flex stack fallback (rowStack)
+ *
+ * SSOT: SelfInspectionFormDialog의 items.map row 컨테이너 className.
+ * Tailwind grid arbitrary는 토큰 SSOT 정의 내부 1회 허용.
+ */
+export const INSPECTION_CHECKITEM_ROW_GRID = {
+  /** desktop 6-cell grid */
+  containerCols: 'grid grid-cols-[28px_1.5fr_0.8fr_1fr_180px_28px] gap-2 items-center',
+  /** mobile 760px 이하 flex stack — sm:hidden 브레이크포인트 매핑 (실제 사용처에서 sm: 적용) */
+  containerColsMobile: 'flex flex-col gap-2',
+  /** 인덱스 셀 (28px) */
+  cellIndex: 'text-xs text-muted-foreground text-right shrink-0 tabular-nums',
+  /** 측정값 / 기준 입력 셀 공통 (도메인 mono font 권장) */
+  cellInput: 'font-mono tabular-nums text-sm',
+  /** 삭제 버튼 셀 */
+  cellRemove: 'flex items-center justify-center',
+} as const;
+
+// ============================================================================
+// 20c. INSPECTION_OVERALL_RESULT_TOGGLE — Phase PR-3 (종합결과 lg ToggleGroup)
+// ============================================================================
+
+/**
+ * 종합결과 ToggleGroup 전용 토큰 (size lg, pass/fail 2개 옵션).
+ *
+ * Mission PR-3 명세 — `<Select>` → `<ToggleGroup type="single" size="lg">` 전환.
+ * - h-10 minimum (44px hit area, WCAG SC 2.5.5)
+ * - 활성 상태 색은 `judgmentToggle.itemPass/itemFail` 재사용
+ *
+ * SSOT: SelfInspectionFormDialog 종합결과 영역 className.
+ */
+export const INSPECTION_OVERALL_RESULT_TOGGLE = {
+  /** ToggleGroup root */
+  groupRoot: 'inline-flex w-full rounded-md border border-input shadow-sm overflow-hidden',
+  /** 각 ToggleGroupItem (size lg = h-10) */
+  itemBase:
+    'flex-1 inline-flex h-10 items-center justify-center gap-1.5 px-3 text-sm font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+  /** 활성/비활성 색 (pass) */
+  itemPass:
+    'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+  /** 활성/비활성 색 (fail) */
+  itemFail:
+    'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
 } as const;
 
 // ============================================================================

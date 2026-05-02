@@ -59,9 +59,9 @@ import {
   INSPECTION_FOCUS,
   INSPECTION_KIND_BADGE,
   getResultBadgeClasses,
-  getSemanticBadgeClasses,
   getSemanticLeftBorderClasses,
   getInspectionStatusSemantic,
+  getInspectionStatusBadgeClasses,
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
@@ -513,13 +513,25 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge className={getSemanticBadgeClasses(semanticColor)}>
+                            <span
+                              className={getInspectionStatusBadgeClasses(
+                                inspection.approvalStatus,
+                                'sm'
+                              )}
+                              aria-label={t('intermediateInspection.statusBadge.ariaLabel', {
+                                status: t(
+                                  `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
+                                    typeof t
+                                  >[0]
+                                ),
+                              })}
+                            >
                               {t(
                                 `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
                                   typeof t
                                 >[0]
                               )}
-                            </Badge>
+                            </span>
                           </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             {renderActions(inspection)}

@@ -72,11 +72,14 @@ pnpm --filter frontend run test:e2e -- --grep "wf-19|wf-20|inspection-template|s
 - `SelfInspectionFormDialog.tsx` items 영역 `flex` → grid 토큰 사용
 - `grep -n "INSPECTION_CHECKITEM_ROW_GRID" apps/frontend/components/inspections/SelfInspectionFormDialog.tsx` ≥ 1
 
-### M10: Status badge size=lg DialogHeader 렌더
-- 자체점검: 이미 적용됨 (`SelfInspectionFormDialog.tsx:425-442`) — 회귀 보존
-- 중간점검: 신규 적용 — `getInspectionStatusBadgeClasses(initialData.status, 'lg')` `InspectionFormDialog.tsx` DialogTitle 영역
-- 5상태(draft/submitted/reviewed/approved/rejected) 매핑 검증
-- `grep -c "getInspectionStatusBadgeClasses" apps/frontend/components/inspections/InspectionFormDialog.tsx` ≥ 1
+### M10: Status badge token SSOT 통일
+- 자체점검: 이미 적용됨 (`SelfInspectionFormDialog.tsx:425-442`) — 회귀 보존 (size lg, edit 모드 DialogHeader)
+- 중간점검: **list status cell**에 적용 (`IntermediateInspectionList.tsx:515-535`)
+  - **rev-1 정정 (2026-05-02)**: contract 초안은 `InspectionFormDialog.tsx` DialogHeader 가정. 실제 dialog는 create-only이며 `initialData` props 부재 → DialogHeader status 시나리오 부재. 정합한 적용 위치는 list status cell (size sm)
+  - `getInspectionStatusBadgeClasses(approvalStatus, 'sm')` 적용 — 기존 `getSemanticBadgeClasses`(중복 SSOT) 대체
+  - aria-label `intermediateInspection.statusBadge.ariaLabel` 추가 (i18n 기존 키 재사용)
+- 5상태(draft/submitted/reviewed/approved/rejected) 매핑은 `INSPECTION_STATUS_SEMANTIC_MAP` SSOT (`apps/frontend/lib/design-tokens/components/inspection.ts:320-326`)
+- `grep -c "getInspectionStatusBadgeClasses" apps/frontend/components/equipment/IntermediateInspectionList.tsx` ≥ 1
 
 ### M11: measurement/criteria 5-layer 전파
 - L1 Drizzle column: `selfInspectionItems.measurement` (varchar 100), `selfInspectionItems.criteria` (varchar 200) — `packages/db/src/schema/equipment-self-inspections.ts`에서 grep 검증
@@ -162,7 +165,7 @@ pnpm --filter frontend run test:e2e -- --grep "wf-19|wf-20|inspection-template|s
 - `apps/frontend/components/ui/toggle.tsx` — 신규
 - `apps/frontend/components/ui/toggle-group.tsx` — 신규
 - `apps/frontend/components/inspections/SelfInspectionFormDialog.tsx`
-- `apps/frontend/components/inspections/InspectionFormDialog.tsx` — status badge 추가
+- `apps/frontend/components/equipment/IntermediateInspectionList.tsx` — status cell SSOT 토큰 통일 (rev-1: `InspectionFormDialog.tsx` 가정 정정)
 
 ### 디자인 토큰 (1)
 - `apps/frontend/lib/design-tokens/components/inspection.ts`

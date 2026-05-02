@@ -34,9 +34,12 @@ import {
   INSPECTION_KIND_BADGE,
   INSPECTION_STATUS_BADGE,
   INSPECTION_CHECKITEM_ROW_STATE,
+  INSPECTION_CHECKITEM_ROW_GRID,
+  INSPECTION_OVERALL_RESULT_TOGGLE,
   INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
   getInspectionStatusBadgeClasses,
 } from '@/lib/design-tokens';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CheckItemPresetSelect from './CheckItemPresetSelect';
 import { cn } from '@/lib/utils';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
@@ -80,6 +83,8 @@ function deriveClassification(equipment?: Equipment): EquipmentClassification | 
 
 interface SelfInspectionItemForm {
   checkItem: string;
+  measurement: string;
+  criteria: string;
   checkResult: SelfInspectionItemJudgment | '';
 }
 
@@ -156,7 +161,12 @@ function SelfInspectionFormDialogInner({
   const [inspectionCycle, setInspectionCycle] = useState(6);
   const [specialNotes, setSpecialNotes] = useState<SpecialNoteForm[]>([]);
   const [items, setItems] = useState<SelfInspectionItemForm[]>(
-    DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' }))
+    DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({
+      checkItem: name,
+      measurement: '',
+      criteria: '',
+      checkResult: '',
+    }))
   );
   // UL-QP-18-05 양식 헤더 snapshot — create 시 장비 마스터에서 derive, edit 시 기존값 복원
   const [classification, setClassification] = useState<EquipmentClassification | ''>('');
@@ -169,7 +179,14 @@ function SelfInspectionFormDialogInner({
     setRemarks('');
     setInspectionCycle(6);
     setSpecialNotes([]);
-    setItems(DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' })));
+    setItems(
+      DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({
+        checkItem: name,
+        measurement: '',
+        criteria: '',
+        checkResult: '',
+      }))
+    );
     setClassification(deriveClassification(equipment));
     setCalibrationValidityPeriod('');
   }, [equipment]);
@@ -216,10 +233,14 @@ function SelfInspectionFormDialogInner({
         initialData.items && initialData.items.length > 0
           ? initialData.items.map((it) => ({
               checkItem: it.checkItem,
+              measurement: it.measurement ?? '',
+              criteria: it.criteria ?? '',
               checkResult: it.checkResult,
             }))
           : DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({
               checkItem: name,
+              measurement: '',
+              criteria: '',
               checkResult: '' as const,
             }));
       setItems(seeded);
@@ -295,7 +316,10 @@ function SelfInspectionFormDialogInner({
   });
 
   const handleAddItem = () => {
-    setItems((prev) => [...prev, { checkItem: '', checkResult: '' }]);
+    setItems((prev) => [
+      ...prev,
+      { checkItem: '', measurement: '', criteria: '', checkResult: '' },
+    ]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -320,7 +344,7 @@ function SelfInspectionFormDialogInner({
 
   // Phase 0C: 프리셋에서 새 항목 추가 — checkCriteria는 자체점검 type 미지원이므로 무시
   const handlePresetSelect = (checkItem: string) => {
-    setItems((prev) => [...prev, { checkItem, checkResult: '' }]);
+    setItems((prev) => [...prev, { checkItem, measurement: '', criteria: '', checkResult: '' }]);
   };
 
   // Phase 0C: segmented control row 시각 — 합부 값에 따라 left border + bg tint
@@ -341,6 +365,8 @@ function SelfInspectionFormDialogInner({
       items: items.map((item, idx) => ({
         itemNumber: idx + 1,
         checkItem: item.checkItem,
+        ...(item.measurement.trim() ? { measurement: item.measurement.trim() } : {}),
+        ...(item.criteria.trim() ? { criteria: item.criteria.trim() } : {}),
         checkResult: item.checkResult as SelfInspectionItemJudgment,
       })),
       ...(remarks ? { remarks } : {}),
@@ -479,19 +505,42 @@ function SelfInspectionFormDialogInner({
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('selfInspection.overallResult')}</Label>
-              <Select
+              <Label htmlFor="self-inspection-overall-result">
+                {t('selfInspection.overallResult')}
+              </Label>
+              <ToggleGroup
+                id="self-inspection-overall-result"
+                type="single"
                 value={overallResult}
-                onValueChange={(v) => setOverallResult(v as SelfInspectionResult)}
+                onValueChange={(v) => {
+                  if (v === 'pass' || v === 'fail') setOverallResult(v);
+                }}
+                aria-label={t('selfInspection.overallResultToggle.ariaLabel')}
+                className={INSPECTION_OVERALL_RESULT_TOGGLE.groupRoot}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('selfInspection.form.selectResult')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pass">{t('selfInspection.judgment.pass')}</SelectItem>
-                  <SelectItem value="fail">{t('selfInspection.judgment.fail')}</SelectItem>
-                </SelectContent>
-              </Select>
+                <ToggleGroupItem
+                  value="pass"
+                  aria-label={t('selfInspection.judgment.pass')}
+                  className={cn(
+                    INSPECTION_OVERALL_RESULT_TOGGLE.itemBase,
+                    INSPECTION_OVERALL_RESULT_TOGGLE.itemPass
+                  )}
+                >
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  {t('selfInspection.judgment.pass')}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="fail"
+                  aria-label={t('selfInspection.judgment.fail')}
+                  className={cn(
+                    INSPECTION_OVERALL_RESULT_TOGGLE.itemBase,
+                    INSPECTION_OVERALL_RESULT_TOGGLE.itemFail
+                  )}
+                >
+                  <XIcon className="h-4 w-4" aria-hidden="true" />
+                  {t('selfInspection.judgment.fail')}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             <div className="space-y-2">
               <Label>{t('selfInspection.inspectionCycle.label')}</Label>
@@ -586,52 +635,71 @@ function SelfInspectionFormDialogInner({
                 <div
                   key={index}
                   className={cn(
-                    INSPECTION_CHECKITEM_ROW_STATE.rowBase,
+                    'rounded-md border bg-card px-2 py-1.5 transition-colors',
+                    INSPECTION_CHECKITEM_ROW_GRID.containerCols,
                     getRowStateClass(item.checkResult)
                   )}
                 >
-                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0 tabular-nums">
-                    {index + 1}
-                  </span>
+                  <span className={INSPECTION_CHECKITEM_ROW_GRID.cellIndex}>{index + 1}</span>
                   <Input
                     value={item.checkItem}
                     onChange={(e) => handleItemChange(index, 'checkItem', e.target.value)}
                     placeholder={t('selfInspection.form.itemNamePlaceholder')}
-                    className="flex-1"
+                    aria-label={t('selfInspection.checkItem')}
                   />
-                  {/* Phase 0C: segmented control (pass/fail/na) — 색·아이콘 강화 (디자인 리뷰 b6/b11) */}
-                  <div
-                    role="radiogroup"
+                  <Input
+                    value={item.measurement}
+                    onChange={(e) => handleItemChange(index, 'measurement', e.target.value)}
+                    placeholder={t('selfInspection.measurementPlaceholder')}
+                    aria-label={t('selfInspection.measurementLabel')}
+                    maxLength={100}
+                    className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
+                  />
+                  <Input
+                    value={item.criteria}
+                    onChange={(e) => handleItemChange(index, 'criteria', e.target.value)}
+                    placeholder={t('selfInspection.criteriaPlaceholder')}
+                    aria-label={t('selfInspection.criteriaLabel')}
+                    maxLength={200}
+                    className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
+                  />
+                  <ToggleGroup
+                    type="single"
+                    value={item.checkResult}
+                    onValueChange={(v) => {
+                      if (v === 'pass' || v === 'fail' || v === 'na') {
+                        handleItemChange(index, 'checkResult', v);
+                      }
+                    }}
                     aria-label={t('selfInspection.checkResult')}
-                    className={INSPECTION_CHECKITEM_ROW_STATE.segGroup}
+                    className={INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.groupRoot}
                   >
                     {(['pass', 'fail', 'na'] as const).map((value) => {
-                      const active = item.checkResult === value;
                       const Icon = value === 'pass' ? Check : value === 'fail' ? XIcon : Minus;
-                      const activeClass =
+                      const itemClass =
                         value === 'pass'
-                          ? INSPECTION_CHECKITEM_ROW_STATE.segPass
+                          ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemPass
                           : value === 'fail'
-                            ? INSPECTION_CHECKITEM_ROW_STATE.segFail
-                            : INSPECTION_CHECKITEM_ROW_STATE.segNa;
+                            ? INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemFail
+                            : INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemNa;
                       return (
-                        <button
+                        <ToggleGroupItem
                           key={value}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          onClick={() => handleItemChange(index, 'checkResult', value)}
+                          value={value}
+                          aria-label={t(
+                            `selfInspection.judgment.${value}` as Parameters<typeof t>[0]
+                          )}
                           className={cn(
-                            INSPECTION_CHECKITEM_ROW_STATE.segItem,
-                            active ? activeClass : INSPECTION_CHECKITEM_ROW_STATE.segInactive
+                            INSPECTION_CHECKITEM_ROW_STATE.judgmentToggle.itemBase,
+                            itemClass
                           )}
                         >
                           <Icon className="h-3 w-3" aria-hidden="true" />
                           {t(`selfInspection.judgment.${value}` as Parameters<typeof t>[0])}
-                        </button>
+                        </ToggleGroupItem>
                       );
                     })}
-                  </div>
+                  </ToggleGroup>
                   <Button
                     type="button"
                     variant="ghost"
@@ -639,6 +707,7 @@ function SelfInspectionFormDialogInner({
                     onClick={() => handleRemoveItem(index)}
                     disabled={items.length <= 1}
                     aria-label={t('selfInspection.form.removeItem')}
+                    className="h-7 w-7 p-0"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

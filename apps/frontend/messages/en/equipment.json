@@ -306,11 +306,18 @@
     "itemNumber": "No.",
     "checkItem": "Check Item",
     "checkResult": "Result",
+    "measurementLabel": "Measurement",
+    "measurementPlaceholder": "e.g. 44.12 dB",
+    "criteriaLabel": "Criteria",
+    "criteriaPlaceholder": "e.g. 45 ± 2.5 dB",
     "remarks": "Remarks",
     "judgment": {
       "pass": "Pass",
       "fail": "Fail",
       "na": "N/A"
+    },
+    "overallResultToggle": {
+      "ariaLabel": "Overall result selection (Pass or Fail)"
     },
     "statusLabel": {
       "draft": "Draft",

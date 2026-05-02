@@ -9,7 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `inspection-pr2-pr3-closure` | 자체점검 ToggleGroup primitive + 4-grid + measurement/criteria 5-layer + 중간점검 status badge | 2026-05-02 |
+| _(없음 — 모든 active 작업 완료)_ | | |
 
 ---
 
@@ -47,4 +47,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 195개 (2026-05-02: +equipment-controller-errorcode-ssot, +equipment-domain-errorcode-closure, +tier2-fsm-invalid-status-transition). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 196개 (2026-05-02: +equipment-controller-errorcode-ssot, +equipment-domain-errorcode-closure, +tier2-fsm-invalid-status-transition, +inspection-pr2-pr3-closure). 검색: `ls .claude/contracts/completed/ | grep <slug>`

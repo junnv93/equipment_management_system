@@ -457,6 +457,9 @@ export {
   type InspectionStatusKey,
   // Phase 0C (P1 자체점검 정합성)
   INSPECTION_CHECKITEM_ROW_STATE,
+  // Phase PR-3 (자체점검 6-cell row + ToggleGroup 종합결과)
+  INSPECTION_CHECKITEM_ROW_GRID,
+  INSPECTION_OVERALL_RESULT_TOGGLE,
   // Phase 1A (P1 prefill 즉시 확장)
   INSPECTION_PREFILL_NOTICE,
   INSPECTION_CELL_PROVENANCE,
