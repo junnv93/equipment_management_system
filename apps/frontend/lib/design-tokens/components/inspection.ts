@@ -516,6 +516,8 @@ export const INSPECTION_TABLE_CELL_STATE = {
 export const INSPECTION_CHECKITEM_ROW_STATE = {
   /** row 컨테이너 — 합부 선택 시 left border + bg tint */
   rowBase: 'flex items-center gap-2 rounded-md border bg-card px-2 py-1.5 transition-colors',
+  /** layout-agnostic 장식 토큰 — grid/flex 구분 없이 공유 (PR-3 grid row용) */
+  rowBaseDecoration: 'rounded-md border bg-card px-2 py-1.5 transition-colors',
   rowPass: 'border-l-4 border-l-emerald-500 bg-emerald-50/40',
   rowFail: 'border-l-4 border-l-rose-500 bg-rose-50/40',
   rowNa: 'border-l-4 border-l-slate-400 bg-slate-50/40',
@@ -548,11 +550,11 @@ export const INSPECTION_CHECKITEM_ROW_STATE = {
     itemBase:
       'inline-flex h-8 min-w-[44px] items-center justify-center gap-1 px-2.5 text-xs font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
     itemPass:
-      'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+      'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 dark:data-[state=on]:bg-emerald-950/30 dark:data-[state=on]:text-emerald-400 dark:data-[state=on]:ring-emerald-800 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
     itemFail:
-      'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+      'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 dark:data-[state=on]:bg-rose-950/30 dark:data-[state=on]:text-rose-400 dark:data-[state=on]:ring-rose-800 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
     itemNa:
-      'data-[state=on]:bg-slate-100 data-[state=on]:text-slate-700 data-[state=on]:ring-1 data-[state=on]:ring-slate-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+      'data-[state=on]:bg-slate-100 data-[state=on]:text-slate-700 data-[state=on]:ring-1 data-[state=on]:ring-slate-300 dark:data-[state=on]:bg-slate-800/50 dark:data-[state=on]:text-slate-400 dark:data-[state=on]:ring-slate-600 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
   },
 } as const;
 
@@ -602,12 +604,12 @@ export const INSPECTION_OVERALL_RESULT_TOGGLE = {
   /** 각 ToggleGroupItem (size lg = h-10) */
   itemBase:
     'flex-1 inline-flex h-10 items-center justify-center gap-1.5 px-3 text-sm font-medium border-r border-input last:border-r-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-  /** 활성/비활성 색 (pass) */
+  /** 활성/비활성 색 (pass) — Tailwind primitive → dark mode 명시적 오버라이드 필요 */
   itemPass:
-    'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
-  /** 활성/비활성 색 (fail) */
+    'data-[state=on]:bg-emerald-100 data-[state=on]:text-emerald-700 data-[state=on]:ring-1 data-[state=on]:ring-emerald-300 dark:data-[state=on]:bg-emerald-950/30 dark:data-[state=on]:text-emerald-400 dark:data-[state=on]:ring-emerald-800 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+  /** 활성/비활성 색 (fail) — Tailwind primitive → dark mode 명시적 오버라이드 필요 */
   itemFail:
-    'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
+    'data-[state=on]:bg-rose-100 data-[state=on]:text-rose-700 data-[state=on]:ring-1 data-[state=on]:ring-rose-300 dark:data-[state=on]:bg-rose-950/30 dark:data-[state=on]:text-rose-400 dark:data-[state=on]:ring-rose-800 data-[state=off]:bg-background data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-muted/50',
 } as const;
 
 // ============================================================================

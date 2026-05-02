@@ -635,7 +635,7 @@ function SelfInspectionFormDialogInner({
                 <div
                   key={index}
                   className={cn(
-                    'rounded-md border bg-card px-2 py-1.5 transition-colors',
+                    INSPECTION_CHECKITEM_ROW_STATE.rowBaseDecoration,
                     INSPECTION_CHECKITEM_ROW_GRID.containerCols,
                     getRowStateClass(item.checkResult)
                   )}
