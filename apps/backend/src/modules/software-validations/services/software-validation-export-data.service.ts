@@ -8,6 +8,7 @@ import type { AcquisitionOrProcessingItem, ControlItem } from '@equipment-manage
 import {
   acquisitionOrProcessingArraySchema,
   controlItemArraySchema,
+  ErrorCode,
   ValidationStatusValues,
 } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -116,7 +117,7 @@ export class SoftwareValidationExportDataService {
 
     if (!record) {
       throw new NotFoundException({
-        code: 'VALIDATION_NOT_FOUND',
+        code: ErrorCode.SoftwareValidationNotFound,
         message: `Software validation ${validationId} not found.`,
       });
     }

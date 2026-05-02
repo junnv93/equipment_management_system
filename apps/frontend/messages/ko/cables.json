@@ -121,5 +121,11 @@
     "SMA": "SMA",
     "N": "N",
     "other": "기타"
+  },
+  "errors": {
+    "title": "오류",
+    "genericError": "요청을 처리하는 중 오류가 발생했습니다.",
+    "notFound": "케이블을 찾을 수 없습니다.",
+    "lossMeasurementNotFound": "케이블 손실 측정값을 찾을 수 없습니다."
   }
 }

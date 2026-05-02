@@ -8,7 +8,7 @@ import {
   equipment as equipmentTable,
 } from '@equipment-management/db/schema';
 import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
-import { Team, type PaginatedResponseType } from '@equipment-management/schemas';
+import { ErrorCode, Team, type PaginatedResponseType } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 @Injectable()
@@ -156,7 +156,7 @@ export class TeamsService {
 
     if (existingTeam) {
       throw new BadRequestException({
-        code: 'TEAM_NAME_ALREADY_EXISTS',
+        code: ErrorCode.TeamNameAlreadyExists,
         message: `Team name '${createTeamDto.name}' is already in use at this site.`,
       });
     }
@@ -227,14 +227,14 @@ export class TeamsService {
 
     if (!leader) {
       throw new BadRequestException({
-        code: 'LEADER_NOT_FOUND',
+        code: ErrorCode.LeaderNotFound,
         message: `User with id '${leaderId}' not found.`,
       });
     }
 
     if (leader.site !== teamSite) {
       throw new BadRequestException({
-        code: 'LEADER_SITE_MISMATCH',
+        code: ErrorCode.TeamLeaderSiteMismatch,
         message: `User '${leader.name}' belongs to site '${leader.site}', not '${teamSite}'.`,
       });
     }

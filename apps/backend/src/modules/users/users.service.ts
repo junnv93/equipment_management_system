@@ -16,6 +16,7 @@ import {
 import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './dto';
 import {
   User,
+  ErrorCode,
   type PaginatedResponseType,
   type UserRole,
   UserRoleValues as URVal,
@@ -197,7 +198,7 @@ export class UsersService {
     const existingUser = await this.findByEmail(createUserDto.email);
     if (existingUser) {
       throw new BadRequestException({
-        code: 'USER_EMAIL_ALREADY_EXISTS',
+        code: ErrorCode.UserEmailAlreadyExists,
         message: `Email '${createUserDto.email}' is already in use.`,
       });
     }
@@ -298,7 +299,7 @@ export class UsersService {
     const requester = await this.findOne(jwtUser.userId);
     if (!requester) {
       throw new NotFoundException({
-        code: 'USER_REQUESTER_NOT_FOUND',
+        code: ErrorCode.UserRequesterNotFound,
         message: 'Requester not found.',
       });
     }
@@ -306,7 +307,7 @@ export class UsersService {
       !([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER] as readonly string[]).includes(requester.role)
     ) {
       throw new ForbiddenException({
-        code: 'USER_NO_ROLE_CHANGE_PERMISSION',
+        code: ErrorCode.UserNoRoleChangePermission,
         message: 'No permission to change roles.',
       });
     }
@@ -314,7 +315,7 @@ export class UsersService {
     // ❷ 자기 변경 차단
     if (jwtUser.userId === targetUserId) {
       throw new ForbiddenException({
-        code: 'USER_CANNOT_CHANGE_OWN_ROLE',
+        code: ErrorCode.UserCannotChangeOwnRole,
         message: 'Cannot change your own role.',
       });
     }
@@ -323,7 +324,7 @@ export class UsersService {
     const target = await this.findOne(targetUserId);
     if (!target) {
       throw new NotFoundException({
-        code: 'USER_TARGET_NOT_FOUND',
+        code: ErrorCode.UserTargetNotFound,
         message: 'Target user not found.',
       });
     }
@@ -333,7 +334,7 @@ export class UsersService {
       !([URVal.TEST_ENGINEER, URVal.TECHNICAL_MANAGER] as readonly string[]).includes(target.role)
     ) {
       throw new ForbiddenException({
-        code: 'USER_CANNOT_CHANGE_SENIOR_ROLE',
+        code: ErrorCode.UserCannotChangeSeniorRole,
         message: 'Cannot change the role of quality manager or lab manager.',
       });
     }
@@ -342,14 +343,14 @@ export class UsersService {
     if (requester.role === URVal.TECHNICAL_MANAGER) {
       if (target.teamId !== requester.teamId) {
         throw new ForbiddenException({
-          code: 'USER_TEAM_SCOPE_ONLY',
+          code: ErrorCode.UserTeamScopeOnly,
           message: 'Can only change roles of your own team members.',
         });
       }
     } else if (requester.role === URVal.LAB_MANAGER) {
       if (target.site !== requester.site) {
         throw new ForbiddenException({
-          code: 'USER_SITE_SCOPE_ONLY',
+          code: ErrorCode.UserSiteScopeOnly,
           message: 'Can only change roles of members in the same site.',
         });
       }
@@ -542,7 +543,7 @@ export class UsersService {
 
     if (!updated) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${userId} not found.`,
       });
     }

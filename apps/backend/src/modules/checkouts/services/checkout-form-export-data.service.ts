@@ -5,7 +5,7 @@ import { checkouts, checkoutItems } from '@equipment-management/db/schema/checko
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { users } from '@equipment-management/db/schema/users';
-import { ConditionCheckStepValues } from '@equipment-management/schemas';
+import { ConditionCheckStepValues, ErrorCode } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 
 export interface CheckoutFormSigner {
@@ -59,7 +59,7 @@ export class CheckoutFormExportDataService {
     const checkoutId = params.checkoutId;
     if (!checkoutId) {
       throw new BadRequestException({
-        code: 'MISSING_CHECKOUT_ID',
+        code: ErrorCode.CheckoutMissingId,
         message: 'checkoutId query parameter is required for checkout export.',
       });
     }
@@ -72,7 +72,7 @@ export class CheckoutFormExportDataService {
 
     if (!checkout) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: ErrorCode.CheckoutNotFound,
         message: 'Checkout not found.',
       });
     }
@@ -98,19 +98,19 @@ export class CheckoutFormExportDataService {
     const scopeActive = filter.site || filter.teamId;
     if (scopeActive && items.length === 0) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: ErrorCode.CheckoutNotFound,
         message: 'Checkout not found or not accessible.',
       });
     }
     if (filter.site && items.some((it) => it.equipmentSite !== filter.site)) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: ErrorCode.CheckoutNotFound,
         message: 'Checkout not found or not accessible from your site.',
       });
     }
     if (filter.teamId && items.some((it) => it.equipmentTeamId !== filter.teamId)) {
       throw new NotFoundException({
-        code: 'CHECKOUT_NOT_FOUND',
+        code: ErrorCode.CheckoutNotFound,
         message: 'Checkout not found or not accessible from your team.',
       });
     }

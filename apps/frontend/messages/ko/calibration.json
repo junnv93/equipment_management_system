@@ -944,7 +944,11 @@
       "onlyReviewedCanApprove": "검토 완료된 중간점검만 승인할 수 있습니다.",
       "onlySubmittedCanWithdraw": "제출된 중간점검만 제출 취소할 수 있습니다.",
       "onlyRejectedCanResubmit": "반려된 중간점검만 재제출할 수 있습니다.",
-      "withdrawNotSubmitter": "제출자 본인만 제출 취소할 수 있습니다."
+      "withdrawNotSubmitter": "제출자 본인만 제출 취소할 수 있습니다.",
+      "notFound": "중간 점검을 찾을 수 없습니다.",
+      "itemNotFound": "점검 항목을 찾을 수 없습니다.",
+      "templateNotFound": "점검 양식 템플릿을 찾을 수 없습니다.",
+      "resultSectionNotFound": "결과 섹션을 찾을 수 없습니다."
     }
   },
   "planErrors": {

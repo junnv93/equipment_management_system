@@ -979,7 +979,11 @@
       "onlyReviewedCanApprove": "Only reviewed intermediate inspections can be approved.",
       "onlySubmittedCanWithdraw": "Only submitted intermediate inspections can be withdrawn.",
       "onlyRejectedCanResubmit": "Only rejected intermediate inspections can be resubmitted.",
-      "withdrawNotSubmitter": "Only the submitter can withdraw a submitted inspection."
+      "withdrawNotSubmitter": "Only the submitter can withdraw a submitted inspection.",
+      "notFound": "Intermediate inspection not found.",
+      "itemNotFound": "Inspection item not found.",
+      "templateNotFound": "Inspection template not found.",
+      "resultSectionNotFound": "Result section not found."
     }
   },
   "planErrors": {

@@ -15,7 +15,11 @@ import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType } from '@equipment-management/schemas';
-import { DocumentStatusValues, ValidationStatusValues } from '@equipment-management/schemas';
+import {
+  DocumentStatusValues,
+  ErrorCode,
+  ValidationStatusValues,
+} from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../storage/storage.interface';
 import type { MulterFile } from '../../types/common.types';
@@ -80,7 +84,7 @@ export class DocumentService {
       !options.nonConformanceId
     ) {
       throw new BadRequestException({
-        code: 'DOCUMENT_OWNER_REQUIRED',
+        code: ErrorCode.DocumentOwnerRequired,
         message:
           'At least one owner (equipmentId, calibrationId, requestId, softwareValidationId, intermediateInspectionId, selfInspectionId, or nonConformanceId) is required.',
       });
@@ -142,7 +146,7 @@ export class DocumentService {
 
     if (!document) {
       throw new NotFoundException({
-        code: 'DOCUMENT_NOT_FOUND',
+        code: ErrorCode.DocumentNotFound,
         message: `Document ${id} not found.`,
       });
     }
@@ -160,7 +164,7 @@ export class DocumentService {
 
     if (!document) {
       throw new NotFoundException({
-        code: 'DOCUMENT_NOT_FOUND',
+        code: ErrorCode.DocumentNotFound,
         message: `Document ${id} not found.`,
       });
     }
@@ -526,7 +530,7 @@ export class DocumentService {
 
     if (!document.mimeType.startsWith('image/')) {
       throw new BadRequestException({
-        code: 'DOCUMENT_NOT_IMAGE',
+        code: ErrorCode.DocumentNotImage,
         message: 'Thumbnail is only available for image documents.',
       });
     }
@@ -653,14 +657,14 @@ export class DocumentService {
 
     if (!validation) {
       throw new NotFoundException({
-        code: 'VALIDATION_NOT_FOUND',
+        code: ErrorCode.SoftwareValidationNotFound,
         message: `Software validation ${validationId} not found.`,
       });
     }
 
     if (validation.status !== ValidationStatusValues.DRAFT) {
       throw new ForbiddenException({
-        code: 'VALIDATION_NOT_DRAFT',
+        code: ErrorCode.DocumentValidationNotDraft,
         message: `Cannot modify documents for validation in '${validation.status}' status. Only 'draft' validations allow document changes.`,
       });
     }

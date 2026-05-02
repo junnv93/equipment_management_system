@@ -620,7 +620,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       existing.approvalStatus !== SelfInspectionStatusValues.REJECTED
     ) {
       throw new BadRequestException({
-        code: 'CANNOT_DELETE_APPROVED',
+        code: ErrorCode.InspectionCannotDeleteApproved,
         message: 'Cannot delete an approved inspection.',
       });
     }
@@ -724,7 +724,7 @@ export class SelfInspectionsService extends VersionedBaseService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'INSPECTION_ITEM_NOT_FOUND',
+        code: ErrorCode.InspectionItemNotFound,
         message: `Item ${itemId} not found in self-inspection ${inspectionId}.`,
       });
     }

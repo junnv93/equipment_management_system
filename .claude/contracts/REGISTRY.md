@@ -9,8 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| _(없음 — 모든 active 작업 완료)_ | | |
-
 ---
 
 ## Backlog (계획됨, 미착수)
@@ -45,4 +43,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 201개 (2026-05-02: +calibration-phase4-7, +rejection-reason-notfound-systemic-closure). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 202개 (2026-05-02: +calibration-phase4-7, +rejection-reason-notfound-systemic-closure, +backend-errorcode-full-closure). 검색: `ls .claude/contracts/completed/ | grep <slug>`

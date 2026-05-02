@@ -12,6 +12,10 @@ import { extractErrorCode, type ErrorToast } from './disposal-errors';
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
 const INTERMEDIATE_INSPECTION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.IntermediateInspectionNotFound]: 'errors.intermediateInspection.notFound',
+  [ErrorCode.InspectionItemNotFound]: 'errors.intermediateInspection.itemNotFound',
+  [ErrorCode.InspectionTemplateNotFound]: 'errors.intermediateInspection.templateNotFound',
+  [ErrorCode.ResultSectionNotFound]: 'errors.intermediateInspection.resultSectionNotFound',
   [ErrorCode.IntermediateInspectionRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.IntermediateInspectionInvalidStatusTransition]: 'errors.invalidStatusForReject',
   [ErrorCode.IntermediateInspectionOnlyDraftCanUpdate]:

@@ -22,6 +22,7 @@ import { CreateTeamValidationPipe } from './dto/create-team.dto';
 import { UpdateTeamValidationPipe } from './dto/update-team.dto';
 import { TeamQueryValidationPipe } from './dto/team-query.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { Team } from '@equipment-management/schemas';
 
 interface TeamsControllerListResponse {
@@ -70,7 +71,7 @@ export class TeamsController {
 
     if (!team) {
       throw new NotFoundException({
-        code: 'RESOURCE_NOT_FOUND',
+        code: ErrorCode.TeamNotFound,
         message: '요청한 팀을 찾을 수 없습니다.',
       });
     }
@@ -115,7 +116,7 @@ export class TeamsController {
 
     if (!team) {
       throw new NotFoundException({
-        code: 'RESOURCE_NOT_FOUND',
+        code: ErrorCode.TeamNotFound,
         message: '업데이트할 팀을 찾을 수 없습니다.',
       });
     }
@@ -135,7 +136,7 @@ export class TeamsController {
 
     if (!deleted) {
       throw new NotFoundException({
-        code: 'RESOURCE_NOT_FOUND',
+        code: ErrorCode.TeamNotFound,
         message: '삭제할 팀을 찾을 수 없습니다.',
       });
     }

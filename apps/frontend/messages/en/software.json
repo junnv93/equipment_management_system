@@ -337,6 +337,10 @@
     "onlyDraftCanSubmit": "Only draft validations can be submitted.",
     "onlySubmittedCanApprove": "Only submitted validations can receive technical approval.",
     "onlyApprovedCanQualityApprove": "Only technically approved validations can receive quality approval.",
-    "onlyRejectedCanRevise": "Only rejected validations can be revised."
+    "onlyRejectedCanRevise": "Only rejected validations can be revised.",
+    "title": "Error",
+    "genericError": "An error occurred while processing the request.",
+    "notFound": "Software not found.",
+    "equipmentLinkNotFound": "Equipment-software link not found."
   }
 }

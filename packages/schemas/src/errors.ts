@@ -393,6 +393,268 @@ export enum ErrorCode {
   SelfInspectionNotFound = 'SELF_INSPECTION_NOT_FOUND',
   /** 점검 계획을 찾을 수 없음. */
   TestPlanNotFound = 'TEST_PLAN_NOT_FOUND',
+  /** 점검 항목을 찾을 수 없음. */
+  InspectionItemNotFound = 'INSPECTION_ITEM_NOT_FOUND',
+  /** 점검 양식 템플릿을 찾을 수 없음. */
+  InspectionTemplateNotFound = 'INSPECTION_TEMPLATE_NOT_FOUND',
+  /** 결과 섹션을 찾을 수 없음. */
+  ResultSectionNotFound = 'RESULT_SECTION_NOT_FOUND',
+
+  // ============================================================================
+  // 반출(Checkout) 도메인 NOT_FOUND
+  // ============================================================================
+  /** 반출 기록을 찾을 수 없음. */
+  CheckoutNotFound = 'CHECKOUT_NOT_FOUND',
+
+  // ============================================================================
+  // 알림(Notification) 도메인 NOT_FOUND
+  // ============================================================================
+  /** 알림을 찾을 수 없음. */
+  NotificationNotFound = 'NOTIFICATION_NOT_FOUND',
+
+  // ============================================================================
+  // 팀(Team) 도메인 NOT_FOUND
+  // ============================================================================
+  /** 팀을 찾을 수 없음. */
+  TeamNotFound = 'TEAM_NOT_FOUND',
+  /** 팀 리더를 찾을 수 없음. */
+  LeaderNotFound = 'LEADER_NOT_FOUND',
+
+  // ============================================================================
+  // 사용자(User) 도메인 NOT_FOUND
+  // ============================================================================
+  /** 요청자(requester) 사용자를 찾을 수 없음. */
+  UserRequesterNotFound = 'USER_REQUESTER_NOT_FOUND',
+  /** 대상(target) 사용자를 찾을 수 없음. */
+  UserTargetNotFound = 'USER_TARGET_NOT_FOUND',
+
+  // ============================================================================
+  // 인증(Auth) 도메인 NOT_FOUND
+  // ============================================================================
+  /** 인증 과정에서 사용자를 찾을 수 없음. */
+  AuthUserNotFound = 'AUTH_USER_NOT_FOUND',
+
+  // ============================================================================
+  // 파일·문서 도메인 NOT_FOUND
+  // ============================================================================
+  /** 문서를 찾을 수 없음. */
+  DocumentNotFound = 'DOCUMENT_NOT_FOUND',
+  /** 파일을 찾을 수 없음. */
+  FileNotFound = 'FILE_NOT_FOUND',
+
+  // ============================================================================
+  // 케이블(Cable) 도메인 추가 NOT_FOUND
+  // ============================================================================
+  /** 케이블 손실 측정 기록을 찾을 수 없음. */
+  CableLossMeasurementNotFound = 'CABLE_LOSS_MEASUREMENT_NOT_FOUND',
+
+  // ============================================================================
+  // 시험용 소프트웨어(Test Software) 도메인 추가 NOT_FOUND
+  // ============================================================================
+  /** 장비 연결(P-number 링크)을 찾을 수 없음. */
+  EquipmentLinkNotFound = 'EQUIPMENT_LINK_NOT_FOUND',
+
+  // ============================================================================
+  // 인증(Auth) 도메인 — SSE·JWT·권한 에러
+  // ============================================================================
+  /** SSE 연결에 토큰이 필요함. */
+  AuthSseTokenRequired = 'AUTH_SSE_TOKEN_REQUIRED',
+  /** 리프레시 토큰으로 SSE 접근 불가 — 액세스 토큰 전용 엔드포인트. */
+  AuthAccessTokenOnly = 'AUTH_ACCESS_TOKEN_ONLY',
+  /** 블랙리스트에 등록된 토큰. */
+  AuthTokenBlacklisted = 'AUTH_TOKEN_BLACKLISTED',
+  /** 유효하지 않은 토큰 (서명 오류·형식 불량). */
+  AuthInvalidToken = 'AUTH_INVALID_TOKEN',
+  /** JWT 페이로드에 userId 클레임 누락. */
+  AuthUserIdMissing = 'AUTH_USER_ID_MISSING',
+  /** 유효하지 않은 세션 (userId 추출 실패). */
+  AuthInvalidSession = 'AUTH_INVALID_SESSION',
+  /** 운영 환경에서는 Azure AD 로그인만 허용. */
+  AuthProductionAzureOnly = 'AUTH_PRODUCTION_AZURE_ONLY',
+  /** 계정이 잠김 (로그인 실패 횟수 초과). */
+  AuthAccountLocked = 'AUTH_ACCOUNT_LOCKED',
+  /** 자격증명(이메일/비밀번호) 불일치 — 인증 흐름 전용. */
+  AuthInvalidCredentials = 'AUTH_INVALID_CREDENTIALS',
+  /** Azure AD 인증 실패. */
+  AuthAzureAdFailed = 'AUTH_AZURE_AD_FAILED',
+  /** 리프레시 토큰이 유효하지 않음. */
+  AuthInvalidRefreshToken = 'AUTH_INVALID_REFRESH_TOKEN',
+  /** 리프레시 토큰 만료 — 재로그인 필요. */
+  AuthSessionExpired = 'AUTH_SESSION_EXPIRED',
+  /** 리프레시 과정에서 사용자를 찾을 수 없음. */
+  AuthRefreshNoUser = 'AUTH_REFRESH_NO_USER',
+  /** 리프레시 토큰 절대만료(30일) 초과. */
+  AuthRefreshExpired = 'AUTH_REFRESH_EXPIRED',
+  /** @SkipPermissions 없는 핸들러에 RequiredPermissions 메타데이터 미설정. */
+  AuthPermissionsNotConfigured = 'AUTH_PERMISSIONS_NOT_CONFIGURED',
+  /** 인증되지 않은 요청 — 로그인 필요. */
+  AuthRequired = 'AUTH_REQUIRED',
+  /** 권한 부족 — 허용된 역할/퍼미션 없음. */
+  AuthInsufficientPermissions = 'AUTH_INSUFFICIENT_PERMISSIONS',
+  /** 비활성화된 사용자 계정. */
+  AuthUserInactive = 'AUTH_USER_INACTIVE',
+  /** 요청 헤더/컨텍스트에서 사용자 정보 추출 실패. */
+  AuthUserInfoMissing = 'AUTH_USER_INFO_MISSING',
+
+  // ============================================================================
+  // 스코프/접근 범위 — 상세 사유
+  // ============================================================================
+  /** 스코프 범위 외 리소스 접근 거부 (ScopeAccessDenied의 세부 케이스). */
+  ScopeDenied = 'SCOPE_DENIED',
+  /** 팀 간 접근 거부 (cross-team). */
+  ScopeCrossTeamDenied = 'CROSS_TEAM_DENIED',
+  /** 사이트 간 접근 거부 (cross-site). */
+  ScopeCrossSiteDenied = 'CROSS_SITE_DENIED',
+  /** 스코프 SQL 필터를 적용할 수 없는 상태. */
+  ScopeFilterUnavailable = 'SCOPE_FILTER_UNAVAILABLE',
+
+  // ============================================================================
+  // 문서·파일 도메인 — 추가 에러
+  // ============================================================================
+  /** 문서가 이미지 형식이 아님. */
+  DocumentNotImage = 'DOCUMENT_NOT_IMAGE',
+  /** 문서가 초안(draft) 상태가 아님 — 유효성 검증 실패. */
+  DocumentValidationNotDraft = 'VALIDATION_NOT_DRAFT',
+  /** 문서 소유자 정보가 필요함. */
+  DocumentOwnerRequired = 'DOCUMENT_OWNER_REQUIRED',
+  /** 문서 파일 첨부 필수. */
+  DocumentFileRequired = 'DOCUMENT_FILE_REQUIRED',
+  /** 문서 타입이 유효하지 않음 (document.service 공통). */
+  DocumentTypeInvalid = 'DOCUMENT_TYPE_INVALID',
+  /** 문서 타입별 개수 불일치. */
+  DocumentTypeCountMismatch = 'DOCUMENT_TYPE_COUNT_MISMATCH',
+  /** 문서 소유자 불일치 — 다른 도메인 문서 사용 시도. */
+  DocumentOwnerMismatch = 'DOCUMENT_OWNER_MISMATCH',
+  /** UUID 형식 오류. */
+  InvalidUuid = 'INVALID_UUID',
+  /** 지원하지 않는 문서 타입 (documents.controller 라우터). */
+  InvalidDocumentType = 'INVALID_DOCUMENT_TYPE',
+  /** NC 첨부파일은 전용 엔드포인트 사용 필요. */
+  NcAttachmentWrongEndpoint = 'NC_ATTACHMENT_WRONG_ENDPOINT',
+
+  // ============================================================================
+  // 교정(Calibration) 도메인 — 추가 에러
+  // ============================================================================
+  /** 교정 파일 첨부 필수. */
+  CalibrationFileRequired = 'CALIBRATION_FILE_REQUIRED',
+  /** 교정 요청 payload 파싱 실패. */
+  CalibrationPayloadInvalid = 'CALIBRATION_PAYLOAD_INVALID',
+  /** 폐기된 엔드포인트 — 신규 엔드포인트 사용 필요. */
+  EndpointDeprecated = 'ENDPOINT_DEPRECATED',
+
+  // ============================================================================
+  // 반출(Checkout) 도메인 — 추가 에러
+  // ============================================================================
+  /** 반출 ID 누락 (export 흐름). */
+  CheckoutMissingId = 'MISSING_CHECKOUT_ID',
+
+  // ============================================================================
+  // 반입(EquipmentImport/RentalImport) 도메인 — 추가 에러
+  // ============================================================================
+  /** 반입 ID 누락 (export 흐름). */
+  ImportMissingId = 'MISSING_IMPORT_ID',
+  /** 지원하지 않는 source type. */
+  ImportInvalidSourceType = 'INVALID_SOURCE_TYPE',
+  /** CAS version 필드 누락 — 낙관적 잠금 필수. */
+  EquipmentImportVersionRequired = 'VERSION_REQUIRED',
+
+  // ============================================================================
+  // 점검 양식 템플릿(InspectionFormTemplate) 도메인 — 추가 에러
+  // ============================================================================
+  /** 점검 유형이 유효하지 않음. */
+  InvalidInspectionType = 'INVALID_INSPECTION_TYPE',
+  /** 템플릿 기반 버전이 최신이 아님 (stale base). */
+  InspectionTemplateStaleBase = 'INSPECTION_TEMPLATE_STALE_BASE',
+  /** 템플릿 버전 형식 오류. */
+  InspectionTemplateInvalidVersion = 'INSPECTION_TEMPLATE_INVALID_VERSION',
+  /** 템플릿 버전 충돌 (동시 수정). */
+  InspectionTemplateVersionConflict = 'INSPECTION_TEMPLATE_VERSION_CONFLICT',
+
+  // ============================================================================
+  // 중간점검·자체점검(Inspection) 도메인 — 추가 에러
+  // ============================================================================
+  /** 중간점검이 필요하지 않은 장비. */
+  IntermediateInspectionNotRequired = 'INTERMEDIATE_INSPECTION_NOT_REQUIRED',
+  /** 승인 완료된 점검은 삭제 불가. */
+  InspectionCannotDeleteApproved = 'CANNOT_DELETE_APPROVED',
+  /** 결과 섹션 중복 등록. */
+  ResultSectionDuplicate = 'RESULT_SECTION_DUPLICATE',
+  /** 결과 섹션 항목 불일치. */
+  ResultSectionMismatch = 'RESULT_SECTION_MISMATCH',
+  /** 결과 섹션 순서 불완전. */
+  ResultSectionIncompleteOrder = 'RESULT_SECTION_INCOMPLETE_ORDER',
+  /** CSV 데이터 행 부족. */
+  CsvTooFewRows = 'CSV_TOO_FEW_ROWS',
+  /** 파일 첨부 필수 (CSV 업로드 엔드포인트). */
+  FileRequired = 'FILE_REQUIRED',
+
+  // ============================================================================
+  // 부적합(NonConformance) 도메인 — 추가 에러
+  // ============================================================================
+  /** 부적합 유형(ncType) 필수. */
+  NcTypeRequired = 'NC_TYPE_REQUIRED',
+  /** 장비가 이미 부적합 상태. */
+  NcEquipmentAlreadyNonConforming = 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
+  /** 수리 이력 연결 필수 (종료 전제조건). */
+  NcRepairRecordRequired = 'NC_REPAIR_RECORD_REQUIRED',
+  /** 재교정 기록 연결 필수 (종료 전제조건). */
+  NcRecalibrationRequired = 'NC_RECALIBRATION_REQUIRED',
+  /** 수리 이력이 이미 연결됨. */
+  NcRepairAlreadyLinked = 'NC_REPAIR_ALREADY_LINKED',
+
+  // ============================================================================
+  // 리포트·양식(Reports/FormTemplate) 도메인 — 추가 에러
+  // ============================================================================
+  /** 전용 엔드포인트를 사용해야 함. */
+  FormUseDedicatedEndpoint = 'USE_DEDICATED_ENDPOINT',
+  /** 해당 양식은 아직 구현되지 않음. */
+  FormNotImplemented = 'FORM_NOT_IMPLEMENTED',
+  /** 점검 ID 누락 (양식 생성 흐름). */
+  FormMissingInspectionId = 'MISSING_INSPECTION_ID',
+  /** 장비 ID 누락 (양식 생성 흐름). */
+  FormMissingEquipmentId = 'MISSING_EQUIPMENT_ID',
+  /** 양식 번호 형식 오류. */
+  FormInvalidFormNumber = 'INVALID_FORM_NUMBER',
+  /** 양식 렌더링 실패 (DOCX 생성 오류). */
+  FormTemplateRenderFailed = 'FORM_TEMPLATE_RENDER_FAILED',
+
+  // ============================================================================
+  // 시험용 소프트웨어 유효성 확인(SoftwareValidation) — 추가 에러
+  // ============================================================================
+  /** 내보내기 불가 상태의 유효성 확인 기록. */
+  SoftwareValidationNonExportableStatus = 'NON_EXPORTABLE_VALIDATION_STATUS',
+  /** 유효성 확인 ID 누락 (export 흐름). */
+  SoftwareValidationMissingId = 'MISSING_VALIDATION_ID',
+
+  // ============================================================================
+  // 팀(Team) 도메인 — 추가 에러
+  // ============================================================================
+  /** 팀 이름 중복. */
+  TeamNameAlreadyExists = 'TEAM_NAME_ALREADY_EXISTS',
+  /** 팀 리더 사이트 불일치. */
+  TeamLeaderSiteMismatch = 'LEADER_SITE_MISMATCH',
+
+  // ============================================================================
+  // 시험용 소프트웨어(TestSoftware) 도메인 — 추가 에러
+  // ============================================================================
+  /** 장비가 이미 P-number에 연결됨. */
+  TestSoftwareEquipmentAlreadyLinked = 'EQUIPMENT_ALREADY_LINKED',
+
+  // ============================================================================
+  // 사용자(User) 도메인 — 추가 에러
+  // ============================================================================
+  /** 이메일 중복 (users 도메인 전용). */
+  UserEmailAlreadyExists = 'USER_EMAIL_ALREADY_EXISTS',
+  /** 역할 변경 권한 없음. */
+  UserNoRoleChangePermission = 'USER_NO_ROLE_CHANGE_PERMISSION',
+  /** 자신의 역할은 변경 불가. */
+  UserCannotChangeOwnRole = 'USER_CANNOT_CHANGE_OWN_ROLE',
+  /** 상위 역할은 변경 불가. */
+  UserCannotChangeSeniorRole = 'USER_CANNOT_CHANGE_SENIOR_ROLE',
+  /** 다른 팀 사용자 역할 변경 불가 (팀 매니저 스코프). */
+  UserTeamScopeOnly = 'USER_TEAM_SCOPE_ONLY',
+  /** 다른 사이트 사용자 역할 변경 불가 (사이트 매니저 스코프). */
+  UserSiteScopeOnly = 'USER_SITE_SCOPE_ONLY',
 
   // ============================================================================
   // 공통 기본 에러 (versioned-base.service.ts 기본값)
@@ -613,6 +875,121 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.IntermediateInspectionNotFound]: 404,
   [ErrorCode.SelfInspectionNotFound]: 404,
   [ErrorCode.TestPlanNotFound]: 404,
+  [ErrorCode.InspectionItemNotFound]: 404,
+  [ErrorCode.InspectionTemplateNotFound]: 404,
+  [ErrorCode.ResultSectionNotFound]: 404,
+  [ErrorCode.CheckoutNotFound]: 404,
+  [ErrorCode.NotificationNotFound]: 404,
+  [ErrorCode.TeamNotFound]: 404,
+  [ErrorCode.LeaderNotFound]: 404,
+  [ErrorCode.UserRequesterNotFound]: 404,
+  [ErrorCode.UserTargetNotFound]: 404,
+  [ErrorCode.AuthUserNotFound]: 404,
+  [ErrorCode.DocumentNotFound]: 404,
+  [ErrorCode.FileNotFound]: 404,
+  [ErrorCode.CableLossMeasurementNotFound]: 404,
+  [ErrorCode.EquipmentLinkNotFound]: 404,
+
+  // 인증(Auth) 도메인 — SSE·JWT·권한 에러
+  [ErrorCode.AuthSseTokenRequired]: 401,
+  [ErrorCode.AuthAccessTokenOnly]: 401,
+  [ErrorCode.AuthTokenBlacklisted]: 401,
+  [ErrorCode.AuthInvalidToken]: 401,
+  [ErrorCode.AuthUserIdMissing]: 401,
+  [ErrorCode.AuthInvalidSession]: 401,
+  [ErrorCode.AuthProductionAzureOnly]: 403,
+  [ErrorCode.AuthAccountLocked]: 401,
+  [ErrorCode.AuthInvalidCredentials]: 401,
+  [ErrorCode.AuthAzureAdFailed]: 401,
+  [ErrorCode.AuthInvalidRefreshToken]: 401,
+  [ErrorCode.AuthSessionExpired]: 401,
+  [ErrorCode.AuthRefreshNoUser]: 401,
+  [ErrorCode.AuthRefreshExpired]: 401,
+  [ErrorCode.AuthPermissionsNotConfigured]: 500,
+  [ErrorCode.AuthRequired]: 401,
+  [ErrorCode.AuthInsufficientPermissions]: 403,
+  [ErrorCode.AuthUserInactive]: 403,
+  [ErrorCode.AuthUserInfoMissing]: 401,
+
+  // 스코프/접근 범위 — 상세 사유
+  [ErrorCode.ScopeDenied]: 403,
+  [ErrorCode.ScopeCrossTeamDenied]: 403,
+  [ErrorCode.ScopeCrossSiteDenied]: 403,
+  [ErrorCode.ScopeFilterUnavailable]: 500,
+
+  // 문서·파일 도메인 — 추가 에러
+  [ErrorCode.DocumentNotImage]: 400,
+  [ErrorCode.DocumentValidationNotDraft]: 400,
+  [ErrorCode.DocumentOwnerRequired]: 400,
+  [ErrorCode.DocumentFileRequired]: 400,
+  [ErrorCode.DocumentTypeInvalid]: 400,
+  [ErrorCode.DocumentTypeCountMismatch]: 400,
+  [ErrorCode.DocumentOwnerMismatch]: 400,
+  [ErrorCode.InvalidUuid]: 400,
+  [ErrorCode.InvalidDocumentType]: 400,
+  [ErrorCode.NcAttachmentWrongEndpoint]: 400,
+
+  // 교정(Calibration) 도메인 — 추가 에러
+  [ErrorCode.CalibrationFileRequired]: 400,
+  [ErrorCode.CalibrationPayloadInvalid]: 400,
+  [ErrorCode.EndpointDeprecated]: 410,
+
+  // 반출(Checkout) 도메인 — 추가 에러
+  [ErrorCode.CheckoutMissingId]: 400,
+
+  // 반입(EquipmentImport) 도메인 — 추가 에러
+  [ErrorCode.ImportMissingId]: 400,
+  [ErrorCode.ImportInvalidSourceType]: 400,
+  [ErrorCode.EquipmentImportVersionRequired]: 400,
+
+  // 점검 양식 템플릿(InspectionFormTemplate) 도메인 — 추가 에러
+  [ErrorCode.InvalidInspectionType]: 400,
+  [ErrorCode.InspectionTemplateStaleBase]: 409,
+  [ErrorCode.InspectionTemplateInvalidVersion]: 400,
+  [ErrorCode.InspectionTemplateVersionConflict]: 409,
+
+  // 중간점검·자체점검(Inspection) 도메인 — 추가 에러
+  [ErrorCode.IntermediateInspectionNotRequired]: 400,
+  [ErrorCode.InspectionCannotDeleteApproved]: 400,
+  [ErrorCode.ResultSectionDuplicate]: 409,
+  [ErrorCode.ResultSectionMismatch]: 400,
+  [ErrorCode.ResultSectionIncompleteOrder]: 400,
+  [ErrorCode.CsvTooFewRows]: 400,
+  [ErrorCode.FileRequired]: 400,
+
+  // 부적합(NonConformance) 도메인 — 추가 에러
+  [ErrorCode.NcTypeRequired]: 400,
+  [ErrorCode.NcEquipmentAlreadyNonConforming]: 409,
+  [ErrorCode.NcRepairRecordRequired]: 400,
+  [ErrorCode.NcRecalibrationRequired]: 400,
+  [ErrorCode.NcRepairAlreadyLinked]: 409,
+
+  // 리포트·양식(Reports/FormTemplate) 도메인 — 추가 에러
+  [ErrorCode.FormUseDedicatedEndpoint]: 400,
+  [ErrorCode.FormNotImplemented]: 400,
+  [ErrorCode.FormMissingInspectionId]: 400,
+  [ErrorCode.FormMissingEquipmentId]: 400,
+  [ErrorCode.FormInvalidFormNumber]: 400,
+  [ErrorCode.FormTemplateRenderFailed]: 500,
+
+  // 시험용 소프트웨어 유효성 확인(SoftwareValidation) — 추가 에러
+  [ErrorCode.SoftwareValidationNonExportableStatus]: 400,
+  [ErrorCode.SoftwareValidationMissingId]: 400,
+
+  // 팀(Team) 도메인 — 추가 에러
+  [ErrorCode.TeamNameAlreadyExists]: 409,
+  [ErrorCode.TeamLeaderSiteMismatch]: 400,
+
+  // 시험용 소프트웨어(TestSoftware) 도메인 — 추가 에러
+  [ErrorCode.TestSoftwareEquipmentAlreadyLinked]: 409,
+
+  // 사용자(User) 도메인 — 추가 에러
+  [ErrorCode.UserEmailAlreadyExists]: 409,
+  [ErrorCode.UserNoRoleChangePermission]: 403,
+  [ErrorCode.UserCannotChangeOwnRole]: 403,
+  [ErrorCode.UserCannotChangeSeniorRole]: 403,
+  [ErrorCode.UserTeamScopeOnly]: 403,
+  [ErrorCode.UserSiteScopeOnly]: 403,
 
   // 공통 기본 에러
   [ErrorCode.EntityNotFound]: 404,

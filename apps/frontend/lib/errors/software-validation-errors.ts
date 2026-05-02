@@ -39,6 +39,7 @@ export function getSoftwareValidationErrorMessageKey(code: string | undefined): 
  * @see ErrorCode.SoftwareValidationRejectionReasonRequired
  */
 const SOFTWARE_VALIDATION_REJECT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.SoftwareValidationNotFound]: 'errors.notFound',
   [ErrorCode.SoftwareValidationRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.SoftwareValidationInvalidStatusTransition]: 'errors.invalidStatusForReject',
   [ErrorCode.SoftwareValidationOnlyDraftCanUpdate]: 'errors.onlyDraftCanUpdate',

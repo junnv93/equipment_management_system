@@ -12,6 +12,9 @@ import { extractErrorCode, type ErrorToast } from './disposal-errors';
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
 const SELF_INSPECTION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.SelfInspectionNotFound]: 'errors.selfInspection.notFound',
+  [ErrorCode.InspectionItemNotFound]: 'errors.selfInspection.itemNotFound',
+  [ErrorCode.ResultSectionNotFound]: 'errors.selfInspection.resultSectionNotFound',
   [ErrorCode.SelfInspectionRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.SelfInspectionInvalidStatusTransition]: 'errors.invalidStatusForReject',
   [ErrorCode.SelfInspectionOnlyDraftCanUpdate]: 'errors.selfInspection.onlyDraftCanUpdate',

@@ -6,6 +6,7 @@ import {
   type InspectionResultSection,
   type NewInspectionResultSection,
 } from '@equipment-management/db/schema';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { InspectionType } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -125,7 +126,7 @@ export class ResultSectionsService {
 
     if (!updated) {
       throw new NotFoundException({
-        code: 'RESULT_SECTION_NOT_FOUND',
+        code: ErrorCode.ResultSectionNotFound,
         message: `Result section ${sectionId} not found.`,
       });
     }
@@ -151,7 +152,7 @@ export class ResultSectionsService {
 
     if (!deleted) {
       throw new NotFoundException({
-        code: 'RESULT_SECTION_NOT_FOUND',
+        code: ErrorCode.ResultSectionNotFound,
         message: `Result section ${sectionId} not found.`,
       });
     }
@@ -182,7 +183,7 @@ export class ResultSectionsService {
     const uniqueIds = new Set(sectionIds);
     if (uniqueIds.size !== sectionIds.length) {
       throw new BadRequestException({
-        code: 'RESULT_SECTION_DUPLICATE',
+        code: ErrorCode.ResultSectionDuplicate,
         message: '중복된 섹션 ID 가 포함되어 있습니다.',
       });
     }
@@ -203,7 +204,7 @@ export class ResultSectionsService {
 
         if (existing.length !== sectionIds.length) {
           throw new BadRequestException({
-            code: 'RESULT_SECTION_MISMATCH',
+            code: ErrorCode.ResultSectionMismatch,
             message: '일부 섹션 ID 가 해당 점검에 속하지 않습니다.',
           });
         }
@@ -220,7 +221,7 @@ export class ResultSectionsService {
           );
         if (totalCountRows.length !== sectionIds.length) {
           throw new BadRequestException({
-            code: 'RESULT_SECTION_INCOMPLETE_ORDER',
+            code: ErrorCode.ResultSectionIncompleteOrder,
             message: '전체 섹션 순서 배열이 필요합니다.',
           });
         }
@@ -278,7 +279,7 @@ export class ResultSectionsService {
 
     if (lines.length < 2) {
       throw new BadRequestException({
-        code: 'CSV_TOO_FEW_ROWS',
+        code: ErrorCode.CsvTooFewRows,
         message: 'CSV must have at least a header row and one data row.',
       });
     }

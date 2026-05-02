@@ -36,6 +36,7 @@ import {
   UpdatePreferencesValidationPipe,
   DEFAULT_DISPLAY_PREFERENCES,
 } from './dto/user-preferences.dto';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { User, PaginatedResponseType, UserRole } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { FileUploadService } from '../../common/file-upload/file-upload.service';
@@ -124,14 +125,14 @@ export class UsersController {
     const userId = req.user?.userId;
     if (!userId) {
       throw new NotFoundException({
-        code: 'AUTH_USER_INFO_MISSING',
+        code: ErrorCode.AuthUserInfoMissing,
         message: 'User information could not be verified.',
       });
     }
     const user = await this.usersService.findOneWithTeam(userId);
     if (!user) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: 'User not found.',
       });
     }
@@ -150,7 +151,7 @@ export class UsersController {
     const userId = req.user?.userId;
     if (!userId) {
       throw new NotFoundException({
-        code: 'AUTH_USER_INFO_MISSING',
+        code: ErrorCode.AuthUserInfoMissing,
         message: 'User information could not be verified.',
       });
     }
@@ -174,7 +175,7 @@ export class UsersController {
     const userId = req.user?.userId;
     if (!userId) {
       throw new NotFoundException({
-        code: 'AUTH_USER_INFO_MISSING',
+        code: ErrorCode.AuthUserInfoMissing,
         message: 'User information could not be verified.',
       });
     }
@@ -203,13 +204,13 @@ export class UsersController {
     const userId = req.user?.userId;
     if (!userId) {
       throw new NotFoundException({
-        code: 'AUTH_USER_INFO_MISSING',
+        code: ErrorCode.AuthUserInfoMissing,
         message: 'User information could not be verified.',
       });
     }
     if (!file) {
       throw new BadRequestException({
-        code: 'FILE_REQUIRED',
+        code: ErrorCode.FileRequired,
         message: 'Signature image file is required.',
       });
     }
@@ -217,13 +218,13 @@ export class UsersController {
       !(SIGNATURE_UPLOAD_LIMITS.ALLOWED_MIME_TYPES as readonly string[]).includes(file.mimetype)
     ) {
       throw new BadRequestException({
-        code: 'INVALID_FILE_TYPE',
+        code: ErrorCode.InvalidFileType,
         message: 'Only PNG and JPEG formats are allowed for signatures.',
       });
     }
     if (file.size > SIGNATURE_UPLOAD_LIMITS.MAX_SIZE_BYTES) {
       throw new BadRequestException({
-        code: 'FILE_TOO_LARGE',
+        code: ErrorCode.FileTooLarge,
         message: 'Signature image must be under 2MB.',
       });
     }
@@ -251,7 +252,7 @@ export class UsersController {
     const userId = req.user?.userId;
     if (!userId) {
       throw new NotFoundException({
-        code: 'AUTH_USER_INFO_MISSING',
+        code: ErrorCode.AuthUserInfoMissing,
         message: 'User information could not be verified.',
       });
     }
@@ -278,7 +279,7 @@ export class UsersController {
     const user = await this.usersService.findOne(id);
     if (!user) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }
@@ -304,7 +305,7 @@ export class UsersController {
     const user = await this.usersService.update(id, updateUserDto);
     if (!user) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }
@@ -323,7 +324,7 @@ export class UsersController {
     const result = await this.usersService.remove(id);
     if (!result) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }
@@ -371,7 +372,7 @@ export class UsersController {
     const user = await this.usersService.toggleActive(id, true);
     if (!user) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }
@@ -392,7 +393,7 @@ export class UsersController {
     const user = await this.usersService.toggleActive(id, false);
     if (!user) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }
@@ -414,7 +415,7 @@ export class UsersController {
     const permissions = await this.usersService.findUserPermissions(id);
     if (!permissions) {
       throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
+        code: ErrorCode.UserNotFound,
         message: `User ID ${id} not found.`,
       });
     }

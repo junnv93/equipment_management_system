@@ -231,7 +231,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (!equip?.needsIntermediateCheck) {
       throw new BadRequestException({
-        code: 'INTERMEDIATE_INSPECTION_NOT_REQUIRED',
+        code: ErrorCode.IntermediateInspectionNotRequired,
         message: `Equipment ${equipmentId} does not require intermediate inspection.`,
       });
     }
@@ -718,7 +718,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       existing.approvalStatus !== InspectionApprovalStatusValues.REJECTED
     ) {
       throw new BadRequestException({
-        code: 'CANNOT_DELETE_APPROVED',
+        code: ErrorCode.InspectionCannotDeleteApproved,
         message: 'Cannot delete approved or reviewed inspections.',
       });
     }
@@ -850,7 +850,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'INSPECTION_ITEM_NOT_FOUND',
+        code: ErrorCode.InspectionItemNotFound,
         message: `Item ${itemId} not found in inspection ${inspectionId}.`,
       });
     }

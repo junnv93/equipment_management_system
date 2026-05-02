@@ -180,7 +180,7 @@ export class NonConformancesService extends VersionedBaseService {
     // ncType 필수 검증
     if (!createDto.ncType) {
       throw new BadRequestException({
-        code: 'NC_TYPE_REQUIRED',
+        code: ErrorCode.NcTypeRequired,
         message: 'Non-conformance type (ncType) is required',
       });
     }
@@ -211,7 +211,7 @@ export class NonConformancesService extends VersionedBaseService {
 
       if (currentEquip.status === EquipmentStatusEnum.enum.non_conforming) {
         throw new BadRequestException({
-          code: 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
+          code: ErrorCode.NcEquipmentAlreadyNonConforming,
           message: 'Equipment is already in non-conforming status.',
         });
       }
@@ -540,7 +540,7 @@ export class NonConformancesService extends VersionedBaseService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'NON_CONFORMANCE_NOT_FOUND',
+        code: ErrorCode.NonConformanceNotFound,
         message: `Non-conformance UUID ${id} not found`,
       });
     }
@@ -950,7 +950,7 @@ export class NonConformancesService extends VersionedBaseService {
 
     if (nc.repairHistoryId) {
       throw new BadRequestException({
-        code: 'NC_REPAIR_ALREADY_LINKED',
+        code: ErrorCode.NcRepairAlreadyLinked,
         message: 'A repair record is already linked (1:1 relationship)',
       });
     }
@@ -1071,14 +1071,14 @@ export class NonConformancesService extends VersionedBaseService {
 
     if (prerequisite === 'repair' && !nc.repairHistoryId) {
       throw new BadRequestException({
-        code: 'NC_REPAIR_RECORD_REQUIRED',
+        code: ErrorCode.NcRepairRecordRequired,
         message: `${nc.ncType} type requires a repair record before correction`,
       });
     }
 
     if (prerequisite === 'recalibration' && !nc.calibrationId) {
       throw new BadRequestException({
-        code: 'NC_RECALIBRATION_REQUIRED',
+        code: ErrorCode.NcRecalibrationRequired,
         message: `${nc.ncType} type requires an approved calibration record before correction`,
       });
     }
@@ -1125,7 +1125,7 @@ export class NonConformancesService extends VersionedBaseService {
     const doc = await this.documentService.findByIdAnyStatus(documentId);
     if (doc.nonConformanceId !== ncId) {
       throw new BadRequestException({
-        code: 'DOCUMENT_OWNER_MISMATCH',
+        code: ErrorCode.DocumentOwnerMismatch,
         message: 'Document does not belong to this non-conformance.',
       });
     }

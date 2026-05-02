@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Res, Inject, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { Response } from 'express';
 import * as path from 'path';
 import { EXTENSION_TO_MIME } from '@equipment-management/shared-constants';
@@ -59,7 +60,7 @@ export class FilesController {
     const safeFilename = filename.replace(/[/\\]/g, '');
 
     if (!safeSubdir || !safeFilename) {
-      throw new NotFoundException({ code: 'FILE_NOT_FOUND', message: 'File not found.' });
+      throw new NotFoundException({ code: ErrorCode.FileNotFound, message: 'File not found.' });
     }
 
     const storageKey = `${safeSubdir}/${safeFilename}`;

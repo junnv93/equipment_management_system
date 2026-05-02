@@ -10,6 +10,7 @@ import {
   SECURITY,
 } from '@equipment-management/shared-constants';
 import {
+  ErrorCode,
   type SiteCode,
   type Site,
   type Location,
@@ -104,7 +105,7 @@ export class AuthService {
     // 프로덕션 환경에서는 로컬 로그인 비활성화
     if (process.env.NODE_ENV === 'production') {
       throw new UnauthorizedException({
-        code: 'AUTH_PRODUCTION_AZURE_ONLY',
+        code: ErrorCode.AuthProductionAzureOnly,
         message: 'Only Azure AD authentication is available in production.',
       });
     }
@@ -120,7 +121,7 @@ export class AuthService {
         timestamp: new Date().toISOString(),
       });
       throw new UnauthorizedException({
-        code: 'AUTH_ACCOUNT_LOCKED',
+        code: ErrorCode.AuthAccountLocked,
         message: `Account is temporarily locked. Please try again in ${lockMinutes} minutes.`,
       });
     }
@@ -181,7 +182,7 @@ export class AuthService {
           timestamp: new Date().toISOString(),
         });
         throw new UnauthorizedException({
-          code: 'AUTH_ACCOUNT_LOCKED',
+          code: ErrorCode.AuthAccountLocked,
           message: `Account is temporarily locked. Please try again in ${lockMinutes} minutes.`,
         });
       }
@@ -194,7 +195,7 @@ export class AuthService {
         timestamp: new Date().toISOString(),
       });
       throw new UnauthorizedException({
-        code: 'AUTH_INVALID_CREDENTIALS',
+        code: ErrorCode.AuthInvalidCredentials,
         message: 'Invalid email or password.',
       });
     }
@@ -227,7 +228,7 @@ export class AuthService {
   validateAzureADUser(azureUser: AzureADUser): AuthResponse {
     if (!azureUser) {
       throw new UnauthorizedException({
-        code: 'AUTH_AZURE_AD_FAILED',
+        code: ErrorCode.AuthAzureAdFailed,
         message: 'Azure AD authentication failed.',
       });
     }
@@ -358,7 +359,7 @@ export class AuthService {
 
     if (!dbUser) {
       throw new UnauthorizedException({
-        code: 'AUTH_USER_NOT_FOUND',
+        code: ErrorCode.AuthUserNotFound,
         message: `User not found: ${email}`,
       });
     }
@@ -384,7 +385,7 @@ export class AuthService {
         timestamp: new Date().toISOString(),
       });
       throw new UnauthorizedException({
-        code: 'AUTH_TOKEN_BLACKLISTED',
+        code: ErrorCode.AuthTokenBlacklisted,
         message: 'This refresh token has been invalidated by logout.',
       });
     }
@@ -414,7 +415,7 @@ export class AuthService {
           timestamp: new Date().toISOString(),
         });
         throw new UnauthorizedException({
-          code: 'AUTH_INVALID_REFRESH_TOKEN',
+          code: ErrorCode.AuthInvalidRefreshToken,
           message: 'Invalid refresh token.',
         });
       }
@@ -432,7 +433,7 @@ export class AuthService {
             timestamp: new Date().toISOString(),
           });
           throw new UnauthorizedException({
-            code: 'AUTH_SESSION_EXPIRED',
+            code: ErrorCode.AuthSessionExpired,
             message: 'Session has expired. Please log in again.',
           });
         }
@@ -441,7 +442,7 @@ export class AuthService {
       const userId = payload.sub;
       if (!userId) {
         throw new UnauthorizedException({
-          code: 'AUTH_REFRESH_NO_USER',
+          code: ErrorCode.AuthRefreshNoUser,
           message: 'No user information in refresh token.',
         });
       }
@@ -451,7 +452,7 @@ export class AuthService {
 
       if (!dbUser) {
         throw new UnauthorizedException({
-          code: 'AUTH_USER_NOT_FOUND',
+          code: ErrorCode.AuthUserNotFound,
           message: 'User not found.',
         });
       }
@@ -464,7 +465,7 @@ export class AuthService {
       }
       this.logger.warn(`refreshTokens() 실패: ${(error as Error).message}`);
       throw new UnauthorizedException({
-        code: 'AUTH_REFRESH_EXPIRED',
+        code: ErrorCode.AuthRefreshExpired,
         message: 'Refresh token is expired or invalid.',
       });
     }

@@ -121,5 +121,11 @@
     "SMA": "SMA",
     "N": "N",
     "other": "Other"
+  },
+  "errors": {
+    "title": "Error",
+    "genericError": "An error occurred while processing the request.",
+    "notFound": "Cable not found.",
+    "lossMeasurementNotFound": "Cable loss measurement not found."
   }
 }

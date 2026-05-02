@@ -13,7 +13,7 @@ import { documents } from '@equipment-management/db/schema/documents';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import type { EquipmentClassification, InspectionJudgment } from '@equipment-management/schemas';
-import { DocumentStatusValues } from '@equipment-management/schemas';
+import { DocumentStatusValues, ErrorCode } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import type { InspectionResultSectionPreFetched } from '../../reports/docx-xml-helper';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -142,7 +142,7 @@ export class IntermediateInspectionExportDataService {
 
     if (!inspection) {
       throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
+        code: ErrorCode.IntermediateInspectionNotFound,
         message: `Intermediate inspection ${inspectionId} not found.`,
       });
     }

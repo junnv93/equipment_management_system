@@ -9,7 +9,7 @@ import {
   DEFAULT_PAGE_SIZE,
   NOTIFICATION_RETENTION_DAYS,
 } from '@equipment-management/shared-constants';
-import { NotificationTypeValues } from '@equipment-management/schemas';
+import { ErrorCode, NotificationTypeValues } from '@equipment-management/schemas';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
@@ -229,7 +229,7 @@ export class NotificationsService {
 
     if (!notification) {
       throw new NotFoundException({
-        code: 'NOTIFICATION_NOT_FOUND',
+        code: ErrorCode.NotificationNotFound,
         message: `Notification ID ${id} not found.`,
       });
     }
@@ -251,7 +251,7 @@ export class NotificationsService {
 
     if (!updated) {
       throw new NotFoundException({
-        code: 'NOTIFICATION_NOT_FOUND',
+        code: ErrorCode.NotificationNotFound,
         message: `Notification ID ${id} not found.`,
       });
     }
@@ -297,7 +297,7 @@ export class NotificationsService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'NOTIFICATION_NOT_FOUND',
+        code: ErrorCode.NotificationNotFound,
         message: `Notification ID ${id} not found.`,
       });
     }

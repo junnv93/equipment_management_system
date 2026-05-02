@@ -1614,7 +1614,10 @@
       "onlySubmittedCanWithdraw": "Only submitted self-inspections can be withdrawn.",
       "withdrawNotSubmitter": "Only the submitter can withdraw a submitted inspection.",
       "onlySubmittedCanApprove": "Only submitted self-inspections can be approved.",
-      "onlyRejectedCanResubmit": "Only rejected self-inspections can be resubmitted."
+      "onlyRejectedCanResubmit": "Only rejected self-inspections can be resubmitted.",
+      "notFound": "Self inspection not found.",
+      "itemNotFound": "Inspection item not found.",
+      "resultSectionNotFound": "Result section not found."
     },
     "import": {
       "endDateBeforeStart": "Usage end date must be after the start date.",

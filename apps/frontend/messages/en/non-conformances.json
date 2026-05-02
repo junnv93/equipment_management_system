@@ -515,6 +515,9 @@
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
     "invalidTransition": "Cannot transition from current status.",
     "closedCannotUpdate": "Closed non-conformances cannot be updated.",
-    "closedCannotLinkRepair": "Cannot link repair to a closed non-conformance."
+    "closedCannotLinkRepair": "Cannot link repair to a closed non-conformance.",
+    "title": "Error",
+    "genericError": "An error occurred while processing the request.",
+    "notFound": "Non-conformance record not found."
   }
 }

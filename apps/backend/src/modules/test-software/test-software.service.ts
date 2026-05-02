@@ -473,7 +473,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
     if (deleted.length === 0) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_LINK_NOT_FOUND',
+        code: ErrorCode.EquipmentLinkNotFound,
         message: 'Equipment link not found.',
       });
     }

@@ -12,6 +12,7 @@ import { extractErrorCode, type ErrorToast } from './disposal-errors';
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
 const NON_CONFORMANCE_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.NonConformanceNotFound]: 'errors.notFound',
   [ErrorCode.NonConformanceRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.NonConformanceInvalidTransition]: 'errors.invalidTransition',
   [ErrorCode.NcClosedCannotUpdate]: 'errors.closedCannotUpdate',

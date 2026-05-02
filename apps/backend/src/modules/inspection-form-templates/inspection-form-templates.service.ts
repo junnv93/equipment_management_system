@@ -102,7 +102,7 @@ export class InspectionFormTemplatesService {
     const found = await this.findCurrent(equipmentId, inspectionType);
     if (!found) {
       throw new NotFoundException({
-        code: 'INSPECTION_TEMPLATE_NOT_FOUND',
+        code: ErrorCode.InspectionTemplateNotFound,
         message: `No current template for equipment ${equipmentId} type ${inspectionType}`,
       });
     }
@@ -140,7 +140,7 @@ export class InspectionFormTemplatesService {
 
     if (!row) {
       throw new NotFoundException({
-        code: 'INSPECTION_TEMPLATE_NOT_FOUND',
+        code: ErrorCode.InspectionTemplateNotFound,
         message: `No current template for equipment ${equipmentId} type ${inspectionType}`,
       });
     }
@@ -270,7 +270,7 @@ export class InspectionFormTemplatesService {
     // SoftFork apply_forward는 current를 supersededBy로 가리킴
     if (current && input.supersededBy !== current.id) {
       throw new BadRequestException({
-        code: 'INSPECTION_TEMPLATE_STALE_BASE',
+        code: ErrorCode.InspectionTemplateStaleBase,
         message:
           'supersededBy must reference the current template. Refresh and retry (CAS protection).',
       });
@@ -280,7 +280,7 @@ export class InspectionFormTemplatesService {
     const expectedVersion = current ? current.version + 1 : 1;
     if (input.version !== expectedVersion) {
       throw new BadRequestException({
-        code: 'INSPECTION_TEMPLATE_INVALID_VERSION',
+        code: ErrorCode.InspectionTemplateInvalidVersion,
         message: `Expected version ${expectedVersion}, got ${input.version}`,
       });
     }
@@ -306,7 +306,7 @@ export class InspectionFormTemplatesService {
       } catch (err) {
         if (this.isUniqueViolation(err)) {
           throw new ConflictException({
-            code: 'INSPECTION_TEMPLATE_VERSION_CONFLICT',
+            code: ErrorCode.InspectionTemplateVersionConflict,
             message: 'Another user updated the template. Please refresh and retry (CAS conflict).',
           });
         }

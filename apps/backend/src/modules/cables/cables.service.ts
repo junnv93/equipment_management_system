@@ -337,7 +337,7 @@ export class CablesService extends VersionedBaseService {
 
         if (!measurement) {
           throw new NotFoundException({
-            code: 'CABLE_LOSS_MEASUREMENT_NOT_FOUND',
+            code: ErrorCode.CableLossMeasurementNotFound,
             message: `Measurement with UUID ${measurementId} not found.`,
           });
         }
