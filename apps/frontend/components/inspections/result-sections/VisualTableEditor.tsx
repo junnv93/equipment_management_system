@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import {
 import DocumentImage from '@/components/shared/DocumentImage';
 import type { RichCell } from '@/lib/api/calibration-api';
 import { useInspectionForm } from '@/lib/inspection/form-context';
+import { useUndoableState } from '@/hooks/use-undoable-state';
 
 // ============================================================================
 // Types
@@ -109,44 +110,21 @@ export default function VisualTableEditor({
     inspectionForm.markSectionModified(trackedSortOrder);
   }, [isProvenanceTracked, trackedSortOrder, inspectionForm]);
 
-  // ── Phase 0A: Undo/Redo history (구조적 변경 단위만 보존) ──
+  // ── Phase 0A: Undo/Redo history — useUndoableState 훅으로 위임 ──
 
-  const pastRef = useRef<TableSnapshot[]>([]);
-  const futureRef = useRef<TableSnapshot[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-
-  const recomputeUndoRedo = useCallback(() => {
-    setCanUndo(pastRef.current.length > 0);
-    setCanRedo(futureRef.current.length > 0);
-  }, []);
-
-  /** 구조적 변경 직전 snapshot 저장. updateCell/updateHeader 등 키 입력은 push 하지 않음. */
-  const pushHistory = useCallback(() => {
-    pastRef.current.push(cloneSnapshot(headers, rows));
-    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
-    futureRef.current = [];
-    recomputeUndoRedo();
-  }, [headers, rows, recomputeUndoRedo]);
-
-  const undoStructural = useCallback(() => {
-    const past = pastRef.current;
-    if (past.length === 0) return;
-    const previous = past.pop() as TableSnapshot;
-    futureRef.current.push(cloneSnapshot(headers, rows));
-    onChange(previous.headers, previous.rows);
-    recomputeUndoRedo();
-  }, [headers, rows, onChange, recomputeUndoRedo]);
-
-  const redoStructural = useCallback(() => {
-    const future = futureRef.current;
-    if (future.length === 0) return;
-    const next = future.pop() as TableSnapshot;
-    pastRef.current.push(cloneSnapshot(headers, rows));
-    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
-    onChange(next.headers, next.rows);
-    recomputeUndoRedo();
-  }, [headers, rows, onChange, recomputeUndoRedo]);
+  const {
+    push: pushHistory,
+    undo: undoStructural,
+    redo: redoStructural,
+    canUndo,
+    canRedo,
+  } = useUndoableState<TableSnapshot>({
+    current: { headers, rows },
+    onChange: (snap) => onChange(snap.headers, snap.rows),
+    clone: (snap) => cloneSnapshot(snap.headers, snap.rows),
+    limit: HISTORY_LIMIT,
+    enableKeyboard: true,
+  });
 
   // ── Phase 0A: Paste mode (append default / replace warning) ──
 
@@ -397,32 +375,6 @@ export default function VisualTableEditor({
     },
     [rows.length, focusCell, addRow]
   );
-
-  // ── Phase 0A: Cmd/Ctrl+Z / Cmd+Shift+Z 단축키 ──
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const isMod = e.metaKey || e.ctrlKey;
-      if (!isMod) return;
-      if (e.key === 'z' || e.key === 'Z') {
-        if (e.shiftKey) {
-          if (futureRef.current.length === 0) return;
-          e.preventDefault();
-          redoStructural();
-        } else {
-          if (pastRef.current.length === 0) return;
-          e.preventDefault();
-          undoStructural();
-        }
-      } else if (e.key === 'y' || e.key === 'Y') {
-        if (futureRef.current.length === 0) return;
-        e.preventDefault();
-        redoStructural();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [undoStructural, redoStructural]);
 
   // ── Render ──
 
