@@ -13,7 +13,9 @@ async function flushMicrotasks(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-function makeHost(request: Record<string, unknown>) {
+function makeHost(
+  request: Record<string, unknown>
+): ArgumentsHost & { _status: jest.Mock; _json: jest.Mock } {
   const json = jest.fn();
   const status = jest.fn().mockReturnValue({ json });
   return {

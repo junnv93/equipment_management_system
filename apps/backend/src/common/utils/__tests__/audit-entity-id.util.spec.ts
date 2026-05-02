@@ -13,7 +13,13 @@ function makeRequest(overrides: {
   route?: { path: string };
   originalUrl?: string;
   url?: string;
-}) {
+}): {
+  params: Record<string, string>;
+  method: string;
+  route?: { path: string };
+  originalUrl?: string;
+  url: string;
+} {
   return {
     params: overrides.params ?? {},
     method: overrides.method ?? 'GET',
