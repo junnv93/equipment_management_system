@@ -374,6 +374,12 @@ export enum ErrorCode {
   RepairHistoryNotFound = 'REPAIR_HISTORY_NOT_FOUND',
   /** 첨부 파일을 찾을 수 없음. */
   AttachmentNotFound = 'ATTACHMENT_NOT_FOUND',
+
+  // ============================================================================
+  // 공통 기본 에러 (versioned-base.service.ts 기본값)
+  // ============================================================================
+  /** 도메인 지정 에러 코드 없을 때 updateWithVersion 기본 notFoundCode */
+  EntityNotFound = 'ENTITY_NOT_FOUND',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
@@ -579,6 +585,9 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.NcInvalidIncidentType]: 400,
   [ErrorCode.RepairHistoryNotFound]: 404,
   [ErrorCode.AttachmentNotFound]: 404,
+
+  // 공통 기본 에러
+  [ErrorCode.EntityNotFound]: 404,
 };
 
 // 에러 응답 스키마

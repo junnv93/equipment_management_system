@@ -151,7 +151,7 @@ export abstract class VersionedBaseService {
     updateData: Record<string, unknown>,
     entityName: string,
     tx?: AppDatabase,
-    notFoundCode = 'ENTITY_NOT_FOUND',
+    notFoundCode: string = ErrorCode.EntityNotFound,
     casColumnKey: 'version' | 'casVersion' = 'version',
     preconditions: readonly CasPrecondition[] = []
   ): Promise<T> {

@@ -21,7 +21,11 @@ import {
   ApprovalStatusValues,
   RequestTypeValues,
 } from '@equipment-management/schemas';
-import { DASHBOARD_ITEM_LIMIT, QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
+import {
+  DASHBOARD_ITEM_LIMIT,
+  QUERY_SAFETY_LIMITS,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
@@ -555,11 +559,14 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 반려 사유 필수
-      if (!rejectionReason || rejectionReason.trim().length === 0) {
+      // 반려 사유 fail-close: trim 후 MIN 이상 강제 (Zod DTO와 대칭)
+      if (
+        !rejectionReason ||
+        rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
+      ) {
         throw new BadRequestException({
           code: ErrorCode.EquipmentRequestRejectionReasonRequired,
-          message: 'Rejection reason is required.',
+          message: `반려 사유는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
         });
       }
 
