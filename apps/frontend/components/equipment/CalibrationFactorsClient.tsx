@@ -43,12 +43,17 @@ import calibrationFactorsApi, {
   CalibrationFactorType,
   FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
+import { CalibrationFactorCacheInvalidation } from '@/lib/api/cache-invalidation';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { CALIBRATION_FACTOR_TYPE_VALUES } from '@equipment-management/schemas';
 import { queryKeys } from '@/lib/api/query-config';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
-import { Permission, VALIDATION_RULES } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  VALIDATION_RULES,
+  DEFAULT_PAGE_SIZE,
+} from '@equipment-management/shared-constants';
 import { Plus, Calculator, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
@@ -129,18 +134,15 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
     optimisticUpdate: (old, { id }) => ({
       ...(old ?? {
         data: [],
-        meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
+        meta: {
+          pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+        },
       }),
       data: (old?.data ?? []).map((f) =>
         f.id === id ? { ...f, approvalStatus: CFASVal.APPROVED } : f
       ),
     }),
-    invalidateKeys: [
-      queryKeys.calibrationFactors.all,
-      queryKeys.dashboard.all,
-      queryKeys.approvals.countsAll,
-      queryKeys.notifications.all,
-    ],
+    invalidateKeys: [...CalibrationFactorCacheInvalidation.APPROVE_KEYS],
     successMessage: t('approveSuccess'),
   });
 
@@ -156,18 +158,15 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
     optimisticUpdate: (old, { id }) => ({
       ...(old ?? {
         data: [],
-        meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
+        meta: {
+          pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+        },
       }),
       data: (old?.data ?? []).map((f) =>
         f.id === id ? { ...f, approvalStatus: CFASVal.REJECTED } : f
       ),
     }),
-    invalidateKeys: [
-      queryKeys.calibrationFactors.all,
-      queryKeys.dashboard.all,
-      queryKeys.approvals.countsAll,
-      queryKeys.notifications.all,
-    ],
+    invalidateKeys: [...CalibrationFactorCacheInvalidation.REJECT_KEYS],
     successMessage: t('rejectSuccess'),
     onErrorCallback: (error: unknown) => {
       const { title, description } = mapCalibrationFactorErrorToToast(error, tCal);

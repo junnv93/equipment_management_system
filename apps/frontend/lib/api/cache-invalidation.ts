@@ -620,6 +620,29 @@ export class CheckoutCacheInvalidation {
 }
 
 /**
+ * 보정계수 승인/반려 후 관련 캐시를 무효화.
+ * 승인 시 장비(보정계수 반영) + 대시보드 교차 영향.
+ * 반려 시 대시보드 승인 카운트만 영향 (장비 상태 변경 없음).
+ */
+export class CalibrationFactorCacheInvalidation {
+  /** 보정계수 승인 후 무효화 대상 키 — calibration-factors/dashboard/approvals/notifications */
+  static readonly APPROVE_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.calibrationFactors.all,
+    queryKeys.dashboard.all,
+    queryKeys.approvals.countsAll,
+    queryKeys.notifications.all,
+  ];
+
+  /** 보정계수 반려 후 무효화 대상 키 — 장비 상태 변경 없으므로 대시보드/알림만 */
+  static readonly REJECT_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.calibrationFactors.all,
+    queryKeys.dashboard.all,
+    queryKeys.approvals.countsAll,
+    queryKeys.notifications.all,
+  ];
+}
+
+/**
  * 대시보드 캐시 무효화 헬퍼
  */
 export class DashboardCacheInvalidation {
