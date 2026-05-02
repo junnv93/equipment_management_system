@@ -141,7 +141,11 @@
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/equipment-reject-zod-fail-close-hardening.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/equipment-reject-zod-fail-close-hardening.md)",
       "Bash(mv .claude/contracts/equipment-reject-zod-fail-close-hardening.md .claude/contracts/completed/)",
       "Bash(mv .claude/contracts/inspection-undo-hook-extraction-reject-spec.md .claude/contracts/completed/)",
-      "Bash(rm -f .claude/contracts/tier2-fsm-invalid-status-transition.md)"
+      "Bash(rm -f .claude/contracts/tier2-fsm-invalid-status-transition.md)",
+      "Bash(grep -v \"^0$\")",
+      "Bash(sed -i '/^- \\\\[x\\\\]/d' /home/kmjkds/equipment_management_system/.claude/exec-plans/tech-debt-tracker.md)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/backlog/calibration-phase4-7.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/calibration-phase4-7.md)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/rejection-reason-notfound-systemic-closure.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/rejection-reason-notfound-systemic-closure.md)"
     ],
     "deny": [],
     "ask": []
