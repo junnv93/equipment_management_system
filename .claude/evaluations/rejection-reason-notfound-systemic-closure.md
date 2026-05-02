@@ -81,3 +81,83 @@ Replace `code: 'EQUIPMENT_NOT_FOUND'` with `code: ErrorCode.EquipmentNotFound` (
 Verify `ErrorCode.EquipmentNotFound` exists in `packages/schemas/src/errors.ts` before substituting (it was in the original 6 — wait, the original 6 were: CableNotFound, CalibrationPlanNotFound, EquipmentImportNotFound, NonConformanceNotFound, SoftwareValidationNotFound, TestSoftwareNotFound — NOT EquipmentNotFound). Check whether `ErrorCode.EquipmentNotFound` or `ErrorCode.EntityNotFound` is the correct enum member for equipment not-found scenarios, or add `EquipmentNotFound = 'EQUIPMENT_NOT_FOUND'` with a 404 mapping.
 
 After fixing, re-validate with `find apps/backend/src/modules -name "*.ts" ! -path "*__tests__*" ! -name "*.spec.ts" -exec grep -l "'EQUIPMENT_NOT_FOUND'" {} \;` to confirm 0 results.
+
+---
+
+## Iteration 3
+
+**Date**: 2026-05-02
+
+**Changes applied from iter 2**: Added `ErrorCode` import to `self-inspection-export-data.service.ts` and `inspection-form-templates.service.ts`; replaced 5x `code: 'EQUIPMENT_NOT_FOUND'` with `code: ErrorCode.EquipmentNotFound`.
+
+### Build Verification
+
+| Check | Result |
+|-------|--------|
+| schemas build | PASS |
+| backend tsc --noEmit | PASS |
+| backend test | PASS |
+
+### MUST Criteria
+
+| ID | Criterion | Verdict | Evidence |
+|----|-----------|---------|----------|
+| M1 | ErrorCode enum has all 10 NOT_FOUND values + 404 mappings | PASS | Original 6: CableNotFound=2, CalibrationPlanNotFound=2, EquipmentImportNotFound=2, NonConformanceNotFound=2, SoftwareValidationNotFound=2, TestSoftwareNotFound=2. New 3: IntermediateInspectionNotFound=2, SelfInspectionNotFound=2, TestPlanNotFound=2 (all ≥ 2 = enum + 404 mapping). |
+| M2 | notFoundCode: ErrorCode type | PASS | `versioned-base.service.ts`: `notFoundCode: ErrorCode = ErrorCode.EntityNotFound` confirmed. `notFoundCode: string` count = 0. |
+| M3 | Zero string literals for all NOT_FOUND codes in non-spec service files | **FAIL** | One remaining string literal found: `apps/backend/src/modules/self-inspections/services/self-inspection-export-data.service.ts:173: code: 'SELF_INSPECTION_NOT_FOUND'`. All 9 other literals confirmed absent via `find -exec grep -l` (exit 123 = no matching files for each). Note: `'EQUIPMENT_NOT_FOUND'` (fixed in iter 2) is gone; only `'SELF_INSPECTION_NOT_FOUND'` remains. |
+| M4 | DTOs use REJECTION_REASON_MIN_LENGTH | PASS | All 3 DTOs: reject-checkout.dto.ts=1, reject-return.dto.ts=1, borrower-reject-checkout.dto.ts=1. `min(1,` count = 0 in all 3. |
+| M5 | checkouts.service.ts 3 fail-closes use MIN_LENGTH | PASS | `REJECTION_REASON_MIN_LENGTH` count = 3. `trim().length === 0` count = 0. |
+| M6 | schemas build PASS | PASS | `rimraf dist && tsc -p tsconfig.json --skipLibCheck` exits 0. |
+| M7 | backend test PASS | PASS | Test Suites: 83 passed, 83 total / Tests: 1133 passed, 1133 total |
+| M8 | backend tsc --noEmit PASS | PASS | `pnpm --filter backend exec tsc --noEmit --incremental false` exits 0, no output. |
+
+### Verdict
+
+**OVERALL**: FAIL
+
+**M3 still fails.** One string literal was not replaced in iter 2 repairs:
+
+- `apps/backend/src/modules/self-inspections/services/self-inspection-export-data.service.ts:173`
+  - Current: `code: 'SELF_INSPECTION_NOT_FOUND',`
+  - Required: `code: ErrorCode.SelfInspectionNotFound,` (the enum member was added in iter 2 to `packages/schemas/src/errors.ts`)
+
+The repair plan from iter 2 correctly identified this file needed an `ErrorCode` import (it was one of the files listed), but the `'EQUIPMENT_NOT_FOUND'` literal at line 138 was replaced while the `'SELF_INSPECTION_NOT_FOUND'` literal at line 173 in the same file was missed.
+
+**Repair instruction**: In `self-inspection-export-data.service.ts` line 173, replace `code: 'SELF_INSPECTION_NOT_FOUND',` with `code: ErrorCode.SelfInspectionNotFound,`. The `ErrorCode` import is already present (added in iter 2). After fixing, re-run: `find apps/backend/src -name "*.ts" ! -name "*.spec.ts" ! -name "*.e2e-spec.ts" -exec grep -l "'SELF_INSPECTION_NOT_FOUND'" {} \;` — must return no output.
+
+---
+
+## Iteration 4
+
+**Date**: 2026-05-02
+
+**Change applied since iter 3**: `apps/backend/src/modules/self-inspections/services/self-inspection-export-data.service.ts` line 173: `code: 'SELF_INSPECTION_NOT_FOUND'` → `code: ErrorCode.SelfInspectionNotFound`
+
+### M3 String Literal Search
+
+All 52 non-spec service `*.ts` files under `apps/backend/src/` searched individually via `find ... | xargs grep -l '...'`.
+
+| Pattern | Result |
+|---------|--------|
+| `'CABLE_NOT_FOUND'` | 0 matches |
+| `'CALIBRATION_PLAN_NOT_FOUND'` | 0 matches |
+| `'IMPORT_NOT_FOUND'` | 0 matches |
+| `'NC_NOT_FOUND'` | 0 matches |
+| `'SOFTWARE_VALIDATION_NOT_FOUND'` | 0 matches |
+| `'TEST_SOFTWARE_NOT_FOUND'` | 0 matches |
+| `'EQUIPMENT_NOT_FOUND'` | 0 matches |
+| `'INTERMEDIATE_INSPECTION_NOT_FOUND'` | 0 matches |
+| `'SELF_INSPECTION_NOT_FOUND'` | 0 matches |
+| `'TEST_PLAN_NOT_FOUND'` | 0 matches |
+
+All 10 patterns: **0 matches**.
+
+### M8 tsc
+
+`pnpm --filter backend exec tsc --noEmit --incremental false` — exit code 0, no output (0 errors).
+
+### Verdict
+
+**OVERALL**: PASS
+
+All MUST criteria satisfied. Sprint ready for commit.

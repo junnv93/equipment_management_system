@@ -170,7 +170,7 @@ export class SelfInspectionExportDataService {
 
     if (!record) {
       throw new NotFoundException({
-        code: 'SELF_INSPECTION_NOT_FOUND',
+        code: ErrorCode.SelfInspectionNotFound,
         message: 'No self-inspection records found for this equipment.',
       });
     }

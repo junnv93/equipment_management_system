@@ -46,4 +46,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 199개 (2026-05-02: +equipment-controller-errorcode-ssot, +equipment-domain-errorcode-closure, +tier2-fsm-invalid-status-transition, +inspection-pr2-pr3-closure, +equipment-reject-zod-fail-close-hardening, +inspection-undo-hook-extraction-reject-spec, +checkout-sprint-2-5-2-8). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 200개 (2026-05-02: +equipment-controller-errorcode-ssot, +equipment-domain-errorcode-closure, +tier2-fsm-invalid-status-transition, +inspection-pr2-pr3-closure, +equipment-reject-zod-fail-close-hardening, +inspection-undo-hook-extraction-reject-spec, +checkout-sprint-2-5-2-8, +rejection-reason-notfound-systemic-closure). 검색: `ls .claude/contracts/completed/ | grep <slug>`
