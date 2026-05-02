@@ -272,7 +272,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (existing.status !== ValidationStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationOnlyDraftCanUpdate,
         message: 'Only draft validations can be updated.',
       });
     }
@@ -339,7 +339,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (existing.status !== ValidationStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationOnlyDraftCanSubmit,
         message: 'Only draft validations can be submitted.',
       });
     }
@@ -395,7 +395,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (existing.status !== ValidationStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationOnlySubmittedCanApprove,
         message: 'Only submitted validations can be approved.',
       });
     }
@@ -455,7 +455,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (existing.status !== ValidationStatusValues.APPROVED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationOnlyApprovedCanQualityApprove,
         message: 'Only technically approved validations can receive quality approval.',
       });
     }
@@ -584,7 +584,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     if (existing.status !== ValidationStatusValues.REJECTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.SoftwareValidationOnlyRejectedCanRevise,
         message: 'Only rejected validations can be revised.',
       });
     }

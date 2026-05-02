@@ -102,7 +102,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (usagePeriodEnd <= usagePeriodStart) {
       throw new BadRequestException({
-        code: 'IMPORT_END_DATE_BEFORE_START',
+        code: ErrorCode.EquipmentImportEndDateBeforeStart,
         message: 'Usage end date must be after the start date.',
       });
     }
@@ -294,7 +294,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'IMPORT_NOT_FOUND',
+        code: ErrorCode.EquipmentImportNotFound,
         message: `Equipment import ${id} not found.`,
       });
     }
@@ -336,7 +336,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         {
           column: equipmentImports.status,
           expected: EIVal.PENDING,
-          errorCode: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
+          errorCode: ErrorCode.EquipmentImportOnlyPendingCanApprove,
           errorMessage: 'Only pending import requests can be approved.',
         },
       ]
@@ -449,7 +449,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (equipmentImport.status !== EIVal.APPROVED) {
       throw new BadRequestException({
-        code: 'IMPORT_ONLY_APPROVED_CAN_RECEIVE',
+        code: ErrorCode.EquipmentImportOnlyApprovedCanReceive,
         message: 'Only approved import requests can be received.',
       });
     }
@@ -604,7 +604,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (!equipmentImport.equipmentId) {
       throw new BadRequestException({
-        code: 'IMPORT_NO_LINKED_EQUIPMENT',
+        code: ErrorCode.EquipmentImportNoLinkedEquipment,
         message: 'No linked equipment found.',
       });
     }
@@ -626,7 +626,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         {
           column: equipmentImports.status,
           expected: EIVal.RECEIVED,
-          errorCode: 'IMPORT_ONLY_RECEIVED_CAN_RETURN',
+          errorCode: ErrorCode.EquipmentImportOnlyReceivedCanReturn,
           errorMessage: 'Only received imports can initiate a return.',
         },
       ]
@@ -743,7 +743,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
       throw new BadRequestException({
-        code: 'IMPORT_ONLY_PENDING_OR_APPROVED_CAN_CANCEL',
+        code: ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel,
         message: 'Only pending or approved import requests can be canceled.',
       });
     }
@@ -751,7 +751,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     // 본인만 취소 가능
     if (equipmentImport.requesterId !== userId) {
       throw new BadRequestException({
-        code: 'IMPORT_ONLY_REQUESTER_CAN_CANCEL',
+        code: ErrorCode.EquipmentImportOnlyRequesterCanCancel,
         message: 'Only the requester can cancel their own import request.',
       });
     }
@@ -1009,7 +1009,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        code: ErrorCode.EquipmentImportDetailNotFound,
         message: `Equipment import ${importId} not found.`,
       });
     }

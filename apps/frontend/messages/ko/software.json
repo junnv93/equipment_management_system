@@ -332,6 +332,11 @@
   },
   "errors": {
     "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요.",
-    "invalidStatusForReject": "현재 상태에서 반려할 수 없습니다."
+    "invalidStatusForReject": "현재 상태에서 반려할 수 없습니다.",
+    "onlyDraftCanUpdate": "초안 상태의 유효성 확인만 수정할 수 있습니다.",
+    "onlyDraftCanSubmit": "초안 상태의 유효성 확인만 제출할 수 있습니다.",
+    "onlySubmittedCanApprove": "제출된 유효성 확인만 기술 승인할 수 있습니다.",
+    "onlyApprovedCanQualityApprove": "기술 승인된 유효성 확인만 품질 승인할 수 있습니다.",
+    "onlyRejectedCanRevise": "반려된 유효성 확인만 재수정할 수 있습니다."
   }
 }

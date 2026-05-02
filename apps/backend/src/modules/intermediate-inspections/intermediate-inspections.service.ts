@@ -87,7 +87,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
       if (!cal) {
         throw new NotFoundException({
-          code: 'CALIBRATION_NOT_FOUND',
+          code: ErrorCode.CalibrationNotFound,
           message: `Calibration with UUID ${dto.calibrationId} not found.`,
         });
       }
@@ -274,7 +274,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (!cal) {
       throw new NotFoundException({
-        code: 'CALIBRATION_NOT_FOUND',
+        code: ErrorCode.CalibrationNotFound,
         message: `Calibration with UUID ${calibrationId} not found.`,
       });
     }
@@ -335,7 +335,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlyDraftCanUpdate,
         message: 'Only draft inspections can be updated.',
       });
     }
@@ -424,7 +424,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.DRAFT) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlyDraftCanSubmit,
         message: 'Only draft inspections can be submitted.',
       });
     }
@@ -456,7 +456,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlySubmittedCanReview,
         message: 'Only submitted inspections can be reviewed.',
       });
     }
@@ -488,7 +488,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.REVIEWED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlyReviewedCanApprove,
         message: 'Only reviewed inspections can be approved.',
       });
     }
@@ -629,14 +629,14 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.SUBMITTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlySubmittedCanWithdraw,
         message: 'Only submitted inspections can be withdrawn.',
       });
     }
 
     if (existing.submittedBy !== userId) {
       throw new BadRequestException({
-        code: 'NOT_SUBMITTER',
+        code: ErrorCode.IntermediateInspectionWithdrawNotSubmitter,
         message: 'Only the submitter can withdraw a submitted inspection.',
       });
     }
@@ -669,7 +669,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
     if (existing.approvalStatus !== InspectionApprovalStatusValues.REJECTED) {
       throw new BadRequestException({
-        code: 'INVALID_STATUS_TRANSITION',
+        code: ErrorCode.IntermediateInspectionOnlyRejectedCanResubmit,
         message: 'Only rejected inspections can be resubmitted.',
       });
     }
@@ -810,7 +810,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       .limit(1);
     if (!result) {
       throw new NotFoundException({
-        code: 'CALIBRATION_NOT_FOUND',
+        code: ErrorCode.CalibrationNotFound,
         message: `Calibration ${calibrationId} not found.`,
       });
     }

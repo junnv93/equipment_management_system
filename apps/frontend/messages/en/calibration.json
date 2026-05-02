@@ -963,7 +963,23 @@
     "planItemNotExecuted": "Items without a linked calibration record cannot be confirmed.",
     "unknown": "An unknown error occurred.",
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
-    "invalidStatusForReject": "Cannot reject from current status."
+    "invalidStatusForReject": "Cannot reject from current status.",
+    "invalidStatusForComplete": "Cannot complete calibration in its current status. Only scheduled or in-progress calibrations can be completed.",
+    "onlyPendingCanApprove": "Only pending calibrations can be approved.",
+    "noIntermediateCheck": "No intermediate check is scheduled for this calibration.",
+    "calibrationFactorNotFound": "Calibration factor not found.",
+    "calibrationFactor": {
+      "onlyPendingCanApprove": "Only pending calibration factors can be approved."
+    },
+    "intermediateInspection": {
+      "onlyDraftCanUpdate": "Only draft intermediate inspections can be updated.",
+      "onlyDraftCanSubmit": "Only draft intermediate inspections can be submitted.",
+      "onlySubmittedCanReview": "Only submitted intermediate inspections can be reviewed.",
+      "onlyReviewedCanApprove": "Only reviewed intermediate inspections can be approved.",
+      "onlySubmittedCanWithdraw": "Only submitted intermediate inspections can be withdrawn.",
+      "onlyRejectedCanResubmit": "Only rejected intermediate inspections can be resubmitted.",
+      "withdrawNotSubmitter": "Only the submitter can withdraw a submitted inspection."
+    }
   },
   "planErrors": {
     "title": "Action Failed",

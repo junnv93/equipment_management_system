@@ -324,7 +324,7 @@ export class CalibrationService extends VersionedBaseService {
 
         if (!row) {
           throw new NotFoundException({
-            code: 'CALIBRATION_NOT_FOUND',
+            code: ErrorCode.CalibrationNotFound,
             message: `Calibration ID ${id} not found`,
           });
         }
@@ -639,7 +639,7 @@ export class CalibrationService extends VersionedBaseService {
 
       if (!updated) {
         throw new NotFoundException({
-          code: 'CALIBRATION_NOT_FOUND',
+          code: ErrorCode.CalibrationNotFound,
           message: `Calibration ID ${id} not found`,
         });
       }
@@ -1209,7 +1209,7 @@ export class CalibrationService extends VersionedBaseService {
       calibration.status !== CalibrationStatusEnum.enum.in_progress
     ) {
       throw new BadRequestException({
-        code: 'CALIBRATION_INVALID_STATUS_FOR_COMPLETE',
+        code: ErrorCode.CalibrationInvalidStatusForComplete,
         message: 'Only scheduled or in-progress calibrations can be completed.',
       });
     }
@@ -1396,7 +1396,7 @@ export class CalibrationService extends VersionedBaseService {
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
       throw new BadRequestException({
-        code: 'CALIBRATION_ONLY_PENDING_CAN_APPROVE',
+        code: ErrorCode.CalibrationOnlyPendingCanApprove,
         message: 'Only pending calibrations can be approved.',
       });
     }
@@ -1740,7 +1740,7 @@ export class CalibrationService extends VersionedBaseService {
 
     if (!calibration.intermediateCheckDate) {
       throw new BadRequestException({
-        code: 'CALIBRATION_NO_INTERMEDIATE_CHECK',
+        code: ErrorCode.CalibrationNoIntermediateCheck,
         message: 'No intermediate check is scheduled for this calibration.',
       });
     }
@@ -1912,7 +1912,7 @@ export class CalibrationService extends VersionedBaseService {
 
     if (result.length === 0) {
       throw new NotFoundException({
-        code: 'CALIBRATION_NOT_FOUND',
+        code: ErrorCode.CalibrationNotFound,
         message: `Calibration ${calibrationId} not found.`,
       });
     }

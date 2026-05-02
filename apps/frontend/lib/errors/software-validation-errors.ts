@@ -41,6 +41,12 @@ export function getSoftwareValidationErrorMessageKey(code: string | undefined): 
 const SOFTWARE_VALIDATION_REJECT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.SoftwareValidationRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.SoftwareValidationInvalidStatusTransition]: 'errors.invalidStatusForReject',
+  [ErrorCode.SoftwareValidationOnlyDraftCanUpdate]: 'errors.onlyDraftCanUpdate',
+  [ErrorCode.SoftwareValidationOnlyDraftCanSubmit]: 'errors.onlyDraftCanSubmit',
+  [ErrorCode.SoftwareValidationOnlySubmittedCanApprove]: 'errors.onlySubmittedCanApprove',
+  [ErrorCode.SoftwareValidationOnlyApprovedCanQualityApprove]:
+    'errors.onlyApprovedCanQualityApprove',
+  [ErrorCode.SoftwareValidationOnlyRejectedCanRevise]: 'errors.onlyRejectedCanRevise',
 };
 
 const SOFTWARE_VALIDATION_REJECT_ERROR_I18N_VARS: Partial<

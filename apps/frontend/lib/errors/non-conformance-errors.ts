@@ -14,6 +14,8 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 const NON_CONFORMANCE_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.NonConformanceRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.NonConformanceInvalidTransition]: 'errors.invalidTransition',
+  [ErrorCode.NcClosedCannotUpdate]: 'errors.closedCannotUpdate',
+  [ErrorCode.NcClosedCannotLinkRepair]: 'errors.closedCannotLinkRepair',
 };
 
 const NON_CONFORMANCE_ERROR_I18N_VARS: Partial<

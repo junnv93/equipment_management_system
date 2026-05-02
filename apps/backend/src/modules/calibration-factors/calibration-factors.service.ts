@@ -249,7 +249,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
         if (!factor) {
           throw new NotFoundException({
-            code: 'CALIBRATION_FACTOR_NOT_FOUND',
+            code: ErrorCode.CalibrationFactorNotFound,
             message: `Calibration factor ID ${id} not found.`,
           });
         }
@@ -275,7 +275,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     if (!result) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
+        code: ErrorCode.EquipmentNotFound,
         message: `Equipment ${equipmentId} not found.`,
       });
     }
@@ -419,7 +419,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
       throw new BadRequestException({
-        code: 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_APPROVE',
+        code: ErrorCode.CalibrationFactorOnlyPendingCanApprove,
         message: 'Only pending calibration factors can be approved.',
       });
     }

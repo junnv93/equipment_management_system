@@ -14,6 +14,20 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 const INTERMEDIATE_INSPECTION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.IntermediateInspectionRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.IntermediateInspectionInvalidStatusTransition]: 'errors.invalidStatusForReject',
+  [ErrorCode.IntermediateInspectionOnlyDraftCanUpdate]:
+    'errors.intermediateInspection.onlyDraftCanUpdate',
+  [ErrorCode.IntermediateInspectionOnlyDraftCanSubmit]:
+    'errors.intermediateInspection.onlyDraftCanSubmit',
+  [ErrorCode.IntermediateInspectionOnlySubmittedCanReview]:
+    'errors.intermediateInspection.onlySubmittedCanReview',
+  [ErrorCode.IntermediateInspectionOnlyReviewedCanApprove]:
+    'errors.intermediateInspection.onlyReviewedCanApprove',
+  [ErrorCode.IntermediateInspectionOnlySubmittedCanWithdraw]:
+    'errors.intermediateInspection.onlySubmittedCanWithdraw',
+  [ErrorCode.IntermediateInspectionOnlyRejectedCanResubmit]:
+    'errors.intermediateInspection.onlyRejectedCanResubmit',
+  [ErrorCode.IntermediateInspectionWithdrawNotSubmitter]:
+    'errors.intermediateInspection.withdrawNotSubmitter',
 };
 
 const INTERMEDIATE_INSPECTION_ERROR_I18N_VARS: Partial<

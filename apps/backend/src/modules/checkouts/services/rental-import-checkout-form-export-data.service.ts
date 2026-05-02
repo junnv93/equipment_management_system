@@ -4,7 +4,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { checkouts } from '@equipment-management/db/schema/checkouts';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { users } from '@equipment-management/db/schema/users';
-import { EquipmentImportSourceValues } from '@equipment-management/schemas';
+import { EquipmentImportSourceValues, ErrorCode } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 import type { CheckoutFormExportData } from './checkout-form-export-data.service';
 
@@ -43,7 +43,7 @@ export class RentalImportCheckoutFormExportDataService {
 
     if (!imp) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        code: ErrorCode.EquipmentImportDetailNotFound,
         message: 'Equipment import not found.',
       });
     }
@@ -58,13 +58,13 @@ export class RentalImportCheckoutFormExportDataService {
 
     if (filter.site && imp.site !== filter.site) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        code: ErrorCode.EquipmentImportDetailNotFound,
         message: 'Equipment import not found or not accessible from your site.',
       });
     }
     if (filter.teamId && imp.teamId !== filter.teamId) {
       throw new NotFoundException({
-        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        code: ErrorCode.EquipmentImportDetailNotFound,
         message: 'Equipment import not found or not accessible from your team.',
       });
     }

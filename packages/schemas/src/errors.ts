@@ -217,6 +217,95 @@ export enum ErrorCode {
   NonConformanceInvalidTransition = 'NC_INVALID_TRANSITION',
 
   // ============================================================================
+  // FSM 상태 전이 ErrorCode — 비-reject 흐름 (tier-2-fsm-invalid-status-transition)
+  // 7 도메인 service의 inline INVALID_STATUS_TRANSITION + 도메인 FSM literal 격상
+  // ============================================================================
+
+  // ── intermediate-inspections (비-reject 흐름 7건) ──────────────────────────
+  /** 초안(draft)만 수정 가능. */
+  IntermediateInspectionOnlyDraftCanUpdate = 'INTERMEDIATE_INSPECTION_ONLY_DRAFT_CAN_UPDATE',
+  /** 초안(draft)만 제출 가능. */
+  IntermediateInspectionOnlyDraftCanSubmit = 'INTERMEDIATE_INSPECTION_ONLY_DRAFT_CAN_SUBMIT',
+  /** 제출(submitted)만 검토 가능. */
+  IntermediateInspectionOnlySubmittedCanReview = 'INTERMEDIATE_INSPECTION_ONLY_SUBMITTED_CAN_REVIEW',
+  /** 검토(reviewed)만 승인 가능. */
+  IntermediateInspectionOnlyReviewedCanApprove = 'INTERMEDIATE_INSPECTION_ONLY_REVIEWED_CAN_APPROVE',
+  /** 제출(submitted)만 제출 취소 가능. */
+  IntermediateInspectionOnlySubmittedCanWithdraw = 'INTERMEDIATE_INSPECTION_ONLY_SUBMITTED_CAN_WITHDRAW',
+  /** 반려(rejected)만 재제출 가능. */
+  IntermediateInspectionOnlyRejectedCanResubmit = 'INTERMEDIATE_INSPECTION_ONLY_REJECTED_CAN_RESUBMIT',
+  /** 제출자 본인만 제출 취소 가능. */
+  IntermediateInspectionWithdrawNotSubmitter = 'INTERMEDIATE_INSPECTION_WITHDRAW_NOT_SUBMITTER',
+
+  // ── self-inspections (비-reject 흐름 6건) ──────────────────────────────────
+  /** 초안(draft)만 수정 가능. */
+  SelfInspectionOnlyDraftCanUpdate = 'SELF_INSPECTION_ONLY_DRAFT_CAN_UPDATE',
+  /** 초안(draft)만 제출 가능. */
+  SelfInspectionOnlyDraftCanSubmit = 'SELF_INSPECTION_ONLY_DRAFT_CAN_SUBMIT',
+  /** 제출(submitted)만 제출 취소 가능. */
+  SelfInspectionOnlySubmittedCanWithdraw = 'SELF_INSPECTION_ONLY_SUBMITTED_CAN_WITHDRAW',
+  /** 제출자 본인만 제출 취소 가능. */
+  SelfInspectionWithdrawNotSubmitter = 'SELF_INSPECTION_WITHDRAW_NOT_SUBMITTER',
+  /** 제출(submitted)만 승인 가능. */
+  SelfInspectionOnlySubmittedCanApprove = 'SELF_INSPECTION_ONLY_SUBMITTED_CAN_APPROVE',
+  /** 반려(rejected)만 재제출 가능. */
+  SelfInspectionOnlyRejectedCanResubmit = 'SELF_INSPECTION_ONLY_REJECTED_CAN_RESUBMIT',
+
+  // ── software-validations (비-reject 흐름 5건) ──────────────────────────────
+  /** 초안(draft)만 수정 가능. */
+  SoftwareValidationOnlyDraftCanUpdate = 'SOFTWARE_VALIDATION_ONLY_DRAFT_CAN_UPDATE',
+  /** 초안(draft)만 제출 가능. */
+  SoftwareValidationOnlyDraftCanSubmit = 'SOFTWARE_VALIDATION_ONLY_DRAFT_CAN_SUBMIT',
+  /** 제출(submitted)만 기술 승인 가능. */
+  SoftwareValidationOnlySubmittedCanApprove = 'SOFTWARE_VALIDATION_ONLY_SUBMITTED_CAN_APPROVE',
+  /** 기술승인(approved)만 품질 승인 가능. */
+  SoftwareValidationOnlyApprovedCanQualityApprove = 'SOFTWARE_VALIDATION_ONLY_APPROVED_CAN_QUALITY_APPROVE',
+  /** 반려(rejected)만 재수정 가능. */
+  SoftwareValidationOnlyRejectedCanRevise = 'SOFTWARE_VALIDATION_ONLY_REJECTED_CAN_REVISE',
+
+  // ── calibration (비-reject 흐름 4코드 — 6건 커버) ─────────────────────────
+  /** 교정 기록을 찾을 수 없음 (NotFoundException). */
+  CalibrationNotFound = 'CALIBRATION_NOT_FOUND',
+  /** 예약(scheduled) 또는 진행 중(in_progress)만 완료 처리 가능. */
+  CalibrationInvalidStatusForComplete = 'CALIBRATION_INVALID_STATUS_FOR_COMPLETE',
+  /** pending_approval 상태만 승인 가능. */
+  CalibrationOnlyPendingCanApprove = 'CALIBRATION_ONLY_PENDING_CAN_APPROVE',
+  /** 중간점검 일정이 없는 교정 기록. */
+  CalibrationNoIntermediateCheck = 'CALIBRATION_NO_INTERMEDIATE_CHECK',
+
+  // ── calibration-factors (비-reject 흐름 2건) ──────────────────────────────
+  /** 교정 인자를 찾을 수 없음 (NotFoundException). */
+  CalibrationFactorNotFound = 'CALIBRATION_FACTOR_NOT_FOUND',
+  /** pending 상태만 승인 가능. */
+  CalibrationFactorOnlyPendingCanApprove = 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_APPROVE',
+
+  // ── equipment-imports (FSM + business 9건) ────────────────────────────────
+  /** 반입 종료일이 시작일보다 이전. */
+  EquipmentImportEndDateBeforeStart = 'IMPORT_END_DATE_BEFORE_START',
+  /** 장비 반입 기록 조회 실패 (findOne — NotFoundException). */
+  EquipmentImportNotFound = 'IMPORT_NOT_FOUND',
+  /** pending 상태만 승인 가능 (CAS precondition errorCode). */
+  EquipmentImportOnlyPendingCanApprove = 'IMPORT_ONLY_PENDING_CAN_APPROVE',
+  /** approved 상태만 수령 가능. */
+  EquipmentImportOnlyApprovedCanReceive = 'IMPORT_ONLY_APPROVED_CAN_RECEIVE',
+  /** 연결된 장비 없음. */
+  EquipmentImportNoLinkedEquipment = 'IMPORT_NO_LINKED_EQUIPMENT',
+  /** received 상태만 반납 시작 가능 (CAS precondition errorCode). */
+  EquipmentImportOnlyReceivedCanReturn = 'IMPORT_ONLY_RECEIVED_CAN_RETURN',
+  /** pending 또는 approved 상태만 취소 가능. */
+  EquipmentImportOnlyPendingOrApprovedCanCancel = 'IMPORT_ONLY_PENDING_OR_APPROVED_CAN_CANCEL',
+  /** 반입 요청자 본인만 취소 가능. */
+  EquipmentImportOnlyRequesterCanCancel = 'IMPORT_ONLY_REQUESTER_CAN_CANCEL',
+  /** 장비 반입 기록 조회 실패 (getImportDetail — NotFoundException). */
+  EquipmentImportDetailNotFound = 'EQUIPMENT_IMPORT_NOT_FOUND',
+
+  // ── non-conformances FSM (비-reject 흐름 2건) ─────────────────────────────
+  /** 종료된 부적합 기록은 수정 불가. */
+  NcClosedCannotUpdate = 'NC_CLOSED_CANNOT_UPDATE',
+  /** 종료된 부적합에는 수리 이력 연결 불가. */
+  NcClosedCannotLinkRepair = 'NC_CLOSED_CANNOT_LINK_REPAIR',
+
+  // ============================================================================
   // 장비 서비스 도메인 에러 (equipment.service.ts)
   // ============================================================================
   /** 교정 기한 날짜 형식 오류 (calibrationDue). */
@@ -411,6 +500,50 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.IntermediateInspectionInvalidStatusTransition]: 400,
   [ErrorCode.SelfInspectionInvalidStatusTransition]: 400,
   [ErrorCode.NonConformanceInvalidTransition]: 400,
+
+  // FSM 상태 전이 ErrorCode — 비-reject 흐름 (tier-2-fsm-invalid-status-transition)
+  // intermediate-inspections
+  [ErrorCode.IntermediateInspectionOnlyDraftCanUpdate]: 400,
+  [ErrorCode.IntermediateInspectionOnlyDraftCanSubmit]: 400,
+  [ErrorCode.IntermediateInspectionOnlySubmittedCanReview]: 400,
+  [ErrorCode.IntermediateInspectionOnlyReviewedCanApprove]: 400,
+  [ErrorCode.IntermediateInspectionOnlySubmittedCanWithdraw]: 400,
+  [ErrorCode.IntermediateInspectionOnlyRejectedCanResubmit]: 400,
+  [ErrorCode.IntermediateInspectionWithdrawNotSubmitter]: 400,
+  // self-inspections
+  [ErrorCode.SelfInspectionOnlyDraftCanUpdate]: 400,
+  [ErrorCode.SelfInspectionOnlyDraftCanSubmit]: 400,
+  [ErrorCode.SelfInspectionOnlySubmittedCanWithdraw]: 400,
+  [ErrorCode.SelfInspectionWithdrawNotSubmitter]: 400,
+  [ErrorCode.SelfInspectionOnlySubmittedCanApprove]: 400,
+  [ErrorCode.SelfInspectionOnlyRejectedCanResubmit]: 400,
+  // software-validations
+  [ErrorCode.SoftwareValidationOnlyDraftCanUpdate]: 400,
+  [ErrorCode.SoftwareValidationOnlyDraftCanSubmit]: 400,
+  [ErrorCode.SoftwareValidationOnlySubmittedCanApprove]: 400,
+  [ErrorCode.SoftwareValidationOnlyApprovedCanQualityApprove]: 400,
+  [ErrorCode.SoftwareValidationOnlyRejectedCanRevise]: 400,
+  // calibration
+  [ErrorCode.CalibrationNotFound]: 404,
+  [ErrorCode.CalibrationInvalidStatusForComplete]: 400,
+  [ErrorCode.CalibrationOnlyPendingCanApprove]: 400,
+  [ErrorCode.CalibrationNoIntermediateCheck]: 400,
+  // calibration-factors
+  [ErrorCode.CalibrationFactorNotFound]: 404,
+  [ErrorCode.CalibrationFactorOnlyPendingCanApprove]: 400,
+  // equipment-imports
+  [ErrorCode.EquipmentImportEndDateBeforeStart]: 400,
+  [ErrorCode.EquipmentImportNotFound]: 404,
+  [ErrorCode.EquipmentImportOnlyPendingCanApprove]: 400,
+  [ErrorCode.EquipmentImportOnlyApprovedCanReceive]: 400,
+  [ErrorCode.EquipmentImportNoLinkedEquipment]: 400,
+  [ErrorCode.EquipmentImportOnlyReceivedCanReturn]: 400,
+  [ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel]: 400,
+  [ErrorCode.EquipmentImportOnlyRequesterCanCancel]: 400,
+  [ErrorCode.EquipmentImportDetailNotFound]: 404,
+  // non-conformances FSM
+  [ErrorCode.NcClosedCannotUpdate]: 400,
+  [ErrorCode.NcClosedCannotLinkRepair]: 400,
 
   // 장비 서비스 도메인 에러
   [ErrorCode.EquipmentInvalidCalibrationDue]: 400,

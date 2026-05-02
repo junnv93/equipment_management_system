@@ -332,6 +332,11 @@
   },
   "errors": {
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
-    "invalidStatusForReject": "Cannot reject from current status."
+    "invalidStatusForReject": "Cannot reject from current status.",
+    "onlyDraftCanUpdate": "Only draft validations can be updated.",
+    "onlyDraftCanSubmit": "Only draft validations can be submitted.",
+    "onlySubmittedCanApprove": "Only submitted validations can receive technical approval.",
+    "onlyApprovedCanQualityApprove": "Only technically approved validations can receive quality approval.",
+    "onlyRejectedCanRevise": "Only rejected validations can be revised."
   }
 }

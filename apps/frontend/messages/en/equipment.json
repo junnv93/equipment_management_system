@@ -1597,6 +1597,24 @@
   },
   "errors": {
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
-    "invalidStatusForReject": "Cannot reject from current status."
+    "invalidStatusForReject": "Cannot reject from current status.",
+    "selfInspection": {
+      "onlyDraftCanUpdate": "Only draft self-inspections can be updated.",
+      "onlyDraftCanSubmit": "Only draft self-inspections can be submitted.",
+      "onlySubmittedCanWithdraw": "Only submitted self-inspections can be withdrawn.",
+      "withdrawNotSubmitter": "Only the submitter can withdraw a submitted inspection.",
+      "onlySubmittedCanApprove": "Only submitted self-inspections can be approved.",
+      "onlyRejectedCanResubmit": "Only rejected self-inspections can be resubmitted."
+    },
+    "import": {
+      "endDateBeforeStart": "Usage end date must be after the start date.",
+      "notFound": "Equipment import record not found.",
+      "onlyPendingCanApprove": "Only pending import requests can be approved.",
+      "onlyApprovedCanReceive": "Only approved import requests can be received.",
+      "noLinkedEquipment": "No linked equipment found.",
+      "onlyReceivedCanReturn": "Only received imports can initiate a return.",
+      "onlyPendingOrApprovedCanCancel": "Only pending or approved import requests can be canceled.",
+      "onlyRequesterCanCancel": "Only the requester can cancel their own import request."
+    }
   }
 }

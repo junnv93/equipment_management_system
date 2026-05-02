@@ -14,6 +14,15 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 const SELF_INSPECTION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.SelfInspectionRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.SelfInspectionInvalidStatusTransition]: 'errors.invalidStatusForReject',
+  [ErrorCode.SelfInspectionOnlyDraftCanUpdate]: 'errors.selfInspection.onlyDraftCanUpdate',
+  [ErrorCode.SelfInspectionOnlyDraftCanSubmit]: 'errors.selfInspection.onlyDraftCanSubmit',
+  [ErrorCode.SelfInspectionOnlySubmittedCanWithdraw]:
+    'errors.selfInspection.onlySubmittedCanWithdraw',
+  [ErrorCode.SelfInspectionWithdrawNotSubmitter]: 'errors.selfInspection.withdrawNotSubmitter',
+  [ErrorCode.SelfInspectionOnlySubmittedCanApprove]:
+    'errors.selfInspection.onlySubmittedCanApprove',
+  [ErrorCode.SelfInspectionOnlyRejectedCanResubmit]:
+    'errors.selfInspection.onlyRejectedCanResubmit',
 };
 
 const SELF_INSPECTION_ERROR_I18N_VARS: Partial<

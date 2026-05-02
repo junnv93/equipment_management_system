@@ -513,6 +513,8 @@
   },
   "errors": {
     "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
-    "invalidTransition": "Cannot transition from current status."
+    "invalidTransition": "Cannot transition from current status.",
+    "closedCannotUpdate": "Closed non-conformances cannot be updated.",
+    "closedCannotLinkRepair": "Cannot link repair to a closed non-conformance."
   }
 }

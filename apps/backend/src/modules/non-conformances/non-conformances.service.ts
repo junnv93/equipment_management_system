@@ -663,7 +663,7 @@ export class NonConformancesService extends VersionedBaseService {
       }
     } else if (nonConformance.status === NonConformanceStatus.CLOSED) {
       throw new BadRequestException({
-        code: 'NC_CLOSED_CANNOT_UPDATE',
+        code: ErrorCode.NcClosedCannotUpdate,
         message: 'Closed non-conformances cannot be updated.',
       });
     }
@@ -943,7 +943,7 @@ export class NonConformancesService extends VersionedBaseService {
 
     if (nc.status === NonConformanceStatus.CLOSED) {
       throw new BadRequestException({
-        code: 'NC_CLOSED_CANNOT_LINK_REPAIR',
+        code: ErrorCode.NcClosedCannotLinkRepair,
         message: 'Cannot link repair to a closed non-conformance',
       });
     }

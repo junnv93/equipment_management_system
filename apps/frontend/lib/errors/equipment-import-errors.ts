@@ -21,6 +21,16 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 const EQUIPMENT_IMPORT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.EquipmentImportRejectionReasonRequired]: 'errors.rejectionReasonRequired',
   [ErrorCode.EquipmentImportOnlyPendingCanReject]: 'errors.invalidStatusForReject',
+  [ErrorCode.EquipmentImportEndDateBeforeStart]: 'errors.import.endDateBeforeStart',
+  [ErrorCode.EquipmentImportNotFound]: 'errors.import.notFound',
+  [ErrorCode.EquipmentImportDetailNotFound]: 'errors.import.notFound',
+  [ErrorCode.EquipmentImportOnlyPendingCanApprove]: 'errors.import.onlyPendingCanApprove',
+  [ErrorCode.EquipmentImportOnlyApprovedCanReceive]: 'errors.import.onlyApprovedCanReceive',
+  [ErrorCode.EquipmentImportNoLinkedEquipment]: 'errors.import.noLinkedEquipment',
+  [ErrorCode.EquipmentImportOnlyReceivedCanReturn]: 'errors.import.onlyReceivedCanReturn',
+  [ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel]:
+    'errors.import.onlyPendingOrApprovedCanCancel',
+  [ErrorCode.EquipmentImportOnlyRequesterCanCancel]: 'errors.import.onlyRequesterCanCancel',
 };
 
 const EQUIPMENT_IMPORT_ERROR_I18N_VARS: Partial<
