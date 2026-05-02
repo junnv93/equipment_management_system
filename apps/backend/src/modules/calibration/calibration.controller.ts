@@ -593,7 +593,9 @@ export class CalibrationController {
   })
   @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024, files: 10 } })
+  )
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'upload', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadDocuments(
