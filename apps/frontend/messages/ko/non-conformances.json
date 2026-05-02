@@ -510,5 +510,8 @@
       "updateError": "업데이트에 실패했습니다.",
       "photoPartialFailed": "사진 {failed}장 업로드 실패. 나머지는 저장되었습니다."
     }
+  },
+  "errors": {
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요."
   }
 }

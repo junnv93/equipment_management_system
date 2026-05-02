@@ -17,7 +17,6 @@ import {
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
@@ -46,6 +45,8 @@ import type { IntermediateInspection } from '@/lib/api/calibration-api';
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { InspectionApprovalStatus } from '@equipment-management/schemas';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import RejectModal from '@/components/approvals/RejectModal';
+import { mapIntermediateInspectionErrorToToast } from '@/lib/errors/intermediate-inspection-errors';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
@@ -82,8 +83,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const equipmentId = String(equipment.id);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectingTarget, setRejectingTarget] = useState<{ id: string; version: number } | null>(
+    null
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { can, user } = useAuth();
   const { toast } = useToast();
@@ -170,8 +172,11 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     successMessage: t('intermediateInspection.toasts.rejectSuccess'),
     errorMessage: t('intermediateInspection.toasts.rejectError'),
     onSuccessCallback: () => {
-      setRejectingId(null);
-      setRejectionReason('');
+      setRejectingTarget(null);
+    },
+    onErrorCallback: (error: unknown) => {
+      const { title, description } = mapIntermediateInspectionErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
     },
   });
 
@@ -247,39 +252,6 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     const { id, version, approvalStatus } = inspection;
     const inspectionDateLabel = format(new Date(inspection.inspectionDate), 'yyyy-MM-dd');
 
-    // 반려 사유 입력 모드 — 인라인 표시
-    if (rejectingId === id) {
-      return (
-        <div className="flex items-center gap-2">
-          <Input
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder={t('intermediateInspection.rejectionReasonPlaceholder')}
-            className="h-8 text-xs w-40"
-          />
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={!rejectionReason || isPending}
-            loading={isPending}
-            onClick={() => rejectMutation.mutate({ id, version, reason: rejectionReason })}
-          >
-            <XCircle className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setRejectingId(null);
-              setRejectionReason('');
-            }}
-          >
-            {t('intermediateInspection.cancel')}
-          </Button>
-        </div>
-      );
-    }
-
     // 삭제 가시성: 시험실무자(draft/submitted/rejected), 기술책임자(모든 상태)
     const showDelete =
       canDelete &&
@@ -326,7 +298,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
         key: 'reject',
         icon: <XCircle className="h-4 w-4 mr-2" />,
         label: t('intermediateInspection.actions.reject'),
-        onClick: () => setRejectingId(id),
+        onClick: () => setRejectingTarget({ id, version }),
       });
     }
     if (approvalStatus === 'reviewed' && canApprove) {
@@ -582,6 +554,23 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
           equipmentName={equipment.name}
         />
       )}
+
+      {/* Reject Modal — RejectModal SSOT (mode='domain') */}
+      <RejectModal
+        mode="domain"
+        isOpen={rejectingTarget !== null}
+        onClose={() => setRejectingTarget(null)}
+        onConfirm={async (reason: string) => {
+          if (!rejectingTarget) return;
+          await rejectMutation.mutateAsync({
+            id: rejectingTarget.id,
+            version: rejectingTarget.version,
+            reason,
+          });
+        }}
+        title={t('intermediateInspection.actions.reject')}
+        description={t('intermediateInspection.rejectionReasonPlaceholder')}
+      />
     </>
   );
 }

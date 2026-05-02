@@ -329,5 +329,8 @@
     "errorFallback": "Please try again",
     "versionConflict": "Already processed by another user",
     "versionConflictDesc": "Data has been updated. Please check the latest status."
+  },
+  "errors": {
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
   }
 }

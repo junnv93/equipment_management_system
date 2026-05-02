@@ -4,6 +4,12 @@
  * 백엔드 서비스와 프론트엔드 UI가 동일한 에러 코드를 사용합니다.
  * i18n 키 매핑: errors.softwareValidation.<code>
  */
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { extractErrorCode, type ErrorToast } from './disposal-errors';
+
+type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
+
 export enum SoftwareValidationErrorCode {
   NOT_FOUND = 'SOFTWARE_VALIDATION_NOT_FOUND',
   VERSION_CONFLICT = 'SOFTWARE_VALIDATION_VERSION_CONFLICT',
@@ -23,4 +29,46 @@ export function getSoftwareValidationErrorMessageKey(code: string | undefined): 
     return `errors.softwareValidation.${code}`;
   }
   return 'errors.softwareValidation.unknown';
+}
+
+/**
+ * Software Validation reject defense-in-depth ErrorCode → toast (5-layer SSOT)
+ *
+ * 호출자 useTranslations('software') — `errors.rejectionReasonRequired` 키는 software.json에 존재.
+ *
+ * @see ErrorCode.SoftwareValidationRejectionReasonRequired
+ */
+const SOFTWARE_VALIDATION_REJECT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.SoftwareValidationRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+};
+
+const SOFTWARE_VALIDATION_REJECT_ERROR_I18N_VARS: Partial<
+  Record<ErrorCode, Record<string, string | number | Date>>
+> = {
+  [ErrorCode.SoftwareValidationRejectionReasonRequired]: {
+    min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+  },
+};
+
+export function mapSoftwareValidationErrorToToast(
+  error: unknown,
+  t: TranslationFunction
+): ErrorToast {
+  const code = extractErrorCode(error);
+  const errorCode = code as ErrorCode | null;
+
+  if (errorCode && SOFTWARE_VALIDATION_REJECT_ERROR_I18N_KEYS[errorCode]) {
+    return {
+      title: t('errors.title'),
+      description: t(
+        SOFTWARE_VALIDATION_REJECT_ERROR_I18N_KEYS[errorCode]!,
+        SOFTWARE_VALIDATION_REJECT_ERROR_I18N_VARS[errorCode]
+      ),
+    };
+  }
+
+  return {
+    title: t('errors.title'),
+    description: error instanceof Error ? error.message : String(error),
+  };
 }

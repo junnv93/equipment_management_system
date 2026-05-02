@@ -863,6 +863,7 @@
     "approval": {
       "approve": "승인",
       "reject": "반려",
+      "rejectDescription": "반려 사유를 {min}자 이상 입력하세요.",
       "approveSuccess": "교정이 승인되었습니다.",
       "rejectSuccess": "교정이 반려되었습니다."
     },
@@ -1586,5 +1587,8 @@
     },
     "loading": "데이터를 로딩 중입니다...",
     "emptySearch": "검색 결과가 없습니다"
+  },
+  "errors": {
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요."
   }
 }

@@ -25,6 +25,8 @@ import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { useToast } from '@/components/ui/use-toast';
+import { mapSoftwareValidationErrorToToast } from '@/lib/errors/software-validation-errors';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
@@ -80,6 +82,7 @@ const EMPTY_FORM: CreateFormState = {
 
 export default function SoftwareValidationContent({ softwareId }: SoftwareValidationContentProps) {
   const t = useTranslations('software');
+  const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const router = useRouter();
   const { can, user } = useAuth();
@@ -201,6 +204,10 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     invalidateKeys: commonInvalidateKeys,
     successMessage: t('toast.validationRejectSuccess'),
     onSuccessCallback: () => setActiveDialog(null),
+    onErrorCallback: (error: unknown) => {
+      const { title, description } = mapSoftwareValidationErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
+    },
   });
 
   const reviseMutation = useOptimisticMutation<

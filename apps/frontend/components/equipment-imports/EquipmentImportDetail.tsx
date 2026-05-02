@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import RejectModal from '@/components/approvals/RejectModal';
+import { mapEquipmentImportErrorToToast } from '@/lib/errors/equipment-import-errors';
+import { useToast } from '@/components/ui/use-toast';
 import { Check, X, Package, Undo2, Ban } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import {
@@ -62,9 +65,9 @@ export default function EquipmentImportDetail({ id }: Props) {
   const t = useTranslations('equipment');
 
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const { toast } = useToast();
 
   const {
     data: equipmentImport,
@@ -106,10 +109,10 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
   });
 
-  const rejectMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: async () => {
+  const rejectMutation = useOptimisticMutation<EquipmentImport, string, EquipmentImport>({
+    mutationFn: async (reason: string) => {
       const fresh = await equipmentImportApi.getOne(id);
-      return equipmentImportApi.reject(id, fresh.version, rejectionReason);
+      return equipmentImportApi.reject(id, fresh.version, reason);
     },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.REJECTED as EquipmentImportStatus }),
@@ -119,6 +122,10 @@ export default function EquipmentImportDetail({ id }: Props) {
     onSuccessCallback: () => {
       setShowRejectDialog(false);
       EquipmentImportCacheInvalidation.invalidateAfterApprovalAction(queryClient, id);
+    },
+    onErrorCallback: (error: unknown) => {
+      const { title, description } = mapEquipmentImportErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
     },
   });
 
@@ -540,38 +547,18 @@ export default function EquipmentImportDetail({ id }: Props) {
         )}
       </div>
 
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('equipmentImport.rejectDialog.title')}</DialogTitle>
-            <DialogDescription>{t('equipmentImport.rejectDialog.description')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="rejectionReason">{t('equipmentImport.rejectDialog.reasonLabel')}</Label>
-            <Textarea
-              id="rejectionReason"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows={3}
-              placeholder={t('equipmentImport.rejectDialog.reasonPlaceholder')}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              {t('equipmentImport.rejectDialog.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => rejectMutation.mutate()}
-              disabled={!rejectionReason.trim() || rejectMutation.isPending}
-              loading={rejectMutation.isPending}
-            >
-              {t('equipmentImport.rejectDialog.submit')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Reject Modal — RejectModal SSOT (mode='domain') */}
+      <RejectModal
+        mode="domain"
+        isOpen={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={async (reason: string) => {
+          await rejectMutation.mutateAsync(reason);
+        }}
+        title={t('equipmentImport.rejectDialog.title')}
+        description={t('equipmentImport.rejectDialog.description')}
+        submitLabel={t('equipmentImport.rejectDialog.submit')}
+      />
 
       {/* Cancel Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

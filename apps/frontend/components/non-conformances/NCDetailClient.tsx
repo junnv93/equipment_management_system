@@ -72,6 +72,8 @@ import { resolveDisplayName } from '@/lib/utils/display-name';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
+import RejectModal from '@/components/approvals/RejectModal';
+import { mapNonConformanceErrorToToast } from '@/lib/errors/non-conformance-errors';
 import {
   Dialog,
   DialogContent,
@@ -129,8 +131,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showRepairDialog, setShowRepairDialog] = useState(false);
+  // RejectModal SSOT 통합 (5-layer defense-in-depth) — 반려 사유 state는 RejectModal 내부 보유
   const [closureNotes, setClosureNotes] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
 
   // Collapsible state
   const [correctionOpen, setCorrectionOpen] = useState(true);
@@ -233,15 +235,15 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     onSuccess: (data) => {
       toast({ title: t('toasts.rejectionSuccess') });
       setShowRejectDialog(false);
-      setRejectionReason('');
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
         data.equipmentId
       );
     },
-    onError: () => {
-      toast({ title: t('toasts.rejectionError'), variant: 'destructive' });
+    onError: (error: unknown) => {
+      const { title, description } = mapNonConformanceErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
     },
   });
 
@@ -591,42 +593,18 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         </DialogContent>
       </Dialog>
 
-      {/* 반려 다이얼로그 */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('detail.dialog.rejectTitle')}</DialogTitle>
-            <DialogDescription>{t('detail.dialog.rejectDescription')}</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            placeholder={t('detail.dialog.rejectReasonPlaceholder')}
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            rows={3}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              {t('detail.dialog.rejectCancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (!rejectionReason.trim()) {
-                  toast({ title: t('toasts.rejectionReasonRequired'), variant: 'destructive' });
-                  return;
-                }
-                rejectMutation.mutate({ rejectionReason });
-              }}
-              disabled={rejectMutation.isPending}
-              loading={rejectMutation.isPending}
-            >
-              {rejectMutation.isPending
-                ? t('detail.dialog.rejectProcessing')
-                : t('detail.dialog.rejectSubmit')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 반려 모달 — RejectModal SSOT (mode='domain') */}
+      <RejectModal
+        mode="domain"
+        isOpen={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={async (reason: string) => {
+          await rejectMutation.mutateAsync({ rejectionReason: reason });
+        }}
+        title={t('detail.dialog.rejectTitle')}
+        description={t('detail.dialog.rejectDescription')}
+        submitLabel={t('detail.dialog.rejectSubmit')}
+      />
 
       {/* NC 편집 다이얼로그 */}
       {nc && <NCEditDialog nc={nc} open={showEditDialog} onOpenChange={setShowEditDialog} />}

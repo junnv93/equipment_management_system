@@ -863,6 +863,7 @@
     "approval": {
       "approve": "Approve",
       "reject": "Reject",
+      "rejectDescription": "Please provide a rejection reason ({min} characters or more).",
       "approveSuccess": "Calibration has been approved.",
       "rejectSuccess": "Calibration has been rejected."
     },
@@ -1586,5 +1587,8 @@
     },
     "loading": "Loading data...",
     "emptySearch": "No search results"
+  },
+  "errors": {
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
   }
 }

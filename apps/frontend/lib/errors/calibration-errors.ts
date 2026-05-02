@@ -4,6 +4,12 @@
  * 백엔드 에러 코드와 1:1 매핑 — 하드코딩 금지, 반드시 이 enum 경유.
  * 코드베이스 패턴: equipment-errors.ts와 동일하게 TypeScript enum 사용.
  */
+import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { extractErrorCode, type ErrorToast } from './disposal-errors';
+
+type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
+
 export enum CalibrationErrorCode {
   FILE_REQUIRED = 'CALIBRATION_FILE_REQUIRED',
   CERTIFICATE_REQUIRED = 'CALIBRATION_CERTIFICATE_REQUIRED',
@@ -39,4 +45,44 @@ export const CALIBRATION_ERROR_I18N_KEY: Record<CalibrationErrorCode, string> = 
 /** API 응답 에러 코드를 i18n 키로 변환 */
 export function getCalibrationErrorI18nKey(code: string): string {
   return CALIBRATION_ERROR_I18N_KEY[code as CalibrationErrorCode] ?? 'calibration.errors.unknown';
+}
+
+/**
+ * Calibration reject defense-in-depth ErrorCode → toast (5-layer SSOT)
+ *
+ * 호출자 useTranslations('equipment') 또는 useTranslations('calibration') —
+ * `errors.rejectionReasonRequired` 키는 양쪽 namespace에 모두 존재(parity).
+ *
+ * @see ErrorCode.CalibrationRejectionReasonRequired
+ */
+const CALIBRATION_REJECT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
+  [ErrorCode.CalibrationRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+};
+
+const CALIBRATION_REJECT_ERROR_I18N_VARS: Partial<
+  Record<ErrorCode, Record<string, string | number | Date>>
+> = {
+  [ErrorCode.CalibrationRejectionReasonRequired]: {
+    min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+  },
+};
+
+export function mapCalibrationErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+  const code = extractErrorCode(error);
+  const errorCode = code as ErrorCode | null;
+
+  if (errorCode && CALIBRATION_REJECT_ERROR_I18N_KEYS[errorCode]) {
+    return {
+      title: t('errors.title'),
+      description: t(
+        CALIBRATION_REJECT_ERROR_I18N_KEYS[errorCode]!,
+        CALIBRATION_REJECT_ERROR_I18N_VARS[errorCode]
+      ),
+    };
+  }
+
+  return {
+    title: t('errors.title'),
+    description: error instanceof Error ? error.message : String(error),
+  };
 }

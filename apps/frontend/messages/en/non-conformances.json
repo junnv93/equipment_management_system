@@ -510,5 +510,8 @@
       "updateError": "Failed to update record.",
       "photoPartialFailed": "{failed} photo(s) failed to upload. Others were saved."
     }
+  },
+  "errors": {
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
   }
 }

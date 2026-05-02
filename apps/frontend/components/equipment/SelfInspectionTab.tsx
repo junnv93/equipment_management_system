@@ -23,8 +23,6 @@ import { FORM_CATALOG, Permission } from '@equipment-management/shared-constants
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -43,14 +41,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -84,6 +74,9 @@ import {
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import RejectModal from '@/components/approvals/RejectModal';
+import { useToast } from '@/components/ui/use-toast';
+import { mapSelfInspectionErrorToToast } from '@/lib/errors/self-inspection-errors';
 import type { SelfInspectionStatus } from '@equipment-management/schemas';
 
 const SelfInspectionFormDialog = dynamic(
@@ -111,7 +104,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const [editTarget, setEditTarget] = useState<SelfInspection | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SelfInspection | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SelfInspection | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
+  const { toast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const canSubmit = can(Permission.SUBMIT_SELF_INSPECTION);
@@ -205,9 +198,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     errorMessage: tSI('toast.rejectError'),
     onSuccessCallback: () => {
       setRejectTarget(null);
-      setRejectReason('');
     },
-    onErrorCallback: (error) => {
+    onErrorCallback: (error: unknown) => {
+      // 5-layer defense-in-depth: ErrorCode 매핑된 i18n 메시지 표시
+      const { title, description } = mapSelfInspectionErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
+      // CAS 충돌 시 reject 모달 닫기 (기존 동작 보존)
       if (isConflictError(error)) setRejectTarget(null);
     },
   });
@@ -447,7 +443,6 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setRejectTarget(inspection);
-                                    setRejectReason('');
                                   }}
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
@@ -573,59 +568,23 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
         />
       )}
 
-      {/* 반려 다이얼로그 (rejectionReason 입력) */}
-      <Dialog
-        open={!!rejectTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRejectTarget(null);
-            setRejectReason('');
-          }
+      {/* 반려 모달 — RejectModal SSOT (mode='domain') */}
+      <RejectModal
+        mode="domain"
+        isOpen={!!rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={async (reason: string) => {
+          if (!rejectTarget) return;
+          await rejectMutation.mutateAsync({
+            id: rejectTarget.id,
+            version: rejectTarget.version,
+            reason,
+          });
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{tSI('rejectDialog.title')}</DialogTitle>
-            <DialogDescription>{tSI('rejectDialog.message')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reject-reason">{tSI('rejectDialog.reasonLabel')}</Label>
-            <Textarea
-              id="reject-reason"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder={tSI('rejectDialog.reasonPlaceholder')}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectTarget(null);
-                setRejectReason('');
-              }}
-            >
-              {tSI('rejectDialog.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={!rejectReason.trim() || rejectMutation.isPending}
-              loading={rejectMutation.isPending}
-              onClick={() => {
-                if (rejectTarget)
-                  rejectMutation.mutate({
-                    id: rejectTarget.id,
-                    version: rejectTarget.version,
-                    reason: rejectReason,
-                  });
-              }}
-            >
-              {tSI('rejectDialog.action')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={tSI('rejectDialog.title')}
+        description={tSI('rejectDialog.message')}
+        submitLabel={tSI('rejectDialog.action')}
+      />
 
       {/* 삭제 확인 다이얼로그 */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

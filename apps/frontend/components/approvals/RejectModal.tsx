@@ -37,6 +37,9 @@ import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
  *
  * mode='single': 단건 반려 (item 필요, onConfirm 콜백)
  * mode='bulk':   일괄 반려 (count만 필요, onBulkConfirm 콜백)
+ * mode='domain': 도메인 일반 반려 — 호출자가 t() 처리된 string으로 title/description 주입
+ *                 (D7: i18n 결합 최소화 — RejectModal은 useTranslations('approvals')만 보유,
+ *                 도메인 i18n namespace는 호출자가 자체 t로 처리)
  *
  * 검증 SSOT: RejectReasonSchema (min/max via Zod)
  * state 단일화: useActionState 폐기 → local useState만 사용
@@ -55,6 +58,20 @@ type RejectModalProps =
       isOpen: boolean;
       onClose: () => void;
       onBulkConfirm: (reason: string) => Promise<void>;
+    }
+  | {
+      mode: 'domain';
+      isOpen: boolean;
+      onClose: () => void;
+      onConfirm: (reason: string) => Promise<void>;
+      /** 호출자가 t() 처리된 string 주입 (예: t('equipmentImport.rejectDialog.title')) */
+      title: string;
+      /** 호출자가 t() 처리된 string 주입 */
+      description: string;
+      /** 제출 버튼 텍스트 (기본: title) */
+      submitLabel?: string;
+      /** 도메인은 quick-template 미사용 (기본 false). approvals 5개 템플릿이 도메인-aware하지 않음. */
+      showTemplates?: boolean;
     };
 
 const TEMPLATE_KEYS = ['spec', 'schedule', 'calibration', 'document', 'other'] as const;
@@ -115,9 +132,12 @@ export default function RejectModal(props: RejectModalProps) {
     try {
       if (props.mode === 'single') {
         await props.onConfirm(reason.trim());
-      } else {
+      } else if (props.mode === 'bulk') {
         await props.onBulkConfirm(reason.trim());
         props.onClose();
+      } else {
+        // mode === 'domain'
+        await props.onConfirm(reason.trim());
       }
     } catch {
       setError(t('toasts.rejectError'));
@@ -126,14 +146,21 @@ export default function RejectModal(props: RejectModalProps) {
     }
   };
 
-  const title = mode === 'bulk' ? t('bulk.reject') : t('rejectModal.title');
+  const title =
+    mode === 'bulk' ? t('bulk.reject') : mode === 'domain' ? props.title : t('rejectModal.title');
 
   const description =
     mode === 'bulk'
       ? t('rejectModal.bulk.description', { count: props.count })
-      : t('rejectModal.single.description', {
-          summary: getLocalizedSummary(props.item, t, siteLabels),
-        });
+      : mode === 'domain'
+        ? props.description
+        : t('rejectModal.single.description', {
+            summary: getLocalizedSummary(props.item, t, siteLabels),
+          });
+
+  const submitLabel = mode === 'domain' ? (props.submitLabel ?? props.title) : title;
+
+  const showTemplates = mode === 'single' || (mode === 'domain' && props.showTemplates === true);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -144,8 +171,8 @@ export default function RejectModal(props: RejectModalProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 템플릿 선택 (single 모드에서만 표시) */}
-          {mode === 'single' && (
+          {/* 템플릿 선택 (single 모드 + domain showTemplates=true에서만 표시) */}
+          {showTemplates && (
             <div className="space-y-2">
               <Label htmlFor="template">{t('rejectModal.templatesLabel')}</Label>
               <Select onValueChange={handleTemplateSelect}>
@@ -217,7 +244,7 @@ export default function RejectModal(props: RejectModalProps) {
               className={getApprovalActionButtonClasses('reject')}
             >
               <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
-              {isPending ? t('processing') : title}
+              {isPending ? t('processing') : submitLabel}
             </Button>
           </DialogFooter>
         </form>

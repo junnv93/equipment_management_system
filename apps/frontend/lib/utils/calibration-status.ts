@@ -12,6 +12,7 @@
 import { type LucideIcon } from 'lucide-react';
 import {
   type ManagementMethod,
+  type EquipmentStatus,
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { type CalibrationSeverity, CALIBRATION_BADGE_TOKENS } from '@/lib/design-tokens';
@@ -137,5 +138,5 @@ export function calculateCalibrationStatus(
  */
 export function shouldSkipCalibrationDisplay(status: string | undefined | null): boolean {
   if (!status) return false;
-  return STATUS_SKIP_CALIBRATION_DISPLAY.includes(status);
+  return STATUS_SKIP_CALIBRATION_DISPLAY.includes(status as EquipmentStatus);
 }

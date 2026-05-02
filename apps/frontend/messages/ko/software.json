@@ -329,5 +329,8 @@
     "errorFallback": "다시 시도해주세요",
     "versionConflict": "다른 사용자가 이미 처리했습니다",
     "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요."
+  },
+  "errors": {
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요."
   }
 }

@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
-import { RejectReasonDialog } from '@/components/admin/RejectReasonDialog';
+import RejectModal from '@/components/approvals/RejectModal';
 import { queryKeys } from '@/lib/api/query-config';
 import { CalibrationCacheInvalidation } from '@/lib/api/cache-invalidation';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/components/ui/use-toast';
+import { mapCalibrationErrorToToast } from '@/lib/errors/calibration-errors';
 import { CalibrationApprovalStatusValues as CASVal } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { getCalibrationActionButtonClasses } from '@/lib/design-tokens';
@@ -31,6 +33,7 @@ export function CalibrationApprovalActions({
 }: CalibrationApprovalActionsProps) {
   const t = useTranslations('equipment');
   const { can } = useAuth();
+  const { toast } = useToast();
   const canApprove = can(Permission.APPROVE_CALIBRATION);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
@@ -60,6 +63,10 @@ export function CalibrationApprovalActions({
       (old ?? []).map((cal) => (cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED } : cal)),
     invalidateKeys: [...CalibrationCacheInvalidation.REJECT_KEYS],
     successMessage: t('calibrationHistoryTab.approval.rejectSuccess'),
+    onErrorCallback: (error: unknown) => {
+      const { title, description } = mapCalibrationErrorToToast(error, t);
+      toast({ title, description, variant: 'destructive' });
+    },
   });
 
   // 렌더링 조건: pending_approval 상태 + 승인 권한 보유
@@ -97,17 +104,21 @@ export function CalibrationApprovalActions({
           {t('calibrationHistoryTab.approval.reject')}
         </Button>
       </div>
-      <RejectReasonDialog
-        open={isRejectDialogOpen}
-        onOpenChange={setIsRejectDialogOpen}
-        isPending={rejectMutation.isPending}
-        onConfirm={(reason) =>
-          rejectMutation.mutate({
+      <RejectModal
+        mode="domain"
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        onConfirm={async (reason: string) => {
+          await rejectMutation.mutateAsync({
             id: calibration.id,
             version: calibration.version,
             rejectionReason: reason,
-          })
-        }
+          });
+        }}
+        title={t('calibrationHistoryTab.approval.reject')}
+        description={t('calibrationHistoryTab.approval.rejectDescription', {
+          default: t('calibrationHistoryTab.approval.reject'),
+        })}
       />
     </>
   );

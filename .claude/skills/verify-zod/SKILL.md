@@ -589,20 +589,31 @@ disabled={rejectionReason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_
 
 **검증 명령**:
 ```bash
-# 1. disposal + calibration-plan 도메인 인라인 error code 0건 (격상 완료된 도메인)
+# 1. 격상 완료된 도메인 service 파일 인라인 error code 0건
+# 격상 목록 (2026-05-02 기준): disposal / calibration-plan / equipment services
 grep -rn "code: '[A-Z_]\+'" \
   apps/backend/src/modules/equipment/services/disposal.service.ts \
   apps/backend/src/modules/equipment/disposal.controller.ts \
   apps/backend/src/modules/calibration-plans/calibration-plans.service.ts \
   apps/backend/src/modules/calibration-plans/calibration-plans.controller.ts \
-  2>/dev/null
+  apps/backend/src/modules/equipment/equipment.service.ts \
+  apps/backend/src/modules/equipment/services/equipment-approval.service.ts \
+  apps/backend/src/modules/equipment/services/equipment-attachment.service.ts \
+  apps/backend/src/modules/equipment/services/equipment-history.service.ts \
+  apps/backend/src/modules/equipment/services/repair-history.service.ts \
+  2>/dev/null | grep -v "//"
 # expected: 0 hits — ErrorCode enum 격상 완료
+# 미격상: equipment.controller.ts / interceptors / dto (10건 — 다음 스프린트 대상)
 
 # 2. ErrorCode enum 사용 카운트 (회귀 차단 — 격상 후 줄어들지 않아야)
 grep -c "ErrorCode\." apps/backend/src/modules/equipment/services/disposal.service.ts
 # expected: ≥ 8 (disposal 도메인 codes)
 grep -c "ErrorCode\." apps/backend/src/modules/calibration-plans/calibration-plans.service.ts
 # expected: ≥ 14 (calibration-plan 도메인 codes)
+grep -c "ErrorCode\." apps/backend/src/modules/equipment/equipment.service.ts
+# expected: ≥ 12 (equipment service codes, 2026-05-02 격상)
+grep -c "ErrorCode\." apps/backend/src/modules/equipment/services/equipment-approval.service.ts
+# expected: ≥ 28 (equipment-approval service codes, 2026-05-02 격상)
 
 # 3. service layer fail-close 비대칭 — rejectionReason length 검증 강도 일관성
 grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length" \
@@ -613,14 +624,15 @@ grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length
 # 4. 다른 도메인 인라인 error code (점진적 마이그레이션 추적)
 grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/null \
   | grep -v ".spec.ts" | grep -v "__tests__" | wc -l
-# 본 sprint(2026-05-02): ~270 hits (disposal + calibration-plan 격상 후 잔존).
+# 2026-05-02 equipment services 격상 후 baseline: ~203 hits (equipment services -51건).
 # 이 수치는 시스템 마이그레이션 진행률 추적 metric — 점진적으로 0에 수렴해야 함.
 
 # 5. Frontend mapper coverage — backend ErrorCode 추가 시 frontend mapper 누락 차단
-# (격상 완료된 도메인 한정: disposal + calibration-plan)
+# (격상 완료된 도메인: disposal + calibration-plan + equipment)
 # - `lib/errors/<domain>-errors.ts` 파일 존재 확인 + 매퍼 export 강제
 test -f apps/frontend/lib/errors/disposal-errors.ts && grep -c "mapDisposalErrorToToast" apps/frontend/lib/errors/disposal-errors.ts
 test -f apps/frontend/lib/errors/calibration-plan-errors.ts && grep -c "mapCalibrationPlanErrorToToast" apps/frontend/lib/errors/calibration-plan-errors.ts
+test -f apps/frontend/lib/errors/equipment-errors.ts && grep -c "mapBackendErrorCode" apps/frontend/lib/errors/equipment-errors.ts
 # expected: 각 1+
 
 # 6. Mapper 호출처 적용 — onError에서 mapper 사용 강제 (도메인 dialog/client)
