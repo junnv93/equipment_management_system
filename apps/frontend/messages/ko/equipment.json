@@ -1589,6 +1589,7 @@
     "emptySearch": "검색 결과가 없습니다"
   },
   "errors": {
-    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요."
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요.",
+    "invalidStatusForReject": "현재 상태에서 반려할 수 없습니다."
   }
 }

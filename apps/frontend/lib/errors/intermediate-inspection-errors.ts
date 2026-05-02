@@ -13,6 +13,7 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 
 const INTERMEDIATE_INSPECTION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.IntermediateInspectionRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+  [ErrorCode.IntermediateInspectionInvalidStatusTransition]: 'errors.invalidStatusForReject',
 };
 
 const INTERMEDIATE_INSPECTION_ERROR_I18N_VARS: Partial<

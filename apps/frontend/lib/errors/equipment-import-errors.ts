@@ -20,6 +20,7 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 
 const EQUIPMENT_IMPORT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.EquipmentImportRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+  [ErrorCode.EquipmentImportOnlyPendingCanReject]: 'errors.invalidStatusForReject',
 };
 
 const EQUIPMENT_IMPORT_ERROR_I18N_VARS: Partial<

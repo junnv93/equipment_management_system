@@ -512,6 +512,7 @@
     }
   },
   "errors": {
-    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요."
+    "rejectionReasonRequired": "반려 사유는 {min}자 이상 입력해주세요.",
+    "invalidTransition": "현재 상태에서 전이할 수 없습니다."
   }
 }

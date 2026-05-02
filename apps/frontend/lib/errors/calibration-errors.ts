@@ -57,6 +57,7 @@ export function getCalibrationErrorI18nKey(code: string): string {
  */
 const CALIBRATION_REJECT_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.CalibrationRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+  [ErrorCode.CalibrationOnlyPendingCanReject]: 'errors.invalidStatusForReject',
 };
 
 const CALIBRATION_REJECT_ERROR_I18N_VARS: Partial<

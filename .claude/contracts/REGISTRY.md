@@ -9,6 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
+| `equipment-controller-errorcode-ssot` | equipment controller 인라인 에러코드 7건 격상 + orphaned 3건 제거 | 2026-05-02 |
 
 ---
 

@@ -331,6 +331,7 @@
     "versionConflictDesc": "Data has been updated. Please check the latest status."
   },
   "errors": {
-    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
+    "invalidStatusForReject": "Cannot reject from current status."
   }
 }

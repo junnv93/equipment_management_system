@@ -512,6 +512,7 @@
     }
   },
   "errors": {
-    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
+    "invalidTransition": "Cannot transition from current status."
   }
 }

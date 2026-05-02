@@ -13,6 +13,7 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 
 const CALIBRATION_FACTOR_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.CalibrationFactorRejectionReasonRequired]: 'errors.rejectionReasonRequired',
+  [ErrorCode.CalibrationFactorOnlyPendingCanReject]: 'errors.invalidStatusForReject',
 };
 
 const CALIBRATION_FACTOR_ERROR_I18N_VARS: Partial<

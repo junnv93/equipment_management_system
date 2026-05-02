@@ -961,7 +961,8 @@
     "endpointDeprecated": "This feature is no longer supported. Please use the calibration registration form.",
     "planItemNotExecuted": "Items without a linked calibration record cannot be confirmed.",
     "unknown": "An unknown error occurred.",
-    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
+    "invalidStatusForReject": "Cannot reject from current status."
   },
   "planErrors": {
     "title": "Action Failed",

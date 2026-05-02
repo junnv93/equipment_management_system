@@ -644,6 +644,52 @@ grep -c "mapCalibrationPlanErrorToToast\|calibration-plan-errors" apps/frontend/
 # disposal-errors.ts mapper의 i18n key가 ko/en disposal.json errors namespace에 모두 존재
 # (verify-i18n parity로 자동 보장 — Step 16 보강)
 # manual: grep "errors\." apps/frontend/lib/errors/disposal-errors.ts | extract keys → check messages/{ko,en}/disposal.json existence
+
+# 8. Mapper Partial Record completeness — ErrorCode가 errorCodeToStatusCode에 등록됐지만
+#    어느 도메인 mapper의 Partial<Record<ErrorCode, string>>에도 등재되지 않으면 silent fallback
+#    (generic error.message 노출) — sprint tier-2-rejectmodal-ssot iter 2 WARN-H5 closure 후 추가
+# 도메인 prefix별 ErrorCode → mapper 등재 검증
+# (각 도메인의 ErrorCode prefix와 mapper 파일 매핑 — 점검 대상 sample)
+node -e "
+const fs = require('fs');
+const errorsTs = fs.readFileSync('packages/schemas/src/errors.ts', 'utf-8');
+const codes = [...errorsTs.matchAll(/^\\s+(\\w+)\\s*=\\s*'[A-Z_]+'/gm)].map(m => m[1]);
+// 긴 prefix 우선 정렬 (CalibrationPlan > Calibration prefix collision 회피)
+const mappers = [
+  ['IntermediateInspection', 'apps/frontend/lib/errors/intermediate-inspection-errors.ts'],
+  ['SoftwareValidation', 'apps/frontend/lib/errors/software-validation-errors.ts'],
+  ['CalibrationFactor', 'apps/frontend/lib/errors/calibration-factor-errors.ts'],
+  ['CalibrationPlan', 'apps/frontend/lib/errors/calibration-plan-errors.ts'],
+  ['EquipmentImport', 'apps/frontend/lib/errors/equipment-import-errors.ts'],
+  ['NonConformance', 'apps/frontend/lib/errors/non-conformance-errors.ts'],
+  ['SelfInspection', 'apps/frontend/lib/errors/self-inspection-errors.ts'],
+  ['Calibration', 'apps/frontend/lib/errors/calibration-errors.ts'],
+  ['Disposal', 'apps/frontend/lib/errors/disposal-errors.ts'],
+];
+const gaps = [];
+for (const code of codes) {
+  for (const [prefix, file] of mappers) {
+    if (code.startsWith(prefix) && fs.existsSync(file)) {
+      const content = fs.readFileSync(file, 'utf-8');
+      // domain reject 흐름 ErrorCode는 mapper에 등재되어야 함
+      const isRejectFlow = /Reject|InvalidStatus|InvalidTransition|OnlyPendingCanReject/.test(code);
+      if (isRejectFlow && !content.includes('ErrorCode.' + code)) {
+        gaps.push({ code, file, prefix });
+      }
+      break;
+    }
+  }
+}
+if (gaps.length > 0) {
+  console.error('FAIL: mapper Partial Record completeness gap:');
+  gaps.forEach(g => console.error('  ' + g.code + ' missing in ' + g.file));
+  process.exit(1);
+} else {
+  console.log('PASS: all reject-flow ErrorCodes registered in domain mappers');
+}
+"
+# expected: PASS — reject 흐름 ErrorCode (RejectionReasonRequired/InvalidStatusForReject 등)는
+# 각 도메인 mapper의 I18N_KEYS Partial Record에 등재되어 generic fallback 회피
 ```
 
 **PASS 기준**:
@@ -654,6 +700,7 @@ grep -c "mapCalibrationPlanErrorToToast\|calibration-plan-errors" apps/frontend/
 - 명령 5 (mapper SSOT 존재): 각 도메인 ≥ 1 export
 - 명령 6 (mapper 호출처 적용): 각 dialog/client ≥ 1 사용 — UX 갭 (한국어 backend 메시지 노출) 0건
 - 명령 7 (i18n namespace 정합성): mapper i18n key가 ko/en parity 만족 (verify-i18n과 시너지)
+- 명령 8 (mapper Partial Record completeness): reject 흐름 ErrorCode(`*RejectionReasonRequired`/`*InvalidStatusTransition`/`*OnlyPendingCanReject`/`*InvalidTransition`)가 각 도메인 mapper에 등재 — silent fallback (generic `error.message` 노출) 0건 강제. **2026-05-02 tier-2-rejectmodal-ssot iter 2 WARN-H5 closure**: ErrorCode enum + errorCodeToStatusCode 등록만 있고 mapper Partial Record 미등재 시 i18n 메시지 노출 안 됨 → 검증 자동화.
 
 **FAIL 기준**:
 - disposal/calibration-plan 도메인에서 인라인 `code: 'X'` 발견 → ErrorCode enum 등록 + ErrorCode.X 사용으로 격상

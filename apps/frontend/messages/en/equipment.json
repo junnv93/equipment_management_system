@@ -1589,6 +1589,7 @@
     "emptySearch": "No search results"
   },
   "errors": {
-    "rejectionReasonRequired": "Rejection reason must be at least {min} characters."
+    "rejectionReasonRequired": "Rejection reason must be at least {min} characters.",
+    "invalidStatusForReject": "Cannot reject from current status."
   }
 }
