@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../../modules/auth/auth.service';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * SSE 전용 JWT 인증 가드
@@ -40,7 +41,7 @@ export class SseJwtAuthGuard implements CanActivate {
 
     if (!token) {
       throw new UnauthorizedException({
-        code: 'AUTH_SSE_TOKEN_REQUIRED',
+        code: ErrorCode.AuthSseTokenRequired,
         message: 'SSE authentication token is required.',
       });
     }
@@ -54,7 +55,7 @@ export class SseJwtAuthGuard implements CanActivate {
       // refresh token은 거부 (access token만 허용)
       if (payload.type === 'refresh') {
         throw new UnauthorizedException({
-          code: 'AUTH_ACCESS_TOKEN_ONLY',
+          code: ErrorCode.AuthAccessTokenOnly,
           message: 'Only access tokens can be used.',
         });
       }
@@ -62,7 +63,7 @@ export class SseJwtAuthGuard implements CanActivate {
       // 블랙리스트 확인
       if (await this.authService.isTokenBlacklisted(token)) {
         throw new UnauthorizedException({
-          code: 'AUTH_TOKEN_BLACKLISTED',
+          code: ErrorCode.AuthTokenBlacklisted,
           message: 'This token has been invalidated by logout.',
         });
       }
@@ -87,7 +88,7 @@ export class SseJwtAuthGuard implements CanActivate {
         `SSE JWT 검증 실패: ${error instanceof Error ? error.message : String(error)}`
       );
       throw new UnauthorizedException({
-        code: 'AUTH_INVALID_TOKEN',
+        code: ErrorCode.AuthInvalidToken,
         message: 'Invalid authentication token.',
       });
     }

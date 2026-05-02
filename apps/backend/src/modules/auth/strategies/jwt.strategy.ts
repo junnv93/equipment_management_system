@@ -8,6 +8,7 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { UsersService } from '../../users/users.service';
 import { derivePermissionsFromRoles } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * JWT 토큰 페이로드 타입
@@ -84,7 +85,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (token && (await this.blacklist.isBlacklisted(token))) {
       throw new UnauthorizedException({
-        code: 'AUTH_TOKEN_BLACKLISTED',
+        code: ErrorCode.AuthTokenBlacklisted,
         message: 'This token has been invalidated by logout.',
       });
     }
@@ -105,7 +106,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!isActive) {
       throw new UnauthorizedException({
-        code: 'AUTH_USER_INACTIVE',
+        code: ErrorCode.AuthUserInactive,
         message: 'User account is deactivated.',
       });
     }

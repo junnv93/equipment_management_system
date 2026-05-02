@@ -626,7 +626,15 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
 
     // 리소스 에러
     NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    ENTITY_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
     EQUIPMENT_NOT_FOUND: EquipmentErrorCode.EQUIPMENT_NOT_FOUND,
+    CABLE_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    NC_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    SOFTWARE_VALIDATION_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    TEST_SOFTWARE_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    INTERMEDIATE_INSPECTION_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    SELF_INSPECTION_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    TEST_PLAN_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
     DOCUMENT_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
     ATTACHMENT_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
     HISTORY_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,

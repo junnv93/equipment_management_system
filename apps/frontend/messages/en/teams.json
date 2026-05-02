@@ -209,5 +209,11 @@
     "groupAriaLabel": "Team members",
     "moreAriaLabel": "View {count} more members",
     "totalMembers": "{count} team members total"
+  },
+  "errors": {
+    "title": "Error",
+    "notFound": "Team not found.",
+    "nameAlreadyExists": "This team name is already in use.",
+    "leaderSiteMismatch": "The team leader's site does not match the team's site."
   }
 }

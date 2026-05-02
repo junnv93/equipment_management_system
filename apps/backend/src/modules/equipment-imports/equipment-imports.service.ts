@@ -594,7 +594,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   ): Promise<EquipmentImport> {
     if (version === undefined) {
       throw new BadRequestException({
-        code: 'VERSION_REQUIRED',
+        code: ErrorCode.EquipmentImportVersionRequired,
         message: 'version is required for concurrent modification protection.',
       });
     }

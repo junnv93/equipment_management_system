@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { Permission } from '@equipment-management/shared-constants';
 import {
+  ErrorCode,
   INSPECTION_TYPE_VALUES,
   InspectionTypeEnum,
   type InspectionType,
@@ -68,7 +69,7 @@ export class EquipmentInspectionTemplateController {
     const parsed = InspectionTypeEnum.safeParse(type);
     if (!parsed.success) {
       throw new BadRequestException({
-        code: 'INVALID_INSPECTION_TYPE',
+        code: ErrorCode.InvalidInspectionType,
         message: `Invalid inspection type. Must be one of: ${INSPECTION_TYPE_VALUES.join(', ')}.`,
         received: type,
       });

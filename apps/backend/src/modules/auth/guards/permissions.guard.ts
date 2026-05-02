@@ -13,6 +13,7 @@ import { SKIP_PERMISSIONS_KEY } from '../decorators/skip-permissions.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ROLE_PERMISSIONS } from '../rbac/role-permissions';
 import { USER_ROLE_VALUES } from '../rbac/roles.enum';
+import { ErrorCode } from '@equipment-management/schemas';
 import { JwtUser } from '../../../types/auth';
 
 /**
@@ -99,7 +100,7 @@ export class PermissionsGuard implements CanActivate {
           `[SECURITY-DENY] Blocked access to ${endpoint} (missing @RequirePermissions)`
         );
         throw new ForbiddenException({
-          code: 'AUTH_PERMISSIONS_NOT_CONFIGURED',
+          code: ErrorCode.AuthPermissionsNotConfigured,
           message: 'Permissions are not configured for this endpoint.',
         });
       }
@@ -109,7 +110,7 @@ export class PermissionsGuard implements CanActivate {
 
     if (!user || !user.roles) {
       throw new ForbiddenException({
-        code: 'AUTH_REQUIRED',
+        code: ErrorCode.AuthRequired,
         message: 'Authentication is required.',
       });
     }
@@ -126,7 +127,7 @@ export class PermissionsGuard implements CanActivate {
 
     if (!hasAllRequiredPermissions) {
       throw new ForbiddenException({
-        code: 'AUTH_INSUFFICIENT_PERMISSIONS',
+        code: ErrorCode.AuthInsufficientPermissions,
         message: 'You do not have permission to perform this action.',
       });
     }

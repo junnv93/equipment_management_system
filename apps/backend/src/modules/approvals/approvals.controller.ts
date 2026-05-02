@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
-import { UserRole } from '@equipment-management/schemas';
+import { UserRole, ErrorCode } from '@equipment-management/schemas';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
 import {
   ApprovalsService,
@@ -53,7 +53,7 @@ export class ApprovalsController {
 
     if (!userId) {
       throw new UnauthorizedException({
-        code: 'AUTH_INVALID_SESSION',
+        code: ErrorCode.AuthInvalidSession,
         message: 'Authentication info is invalid. Please log in again.',
       });
     }
@@ -90,7 +90,7 @@ export class ApprovalsController {
 
     if (!userId) {
       throw new UnauthorizedException({
-        code: 'AUTH_INVALID_SESSION',
+        code: ErrorCode.AuthInvalidSession,
         message: 'Authentication info is invalid. Please log in again.',
       });
     }

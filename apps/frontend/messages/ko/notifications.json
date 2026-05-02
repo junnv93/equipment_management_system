@@ -64,21 +64,42 @@
   "category": {
     "title": "알림 유형",
     "description": "수신할 알림 카테고리를 선택하세요.",
-    "checkout": { "label": "반출", "description": "반출 요청, 승인, 반려, 반입 관련 알림" },
-    "calibration": { "label": "교정", "description": "교정 기록 등록, 승인, 기한 임박/초과 알림" },
+    "checkout": {
+      "label": "반출",
+      "description": "반출 요청, 승인, 반려, 반입 관련 알림"
+    },
+    "calibration": {
+      "label": "교정",
+      "description": "교정 기록 등록, 승인, 기한 임박/초과 알림"
+    },
     "calibration_plan": {
       "label": "교정계획",
       "description": "교정계획서 제출/검토/승인/반려 알림"
     },
-    "non_conformance": { "label": "부적합", "description": "부적합 등록, 조치 완료, 종료 알림" },
-    "disposal": { "label": "폐기", "description": "폐기 요청, 검토, 승인 알림" },
-    "equipment_import": { "label": "장비 반입", "description": "장비 반입 요청, 승인 알림" },
-    "equipment": { "label": "장비", "description": "장비 등록, 수정, 상태 변경 알림" },
+    "non_conformance": {
+      "label": "부적합",
+      "description": "부적합 등록, 조치 완료, 종료 알림"
+    },
+    "disposal": {
+      "label": "폐기",
+      "description": "폐기 요청, 검토, 승인 알림"
+    },
+    "equipment_import": {
+      "label": "장비 반입",
+      "description": "장비 반입 요청, 승인 알림"
+    },
+    "equipment": {
+      "label": "장비",
+      "description": "장비 등록, 수정, 상태 변경 알림"
+    },
     "software": {
       "label": "소프트웨어",
       "description": "소프트웨어 등록, 업데이트, 라이선스 관련 알림"
     },
-    "system": { "label": "시스템", "description": "시스템 점검 및 중요 공지 알림" }
+    "system": {
+      "label": "시스템",
+      "description": "시스템 점검 및 중요 공지 알림"
+    }
   },
   "comingSoon": "준비중",
   "list": {
@@ -161,5 +182,9 @@
         "error": "완료 처리 실패"
       }
     }
+  },
+  "errors": {
+    "title": "오류",
+    "notFound": "알림을 찾을 수 없습니다."
   }
 }

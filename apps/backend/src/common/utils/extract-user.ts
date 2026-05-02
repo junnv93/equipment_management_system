@@ -12,6 +12,7 @@
 
 import { UnauthorizedException } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../../types/auth';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * JWT 토큰에서 사용자 ID를 추출합니다.
@@ -30,7 +31,7 @@ export function extractUserId(req: AuthenticatedRequest): string {
 
   if (!userId) {
     throw new UnauthorizedException({
-      code: 'AUTH_USER_ID_MISSING',
+      code: ErrorCode.AuthUserIdMissing,
       message: 'User identity could not be extracted from the authentication token.',
     });
   }

@@ -96,7 +96,10 @@
       "label": "Software",
       "description": "Software registration, update, and license notifications"
     },
-    "system": { "label": "System", "description": "System maintenance and important announcements" }
+    "system": {
+      "label": "System",
+      "description": "System maintenance and important announcements"
+    }
   },
   "comingSoon": "Coming Soon",
   "list": {
@@ -179,5 +182,9 @@
         "error": "Completion Failed"
       }
     }
+  },
+  "errors": {
+    "title": "Error",
+    "notFound": "Notification not found."
   }
 }

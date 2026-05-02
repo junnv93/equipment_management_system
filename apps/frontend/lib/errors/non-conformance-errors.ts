@@ -17,6 +17,11 @@ const NON_CONFORMANCE_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.NonConformanceInvalidTransition]: 'errors.invalidTransition',
   [ErrorCode.NcClosedCannotUpdate]: 'errors.closedCannotUpdate',
   [ErrorCode.NcClosedCannotLinkRepair]: 'errors.closedCannotLinkRepair',
+  [ErrorCode.NcTypeRequired]: 'errors.ncTypeRequired',
+  [ErrorCode.NcEquipmentAlreadyNonConforming]: 'errors.equipmentAlreadyNonConforming',
+  [ErrorCode.NcRepairRecordRequired]: 'errors.repairRecordRequired',
+  [ErrorCode.NcRecalibrationRequired]: 'errors.recalibrationRequired',
+  [ErrorCode.NcRepairAlreadyLinked]: 'errors.repairAlreadyLinked',
 };
 
 const NON_CONFORMANCE_ERROR_I18N_VARS: Partial<

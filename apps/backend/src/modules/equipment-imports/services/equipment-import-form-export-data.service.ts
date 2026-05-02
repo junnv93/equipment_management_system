@@ -54,7 +54,7 @@ export class EquipmentImportFormExportDataService {
     const importId = params.importId;
     if (!importId) {
       throw new BadRequestException({
-        code: 'MISSING_IMPORT_ID',
+        code: ErrorCode.ImportMissingId,
         message: 'importId query parameter is required for equipment import export.',
       });
     }
@@ -74,7 +74,7 @@ export class EquipmentImportFormExportDataService {
 
     if (imp.sourceType === EquipmentImportSourceValues.RENTAL) {
       throw new BadRequestException({
-        code: 'INVALID_SOURCE_TYPE',
+        code: ErrorCode.ImportInvalidSourceType,
         message:
           'Rental imports must use QP-18-06 (장비반출입확인서). QP-18-10 is for internal shared equipment only.',
       });

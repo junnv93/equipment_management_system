@@ -52,10 +52,12 @@ import {
   CALIBRATION_THRESHOLDS,
   Permission,
   CALIBRATION_DATA_SCOPE,
+  FILE_UPLOAD_LIMITS,
 } from '@equipment-management/shared-constants';
 import {
   SiteEnum,
   IntermediateCheckStatusEnum,
+  ErrorCode,
   type CalibrationRegisteredByRole,
   type IntermediateCheckStatus,
 } from '@equipment-management/schemas';
@@ -124,7 +126,12 @@ export class CalibrationController {
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @Throttle(throttleAllNamed(THROTTLE_PRESETS.UPLOAD))
   @UseInterceptors(
-    FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024, files: 10 } })
+    FilesInterceptor('files', FILE_UPLOAD_LIMITS.MAX_FILE_COUNT, {
+      limits: {
+        fileSize: FILE_UPLOAD_LIMITS.MAX_FILE_SIZE,
+        files: FILE_UPLOAD_LIMITS.MAX_FILE_COUNT,
+      },
+    })
   )
   @AuditLog({
     action: 'create',
@@ -140,7 +147,7 @@ export class CalibrationController {
   ): Promise<{ calibration: CalibrationRecord; documents: DocumentRecord[] }> {
     if (!files || files.length === 0) {
       throw new BadRequestException({
-        code: 'CALIBRATION_FILE_REQUIRED',
+        code: ErrorCode.CalibrationFileRequired,
         message: '교정성적서 파일이 필요합니다.',
       });
     }
@@ -150,7 +157,7 @@ export class CalibrationController {
       parsedPayload = await createCalibrationSchema.parseAsync(JSON.parse(payloadRaw ?? '{}'));
     } catch {
       throw new BadRequestException({
-        code: 'CALIBRATION_PAYLOAD_INVALID',
+        code: ErrorCode.CalibrationPayloadInvalid,
         message: '교정 등록 데이터가 유효하지 않습니다.',
       });
     }
@@ -166,7 +173,7 @@ export class CalibrationController {
 
     if (documentTypes.length !== files.length) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_COUNT_MISMATCH',
+        code: ErrorCode.DocumentTypeCountMismatch,
         message: `documentTypes 개수(${documentTypes.length})가 파일 개수(${files.length})와 다릅니다.`,
       });
     }
@@ -174,7 +181,7 @@ export class CalibrationController {
     const invalidTypes = documentTypes.filter((t) => !DOCUMENT_TYPE_VALUES.includes(t));
     if (invalidTypes.length > 0) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_INVALID',
+        code: ErrorCode.DocumentTypeInvalid,
         message: `유효하지 않은 documentType: ${invalidTypes.join(', ')}`,
       });
     }
@@ -300,7 +307,7 @@ export class CalibrationController {
       const parsed = IntermediateCheckStatusEnum.safeParse(status);
       if (!parsed.success) {
         throw new BadRequestException({
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.ValidationError,
           message: `Invalid status value: ${status}. Allowed values: ${IntermediateCheckStatusEnum.options.join(', ')}`,
         });
       }
@@ -441,7 +448,7 @@ export class CalibrationController {
     const fromDateObj = fromDate ? new Date(fromDate) : new Date();
     if (isNaN(fromDateObj.getTime())) {
       throw new BadRequestException({
-        code: 'VALIDATION_ERROR',
+        code: ErrorCode.ValidationError,
         message: `Invalid fromDate value: ${fromDate}. Must be a valid ISO date string.`,
       });
     }
@@ -451,7 +458,7 @@ export class CalibrationController {
       toDateObj = new Date(toDate);
       if (isNaN(toDateObj.getTime())) {
         throw new BadRequestException({
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.ValidationError,
           message: `Invalid toDate value: ${toDate}. Must be a valid ISO date string.`,
         });
       }
@@ -577,7 +584,7 @@ export class CalibrationController {
   ): Promise<never> {
     this.logger.warn(`Deprecated endpoint called: POST /calibration/${uuid}/certificate`);
     throw new GoneException({
-      code: 'ENDPOINT_DEPRECATED',
+      code: ErrorCode.EndpointDeprecated,
       message: 'Use POST /calibration (multipart) instead.',
     });
   }
@@ -594,7 +601,12 @@ export class CalibrationController {
   @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024, files: 10 } })
+    FilesInterceptor('files', FILE_UPLOAD_LIMITS.MAX_FILE_COUNT, {
+      limits: {
+        fileSize: FILE_UPLOAD_LIMITS.MAX_FILE_SIZE,
+        files: FILE_UPLOAD_LIMITS.MAX_FILE_COUNT,
+      },
+    })
   )
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'upload', entityType: 'calibration', entityIdPath: 'params.uuid' })
@@ -610,7 +622,7 @@ export class CalibrationController {
 
     if (!files || files.length === 0) {
       throw new BadRequestException({
-        code: 'CALIBRATION_FILE_REQUIRED',
+        code: ErrorCode.CalibrationFileRequired,
         message: 'No files were uploaded.',
       });
     }
@@ -627,7 +639,7 @@ export class CalibrationController {
     const invalidTypes = documentTypes.filter((t) => !DOCUMENT_TYPE_VALUES.includes(t));
     if (invalidTypes.length > 0) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_INVALID',
+        code: ErrorCode.DocumentTypeInvalid,
         message: `Invalid documentType: ${invalidTypes.join(', ')}. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
       });
     }
@@ -635,7 +647,7 @@ export class CalibrationController {
     // 파일 수와 documentTypes 수 불일치 → 400 에러 (사일런트 폴백 방지)
     if (documentTypes.length !== files.length) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_COUNT_MISMATCH',
+        code: ErrorCode.DocumentTypeCountMismatch,
         message: `File count (${files.length}) and documentTypes count (${documentTypes.length}) must match.`,
       });
     }
@@ -696,7 +708,7 @@ export class CalibrationController {
     // SSOT 기반 documentType 검증 (documents.controller.ts와 동일 패턴)
     if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
       throw new BadRequestException({
-        code: 'INVALID_DOCUMENT_TYPE',
+        code: ErrorCode.InvalidDocumentType,
         message: `Invalid document type: ${type}`,
       });
     }

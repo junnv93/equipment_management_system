@@ -73,7 +73,7 @@ export class SoftwareValidationExportDataService {
   ): Promise<SoftwareValidationExportData> {
     if (!validationId) {
       throw new BadRequestException({
-        code: 'MISSING_VALIDATION_ID',
+        code: ErrorCode.SoftwareValidationMissingId,
         message: 'validationId query parameter is required for software validation export.',
       });
     }
@@ -125,7 +125,7 @@ export class SoftwareValidationExportDataService {
     // draft / rejected 상태는 내보내기 불가 (절차서: 승인 완료된 문서만 공식 기록)
     if (!EXPORTABLE_STATUSES.includes(record.status as (typeof EXPORTABLE_STATUSES)[number])) {
       throw new BadRequestException({
-        code: 'NON_EXPORTABLE_VALIDATION_STATUS',
+        code: ErrorCode.SoftwareValidationNonExportableStatus,
         message: `Status '${record.status}' is not exportable. Must be submitted, approved, or quality_approved.`,
       });
     }

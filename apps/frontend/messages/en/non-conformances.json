@@ -518,6 +518,11 @@
     "closedCannotLinkRepair": "Cannot link repair to a closed non-conformance.",
     "title": "Error",
     "genericError": "An error occurred while processing the request.",
-    "notFound": "Non-conformance record not found."
+    "notFound": "Non-conformance record not found.",
+    "ncTypeRequired": "Non-conformance type (ncType) is required.",
+    "equipmentAlreadyNonConforming": "This equipment is already in a non-conforming state.",
+    "repairRecordRequired": "A repair record must be linked before closing.",
+    "recalibrationRequired": "A recalibration record must be linked before closing.",
+    "repairAlreadyLinked": "A repair record is already linked."
   }
 }

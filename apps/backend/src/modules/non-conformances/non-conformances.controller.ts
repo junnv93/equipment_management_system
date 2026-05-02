@@ -28,7 +28,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { NonConformancesService } from './non-conformances.service';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
-import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
+import { ErrorCode, DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import {
   CreateNonConformanceDto,
@@ -292,7 +292,7 @@ export class NonConformancesController {
     const version = parseInt(versionParam, 10);
     if (isNaN(version) || version < 1) {
       throw new BadRequestException({
-        code: 'VALIDATION_ERROR',
+        code: ErrorCode.ValidationError,
         message: 'version query parameter is required and must be a positive integer',
       });
     }
@@ -322,7 +322,7 @@ export class NonConformancesController {
 
     if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
       throw new BadRequestException({
-        code: 'INVALID_DOCUMENT_TYPE',
+        code: ErrorCode.InvalidDocumentType,
         message: `Invalid document type: ${type}`,
       });
     }
@@ -360,13 +360,13 @@ export class NonConformancesController {
   ): Promise<{ document: DocumentRecord; message: string }> {
     if (!file) {
       throw new BadRequestException({
-        code: 'DOCUMENT_FILE_REQUIRED',
+        code: ErrorCode.DocumentFileRequired,
         message: 'File is required.',
       });
     }
     if (!documentType || !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(documentType)) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_INVALID',
+        code: ErrorCode.DocumentTypeInvalid,
         message: `Invalid documentType. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
       });
     }

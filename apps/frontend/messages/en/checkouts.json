@@ -893,5 +893,12 @@
     "return": {
       "label": "Return"
     }
+  },
+  "errors": {
+    "title": "Error",
+    "notFound": "Checkout record not found.",
+    "alreadyApproved": "This checkout request has already been approved.",
+    "notPending": "This checkout request is not in a pending state.",
+    "versionConflict": "Another user has modified this data. Loading the latest version."
   }
 }

@@ -1,0 +1,12 @@
+{
+  "errors": {
+    "title": "Error",
+    "notFound": "User not found.",
+    "emailAlreadyExists": "This email address is already in use.",
+    "noRoleChangePermission": "You do not have permission to change roles.",
+    "cannotChangeOwnRole": "You cannot change your own role.",
+    "cannotChangeSeniorRole": "You cannot change the role of a user with a higher role.",
+    "teamScopeOnly": "Only team-scoped permissions are allowed.",
+    "siteScopeOnly": "Only site-scoped permissions are allowed."
+  }
+}

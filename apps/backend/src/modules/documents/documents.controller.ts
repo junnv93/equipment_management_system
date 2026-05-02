@@ -29,7 +29,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { Permission } from '@equipment-management/shared-constants';
-import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
+import { ErrorCode, DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { buildContentDisposition } from '../../common/http/content-disposition.util';
@@ -89,14 +89,14 @@ export class DocumentsController {
   ): Promise<{ document: DocumentRecord; message: string }> {
     if (!file) {
       throw new BadRequestException({
-        code: 'DOCUMENT_FILE_REQUIRED',
+        code: ErrorCode.DocumentFileRequired,
         message: 'File is required.',
       });
     }
 
     if (!documentType || !DOCUMENT_TYPE_VALUES.includes(documentType as DocumentType)) {
       throw new BadRequestException({
-        code: 'DOCUMENT_TYPE_INVALID',
+        code: ErrorCode.DocumentTypeInvalid,
         message: `Invalid documentType. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
       });
     }
@@ -106,7 +106,7 @@ export class DocumentsController {
     // 400 + 명확한 메시지로 전용 경로 유도.
     if (nonConformanceId) {
       throw new BadRequestException({
-        code: 'NC_ATTACHMENT_WRONG_ENDPOINT',
+        code: ErrorCode.NcAttachmentWrongEndpoint,
         message:
           'Non-conformance attachments must use POST /non-conformances/:id/attachments (dedicated permission boundary).',
       });
@@ -165,40 +165,43 @@ export class DocumentsController {
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (equipmentId && !uuidPattern.test(equipmentId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid equipmentId format.',
       });
     }
     if (calibrationId && !uuidPattern.test(calibrationId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid calibrationId format.',
       });
     }
     if (requestId && !uuidPattern.test(requestId)) {
-      throw new BadRequestException({ code: 'INVALID_UUID', message: 'Invalid requestId format.' });
+      throw new BadRequestException({
+        code: ErrorCode.InvalidUuid,
+        message: 'Invalid requestId format.',
+      });
     }
     if (softwareValidationId && !uuidPattern.test(softwareValidationId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid softwareValidationId format.',
       });
     }
     if (intermediateInspectionId && !uuidPattern.test(intermediateInspectionId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid intermediateInspectionId format.',
       });
     }
     if (selfInspectionId && !uuidPattern.test(selfInspectionId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid selfInspectionId format.',
       });
     }
     if (nonConformanceId && !uuidPattern.test(nonConformanceId)) {
       throw new BadRequestException({
-        code: 'INVALID_UUID',
+        code: ErrorCode.InvalidUuid,
         message: 'Invalid nonConformanceId format.',
       });
     }
@@ -206,7 +209,7 @@ export class DocumentsController {
     // documentType 검증 — 무효값 시 400 에러
     if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
       throw new BadRequestException({
-        code: 'INVALID_DOCUMENT_TYPE',
+        code: ErrorCode.InvalidDocumentType,
         message: `Invalid document type: ${type}`,
       });
     }
@@ -359,7 +362,7 @@ export class DocumentsController {
   ): Promise<DocumentRecord> {
     if (!file) {
       throw new BadRequestException({
-        code: 'DOCUMENT_FILE_REQUIRED',
+        code: ErrorCode.DocumentFileRequired,
         message: 'No file was uploaded.',
       });
     }

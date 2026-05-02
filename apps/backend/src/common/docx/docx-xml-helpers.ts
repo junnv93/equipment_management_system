@@ -1,4 +1,5 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import type PizZip from 'pizzip';
 import type { DocxTemplate } from './docx-template.util';
 import type { IStorageProvider } from '../storage/storage.interface';
@@ -26,7 +27,7 @@ const helperLogger = new Logger('DocxXmlHelper');
 export class FormRenderError extends InternalServerErrorException {
   constructor(formLabel: string, context: string, details: string) {
     super({
-      code: 'FORM_TEMPLATE_RENDER_FAILED',
+      code: ErrorCode.FormTemplateRenderFailed,
       formLabel,
       context,
       message: `[${formLabel}] ${context}: ${details}`,

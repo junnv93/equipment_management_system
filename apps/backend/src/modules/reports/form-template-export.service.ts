@@ -5,6 +5,7 @@ import {
   isFormImplemented,
   isFormDedicatedEndpoint,
 } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { IntermediateInspectionExportDataService } from '../intermediate-inspections/services/intermediate-inspection-export-data.service';
 import { IntermediateInspectionRendererService } from '../intermediate-inspections/services/intermediate-inspection-renderer.service';
@@ -93,21 +94,21 @@ export class FormTemplateExportService {
 
     if (!catalogEntry) {
       throw new BadRequestException({
-        code: 'INVALID_FORM_NUMBER',
+        code: ErrorCode.FormInvalidFormNumber,
         message: `Invalid form number: ${formNumber}. Valid range: UL-QP-18-01 ~ UL-QP-18-11`,
       });
     }
 
     if (isFormDedicatedEndpoint(formNumber)) {
       throw new BadRequestException({
-        code: 'USE_DEDICATED_ENDPOINT',
+        code: ErrorCode.FormUseDedicatedEndpoint,
         message: `${formNumber} ${catalogEntry.name}은(는) 전용 엔드포인트를 사용하세요. (예: GET /api/equipment/:uuid/history-card)`,
       });
     }
 
     if (!isFormImplemented(formNumber)) {
       throw new NotImplementedException({
-        code: 'FORM_NOT_IMPLEMENTED',
+        code: ErrorCode.FormNotImplemented,
         message: `${formNumber} ${catalogEntry.name} 내보내기는 아직 구현되지 않았습니다.`,
       });
     }
@@ -130,7 +131,7 @@ export class FormTemplateExportService {
     const exporter = exporters[formNumber];
     if (!exporter) {
       throw new NotImplementedException({
-        code: 'FORM_NOT_IMPLEMENTED',
+        code: ErrorCode.FormNotImplemented,
         message: `${formNumber} exporter is registered as implemented but has no handler.`,
       });
     }
@@ -181,7 +182,7 @@ export class FormTemplateExportService {
     const inspectionId = params.inspectionId;
     if (!inspectionId) {
       throw new BadRequestException({
-        code: 'MISSING_INSPECTION_ID',
+        code: ErrorCode.FormMissingInspectionId,
         message: 'inspectionId query parameter is required for intermediate inspection export.',
       });
     }
@@ -207,7 +208,7 @@ export class FormTemplateExportService {
     const equipmentId = params.equipmentId;
     if (!equipmentId) {
       throw new BadRequestException({
-        code: 'MISSING_EQUIPMENT_ID',
+        code: ErrorCode.FormMissingEquipmentId,
         message: 'equipmentId query parameter is required for self-inspection export.',
       });
     }

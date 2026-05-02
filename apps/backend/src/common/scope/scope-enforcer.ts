@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { ResolvedDataScope } from '@equipment-management/shared-constants';
 
 /**
@@ -44,7 +45,7 @@ export function enforceScope(
   switch (scope.type) {
     case 'none':
       throw new ForbiddenException({
-        code: 'SCOPE_DENIED',
+        code: ErrorCode.ScopeDenied,
         message: `리소스 접근 권한 없음: ${scope.label}`,
       });
 
@@ -52,13 +53,13 @@ export function enforceScope(
       if (!scope.teamId) {
         // data-scope 해석기 버그 — fail closed
         throw new ForbiddenException({
-          code: 'SCOPE_DENIED',
+          code: ErrorCode.ScopeDenied,
           message: `팀 스코프에 teamId 누락: ${scope.label}`,
         });
       }
       if (params.teamId && params.teamId !== scope.teamId) {
         throw new ForbiddenException({
-          code: 'CROSS_TEAM_DENIED',
+          code: ErrorCode.ScopeCrossTeamDenied,
           message: `Cross-team access denied: scope=${scope.teamId}, requested=${params.teamId}`,
         });
       }
@@ -72,13 +73,13 @@ export function enforceScope(
     case 'site': {
       if (!scope.site) {
         throw new ForbiddenException({
-          code: 'SCOPE_DENIED',
+          code: ErrorCode.ScopeDenied,
           message: `사이트 스코프에 site 누락: ${scope.label}`,
         });
       }
       if (params.site && params.site !== scope.site) {
         throw new ForbiddenException({
-          code: 'CROSS_SITE_DENIED',
+          code: ErrorCode.ScopeCrossSiteDenied,
           message: `Cross-site access denied: scope=${scope.site}, requested=${params.site}`,
         });
       }

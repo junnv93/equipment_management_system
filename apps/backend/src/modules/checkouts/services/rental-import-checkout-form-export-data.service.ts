@@ -30,7 +30,7 @@ export class RentalImportCheckoutFormExportDataService {
     const importId = params.importId;
     if (!importId) {
       throw new BadRequestException({
-        code: 'MISSING_IMPORT_ID',
+        code: ErrorCode.ImportMissingId,
         message: 'importId query parameter is required for rental import export.',
       });
     }
@@ -50,7 +50,7 @@ export class RentalImportCheckoutFormExportDataService {
 
     if (imp.sourceType !== EquipmentImportSourceValues.RENTAL) {
       throw new BadRequestException({
-        code: 'INVALID_SOURCE_TYPE',
+        code: ErrorCode.ImportInvalidSourceType,
         message:
           'QP-18-06 form is only for rental imports. Use QP-18-10 for internal shared equipment.',
       });

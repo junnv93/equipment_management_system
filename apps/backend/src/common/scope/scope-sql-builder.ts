@@ -50,6 +50,7 @@
 
 import { ForbiddenException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
+import { ErrorCode } from '@equipment-management/schemas';
 import {
   resolveDataScope,
   type FeatureScopePolicy,
@@ -156,7 +157,7 @@ export function buildScopePredicate(
       return result.condition;
     case 'unavailable':
       throw new ForbiddenException({
-        code: 'SCOPE_FILTER_UNAVAILABLE',
+        code: ErrorCode.ScopeFilterUnavailable,
         message: `${result.reason === 'site' ? 'Site' : 'Team/site'} scope filter is not available for this resource`,
       });
   }

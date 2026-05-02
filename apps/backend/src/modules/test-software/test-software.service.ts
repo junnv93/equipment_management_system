@@ -449,7 +449,7 @@ export class TestSoftwareService extends VersionedBaseService {
         (error as { code: string }).code === '23505'
       ) {
         throw new ConflictException({
-          code: 'EQUIPMENT_ALREADY_LINKED',
+          code: ErrorCode.TestSoftwareEquipmentAlreadyLinked,
           message: 'This equipment is already linked to the software.',
         });
       }
