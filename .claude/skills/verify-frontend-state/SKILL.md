@@ -31,6 +31,7 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/lib/api/cache-invalidation.ts` | 캐시 무효화 SSOT |
 | `apps/frontend/hooks/use-date-formatter.ts` | 사용자 dateFormat 적용 날짜 포맷 훅 |
 | `apps/frontend/hooks/use-calibration.ts` | 교정 기록 도메인 훅 (useCalibrationDetail) |
+| `apps/frontend/hooks/use-undoable-state.ts` | undo/redo 히스토리 SSOT 훅 (Step 38) |
 
 ## Workflow
 
@@ -1283,3 +1284,54 @@ grep -A20 "export function restore" apps/frontend/lib/utils/ apps/frontend/hooks
 - `apps/frontend/lib/utils/__tests__/checkout-return-context.test.ts` — TTL/private mode/one-shot 단위 테스트 20건
 
 **발생 이력 (2026-04-30 신설)**: Sprint 4.5 U-07 돌아가기 컨텍스트 보존 작업에서 `restoreCheckoutListContext()`가 한 번 사용 후 sessionStorage에서 자동 삭제되어야 한다는 요구. private mode에서 throw 발생 시 silent fallback + URL이 SSOT이므로 storage 차단되어도 동작 보장. 단위 테스트로 3 패턴 모두 검증.
+
+### Step 38: useUndoableState SSOT — 인라인 undo/redo 스택 컴포넌트 내 선언 금지 (2026-05-02 추가, VisualTableEditor 추출)
+
+**규칙**: 컴포넌트에서 undo/redo 히스토리 관리가 필요할 때 `pastRef`/`futureRef`를 인라인 선언하거나 `recomputeUndoRedo`/`pushHistory`/`undoStructural`/`redoStructural`을 직접 구현하지 말고 `useUndoableState` 훅을 사용해야 한다.
+
+**안티패턴:**
+```typescript
+// ❌ 인라인 undo 히스토리 — 56줄 보일러플레이트, deps 관리 복잡
+const pastRef = useRef<TableSnapshot[]>([]);
+const futureRef = useRef<TableSnapshot[]>([]);
+const [canUndo, setCanUndo] = useState(false);
+const recomputeUndoRedo = useCallback(() => { ... }, []);
+const pushHistory = useCallback(() => { ... }, [headers, rows, recomputeUndoRedo]);
+const undoStructural = useCallback(() => { ... }, [headers, rows, onChange, recomputeUndoRedo]);
+useEffect(() => { /* Ctrl+Z 단축키 */ }, [undoStructural, redoStructural]);
+```
+
+**올바른 패턴:**
+```typescript
+// ✅ useUndoableState 훅 위임 — 8줄
+const {
+  push: pushHistory,
+  undo: undoStructural,
+  redo: redoStructural,
+  canUndo,
+  canRedo,
+} = useUndoableState<TableSnapshot>({
+  current: { headers, rows },
+  onChange: (snap) => onChange(snap.headers, snap.rows),
+  clone: (snap) => cloneSnapshot(snap.headers, snap.rows),
+  limit: HISTORY_LIMIT,
+  enableKeyboard: true,  // Ctrl/Cmd+Z / Ctrl+Y 단축키 자동 등록 (IME 가드 내장)
+});
+```
+
+**탐지 — 인라인 undo 패턴 잔존:**
+```bash
+# pastRef + futureRef 조합 또는 recomputeUndoRedo 인라인 선언
+grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoStructural\|redoStructural" \
+  apps/frontend/components --include="*.tsx" --include="*.ts"
+# 기대: 0건 (모든 undo/redo는 useUndoableState 위임)
+```
+
+**예외:**
+- `apps/frontend/hooks/use-undoable-state.ts` — SSOT 정의 파일 자체는 제외
+- undo/redo가 1곳 이하인 단순 토글 (e.g. `const [prev, setPrev] = useState(...)`) — 보일러플레이트 3종 세트 없으면 제외
+
+**관련 파일:**
+- `apps/frontend/hooks/use-undoable-state.ts` — SSOT 정의 (2026-05-02, inspection-undo-hook-extraction-reject-spec)
+- `apps/frontend/hooks/__tests__/use-undoable-state.test.ts` — 8개 케이스: push→undo 복원, push→undo→redo, limit shift, 빈 stack no-op, 참조 안정성
+- `apps/frontend/components/inspections/result-sections/VisualTableEditor.tsx` — 참조 구현 (인라인 56줄 → 위임 8줄)

@@ -136,7 +136,12 @@
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-05-02-tier2-fsm-invalid-status-transition.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-05-02-tier2-fsm-invalid-status-transition.md)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/tier2-fsm-invalid-status-transition.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/tier2-fsm-invalid-status-transition.md)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/inspection-pr2-pr3-closure.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/inspection-pr2-pr3-closure.md)",
-      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-05-02-inspection-pr2-pr3-closure.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-05-02-inspection-pr2-pr3-closure.md)"
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-05-02-inspection-pr2-pr3-closure.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-05-02-inspection-pr2-pr3-closure.md)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/inspection-undo-hook-extraction-reject-spec.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/inspection-undo-hook-extraction-reject-spec.md)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/equipment-reject-zod-fail-close-hardening.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/equipment-reject-zod-fail-close-hardening.md)",
+      "Bash(mv .claude/contracts/equipment-reject-zod-fail-close-hardening.md .claude/contracts/completed/)",
+      "Bash(mv .claude/contracts/inspection-undo-hook-extraction-reject-spec.md .claude/contracts/completed/)",
+      "Bash(rm -f .claude/contracts/tier2-fsm-invalid-status-transition.md)"
     ],
     "deny": [],
     "ask": []
