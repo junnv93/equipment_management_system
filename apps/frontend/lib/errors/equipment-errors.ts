@@ -60,6 +60,19 @@ export enum EquipmentErrorCode {
   MAINTENANCE_HISTORY_SAVE_FAILED = 'MAINTENANCE_HISTORY_SAVE_FAILED',
   INCIDENT_HISTORY_SAVE_FAILED = 'INCIDENT_HISTORY_SAVE_FAILED',
 
+  // 장비 도메인 — 구체적 범위 에러
+  EQUIPMENT_SITE_SCOPE_ONLY = 'EQUIPMENT_SITE_SCOPE_ONLY',
+  EQUIPMENT_TEAM_SCOPE_ONLY = 'EQUIPMENT_TEAM_SCOPE_ONLY',
+  EQUIPMENT_SHARED_CANNOT_UPDATE = 'EQUIPMENT_SHARED_CANNOT_UPDATE',
+  EQUIPMENT_SHARED_CANNOT_DELETE = 'EQUIPMENT_SHARED_CANNOT_DELETE',
+
+  // 장비 도메인 — 구체적 검증 에러
+  EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED = 'EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED',
+  EQUIPMENT_FILE_REQUIRED = 'EQUIPMENT_FILE_REQUIRED',
+  EQUIPMENT_ATTACHMENT_TYPE_REQUIRED = 'EQUIPMENT_ATTACHMENT_TYPE_REQUIRED',
+  FORM_DATA_PARSE_FAILED = 'FORM_DATA_PARSE_FAILED',
+  INVALID_MANAGEMENT_NUMBER = 'INVALID_MANAGEMENT_NUMBER',
+
   // 부적합 관련
   NC_REPAIR_RECORD_REQUIRED = 'NC_REPAIR_RECORD_REQUIRED',
   NC_RECALIBRATION_REQUIRED = 'NC_RECALIBRATION_REQUIRED',
@@ -127,6 +140,39 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     solutions: ['날짜 선택기를 사용하여 올바른 날짜를 선택하세요'],
     severity: 'error',
   },
+  [EquipmentErrorCode.EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED]: {
+    title: '관리 번호 필요',
+    message: '관리 번호를 입력해야 합니다.',
+    solutions: ['관리 번호 항목을 작성해주세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_FILE_REQUIRED]: {
+    title: '파일 필요',
+    message: '첨부 파일을 업로드해야 합니다.',
+    solutions: ['파일을 선택한 후 다시 시도해주세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_ATTACHMENT_TYPE_REQUIRED]: {
+    title: '첨부 유형 필요',
+    message: '첨부 파일 유형을 지정해야 합니다.',
+    solutions: ['첨부 유형을 선택한 후 다시 시도해주세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.FORM_DATA_PARSE_FAILED]: {
+    title: '데이터 파싱 오류',
+    message: '폼 데이터를 처리하는 중 오류가 발생했습니다.',
+    solutions: [
+      '입력 데이터를 확인하고 다시 시도해주세요',
+      '문제가 지속되면 시스템 관리자에게 문의하세요',
+    ],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.INVALID_MANAGEMENT_NUMBER]: {
+    title: '관리번호 형식 오류',
+    message: '올바른 관리번호 형식이 아닙니다.',
+    solutions: ['관리번호 형식: XXX-XYYYY (예: SUW-E0001, UIW-E0001)'],
+    severity: 'error',
+  },
 
   // 중복 에러
   [EquipmentErrorCode.DUPLICATE_ERROR]: {
@@ -183,6 +229,36 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
       '본인 소속 사이트/팀의 데이터만 수정할 수 있습니다.',
       '필요시 시스템 관리자에게 문의하세요.',
     ],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_SITE_SCOPE_ONLY]: {
+    title: '사이트 접근 제한',
+    message: '자신의 사이트 장비만 등록할 수 있습니다.',
+    solutions: [
+      '소속 사이트의 장비만 등록 가능합니다',
+      '다른 사이트 장비 등록은 시스템 관리자에게 문의하세요',
+    ],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_TEAM_SCOPE_ONLY]: {
+    title: '팀 접근 제한',
+    message: '자신의 팀 장비만 등록할 수 있습니다.',
+    solutions: [
+      '소속 팀의 장비만 등록 가능합니다',
+      '다른 팀 장비 등록은 시스템 관리자에게 문의하세요',
+    ],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_SHARED_CANNOT_UPDATE]: {
+    title: '공용 장비 수정 불가',
+    message: '공용 장비는 수정할 수 없습니다.',
+    solutions: ['공용 장비 수정이 필요한 경우 시스템 관리자에게 문의하세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.EQUIPMENT_SHARED_CANNOT_DELETE]: {
+    title: '공용 장비 삭제 불가',
+    message: '공용 장비는 삭제할 수 없습니다.',
+    solutions: ['공용 장비 삭제가 필요한 경우 시스템 관리자에게 문의하세요'],
     severity: 'error',
   },
   [EquipmentErrorCode.SESSION_EXPIRED]: {
@@ -520,11 +596,11 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     EQUIPMENT_INVALID_CALIBRATION_DUE_AFTER: EquipmentErrorCode.VALIDATION_ERROR,
     EQUIPMENT_SITE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
     EQUIPMENT_CALIBRATION_OVERDUE_STATUS_BLOCK: EquipmentErrorCode.VALIDATION_ERROR,
-    EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
-    EQUIPMENT_FILE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
-    EQUIPMENT_ATTACHMENT_TYPE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
-    FORM_DATA_PARSE_FAILED: EquipmentErrorCode.VALIDATION_ERROR,
-    INVALID_MANAGEMENT_NUMBER: EquipmentErrorCode.VALIDATION_ERROR,
+    EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED: EquipmentErrorCode.EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED,
+    EQUIPMENT_FILE_REQUIRED: EquipmentErrorCode.EQUIPMENT_FILE_REQUIRED,
+    EQUIPMENT_ATTACHMENT_TYPE_REQUIRED: EquipmentErrorCode.EQUIPMENT_ATTACHMENT_TYPE_REQUIRED,
+    FORM_DATA_PARSE_FAILED: EquipmentErrorCode.FORM_DATA_PARSE_FAILED,
+    INVALID_MANAGEMENT_NUMBER: EquipmentErrorCode.INVALID_MANAGEMENT_NUMBER,
     EQUIPMENT_REQUEST_NO_EQUIPMENT_ID: EquipmentErrorCode.VALIDATION_ERROR,
     EQUIPMENT_REQUEST_REJECTION_REASON_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
     NC_INVALID_INCIDENT_TYPE: EquipmentErrorCode.VALIDATION_ERROR,
@@ -535,10 +611,10 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     PERMISSION_DENIED: EquipmentErrorCode.PERMISSION_DENIED,
     ACCESS_DENIED: EquipmentErrorCode.PERMISSION_DENIED,
     SCOPE_ACCESS_DENIED: EquipmentErrorCode.SCOPE_ACCESS_DENIED,
-    EQUIPMENT_SITE_SCOPE_ONLY: EquipmentErrorCode.SCOPE_ACCESS_DENIED,
-    EQUIPMENT_TEAM_SCOPE_ONLY: EquipmentErrorCode.SCOPE_ACCESS_DENIED,
-    EQUIPMENT_SHARED_CANNOT_UPDATE: EquipmentErrorCode.PERMISSION_DENIED,
-    EQUIPMENT_SHARED_CANNOT_DELETE: EquipmentErrorCode.PERMISSION_DENIED,
+    EQUIPMENT_SITE_SCOPE_ONLY: EquipmentErrorCode.EQUIPMENT_SITE_SCOPE_ONLY,
+    EQUIPMENT_TEAM_SCOPE_ONLY: EquipmentErrorCode.EQUIPMENT_TEAM_SCOPE_ONLY,
+    EQUIPMENT_SHARED_CANNOT_UPDATE: EquipmentErrorCode.EQUIPMENT_SHARED_CANNOT_UPDATE,
+    EQUIPMENT_SHARED_CANNOT_DELETE: EquipmentErrorCode.EQUIPMENT_SHARED_CANNOT_DELETE,
     EQUIPMENT_MANAGER_ROLE_INSUFFICIENT: EquipmentErrorCode.PERMISSION_DENIED,
     EQUIPMENT_MANAGER_SITE_MISMATCH: EquipmentErrorCode.PERMISSION_DENIED,
     EQUIPMENT_REQUEST_NO_VIEW_PERMISSION: EquipmentErrorCode.PERMISSION_DENIED,
