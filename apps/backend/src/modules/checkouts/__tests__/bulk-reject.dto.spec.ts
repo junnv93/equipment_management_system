@@ -15,6 +15,7 @@ import { bulkRejectSchema } from '../dto/bulk-reject.dto';
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
 const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
 const MAX = VALIDATION_RULES.LONG_TEXT_MAX_LENGTH;
+const BULK_MAX = VALIDATION_RULES.BULK_OPERATION_MAX_COUNT;
 const VALID_REASON = 'x'.repeat(MIN);
 
 describe('bulkRejectSchema', () => {
@@ -31,21 +32,21 @@ describe('bulkRejectSchema', () => {
       const result = bulkRejectSchema.safeParse({ ids: [], reason: VALID_REASON });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('최소 1건');
+        expect(result.error.issues[0].message).toBe(VM.array.minCases(1));
       }
     });
 
-    it('51건 → 실패 (max 50, DoS 방어)', () => {
-      const ids = Array.from({ length: 51 }, () => VALID_UUID);
+    it(`${BULK_MAX + 1}건 → 실패 (max ${BULK_MAX}, DoS 방어)`, () => {
+      const ids = Array.from({ length: BULK_MAX + 1 }, () => VALID_UUID);
       const result = bulkRejectSchema.safeParse({ ids, reason: VALID_REASON });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('최대 50건');
+        expect(result.error.issues[0].message).toBe(VM.array.maxCases(BULK_MAX));
       }
     });
 
-    it('정확히 50건 → 통과 (boundary)', () => {
-      const ids = Array.from({ length: 50 }, () => VALID_UUID);
+    it(`정확히 ${BULK_MAX}건 → 통과 (boundary)`, () => {
+      const ids = Array.from({ length: BULK_MAX }, () => VALID_UUID);
       const result = bulkRejectSchema.safeParse({ ids, reason: VALID_REASON });
       expect(result.success).toBe(true);
     });

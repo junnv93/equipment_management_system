@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
@@ -29,7 +30,7 @@ export class IssueHandoverTokenDto extends createZodDto(IssueHandoverTokenSchema
  * 토큰 검증 요청 body. URL 쿼리로 받은 JWT를 그대로 전달.
  */
 export const VerifyHandoverTokenSchema = z.object({
-  token: z.string().min(1, 'token is required'),
+  token: z.string().trim().min(1, VM.handover.token.required),
 });
 export class VerifyHandoverTokenDto extends createZodDto(VerifyHandoverTokenSchema) {}
 
@@ -41,7 +42,7 @@ export const VerifyHandoverTokenValidationPipe = new ZodValidationPipe(VerifyHan
  * 전부 이 schema 로부터 파생된다.
  */
 export const IssueHandoverTokenResponseSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().trim().min(1),
   expiresAt: z.string(), // ISO timestamp (서버 생성 보장)
   purpose: HandoverTokenPurposeEnum,
 });

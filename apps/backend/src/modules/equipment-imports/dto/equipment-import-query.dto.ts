@@ -12,10 +12,11 @@ import {
   type SortOrder,
   optionalUuid,
 } from '@equipment-management/schemas';
+import { MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 export const equipmentImportQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
+  limit: z.coerce.number().int().positive().max(MAX_PAGE_SIZE).optional(),
   status: z.enum(EQUIPMENT_IMPORT_STATUS_VALUES).optional(),
   sourceType: z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES).optional(),
   site: SiteEnum.optional(),
@@ -38,7 +39,11 @@ export class EquipmentImportQueryDto {
   @ApiProperty({ description: '페이지 번호', example: 1, required: false })
   page?: number;
 
-  @ApiProperty({ description: '페이지당 항목 수 (최대 100)', example: 20, required: false })
+  @ApiProperty({
+    description: `페이지당 항목 수 (최대 ${MAX_PAGE_SIZE})`,
+    example: 20,
+    required: false,
+  })
   limit?: number;
 
   @ApiProperty({

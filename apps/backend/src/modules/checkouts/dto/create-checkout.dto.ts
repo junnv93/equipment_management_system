@@ -25,7 +25,7 @@ export const createCheckoutSchema = z.object({
     .min(1, VM.array.min('장비', 1))
     .max(CHECKOUT_MAX_EQUIPMENT_COUNT, VM.array.max('장비', CHECKOUT_MAX_EQUIPMENT_COUNT))
     .refine((ids) => new Set(ids).size === ids.length, {
-      message: '동일한 장비를 중복으로 선택할 수 없습니다',
+      message: VM.checkout.duplicateEquipment,
     }),
   purpose: z.enum(CHECKOUT_PURPOSE_VALUES, {
     message: VM.checkout.purpose.invalid,

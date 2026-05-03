@@ -22,6 +22,8 @@ import {
   Permission,
   EQUIPMENT_DATA_SCOPE,
   FILE_UPLOAD_LIMITS,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
@@ -108,7 +110,10 @@ export class EquipmentSelfInspectionsController {
     const info = await this.selfInspectionsService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const page = Math.max(1, pageStr ? parseInt(pageStr, 10) : 1);
-    const pageSize = Math.min(100, Math.max(1, pageSizeStr ? parseInt(pageSizeStr, 10) : 20));
+    const pageSize = Math.min(
+      MAX_PAGE_SIZE,
+      Math.max(1, pageSizeStr ? parseInt(pageSizeStr, 10) : DEFAULT_PAGE_SIZE)
+    );
     return this.selfInspectionsService.findByEquipment(equipmentUuid, page, pageSize);
   }
 }

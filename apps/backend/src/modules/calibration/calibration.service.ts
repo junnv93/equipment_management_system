@@ -454,6 +454,7 @@ export class CalibrationService extends VersionedBaseService {
           site: equipForCreate?.site ?? '',
           actorId,
           actorName: '',
+          linkedPlanItemId: dtoWithComputedDate.planItemId ?? null,
           timestamp: new Date(),
         });
       } catch (error) {

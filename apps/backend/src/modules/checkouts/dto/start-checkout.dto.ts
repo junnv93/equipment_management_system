@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { uuidString, VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -16,7 +17,14 @@ export const startCheckoutSchema = z.object({
     .array(
       z.object({
         equipmentId: uuidString(VM.uuid.invalid('장비')),
-        conditionBefore: z.string().min(1),
+        conditionBefore: z
+          .string()
+          .trim()
+          .min(1, VM.required('반출 전 상태'))
+          .max(
+            VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+            VM.string.max('반출 전 상태', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+          ),
       })
     )
     .optional(),

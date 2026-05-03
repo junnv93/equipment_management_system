@@ -14,7 +14,14 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const approveCalibrationSchema = z.object({
   ...versionedSchema,
-  approverComment: z.string().optional(),
+  approverComment: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('승인자 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type ApproveCalibrationInput = z.infer<typeof approveCalibrationSchema>;

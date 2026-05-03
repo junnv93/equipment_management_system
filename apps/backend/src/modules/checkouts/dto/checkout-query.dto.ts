@@ -11,6 +11,7 @@ import {
   VM,
   optionalUuid,
 } from '@equipment-management/schemas';
+import { MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -40,7 +41,7 @@ export const checkoutQuerySchema = z.object({
   page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().int().min(1).optional()),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : undefined),
-    z.number().int().min(1).max(100).optional()
+    z.number().int().min(1).max(MAX_PAGE_SIZE).optional()
   ),
   includeSummary: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
 });

@@ -18,8 +18,11 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 export const bulkRejectSchema = z.object({
   ids: z
     .array(uuidString(VM.uuid.generic))
-    .min(1, '최소 1건 이상 선택해야 합니다')
-    .max(50, '최대 50건까지 일괄 반려할 수 있습니다'),
+    .min(1, VM.array.minCases(1))
+    .max(
+      VALIDATION_RULES.BULK_OPERATION_MAX_COUNT,
+      VM.array.maxCases(VALIDATION_RULES.BULK_OPERATION_MAX_COUNT)
+    ),
   reason: z
     .string()
     .trim()
@@ -40,7 +43,7 @@ export const BulkRejectValidationPipe = new ZodValidationPipe(bulkRejectSchema);
 
 export class BulkRejectDto {
   @ApiProperty({
-    description: '반려할 반출 UUID 배열 (min 1, max 50)',
+    description: `반려할 반출 UUID 배열 (min 1, max ${VALIDATION_RULES.BULK_OPERATION_MAX_COUNT})`,
     type: [String],
     example: ['550e8400-e29b-41d4-a716-446655440000'],
   })

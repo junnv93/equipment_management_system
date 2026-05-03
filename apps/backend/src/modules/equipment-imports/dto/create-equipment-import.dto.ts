@@ -81,7 +81,7 @@ const baseImportSchemaRaw = z.object({
 const dateRangeCheck = (data: { usagePeriodStart: string; usagePeriodEnd: string }): boolean =>
   new Date(data.usagePeriodEnd) > new Date(data.usagePeriodStart);
 const dateRangeParams = {
-  message: 'Usage end date must be after the start date.',
+  message: VM.equipmentImport.dateRangeInvalid,
   path: ['usagePeriodEnd'] as string[],
 };
 

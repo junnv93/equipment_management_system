@@ -8,6 +8,7 @@ import {
   VM,
   uuidString,
 } from '@equipment-management/schemas';
+import { MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export { RepairResultEnum, REPAIR_RESULT_VALUES, type RepairResult };
@@ -65,7 +66,7 @@ export const repairHistoryQuerySchema = z.object({
   ),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : undefined),
-    z.number().int().positive().max(100).optional()
+    z.number().int().positive().max(MAX_PAGE_SIZE).optional()
   ),
 });
 

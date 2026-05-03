@@ -2,10 +2,19 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { VM } from '@equipment-management/schemas';
 
 export const approveEquipmentImportSchema = z.object({
   ...versionedSchema,
-  comment: z.string().optional(),
+  comment: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('승인 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type ApproveEquipmentImportInput = z.infer<typeof approveEquipmentImportSchema>;

@@ -12,7 +12,14 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  */
 export const submitForReviewSchema = z.object({
   casVersion: z.number().int().positive(VM.number.positive('casVersion')),
-  memo: z.string().optional(),
+  memo: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('검토 요청 메모', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type SubmitForReviewInput = z.infer<typeof submitForReviewSchema>;
@@ -26,7 +33,14 @@ export const SubmitForReviewValidationPipe = new ZodValidationPipe(submitForRevi
  */
 export const reviewCalibrationPlanSchema = z.object({
   casVersion: z.number().int().positive(VM.number.positive('casVersion')),
-  reviewComment: z.string().optional(),
+  reviewComment: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('검토 의견', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type ReviewCalibrationPlanInput = z.infer<typeof reviewCalibrationPlanSchema>;
@@ -85,7 +99,14 @@ export const RejectCalibrationPlanValidationPipe = new ZodValidationPipe(
  * @deprecated submitForReviewSchema 사용 권장
  */
 export const submitCalibrationPlanSchema = z.object({
-  memo: z.string().optional(),
+  memo: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('검토 요청 메모', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type SubmitCalibrationPlanInput = z.infer<typeof submitCalibrationPlanSchema>;

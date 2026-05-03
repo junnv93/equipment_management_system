@@ -12,7 +12,14 @@ import { versionedSchema } from '../../../common/dto/base-versioned.dto';
  */
 export const approveCalibrationFactorSchema = z.object({
   // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  approverComment: z.string().optional(),
+  approverComment: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('승인자 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   ...versionedSchema,
 });
 
