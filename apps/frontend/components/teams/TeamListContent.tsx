@@ -24,6 +24,7 @@ import {
   TEAM_ROW_TOKENS,
   CLS_PILL_TOKENS,
   TEAM_SEARCH_TOKENS,
+  TEAM_EMPTY_STATE_TOKENS,
   getStaggerDelay,
   MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
@@ -133,6 +134,8 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
         <div className="relative flex-shrink-0">
           <Search className={TEAM_SEARCH_TOKENS.iconPositioned} aria-hidden="true" />
           <Input
+            name="team-search"
+            autoComplete="off"
             type="search"
             placeholder={t('listContent.searchPlaceholder')}
             value={searchInput}
@@ -205,7 +208,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
       {/* ─── 전체 통계 + 팀 추가 버튼 ─── */}
       {!isLoading && (
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground min-w-0">
             <span className="flex items-center gap-1.5">
               <span>{t('listContent.stats.totalTeams')}</span>
               <span className="font-mono font-semibold text-foreground tabular-nums">
@@ -366,20 +369,29 @@ function SitePanel({
       {/* 팀 목록 */}
       <div className={SITE_PANEL_TOKENS.teamList}>
         {teams.length === 0 ? (
-          <EmptySitePanel t={t} />
+          <EmptySitePanel
+            siteLabel={siteLabels[siteKey as keyof typeof siteLabels] || siteKey}
+            canCreateTeam={canCreateTeam}
+            onAddTeam={onAddTeam}
+            t={t}
+          />
         ) : (
           teams.map((team, index) => (
             <Fragment key={team.id}>
               {index > 0 && <div className={TEAM_ROW_TOKENS.divider} />}
-              <div
-                className={TEAM_ROW_TOKENS.staggerSlideUp}
+              <button
+                type="button"
+                data-testid="team-card"
+                className={cn(TEAM_ROW_TOKENS.staggerSlideUp, TEAM_ROW_TOKENS.rowButton)}
+                aria-label={team.name}
                 style={{
                   animationDelay: getStaggerDelay(index, 'list'),
                   animationDuration: `${MOTION_PRIMITIVES.duration.fast}ms`,
                 }}
+                onClick={() => onTeamClick(team)}
               >
-                <TeamRow team={team} onClick={() => onTeamClick(team)} t={t} />
-              </div>
+                <TeamRow team={team} t={t} />
+              </button>
             </Fragment>
           ))
         )}
@@ -404,48 +416,35 @@ function SitePanel({
 
 interface TeamRowProps {
   team: Team;
-  onClick: () => void;
   t: ReturnType<typeof useTranslations<'teams'>>;
 }
 
-function TeamRow({ team, onClick, t }: TeamRowProps) {
+function TeamRow({ team, t }: TeamRowProps) {
   const clsConfig =
     CLASSIFICATION_CONFIG[team.classification || 'fcc_emc_rf'] || CLASSIFICATION_CONFIG.fcc_emc_rf;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={TEAM_ROW_TOKENS.row}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={team.name}
-    >
+    <span className={TEAM_ROW_TOKENS.row}>
       {/* 분류 색상 left accent bar — hover 시 나타남 */}
-      <div
+      <span
         className={TEAM_ROW_TOKENS.accentBar}
         style={{ background: clsConfig.color }}
         aria-hidden="true"
       />
 
       {/* 분류 코드 아이콘 */}
-      <div
+      <span
         className={TEAM_ROW_TOKENS.clsIcon}
         style={{ background: clsConfig.bgColor, color: clsConfig.color }}
         aria-hidden="true"
       >
         {clsConfig.classificationCode}
-      </div>
+      </span>
 
       {/* 팀명 + 팀장 */}
-      <div className={TEAM_ROW_TOKENS.info}>
-        <div className={TEAM_ROW_TOKENS.clsName}>{team.name}</div>
-        <div className={TEAM_ROW_TOKENS.leaderRow}>
+      <span className={TEAM_ROW_TOKENS.info}>
+        <span className={TEAM_ROW_TOKENS.clsName}>{team.name}</span>
+        <span className={TEAM_ROW_TOKENS.leaderRow}>
           {team.leaderName ? (
             <>
               <UserCheck
@@ -460,21 +459,21 @@ function TeamRow({ team, onClick, t }: TeamRowProps) {
               {t('listContent.stats.noLeader')}
             </span>
           )}
-        </div>
-      </div>
+        </span>
+      </span>
 
       {/* KPI 칩: 팀원 수 + 장비 수 */}
-      <div className={TEAM_ROW_TOKENS.kpiGroup}>
-        <div className={TEAM_ROW_TOKENS.kpiChip}>
+      <span className={TEAM_ROW_TOKENS.kpiGroup}>
+        <span className={TEAM_ROW_TOKENS.kpiChip}>
           <Users className="h-3 w-3" aria-hidden="true" />
           <span className={TEAM_ROW_TOKENS.kpiNum}>{team.memberCount ?? 0}</span>
-        </div>
-        <div className={TEAM_ROW_TOKENS.kpiChip}>
+        </span>
+        <span className={TEAM_ROW_TOKENS.kpiChip}>
           <Package className="h-3 w-3" aria-hidden="true" />
           <span className={TEAM_ROW_TOKENS.kpiNum}>{team.equipmentCount ?? 0}</span>
-        </div>
-      </div>
-    </div>
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -482,11 +481,36 @@ function TeamRow({ team, onClick, t }: TeamRowProps) {
 // 빈 상태 컴포넌트들
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EmptySitePanel({ t }: { t: ReturnType<typeof useTranslations<'teams'>> }) {
+function EmptySitePanel({
+  siteLabel,
+  canCreateTeam,
+  onAddTeam,
+  t,
+}: {
+  siteLabel: string;
+  canCreateTeam: boolean;
+  onAddTeam: () => void;
+  t: ReturnType<typeof useTranslations<'teams'>>;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-6 text-center px-4">
-      <Users className="h-7 w-7 text-muted-foreground/40 mb-2" aria-hidden="true" />
-      <p className="text-xs text-muted-foreground">{t('listContent.empty.noTeams')}</p>
+    <div className={TEAM_EMPTY_STATE_TOKENS.sitePanel}>
+      <div className={TEAM_EMPTY_STATE_TOKENS.iconWrap}>
+        <Users className={TEAM_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
+      </div>
+      <p className={TEAM_EMPTY_STATE_TOKENS.title}>{t('listContent.empty.noTeams')}</p>
+      <p className={TEAM_EMPTY_STATE_TOKENS.description}>
+        {canCreateTeam
+          ? t('listContent.empty.noTeamsForSite', { site: siteLabel })
+          : t('listContent.empty.requestTeamCreate')}
+      </p>
+      {canCreateTeam && (
+        <div className={TEAM_EMPTY_STATE_TOKENS.action}>
+          <Button size="sm" variant="outline" onClick={onAddTeam} type="button">
+            <Plus className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {t('listContent.empty.addTeamForSite', { site: siteLabel })}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -501,9 +525,9 @@ function EmptyFilterResult({
   searchTerm?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
+    <div className={TEAM_EMPTY_STATE_TOKENS.filterContainer}>
       <div className="bg-muted rounded-full p-4 mb-4">
-        <Users className="h-10 w-10 text-muted-foreground" />
+        <Users className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
       </div>
       <h3 className="text-base font-semibold mb-2">{t('listContent.empty.noResults')}</h3>
       <p className="text-sm text-muted-foreground max-w-xs mb-5">

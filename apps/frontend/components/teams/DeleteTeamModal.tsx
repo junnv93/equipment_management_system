@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle } from 'lucide-react';
-import { ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { AlertTriangle, Package, Users } from 'lucide-react';
+import { ANIMATION_PRESETS, TEAM_DELETE_MODAL_TOKENS } from '@/lib/design-tokens';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -72,6 +72,8 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
 
   const hasRelatedData =
     (team.memberCount && team.memberCount > 0) || (team.equipmentCount && team.equipmentCount > 0);
+  const memberCount = team.memberCount ?? 0;
+  const equipmentCount = team.equipmentCount ?? 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -82,34 +84,65 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
       >
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+            <div className={TEAM_DELETE_MODAL_TOKENS.warningIconWrap}>
+              <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             </div>
-            <AlertDialogTitle>{t('deleteModal.title')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {hasRelatedData ? t('deleteModal.blockedTitle') : t('deleteModal.title')}
+            </AlertDialogTitle>
           </div>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-left">
               <p>
-                {t.rich('deleteModal.confirmMessage', {
-                  name: team.name,
-                  bold: (chunks) => <strong className="text-foreground">{chunks}</strong>,
-                })}
+                {hasRelatedData
+                  ? t.rich('deleteModal.blockedDescription', {
+                      name: team.name,
+                      bold: (chunks) => <strong className="text-foreground">{chunks}</strong>,
+                    })
+                  : t.rich('deleteModal.confirmMessage', {
+                      name: team.name,
+                      bold: (chunks) => <strong className="text-foreground">{chunks}</strong>,
+                    })}
               </p>
 
               {hasRelatedData && (
-                <div className="p-3 rounded-lg bg-brand-warning/10 border border-brand-warning/20">
-                  <p className="text-sm text-brand-warning font-medium mb-2">
+                <div className={TEAM_DELETE_MODAL_TOKENS.blockedPanel}>
+                  <p className={TEAM_DELETE_MODAL_TOKENS.blockedTitle}>
                     {t('deleteModal.relatedDataWarning')}
                   </p>
-                  <ul className="text-sm text-brand-warning list-disc list-inside space-y-1">
-                    {team.memberCount && team.memberCount > 0 && (
-                      <li>{t('deleteModal.relatedMembers', { count: team.memberCount })}</li>
+                  <div className={TEAM_DELETE_MODAL_TOKENS.relatedList}>
+                    {memberCount > 0 && (
+                      <div className={TEAM_DELETE_MODAL_TOKENS.relatedRow}>
+                        <span className="inline-flex items-center gap-2">
+                          <Users className="h-4 w-4" aria-hidden="true" />
+                          {t('deleteModal.relatedMembers', { count: memberCount })}
+                        </span>
+                        <button
+                          type="button"
+                          className={TEAM_DELETE_MODAL_TOKENS.relatedAction}
+                          onClick={() => router.push(`/teams/${team.id}`)}
+                        >
+                          {t('deleteModal.moveMembersAction')}
+                        </button>
+                      </div>
                     )}
-                    {team.equipmentCount && team.equipmentCount > 0 && (
-                      <li>{t('deleteModal.relatedEquipment', { count: team.equipmentCount })}</li>
+                    {equipmentCount > 0 && (
+                      <div className={TEAM_DELETE_MODAL_TOKENS.relatedRow}>
+                        <span className="inline-flex items-center gap-2">
+                          <Package className="h-4 w-4" aria-hidden="true" />
+                          {t('deleteModal.relatedEquipment', { count: equipmentCount })}
+                        </span>
+                        <button
+                          type="button"
+                          className={TEAM_DELETE_MODAL_TOKENS.relatedAction}
+                          onClick={() => router.push(`/equipment?teamId=${team.id}`)}
+                        >
+                          {t('deleteModal.moveEquipmentAction')}
+                        </button>
+                      </div>
                     )}
-                  </ul>
-                  <p className="text-xs text-brand-warning mt-2">
+                  </div>
+                  <p className={TEAM_DELETE_MODAL_TOKENS.hint}>
                     {t('deleteModal.relatedDataHint')}
                   </p>
                 </div>
@@ -127,11 +160,13 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
           <Button
             variant="destructive"
             onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
+            disabled={deleteMutation.isPending || Boolean(hasRelatedData)}
+            aria-disabled={hasRelatedData || undefined}
+            title={hasRelatedData ? t('deleteModal.blockedButtonTitle') : undefined}
             loading={deleteMutation.isPending}
             loadingLabel={t('deleteModal.deleting')}
           >
-            {t('deleteModal.confirm')}
+            {hasRelatedData ? t('deleteModal.blockedConfirm') : t('deleteModal.confirm')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

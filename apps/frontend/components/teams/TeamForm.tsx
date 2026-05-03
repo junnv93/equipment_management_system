@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -26,7 +27,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { ClassificationEnum, SiteEnum, optionalUuid } from '@equipment-management/schemas';
 import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
@@ -34,6 +34,7 @@ import { queryKeys } from '@/lib/api/query-config';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { LeaderCombobox } from './LeaderCombobox';
 import { TeamTypeIcon } from './TeamTypeIcon';
+import { TEAM_FORM_TOKENS } from '@/lib/design-tokens';
 
 // 드롭다운에 표시할 주요 팀 분류 (소문자_언더스코어)
 const PRIMARY_CLASSIFICATIONS = [
@@ -184,35 +185,42 @@ export function TeamForm({ team, mode }: TeamFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('form.basicInfo')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* 팀 이름 */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('form.nameLabel')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value || ''}
-                      placeholder={t('form.namePlaceholder')}
-                      aria-describedby="name-description"
-                    />
-                  </FormControl>
-                  <FormDescription id="name-description">
-                    {t('form.nameDescription')}
-                  </FormDescription>
-                  <FormMessage role="alert" />
-                </FormItem>
-              )}
-            />
+      <form onSubmit={form.handleSubmit(onSubmit)} className={TEAM_FORM_TOKENS.form}>
+        <FormSection
+          id="team-form-basic"
+          title={t('form.basicInfo')}
+          description={t('form.basicInfoDescription')}
+        >
+          {/* 팀 이름 */}
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.nameLabel')}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value || ''}
+                    name={field.name}
+                    autoComplete="off"
+                    placeholder={t('form.namePlaceholder')}
+                    aria-describedby="name-description"
+                  />
+                </FormControl>
+                <FormDescription id="name-description">{t('form.nameDescription')}</FormDescription>
+                <FormMessage role="alert" />
+              </FormItem>
+            )}
+          />
+        </FormSection>
 
+        <FormSection
+          id="team-form-assignment"
+          title={t('form.assignmentInfo')}
+          description={t('form.assignmentDescription')}
+        >
+          <div className={TEAM_FORM_TOKENS.inlineGrid}>
             {/* 팀 분류 */}
             <FormField
               control={form.control}
@@ -220,7 +228,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('form.classificationLabel')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select name={field.name} onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger aria-describedby="classification-description">
                         <SelectValue placeholder={t('form.classificationPlaceholder')} />
@@ -253,6 +261,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                 <FormItem>
                   <FormLabel>{t('form.siteLabel')}</FormLabel>
                   <Select
+                    name={field.name}
                     onValueChange={(newSite) => {
                       field.onChange(newSite);
                       // 사이트 변경 시 팀장 초기화 (다른 사이트 사용자가 팀장으로 남는 것 방지)
@@ -282,71 +291,84 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                 </FormItem>
               )}
             />
+          </div>
+        </FormSection>
 
-            {/* 팀 설명 */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
+        <FormSection
+          id="team-form-description"
+          title={t('form.descriptionSection')}
+          description={t('form.descriptionSectionDesc')}
+        >
+          {/* 팀 설명 */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.descriptionLabel')}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    value={field.value || ''}
+                    name={field.name}
+                    autoComplete="off"
+                    placeholder={t('form.descriptionPlaceholder')}
+                    rows={3}
+                    aria-describedby="description-description"
+                  />
+                </FormControl>
+                <FormDescription id="description-description">
+                  {t('form.descriptionHint')}
+                </FormDescription>
+                <FormMessage role="alert" />
+              </FormItem>
+            )}
+          />
+        </FormSection>
+
+        <FormSection
+          id="team-form-leader"
+          title={t('form.leaderSection')}
+          description={t('form.leaderSectionDesc')}
+        >
+          {/* 팀장 선택 */}
+          <FormField
+            control={form.control}
+            name="leaderId"
+            render={({ field }) => {
+              const currentSite = form.watch('site');
+              // Edit 모드: site가 원래 팀 site와 동일할 때만 teamId 필터 적용
+              // site 변경 시 teamId 필터 무효 → site 기반 검색으로 전환
+              const effectiveTeamId =
+                isEditMode && team?.site === currentSite ? team?.id : undefined;
+
+              return (
                 <FormItem>
-                  <FormLabel>{t('form.descriptionLabel')}</FormLabel>
+                  <FormLabel>{t('form.leaderLabel')}</FormLabel>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      value={field.value || ''}
-                      placeholder={t('form.descriptionPlaceholder')}
-                      rows={3}
-                      aria-describedby="description-description"
+                    <LeaderCombobox
+                      value={field.value || undefined}
+                      onChange={(val) => field.onChange(val || '')}
+                      site={currentSite}
+                      teamId={effectiveTeamId}
+                      disabled={isPending}
                     />
                   </FormControl>
-                  <FormDescription id="description-description">
-                    {t('form.descriptionHint')}
-                  </FormDescription>
+                  <FormDescription>{t('form.leaderDescription')}</FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
-              )}
-            />
-
-            {/* 팀장 선택 */}
-            <FormField
-              control={form.control}
-              name="leaderId"
-              render={({ field }) => {
-                const currentSite = form.watch('site');
-                // Edit 모드: site가 원래 팀 site와 동일할 때만 teamId 필터 적용
-                // site 변경 시 teamId 필터 무효 → site 기반 검색으로 전환
-                const effectiveTeamId =
-                  isEditMode && team?.site === currentSite ? team?.id : undefined;
-
-                return (
-                  <FormItem>
-                    <FormLabel>{t('form.leaderLabel')}</FormLabel>
-                    <FormControl>
-                      <LeaderCombobox
-                        value={field.value || undefined}
-                        onChange={(val) => field.onChange(val || '')}
-                        site={currentSite}
-                        teamId={effectiveTeamId}
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormDescription>{t('form.leaderDescription')}</FormDescription>
-                    <FormMessage role="alert" />
-                  </FormItem>
-                );
-              }}
-            />
-          </CardContent>
-        </Card>
+              );
+            }}
+          />
+        </FormSection>
 
         {/* 버튼 영역 */}
-        <div className="flex justify-end gap-3">
+        <div className={TEAM_FORM_TOKENS.actions}>
           <Button
             type="button"
             variant="outline"
             onClick={() => router.back()}
             disabled={isPending}
-            loading={isPending}
           >
             {t('form.cancel')}
           </Button>
@@ -361,5 +383,29 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         </div>
       </form>
     </Form>
+  );
+}
+
+function FormSection({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={TEAM_FORM_TOKENS.section} aria-labelledby={`${id}-title`}>
+      <div className={TEAM_FORM_TOKENS.sectionMeta}>
+        <h2 id={`${id}-title`} className={TEAM_FORM_TOKENS.sectionTitle}>
+          {title}
+        </h2>
+        <p className={TEAM_FORM_TOKENS.sectionDescription}>{description}</p>
+      </div>
+      <div className={TEAM_FORM_TOKENS.sectionFields}>{children}</div>
+    </section>
   );
 }

@@ -15,10 +15,14 @@
  * - TEAM_ROW_TOKENS: TeamListContent compact row
  * - CLS_PILL_TOKENS: TeamListContent 분류 필터 pill
  * - TEAM_MEMBER_GROUP_TOKENS: TeamMemberList 역할 그룹
+ * - TEAM_EMPTY_STATE_TOKENS: 팀 목록 빈 상태
+ * - TEAM_FORM_TOKENS: 팀 생성/수정 폼 섹션 레이아웃
+ * - TEAM_DETAIL_TOKENS: 팀 상세 정보 배너/KPI
+ * - TEAM_DELETE_MODAL_TOKENS: 삭제 차단 모달
  */
 
 import { TRANSITION_PRESETS } from '../motion';
-import { MICRO_TYPO } from '../semantic';
+import { EMPTY_STATE_TOKENS, MICRO_TYPO, TYPOGRAPHY_TOKENS } from '../semantic';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 팀 모듈 공유 프리미티브 — DRY 원칙
@@ -154,9 +158,11 @@ export const SITE_PANEL_TOKENS = {
 
 export const TEAM_ROW_TOKENS = {
   /** 행 컨테이너 — group 클래스로 accent bar hover 연동 */
-  row: [
-    'group relative flex items-center px-3.5 py-2.5 gap-2.5',
-    'cursor-pointer',
+  row: ['group relative flex w-full items-center px-3.5 py-2.5 gap-2.5', 'text-left'].join(' '),
+
+  /** 실제 포커스 대상(button) — keyboard focus ring은 button에 직접 부여 */
+  rowButton: [
+    'w-full text-left cursor-pointer',
     'hover:bg-muted/50',
     TRANSITION_PRESETS.fastColor,
     'focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-1 focus-visible:ring-primary',
@@ -198,7 +204,7 @@ export const TEAM_ROW_TOKENS = {
   divider: 'h-px bg-border mx-3.5',
 
   /** compact row stagger — STAGGER SSOT 참조 */
-  staggerSlideUp: STAGGER.slideUp,
+  staggerSlideUp: `block w-full ${STAGGER.slideUp}`,
 
   /** 테이블 행 stagger — STAGGER SSOT 참조 */
   staggerFade: STAGGER.fade,
@@ -255,4 +261,76 @@ export const TEAM_MEMBER_GROUP_TOKENS = {
   memberInfo: 'flex-1 min-w-0',
   memberName: 'text-sm font-medium truncate leading-tight',
   memberSub: `${MICRO_TYPO.meta} text-muted-foreground truncate mt-0.5`,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 팀 목록 빈 상태
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TEAM_EMPTY_STATE_TOKENS = {
+  sitePanel: [
+    'px-4 py-7 text-center',
+    'bg-[repeating-linear-gradient(135deg,color-mix(in_oklch,var(--muted)_10%,transparent)_0_6px,transparent_6px_12px)]',
+  ].join(' '),
+  iconWrap: `${EMPTY_STATE_TOKENS.variantIconBg['no-data']} mx-auto h-12 w-12 flex items-center justify-center`,
+  icon: 'h-6 w-6 text-brand-info',
+  title: `${TYPOGRAPHY_TOKENS.heading.h4} mt-3 text-pretty`,
+  description: `${TYPOGRAPHY_TOKENS.body.small} text-muted-foreground mt-1.5 text-pretty`,
+  action: 'mt-4',
+  filterContainer: `${EMPTY_STATE_TOKENS.container} border border-dashed border-border rounded-lg bg-card`,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 팀 생성/수정 폼
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TEAM_FORM_TOKENS = {
+  form: 'max-w-4xl space-y-5',
+  section: 'grid grid-cols-12 gap-4 rounded-lg border border-border bg-card p-4',
+  sectionMeta: 'col-span-12 md:col-span-4',
+  sectionTitle: TYPOGRAPHY_TOKENS.heading.h4,
+  sectionDescription: `${TYPOGRAPHY_TOKENS.body.small} text-muted-foreground mt-1 text-pretty`,
+  sectionFields: 'col-span-12 md:col-span-8 space-y-4',
+  inlineGrid: 'grid grid-cols-1 sm:grid-cols-2 gap-4',
+  actions: [
+    'sticky bottom-0 z-10 -mx-4 flex justify-end gap-3 border-t border-border',
+    'bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+    'sm:static sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-0',
+  ].join(' '),
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 팀 상세 정보 배너
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TEAM_DETAIL_TOKENS = {
+  infoCard: 'relative overflow-hidden',
+  contentGrid: 'grid grid-cols-12 gap-4 py-4 pt-5',
+  narrative: 'col-span-12 lg:col-span-7 space-y-3',
+  metaGrid: 'grid grid-cols-1 sm:grid-cols-2 gap-3',
+  metaLabel: `${MICRO_TYPO.label} font-semibold uppercase tracking-wide text-muted-foreground`,
+  metaValue: `${MICRO_TYPO.detail} text-foreground mt-1 flex items-center gap-1.5 min-w-0`,
+  description: `${TYPOGRAPHY_TOKENS.body.base} text-muted-foreground text-pretty leading-relaxed`,
+  kpiGrid: 'col-span-12 lg:col-span-5 grid grid-cols-2 gap-2',
+  kpiTile: 'rounded-md border border-border bg-muted/25 p-3 min-h-[76px]',
+  kpiLabel: `${MICRO_TYPO.label} font-semibold uppercase tracking-wide text-muted-foreground`,
+  kpiValue: 'mt-1 text-xl font-semibold tabular-nums text-foreground leading-none',
+  kpiSubValue: `${MICRO_TYPO.caption} text-muted-foreground font-normal`,
+  kpiStatus: 'mt-2 inline-flex items-center gap-1.5 text-sm font-semibold',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 팀 삭제 모달
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TEAM_DELETE_MODAL_TOKENS = {
+  warningIconWrap:
+    'flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive',
+  blockedPanel: 'p-3 rounded-lg border border-brand-warning/25 bg-brand-warning/10',
+  blockedTitle: 'text-sm text-brand-warning font-semibold',
+  relatedList: 'mt-3 divide-y divide-brand-warning/20 rounded-md border border-brand-warning/20',
+  relatedRow: 'flex items-center justify-between gap-3 px-3 py-2 text-sm text-brand-warning',
+  relatedAction:
+    'text-xs font-semibold text-brand-info hover:text-brand-info/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-info rounded px-1 py-0.5',
+  hint: 'text-xs text-brand-warning mt-3',
 } as const;

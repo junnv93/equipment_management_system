@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Edit, Trash2, Users, MapPin, User } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, User, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,7 +15,7 @@ import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
 import { TeamMemberList } from './TeamMemberList';
-import { SITE_PANEL_TOKENS, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { SITE_PANEL_TOKENS, SUB_PAGE_HEADER_TOKENS, TEAM_DETAIL_TOKENS } from '@/lib/design-tokens';
 
 // 삭제 모달은 dynamic import로 지연 로딩
 const DeleteTeamModal = dynamic(
@@ -57,6 +57,10 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
   const clsConfig =
     (team.classification && CLASSIFICATION_CONFIG[team.classification]) ||
     CLASSIFICATION_CONFIG.fcc_emc_rf;
+  const memberCount = team.memberCount ?? members.length;
+  const activeMemberCount = members.filter((member) => member.isActive !== false).length;
+  const equipmentCount = team.equipmentCount ?? 0;
+  const hasLeader = Boolean(team.leaderName);
 
   // SSOT: 백엔드 teams 컨트롤러 @RequirePermissions와 정렬
   const canEdit = can(Permission.UPDATE_TEAMS);
@@ -107,35 +111,78 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
       </div>
 
       {/* 팀 정보 배너 — 분류 accent line으로 목록 ↔ 상세 시각 identity 연결 */}
-      <Card className="relative overflow-hidden">
+      <Card className={TEAM_DETAIL_TOKENS.infoCard}>
         <div
           className={SITE_PANEL_TOKENS.accentBar}
           style={{ background: clsConfig.color }}
           aria-hidden="true"
         />
-        <CardContent className="py-4 pt-5">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <TeamTypeBadge classification={team.classification || team.id} />
-            {siteInfo && (
-              <span className="text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" aria-hidden="true" />
-                {siteLabels[team.site as keyof typeof siteLabels] || team.site}
-              </span>
-            )}
-            {team.leaderName && (
-              <span className="text-muted-foreground flex items-center gap-1">
-                <User className="h-3 w-3" aria-hidden="true" />
-                {t('detail.leaderLabel')} {team.leaderName}
-              </span>
-            )}
-            <span className="text-muted-foreground flex items-center gap-1 tabular-nums">
-              <Users className="h-3 w-3" aria-hidden="true" />
-              {t('stats.memberCount', { count: team.memberCount || 0 })}
-            </span>
+        <CardContent className={TEAM_DETAIL_TOKENS.contentGrid}>
+          <div className={TEAM_DETAIL_TOKENS.narrative}>
+            <div className="flex flex-wrap items-center gap-2">
+              <TeamTypeBadge classification={team.classification || team.id} />
+              {siteInfo && (
+                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                  {siteLabels[team.site as keyof typeof siteLabels] || team.site}
+                  <span className="font-mono text-xs">· {siteInfo.code}</span>
+                </span>
+              )}
+            </div>
+
+            <p className={TEAM_DETAIL_TOKENS.description}>
+              {team.description || t('detail.noDescription')}
+            </p>
+
+            <div className={TEAM_DETAIL_TOKENS.metaGrid}>
+              <div>
+                <div className={TEAM_DETAIL_TOKENS.metaLabel}>{t('detail.leaderMetric')}</div>
+                <div className={TEAM_DETAIL_TOKENS.metaValue}>
+                  <User
+                    className={
+                      hasLeader ? 'h-3.5 w-3.5 text-brand-ok' : 'h-3.5 w-3.5 text-brand-warning'
+                    }
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{team.leaderName || t('card.leaderNotAssigned')}</span>
+                </div>
+              </div>
+              <div>
+                <div className={TEAM_DETAIL_TOKENS.metaLabel}>
+                  {t('detail.classificationMetric')}
+                </div>
+                <div className={TEAM_DETAIL_TOKENS.metaValue}>
+                  <span
+                    className="h-2 w-2 rounded-full flex-shrink-0"
+                    style={{ background: clsConfig.color }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{clsConfig.label}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          {team.description && (
-            <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{team.description}</p>
-          )}
+
+          <div className={TEAM_DETAIL_TOKENS.kpiGrid} aria-label={t('detail.kpiAriaLabel')}>
+            <TeamKpiTile label={t('detail.kpi.members')} value={memberCount} />
+            <TeamKpiTile
+              label={t('detail.kpi.activeMembers')}
+              value={activeMemberCount}
+              suffix={`/${memberCount}`}
+            />
+            <TeamKpiTile label={t('detail.kpi.equipment')} value={equipmentCount} />
+            <div className={TEAM_DETAIL_TOKENS.kpiTile}>
+              <div className={TEAM_DETAIL_TOKENS.kpiLabel}>{t('detail.kpi.leader')}</div>
+              <div
+                className={`${TEAM_DETAIL_TOKENS.kpiStatus} ${
+                  hasLeader ? 'text-brand-ok' : 'text-brand-warning'
+                }`}
+              >
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                {hasLeader ? t('card.leaderAssigned') : t('card.leaderNotAssigned')}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -151,6 +198,18 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
       {isDeleteModalOpen && (
         <DeleteTeamModal team={team} open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} />
       )}
+    </div>
+  );
+}
+
+function TeamKpiTile({ label, value, suffix }: { label: string; value: number; suffix?: string }) {
+  return (
+    <div className={TEAM_DETAIL_TOKENS.kpiTile}>
+      <div className={TEAM_DETAIL_TOKENS.kpiLabel}>{label}</div>
+      <div className={TEAM_DETAIL_TOKENS.kpiValue}>
+        {value}
+        {suffix && <span className={TEAM_DETAIL_TOKENS.kpiSubValue}>{suffix}</span>}
+      </div>
     </div>
   );
 }
