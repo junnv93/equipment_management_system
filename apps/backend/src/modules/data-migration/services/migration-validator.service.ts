@@ -30,7 +30,7 @@ import { EQUIPMENT_COLUMN_MAPPING } from '../constants/equipment-column-mapping'
 import { SHARED_EQUIPMENT_COLUMN_MAPPING } from '../constants/shared-equipment-column-mapping';
 import { MigrationErrorCode, VALIDATION_RULES } from '@equipment-management/shared-constants';
 
-const requiredMigrationText = (fieldName: string, requiredMessage: string) =>
+const requiredMigrationText = (fieldName: string, requiredMessage: string): z.ZodString =>
   z
     .string()
     .trim()

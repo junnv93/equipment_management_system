@@ -20,14 +20,16 @@ const requiredText = (
   fieldName: string,
   requiredMessage: string,
   maxLength: number = VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH
-) => z.string().trim().min(1, requiredMessage).max(maxLength, VM.string.max(fieldName, maxLength));
+): z.ZodString =>
+  z.string().trim().min(1, requiredMessage).max(maxLength, VM.string.max(fieldName, maxLength));
 
 const optionalText = (
   fieldName: string,
   maxLength: number = VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH
-) => z.string().trim().max(maxLength, VM.string.max(fieldName, maxLength)).optional();
+): z.ZodOptional<z.ZodString> =>
+  z.string().trim().max(maxLength, VM.string.max(fieldName, maxLength)).optional();
 
-const managementNumber = (message = '관리번호는 필수입니다.') =>
+const managementNumber = (message = '관리번호는 필수입니다.'): z.ZodString =>
   requiredText('관리번호', message, VALIDATION_RULES.MANAGEMENT_NUMBER_MAX_LENGTH);
 
 const calibrationRowSchema = z.object({
