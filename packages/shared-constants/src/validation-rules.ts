@@ -34,6 +34,9 @@ export const VALIDATION_RULES = {
 
   /** 관리번호 최대 길이 */
   MANAGEMENT_NUMBER_MAX_LENGTH: 50,
+
+  /** 중간 텍스트 필드 최대 길이 (소프트웨어명, 제조사, URL 등 varchar(200)) */
+  EXTENDED_TEXT_MAX_LENGTH: 200,
 } as const;
 
 // ============================================================================

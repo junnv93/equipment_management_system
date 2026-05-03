@@ -13,6 +13,7 @@ import {
   type NotificationType,
   type NotificationPriority,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 // NotificationTypeEnum, NotificationPriorityEnum are Zod enums (for validation)
@@ -38,12 +39,18 @@ export const createNotificationSchema = z.object({
     .string()
     .trim()
     .min(1, VM.notification.title.required)
-    .max(100, VM.string.max('알림 제목', 100)),
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('알림 제목', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
   content: z
     .string()
     .trim()
     .min(1, VM.notification.content.required)
-    .max(500, VM.string.max('알림 내용', 500)),
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('알림 내용', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
   type: NotificationTypeEnum,
   priority: NotificationPriorityEnum.default('medium'),
   recipientId: uuidString(VM.uuid.invalid('수신자')),
@@ -51,7 +58,14 @@ export const createNotificationSchema = z.object({
   equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
   rentalId: uuidString(VM.uuid.invalid('대여')).optional(),
-  linkUrl: z.string().trim().max(200, VM.string.max('링크 URL', 200)).optional(),
+  linkUrl: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH,
+      VM.string.max('링크 URL', VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;
