@@ -1,4 +1,6 @@
 import { rejectCorrectionSchema } from '../dto/reject-correction.dto';
+import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 describe('rejectCorrectionSchema — rejectionReason 검증', () => {
   it('should reject empty rejectionReason', () => {
@@ -28,5 +30,19 @@ describe('rejectCorrectionSchema — rejectionReason 검증', () => {
       rejectionReason: 'test reason placeholder',
     });
     expect(result.success).toBe(true);
+  });
+
+  it('should reject rejectionReason over LONG_TEXT_MAX_LENGTH', () => {
+    const result = rejectCorrectionSchema.safeParse({
+      version: 1,
+      rejectionReason: '가'.repeat(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH + 1),
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      );
+    }
   });
 });

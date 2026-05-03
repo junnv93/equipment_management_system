@@ -17,7 +17,14 @@ const dataPointSchema = z.object({
 export const createMeasurementSchema = z.object({
   measurementDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD),
   measurementEquipmentId: optionalUuid(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   dataPoints: z.array(dataPointSchema).min(1, VM.array.min('데이터 포인트', 1)),
 });
 

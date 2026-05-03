@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { VM } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -12,7 +14,14 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const approveCheckoutSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('승인 메모', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type ApproveCheckoutInput = z.infer<typeof approveCheckoutSchema>;

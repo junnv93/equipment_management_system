@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { InspectionResultSectionTypeEnum, uuidString, VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 const tableDataSchema = z.object({
   headers: z.array(z.string()),
@@ -26,7 +27,14 @@ export const createResultSectionSchema = z.object({
   sortOrder: z.number().int().min(0),
   sectionType: InspectionResultSectionTypeEnum,
   title: z.string().max(200, VM.string.max('제목', 200)).optional(),
-  content: z.string().optional(),
+  content: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('본문', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   tableData: tableDataSchema.optional(),
   richTableData: richTableDataSchema.optional(),
   documentId: uuidString(VM.uuid.invalid('문서')).optional(),

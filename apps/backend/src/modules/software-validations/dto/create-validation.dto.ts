@@ -7,6 +7,7 @@ import {
   acquisitionOrProcessingArraySchema,
   controlItemArraySchema,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { CONTROL_MAX_ROWS } from '../services/software-validation.layout';
 
 const datePattern = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD);
@@ -33,21 +34,63 @@ const SELF_FIELDS = [
 export const createValidationSchema = z
   .object({
     validationType: ValidationTypeEnum,
-    softwareVersion: z.string().max(100, VM.string.max('소프트웨어 버전', 100)).optional(),
+    softwareVersion: z.string().trim().max(100, VM.string.max('소프트웨어 버전', 100)).optional(),
     testDate: datePattern.optional(),
     infoDate: datePattern.optional(),
-    softwareAuthor: z.string().max(200, VM.string.max('제작자', 200)).optional(),
+    softwareAuthor: z.string().trim().max(200, VM.string.max('제작자', 200)).optional(),
     // ── 방법 1: 공급자 시연 (vendor) ──
-    vendorName: z.string().max(200, VM.string.max('공급자명', 200)).optional(),
-    vendorSummary: z.string().optional(),
+    vendorName: z.string().trim().max(200, VM.string.max('공급자명', 200)).optional(),
+    vendorSummary: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('공급자 요약', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
     receivedBy: uuidString(VM.uuid.invalid('수령인')).optional(),
     receivedDate: datePattern.optional(),
-    attachmentNote: z.string().optional(),
+    attachmentNote: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('첨부 비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
     // ── 방법 2: UL 자체 시험 (self) ──
-    referenceDocuments: z.string().optional(),
-    operatingUnitDescription: z.string().optional(),
-    softwareComponents: z.string().optional(),
-    hardwareComponents: z.string().optional(),
+    referenceDocuments: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('참조 문서', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+    operatingUnitDescription: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('운영 단위 설명', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+    softwareComponents: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('소프트웨어 구성', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+    hardwareComponents: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('하드웨어 구성', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
     // UL-QP-18-09 템플릿 구조: T4/T5 = 단일 기능(3행×2열), T6 = 최대 CONTROL_MAX_ROWS개(R1~R3)
     acquisitionFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
     processingFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),

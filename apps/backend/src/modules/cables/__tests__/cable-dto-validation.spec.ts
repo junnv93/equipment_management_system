@@ -45,4 +45,30 @@ describe('cable DTO validation', () => {
       );
     }
   });
+
+  it('createMeasurementSchema trims notes and enforces LONG_TEXT_MAX_LENGTH', () => {
+    const trimmed = createMeasurementSchema.safeParse({
+      measurementDate: '2026-05-03',
+      notes: '  측정 완료  ',
+      dataPoints: [{ frequencyMhz: 100, lossDb: '0.1' }],
+    });
+
+    expect(trimmed.success).toBe(true);
+    if (trimmed.success) {
+      expect(trimmed.data.notes).toBe('측정 완료');
+    }
+
+    const overflow = createMeasurementSchema.safeParse({
+      measurementDate: '2026-05-03',
+      notes: '가'.repeat(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH + 1),
+      dataPoints: [{ frequencyMhz: 100, lossDb: '0.1' }],
+    });
+
+    expect(overflow.success).toBe(false);
+    if (!overflow.success) {
+      expect(overflow.error.issues[0].message).toBe(
+        VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      );
+    }
+  });
 });

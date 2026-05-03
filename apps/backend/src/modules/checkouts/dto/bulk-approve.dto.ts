@@ -19,7 +19,14 @@ export const bulkApproveSchema = z.object({
       VALIDATION_RULES.BULK_OPERATION_MAX_COUNT,
       VM.array.maxCases(VALIDATION_RULES.BULK_OPERATION_MAX_COUNT)
     ),
-  commonReason: z.string().optional(),
+  commonReason: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('공통 승인 메모', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type BulkApproveInput = z.infer<typeof bulkApproveSchema>;

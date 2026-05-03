@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { VM, uuidString } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -22,8 +23,22 @@ export const UpdateCalibrationPlanValidationPipe = new ZodValidationPipe(
  * 교정계획서 항목 수정 스키마
  */
 export const updateCalibrationPlanItemSchema = z.object({
-  plannedCalibrationAgency: z.string().optional(),
-  notes: z.string().optional(),
+  plannedCalibrationAgency: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('계획된 교정기관', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('추가 비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type UpdateCalibrationPlanItemInput = z.infer<typeof updateCalibrationPlanItemSchema>;
