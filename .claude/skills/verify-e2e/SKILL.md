@@ -31,8 +31,10 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts` | 테스트 데이터 SSOT |
 | `apps/frontend/tests/e2e/shared/helpers/api-helpers.ts` | 토큰 캐싱, 캐시 클리어 헬퍼 |
 | `apps/backend/src/database/utils/uuid-constants.ts` | 백엔드 UUID 상수 SSOT |
-| `apps/frontend/tests/e2e/a11y/` | 접근성 게이트 (공개 라우트 전용, auth 불필요) |
-| `apps/frontend/playwright.a11y.config.ts` | a11y 전용 Playwright 설정 (globalSetup 없음) |
+| `apps/frontend/tests/e2e/a11y/login.a11y.spec.ts` | 공개 라우트 접근성 게이트 (auth 불필요) |
+| `apps/frontend/tests/e2e/shared/utils/quality-audit-routes.ts` | quality audit route registry 로더 |
+| `apps/frontend/playwright.a11y.config.ts` | 공개 a11y 전용 Playwright 설정 (globalSetup 없음) |
+| `docs/operations/quality-audit-routes.json` | Lighthouse/a11y 감사 대상 라우트 SSOT |
 
 ## Workflow
 
@@ -1194,3 +1196,28 @@ grep -n "E2E_PASSWORDS\|DEV_USER_PASSWORD\|DEV_MANAGER_PASSWORD\|DEV_ADMIN_PASSW
 **FAIL:** 하드코딩 → `E2E_PASSWORDS` 상수 경유로 교체.
 
 **예외:** `auth.setup.ts` 및 `global-setup.ts` — test-login endpoint 경유 storageState 생성, 패스워드 직접 참조 없음.
+
+### Step 27: 공개 a11y 감사 라우트 SSOT + config 경계 (2026-05-03 추가)
+
+공개 접근성 게이트는 `docs/operations/quality-audit-routes.json`의 `publicRoutes`만 대상으로 한다.
+인증이 필요한 a11y spec은 기본 Playwright 설정의 storageState/globalSetup 경계를 사용하고,
+`playwright.a11y.config.ts`에는 포함하지 않는다.
+
+```bash
+# 공개 a11y config는 login 공개 spec만 수집해야 함
+grep -n "testMatch: 'login\\.a11y\\.spec\\.ts'" apps/frontend/playwright.a11y.config.ts
+
+# spec은 라우트 문자열을 직접 보유하지 않고 registry loader를 경유해야 함
+grep -n "getPublicA11yRoutes" apps/frontend/tests/e2e/a11y/login.a11y.spec.ts
+grep -n "quality-audit-routes.json" apps/frontend/tests/e2e/shared/utils/quality-audit-routes.ts
+
+# CI workflow는 filter cwd 기준 config path를 사용해야 함
+grep -n -- "--config playwright\\.a11y\\.config\\.ts" .github/workflows/accessibility-audit.yml
+grep -n "apps/frontend/playwright\\.a11y\\.config\\.ts" .github/workflows/accessibility-audit.yml && echo "FAIL: duplicated cwd path" || true
+
+# 실제 수집 대상 확인: 2 tests / login.a11y.spec.ts only
+pnpm --filter frontend exec playwright test --config playwright.a11y.config.ts --list
+```
+
+**PASS:** 공개 a11y config가 `login.a11y.spec.ts`만 수집하고, spec/workflow가 `quality-audit-routes.json` SSOT를 경유.
+**FAIL:** `/login` 같은 route literal이 spec/workflow/config에 직접 박히거나, auth-required a11y spec이 public config에 포함됨.

@@ -1,12 +1,14 @@
 name: Performance Audit (Lighthouse CI)
 # 임계값 SSOT: docs/operations/performance-budgets.md
-# 대상: /login (인증 불필요 — 백엔드 없이 실행)
+# 대상 라우트 SSOT: docs/operations/quality-audit-routes.json
+# 대상: publicRoutes 중 lighthouse=true (인증 불필요 — 백엔드 없이 실행)
 
 on:
   push:
     branches: [main]
     paths:
       - 'apps/frontend/**'
+      - 'docs/operations/quality-audit-routes.json'
       - '.lighthouserc.js'
       - '.github/workflows/performance-audit.yml'
   workflow_dispatch:
@@ -23,7 +25,7 @@ env:
 
 jobs:
   lighthouse:
-    name: Lighthouse CI — /login
+    name: Lighthouse CI — public routes
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -43,7 +45,7 @@ jobs:
       - name: Build frontend
         run: pnpm --filter frontend run build
         env:
-          # /login 페이지는 backend 호출 없음 — CI 전용 더미값
+          # public audit routes are backend-free — CI 전용 더미값
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: ci-lighthouse-secret-not-for-production
           INTERNAL_BACKEND_URL: http://localhost:3001

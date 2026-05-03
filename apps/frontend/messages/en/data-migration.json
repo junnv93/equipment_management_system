@@ -65,7 +65,11 @@
       "deselectAll": "Deselect all",
       "collapse": "Collapse",
       "showMore": "+{count} more",
-      "selectRow": "Select row {row}"
+      "selectRow": "Select row {row}",
+      "paginationLabel": "Preview row pages",
+      "paginationInfo": "Showing {start}-{end} of {total} · Page {page} of {totalPages}",
+      "previousPage": "Previous",
+      "nextPage": "Next"
     },
     "status": {
       "valid": "Valid",

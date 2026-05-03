@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Download, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useExecuteMigration, useDownloadErrorReport } from '@/hooks/use-data-migration';
+import { DATA_MIGRATION_PREVIEW_PAGE_SIZE } from '@/lib/config/data-migration-preview';
 import type {
   MultiSheetPreviewResult,
   MultiSheetExecuteResult,
@@ -48,6 +49,71 @@ const DATE_FIELD: Partial<Record<MigrationSheetType, string>> = {
   repair: 'repairDate',
   incident: 'occurredAt',
 };
+
+function usePreviewWindow<T>(rows: readonly T[]) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(rows.length / DATA_MIGRATION_PREVIEW_PAGE_SIZE));
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
+  const startIndex = (page - 1) * DATA_MIGRATION_PREVIEW_PAGE_SIZE;
+  const endIndex = Math.min(startIndex + DATA_MIGRATION_PREVIEW_PAGE_SIZE, rows.length);
+  const visibleRows = useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex]);
+
+  return {
+    page,
+    totalPages,
+    start: rows.length === 0 ? 0 : startIndex + 1,
+    end: endIndex,
+    visibleRows,
+    previousPage: () => setPage((current) => Math.max(1, current - 1)),
+    nextPage: () => setPage((current) => Math.min(totalPages, current + 1)),
+  };
+}
+
+function PreviewPaginationBar({
+  start,
+  end,
+  total,
+  page,
+  totalPages,
+  onPrevious,
+  onNext,
+}: {
+  start: number;
+  end: number;
+  total: number;
+  page: number;
+  totalPages: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const t = useTranslations('data-migration');
+
+  if (total <= DATA_MIGRATION_PREVIEW_PAGE_SIZE) return null;
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-sm text-muted-foreground"
+      role="navigation"
+      aria-label={t('preview.table.paginationLabel')}
+    >
+      <span aria-live="polite">
+        {t('preview.table.paginationInfo', { start, end, total, page, totalPages })}
+      </span>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={onPrevious} disabled={page <= 1}>
+          {t('preview.table.previousPage')}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onNext} disabled={page >= totalPages}>
+          {t('preview.table.nextPage')}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function RowErrorsCell({ row }: { row: MigrationRowPreview }) {
   const t = useTranslations('data-migration');
@@ -131,6 +197,9 @@ function EquipmentSheetTable({
   onToggleRow: (n: number) => void;
 }) {
   const t = useTranslations('data-migration');
+  const { page, totalPages, start, end, visibleRows, previousPage, nextPage } = usePreviewWindow(
+    sheet.rows
+  );
   const selectableRows = sheet.rows.filter(
     (r) =>
       r.status === 'valid' ||
@@ -141,63 +210,74 @@ function EquipmentSheetTable({
     selectableRows.length > 0 && selectableRows.every((r) => selectedRowNumbers.has(r.rowNumber));
 
   return (
-    <div className="overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10 pl-4">
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={onToggleAll}
-                aria-label={
-                  allSelected ? t('preview.table.deselectAll') : t('preview.table.selectAll')
-                }
-              />
-            </TableHead>
-            <TableHead className="w-14">{t('preview.table.row')}</TableHead>
-            <TableHead className="w-24">{t('preview.table.status')}</TableHead>
-            <TableHead>{t('preview.table.name')}</TableHead>
-            <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
-            <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sheet.rows.map((row) => {
-            const isSelectable =
-              row.status === 'valid' ||
-              row.status === 'warning' ||
-              (!options.skipDuplicates && row.status === 'duplicate');
-            const isChecked = selectedRowNumbers.has(row.rowNumber);
+    <div>
+      <div className="overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10 pl-4">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={onToggleAll}
+                  aria-label={
+                    allSelected ? t('preview.table.deselectAll') : t('preview.table.selectAll')
+                  }
+                />
+              </TableHead>
+              <TableHead className="w-14">{t('preview.table.row')}</TableHead>
+              <TableHead className="w-24">{t('preview.table.status')}</TableHead>
+              <TableHead>{t('preview.table.name')}</TableHead>
+              <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
+              <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleRows.map((row) => {
+              const isSelectable =
+                row.status === 'valid' ||
+                row.status === 'warning' ||
+                (!options.skipDuplicates && row.status === 'duplicate');
+              const isChecked = selectedRowNumbers.has(row.rowNumber);
 
-            return (
-              <TableRow key={row.rowNumber} className={!isSelectable ? 'opacity-50' : undefined}>
-                <TableCell className="pl-4">
-                  {isSelectable && (
-                    <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={() => onToggleRow(row.rowNumber)}
-                      aria-label={t('preview.table.selectRow', { row: row.rowNumber })}
-                    />
-                  )}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
-                    {t(`preview.status.${row.status}`)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm">{String(row.data['name'] ?? '-')}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {row.managementNumber ?? String(row.data['managementNumber'] ?? '-')}
-                </TableCell>
-                <TableCell>
-                  <RowErrorsCell row={row} />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+              return (
+                <TableRow key={row.rowNumber} className={!isSelectable ? 'opacity-50' : undefined}>
+                  <TableCell className="pl-4">
+                    {isSelectable && (
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => onToggleRow(row.rowNumber)}
+                        aria-label={t('preview.table.selectRow', { row: row.rowNumber })}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
+                      {t(`preview.status.${row.status}`)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{String(row.data['name'] ?? '-')}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {row.managementNumber ?? String(row.data['managementNumber'] ?? '-')}
+                  </TableCell>
+                  <TableCell>
+                    <RowErrorsCell row={row} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <PreviewPaginationBar
+        start={start}
+        end={end}
+        total={sheet.rows.length}
+        page={page}
+        totalPages={totalPages}
+        onPrevious={previousPage}
+        onNext={nextPage}
+      />
     </div>
   );
 }
@@ -206,6 +286,9 @@ function EquipmentSheetTable({
 function HistorySheetTable({ sheet }: { sheet: SheetPreviewResult }) {
   const t = useTranslations('data-migration');
   const dateField = DATE_FIELD[sheet.sheetType];
+  const { page, totalPages, start, end, visibleRows, previousPage, nextPage } = usePreviewWindow(
+    sheet.rows
+  );
 
   return (
     <div className="space-y-3">
@@ -213,42 +296,53 @@ function HistorySheetTable({ sheet }: { sheet: SheetPreviewResult }) {
         <Info className="h-4 w-4" />
         <AlertDescription className="text-xs">{t('preview.historyReadOnly')}</AlertDescription>
       </Alert>
-      <div className="overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-14">{t('preview.table.row')}</TableHead>
-              <TableHead className="w-24">{t('preview.table.status')}</TableHead>
-              <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
-              {dateField && <TableHead className="w-32">{t('preview.table.date')}</TableHead>}
-              <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sheet.rows.map((row) => (
-              <TableRow
-                key={row.rowNumber}
-                className={row.status === 'error' ? 'opacity-50' : undefined}
-              >
-                <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
-                    {t(`preview.status.${row.status}`)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {String(row.data['managementNumber'] ?? '-')}
-                </TableCell>
-                {dateField && (
-                  <TableCell className="text-xs">{String(row.data[dateField] ?? '-')}</TableCell>
-                )}
-                <TableCell>
-                  <RowErrorsCell row={row} />
-                </TableCell>
+      <div>
+        <div className="overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-14">{t('preview.table.row')}</TableHead>
+                <TableHead className="w-24">{t('preview.table.status')}</TableHead>
+                <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
+                {dateField && <TableHead className="w-32">{t('preview.table.date')}</TableHead>}
+                <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((row) => (
+                <TableRow
+                  key={row.rowNumber}
+                  className={row.status === 'error' ? 'opacity-50' : undefined}
+                >
+                  <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
+                      {t(`preview.status.${row.status}`)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {String(row.data['managementNumber'] ?? '-')}
+                  </TableCell>
+                  {dateField && (
+                    <TableCell className="text-xs">{String(row.data[dateField] ?? '-')}</TableCell>
+                  )}
+                  <TableCell>
+                    <RowErrorsCell row={row} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <PreviewPaginationBar
+          start={start}
+          end={end}
+          total={sheet.rows.length}
+          page={page}
+          totalPages={totalPages}
+          onPrevious={previousPage}
+          onNext={nextPage}
+        />
       </div>
     </div>
   );

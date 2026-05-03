@@ -65,7 +65,11 @@
       "deselectAll": "전체 해제",
       "collapse": "접기",
       "showMore": "+{count}개 더보기",
-      "selectRow": "행 {row} 선택"
+      "selectRow": "행 {row} 선택",
+      "paginationLabel": "미리보기 행 페이지",
+      "paginationInfo": "{total}개 중 {start}-{end} 표시 · {page}/{totalPages}페이지",
+      "previousPage": "이전",
+      "nextPage": "다음"
     },
     "status": {
       "valid": "유효",

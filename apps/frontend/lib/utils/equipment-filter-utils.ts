@@ -39,7 +39,7 @@ import type {
   ManagementMethod,
   Classification,
 } from '@equipment-management/schemas';
-import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@equipment-management/shared-constants';
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
@@ -100,6 +100,12 @@ export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
 };
+
+function normalizePageSize(value: number): number {
+  return PAGE_SIZE_OPTIONS.includes(value as (typeof PAGE_SIZE_OPTIONS)[number])
+    ? value
+    : DEFAULT_UI_FILTERS.pageSize;
+}
 
 /**
  * URLSearchParams에서 UI 필터 객체로 변환
@@ -181,7 +187,8 @@ export function parseEquipmentFiltersFromSearchParams(
     sortBy,
     sortOrder,
     page: isNaN(page) || page < 1 ? DEFAULT_UI_FILTERS.page : page,
-    pageSize: isNaN(pageSize) || pageSize < 1 ? DEFAULT_UI_FILTERS.pageSize : pageSize,
+    pageSize:
+      isNaN(pageSize) || pageSize < 1 ? DEFAULT_UI_FILTERS.pageSize : normalizePageSize(pageSize),
   };
 }
 

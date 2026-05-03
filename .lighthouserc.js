@@ -3,15 +3,37 @@
 /**
  * Lighthouse CI 설정 — UL Equipment Management System
  *
- * 대상 라우트: /login (인증 불필요 — 백엔드 없이 CI에서 실행 가능)
+ * 대상 라우트: docs/operations/quality-audit-routes.json publicRoutes 중 lighthouse=true
+ * 인증 불필요 공개 라우트만 실행한다. 인증 라우트는 Playwright E2E/a11y에서 storageState 기반 검증.
  * 임계값 SSOT: docs/operations/performance-budgets.md
  *
  * @type {import('@lhci/cli').LhciConfig}
  */
+const qualityAuditRoutes = require('./docs/operations/quality-audit-routes.json');
+
+const authenticatedLighthouseRoutes = qualityAuditRoutes.authenticatedRoutes.filter(
+  (route) => route.lighthouse
+);
+if (authenticatedLighthouseRoutes.length > 0) {
+  throw new Error(
+    `Authenticated Lighthouse routes require an explicit login flow first: ${authenticatedLighthouseRoutes
+      .map((route) => route.id)
+      .join(', ')}`
+  );
+}
+
+const publicLighthouseUrls = qualityAuditRoutes.publicRoutes
+  .filter((route) => route.lighthouse)
+  .map((route) => `http://localhost:3000${route.path}`);
+
+if (publicLighthouseUrls.length === 0) {
+  throw new Error('No public Lighthouse routes configured in quality-audit-routes.json');
+}
+
 module.exports = {
   ci: {
     collect: {
-      url: ['http://localhost:3000/login'],
+      url: publicLighthouseUrls,
       startServerCommand: 'pnpm --filter frontend run start',
       startServerReadyPattern: 'Ready in',
       startServerReadyTimeout: 30000,

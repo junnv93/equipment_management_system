@@ -39,8 +39,12 @@ Referenced by `.github/workflows/performance-audit.yml`, `accessibility-audit.ym
 
 ## Monitored Routes
 
-- `/` (dashboard redirect)
-- `/equipment` (equipment list)
-- `/software` (software registry)
-- `/software/:id` (software detail — mobile QR landing)
-- `/software-validations` (global validation list)
+Route targets are defined in `docs/operations/quality-audit-routes.json`.
+
+- `publicRoutes`: run in lightweight CI without backend authentication.
+- `authenticatedRoutes`: registry-only for now. They require seeded backend data and
+  Playwright storageState before `lighthouse` or `a11y` can be enabled.
+
+Do not add route strings directly to Lighthouse or axe configs. Add the route to
+`quality-audit-routes.json`, then opt it into the relevant audit with
+`lighthouse` and `a11y`.

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const managedFrontendServer = process.env.PLAYWRIGHT_MANAGED_SERVER === '1';
+
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: '**/*.spec.ts',
@@ -67,12 +69,14 @@ export default defineConfig({
       dependencies: ['setup'],
     },
   ],
-  // webServer 설정 비활성화 - 수동으로 서버 실행 필요
-  // 사용법: pnpm dev 실행 후 playwright test 실행
-  // webServer: {
-  //   command: 'npx next dev',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: true,
-  //   timeout: 120 * 1000,
-  // },
+  // Nightly E2E는 backend/frontend를 workflow가 함께 기동하므로 기본값은 외부 서버 사용.
+  // 로컬 단일 frontend 검증은 `PLAYWRIGHT_MANAGED_SERVER=1`로 opt-in.
+  webServer: managedFrontendServer
+    ? {
+        command: 'pnpm exec next dev --port 3000',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      }
+    : undefined,
 });

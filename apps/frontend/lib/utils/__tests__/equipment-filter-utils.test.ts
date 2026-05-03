@@ -41,6 +41,18 @@ describe('parseEquipmentFiltersFromSearchParams()', () => {
       const result = parseEquipmentFiltersFromSearchParams(params);
       expect(result.page).toBe(1);
     });
+
+    it('PAGE_SIZE_OPTIONS에 없는 pageSize → 기본값으로 폴백', () => {
+      const params = new URLSearchParams('pageSize=999999');
+      const result = parseEquipmentFiltersFromSearchParams(params);
+      expect(result.pageSize).toBe(DEFAULT_UI_FILTERS.pageSize);
+    });
+
+    it('pageSize는 PAGE_SIZE_OPTIONS 값만 허용', () => {
+      const params = new URLSearchParams('pageSize=100');
+      const result = parseEquipmentFiltersFromSearchParams(params);
+      expect(result.pageSize).toBe(100);
+    });
   });
 
   describe('_all 변환 규칙 (무한 리다이렉트 방지)', () => {

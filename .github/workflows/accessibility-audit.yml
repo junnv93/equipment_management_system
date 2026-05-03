@@ -1,13 +1,15 @@
-name: Accessibility Audit (axe-core + Playwright)
+name: Accessibility Audit (Public Routes)
 # 임계값 SSOT: docs/operations/performance-budgets.md
+# 대상 라우트 SSOT: docs/operations/quality-audit-routes.json
 # 도구: @axe-core/playwright (기존 설치됨)
-# 대상: /login (인증 불필요 — 백엔드 없이 실행)
+# 대상: publicRoutes 중 a11y=true (인증 불필요 — 백엔드 없이 실행)
 
 on:
   push:
     branches: [main]
     paths:
       - 'apps/frontend/**'
+      - 'docs/operations/quality-audit-routes.json'
       - '.github/workflows/accessibility-audit.yml'
   workflow_dispatch:
 
@@ -23,7 +25,7 @@ env:
 
 jobs:
   axe:
-    name: axe-core WCAG 2.1 AA
+    name: axe-core WCAG 2.1 AA — public routes
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -62,14 +64,15 @@ jobs:
 
       - name: Wait for server ready
         run: |
+          READY_PATH="$(node -p "require('./docs/operations/quality-audit-routes.json').publicRoutes.find((route) => route.a11y)?.path || '/'")"
           timeout 30 bash -c \
-            'until curl -sf http://localhost:3000/login -o /dev/null; do sleep 1; done' \
+            "until curl -sf http://localhost:3000${READY_PATH} -o /dev/null; do sleep 1; done" \
           && echo "✅ 서버 준비 완료"
 
       - name: Run axe accessibility tests
         run: |
           pnpm --filter frontend exec playwright test \
-            --config apps/frontend/playwright.a11y.config.ts \
+            --config playwright.a11y.config.ts \
             --reporter=list
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000

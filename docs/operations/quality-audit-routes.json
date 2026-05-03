@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "description": "SSOT for quality audit route targets. Public routes are automated without backend auth; authenticated routes are registry-only until Playwright storageState and seeded backend data are wired.",
+  "publicRoutes": [
+    {
+      "id": "login",
+      "path": "/login",
+      "label": "Login",
+      "lighthouse": true,
+      "a11y": true
+    }
+  ],
+  "authenticatedRoutes": [
+    {
+      "id": "dashboard",
+      "path": "/",
+      "label": "Dashboard",
+      "role": "test_engineer",
+      "lighthouse": false,
+      "a11y": false
+    },
+    {
+      "id": "equipment-list",
+      "path": "/equipment",
+      "label": "Equipment List",
+      "role": "test_engineer",
+      "lighthouse": false,
+      "a11y": false
+    },
+    {
+      "id": "software-list",
+      "path": "/software",
+      "label": "Software Registry",
+      "role": "technical_manager",
+      "lighthouse": false,
+      "a11y": false
+    },
+    {
+      "id": "software-validations",
+      "path": "/software-validations",
+      "label": "Software Validations",
+      "role": "technical_manager",
+      "lighthouse": false,
+      "a11y": false
+    }
+  ]
+}

@@ -381,6 +381,27 @@ grep -n "CHECKOUT_PURPOSE_VALUES" "apps/frontend/app/(dashboard)/checkouts/Check
 **예외:**
 - `handlePurposeChange(value: string)` 파라미터 — shadcn `Select.onValueChange`가 `string`을 반환하므로 입력 타입은 `string`. 내부에서 `includes()` 검증 후 `CheckoutPurpose | 'all'`로 좁혀야 함.
 
+### Step 12: Equipment URL `pageSize` 허용값 SSOT (2026-05-03 추가)
+
+`equipment-filter-utils.ts`는 URL `pageSize`를 그대로 신뢰하면 안 된다.
+`/equipment?pageSize=999999` 같은 값은 API 요청과 현재 페이지 렌더링 범위를 과도하게 키울 수 있으므로
+`PAGE_SIZE_OPTIONS`에 포함된 값만 허용하고 나머지는 `DEFAULT_UI_FILTERS.pageSize`로 폴백해야 한다.
+
+```bash
+# PAGE_SIZE_OPTIONS를 shared-constants에서 import해야 함
+grep -n "PAGE_SIZE_OPTIONS" apps/frontend/lib/utils/equipment-filter-utils.ts
+
+# pageSize normalization 경로 존재
+grep -n "normalizePageSize" apps/frontend/lib/utils/equipment-filter-utils.ts
+
+# oversized/invalid pageSize 회귀 테스트 존재
+grep -n "pageSize=999999\\|PAGE_SIZE_OPTIONS에 없는 pageSize" \
+  apps/frontend/lib/utils/__tests__/equipment-filter-utils.test.ts
+```
+
+**PASS:** URL `pageSize`는 shared `PAGE_SIZE_OPTIONS` 값만 통과하고, oversized/unknown 값은 기본값으로 폴백.
+**FAIL:** 임의 양수 pageSize가 `queryFilters`/API params로 그대로 흐름.
+
 ## Output Format
 
 ```markdown
@@ -397,6 +418,7 @@ grep -n "CHECKOUT_PURPOSE_VALUES" "apps/frontend/app/(dashboard)/checkouts/Check
 | 9   | 탭 컴포넌트 countActiveFilters SSOT | PASS/FAIL | 인라인 filterActive 계산 위치 |
 | 10  | checkout purpose 필터 타입 SSOT | PASS/FAIL | purpose: string 잔존 또는 enum 검증 누락 위치 |
 | 11  | IMPORT_SUBTAB_STATUS_GROUPS SSOT 위치 + 인라인 배열 금지 | PASS/FAIL | checkout-filter-utils.ts 외 재정의 또는 InboundTab 인라인 EIV 배열 위치 |
+| 12  | Equipment URL pageSize 허용값 SSOT | PASS/FAIL | PAGE_SIZE_OPTIONS 미경유 또는 oversized pageSize 테스트 누락 |
 ```
 
 ## Exceptions

@@ -30,7 +30,13 @@ function LoginProviders() {
 
   if (isLoading) {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label={tLogin('ssoLoading')}>
+      <div
+        className="space-y-3"
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label={tLogin('ssoLoading')}
+      >
         <Skeleton className="h-11 w-full rounded-lg" />
         <Skeleton className="h-11 w-full rounded-lg" />
       </div>
