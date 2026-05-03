@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Bell, CheckCircle2, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -138,6 +138,21 @@ export function NextStepPanel({
   const isHero = variant === 'hero';
   const isCompact = variant === 'compact';
   const canAct = descriptor.availableToCurrentUser && !isPending;
+  const liveMode = urgency === 'critical' ? 'assertive' : 'polite';
+  const rootRef = useRef<HTMLElement | null>(null);
+  const wasPendingRef = useRef(isPending);
+
+  const setRootRef = useCallback((node: HTMLElement | null) => {
+    rootRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    if (wasPendingRef.current && !isPending) {
+      rootRef.current?.focus({ preventScroll: true });
+    }
+
+    wasPendingRef.current = isPending;
+  }, [descriptor.currentStatus, isPending]);
 
   // 내 차례 판정 — system_admin은 availableToCurrentUser로 판단 (전체 역할 겸임)
   const userActorVariant = currentUserRole ? roleToActorVariant(currentUserRole) : null;
@@ -210,11 +225,13 @@ export function NextStepPanel({
   if (isHero) {
     return (
       <section
+        ref={setRootRef}
         key={descriptor.currentStatus}
         role="region"
         aria-label={t('panelTitle')}
-        aria-live={urgency === 'critical' ? 'assertive' : 'polite'}
+        aria-live={liveMode}
         aria-atomic="true"
+        tabIndex={-1}
         className={cn(
           NEXT_STEP_PANEL_TOKENS.container.hero,
           NEXT_STEP_PANEL_TOKENS.urgency[urgency],
@@ -305,10 +322,12 @@ export function NextStepPanel({
   if (isCompact) {
     return (
       <div
+        ref={setRootRef}
         key={descriptor.currentStatus}
         role="status"
-        aria-live="polite"
+        aria-live={liveMode}
         aria-atomic="true"
+        tabIndex={-1}
         className={cn(
           NEXT_STEP_PANEL_TOKENS.container.compact,
           WORKFLOW_PANEL_TOKENS.actor[actorVariant].border,
@@ -408,10 +427,12 @@ export function NextStepPanel({
 
   return (
     <div
+      ref={setRootRef}
       key={descriptor.currentStatus}
       role="status"
-      aria-live="polite"
+      aria-live={liveMode}
       aria-atomic="true"
+      tabIndex={-1}
       className={containerClasses}
       data-variant={variant}
       data-actor-variant={actorVariant}

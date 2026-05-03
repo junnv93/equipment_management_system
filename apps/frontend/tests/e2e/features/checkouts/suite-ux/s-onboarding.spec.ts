@@ -6,7 +6,7 @@
  * - CTA 클릭 → localStorage에 dismiss 저장
  * - prefers-reduced-motion: reduce → pulse 미적용
  *
- * Feature Flag 의존: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true
+ * NextStepPanel CTA 렌더가 전제입니다.
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
