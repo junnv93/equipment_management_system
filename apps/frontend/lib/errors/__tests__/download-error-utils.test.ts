@@ -1,5 +1,5 @@
 import { getDownloadErrorToast } from '../download-error-utils';
-import { ApiError, EquipmentErrorCode } from '../equipment-errors';
+import { ApiError, EquipmentErrorCode, ErrorCode, mapBackendErrorCode } from '../equipment-errors';
 
 describe('getDownloadErrorToast', () => {
   const fallback = '양식 다운로드에 실패했습니다.';
@@ -31,6 +31,45 @@ describe('getDownloadErrorToast', () => {
     const err = new ApiError('', EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND, 404);
     const result = getDownloadErrorToast(err, fallback);
     expect(result.description).toBe('양식 템플릿 파일이 스토리지에 없습니다.');
+  });
+
+  it('DOCUMENT_NOT_FOUND → 문서 전용 카탈로그 title + 백엔드 메시지 사용', () => {
+    expect(mapBackendErrorCode(ErrorCode.DocumentNotFound)).toBe(
+      EquipmentErrorCode.DOCUMENT_NOT_FOUND
+    );
+
+    const err = new ApiError(
+      '요청한 문서가 존재하지 않습니다.',
+      EquipmentErrorCode.DOCUMENT_NOT_FOUND,
+      404
+    );
+    const result = getDownloadErrorToast(err, fallback);
+    expect(result.title).toBe('문서를 찾을 수 없음');
+    expect(result.description).toBe('요청한 문서가 존재하지 않습니다.');
+  });
+
+  it('FILE_NOT_FOUND → 파일 전용 카탈로그 title + 기본 메시지 사용', () => {
+    expect(mapBackendErrorCode(ErrorCode.FileNotFound)).toBe(EquipmentErrorCode.FILE_NOT_FOUND);
+
+    const err = new ApiError('', EquipmentErrorCode.FILE_NOT_FOUND, 404);
+    const result = getDownloadErrorToast(err, fallback);
+    expect(result.title).toBe('파일을 찾을 수 없음');
+    expect(result.description).toBe('문서 파일이 스토리지에 없습니다.');
+  });
+
+  it('raw axios DOCUMENT_NOT_FOUND 응답도 document mapper로 처리', () => {
+    const result = getDownloadErrorToast(
+      {
+        response: {
+          data: {
+            code: ErrorCode.DocumentNotFound,
+          },
+        },
+      },
+      fallback
+    );
+    expect(result.title).toBe('문서를 찾을 수 없음');
+    expect(result.description).toBe('요청한 문서를 찾을 수 없습니다.');
   });
 
   it('UNKNOWN_ERROR 코드 → fallback description 사용 (title 없음)', () => {

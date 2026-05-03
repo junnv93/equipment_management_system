@@ -168,4 +168,53 @@ describe('useOptimisticMutation', () => {
 
     errorSpy.mockRestore();
   });
+
+  it('기본 optimistic write는 queryKey 정확 일치 캐시만 업데이트한다', async () => {
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(['items'], [] as Item[]);
+    queryClient.setQueryData(['items', { status: 'open' }], [] as Item[]);
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticMutation<Item, Item, Item[]>({
+          mutationFn: async (vars) => vars,
+          queryKey: ['items'],
+          optimisticUpdate: (old, vars) => [...(old ?? []), vars],
+        }),
+      { wrapper: Wrapper }
+    );
+
+    act(() => {
+      result.current.mutate({ id: '5' });
+    });
+
+    await waitFor(() => expect(queryClient.getQueryData(['items'])).toEqual([{ id: '5' }]));
+    expect(queryClient.getQueryData(['items', { status: 'open' }])).toEqual([]);
+  });
+
+  it('optimisticUpdateScope=matching이면 prefix가 같은 view 캐시들을 함께 업데이트한다', async () => {
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(['items'], [] as Item[]);
+    queryClient.setQueryData(['items', { status: 'open' }], [] as Item[]);
+    queryClient.setQueryData(['other-items'], [] as Item[]);
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticMutation<Item, Item, Item[]>({
+          mutationFn: async (vars) => vars,
+          queryKey: ['items'],
+          optimisticUpdateScope: 'matching',
+          optimisticUpdate: (old, vars) => [...(old ?? []), vars],
+        }),
+      { wrapper: Wrapper }
+    );
+
+    act(() => {
+      result.current.mutate({ id: '6' });
+    });
+
+    await waitFor(() => expect(queryClient.getQueryData(['items'])).toEqual([{ id: '6' }]));
+    expect(queryClient.getQueryData(['items', { status: 'open' }])).toEqual([{ id: '6' }]);
+    expect(queryClient.getQueryData(['other-items'])).toEqual([]);
+  });
 });

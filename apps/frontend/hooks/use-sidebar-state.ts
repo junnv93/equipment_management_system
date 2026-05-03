@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { track } from '@/lib/analytics/track';
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 
 const STORAGE_KEY = 'sidebar-collapsed';
 const ANALYTICS_DEBOUNCE_MS = 200;
@@ -29,7 +30,9 @@ export function useSidebarState() {
   const trackToggleDebounced = useCallback((nextCollapsed: boolean) => {
     if (analyticsTimerRef.current) clearTimeout(analyticsTimerRef.current);
     analyticsTimerRef.current = setTimeout(() => {
-      track('sidebar.toggle', { state: nextCollapsed ? 'collapsed' : 'expanded' });
+      track(ANALYTICS_EVENTS.SIDEBAR_TOGGLE, {
+        state: nextCollapsed ? 'collapsed' : 'expanded',
+      });
       analyticsTimerRef.current = null;
     }, ANALYTICS_DEBOUNCE_MS);
   }, []);

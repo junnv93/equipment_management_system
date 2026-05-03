@@ -880,6 +880,7 @@ export type NCGuidanceKey = `${NCGuidanceStatusKey}_${NCGuidanceRole}`;
  */
 export type NCGuidanceKeyReachable =
   | `${'open' | 'openRejected' | 'openBlockedRepair' | 'openBlockedRecalibration' | 'corrected'}_${'operator' | 'manager'}`
+  | 'openBlockedRepair_quality_manager'
   | 'openBlockedRecalibration_quality_manager'
   | 'closed_all';
 
@@ -942,6 +943,14 @@ export const NC_WORKFLOW_GUIDANCE_TOKENS = {
     roleChip: 'blocked',
   },
   openBlockedRepair_manager: {
+    variant: 'critical',
+    emphasis: 'leftBorder',
+    icon: 'Wrench',
+    stepBadgeKey: 'one',
+    ctaKind: 'none',
+    roleChip: 'blocked',
+  },
+  openBlockedRepair_quality_manager: {
     variant: 'critical',
     emphasis: 'leftBorder',
     icon: 'Wrench',
@@ -1019,7 +1028,10 @@ export function resolveNCGuidanceKey(args: {
   const role: NCGuidanceRole = canCloseNC ? 'manager' : 'operator';
   if (status === 'closed') return 'closed_all';
   if (status === 'corrected') return `corrected_${role}`;
-  if (needsRepair) return `openBlockedRepair_${role}`;
+  if (needsRepair) {
+    if (!canCloseNC && canCreateCalibration === false) return 'openBlockedRepair_quality_manager';
+    return `openBlockedRepair_${role}`;
+  }
   if (needsRecalibration) {
     if (!canCloseNC && canCreateCalibration === false)
       return 'openBlockedRecalibration_quality_manager';

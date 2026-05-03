@@ -87,17 +87,20 @@ export function getStaggerDelay(
  * 이 상한 이상의 row는 animation-delay 없이 렌더 — 저사양 기기 GPU layer 분리 비용 방지.
  */
 export const STAGGER_ROW_LIMIT = 12 as const;
+export const LOW_HARDWARE_CONCURRENCY_THRESHOLD = 4 as const;
+
+export function shouldUseStaggerFadeIn(index: number): boolean {
+  if (index >= STAGGER_ROW_LIMIT) return false;
+  if (typeof window === 'undefined') return true;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  return navigator.hardwareConcurrency >= LOW_HARDWARE_CONCURRENCY_THRESHOLD;
+}
 
 export function getStaggerFadeInStyle(
   index: number,
   type: keyof typeof MOTION_TOKENS.stagger = 'list'
 ): React.CSSProperties | undefined {
-  if (
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) {
-    return undefined;
-  }
+  if (!shouldUseStaggerFadeIn(index)) return undefined;
   return { animationDelay: getStaggerDelay(index, type) };
 }
 

@@ -13,6 +13,7 @@
  */
 
 import { ApiError, EquipmentErrorCode, ERROR_MESSAGES } from './equipment-errors';
+import { mapDocumentFileErrorToToast } from './document-errors';
 
 export interface DownloadErrorToast {
   title?: string;
@@ -30,6 +31,11 @@ export function getDownloadErrorToast(
   error: unknown,
   fallbackDescription: string
 ): DownloadErrorToast {
+  const documentFileToast = mapDocumentFileErrorToToast(error, fallbackDescription);
+  if (documentFileToast.title) {
+    return documentFileToast;
+  }
+
   if (error instanceof ApiError) {
     const info = ERROR_MESSAGES[error.code];
 

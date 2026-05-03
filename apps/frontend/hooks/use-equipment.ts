@@ -102,6 +102,7 @@ export function useCreateEquipment() {
   >({
     mutationFn: ({ data, files }) => equipmentApi.createEquipment(data, files),
     queryKey: queryKeys.equipment.lists(),
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { data }) => {
       if (!old?.data) return { data: [] };
 
@@ -140,6 +141,7 @@ export function useUpdateEquipment() {
   >({
     mutationFn: ({ id, data, files }) => equipmentApi.updateEquipment(id, data, files),
     queryKey: queryKeys.equipment.lists(),
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { id, data }) => {
       if (!old?.data) return { data: [] };
 
@@ -175,6 +177,7 @@ export function useDeleteEquipment() {
   return useOptimisticMutation<void, { id: string; version: number }, { data: Equipment[] }>({
     mutationFn: ({ id, version }) => equipmentApi.deleteEquipment(id, version),
     queryKey: queryKeys.equipment.lists(),
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { id }) => {
       if (!old?.data) return { data: [] };
 
@@ -208,6 +211,7 @@ export function useUpdateEquipmentStatus() {
     mutationFn: ({ id, status, version }) =>
       equipmentApi.updateEquipmentStatus(id, status, version),
     queryKey: queryKeys.equipment.lists(),
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { id, status }) => {
       if (!old?.data) return { data: [] };
 

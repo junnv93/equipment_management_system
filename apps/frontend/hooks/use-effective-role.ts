@@ -11,10 +11,11 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { UserRoleEnum, UserRoleValues, type UserRole } from '@equipment-management/schemas';
+import { apiClient } from '@/lib/api/api-client';
 
 const SIMULATE_QUERY_KEY = 'simulateRole';
 
@@ -52,8 +53,25 @@ export function useEffectiveRole(): EffectiveRoleResult {
     return { effectiveRole: actualRole, simulating: false };
   }, [searchParams, actualRole]);
 
+  const auditKeysRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!simulating || !actualRole || !effectiveRole) return;
+    const auditKey = `${actualRole}:${effectiveRole}`;
+    if (auditKeysRef.current.has(auditKey)) return;
+    auditKeysRef.current.add(auditKey);
+
+    void apiClient.post('/api/audit-logs/simulate-role', {
+      simulatedRole: effectiveRole,
+      path: `${pathname}?${searchParams.toString()}`,
+    });
+  }, [actualRole, effectiveRole, pathname, searchParams, simulating]);
+
   const exitSimulation = () => {
     if (!simulating) return;
+    if (actualRole && effectiveRole) {
+      auditKeysRef.current.delete(`${actualRole}:${effectiveRole}`);
+    }
     const next = new URLSearchParams(searchParams.toString());
     next.delete(SIMULATE_QUERY_KEY);
     const qs = next.toString();

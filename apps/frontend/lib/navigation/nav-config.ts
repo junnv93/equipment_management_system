@@ -38,6 +38,12 @@ import type { PendingCountsByCategory } from '@/lib/api/approvals-api';
 /** 배지 데이터 소스 식별자 */
 export type NavBadgeSourceKey = 'approvals' | 'checkouts-your-turn';
 
+/** 보조 anchor의 aria-label i18n 키 (navigation namespace). */
+export type NavSecondaryActionAriaKey = 'layout.checkoutYourTurnAria';
+
+/** 메인 anchor의 aria-label i18n 키 (navigation namespace). */
+export type NavSecondaryActionPrimaryAriaKey = 'layout.checkoutOpenList';
+
 /**
  * 배지 설정 — discriminated union으로 분기 silent break 방지
  *
@@ -58,13 +64,13 @@ export type NavItemBadgeConfig =
         /** URL query 값 (CHECKOUT_QUERY_PARAMS.VIEW_VALUES 등 SSOT 경유) */
         queryValue: string;
         /** 보조 anchor의 aria-label i18n 키 (ICU `{count}` 지원) */
-        ariaKey: string;
+        ariaKey: NavSecondaryActionAriaKey;
         /**
          * 메인 anchor의 aria-label i18n 키.
          * 보조 anchor와 의미 구분을 위해 명시 (예: 메인은 "전체 목록", 보조는 "내 차례 N건").
          * sibling anchor 패턴에서 SR이 두 link의 의도를 즉시 구별하도록.
          */
-        primaryAriaKey: string;
+        primaryAriaKey: NavSecondaryActionPrimaryAriaKey;
       };
     };
 
@@ -94,9 +100,9 @@ export interface NavSection {
 export interface FilteredNavSecondaryAction {
   href: string;
   /** 보조 anchor aria-label i18n 키 */
-  ariaKey: string;
+  ariaKey: NavSecondaryActionAriaKey;
   /** 메인 anchor aria-label i18n 키 (보조 anchor와 의미 구분) */
-  primaryAriaKey: string;
+  primaryAriaKey: NavSecondaryActionPrimaryAriaKey;
 }
 
 /** 필터링/번역 완료된 네비게이션 아이템 */

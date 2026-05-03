@@ -650,6 +650,9 @@ export const EMPTY_STATE_TOKENS = {
     filtered: 'text-muted-foreground',
     'status-filtered': 'text-brand-warning',
     celebration: 'text-brand-ok',
+    neutral: 'text-muted-foreground',
+    success: 'text-brand-ok',
+    error: 'text-brand-critical',
   } as const,
   /** variant별 아이콘 배경 (iconContainer 결합용) */
   variantIconBg: {
@@ -657,6 +660,9 @@ export const EMPTY_STATE_TOKENS = {
     filtered: '',
     'status-filtered': 'bg-brand-warning/5 rounded-full p-3',
     celebration: 'bg-brand-ok/5 rounded-full p-3',
+    neutral: 'bg-muted rounded-full p-3',
+    success: 'bg-brand-ok/5 rounded-full p-3',
+    error: 'bg-brand-critical/5 rounded-full p-3',
   } as const,
 } as const;
 

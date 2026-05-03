@@ -32,6 +32,7 @@
  */
 export const BRAND_COLORS_HEX = {
   ok: '#10B981',
+  success: '#00A451',
   warning: '#F59E0B',
   critical: '#EF4444',
   info: '#3B82F6',
@@ -171,6 +172,17 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     solid: 'bg-brand-ok text-white',
     dot: 'bg-brand-ok rounded-full',
     borderOpacity30: 'border-brand-ok/30',
+  },
+  success: {
+    text: 'text-brand-success',
+    bgLight: 'bg-brand-success/10',
+    status: 'bg-brand-success/10 text-brand-success',
+    badge: 'text-brand-success bg-brand-success/10 border-brand-success/20',
+    container: 'bg-brand-success/10 border-brand-success/20',
+    leftBorder: 'border-l-brand-success',
+    solid: 'bg-brand-success text-white',
+    dot: 'bg-brand-success rounded-full',
+    borderOpacity30: 'border-brand-success/30',
   },
   warning: {
     text: 'text-brand-warning',

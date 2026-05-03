@@ -16,6 +16,9 @@
  *   - 이벤트 추가/제거 시 한 곳만 변경
  */
 export const ANALYTICS_EVENTS = {
+  /** 사이드바 접기/펼치기 — state 동반 */
+  SIDEBAR_TOGGLE: 'sidebar.toggle',
+
   /** 사이드바 반출 메뉴 클릭 — pendingCount 동반 */
   SIDEBAR_CHECKOUTS_CLICK: 'sidebar.checkouts.click',
 
@@ -44,14 +47,30 @@ export const ANALYTICS_EVENTS = {
   /**
    * Soft fork 결정 — Phase 1B-backend 출시 시 활성.
    * 옵션: 'this_only' / 'apply_forward' / 'cancel' (사전 등록).
+   *
+   * @deprecated Use SOFT_FORK_DECIDED for new callers.
    */
   INSPECTION_SOFT_FORK: 'inspection.soft_fork',
 
   /**
    * Template gallery 카드 선택 — Phase 1D 출시 시 활성 (사전 등록).
    * matchingReason: 'same_model' / 'same_classification' / 'same_measurement_area' / 'blank'.
+   *
+   * @deprecated Use GALLERY_USED for new callers.
    */
   INSPECTION_GALLERY_SELECTED: 'inspection.gallery.selected',
+
+  /** Inspection template version 1 created. PII-free event for build-once adoption metrics. */
+  INSPECTION_TEMPLATE_CREATED: 'inspection_template_created',
+
+  /** Inspection template version-up created via apply-forward or admin update. */
+  INSPECTION_TEMPLATE_VERSIONED: 'inspection_template_versioned',
+
+  /** Soft fork decision submitted: this_only / apply_forward / cancel. */
+  SOFT_FORK_DECIDED: 'soft_fork_decided',
+
+  /** Template gallery selection submitted, including blank-form selection. */
+  GALLERY_USED: 'gallery_used',
 
   /**
    * Cancel/X/Esc confirmation 진입 (0A-ext).

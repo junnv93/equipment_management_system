@@ -91,6 +91,17 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
   queryKey: QueryKey;
 
   /**
+   * Optimistic 업데이트 적용 범위.
+   *
+   * - `exact` 기본값: queryKey와 정확히 같은 캐시 1개만 업데이트
+   * - `matching`: queryKey prefix에 매칭되는 기존 캐시들을 모두 업데이트
+   *
+   * `queryKeys.equipment.lists()` / `queryKeys.checkouts.view.all()`처럼 filter 객체가 뒤에
+   * 붙는 list/view prefix를 넘길 때는 `matching`을 사용해야 실제 화면 캐시에 즉시 반영됩니다.
+   */
+  optimisticUpdateScope?: 'exact' | 'matching';
+
+  /**
    * Optimistic 업데이트 함수
    *
    * onMutate에서 즉시 실행되어 캐시를 업데이트합니다.
@@ -201,6 +212,7 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
 export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   mutationFn,
   queryKey,
+  optimisticUpdateScope = 'exact',
   optimisticUpdate,
   invalidateKeys = [],
   successMessage,
@@ -214,7 +226,15 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   const t = useTranslations('errors');
   const tGlobal = useTranslations();
 
-  return useMutation<TData, Error, TVariables, { snapshot: TCachedData | undefined }>({
+  return useMutation<
+    TData,
+    Error,
+    TVariables,
+    {
+      snapshot: TCachedData | undefined;
+      snapshots: Array<[QueryKey, TCachedData | undefined]>;
+    }
+  >({
     mutationFn,
 
     /**
@@ -230,14 +250,24 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
 
       // 2. 현재 데이터 스냅샷 저장 (롤백용)
       const snapshot = queryClient.getQueryData<TCachedData>(queryKey);
+      const snapshots =
+        optimisticUpdateScope === 'matching'
+          ? queryClient.getQueriesData<TCachedData>({ queryKey })
+          : [[queryKey, snapshot] as [QueryKey, TCachedData | undefined]];
 
       // 3. Optimistic 업데이트 - 즉시 캐시 수정
-      queryClient.setQueryData(queryKey, (old: TCachedData | undefined) =>
-        optimisticUpdate(old, variables)
-      );
+      if (optimisticUpdateScope === 'matching') {
+        queryClient.setQueriesData<TCachedData>({ queryKey }, (old) =>
+          optimisticUpdate(old, variables)
+        );
+      } else {
+        queryClient.setQueryData(queryKey, (old: TCachedData | undefined) =>
+          optimisticUpdate(old, variables)
+        );
+      }
 
       // 4. onError에서 사용할 context 반환
-      return { snapshot };
+      return { snapshot, snapshots };
     },
 
     /**

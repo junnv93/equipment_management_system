@@ -8,40 +8,14 @@
  * 의존: PR-3 design tokens (TRANSITION_PRESETS)
  */
 
-import { CheckoutStatusValues as CSVal, type CheckoutStatus } from '@equipment-management/schemas';
+import { CHECKOUT_DISPLAY_STEPS } from '@equipment-management/schemas';
 import { TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
-// Display step sequences — UI 관심사 SSOT (FSM 경로와 일치, SSOT: computeStepIndex)
-// CheckoutStatusStepper + WorkflowTimeline 공용. 여기서만 정의.
+// Display step sequences — package-level domain SSOT
 // ============================================================================
 
-export const CHECKOUT_DISPLAY_STEPS: { nonRental: CheckoutStatus[]; rental: CheckoutStatus[] } = {
-  nonRental: [
-    CSVal.PENDING,
-    CSVal.APPROVED,
-    CSVal.CHECKED_OUT,
-    CSVal.RETURNED,
-    CSVal.RETURN_APPROVED,
-  ],
-  rental: [
-    CSVal.PENDING,
-    CSVal.BORROWER_APPROVED,
-    CSVal.APPROVED,
-    CSVal.LENDER_CHECKED,
-    CSVal.IN_USE,
-    CSVal.BORROWER_RETURNED,
-    CSVal.LENDER_RECEIVED,
-    CSVal.RETURN_APPROVED,
-  ],
-};
-
-// FSM 불변식 검증 — 스텝 배열 길이 변경 시 즉시 crash로 발견
-if (CHECKOUT_DISPLAY_STEPS.nonRental.length !== 5 || CHECKOUT_DISPLAY_STEPS.rental.length !== 8) {
-  throw new Error(
-    `[FSM invariant] CHECKOUT_DISPLAY_STEPS 길이 불일치 — nonRental=${CHECKOUT_DISPLAY_STEPS.nonRental.length}(expected 5), rental=${CHECKOUT_DISPLAY_STEPS.rental.length}(expected 8)`
-  );
-}
+export { CHECKOUT_DISPLAY_STEPS };
 
 export const CHECKOUT_TIMELINE_TOKENS = {
   container: 'relative flex flex-col gap-0',

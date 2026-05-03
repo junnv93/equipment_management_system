@@ -428,7 +428,8 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   legend: 'px-4 pb-3 flex items-center gap-3 flex-shrink-0 flex-wrap',
   legendItem: 'flex items-center gap-1',
   legendDot: 'w-2 h-2 rounded-full flex-shrink-0',
-  legendText: `${MICRO_TYPO.badge} text-muted-foreground`,
+  /** Spec §A.3.1: legend labels use 12px while dense calendar internals keep badge scale. */
+  legendText: 'text-xs text-muted-foreground',
 } as const;
 
 // ============================================================================

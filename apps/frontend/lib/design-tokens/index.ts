@@ -120,6 +120,7 @@ export {
   getTransitionClasses,
   getStaggerDelay,
   getStaggerFadeInStyle,
+  shouldUseStaggerFadeIn,
   getAnimationDuration,
   getAnimationEasing,
   ANIMATION_PRESETS,
@@ -128,6 +129,7 @@ export {
   REDUCED_MOTION,
   staggerItem,
   STAGGER_ROW_LIMIT,
+  LOW_HARDWARE_CONCURRENCY_THRESHOLD,
 } from './motion';
 
 // ============================================================================

@@ -42,6 +42,8 @@ export enum EquipmentErrorCode {
   NOT_FOUND = 'NOT_FOUND',
   EQUIPMENT_NOT_FOUND = 'EQUIPMENT_NOT_FOUND',
   FORM_TEMPLATE_NOT_FOUND = 'FORM_TEMPLATE_NOT_FOUND',
+  DOCUMENT_NOT_FOUND = 'DOCUMENT_NOT_FOUND',
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
 
   // 서버/네트워크 에러
   SERVER_ERROR = 'SERVER_ERROR',
@@ -294,6 +296,18 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
       '시스템 관리자에게 해당 양식의 스토리지 등록을 요청하세요',
       '이미 요청한 경우 관리자 처리가 완료될 때까지 잠시 후 다시 시도해주세요',
     ],
+    severity: 'warning',
+  },
+  [EquipmentErrorCode.DOCUMENT_NOT_FOUND]: {
+    title: '문서를 찾을 수 없음',
+    message: '요청한 문서를 찾을 수 없습니다.',
+    solutions: ['문서가 삭제되었을 수 있습니다', '목록을 새로고침한 뒤 다시 시도해주세요'],
+    severity: 'warning',
+  },
+  [EquipmentErrorCode.FILE_NOT_FOUND]: {
+    title: '파일을 찾을 수 없음',
+    message: '문서 파일이 스토리지에 없습니다.',
+    solutions: ['시스템 관리자에게 파일 상태 확인을 요청하세요', '잠시 후 다시 시도해주세요'],
     severity: 'warning',
   },
 
@@ -552,6 +566,8 @@ export const ERROR_CODE_TO_HTTP_STATUS: Partial<Record<EquipmentErrorCode, numbe
   [EquipmentErrorCode.NOT_FOUND]: 404,
   [EquipmentErrorCode.EQUIPMENT_NOT_FOUND]: 404,
   [EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND]: 404,
+  [EquipmentErrorCode.DOCUMENT_NOT_FOUND]: 404,
+  [EquipmentErrorCode.FILE_NOT_FOUND]: 404,
   [EquipmentErrorCode.UNAUTHORIZED]: 401,
   [EquipmentErrorCode.SESSION_EXPIRED]: 401,
   [EquipmentErrorCode.PERMISSION_DENIED]: 403,
@@ -639,7 +655,8 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     [ErrorCode.IntermediateInspectionNotFound]: EquipmentErrorCode.NOT_FOUND,
     [ErrorCode.SelfInspectionNotFound]: EquipmentErrorCode.NOT_FOUND,
     [ErrorCode.TestPlanNotFound]: EquipmentErrorCode.NOT_FOUND,
-    [ErrorCode.DocumentNotFound]: EquipmentErrorCode.NOT_FOUND,
+    [ErrorCode.DocumentNotFound]: EquipmentErrorCode.DOCUMENT_NOT_FOUND,
+    [ErrorCode.FileNotFound]: EquipmentErrorCode.FILE_NOT_FOUND,
     [ErrorCode.AttachmentNotFound]: EquipmentErrorCode.NOT_FOUND,
     [ErrorCode.HistoryNotFound]: EquipmentErrorCode.NOT_FOUND,
     [ErrorCode.RepairHistoryNotFound]: EquipmentErrorCode.NOT_FOUND,

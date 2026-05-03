@@ -7,6 +7,7 @@ import {
 import type { PaginatedResponse } from './types';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { EquipmentImport } from './equipment-import-api';
+import { recordFsmMetaDrift } from '@/lib/observability/fsm-meta-drift';
 
 // ✅ SSOT: 반출 상태/목적 타입 import
 import type {
@@ -306,12 +307,18 @@ export interface RejectReturnDto {
   reason: string; // 반려 사유 (필수)
 }
 
+export interface RejectionPreset {
+  id: string;
+  label: string;
+  template: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+}
+
 /** Sprint 1.1 보장: 서버는 항상 meta를 populate해야 함. 누락 시 FSM drift 감지 로그. */
-function warnMetaDrift(checkout: Checkout): void {
+function warnMetaDrift(checkout: Checkout, endpoint: 'list' | 'detail'): void {
   if (checkout.meta === undefined) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[FSM drift] meta missing', checkout.id);
-    }
+    recordFsmMetaDrift({ checkoutId: checkout.id, endpoint, reason: 'meta_missing' });
   }
 }
 
@@ -334,7 +341,7 @@ const checkoutApi = {
     const url = `${API_ENDPOINTS.CHECKOUTS.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
     const result = transformPaginatedResponse<Checkout, CheckoutSummary>(response);
-    result.data.forEach(warnMetaDrift);
+    result.data.forEach((checkout) => warnMetaDrift(checkout, 'list'));
     return result;
   },
 
@@ -345,7 +352,7 @@ const checkoutApi = {
   async getCheckout(id: string): Promise<Checkout> {
     const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.GET(id));
     const checkout = transformSingleResponse<Checkout>(response);
-    warnMetaDrift(checkout);
+    warnMetaDrift(checkout, 'detail');
     return checkout;
   },
 
@@ -447,6 +454,15 @@ const checkoutApi = {
       reason,
     });
     return transformSingleResponse(response);
+  },
+
+  /**
+   * 반려 사유 프리셋 목록.
+   * Backend SSOT: `/api/checkouts/rejection-presets` (`rejection_presets` table).
+   */
+  async getRejectionPresets(): Promise<RejectionPreset[]> {
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.REJECTION_PRESETS);
+    return transformArrayResponse<RejectionPreset>(response);
   },
 
   /**

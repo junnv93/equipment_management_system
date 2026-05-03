@@ -48,6 +48,7 @@ export function useApproveCheckoutMutation() {
       return checkoutApi.approveCheckout(id, version);
     },
     queryKey: VIEW_ALL_KEY,
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { id }) => {
       if (!old?.data) return old as CheckoutListCache;
       return {
@@ -84,6 +85,7 @@ export function useBorrowerApproveCheckoutMutation() {
       return checkoutApi.borrowerApproveCheckout(id, version);
     },
     queryKey: VIEW_ALL_KEY,
+    optimisticUpdateScope: 'matching',
     optimisticUpdate: (old, { id }) => {
       if (!old?.data) return old as CheckoutListCache;
       return {

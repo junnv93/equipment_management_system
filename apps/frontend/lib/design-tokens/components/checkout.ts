@@ -842,6 +842,7 @@ export const CHECKOUT_FILTER_BAR_TOKENS = {
  *
  * Sprint 4.2: 4-zone grid 재구조화
  * Zone 1 (3px): purposeBar | Zone 2 (72px): status+dday | Zone 3 (1fr): identity | Zone 4 (auto): action
+ * Mobile: Zone 4 stacks under Zone 3 to avoid fixed 4-column overflow below sm.
  */
 export const CHECKOUT_ITEM_ROW_TOKENS = {
   /** 행 컨테이너 — 기본 스타일 (레이아웃 제외). grid 토큰과 함께 사용.
@@ -855,7 +856,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   ].join(' '),
 
   /** Sprint 4.2: 4-zone grid 레이아웃 — container와 함께 적용 */
-  grid: 'grid grid-cols-[3px_72px_1fr_auto] gap-3 items-center',
+  grid: 'grid grid-cols-[3px_72px_1fr] gap-3 items-center sm:grid-cols-[3px_72px_1fr_auto]',
 
   /** 기한 초과 행 배경 */
   containerOverdue: 'bg-brand-critical/5 hover:bg-brand-critical/8',
@@ -877,7 +878,8 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   zoneIdentity: 'min-w-0',
 
   /** Zone 4: NextStepPanel compact + MiniProgress tooltip */
-  zoneAction: 'flex items-center gap-1.5 shrink-0',
+  zoneAction:
+    'col-start-3 flex min-w-0 items-center justify-end gap-1.5 sm:col-auto sm:justify-start sm:shrink-0',
 
   /** MiniProgress 7×7 tooltip 트리거 버튼 — Zone 4 보조 */
   miniProgressTooltipButton: [

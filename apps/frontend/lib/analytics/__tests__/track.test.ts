@@ -4,7 +4,7 @@
  * 핵심 검증:
  * 1. SSR 환경(window undefined)에서 silent no-op
  * 2. CustomEvent('app:analytics') 발행
- * 3. PII 키 거부 (userId/email/role 등)
+ * 3. PII 키 거부 (userId/email 등 직접 식별 키)
  */
 import { track, type AnalyticsEventDetail } from '../track';
 

@@ -100,8 +100,12 @@ export const APPROVAL_STEPPER_TOKENS = {
   /** 최소 너비 (단계 정보) */
   infoWidth: 'min-w-[80px]',
 
-  /** 시작 노드 SR-only 라벨 (첫 번째 단계 노드 — 스크린리더 맥락 제공) */
-  startNodeLabel: { srOnly: 'sr-only' },
+  /** 시작 노드 라벨 (첫 번째 단계 노드 — 폐기 flow 시각 차등화 + 스크린리더 맥락 제공) */
+  startNodeLabel: {
+    srOnly: 'sr-only',
+    visual:
+      'absolute -left-1.5 -top-1.5 text-[10px] font-bold leading-none text-brand-info bg-background rounded-full px-0.5',
+  },
 } as const;
 
 // ============================================================================
@@ -545,6 +549,11 @@ export const APPROVAL_MOBILE_CATEGORY_BAR_TOKENS = {
 
 /** 승인 상세 모달 레이아웃 + 섹션 토큰 */
 export const APPROVAL_DETAIL_MODAL_TOKENS = {
+  /** 모바일 fullscreen, sm 이상 기존 centered modal */
+  content:
+    'inset-0 left-0 top-0 grid h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-none border-0 p-4 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6 data-[state=open]:motion-safe:duration-300 data-[state=open]:motion-safe:ease-spring-pop',
+  /** fullscreen body scroll region */
+  scrollBody: 'min-h-0 overflow-y-auto pr-2 sm:max-h-[60vh] sm:pr-4',
   /** 메타 그리드 — 2열 기본, 경과일/긴급도 포함 */
   metaGrid: 'grid grid-cols-2 gap-4 text-sm',
   metaLabel: 'text-muted-foreground',

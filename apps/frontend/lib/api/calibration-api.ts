@@ -12,9 +12,10 @@ import type {
   InspectionResult,
   InspectionJudgment,
   EquipmentClassification,
-  InspectionResultSectionType,
-  InspectionType,
   DocumentJson,
+  CreateInspectionResultSectionShape,
+  InspectionResultSectionShape,
+  RichCell as SchemaRichCell,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
@@ -226,38 +227,11 @@ export interface IntermediateInspectionEquipmentRef {
 // 결과 섹션 (동적 콘텐츠)
 // ============================================================================
 
-export type RichCell =
-  | { type: 'text'; value: string }
-  | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number };
+export type RichCell = SchemaRichCell;
 
-export interface ResultSection {
-  id: string;
-  inspectionId: string;
-  inspectionType: InspectionType;
-  sectionType: InspectionResultSectionType;
-  sortOrder: number;
-  title: string | null;
-  content: string | null;
-  tableData: { headers: string[]; rows: string[][] } | null;
-  richTableData: { headers: string[]; rows: RichCell[][] } | null;
-  documentId: string | null;
-  imageWidthCm: string | null;
-  imageHeightCm: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type ResultSection = InspectionResultSectionShape;
 
-export interface CreateResultSectionDto {
-  sortOrder: number;
-  sectionType: InspectionResultSectionType;
-  title?: string;
-  content?: string;
-  tableData?: { headers: string[]; rows: string[][] };
-  richTableData?: { headers: string[]; rows: RichCell[][] };
-  documentId?: string;
-  imageWidthCm?: number;
-  imageHeightCm?: number;
-}
+export type CreateResultSectionDto = CreateInspectionResultSectionShape;
 
 export interface CreateInspectionDto {
   inspectionDate: string;
