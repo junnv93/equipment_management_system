@@ -2140,3 +2140,29 @@ grep -rn "ROLE_PERMISSIONS\[.*\]\.includes\|ROLE_PERMISSIONS\[.*\]\.filter" \
 - `apps/backend/scripts/verify-e2e-actor-alignment.ts` — R4 룰 (matrix consistency)
 
 **발생 이력 (2026-05-02 신설)**: senior-permission-ssot-20260501 sprint Phase 1에서 `ROLE_PERMISSIONS`의 reverse-index view 신설. 시니어 표준 자기 검토에서 SSOT 정책이 SKILL doc에 미반영된 점 발견하여 즉시 추가 (별도 sprint 이연 회피).
+
+---
+
+### Step 58: `VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH` SSOT — `.max(200)` 매직넘버 DTO 인라인 금지 (2026-05-03 추가)
+
+**배경**: `packages/shared-constants/src/validation-rules.ts`에 `EXTENDED_TEXT_MAX_LENGTH: 200` 상수가 추가되었다 (`zod-trim-max-system-wide-residual` sprint, 2026-05-03). 이 상수는 소프트웨어명·제조사·URL 등 varchar(200) 컬럼 최대 길이를 나타낸다. 기존 `.max(200, ...)` 인라인 매직넘버는 모두 이 SSOT로 교체되었다. 신규 코드에서 `.max(200, ...)` 직접 사용은 SSOT 우회다.
+
+**규칙**: DTO에서 `.max(200, ...)` 매직넘버 직접 사용 금지 — `VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH` 경유 필수.
+
+**탐지 명령**:
+
+```bash
+# DTO 파일에서 .max(200) 매직넘버 인라인 사용 탐지
+grep -rn "\.max(200," apps/backend/src/modules --include="*.dto.ts"
+# 기대: 0건 (VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH SSOT 경유 필수)
+```
+
+**PASS 기준**: `.max(200,` 패턴 0건.
+
+**FAIL 기준**: 1건 이상 → `VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH` 교체 + `import { VALIDATION_RULES } from '@equipment-management/shared-constants'` 추가.
+
+**SSOT 체인**:
+- `packages/shared-constants/src/validation-rules.ts` — `EXTENDED_TEXT_MAX_LENGTH: 200`
+- 용도: 소프트웨어명, 제조사명, URL, linkUrl, externalIdentifier 등 varchar(200) 필드
+
+**발생 이력**: `zod-trim-max-system-wide-residual` sprint (2026-05-03) — notification.dto의 `.max(200, ...)` 인라인에서 상수 신설. 기존 매직넘버 전수 교체 완료.
