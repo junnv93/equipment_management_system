@@ -56,125 +56,48 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 
 **PASS:** `waitForTimeout` 0건. **WARN:** 헬퍼의 짧은 대기는 경고 수준.
 
-**Event-based wait 패턴 (2026-04-27 추가):**
-`waitForTimeout`은 DOM 상태 변화와 무관한 고정 sleep이므로 flaky 위험이 있다. 대신 Playwright의 retry-until 기반 어서션을 사용한다:
-
-```typescript
-// ❌ WRONG — 고정 sleep
-await page.waitForTimeout(2000);
-
-// ✅ 모달 닫힘 대기
-await expect(modal).not.toBeVisible({ timeout: 10000 });
-
-// ✅ 행 제거 대기 (승인/반려 후 목록에서 사라짐)
-await rows.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
-
-// ✅ 카운트 변화 대기
-await expect(rows).not.toHaveCount(initialCount, { timeout: 5000 });
-```
-
-`waitFor({state:'detached'})` + `.catch(() => {})` 패턴: 조건부 플로우(if 블록 내) 에서 액션이 실행될 수도 있고 안 될 수도 있을 때 — catch는 "실행 안 됨"을 정상 경로로 허용.
+상세: [references/locator-patterns.md](references/locator-patterns.md#step-4-waitfortimeout-금지--event-based-wait-패턴-2026-04-27-추가)
 
 ### Step 5: Locator 안티패턴
 
 **PASS:** `locator('[role=]')` 0건(예외 허용 목록 제외), `waitForFunction` 0건, **Tailwind utility class selector 0건**.
 
-**ARIA 역할 locator 허용 예외 (2026-04-27 추가):**
-`[role="X"]` CSS selector는 일반적으로 안티패턴이나, **ARIA 역할 속성 자체를 검증하는 목적**에서는 허용한다. 해당 역할이 올바르게 설정되어 있는지가 테스트 의도일 때 `getByRole()`로 대체하면 검증이 사라진다.
-
-허용 목록:
-- `[role="progressbar"]` — ARIA progressbar 균일 렌더 + aria-valuenow/valuemax 속성 검증
-- `[role="dialog"]` — 모달 열림/닫힘 상태 검증
-- `[role="toolbar"]` — BulkActionBar 같은 toolbar 역할 검증
-- `[role="checkbox"]` — 체크박스 역할 + 선택 상태 연동 검증
-- `[role="menuitem"]` — 드롭다운 메뉴 아이템 역할 검증
-
-```typescript
-// ✅ ARIA 역할 검증 목적 — 허용
-const stepper = row.locator('[role="progressbar"]');
-await expect(stepper).toHaveAttribute('aria-valuemax', '1');
-
-// ✅ dialog 열림 상태 검증 — 허용
-const modal = page.locator('[role="dialog"]');
-await expect(modal).toBeVisible();
-
-// ❌ 일반 레이아웃 요소에 role selector 사용 — 금지 (getByRole 대체)
-const nav = page.locator('[role="navigation"]');  // → page.getByRole('navigation')
-```
-
-**Tailwind utility class selector 금지** (33차 추가, review-architecture 발견):
-스켈레톤/로딩 상태 대기를 위해 `locator('.h-8.w-14')` 같은 Tailwind utility class literal 을 쓰면
-Tailwind 리팩토링 시 무음 브레이크. 스켈레톤 컴포넌트에 `data-testid` 부여 후 `getByTestId` 사용.
-
-탐지:
-```bash
-grep -rn "\.locator('\\.\\(h\\|w\\|p\\|m\\|bg\\|text\\|flex\\|grid\\)-" apps/frontend/tests/e2e \
-  --include="*.ts" --include="*.spec.ts"
-```
-→ 0 hit 이어야 함.
-
-**기존 hit (33차 현재):**
-- `apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts` (KPI 스켈레톤 `.h-8.w-14`)
-- `apps/frontend/tests/e2e/features/approvals/comprehensive/09-actual-approve-reject.spec.ts` (동일)
-
-→ `ApprovalKpi` 컴포넌트에 `data-testid="kpi-pending-skeleton"` 부여 + 일괄 전환 필요 (별도 harness 프롬프트 등재됨).
+ARIA 역할 locator 허용 예외 및 탐지 명령 상세: [references/locator-patterns.md](references/locator-patterns.md#step-5-locator-안티패턴)
 
 ### Step 5a: actionability 우회 안티패턴 (35차 추가)
 
-`click({ force: true })` / `.first()` 우회는 sticky overlay/ aria-live 중복 같은 **실제 UX/접근성 결함을 가립니다**. 회피책 대신 SSOT 헬퍼로 교정하고 spec 에서는 헬퍼만 호출.
+`click({ force: true })` / `.first()` 우회는 sticky overlay/aria-live 중복 같은 **실제 UX/접근성 결함을 가립니다**. 회피책 대신 SSOT 헬퍼로 교정하고 spec에서는 헬퍼만 호출.
 
 **현재 SSOT 헬퍼:**
-- `apps/frontend/tests/e2e/shared/helpers/sticky-helpers.ts` — `safeClick` / sticky-aware scroll utilities (force 사용 금지)
-- `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` — useToast 중복 발화 우회 (`.first()` 대신)
+
+- `apps/frontend/tests/e2e/shared/helpers/sticky-helpers.ts` — `safeClick` / sticky-aware scroll utilities
+- `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` — useToast 중복 발화 우회
 
 **탐지:**
+
 ```bash
-# spec 파일에서 force:true 사용 금지 (sticky-helpers 내부는 면제)
-# 면제: position 좌표 클릭 (드로어 외부 클릭 등 의도적 a11y 패턴)
 grep -rn "force:\s*true" apps/frontend/tests/e2e --include="*.spec.ts" \
   | grep -v "position:"
-
-# 토스트/리스트 .first() 우회 패턴 검출 (헬퍼 내부 면제)
 grep -rn "getByText.*\.first()\|getByRole.*status.*\.first()" \
   apps/frontend/tests/e2e --include="*.spec.ts"
 ```
 
-**PASS:** spec 파일에서 0건 (헬퍼 내부 + position 좌표 클릭 면제). **FAIL:** spec 에서 직접 사용 → 헬퍼 호출로 교체.
+**PASS:** spec 파일에서 0건 (헬퍼 내부 + position 좌표 클릭 면제).
 
-**예외:**
-- `click({ force: true, position: ... })` — 정확한 좌표 클릭 (드로어 외부, 캔버스, 오버레이 영역 테스트). 현재 면제 위치: `apps/frontend/tests/e2e/common/accessibility/accessibility.spec.ts`.
+### Step 5b: Export 양식 Cross-spec Pairing (38차 form-level 승격)
 
-**기존 hit (35차 현재 — 알려진 부채):**
-- `apps/frontend/tests/e2e/features/approvals/comprehensive/04-bulk-actions.spec.ts` — `#select-all` checkbox 가 6건 force-click. sticky overlay 또는 hidden checkbox 가 원인일 가능성 → SelectAll 컴포넌트 actionability 점검 후 `safeClick` 으로 마이그레이션 필요 (별도 harness 프롬프트 등재 권장).
-
-**근거:** WF-20 spec 작성 중 sticky header z-index 결함 + useToast 중복 aria-live 발화가 force/first 우회로 가려져 있던 것을 발견 (34차 부채 → 35차 헬퍼 추출 완료).
-
-### Step 5b: Export 양식 Cross-spec Pairing (35차 추가, 38차 form-level 승격)
-
-Export 양식 spec 이 `page.request` 로 API 응답만 검증하고 사용자 다운로드 동선("내보내기" 버튼 → `<a download>` → `download` 이벤트)이 **어느 spec 에서도** cover 되지 않으면 해당 **양식(form)** 을 WARN 으로 보고. 31차 발견 → 35차 per-file WARN → **38차 form-identifier 단위 cross-spec pairing 으로 승격**.
-
-**승격 배경**: 35차 per-file 검사는 `wf-export-ui-download.spec.ts` 가 별도 파일로 UI 동선을 cover 하게 된 뒤로 `wf-19b/20b` 같은 의도적 API-only regression spec 을 false WARN 으로 계속 보고했다. `@api-only` 마커로 suppress 하는 방식도 시도되었으나, 마커는 "spec 파일의 의도" 만 표현할 뿐 **양식 단위로 UI 동선이 실제 cover 되는지** 는 답하지 못한다. form-level pairing 은 spec 파일 배치와 무관하게 **양식마다 API + UI 한 쌍이 존재하는가** 를 직접 검증한다.
-
-**판정 규칙** (양식 식별자 = `UL-QP-18-NN`):
+양식(form) 단위로 API + UI 한 쌍이 존재하는가를 검증. 양식 식별자 = `UL-QP-18-NN`.
 
 | API cover | UI cover | 결과 |
-|---|---|---|
-| ≥1 | ≥1 | PASS — regression 가드 + 사용자 동선 양쪽 cover |
-| ≥1 | 0   | **WARN** — backend-only, 한국어 filename/권한 토스트/드롭다운 UX 0건 cover |
-| 0   | ≥1 | INFO — UI-only (회귀 가드 부재, tolerable) |
-| 0   | 0   | skip — export 대상 아님 |
+| --------- | -------- | ---- |
+| ≥1        | ≥1       | PASS |
+| ≥1        | 0        | **WARN** — backend-only |
+| 0         | ≥1       | INFO — UI-only |
+| 0         | 0        | skip |
 
-**시그널 정의**:
-- **API cover**: spec 파일이 `page.request` 호출을 포함
-- **UI cover**: spec 파일이 `suggestedFilename().*toMatch.*<form-id>` 또는 `filenamePattern.*<form-id>` 을 포함. **단순 literal 등장은 주석/"미커버" 목록과 구분 불가하므로 부적합** — 파일명 어서션 위치만 신뢰.
-
-**SSOT 헬퍼**: UI spec 은 `apps/frontend/tests/e2e/shared/helpers/download-helpers.ts` 의 `expectFileDownload(page, action, { filenamePattern })` 를 호출. 새 양식 추가 시 spec 은 helper + filenamePattern 만 지정하면 자동 가드 편입.
-
-**탐지 스크립트**:
+**탐지 스크립트:**
 
 ```bash
-# 양식별 API/UI cover 집계 → WARN 리스트 출력
-# 양식 식별자는 spec 에서 동적 추출 (하드코딩 없음 — 새 양식 추가 시 자동 편입)
 SPECS_DIR="apps/frontend/tests/e2e/workflows"
 FORM_IDS=$(grep -hoE 'UL-QP-18-[0-9]{2}' "$SPECS_DIR"/*.spec.ts 2>/dev/null | sort -u)
 for id in $FORM_IDS; do
@@ -191,16 +114,7 @@ for id in $FORM_IDS; do
 done
 ```
 
-**PASS 기준**: WARN 출력 0건. **FAIL 조건 없음** — 메타 가드. WARN 은 tech-debt-tracker.md `Export UI 다운로드 동선 미검증 양식` 항목과 1:1 대응되어야 한다.
-
-**현재 baseline (38차 실측)**:
-- **PASS**: UL-QP-18-01 / -07 / -08 / -09 (`wf-export-ui-download.spec.ts` + `wf-21-cable-ui.spec.ts`)
-- **WARN**: UL-QP-18-03 / -05 / -06 / -10 (UI 진입점 부재 — backend-only export 설계. 잔여 부채로 tech-debt-tracker 등재)
-- **skip**: UL-QP-18-02 (history-card 전용 endpoint 로 API-test 없음), -04, -11
-
-**WARN 대응**: 새 WARN 등장 시 (a) `wf-export-ui-download.spec.ts` 에 `expectFileDownload` 케이스 추가로 해소하거나, (b) UI 진입점 부재로 의도된 부채면 tracker 항목에 양식 번호 추가. spec 파일 단위 `@api-only` 마커는 form-level pairing 이 직접 답을 주므로 **deprecated** (기존 마커 보유 파일이 있으면 다음 편집 시 제거 가능).
-
-**근거**: API-only spec 은 backend regression 만 잡고 한국어 filename UTF-8 보존(RFC 5987), 권한 가드 토스트, dropdown 선택 UX 등 사용자 시점 결함을 0건 cover 한다. form-level pairing 은 "spec 파일 의도" 가 아닌 "양식별 실제 coverage" 를 측정해 false WARN 없이 진짜 갭만 보고한다.
+**PASS 기준:** WARN 출력 0건. 현재 baseline (38차): PASS = UL-QP-18-01/-07/-08/-09, WARN = UL-QP-18-03/-05/-06/-10.
 
 ### Step 6: UUID 하드코딩
 
@@ -220,11 +134,9 @@ done
 
 ### Step 10: Backend URL 하드코딩
 
-`tests/e2e/scripts/` 유틸리티 스크립트도 검사 범위에 포함. spec 파일이 아니어서 `--include="*.spec.ts"` 단독 grep으로는 탐지되지 않는 맹점 존재.
+`tests/e2e/scripts/` 유틸리티 스크립트도 검사 범위에 포함.
 
-**탐지:**
 ```bash
-# spec 파일 + scripts/ 유틸리티 스크립트 모두 검사
 grep -rn "localhost:3001\|localhost:3000" \
   apps/frontend/tests/e2e \
   --include="*.ts" --include="*.spec.ts" \
@@ -232,7 +144,6 @@ grep -rn "localhost:3001\|localhost:3000" \
 ```
 
 **PASS:** 0건. `BASE_URLS.BACKEND` 또는 `process.env.NEXT_PUBLIC_API_URL` 폴백 경유.
-**근거 (2026-04-21 수정):** `tests/e2e/scripts/generate-inspection-docx.ts` 등 scripts/ 파일이 `const BACKEND = 'http://localhost:3001'` 하드코딩을 가지고 있었음. `BASE_URLS.BACKEND` SSOT 경유로 수정됨.
 
 ### Step 11b: TEST_USERS_BY_TEAM SSOT
 
@@ -250,11 +161,8 @@ grep -rn "localhost:3001\|localhost:3000" \
 
 ### Step 13: global-setup 시드 실패 fail-fast
 
-테스트 시드/검증 실패가 `console.warn` 뒤에 진행되면 false negative 가 발생한다
-(e.g. 스키마 drift 또는 시드 검증 실패를 조용히 통과). 시드/검증 실패는 **throw** 로
-글로벌 설정을 중단해야 한다.
+시드/검증 실패는 **throw** 로 글로벌 설정을 중단해야 한다.
 
-**탐지:**
 ```bash
 grep -nA3 "시드 데이터 로딩\|seed.*load" apps/frontend/tests/e2e/global-setup.ts \
   | grep -B1 "console\.warn" && echo "❌ seed 실패가 warn-and-continue 로 흡수됨"
@@ -262,56 +170,38 @@ grep -nA3 "시드 데이터 로딩\|seed.*load" apps/frontend/tests/e2e/global-s
 
 **PASS:** `} catch { throw ... }` 또는 `throw err`. **FAIL:** `} catch { console.warn(...) }` 후 진행.
 
-**예외:** 시드 성공 이후의 부가 단계(예: overdue scheduler 트리거)는 warn 유지 가능 — 단 그 이유가 주석으로 명시되어야 함 ("optional enrichment — test seeds already cover...").
-
 ### Step 14: 장비 파티셔닝 (E2E 장비 격리)
 
-상태를 mutate하는 checkout E2E suite(S23-S27 등)는 **전용 장비**를 사용해야 한다.
-공용 장비(SPECTRUM_ANALYZER_SUW_E 등)를 여러 suite가 동시 mutate하면 병렬 실행 시 비결정적 실패.
+상태를 mutate하는 checkout E2E suite(S23-S27 등)는 전용 장비를 사용해야 한다.
 
-**탐지:**
 ```bash
-# S23-S27 spec에서 사용하는 장비 ID가 전용 상수인지 확인
 grep -n "TEST_EQUIPMENT_IDS\." apps/frontend/tests/e2e/features/checkouts/suite-2[3-7]-*/*.spec.ts \
   | grep -v "RBAC_\|CANCEL_\|CAS_\|SHARED_\|RECEIVER_UIW\|SPECTRUM_ANALYZER.*NON_SHARED" \
   && echo "❌ S23-S27이 공용 장비를 primary로 사용 중"
 ```
 
-**PASS:** S23-S27의 primary 장비가 전용 상수(`RBAC_SIGNAL_GEN_SUW_E`, `CANCEL_RECEIVER_SUW_E`, `CAS_ANALYZER_SUW_E`, `SHARED_ANALYZER_SUW_E`). read-only 참조(NON_SHARED, UIWANG_SHARED_REF)는 면제.
-
-**불변식:** "상태를 mutate하는 E2E suite는 전용 장비를 소유하며 다른 suite와 공유하지 않는다."
+**PASS:** S23-S27의 primary 장비가 전용 상수(`RBAC_SIGNAL_GEN_SUW_E`, `CANCEL_RECEIVER_SUW_E`, `CAS_ANALYZER_SUW_E`, `SHARED_ANALYZER_SUW_E`).
 
 ### Step 15: Backend Jest/supertest E2E 헬퍼 패턴 (2026-04-18 추가)
-
-`apps/backend/test/` 하위 Jest + supertest 기반 E2E 테스트의 인증/인프라 패턴 검증.
 
 **15a: loginAs() SSOT — DEFAULT_ROLE_EMAILS 경유**
 
 ```bash
-# test-auth.ts가 DEFAULT_ROLE_EMAILS를 shared-constants에서 import하는지 확인
 grep -n "DEFAULT_ROLE_EMAILS" apps/backend/test/helpers/test-auth.ts
-# → 1건 이상 (SSOT 경유)
-
-# 하드코딩 이메일로 직접 인증하는 패턴 탐지 (auth.e2e-spec.ts 제외)
 grep -rn "admin@example\.com\|manager@example\.com\|user@example\.com" \
   apps/backend/test/*.e2e-spec.ts | grep -v auth.e2e-spec.ts
-# → 0건
 ```
 
-**PASS:** `loginAs()` 가 `/auth/test-login?role=<role>` 엔드포인트 경유 + `DEFAULT_ROLE_EMAILS` SSOT 사용. **FAIL:** hardcoded credential 직접 사용.
-
-**예외:** `auth.e2e-spec.ts` — `/auth/login` 엔드포인트 자체를 테스트하므로 로컬 `LOGIN_USERS` 상수 사용 정당.
+**PASS:** `loginAs()` 가 `/auth/test-login?role=<role>` 엔드포인트 경유 + `DEFAULT_ROLE_EMAILS` SSOT 사용.
 
 **15b: TEST_USER_IDS 프로덕션 UUID 정합**
 
 ```bash
-# TEST_USER_IDS가 uuid-constants.ts에서 import하는지 확인
 grep -n "uuid-constants\|USER_LAB_MANAGER\|USER_TECHNICAL_MANAGER\|USER_TEST_ENGINEER" \
   apps/backend/test/helpers/test-auth.ts
-# → production UUID 상수 import 확인
 ```
 
-**PASS:** `TEST_USER_IDS`가 `uuid-constants.ts`의 production UUID 상수 경유 (e2e00000-... 형태 금지). **근거:** `/auth/test-login`이 DB lookup → JWT sub = 실제 DB UUID. e2e UUID를 쓰면 `TEST_USER_IDS.admin !== req.user.userId`.
+**PASS:** `TEST_USER_IDS`가 `uuid-constants.ts`의 production UUID 상수 경유 (e2e00000-... 형태 금지).
 
 **15c: jest-e2e.json maxWorkers:1 필수**
 
@@ -320,453 +210,187 @@ grep "maxWorkers" apps/backend/test/jest-e2e.json
 # → "maxWorkers": 1
 ```
 
-**PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과. 단일 DB 아키텍처에서 병렬 실행은 시드 데이터 경합 → 비결정적 실패.
+**PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과.
 
-**15d: API_ENDPOINTS 직접 사용 SSOT — E2E spec 하드코딩 경로 금지 (2026-04-21 업데이트)**
-
-`createTestApp`이 `setGlobalPrefix('api')`를 설정하므로 spec은 `API_ENDPOINTS.*`를 그대로 사용.
-`test-paths.ts` / `toTestPath()` 래퍼는 2026-04-21 삭제됨 — 탐지 시 anti-pattern.
+**15d: API_ENDPOINTS 직접 사용 SSOT (2026-04-21 업데이트)**
 
 ```bash
-# E2E spec에서 하드코딩된 경로 문자열 리터럴 직접 사용 탐지
 grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]/api/" \
   apps/backend/test --include="*.e2e-spec.ts"
-# 결과: 0건 (모두 API_ENDPOINTS.* 직접 경유)
-
-# toTestPath 잔재 탐지 (삭제된 래퍼 재도입 방지)
 grep -rn "toTestPath\|test-paths" apps/backend/test
-# 결과: 0건 (파일 삭제됨)
 ```
 
-**PASS:** 두 명령어 모두 0건. **FAIL:** 하드코딩 경로 리터럴 또는 toTestPath 재도입.
+**PASS:** 두 명령어 모두 0건.
 
-### Step 16: E2E data-* 셀렉터 × 컴포넌트 attribute 일관성 (2026-04-19 추가)
+### Step 16: E2E data-* 셀렉터 × 컴포넌트 attribute 일관성
 
-E2E spec이 `[data-xxx]` 커스텀 attribute 셀렉터를 사용할 때, 해당 컴포넌트 구현에
-동일 attribute가 실제로 부착되어 있는지 확인.
-
-**16a: data-timeline-card 셀렉터 일관성**
-```bash
-# E2E spec에서 [data-timeline-card] 셀렉터를 사용하는지 확인
-grep -rn "data-timeline-card" \
-  apps/frontend/tests/e2e --include="*.spec.ts"
-
-# 컴포넌트에서 실제 attribute가 부착되어 있는지 확인 (동일 개수 이상이어야 함)
-grep -rn "data-timeline-card" \
-  apps/frontend/components --include="*.tsx"
-# 결과: 1건 이상 (spec 사용 수 ≤ 컴포넌트 정의 수)
-```
-
-**16b: 신규 data-* 셀렉터 드리프트 탐지**
-```bash
-# E2E spec에서 사용하는 모든 data-* 셀렉터 목록 추출
-grep -rn '\[data-[a-z]' \
-  apps/frontend/tests/e2e --include="*.spec.ts" \
-  | grep -oE 'data-[a-z-]+' | sort -u
-
-# 각 셀렉터가 컴포넌트/레이아웃 파일에 존재하는지 수동 확인
-# (자동화 불가 — 셀렉터마다 별도 grep 필요)
-```
+상세 탐지 명령 및 현재 baseline: [references/locator-patterns.md](references/locator-patterns.md#step-16-e2e-data--셀렉터--컴포넌트-attribute-일관성-2026-04-19-추가)
 
 **PASS:** spec의 `[data-xxx]` 셀렉터가 컴포넌트에 attribute로 실재함.
-**FAIL:** spec이 존재하지 않는 attribute를 참조 → 셀렉터가 항상 0 match → 결과가 false negative.
+**FAIL:** spec이 존재하지 않는 attribute를 참조 → false negative.
 
-**현재 baseline (2026-04-27):**
-- `data-widget` — `DashboardRow4.tsx:` `data-widget={widget}` 부착. `auth-role-access.spec.ts`에서 `[data-widget="systemHealth"]` 등 사용.
-- `data-timeline-card` — `CheckoutTimeline.tsx` 부착. E2E 워크플로우 spec에서 사용.
-- `data-guidance-key` — `GuidanceCallout.tsx` 부착. NC E2E spec에서 사용.
+### Step 17: 브라우저 기반 Feature Flag 감지 패턴
 
-**16c: `toHaveAttribute` 기반 상태 검증 패턴 (2026-04-22 추가)**
+`process.env.NEXT_PUBLIC_*` 직접 조건 분기 금지. `beforeAll` DOM 검사 패턴 사용.
 
-상태 머신(FSM) 컴포넌트의 현재 상태를 E2E에서 검증할 때 `data-<domain>-key` attribute +
-`toHaveAttribute(attr, value)` 패턴을 사용한다.
-텍스트 내용(`toHaveText`)이나 클래스(`toHaveClass`)로 상태를 추론하면 UI 리팩토링 시 silent break.
-
-**올바른 패턴 (GuidanceCallout 기준):**
-```typescript
-// ✅ attribute 기반 상태 검증 — 리팩토링에 안전
-const callout = page.getByTestId('nc-guidance-callout');
-await expect(callout).toHaveAttribute('data-guidance-key', 'openBlockedRepair_operator');
-
-// ❌ 텍스트 기반 상태 추론 — UI 문구 변경 시 silent break
-await expect(callout).toContainText('수리 이력을 먼저');
-```
-
-**탐지 — data-guidance-key 일관성:**
-```bash
-# spec에서 사용하는 data-guidance-key 값 목록
-grep -rn "data-guidance-key" \
-  apps/frontend/tests/e2e --include="*.spec.ts" \
-  | grep -oE "'[a-z_]+'" | sort -u
-
-# 컴포넌트에서 해당 attribute가 부착되어 있는지 확인
-grep -rn "data-guidance-key" \
-  apps/frontend/components --include="*.tsx"
-# 결과: 1건 이상 (GuidanceCallout.tsx의 data-guidance-key={guidanceKey})
-```
-
-**PASS:** spec의 `data-guidance-key` 값이 `NC_WORKFLOW_GUIDANCE_TOKENS` 키 집합에 속함.
-**FAIL:** spec이 존재하지 않는 guidance key를 참조 → 항상 false negative.
-
-### Step 17: 브라우저 기반 Feature Flag 감지 패턴 (2026-04-22 추가)
-
-`NEXT_PUBLIC_*` 환경 변수는 Next.js 빌드 타임에 앱 번들에 인라인된다.
-E2E 테스트 러너(Node.js)의 `process.env.NEXT_PUBLIC_*`는 빌드된 앱의 플래그 상태를 반영하지 않으므로,
-이를 기반으로 `testInfo.skip()` 또는 `test.describe.skip()`을 결정하는 것은 **무음 오검출**을 유발한다.
-
-**올바른 패턴:**
-`test.describe.configure({ mode: 'serial' })` + `beforeAll`에서 `browser.newContext({ baseURL, storageState })`로
-임시 컨텍스트를 생성해 실제 앱 DOM을 확인해야 한다.
-
-```typescript
-// ✅ 올바른 패턴 — 브라우저 DOM으로 플래그 감지
-test.describe.configure({ mode: 'serial' });
-let flagEnabled = false;
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext({
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',  // baseURL 필수
-    storageState: path.join(__dirname, '../../../.auth/technical-manager.json'),
-  });
-  const probe = await context.newPage();
-  await probe.goto('/some-page');
-  await probe.waitForLoadState('domcontentloaded');
-  flagEnabled = await probe.locator('[data-feature-panel]').isVisible();
-  await context.close();
-});
-
-// ❌ 잘못된 패턴 — 테스트 러너 env는 빌드 타임 플래그를 반영 안 함
-const FLAG_ENABLED = process.env.NEXT_PUBLIC_MY_FEATURE === 'true';
-```
-
-**탐지:**
-```bash
-# spec에서 NEXT_PUBLIC_* env 직접 조건 분기 탐지
-grep -rn "process\.env\.NEXT_PUBLIC_" \
-  apps/frontend/tests/e2e --include="*.spec.ts" \
-  | grep -v "shared-test-data\|BASE_URLS\|process\.env\.NEXT_PUBLIC_API_URL"
-# → 0건 (NEXT_PUBLIC_API_URL은 BASE_URLS 경유로 허용됨)
-
-# browser.newContext에 baseURL 없는 패턴 탐지
-grep -rn "browser\.newContext(" \
-  apps/frontend/tests/e2e --include="*.spec.ts" -A3 \
-  | grep -B1 "storageState" | grep -v "baseURL"
-# 결과가 있으면 해당 컨텍스트에 baseURL 없음 — 상대경로 goto 실패
-```
+상세 패턴 및 탐지 명령: [references/locator-patterns.md](references/locator-patterns.md#step-17-브라우저-기반-feature-flag-감지-패턴-2026-04-22-추가)
 
 **PASS:** `NEXT_PUBLIC_*` env 직접 조건 분기 0건, `browser.newContext` 호출 시 `baseURL` 포함.
-**FAIL:** spec에서 `process.env.NEXT_PUBLIC_FEATURE === 'true'` 분기 → `beforeAll` DOM 검사 패턴으로 교체.
 
-**예외:**
-- `process.env.NEXT_PUBLIC_API_URL` — API 엔드포인트 URL(feature flag 아님), `BASE_URLS` 폴백 경유 허용
-- `shared-test-data.ts` 내 `BASE_URLS.BACKEND/FRONTEND` 정의 — SSOT 상수 정의이므로 허용
+### Step 18: page.route() API 모킹 패턴
 
-**17b: browser.newContext() try/finally 보장 (2026-04-24 추가)**
+상세 패턴(18a 스키마 SSOT, 18b unroute 정리, 18c networkidle 금지): [references/locator-patterns.md](references/locator-patterns.md#step-18-pageroute-api-모킹-패턴-2026-04-24-추가)
 
-`beforeAll` 내에서 `browser.newContext()`로 임시 컨텍스트를 생성한 뒤 `context.close()`를
-`try/finally` 없이 호출하면, probe 네비게이션 타임아웃 등 예외 발생 시 컨텍스트가 누수된다.
+**PASS:** 모킹 응답 `{ currentPage, pageSize, total, totalPages }` 형태, workflows/ spec에서 unroute 정리.
 
-```typescript
-// ✅ 올바른 패턴 — try/finally로 context 누수 방지
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext({ baseURL, storageState });
-  try {
-    const probe = await context.newPage();
-    await probe.goto('/some-page');
-    await probe.waitForLoadState('domcontentloaded');
-    flagEnabled = await probe.locator('[data-feature]').isVisible();
-  } finally {
-    await context.close();
-  }
-});
+### Step 19: suite-ux 패턴 — localStorage·emulateMedia·모바일 viewport
 
-// ❌ 잘못된 패턴 — 예외 시 context 누수
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext({ baseURL, storageState });
-  const probe = await context.newPage();
-  await probe.goto('/some-page');
-  flagEnabled = await probe.locator('[data-feature]').isVisible();
-  await context.close();  // 예외 발생 시 도달 불가
-});
-```
+상세 패턴(19a localStorage, 19b reducedMotion, 19c 모바일 viewport): [references/locator-patterns.md](references/locator-patterns.md#step-19-suite-ux-패턴--localstorage-조작emulatemedia모바일-viewport-2026-04-24-추가)
 
-**탐지:**
-```bash
-# beforeAll 내 browser.newContext() 가 try/finally 없이 사용되는지 확인
-grep -rn "browser\.newContext(" \
-  apps/frontend/tests/e2e --include="*.spec.ts" -B5 \
-  | grep "beforeAll" | grep -v "try {"
-# 상세 확인 필요 시 해당 파일에서 context 생성 전후 try/finally 수동 확인
-```
+**PASS:** suite-ux 3파일 존재, localStorage 접근이 `page.evaluate()` 경유, `aria-modal="true"` 검증 포함.
 
-**PASS:** `browser.newContext()` + `context.close()` 가 `try/finally` 블록 내에 존재.
-**FAIL:** `context.close()` 가 `finally` 없이 직접 호출 → 예외 시 컨텍스트 누수.
+### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion
 
-### Step 18: page.route() API 모킹 패턴 (2026-04-24 추가)
+상세 패턴(20a tokenCache 격리, 20b negative assertion, 20c storageState 수): [references/auth-fixtures.md](references/auth-fixtures.md#step-20-email-기반-멀티롤-token-주입--negative-시나리오-assertion)
 
-seed 데이터로 자연 유도 불가능한 빈 상태(empty state) 등 결정론적 조건이 필요할 때
-`page.route()`로 API 응답을 모킹한다.
-
-**필수 요건:**
-
-**18a: 모킹 응답 스키마 — FrontendPaginatedResponse SSOT 준수**
-
-```bash
-# page.route() 내부 pagination 키 검사 — 'page:' 금지, 'currentPage:' 필수
-grep -rn "page\.route(" \
-  apps/frontend/tests/e2e --include="*.spec.ts" -A 20 \
-  | grep -E "^\s+(page|currentPage):"
-# 'page:' 이 나오면 FAIL — FrontendPaginatedResponse는 currentPage 필드 사용
-```
-
-**PASS:** 모킹 응답의 pagination 객체가 `{ currentPage, pageSize, total, totalPages }` 형태.
-**FAIL:** `page:` 필드 사용 → 컴포넌트의 `meta.pagination.currentPage` 참조가 `undefined` → UI 오동작.
-
-**18b: page.unroute() 정리 필수 (픽스처 명 포함 — 2026-04-30 확장)**
-
-`page.route()` 뿐 아니라 `techManagerPage.route()` / `testOperatorPage.route()` 등 픽스처 이름이 붙은 호출도 탐지 대상.
-`await.*\.route\('` 패턴으로 모든 Playwright Page 객체의 route 호출을 포괄한다.
-
-```bash
-# 모든 Playwright Page 객체 route 호출 수 vs unroute 수 불균형 탐지
-grep -rn "page\.route(\|Page\.route(" \
-  apps/frontend/tests/e2e --include="*.spec.ts" -l \
-  | while read f; do
-      routes=$(grep -cE "Page\.route\(|page\.route\(" "$f")
-      unroutes=$(grep -cE "unroute|unrouteAll" "$f")
-      [ "$routes" -gt "$unroutes" ] && echo "UNROUTE 누락: $f (route=$routes unroute=$unroutes)"
-    done
-# → 0건 (workflow spec은 finally 블록 내 unroute 필수)
-```
-
-**근거 (2026-04-30):** WF-AP02-EXT Step EXT-3에서 `techManagerPage.route()` 패턴 도입. 기존 `page\.route(` 소문자 grep은 `techManagerPage.route(` (대문자 P) 미탐지 — 카운트 불일치 시 unroute 누락 감지 불가. `Page\.route(|page\.route(` 대소문자 OR 패턴으로 확장.
-
-**판정 기준:**
-- `workflows/` 스펙: **FAIL** — serial 모드 상태 공유 컨텍스트에서 route 누출은 실제 위험
-- `features/` 스펙: **WARN** — 각 test()가 fresh fixture를 받으므로 test 종료 시 자동 cleanup. 위생 권장
-
-**알려진 부채 (2026-04-30, WARN 수준):**
-- `features/dashboard/statistics.spec.ts` (route=1, unroute=0)
-- `features/equipment/list/equipment-list.spec.ts` (route=9, unroute=0)
-- `features/equipment/list/group-f-loading-states.spec.ts` (route=2, unroute=0)
-- `features/dashboard/dashboard.spec.ts` (route=3, unroute=0)
-- `features/equipment/create/equipment-form-errors.spec.ts` (route=7, unroute=0)
-- `features/calibration/certificate/registration-approval-flow.spec.ts` (route=1, unroute=0)
-- `features/calibration/certificate/rejection-workflow.spec.ts` (route=1, unroute=0)
-- `features/calibration/certificate/permission-error.spec.ts` (route=4, unroute=1)
-- `features/checkouts/suite-list-ia/s-empty-states.spec.ts` (route=3, unroute=2)
-
-**18c: goto 후 networkidle 금지**
-
-```bash
-# page.route()를 사용하는 파일에서 networkidle 탐지
-grep -rn "page\.route(" \
-  apps/frontend/tests/e2e --include="*.spec.ts" -l \
-  | xargs grep -l "networkidle" 2>/dev/null
-# → 0건
-```
-
-**PASS:** 0건. **FAIL:** networkidle → Next.js HMR/SSE 커넥션이 유지되어 타임아웃.
-
-**현재 사용처:** `suite-list-ia/s-empty-states.spec.ts` — completed/inProgress 탭 빈 상태 결정론적 검증.
-
-### Step 19: suite-ux 패턴 — localStorage 조작·emulateMedia·모바일 viewport (2026-04-24 추가)
-
-`tests/e2e/features/checkouts/suite-ux/` 디렉토리는 UX 레이어 전용 테스트 묶음이다.
-아래 세 가지 패턴이 이 suite에서 사용되며 일관성 검사가 필요하다.
-
-**19a: localStorage 조작 패턴**
-
-온보딩 힌트 테스트는 `localStorage.removeItem`으로 힌트 상태를 초기화하고, 클릭 후 `localStorage.getItem`으로 결과를 검증한다.
-`page.evaluate()` 내부에서만 localStorage에 접근해야 한다 (직접 Playwright API 없음).
-
-```bash
-# suite-ux에서 localStorage 직접 조작 확인
-grep -rn "localStorage\|evaluate" \
-  apps/frontend/tests/e2e/features/checkouts/suite-ux \
-  --include="*.spec.ts"
-```
-
-**✅ 올바른 패턴:**
-```typescript
-// 초기화
-await page.evaluate(() =>
-  localStorage.removeItem('onboarding-dismissed:checkout-next-step')
-);
-// 검증
-const stored = await page.evaluate(() =>
-  localStorage.getItem('onboarding-dismissed:checkout-next-step')
-);
-expect(stored).toBe('true');
-```
-
-**❌ 금지:**
-```typescript
-// page.localstorage_delete() 같은 존재하지 않는 API 사용
-// localStorage 키 하드코딩 시 'onboarding-dismissed:' prefix 빠뜨리기
-```
-
-**19b: prefers-reduced-motion 검증 패턴**
-
-`page.emulateMedia({ reducedMotion: 'reduce' })` → pulse 클래스 미적용 확인.
-
-```bash
-# emulateMedia 사용 확인
-grep -rn "emulateMedia\|reducedMotion\|prefers-reduced-motion" \
-  apps/frontend/tests/e2e/features/checkouts/suite-ux \
-  --include="*.spec.ts"
-```
-
-**19c: 모바일 viewport 패턴**
-
-모바일 테스트는 `test.use({ viewport: { width: 375, height: 812 } })` 또는 `page.setViewportSize()` 사용.
-`md:hidden` 클래스로 숨겨진 요소는 `toBeHidden()`으로 검증 (DOM에 존재하지만 CSS로 숨김).
-
-```bash
-# 모바일 viewport 설정 확인
-grep -rn "setViewportSize\|width: 375\|MOBILE_VIEWPORT" \
-  apps/frontend/tests/e2e/features/checkouts/suite-ux \
-  --include="*.spec.ts"
-```
-
-**PASS 기준:**
-- `suite-ux/*.spec.ts` 존재 (s-onboarding, s-toast, s-mobile-bottom-sheet 3파일)
-- localStorage 접근이 모두 `page.evaluate()` 경유
-- 모바일 peek 버튼 높이 56px~72px 범위 검증 포함
-- `aria-modal="true"` Drawer 검증 포함
-
-**FAIL 기준:**
-- `waitForTimeout` 사용 (Step 4 위반) — `waitForSelector` 또는 `expect(...).toBeVisible()` 대체
-- `[data-radix-toast-viewport]`가 아닌 `[data-sonner-toast]` — 현재 구현이 shadcn toast이므로 Radix selector 사용
-
-**관련 파일:**
-- `tests/e2e/features/checkouts/suite-ux/s-onboarding.spec.ts`
-- `tests/e2e/features/checkouts/suite-ux/s-toast.spec.ts`
-- `tests/e2e/features/checkouts/suite-ux/s-mobile-bottom-sheet.spec.ts`
+**PASS:** `email:${email}` 네임스페이스 격리, negative spec에서 status + errorCode 쌍 검증.
 
 ### Step 20d: apiGetWithToken / apiPatchWithToken role vs token 헬퍼 분리
 
-`api-helpers.ts`의 역할 기반 토큰 캐시 헬퍼와 실제 HTTP 요청 헬퍼 간 파라미터 혼용 방지.
+상세 탐지 명령: [references/auth-fixtures.md](references/auth-fixtures.md#step-20d-apigetwithtoken--apipatchwithtokenrole-vs-token-헬퍼-분리)
 
-**PASS:** `apiGetWithToken(token, url)` — 첫 인자가 token string, `loginAs(role)` 반환값 직접 전달. **FAIL:** role 문자열을 첫 인자로 전달 (타입 에러이지만 런타임 동작은 가능).
+**PASS:** `apiGetWithToken(token, url)` — 첫 인자가 token string. **FAIL:** role 문자열을 첫 인자로 전달.
 
 ### Step 20e: 로그인 폼 자격증명 DEV_*_PASSWORD 환경변수 + fallback SSOT
 
-백엔드 E2E에서 credentials 하드코딩 방지 — `DEV_ADMIN_PASSWORD`, `DEV_MANAGER_PASSWORD` 등 환경변수 경유 + fallback.
+상세 패턴 및 탐지 명령: [references/auth-fixtures.md](references/auth-fixtures.md#step-20e-로그인-폼-e2e-자격증명--dev_password-환경변수--fallback-ssot)
 
 **PASS:** `process.env.DEV_*_PASSWORD ?? 'fallback'` 패턴. **FAIL:** 비밀번호 리터럴 직접 사용.
 
 ### Step 21: test.use() describe 스코프 위반 탐지 (2026-04-30 추가)
 
-Playwright의 `test.use()` 호출은 반드시 `test.describe()` 블록의 **직속 자식** 위치에 있어야 한다. `test()` 콜백 내부에서 호출하면 storageState가 이미 확립된 이후이므로 **silently ignored** — 에러도 경고도 없이 잘못된 인증 상태로 테스트가 실행된다.
+`test()` 콜백 내부의 `test.use()`는 Playwright에서 **silently ignored** — 에러도 경고도 없이 잘못된 인증 상태로 실행.
 
-**위반 패턴 (FC-13~20에서 발견, 2026-04-30 수정):**
-
-```typescript
-// ❌ WRONG — test() 내부 test.use()는 Playwright에서 무시됨
-test.describe('FC: 여러 역할 묶음', () => {
-  test('FC-13: technical_manager', async ({ page }) => {
-    test.use({ storageState: 'technical-manager.json' }); // 무시됨!
-    await expect(page.getByRole('button')).toBeHidden();
-  });
-  test('FC-14: quality_manager', async ({ page }) => {
-    test.use({ storageState: 'quality-manager.json' });   // 무시됨!
-    ...
-  });
-});
-
-// ✅ CORRECT — 역할별로 describe 분리, test.use()는 describe 직속
-test.describe('FC-13: technical_manager — 반려 버튼 fail-closed', () => {
-  test.use({ storageState: path.join(AUTH_DIR, 'technical-manager.json') });
-  test('FC-13: ...', async ({ page }) => {
-    await expect(page.getByRole('button')).toBeHidden();
-  });
-});
-test.describe('FC-14: quality_manager — 승인 버튼 회귀', () => {
-  test.use({ storageState: path.join(AUTH_DIR, 'quality-manager.json') });
-  test('FC-14: ...', async ({ page }) => { ... });
-});
-```
-
-**탐지:**
-
-```bash
-# test.use() 호출 전체 목록 추출 후 describe 스코프 여부 수동 확인
-grep -rn "test\.use({" apps/frontend/tests/e2e --include="*.spec.ts"
-# 각 결과에서 해당 라인이 test.describe() 블록 내부의 '직속 자식'인지 확인
-# (test() 콜백 내부가 아닌 describe() 바디 직속 위치)
-```
-
-```bash
-# Node.js 기반 구조적 탐지 (더 신뢰성 높음)
-node -e "
-const fs = require('fs');
-const {execSync} = require('child_process');
-const files = execSync('find apps/frontend/tests/e2e -name \"*.spec.ts\" 2>/dev/null')
-  .toString().trim().split('\n').filter(Boolean);
-let issues = [];
-for (const f of files) {
-  const lines = fs.readFileSync(f, 'utf-8').split('\n');
-  let insideTest = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    if (/^\s*test\s*\(/.test(l) && !/test\.describe/.test(l) && !/test\.use/.test(l) && !/test\.beforeEach/.test(l) && !/test\.afterEach/.test(l) && !/test\.only/.test(l) || /^\s*test\.only\s*\(/.test(l)) {
-      insideTest++;
-    }
-    if (insideTest > 0 && /test\.use\s*\(/.test(l)) {
-      issues.push(f + ':' + (i+1) + ' — test.use() inside test() body (silently ignored)');
-    }
-    if (insideTest > 0 && /^\s*\}\s*\)\s*;?\s*$/.test(l)) insideTest = Math.max(0, insideTest - 1);
-  }
-}
-console.log(issues.length ? 'FAIL:\n' + issues.join('\n') : 'PASS: all test.use() at describe() scope');
-"
-```
+상세 패턴 및 Node.js 구조적 탐지 스크립트: [references/auth-fixtures.md](references/auth-fixtures.md#step-21-testuse-describe-스코프-위반-탐지-2026-04-30-추가)
 
 **PASS:** `PASS: all test.use() at describe() scope`. **FAIL:** 위반 파일:라인 목록 출력.
 
-**수정 패턴:**
-동일 `describe()` 블록에 여러 역할이 묶인 경우 → 역할별로 별도 `describe()` 블록으로 분리하고, 각 `describe()` 바디에 `test.use()` 배치.
+### Step 22: goto/reload 후 networkidle + 조건 기반 wait 중복
 
-**예외:** `test.describe.configure()` 호출(`mode: 'serial'` 설정)은 `test.use()`와 다르며 `describe()` 내부 어느 위치든 허용.
+조건 기반 wait가 이어진다면 그 사이의 `waitForLoadState('networkidle')` 은 중복.
+
+상세 패턴 및 탐지 명령: [references/locator-patterns.md](references/locator-patterns.md#step-22-gotoreload-후-waitforloadstatenetworkidle--조건-기반-wait-중복-탐지-2026-04-30-추가)
+
+**PASS:** 0건. **WARN:** 검토 권장.
+
+### Step 23: TestRole 4-place SSOT 정합성 (2026-05-01 추가)
+
+> 1차 검증: `pnpm --filter backend run verify:e2e-actors` (R3 룰, pre-push 자동 실행)
+
+`TestRole` 추가 시 CANONICAL_ROLE / TEST_USERS / TEST_USER_IDS / TEST_USER_DETAILS 4곳 동시 갱신 필수.
+
+상세 SSOT 구조 및 탐지 명령: [references/auth-fixtures.md](references/auth-fixtures.md#step-23-testrole-4-place-ssot-정합성-2026-05-01-추가)
+
+**PASS:** 4곳 매핑 entry 수 일치. **FAIL:** compile 에러 또는 TEST_USER_DETAILS silent omission.
+
+### Step 24: Fixture 권한 격리 패턴 (2026-05-01 추가)
+
+> 1차 검증: `pnpm --filter backend run verify:e2e-actors` (R2 룰)
+
+`createTestEquipment` 등 fixture 헬퍼는 자체 `loginAs(app, 'systemAdmin')` 발급 필수.
+
+상세 패턴 및 탐지 명령: [references/auth-fixtures.md](references/auth-fixtures.md#step-24-fixture-권한-격리-패턴-2026-05-01-추가)
+
+**PASS:** fixture가 자체 setup token 발급. **WARN:** 호출부 token 의존.
+
+### Step 25: e2e spec actor token 적절성 (2026-05-01 추가)
+
+> 1차 검증: `pnpm --filter backend run verify:e2e-actors` (R1 룰, pre-push 자동 실행)
+
+도메인 권한·scope 검증 spec은 `'systemAdmin'` 대신 의도된 도메인 역할 사용.
+
+상세 패턴 및 token 매핑 가이드: [references/auth-fixtures.md](references/auth-fixtures.md#step-25-e2e-spec-actor-token-적절성--domain-permission-spec은-system_admin-사용-금지-2026-05-01-추가)
+
+**PASS:** permission/scope/role-constraint spec에서 systemAdmin actor 0건.
+
+### Step 26: 도메인 e2e helper SSOT 분리 + value-based selector (2026-05-02 추가)
+
+상세 패턴(26a domain helper 분리, 26b value-based selector, 26c DB 직접 검증, 26d rewrite, 26e 양면 페어링): [references/locator-patterns.md](references/locator-patterns.md#step-26-도메인-e2e-helper-ssot-분리--value-based-selector-2026-05-02-추가)
+
+**PASS:** `input[value=""]` brittle selector 0건, workflow-helpers.ts < 1500 lines.
+
+### Step 27: 공개 a11y 감사 라우트 SSOT + config 경계 (2026-05-03 추가)
+
+상세 탐지 명령: [references/locator-patterns.md](references/locator-patterns.md#step-27-공개-a11y-감사-라우트-ssot--config-경계-2026-05-03-추가)
+
+**PASS:** 공개 a11y config가 `login.a11y.spec.ts`만 수집하고, spec/workflow가 `quality-audit-routes.json` SSOT 경유.
+
+### Step 28: 워크플로우 커버리지 (verify-workflows 통합 — 2026-05-03)
+
+`docs/workflows/critical-workflows.md`에 정의된 크리티컬 워크플로우(WF-01~WF-35 + WF-AP 시리즈)가 E2E 테스트로 올바르게 커버되는지 검증한다.
+
+**핵심 invariant 7가지:**
+
+1. **커버리지** — P0 (WF-03/10/11) 100% + P1 일부 + WF-AP 시리즈
+2. **단계 완전성** — 워크플로우 문서 step ≥ test 'Step N'
+3. **역할 정확성** — TE/TM/QM/LM ↔ testOperatorPage/techManagerPage/qualityManagerPage/siteAdminPage
+4. **상태 전이 assertion** — `expectEquipmentStatus` 또는 유사
+5. **부수 효과 검증** — 교정일 갱신, NC 자동 CORRECTED, 수리이력 연결
+6. **serial 모드** — 워크플로우 테스트는 `mode: 'serial'` 필수
+7. **DB 리셋 + 캐시 클리어** — `beforeAll`/`afterAll` + `resetEquipmentForWorkflow`/`cleanupSharedPool`
+
+**진입 명령어:**
+
+```bash
+for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16; do
+  ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
+done
+ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
+grep -L "mode.*serial" apps/frontend/tests/e2e/workflows/*.spec.ts
+```
+
+**상세 체크리스트:** [references/workflows-coverage.md](references/workflows-coverage.md)
+
+**PASS:** P0 워크플로우(WF-03/10/11) 모두 spec 존재 + 문서 step 90% 이상 커버 + serial 모드 + role fixture 정합.
 
 ## Output Format
 
 ```markdown
-| #   | 검사                    | 상태      | 상세                          |
-| --- | ----------------------- | --------- | ----------------------------- |
-| 1   | Auth Fixture 사용       | PASS/FAIL | loginAs/직접 로그인 위치      |
-| 2   | Import 소스             | PASS/FAIL | @playwright/test 직접 import  |
-| 3   | networkidle 금지        | PASS/FAIL | networkidle 사용 위치         |
-| 4   | waitForTimeout 금지     | PASS/WARN | waitForTimeout 사용 위치      |
-| 5   | Locator 안티패턴        | PASS/FAIL | CSS role selector 등          |
-| 6   | UUID 하드코딩           | PASS/FAIL | spec 파일 내 UUID 리터럴      |
-| 7   | 상태 변경 테스트 격리   | PASS/WARN | serial 모드 미설정            |
-| 8   | Backend 캐시 클리어     | PASS/FAIL | DB 수정 후 캐시 클리어 누락   |
-| 9   | Backend 토큰 직접 호출  | PASS/FAIL | test-login 직접 호출          |
-| 10  | Backend URL 하드코딩    | PASS/FAIL | localhost URL 직접 사용       |
-| 11b | TEST_USERS_BY_TEAM SSOT | PASS/FAIL | shared-test-data.ts import    |
-| 11  | Pool 정리               | PASS/FAIL | cleanup 함수 미제공           |
-| 12a | CAS 충돌 복구 테스트    | PASS/WARN | VERSION_CONFLICT 시나리오     |
-| 12b | 캐시 일관성 테스트      | PASS/INFO | 뮤테이션 후 목록 갱신 검증    |
-| 12c | 사이트 접근 제어 범위   | PASS/WARN | GET + mutation 모두 검증      |
-| 13  | global-setup fail-fast  | PASS/FAIL | 시드 실패가 warn-and-continue |
-| 14  | 장비 파티셔닝           | PASS/FAIL | S23-S27 공용 장비 사용        |
-| 15a | Backend loginAs SSOT    | PASS/FAIL | hardcoded credential 탐지     |
-| 15b | TEST_USER_IDS UUID 정합 | PASS/FAIL | e2e UUID 사용 탐지            |
-| 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
-| 15d | API_ENDPOINTS SSOT (E2E) | PASS/FAIL | 하드코딩 경로 리터럴 또는 toTestPath 재도입 |
-| 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
-| 16c | `toHaveAttribute` 기반 상태 검증 | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부 |
-| 17  | 브라우저 기반 feature flag 감지 | PASS/FAIL | `process.env.NEXT_PUBLIC_*` 직접 분기 또는 `browser.newContext` baseURL 누락 |
-| 17b | beforeAll newContext try/finally | PASS/FAIL | `browser.newContext()` 후 `finally` 없는 `context.close()` — 예외 시 context 누수 |
-| 18a | page.route() 응답 스키마 SSOT  | PASS/FAIL | pagination `page:` 금지, `currentPage:` 필수 |
-| 18b | page.unroute() 정리             | PASS/FAIL | route 후 unroute 누락 → 이후 테스트 오염 |
-| 18c | route 후 networkidle 금지       | PASS/FAIL | page.route() 파일에 networkidle 잔존 |
-| 19a | suite-ux localStorage 조작 패턴 | PASS/FAIL | page.evaluate() 외부 localStorage 직접 접근 또는 키 prefix 누락 위치 |
-| 19b | emulateMedia reducedMotion 패턴 | PASS/INFO | pulse 클래스 검증 테스트에서 reduced-motion 시나리오 누락 |
-| 19c | 모바일 viewport + aria-modal 검증 | PASS/FAIL | Drawer toBeVisible 후 aria-modal="true" 검증 누락 |
-| 20e | 로그인 폼 자격증명 SSOT | PASS/FAIL | fill('user123') 등 하드코딩 리터럴 → E2E_PASSWORDS + DEV_*_PASSWORD fallback |
-| 22  | networkidle + 조건 기반 wait 중복 | PASS/WARN | reload 후 networkidle + waitForFunction/waitForSelector 직후 조합 탐지 |
+| #   | 검사                             | 상태      | 상세                                                           |
+| --- | -------------------------------- | --------- | -------------------------------------------------------------- |
+| 1   | Auth Fixture 사용                | PASS/FAIL | loginAs/직접 로그인 위치                                       |
+| 2   | Import 소스                      | PASS/FAIL | @playwright/test 직접 import                                   |
+| 3   | networkidle 금지                 | PASS/FAIL | networkidle 사용 위치                                          |
+| 4   | waitForTimeout 금지              | PASS/WARN | waitForTimeout 사용 위치                                       |
+| 5   | Locator 안티패턴                 | PASS/FAIL | CSS role selector 등                                           |
+| 6   | UUID 하드코딩                    | PASS/FAIL | spec 파일 내 UUID 리터럴                                       |
+| 7   | 상태 변경 테스트 격리            | PASS/WARN | serial 모드 미설정                                             |
+| 8   | Backend 캐시 클리어              | PASS/FAIL | DB 수정 후 캐시 클리어 누락                                    |
+| 9   | Backend 토큰 직접 호출           | PASS/FAIL | test-login 직접 호출                                           |
+| 10  | Backend URL 하드코딩             | PASS/FAIL | localhost URL 직접 사용                                        |
+| 11b | TEST_USERS_BY_TEAM SSOT          | PASS/FAIL | shared-test-data.ts import                                     |
+| 11  | Pool 정리                        | PASS/FAIL | cleanup 함수 미제공                                            |
+| 12a | CAS 충돌 복구 테스트             | PASS/WARN | VERSION_CONFLICT 시나리오                                      |
+| 12b | 캐시 일관성 테스트               | PASS/INFO | 뮤테이션 후 목록 갱신 검증                                     |
+| 12c | 사이트 접근 제어 범위            | PASS/WARN | GET + mutation 모두 검증                                       |
+| 13  | global-setup fail-fast           | PASS/FAIL | 시드 실패가 warn-and-continue                                  |
+| 14  | 장비 파티셔닝                    | PASS/FAIL | S23-S27 공용 장비 사용                                         |
+| 15a | Backend loginAs SSOT             | PASS/FAIL | hardcoded credential 탐지                                      |
+| 15b | TEST_USER_IDS UUID 정합          | PASS/FAIL | e2e UUID 사용 탐지                                             |
+| 15c | jest-e2e.json maxWorkers         | PASS/FAIL | maxWorkers != 1                                                |
+| 15d | API_ENDPOINTS SSOT (E2E)         | PASS/FAIL | 하드코딩 경로 리터럴 또는 toTestPath 재도입                    |
+| 16a | data-* 셀렉터 일관성             | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치                       |
+| 16c | toHaveAttribute 기반 상태 검증   | PASS/FAIL | data-guidance-key 등 FSM 상태 attribute 실재 여부              |
+| 17  | 브라우저 기반 feature flag 감지  | PASS/FAIL | process.env.NEXT_PUBLIC_* 직접 분기 또는 newContext baseURL 누락 |
+| 17b | beforeAll newContext try/finally  | PASS/FAIL | browser.newContext() 후 finally 없는 context.close()           |
+| 18a | page.route() 응답 스키마 SSOT    | PASS/FAIL | pagination page: 금지, currentPage: 필수                       |
+| 18b | page.unroute() 정리              | PASS/FAIL | route 후 unroute 누락                                          |
+| 18c | route 후 networkidle 금지        | PASS/FAIL | page.route() 파일에 networkidle 잔존                           |
+| 19a | suite-ux localStorage 조작 패턴  | PASS/FAIL | page.evaluate() 외부 localStorage 직접 접근                    |
+| 19b | emulateMedia reducedMotion 패턴  | PASS/INFO | reduced-motion 시나리오 누락                                   |
+| 19c | 모바일 viewport + aria-modal 검증 | PASS/FAIL | Drawer aria-modal="true" 검증 누락                             |
+| 20e | 로그인 폼 자격증명 SSOT          | PASS/FAIL | fill('user123') 등 하드코딩 리터럴                             |
+| 22  | networkidle + 조건 기반 wait 중복 | PASS/WARN | reload 후 networkidle + waitForFunction 조합                   |
 ```
 
 ## Exceptions
@@ -780,476 +404,11 @@ console.log(issues.length ? 'FAIL:\n' + issues.join('\n') : 'PASS: all test.use(
 7. **단일 테스트 describe에 serial 미설정** — 순서 의존성 없으면 불필요
 8. **global-setup/teardown** — 글로벌 파일, localhost 폴백 정상
 9. **auth.spec.ts, auth-token-sync.spec.ts** — 로그인 플로우 테스트
-10. **auth-role-access.spec.ts Group 1 (1.1~1.3)** — 로그인 폼 UI 자체를 테스트하므로 `baseTest` + 실제 로그인 폼 접근이 정당. 단, 자격증명은 반드시 `DEV_*_PASSWORD` 환경변수 + fallback 상수를 경유해야 한다 (Step 20e 참조). 비인증 리다이렉트 검증(Group 7)도 포함.
+10. **auth-role-access.spec.ts Group 1 (1.1~1.3)** — 로그인 폼 UI 자체를 테스트하므로 `baseTest` + 실제 로그인 폼 접근이 정당. 단, 자격증명은 반드시 `DEV_*_PASSWORD` 환경변수 + fallback 상수를 경유해야 한다. 비인증 리다이렉트 검증(Group 7)도 포함.
 11. **security.spec.ts** — API 보안 테스트
 12. **calibration/overdue-auto-nc/** — API 전용 테스트
 13. **seed 파일** — 시드 스크립트
 14. **복합 CSS 셀렉터** — `getByRole`로 대체 불가한 경우 허용
-15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — "클릭 후 아무 일도 일어나지 않음"을 증명하려면 일정 시간 대기가 불가피. `≤ 1000ms` 이내의 `waitForTimeout` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당. 예: early-return handler의 no-op 회귀 보호
-16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리 소속(CSS 셀렉터 아님). shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 `getByLabel`이 불안정할 때 허용. `getByRole('textbox', { name })`이 가능하면 그 쪽을 우선
-17. **`tests/e2e/a11y/*.a11y.spec.ts`** — 공개 라우트 접근성 게이트. 인증 불필요 페이지만 대상이므로 `auth.fixture` 대신 `@playwright/test` 직접 import 정당. `playwright.a11y.config.ts` 전용 설정 사용.
-
-### Step 22: goto/reload 후 `waitForLoadState('networkidle')` + 조건 기반 wait 중복 탐지 (2026-04-30 추가)
-
-`goto()` / `reload()` 직후에 `waitForFunction()` 또는 `waitForSelector()` 같은 조건 기반 wait가 이어진다면, 그 사이의 `waitForLoadState('networkidle')` 은 **중복**이다. 조건 기반 wait 자체가 해당 조건이 충족될 때까지 폴링하므로 네트워크 안정화를 별도로 기다릴 필요가 없다.
-
-**위반 패턴 (legacy-sw-cleanup.spec.ts에서 발견, 2026-04-30 수정):**
-
-```typescript
-// ❌ WRONG — reload 후 networkidle + 바로 waitForFunction 조합 (networkidle 중복)
-await page.reload();
-await page.waitForLoadState('networkidle');
-await page.waitForFunction((key) => localStorage.getItem(key) === '1', STORAGE_KEY);
-```
-
-```typescript
-// ✅ CORRECT — 조건 기반 wait 하나로 충분
-await page.reload();
-await page.waitForFunction((key) => localStorage.getItem(key) === '1', STORAGE_KEY, { timeout: 5000 });
-```
-
-**단, TC-03처럼 이어지는 조건 기반 wait 없이 `reload()` 후 단순 상태 확인만 한다면** `waitForLoadState('domcontentloaded')`가 적합하다 (`networkidle` 보다 빠르고 충분):
-
-```typescript
-// TC-03 패턴 — 이미 정착된 상태를 확인하는 경우
-await page.reload();
-await page.waitForLoadState('domcontentloaded');
-const flag = await page.evaluate(/* ... */);
-```
-
-**탐지:**
-
-```bash
-# goto/reload 직후 networkidle이 있고, 그 뒤 waitForFunction/waitForSelector가 이어지는 파일 탐지
-grep -rn "waitForLoadState.*networkidle" apps/frontend/tests/e2e --include="*.spec.ts" \
-  | grep -v "/seeds/"
-# 각 결과의 앞뒤 10줄 확인 — 직후 waitForFunction/waitForSelector가 있으면 WARN
-```
-
-**예외:**
-- seed 파일 (`/seeds/`, `seed.spec.ts`) — 데이터 준비용으로 안정성 우선
-- `page.route()` 컨텍스트 내 networkidle → Step 18c에서 별도 관리
-- 이어지는 조건 기반 wait가 없는 단독 networkidle — Step 18c에 해당하지 않는 경우 WARN(검토 권장)
-
-**발생 이력 (2026-04-30):** `legacy-sw-cleanup.spec.ts` TC-01에서 `reload()` + `networkidle` + `waitForFunction` 3단 조합 발견. networkidle 2건 제거 완료 (`waitForFunction` + `domcontentloaded` 대체).
-
----
-
-### Step 23: TestRole 4-place SSOT 정합성 (2026-05-01 추가, stale-contract-cleanup)
-
-> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
-> 본 Step의 grep 명령은 보조 수단으로 강등됨. 1차 검증은 자동 정적 분석:
-> ```bash
-> pnpm --filter backend run verify:e2e-actors  # R3 룰 = Step 23 strict
-> ```
-> pre-push hook이 자동 실행. R3 위반 시 push 차단.
-
-`apps/backend/test/helpers/test-auth.ts`의 `TestRole` 유니언 타입에 새 역할을 추가할 때, **반드시 다음 4곳의 `Record<TestRole, ...>` 매핑을 동시 갱신**해야 한다. 누락 시 `Record<TestRole, T>` 타입 강제로 컴파일 에러는 발생하나, `TEST_USER_DETAILS` 배열은 `as const` 튜플이라 타입 강제 없이 silent omission 위험.
-
-**4곳 SSOT (test-auth.ts):**
-
-```typescript
-// 1. CANONICAL_ROLE: TestRole → canonical UserRole
-const CANONICAL_ROLE: Record<TestRole, string> = {
-  admin: 'lab_manager',
-  manager: 'technical_manager',
-  user: 'test_engineer',
-  systemAdmin: 'system_admin',  // ← 신규 추가 시
-};
-
-// 2. TEST_USERS: TestRole → email
-export const TEST_USERS: Record<TestRole, { email: string }> = {
-  // ... systemAdmin: { email: DEFAULT_ROLE_EMAILS['system_admin'] }
-};
-
-// 3. TEST_USER_IDS: TestRole → UUID
-export const TEST_USER_IDS: Record<TestRole, string> = {
-  // ... systemAdmin: USER_SYSTEM_ADMIN_ID
-};
-
-// 4. TEST_USER_DETAILS: 시드 entry array (jest-global-setup이 사용)
-export const TEST_USER_DETAILS = [
-  // ... { id: TEST_USER_IDS.systemAdmin, email: ..., role: 'system_admin', site, location, teamId }
-] as const;
-```
-
-**탐지:**
-
-```bash
-# TestRole 정의 확인
-grep -n "export type TestRole" apps/backend/test/helpers/test-auth.ts
-# 출력 예: export type TestRole = 'admin' | 'manager' | 'user' | 'systemAdmin';
-
-# 4곳 매핑 entry 수 일치 확인 (TestRole 멤버 수 = N이면 각 매핑도 N entry)
-grep -c "^\s*\(admin\|manager\|user\|systemAdmin\):" apps/backend/test/helpers/test-auth.ts
-# 정합 시: CANONICAL_ROLE(N) + TEST_USERS(N) + TEST_USER_IDS(N) = 3N 출력
-
-# TEST_USER_DETAILS 배열 길이 = TestRole 멤버 수 일치 확인
-grep -c "id: TEST_USER_IDS\." apps/backend/test/helpers/test-auth.ts
-# 결과 = TestRole 멤버 수와 일치해야 PASS
-```
-
-**SSOT 의존성:**
-- `DEFAULT_ROLE_EMAILS[<canonical_role>]` (`packages/shared-constants/src/test-users.ts`) — email 파생
-- `USER_<ROLE>_ID` 상수 (`apps/backend/src/database/utils/uuid-constants.ts`) — UUID 파생
-
-**위반 시 영향:** 
-- CANONICAL_ROLE 누락 → `loginAs(app, '<role>')` 런타임 실패 (`canonicalRole === undefined`)
-- TEST_USER_IDS 누락 → spec 파일에서 `TEST_USER_IDS.<role>` undefined → silent test 실패
-- TEST_USER_DETAILS 누락 → jest-global-setup이 해당 사용자 시딩 안 함 → loginAs() 401
-
-**발생 이력 (2026-05-01):** stale-contract-cleanup 세션에서 `systemAdmin` 추가 시 4곳 동시 갱신 필요. `Record<TestRole, ...>` 강제로 1-3은 자동 검증되나 TEST_USER_DETAILS는 array length 수동 확인 필요.
-
----
-
-### Step 24: Fixture 권한 격리 패턴 (2026-05-01 추가, stale-contract-cleanup)
-
-> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
-> ```bash
-> pnpm --filter backend run verify:e2e-actors  # R2 룰 = Step 24 (WARN: deprecation 진행 추적)
-> ```
-> Phase 5 codemod 완료 시 R2 WARN 자동 해소.
-
-`apps/backend/test/helpers/test-fixtures.ts`의 fixture 헬퍼(`createTestEquipment`, `createTestCheckout` 등)가 **호출부의 `token` 인자에 의존하면 도메인 권한 정책 변경 시 전체 fixture가 깨진다**. fixture는 setup용이므로 자체 권한 토큰을 발급해 호출부 역할과 분리해야 한다.
-
-**위반 패턴 (UL-QP-18 직무분리 commit 77cb3f37 후 발견):**
-
-```typescript
-// ❌ WRONG — 호출부 token에 의존, lab_manager가 CREATE_EQUIPMENT 권한 박탈되면 전체 fixture 회귀
-export async function createTestEquipment(app, token: string, overrides?) {
-  const response = await request(app.getHttpServer())
-    .post(API_ENDPOINTS.EQUIPMENT.CREATE)
-    .set('Authorization', `Bearer ${token}`)  // ← 호출부 권한 의존
-    .send(data);
-  // ...
-}
-```
-
-```typescript
-// ✅ CORRECT — fixture가 자체 setup token 발급 (system_admin 권한 우회)
-export async function createTestEquipment(app, _token: string, overrides?) {
-  // UL-QP-18 직무분리: system_admin만 직접 등록 가능 (승인 워크플로 우회)
-  const creatorToken = await loginAs(app, 'systemAdmin');
-  const response = await request(app.getHttpServer())
-    .post(API_ENDPOINTS.EQUIPMENT.CREATE)
-    .set('Authorization', `Bearer ${creatorToken}`)  // ← 자체 발급 토큰
-    .send(data);
-  // ...
-}
-```
-
-**탐지:**
-
-```bash
-# fixture 헬퍼 내부에서 인자 token을 직접 사용 + loginAs() 호출 0건 패턴 (위반)
-grep -A20 "^export async function create" apps/backend/test/helpers/test-fixtures.ts \
-  | grep -B5 "Bearer \${token}" \
-  | grep -v "loginAs"
-# 결과: 0건 PASS, 1+건이면 WARN (fixture가 호출부 token 의존)
-
-# fixture가 자체 loginAs 발급 패턴 확인
-grep -A5 "^export async function create" apps/backend/test/helpers/test-fixtures.ts \
-  | grep "loginAs(app,"
-# 결과: 자체 토큰 발급 패턴 확인
-```
-
-**예외:**
-- fixture가 권한 자체를 검증하는 케이스 (예: `assertCannotCreate(token)`) — 의도적 token 인자 사용 허용
-- DB 직접 시딩 fixture (request 미호출) — token 무관
-
-**발생 이력 (2026-04-30):** UL-QP-18 직무분리(commit `77cb3f37`) 후 `lab_manager` (admin)가 `CREATE_EQUIPMENT` 권한 박탈. `createTestEquipment(app, accessToken)` 호출 시 14 e2e suite cascading 실패. fixture를 `loginAs(app, 'systemAdmin')` 자체 발급으로 전환하여 해결. `_token` 인자는 시그니처 호환성 위해 보존(deprecation 이연).
-
----
-
-### Step 25: e2e spec actor token 적절성 — domain-permission spec은 system_admin 사용 금지 (2026-05-01 추가, stale-contract-cleanup)
-
-> **2026-05-01 자동화 승격 (senior-permission-ssot-20260501 Phase 3):**
-> ```bash
-> pnpm --filter backend run verify:e2e-actors  # R1 룰 = Step 25 strict
-> ```
-> pre-push hook이 자동 실행. setup 의도 화이트리스트: `loginAs(*, 'systemAdmin')` 직전
-> 1~5 라인에 `// setup` 또는 `// fixture` 의도 주석이 있으면 화이트리스트 (의도 명시 필수).
-
-E2E spec의 `accessToken = loginAs('systemAdmin')` 사용은 **모든 site/team/role scope 검증을 우회**한다. 도메인 권한·scope 검증을 본 의도로 하는 spec은 `'systemAdmin'` 대신 의도된 도메인 역할(`'admin'`/`'manager'`/`'user'`)을 사용해야 검증 의미가 보존된다.
-
-**위반 패턴 (site-permissions.e2e-spec.ts에서 발견):**
-
-```typescript
-// ❌ WRONG — site-scope 검증 spec인데 system_admin 사용 → cross-site 차단 분기가 dead code화
-adminToken = await loginAs(ctx.app, 'systemAdmin');
-const uiwangResponse = await request(...).get('/equipment?site=uiwang')
-  .set('Authorization', `Bearer ${adminToken}`);
-if (uiwangResponse.status === 200) { ... } 
-else { expect(uiwangResponse.status).toBe(403); }  // ← system_admin이면 항상 200, 이 분기 절대 실행 안 됨
-```
-
-```typescript
-// ✅ CORRECT — site-scope 검증은 site-scoped 역할(lab_manager) 토큰 사용
-adminToken = await loginAs(ctx.app, 'systemAdmin');     // setup용 (cross-site 인프라 셋업)
-labManagerToken = await loginAs(ctx.app, 'admin');     // 검증용 (site-scoped 역할)
-const uiwangResponse = await request(...).get('/equipment?site=uiwang')
-  .set('Authorization', `Bearer ${labManagerToken}`);  // ← lab_manager가 cross-site 차단되는지 검증
-```
-
-**탐지:**
-
-```bash
-# permission/scope/role-constraint spec에서 systemAdmin actor 사용 탐지
-grep -l "site-permissions\|role-constraint\|permission" apps/backend/test/*.e2e-spec.ts \
-  | xargs grep -l "loginAs(ctx.app, 'systemAdmin')"
-# 결과: 0건이면 PASS, 1+건이면 spec 의도 재검토 필요
-
-# 워크플로 spec(systemAdmin OK) vs permission spec(systemAdmin 금지) 분리
-grep -rn "loginAs(ctx.app, 'systemAdmin')" apps/backend/test/*.e2e-spec.ts | \
-  grep -E "(site-permissions|role-constraint|permission)" 
-# 결과: 0건이면 PASS
-```
-
-**적절한 token 매핑 가이드:**
-
-| Spec 의도 | actor token | 근거 |
-|---|---|---|
-| 워크플로 검증 (NC 생성, checkout 워크플로 등) | `'systemAdmin'` | scope 검증 무관, fixture 일관성 |
-| Site-scope 검증 (cross-site 차단) | `'admin'` (lab_manager) | site-scoped 역할 |
-| Team-scope 검증 (cross-team 차단) | `'manager'`/`'user'` | team-scoped 역할 |
-| Role-constraint 검증 (managerId 지정 등) | `'manager'` (technical_manager) | UPDATE 권한 보유 + scope 준수 |
-| Setup/cleanup (fixture 외 직접 호출) | `'systemAdmin'` | 권한 우회 setup 전용 |
-
-**발생 이력 (2026-04-30):** stale-contract-cleanup 세션에서 8 spec 일괄 `'admin'` → `'systemAdmin'` 교체 후 verify-e2e Agent가 `site-permissions.e2e-spec.ts:175` else 분기 dead code화 + `manager-role-constraint.e2e-spec.ts:30` 행위자 검증 약화 발견. labManagerToken/manager 토큰으로 분리 수정.
-
----
-
-### Step 26: 도메인 e2e helper SSOT 분리 + value-based selector for prefilled forms (2026-05-02 추가, inspection-template-1bg)
-
-prefill된 폼 + 도메인별 helper 누적은 시스템 정합성을 깨뜨리는 두 가지 anti-pattern이다.
-
-**26a: 도메인 e2e helper SSOT 분리**
-
-`workflow-helpers.ts`는 *cross-domain generic* helper(`apiGet/apiPost`, `extractId/Version`, `clearBackendCache`)에 한정. 도메인별 API 헬퍼 (≥3 함수)는 `helpers/<domain>-helpers.ts`로 분리하여 SSOT 유지. workflow-helpers.ts에 모든 도메인 헬퍼가 누적되면 1500+ lines 비대화 → 도메인 추가 시 충돌.
-
-```typescript
-// ✅ CORRECT — 도메인별 helper file
-// helpers/inspection-template-helpers.ts
-export async function getInspectionTemplate(...) {...}
-export async function upsertInspectionTemplate(...) {...}
-export async function resetInspectionTemplates(...) {...}
-export async function findCurrentTemplateId(...) {...}  // DB 직접 검증용
-
-// ❌ WRONG — workflow-helpers.ts에 도메인 helper 누적
-// (이미 1276 lines — 새 도메인 helper 추가 시 분리 필수)
-```
-
-**26b: prefill 폼에서 `input[value=""]` 위치 의존 selector 금지**
-
-REFERENCE_TEMPLATE_STRUCTURE 같은 prefill source가 있는 폼에서 `dialog.locator('input[value=""]').first()` / `.nth(N)` 패턴은 *DOM 순서 의존*으로 brittle. inspectionDate(빈 시작) + items[*].checkResult(prefill 후 비워짐) + 추가 input이 모두 매칭되어 의도와 다른 input 채움 → false PASS 또는 silent fail.
-
-```typescript
-// ❌ WRONG — DOM 순서 의존 (inspectionDate / 다른 빈 input과 충돌)
-const newItemInputs = dialog.locator('input[value=""]');
-await newItemInputs.first().fill('새 항목');
-await newItemInputs.nth(1).fill('새 기준');
-
-// ✅ CORRECT — value-based selector + rename trigger (정확히 1개 input 매칭)
-await dialog.locator('input[value="WF-19f 외관 검사"]').fill('WF-19f 외관 검사 (변경됨)');
-```
-
-**26c: backend hook fail-soft 회귀 가드 — DB 직접 검증**
-
-승인 시 `templateService.autoCreateIfAbsent` 같은 *fail-soft* hook(approve 자체는 성공해도 hook 실패는 logger만)은 UI 검증만으로 catch 못함. *helper 작성 후 사용 안 함* 분리는 단편 처리 — spec에서 직접 호출.
-
-```typescript
-// ✅ CORRECT — UI 검증 전 DB 직접 확인
-const templateId = await findCurrentTemplateId(equipmentId, 'intermediate');
-expect(templateId, 'approve hook 후 template auto-create row 존재해야 함').not.toBeNull();
-await openInspectionDialog(page);
-await expect(dialog.getByText(/v1/)).toBeVisible();
-```
-
-**탐지 명령:**
-
-```bash
-# 26a: workflow-helpers.ts 라인 수 (≥1500 시 도메인 분리 검토 권고)
-wc -l apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts
-
-# 26b: brittle empty-value selector — 0건 강제
-grep -rn 'input\[value=""\]' apps/frontend/tests/e2e/ --include="*.spec.ts"
-# 결과: 0건이면 PASS, 1+건이면 value-based selector로 교체
-
-# 26c: 도메인별 helper SSOT 패턴 — 신규 도메인 helper 신설 시 inspection-template-helpers.ts 패턴 정합 (top-level 주석 + workflow-helpers 재사용 + DB 직접 query helper 포함)
-ls apps/frontend/tests/e2e/workflows/helpers/*-helpers.ts
-```
-
-**26d: 도메인 변경 후 legacy spec rewrite 패턴**
-
-도메인 메커니즘 변경(예: latestInspection prefill → template snapshot prefill)으로 기존 spec이 fail 상태가 되면 *단순 삭제 또는 skip 회피*. *의도(회귀 가드)는 유지하면서 메커니즘만 정합화*하는 rewrite가 시니어 표준. WF-19d.spec.ts (2026-05-02): legacy "직전 승인 점검 토글" 검증 → "template 기반 prefill regression" 정합 rewrite.
-
-**26e: backend 양면 도메인 페어링 (intermediate/self) 회귀 가드**
-
-같은 backend hook이 두 도메인(intermediate-inspections + self-inspections)에서 작동 시 e2e도 양면 spec 페어링 필수. 한쪽만 cover하면 *시스템 정합성* 단편. 2026-05-02 발견: wf-19* 시리즈가 intermediate만 cover → wf-20c-self-inspection-template-badge.spec.ts 추가.
-
-**발생 이력 (2026-05-02):** inspection-template-1bg Mode 1 harness iter 1 PASS 후 시니어 자기검토에서 self-inspection 누락 + brittle selector + helper 작성-사용 분리 4건 발견. 26a-e 모두 closure.
-
----
-
-### Step 20: email 기반 멀티롤 token 주입 + negative 시나리오 assertion (2026-04-24 추가)
-
-`getBackendTokenByEmail`을 사용하는 E2E spec은 다음 패턴을 준수해야 한다.
-
-**20a: tokenCache 네임스페이스 격리**
-
-`tokenCache` 키가 `'email:' + email` 형태여야 role 기반 키(`'technical_manager'` 등)와 충돌하지 않는다.
-
-```bash
-# 'email:' 프리픽스 네임스페이스 확인
-grep -A5 "const cacheKey" \
-  apps/frontend/tests/e2e/shared/helpers/api-helpers.ts \
-  | grep "email:"
-# 결과: `email:${email}` 패턴 존재 → PASS
-```
-
-**20b: negative 시나리오 assertion 수준**
-
-403(scope/identity 실패) 또는 400(purpose/FSM 불일치) 케이스에서 HTTP 상태 코드 + 에러 코드 문자열을 함께 검증해야 한다.
-단순 `expect(resp.ok()).toBeFalsy()`는 실패 — 상태 코드와 에러 코드 `toBe()`가 필수.
-
-```bash
-# negative 테스트에서 status + errorCode 모두 검증하는지 확인
-grep -A5 "expect(resp.status()).toBe(403\|400)" \
-  apps/frontend/tests/e2e/workflows/wf-34-rental-2step-approval.spec.ts
-# 403/400 단독 status 체크 → 경고
-# status + errorCode toBe() 쌍 → PASS
-```
-
-**20c: storageState 신규 생성 없이 token 주입으로 충분한지**
-
-`getBackendTokenByEmail` 사용 시 새 `.auth/*.json` 파일이 추가되지 않아야 한다.
-
-```bash
-# storageState 파일 수가 6개 유지되는지
-ls apps/frontend/tests/e2e/.auth/*.json | wc -l
-# 6 → PASS, 7 이상 → FAIL (신규 storageState 추가 확인 필요)
-```
-
-**20d: apiGetWithToken / apiPatchWithToken — role vs token 헬퍼 분리 패턴 (2026-04-27 추가)**
-
-borrower처럼 storageState가 없는 역할(동적 token 주입)에서 API 호출 시
-`apiGet(role)` / `apiPatch(role)` 대신 `apiGetWithToken(token)` / `apiPatchWithToken(token)` 헬퍼를 사용해야 한다.
-두 헬퍼를 동일 operation에 혼용하면 Authorization 헤더 전략이 충돌한다.
-
-```bash
-# workflow-helpers.ts에 apiGetWithToken 정의 확인
-grep -n "apiGetWithToken\|apiPatchWithToken" \
-  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
-  | head -10
-# 결과: function apiGetWithToken(token: string) 및 apiPatchWithToken(token: string) → PASS
-
-# borrowerApproveCheckout / borrowerRejectCheckout이 token 헬퍼를 사용하는지 확인
-grep -A5 "borrowerApproveCheckout\|borrowerRejectCheckout" \
-  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
-  | grep "apiGetWithToken\|apiPatchWithToken"
-# 결과: 두 함수 모두 token 헬퍼 경유 → PASS
-
-# storageState와 token 주입 혼용 금지 확인
-grep -B2 -A2 "apiGet\b\|apiPatch\b" \
-  apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts \
-  | grep -c "borrower"
-# 0 → PASS (role 기반 헬퍼에 borrower 혼용 없음)
-```
-
-**PASS:** `apiGetWithToken/apiPatchWithToken`이 token 파라미터로 정의되고 borrower 함수들이 이를 경유.
-**FAIL:** `apiGet('borrower')` 형태로 role 기반 헬퍼에 존재하지 않는 role 전달, 또는 storageState 기반 context에서 token 헬퍼 혼용.
-
-### Step 20e: 로그인 폼 E2E 자격증명 — DEV_*_PASSWORD 환경변수 + fallback SSOT (2026-04-27 추가)
-
-로그인 폼 UI를 직접 테스트하는 spec(auth-role-access.spec.ts Group 1 등)에서
-시드 자격증명을 하드코딩하면 CI 환경 password 변경 시 일괄 수정이 필요하다.
-`DEV_*_PASSWORD` 환경변수 + fallback 패턴으로 추출해야 한다.
-
-**올바른 패턴:**
-```typescript
-// ✅ 파일 상단 상수 — 환경변수 우선, 없으면 시드 fallback
-const E2E_PASSWORDS = {
-  user: process.env.DEV_USER_PASSWORD ?? 'user123',
-  manager: process.env.DEV_MANAGER_PASSWORD ?? 'manager123',
-  admin: process.env.DEV_ADMIN_PASSWORD ?? 'admin123',
-} as const;
-
-// ✅ 사용
-await passwordInput.fill(E2E_PASSWORDS.user);
-```
-
-**탐지:**
-```bash
-# 로그인 폼 spec에 하드코딩 password 리터럴 탐지
-grep -rn "\.fill('user123'\|\.fill('manager123'\|\.fill('admin123'" \
-  apps/frontend/tests/e2e --include="*.spec.ts" \
-  | grep -v "auth.setup\|global-setup"
-# → 0건 (E2E_PASSWORDS 상수 경유)
-
-# E2E_PASSWORDS 상수가 DEV_*_PASSWORD 환경변수 경유인지 확인
-grep -n "E2E_PASSWORDS\|DEV_USER_PASSWORD\|DEV_MANAGER_PASSWORD\|DEV_ADMIN_PASSWORD" \
-  apps/frontend/tests/e2e/features/dashboard/auth-role-access.spec.ts
-# → DEV_*_PASSWORD ?? 'fallback' 패턴 존재
-```
-
-**PASS:** 로그인 폼 spec 내 `fill('user123')` / `fill('manager123')` / `fill('admin123')` 리터럴 0건.
-**FAIL:** 하드코딩 → `E2E_PASSWORDS` 상수 경유로 교체.
-
-**예외:** `auth.setup.ts` 및 `global-setup.ts` — test-login endpoint 경유 storageState 생성, 패스워드 직접 참조 없음.
-
-### Step 27: 공개 a11y 감사 라우트 SSOT + config 경계 (2026-05-03 추가)
-
-공개 접근성 게이트는 `docs/operations/quality-audit-routes.json`의 `publicRoutes`만 대상으로 한다.
-인증이 필요한 a11y spec은 기본 Playwright 설정의 storageState/globalSetup 경계를 사용하고,
-`playwright.a11y.config.ts`에는 포함하지 않는다.
-
-```bash
-# 공개 a11y config는 login 공개 spec만 수집해야 함
-grep -n "testMatch: 'login\\.a11y\\.spec\\.ts'" apps/frontend/playwright.a11y.config.ts
-
-# spec은 라우트 문자열을 직접 보유하지 않고 registry loader를 경유해야 함
-grep -n "getPublicA11yRoutes" apps/frontend/tests/e2e/a11y/login.a11y.spec.ts
-grep -n "quality-audit-routes.json" apps/frontend/tests/e2e/shared/utils/quality-audit-routes.ts
-
-# CI workflow는 filter cwd 기준 config path를 사용해야 함
-grep -n -- "--config playwright\\.a11y\\.config\\.ts" .github/workflows/accessibility-audit.yml
-grep -n "apps/frontend/playwright\\.a11y\\.config\\.ts" .github/workflows/accessibility-audit.yml && echo "FAIL: duplicated cwd path" || true
-
-# 실제 수집 대상 확인: 2 tests / login.a11y.spec.ts only
-pnpm --filter frontend exec playwright test --config playwright.a11y.config.ts --list
-```
-
-**PASS:** 공개 a11y config가 `login.a11y.spec.ts`만 수집하고, spec/workflow가 `quality-audit-routes.json` SSOT를 경유.
-**FAIL:** `/login` 같은 route literal이 spec/workflow/config에 직접 박히거나, auth-required a11y spec이 public config에 포함됨.
-
-### Step 28: 워크플로우 커버리지 (verify-workflows 통합 — 2026-05-03)
-
-`docs/workflows/critical-workflows.md`에 정의된 크리티컬 워크플로우(WF-01~WF-35 + WF-AP 시리즈)가 E2E 테스트로 올바르게 커버되는지 검증한다. 2026-05-03 verify-workflows 스킬이 verify-e2e의 sub-domain으로 흡수되었다.
-
-**핵심 invariant 7가지** (모두 cross-feature E2E 도메인):
-1. **커버리지** — P0 (WF-03/10/11) 100% + P1 일부 + WF-AP 시리즈
-2. **단계 완전성** — 워크플로우 문서 step ≥ test 'Step N'
-3. **역할 정확성** — TE/TM/QM/LM ↔ testOperatorPage/techManagerPage/qualityManagerPage/siteAdminPage
-4. **상태 전이 assertion** — `expectEquipmentStatus` 또는 유사 (available → checked_out → available 등)
-5. **부수 효과 검증** — 교정일 갱신, NC 자동 CORRECTED, 수리이력 연결
-6. **serial 모드** — 워크플로우 테스트는 `mode: 'serial'` 필수
-7. **DB 리셋 + 캐시 클리어** — `beforeAll`/`afterAll` + `resetEquipmentForWorkflow`/`cleanupSharedPool`
-
-**진입 명령어**:
-```bash
-# WF-01~WF-35 spec 파일 존재 확인
-for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16; do
-  ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
-done
-
-# WF-AP 시리즈 (승인 UI 전용 — wf-ap* 프리픽스, 2026-04-27 추가)
-ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
-
-# serial 모드 + role fixture 정합
-grep -L "mode.*serial" apps/frontend/tests/e2e/workflows/*.spec.ts
-```
-
-**상세 체크리스트 (Step 1~7 + Output Format + Exceptions)**: [references/workflows-coverage.md](references/workflows-coverage.md)
-
-**PASS:** P0 워크플로우(WF-03/10/11) 모두 spec 존재 + 문서 step 90% 이상 커버 + serial 모드 + role fixture 정합.
-**FAIL:** P0 spec 누락 또는 핵심 상태 전이 assertion 누락 또는 serial 모드 누락.
+15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — `≤ 1000ms` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당.
+16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리. shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 허용.
+17. **`tests/e2e/a11y/*.a11y.spec.ts`** — 공개 라우트 접근성 게이트. `auth.fixture` 대신 `@playwright/test` 직접 import 정당. `playwright.a11y.config.ts` 전용 설정 사용.

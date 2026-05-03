@@ -74,13 +74,6 @@ grep -rn "mutationFn.*version\|\.version\s*\?" apps/frontend/components apps/fro
   --include="*.tsx" --include="*.ts" -B 2 | grep -v "getQueryData"
 ```
 
-**❌ 금지 — stale closure:**
-```typescript
-const toggleMutation = useOptimisticMutation({
-  mutationFn: () => api.toggle(id, entity?.version ?? 0), // entity는 렌더 캡처
-});
-```
-
 **✅ 올바른 패턴 — mutationFn 내부 fresh read:**
 ```typescript
 const toggleMutation = useOptimisticMutation({
@@ -95,7 +88,7 @@ const toggleMutation = useOptimisticMutation({
 
 ### Step 3c: fetch-before-mutate 패턴 — `useCasGuardedMutation` SSOT (2026-04-20~)
 
-3단계 승인 워크플로우(submit/approve/reject/confirm)처럼 **두 사용자가 동시에 같은 레코드를 진행**시킬 위험이 높은 경우, 단순 getQueryData 보다 강력한 API fetch-before-mutate 패턴 사용.
+3단계 승인 워크플로우처럼 두 사용자가 동시에 같은 레코드를 진행시킬 위험이 높은 경우, 단순 getQueryData 보다 강력한 API fetch-before-mutate 패턴 사용.
 
 **SSOT 훅:** `apps/frontend/hooks/use-cas-guarded-mutation.ts`
 
@@ -104,17 +97,6 @@ const toggleMutation = useOptimisticMutation({
 # casVersion을 외부 변수에서 캡처하는 mutationFn (useCasGuardedMutation 미사용)
 grep -rn "casVersion" apps/frontend/components apps/frontend/hooks \
   --include="*.tsx" --include="*.ts" | grep -v "useCasGuardedMutation\|CasGuarded\|use-cas-guarded"
-```
-
-**✅ 올바른 패턴:**
-```typescript
-const approveMutation = useCasGuardedMutation<CalibrationPlan, ApproveDto>({
-  getCasVersion: () => calibrationPlansApi.getCasVersion(planId), // 항상 fresh API 조회
-  mutationFn: (casVersion, dto) => calibrationPlansApi.approve(planId, { ...dto, casVersion }),
-  queryKey: queryKeys.calibrationPlans.detail(planId),
-  invalidateKeys: [queryKeys.calibrationPlans.lists()],
-  onSuccess: () => toast.success(t('approved')),
-});
 ```
 
 **PASS:** calibration-plans 도메인의 상태 변경 mutation(submit/approve/reject/confirm)이 `useCasGuardedMutation` 또는 동등한 fetch-before-mutate 패턴 경유.
@@ -159,11 +141,7 @@ grep -rn "@/hooks/use-toast" apps/frontend --include="*.ts" --include="*.tsx"
 
 ### Step 12: count 전용 쿼리 키 분리 (pageSize:1 캐시 오염 방지)
 
-`pageSize: 1`로 total count만 조회하는 쿼리가 전체 목록 쿼리와 **동일한 queryKey**를 사용하면, 1건 응답이 전체 목록 캐시를 오염시켜 올바른 데이터가 보이지 않는 버그를 유발한다.
-
-**규칙:**
-- `pageSize: 1` + 총 건수만 사용하는 위젯 → `pendingCount()`, `summaryCount()` 등 전용 키 사용
-- 동일 엔티티의 전체 목록 쿼리와 키가 겹치면 안 됨
+`pageSize: 1`로 total count만 조회하는 쿼리가 전체 목록 쿼리와 동일한 queryKey를 사용하면, 1건 응답이 전체 목록 캐시를 오염시켜 올바른 데이터가 보이지 않는 버그를 유발한다.
 
 **검증:**
 ```bash
@@ -171,50 +149,26 @@ grep -rn "@/hooks/use-toast" apps/frontend --include="*.ts" --include="*.tsx"
 grep -rn "pageSize.*1\b" apps/frontend --include="*.tsx" --include="*.ts" -B 3 | grep "queryKey" | grep -v "Count\|count\|summary\|Summary"
 ```
 
-**참고 패턴 (정상):**
-```typescript
-// ✅ 전용 키 사용
-queryKey: queryKeys.checkouts.pendingCount(),     // ['checkouts', 'pending-count']
-queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
-
-// ❌ 목록 키 재사용 (오염 위험)
-queryKey: queryKeys.checkouts.pending(),          // ['checkouts', 'pending', undefined]
-queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
-```
-
-**배경**: `CheckoutsContent.tsx`에서 `pending()` 키로 `pageSize:1` 결과를 캐시 → `PendingChecksClient`가 동일 키의 1건 캐시를 사용해 전체 탭에서 1건만 표시되던 버그 발생 (2026-04-13 수정).
-
 **PASS:** pageSize:1 쿼리가 전용 count 키를 사용하거나 0건.
 
 ### Step 11: E2E 토스트 매칭은 expectToastVisible helper 사용
 
-Radix Toast 는 의도적으로 시각 토스트(`<li role="status">`) + visually-hidden status mirror (`<span role="status" aria-live="assertive">`) 를 동시에 노출한다 (스크린리더 a11y). 따라서 `page.getByText('...').first()` 같은 직접 매칭은 strict mode 충돌을 우회할 뿐 의도(시각 발화 검증)가 코드에 드러나지 않고, mirror span 의 "Notification " 접두사 변경 시 silent break 위험이 있다.
-
-**규칙:**
-- 토스트 메시지 검증은 `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` 의 `expectToastVisible(page, text)` 사용
-- 두 후보 토스트(성공/에러 분기)는 `toastLocator(page, text)` 로 좁힌 뒤 `.or()` 로 결합
-- spec 안에서 토스트 텍스트에 직접 `.first()` 사용 금지
+토스트 메시지 검증은 `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` 의 `expectToastVisible(page, text)` 사용. spec 안에서 토스트 텍스트에 직접 `.first()` 사용 금지.
 
 **검증:**
 ```bash
-# 토스트로 보이는 한국어 종결형 문구에 .first() 직접 매칭
 grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
   apps/frontend/tests/e2e --include="*.spec.ts"
 ```
 
-**PASS:** 토스트 텍스트에 직접 `.first()` 적용된 매칭 0건. helper 우회만 한정 검출.
+**PASS:** 토스트 텍스트에 직접 `.first()` 적용된 매칭 0건.
 
 ### Step 13: 비동기 타이머 cleanup (useRef + clearTimeout)
 
-컴포넌트 내에서 `window.setTimeout`으로 상태를 변경하는 경우, unmount 후에도 타이머가 실행되면 `setPhase` 등의 setState가 호출됩니다. 이를 방지하려면 `useRef<number | null>`로 타이머 ID를 추적하고 `useEffect` cleanup에서 `clearTimeout`을 호출해야 합니다.
-
-**규칙:**
-- `window.setTimeout(() => setState(...), N)` 패턴 → `useRef<number | null>` + `clearTimeout` + `useEffect` cleanup 필수
-- `useRef` 없이 직접 `window.setTimeout` → FAIL
+`window.setTimeout` + setState 패턴은 `useRef<number | null>` + `clearTimeout` + `useEffect` cleanup 필수.
 
 **탐지:**
 ```bash
-# cleanup 없는 직접 setTimeout으로 상태 변경 패턴
 grep -rn "window\.setTimeout.*setPhase\|window\.setTimeout.*setState\|window\.setTimeout.*set[A-Z]" \
   apps/frontend/components --include="*.tsx" --include="*.ts"
 ```
@@ -222,23 +176,27 @@ grep -rn "window\.setTimeout.*setPhase\|window\.setTimeout.*setState\|window\.se
 **PASS:** 0건이거나 모두 `timerRef.current = window.setTimeout(...)` + `clearTimeout` cleanup 패턴.
 **FAIL:** `window.setTimeout(() => setXxx(...), N)` 직접 호출.
 
-**정상 패턴 (BulkLabelPrintButton.tsx 기준):**
-```typescript
-const timerRef = React.useRef<number | null>(null);
-React.useEffect(() => { return () => { if (timerRef.current !== null) clearTimeout(timerRef.current); }; }, []);
-// catch 블록
-timerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
-```
+### Step 14: QUERY_CONFIG 스프레드 오버라이드
 
-### Step 15: useCasGuardedMutation — VERSION_CONFLICT 처리 및 캐시 무효화 패턴 (2026-04-20 추가)
+`{ ...QUERY_CONFIG.XXX, extraKey: value }` 형태는 주석 필수. INFO: 반복 시 QUERY_CONFIG 신규 프리셋 추가 검토.
 
-`useCasGuardedMutation` 훅은 3단계 승인 워크플로우처럼 mutationFn 직전에 항상 최신 casVersion이 필요한 경우의 SSOT.
-이 훅을 직접 사용하지 않고 fetchCasVersion+mutationFn을 수동 조합하거나,
-onError에서 직접 VERSION_CONFLICT 분기를 구현하는 패턴은 중복이다.
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-14-query_config-스프레드-오버라이드)
+
+### Step 14b: placeholderData 순서
+
+`placeholderData`는 `...QUERY_CONFIG.XXX` 스프레드 **다음에** 위치해야 한다.
+
+**PASS:** `placeholderData`가 `...QUERY_CONFIG.XXX` 스프레드 이후에 위치.
+**FAIL:** `placeholderData`가 스프레드 이전에 위치 → 순서 교환.
+
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-14b-placeholderdata는-query_config-스프레드-다음에-위치-2026-04-22-추가)
+
+### Step 15: useCasGuardedMutation — VERSION_CONFLICT 처리 및 캐시 무효화 패턴
+
+`useCasGuardedMutation` 훅 미사용 수동 casVersion fetch + mutation 조합, 또는 onError에서 `isConflictError` 중복 처리 금지.
 
 **탐지:**
 ```bash
-# useCasGuardedMutation 없이 수동 casVersion fetch + mutation 조합 탐지
 grep -rn "fetchCasVersion\|getCalibrationPlan.*casVersion\|casVersion.*await" \
   apps/frontend/components apps/frontend/app \
   --include="*.tsx" --include="*.ts" \
@@ -246,7 +204,6 @@ grep -rn "fetchCasVersion\|getCalibrationPlan.*casVersion\|casVersion.*await" \
 ```
 
 ```bash
-# onError에서 isConflictError 직접 처리 탐지 (useCasGuardedMutation이 이미 자동 처리)
 grep -rn "isConflictError\|VERSION_CONFLICT" \
   apps/frontend/components apps/frontend/app \
   --include="*.tsx" --include="*.ts" \
@@ -254,459 +211,183 @@ grep -rn "isConflictError\|VERSION_CONFLICT" \
 ```
 
 **PASS:** `useCasGuardedMutation` 사용 컴포넌트의 onError에 `isConflictError` 중복 처리 없음.
-**INFO:** casVersion을 수동 관리하는 컴포넌트가 있으면 `useCasGuardedMutation` 전환 검토.
 
-### Step 18: `*-api.ts`에 React Hook 금지 (2026-04-21 추가)
+### Step 16: raw async mutation 금지 — delete/simple mutation도 useMutation 필수
 
-`lib/api/*-api.ts` 파일은 순수 API 함수 집합이어야 한다. `useQuery`, `useMutation`, `useQueryClient` 등 React Hook import 또는 함수 정의가 포함되면 안 된다. 도메인별 훅 함수는 `hooks/use-<domain>.ts`로 분리한다.
+onClick 핸들러에서 raw `await api.delete/remove/unlink` 직접 호출 금지.
 
-**배경:** `calibration-api.ts`에 `useCalibrationDetail`이 혼재 → `hooks/use-calibration.ts`로 이동 (2026-04-21).
+**PASS:** raw `await api.delete/remove/unlink` 직접 호출 0건.
+
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-16-raw-async-mutation-금지--deleteSimple-mutation도-usemutation-필수-2026-04-21-추가)
+
+### Step 17: useQuery isError 분기 + 에러 UI 필수
+
+`isLoading` 사용 컴포넌트에서 `isError` 누락 금지.
+
+**PASS:** `isLoading`을 사용하는 컴포넌트가 `isError`도 구조분해하고 에러 분기 렌더링 포함.
+
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-17-usequery-iserror-분기--에러-ui-필수-2026-04-21-추가)
+
+### Step 18: `*-api.ts`에 React Hook 금지
+
+`lib/api/*-api.ts`에 `@tanstack/react-query` import 0건 필수.
 
 **탐지:**
 ```bash
-# *-api.ts 파일에서 useQuery/useMutation 등 React Hook import 탐지
 grep -rn "from '@tanstack/react-query'" \
   apps/frontend/lib/api \
   --include="*-api.ts"
 ```
 
-**PASS:** `lib/api/*-api.ts` 파일에 `@tanstack/react-query` import 0건.
-**FAIL:** `useQuery`/`useMutation`/`useQueryClient`가 api 파일에서 import됨 → `hooks/use-<domain>.ts`로 이동 필요.
+**PASS:** 0건. **FAIL:** `hooks/use-<domain>.ts`로 이동 필요.
 
-**올바른 사용 패턴:**
-```typescript
-// ✅ 올바른 패턴 — VERSION_CONFLICT는 훅 내부에서 자동 처리
-const reviewMutation = useCasGuardedMutation({
-  fetchCasVersion: () => calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion),
-  mutationFn: (_, casVersion) => calibrationPlansApi.reviewCalibrationPlan(planUuid, { casVersion }),
-  onSuccess: () => { invalidateAfterChange(); },
-  onError: (error) => { toast({ variant: 'destructive', description: error.response?.data?.message }); },
-  // VERSION_CONFLICT는 onError에 전달되지 않으므로 별도 분기 불필요
-});
-```
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-18-api-ts에-react-hook-금지-2026-04-21-추가)
 
-**예외:** `use-cas-guarded-mutation.ts` 자체 내부의 `isConflictError` 처리 — SSOT 정의이므로 정상.
+### Step 19: shared/generic 컴포넌트에서 useAuth 금지
 
-### Step 14: QUERY_CONFIG 스프레드 오버라이드
-
-`{ ...QUERY_CONFIG.XXX, extraKey: value }` 패턴은 프리셋에 없는 옵션을 추가하는 오버라이드입니다. 이 경우 QUERY_CONFIG 프리셋 자체가 불완전하거나, 개별 쿼리가 특수 요구사항을 가진 것입니다. 두 경우 모두 **명시적인 주석**이 없으면 추후 유지보수자가 의도를 파악할 수 없습니다.
-
-**규칙:**
-- `{ ...QUERY_CONFIG.XXX, someKey: value }` 형태로 추가 옵션을 덧붙이는 경우 → 이유 주석 필수
-- 주석 없이 오버라이드 → INFO (QUERY_CONFIG 프리셋 확장 검토 권장)
+`components/shared/`, `components/ui/` 내에서 `useAuth` import 0건 필수.
 
 **탐지:**
 ```bash
-# QUERY_CONFIG 스프레드 후 추가 옵션 붙이는 패턴 (trailing comma = 추가 키 존재)
-grep -rn "\.\.\.\bQUERY_CONFIG\.\w\+," apps/frontend --include="*.tsx" --include="*.ts"
-```
-
-**정상 패턴 (주석 포함):**
-```typescript
-useQuery({
-  queryKey: ...,
-  queryFn: ...,
-  // 목록 전환 시 stale 데이터 즉시 노출 방지 — QUERY_CONFIG.EQUIPMENT_LIST에 없는 옵션
-  ...QUERY_CONFIG.EQUIPMENT_LIST,
-  refetchOnMount: 'always',
-});
-```
-
-**INFO:** 스프레드 오버라이드가 반복되면 QUERY_CONFIG에 새 프리셋 추가 검토.
-
-### Step 14b: placeholderData는 QUERY_CONFIG 스프레드 다음에 위치 (2026-04-22 추가)
-
-`placeholderData`는 `...QUERY_CONFIG.XXX` 스프레드 **다음에** 위치해야 한다.
-QUERY_CONFIG 프리셋이 미래에 `placeholderData` 키를 추가하면 스프레드가 먼저 오는 값을 덮어쓰기 때문이다.
-
-**올바른 패턴:**
-```typescript
-useQuery({
-  queryKey: queryKeys.checkouts.summary(),
-  queryFn: () => checkoutApi.getSummary(),
-  ...QUERY_CONFIG.CHECKOUT_SUMMARY,    // ← 스프레드 먼저
-  placeholderData: initialSummary,     // ← placeholderData 나중에
-});
-```
-
-**금지 패턴:**
-```typescript
-useQuery({
-  queryKey: queryKeys.checkouts.summary(),
-  queryFn: () => checkoutApi.getSummary(),
-  placeholderData: initialSummary,     // ← QUERY_CONFIG 스프레드보다 먼저 오면 silent overwrite 위험
-  ...QUERY_CONFIG.CHECKOUT_SUMMARY,
-});
-```
-
-**탐지:**
-```bash
-# placeholderData 다음에 QUERY_CONFIG 스프레드가 오는 역순 패턴
-grep -rn "placeholderData" apps/frontend --include="*.tsx" --include="*.ts" -A 3 \
-  | grep "QUERY_CONFIG"
-```
-
-**PASS:** `placeholderData`가 `...QUERY_CONFIG.XXX` 스프레드 이후에 위치. **FAIL:** `placeholderData`가 스프레드 이전에 위치 → 순서 교환 필요.
-
-### Step 16: raw async mutation 금지 — delete/simple mutation도 useMutation 필수 (2026-04-21 추가)
-
-파일 삭제·연결 해제 등 optimistic update가 불필요한 mutation도 **`useMutation`으로 감싸야 한다**.
-raw `async/await` 직접 호출은 `isPending` 기반 중복 요청 방지, `onError` 에러 처리, 버튼 비활성화가 불가능하다.
-
-**탐지:**
-```bash
-# onClick/handler 내부에서 await api.delete/remove/unlink 직접 호출 탐지
-grep -rn "await.*api\.\(delete\|remove\|unlink\)" \
-  apps/frontend/components apps/frontend/app \
-  --include="*.tsx" --include="*.ts" \
-  | grep -v "mutationFn\|mutation\.\|useMutation\|test\|spec\|node_modules"
-```
-
-**❌ 금지 — raw async:**
-```typescript
-const handleDelete = async (id: string) => {
-  if (!confirm(t('deleteConfirm'))) return;
-  await documentApi.deleteDocument(id);  // 중복 요청 방지 불가, 로딩 상태 없음
-};
-```
-
-**✅ 올바른 패턴 — useMutation:**
-```typescript
-const deleteMutation = useMutation({
-  mutationFn: (id: string) => documentApi.deleteDocument(id),
-  onSuccess: () => { toast({ title: t('deleteSuccess') }); invalidateDocs(); },
-  onError: () => { toast({ title: t('deleteError'), variant: 'destructive' }); },
-});
-const handleDelete = (id: string) => {
-  if (!confirm(t('deleteConfirm'))) return;
-  deleteMutation.mutate(id);
-};
-// 버튼: disabled={deleteMutation.isPending}
-```
-
-**PASS:** onClick 핸들러에서 raw `await api.delete/remove/unlink` 직접 호출 0건.
-**근거:** 2026-04-21 harness C-1 — `ValidationDocumentsSection.tsx` delete handler가 raw async로 작성되어 버튼 중복 클릭 시 race condition 발생. `useMutation` 교체로 `isPending` 로딩 + 에러 분기 제공.
-
-### Step 17: useQuery isError 분기 + 에러 UI 필수 (2026-04-21 추가)
-
-`useQuery`로 데이터를 가져오는 컴포넌트는 `isError` 상태를 명시적으로 처리해야 한다.
-로딩/빈 상태만 분기하고 에러 상태를 누락하면 네트워크 오류 시 빈 상태 UI가 표시되어
-"데이터 없음"과 "데이터 로드 실패"를 사용자가 구분할 수 없다.
-
-**탐지:**
-```bash
-# isLoading을 사용하지만 isError는 사용하지 않는 컴포넌트 파일 탐지
-grep -rln "isLoading\b" \
-  apps/frontend/components apps/frontend/app \
-  --include="*.tsx" \
-  | xargs grep -L "isError" \
-  | grep -v "node_modules\|\.test\.\|\.spec\."
-```
-
-**❌ 금지 — isError 누락:**
-```typescript
-const { data: docs = [], isLoading } = useQuery({ ... });
-// isLoading → skeleton, docs.length === 0 → 빈 상태
-// 에러 상태 없음 → 네트워크 오류를 "빈 상태"로 오인
-```
-
-**✅ 올바른 패턴:**
-```typescript
-const { data: docs = [], isLoading, isError } = useQuery({ ... });
-return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <Empty /> : <List />;
-```
-
-**PASS:** `isLoading`을 사용하는 컴포넌트가 `isError`도 구조분해하고 에러 분기 렌더링 포함.
-**INFO:** 에러를 상위 `error.tsx` Error Boundary로 bubble up하는 경우 `isError` 분기 생략 가능.
-**근거:** 2026-04-21 harness W-2 — `ValidationDocumentsSection.tsx` 첨부파일 로드 실패 시 빈 상태와 동일한 UI. `isError` 분기 추가 후 에러/빈 상태 구분 가능.
-
-### Step 20: `isMounted` ref skip-first-render 패턴 (2026-04-22 추가)
-
-`useEffect`가 마운트 시 실행되어 상태를 변경하는 것을 방지하려면 `useRef<boolean>`으로
-마운트 여부를 추적하고 첫 번째 렌더링 시 effect를 건너뛰는 패턴을 사용한다.
-
-이 패턴은 "상태 변경 → 가이던스 키 갱신 → 포커스 이전" 연쇄에서 마운트 시 불필요한
-포커스 이전/애니메이션 실행을 방지하기 위해 도입됨 (NCDetailClient.tsx 기준).
-
-**올바른 패턴:**
-```typescript
-const isMounted = useRef(false);
-
-useEffect(() => {
-  if (!isMounted.current) {
-    isMounted.current = true;
-    return; // 마운트 시 실행 건너뜀
-  }
-  // 실제 동작 (상태 변경 후에만 실행)
-  guidanceTitleRef.current?.focus();
-}, [guidanceKey]);
-```
-
-**탐지 — isMounted ref 없이 마운트 시 실행되는 포커스/애니메이션 effect:**
-```bash
-# guidanceKey, status 등 상태 의존 useEffect에서 isMounted guard 없이 focus 호출
-grep -rn "useEffect" apps/frontend/components --include="*.tsx" -A 5 \
-  | grep -B 3 "\.focus()" | grep -v "isMounted\|requestAnimationFrame"
-```
-
-**PASS:** 마운트 시 실행 방지가 필요한 포커스 전환 effect에 `isMounted.current` guard 존재.
-**FAIL:** `useEffect(() => { ref.current?.focus() }, [someState])` — 첫 렌더에도 포커스 강제 이전.
-
-**예외:**
-- `useEffect(() => { ref.current?.focus() }, [])` — 의도적 마운트 포커스 (모달 오픈 등)
-- `useEffect(() => { ref.current?.focus() }, [open])` — 열기/닫기 조건 포커스
-
-**관련 파일:**
-- `apps/frontend/components/non-conformances/NCDetailClient.tsx` — isMounted 패턴 최초 도입 (NC 가이던스 키 갱신 후 포커스 이전)
-
-### Step 19: shared/generic 컴포넌트에서 useAuth 금지 (2026-04-21 추가)
-
-`components/shared/`, `components/ui/` 등 여러 도메인에서 재사용되는 **프레젠테이션 컴포넌트**는
-`useAuth()`를 직접 호출해서는 안 된다. 권한 판단 결과를 props(`canAct`, `canEdit` 등)로 주입받아야 한다.
-
-**이유:** 프레젠테이션 컴포넌트가 인증 컨텍스트(useAuth)에 의존하면:
-- 스토리북/단위 테스트 시 AuthProvider 래핑 강제
-- 컴포넌트를 서버 컴포넌트로 전환하기 어려움
-- 같은 컴포넌트를 다른 권한 조건으로 재사용 불가
-
-**탐지:**
-```bash
-# components/shared/, components/ui/ 에서 useAuth import 탐지
 grep -rn "use-auth\|useAuth" \
   apps/frontend/components/shared \
   apps/frontend/components/ui \
   --include="*.tsx" --include="*.ts"
 ```
 
-**❌ 금지 — 프레젠테이션 컴포넌트 내부 권한 판단:**
-```typescript
-// EmptyState.tsx — 수정 전 (anti-pattern)
-export function EmptyState({ primaryAction }: EmptyStateProps) {
-  const { can } = useAuth(); // ← 프레젠테이션 컴포넌트에 인프라 의존성 주입
-  const showPrimary = primaryAction?.permission ? can(primaryAction.permission) : true;
-}
-```
+**PASS:** 0건. **FAIL:** `canXxx?: boolean` prop 패턴으로 전환.
 
-**✅ 올바른 패턴 — Container가 권한 판단 후 props로 전달:**
-```typescript
-// EmptyState.tsx — 수정 후 (presentation)
-export function EmptyState({ canAct }: EmptyStateProps) {
-  const showPrimary = canAct !== false; // props 수신만
-}
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-19-sharedgeneric-컴포넌트에서-useauth-금지-2026-04-21-추가)
 
-// OutboundCheckoutsTab.tsx — Container
-const { can } = useAuth();
-const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
-<EmptyState canAct={canCreateCheckout} />
-```
+### Step 20: `isMounted` ref skip-first-render 패턴
 
-**PASS:** `components/shared/`, `components/ui/` 내에서 `useAuth` import 0건.
-**FAIL:** shared/ui 컴포넌트에서 `useAuth` 발견 → `canXxx?: boolean` prop으로 전환, 소비처(container)에서 `useAuth().can()` 호출.
+마운트 시 실행 방지가 필요한 포커스 전환 effect에 `isMounted.current` guard 필수.
 
-**예외:** `hooks/use-auth.ts` 자체 정의 파일 — 제외.
+**PASS:** guard 존재. **FAIL:** `useEffect(() => { ref.current?.focus() }, [someState])` — 첫 렌더에도 포커스 강제.
 
-### Step 21: 런타임 feature flag로 union 타입 내로잉 금지 (2026-04-26 추가)
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-20-ismounted-ref-skip-first-render-패턴-2026-04-22-추가)
 
-런타임 불리언 플래그(예: `isInboundBffEnabled()`)로 `A | B` union 타입 변수를 내로잉할 수 없다.
-TypeScript는 함수 반환값이 타입 가드(`value is T`)가 아닌 이상 타입을 좁히지 않는다.
-따라서 `if (bffEnabled) resolvedData?.items` 에서 `resolvedData`가 `A | B`이면 `.items` 접근이 불가능하다.
+### Step 21: 런타임 feature flag union 내로잉 금지 + toast toastFn 외부 주입 + useOnboardingHint SSOT
 
-**올바른 패턴:** union 변수 대신 원본 소스 변수를 직접 ternary로 선택.
+- feature flag ternary 결과를 union 변수에 담지 않고 원본 소스 변수를 ternary로 직접 접근
+- `lib/` 하위 `.ts` 파일에서 `useToast`/`useSonner` import 0건
+- `use-onboarding-hint.ts` 외부에서 `onboarding-dismissed:` 문자열 0건
 
-```typescript
-// ❌ WRONG — resolved union 변수는 내로잉 불가
-const resolvedRentalData: RentalImportListResponse | InboundOverviewSection | undefined =
-  bffEnabled ? overviewData?.rental : rentalImportsData?.data;
+상세 (feature flag): [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-21-런타임-feature-flag로-union-타입-내로잉-금지-2026-04-26-추가)
+상세 (toast/onboarding): [references/cache-invalidation.md](references/cache-invalidation.md#step-21-toast-templates-toastfn-외부-주입--useonboardinghint-패턴-2026-04-24-추가)
 
-// TypeScript: (A | B)['items'] — 두 타입 모두에 items 없으면 오류
-const items = resolvedRentalData?.items; // ← TS2339
+### Step 21 확장: `useOnlineStatus` SSOT 훅
 
-// ✅ CORRECT — 원본 소스 변수를 ternary로 직접 접근
-const items = bffEnabled
-  ? overviewData?.rental?.items
-  : rentalImportsData?.data?.items;
-```
+`navigator.onLine`, `addEventListener('online'/'offline', ...)` 직접 등록 금지. 반드시 `useOnlineStatus()` 경유.
 
-**탐지 — feature flag ternary 결과로 union 변수 선언 후 필드 접근:**
+**검증:**
 ```bash
-# isXxxEnabled() 결과로 union 타입 변수를 선언하는 패턴
-grep -rn "isInboundBffEnabled\|bffEnabled\|featureEnabled" \
-  apps/frontend/app apps/frontend/components \
-  --include="*.tsx" --include="*.ts" \
-  | grep "? .*: " | grep -v "return\|className\|enabled:"
+grep -rEn "navigator\.onLine|addEventListener\(['\"](online|offline)['\"]" \
+  apps/frontend/components apps/frontend/app apps/frontend/hooks \
+  --include='*.ts' --include='*.tsx' \
+  | grep -v "use-online-status\|//\|node_modules"
 ```
 
-**PASS:** feature flag ternary 결과를 union 변수에 담지 않고 원본 소스 변수를 ternary로 직접 사용.
-**FAIL:** `const resolvedX = flag ? A : B` 선언 후 `resolvedX.fieldName` 접근 — TypeScript 타입 오류 발생.
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-21-확장-useonlinestatus-ssot-훅--클라이언트-컴포넌트의-navigatoronline-직접-사용-금지-2026-04-28-추가)
 
-**근거:** `InboundCheckoutsTab.tsx` Sprint 3.2에서 `resolvedRentalData: RentalImportListResponse | InboundOverviewSection`
-패턴을 사용했다가 `.items`, `.meta.totalItems` 등 필드 접근 시 8개 TS 오류 발생 (2026-04-26).
+### Step 22: `Promise.allSettled` 병렬 bulk mutation — `for...of` 순차 처리 금지
 
-**근거:** 2026-04-21 78차 반출 세션 — `EmptyState.tsx` 내부 `useAuth` 제거 + `canAct?: boolean` prop 전환. 동일 패턴 재도입 방지.
+bulk 함수에서 `Promise.allSettled` 사용 필수.
 
-### Step 21: toast-templates toastFn 외부 주입 + useOnboardingHint 패턴 (2026-04-24 추가)
+**PASS:** bulk 함수에서 `Promise.allSettled` 사용. **FAIL:** `for...of + await` 패턴.
 
-**toast 유틸 레이어는 React Hook을 직접 호출할 수 없다.** `lib/checkouts/toast-templates.ts`처럼
-순수 유틸 레이어에서 토스트를 발송하려면 `toastFn`을 외부에서 주입받아야 한다.
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-22-promiseallsettled-병렬-bulk-mutation--forof-순차-처리-금지-2026-04-27-추가)
 
-**탐지 — 유틸 레이어에서 React Hook 직접 호출:**
+### Step 23: TanStack Query v5 `onError` snapshot rollback
+
+`onMutate` → `getQueriesData` 스냅샷 → `onError` → `forEach setQueryData` 즉시 복원 패턴 필수.
+
+**PASS:** `onError` 롤백이 스냅샷 복원 패턴 사용. **INFO:** `invalidateQueries`만 사용 시 깜빡임 주의.
+
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-23-tanstack-query-v5-onerror-snapshot-rollback--getqueriesdata--foreach-setquerydata-2026-04-27-추가)
+
+### Step 24: Dual-Mode 비대칭 props
+
+dual-mode 컴포넌트의 controlled props 양측을 모두 주입하거나 모두 omit.
+
+**PASS:** prop 양측 모두 주입 또는 모두 omit. **FAIL:** prop 절반만 전달 — silent fetch 활성화.
+
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-24-dual-mode-비대칭-props--controlleduncontrolled-절반-주입-silent-bug-탐지-2026-04-28-추가)
+
+### Step 25: `useEffect` dependency array TDZ 패턴 + React.memo useCallback 안정화
+
+- **TDZ:** `useQuery` 결과를 dep array에 사용하는 `useEffect`가 해당 `useQuery` 선언 이후에 위치
+- **memo:** `React.memo` atom 호출처에서 inline arrow onClick 0건 — 모두 `useCallback` 변수
+
+상세 (TDZ): [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-25-useeffect-dependency-array-tdz-패턴--선언-이전-변수-참조-금지-2026-04-29-추가)
+상세 (memo): [references/cache-invalidation.md](references/cache-invalidation.md#step-25-reactmemo-reactmemo-atom-부모는-함수-prop을-usecallback으로-안정화-2026-04-28-추가)
+
+### Step 31: Nested interactive (a-in-a / Link-in-Link) 차단
+
+ESLint `NESTED_LINK_RULE` / `NESTED_ANCHOR_RULE` 전체 적용 + lint 실측 0 violation.
+
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-31-nested-interactive-a-in-a--link-in-link-차단-2026-04-28-추가)
+
+### Step 32: useEffect deps 안정화 — useRef 패턴
+
+eslint-disable react-hooks 0건 + stable ref(t/toast) deps 직접 포함 0건.
+
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-32-useeffect-deps-안정화--useref-패턴-eslint-disable-회피-2026-04-28-추가)
+
+### Step 33: TableRow onClick 내 router.push 네비게이션 금지
+
+`TableRow onClick` 내 detail 이동 목적 `router.push` 0건. NavLink overlay 패턴 사용.
+
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-33-tablerow-onclick-내-routerpush-네비게이션-금지-2026-04-29-추가)
+
+### Step 34: 다중 다이얼로그 상태 — discriminated union `ActiveDialog` 패턴
+
+동일 컴포넌트 내 `isXxxOpen + xxxTarget + xxxComment` 3-tuple 반복 금지 → `ActiveDialog` union 사용.
+
+**PASS:** union 패턴 사용. **FAIL:** useState 6개 이상 반복.
+
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-34-다중-다이얼로그-상태--discriminated-union-activedialog-패턴-2026-04-30-추가)
+
+### Step 35: bulk approve/reject는 `runWithConcurrency` worker pool 패턴
+
+`bulkApprove`/`bulkReject` 본문에 `Promise.allSettled` 직접 호출 0건, `runWithConcurrency` 경유 필수.
+
+상세: [references/tanstack-query-cas.md](references/tanstack-query-cas.md#step-35-bulk-approvereject는-runwithconcurrency-worker-pool-패턴--promiseallsettled-직접-호출-금지-2026-04-30-추가)
+
+### Step 36: 카운트 기반 조건부 UI — `!!count` 방어 가드
+
+숫자 카운트 기반 JSX 조건부 렌더링에 `!!count` 또는 `count > 0` 가드 사용.
+
+**FAIL:** `{someCount && <Component />}` 패턴 — `count === 0` 시 "0" 텍스트 노드 노출.
+
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-36-카운트-기반-조건부-ui--count-방어-가드-패턴-2026-04-30-추가)
+
+### Step 37: sessionStorage TTL + try/catch + one-shot 패턴
+
+storage 헬퍼는 ① try/catch wrap + ② TTL 검증 + ③ one-shot removeItem 3패턴 모두 필수.
+
+상세: [references/dynamic-import-ssr.md](references/dynamic-import-ssr.md#step-37-sessionstorage-ttl--trycatch--one-shot-패턴-2026-04-30-추가-sprint-45-u-07)
+
+### Step 38: useUndoableState SSOT — 인라인 undo/redo 스택 금지
+
+`pastRef`/`futureRef` 인라인 선언 또는 `recomputeUndoRedo`/`pushHistory`/`undoStructural`/`redoStructural` 직접 구현 금지 → `useUndoableState` 위임 필수.
+
+**탐지:**
 ```bash
-# lib/ 하위에서 use-toast, useToast import 탐지
-grep -rn "use-toast\|useToast\|useSonner" apps/frontend/lib --include="*.ts"
+grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoStructural\|redoStructural" \
+  apps/frontend/components --include="*.tsx" --include="*.ts"
+# 기대: 0건
 ```
 
-**✅ 올바른 패턴 — toastFn 외부 주입:**
-```typescript
-// toast-templates.ts (유틸 레이어)
-export function notifyCheckoutAction(
-  toastFn: CheckoutToastFn,  // ← 외부 주입
-  action: CheckoutAction,
-  ctx: CheckoutToastContext,
-  t: CheckoutToastTranslate,
-): void {
-  toastFn({ title: t(`toast.${actionKey}.success`, ctx) });
-}
+상세: [references/cache-invalidation.md](references/cache-invalidation.md#step-38-useundoablestate-ssot--인라인-undoredo-스택-컴포넌트-내-선언-금지-2026-05-02-추가)
 
-// CheckoutGroupCard.tsx (React 컴포넌트 레이어)
-const { toast } = useToast();
-approveMutation.mutate({ ... }, {
-  onSuccess: (_data, variables) =>
-    notifyCheckoutAction(toast, 'approve', { equipmentName: variables.equipmentName }, t)
-});
-```
+### Step 39: 프론트엔드 mutation에 version 전달 — CAS 무력화 차단 (2026-05-03 verify-cas Step 9 흡수)
 
-**❌ 금지 — 유틸 레이어에서 훅 직접 호출:**
-```typescript
-// lib/checkouts/toast-templates.ts
-import { useToast } from '@/hooks/use-toast'; // ← lib 레이어에서 훅 호출 금지
-export function notifyCheckoutAction(...) {
-  const { toast } = useToast(); // React 규칙 위반
-}
-```
+상태 변경 API 함수(approve/reject/update/cancel/close)는 반드시 `version: number` 파라미터를 받아 서버에 전달한다. 상세: [references/step-details.md](references/step-details.md#step-39-프론트엔드-mutation에-version-전달--cas-무력화-차단)
 
-**PASS:** `lib/` 하위 `.ts` 파일에서 `useToast`/`useSonner` import 0건.
-**FAIL:** 유틸 레이어에서 훅 직접 호출 → `toastFn` 파라미터 패턴으로 변환.
+### Step 40: useCasGuardedMutation + 2-step Dialog AP-4 — confirm 진입 전 version 재조회 (2026-05-03 verify-cas Step 12·13 흡수)
 
----
-
-**useOnboardingHint: SSR-safe localStorage 힌트 훅 패턴**
-
-`hooks/use-onboarding-hint.ts`가 SSOT. 동일 기능의 새 훅 생성 금지.
-`useOnboardingHint(id)` — `isVisible`(표시 여부) + `dismiss()`(영구 해제).
-
-**탐지 — STORAGE_KEY_PREFIX 직접 하드코딩 또는 훅 복제:**
-```bash
-# 'onboarding-dismissed:' 문자열 직접 사용 탐지
-grep -rn "onboarding-dismissed" apps/frontend --include="*.ts" --include="*.tsx" \
-  | grep -v "use-onboarding-hint.ts"
-```
-
-**PASS:** `use-onboarding-hint.ts` 외부에서 `onboarding-dismissed:` 문자열 0건.
-**FAIL:** 컴포넌트 내 직접 localStorage.getItem('onboarding-dismissed:...') → 훅 경유로 전환.
-
-**관련 파일:**
-- `apps/frontend/hooks/use-onboarding-hint.ts` — SSOT 훅
-- `apps/frontend/lib/checkouts/toast-templates.ts` — toastFn 외부 주입 패턴 참고 구현
-- `apps/frontend/components/shared/NextStepPanel.tsx` — useOnboardingHint('checkout-next-step') 사용 예
-
----
-
-### Step 22: `Promise.allSettled` 병렬 bulk mutation — `for...of` 순차 처리 금지 (2026-04-27 추가)
-
-여러 항목에 동일한 뮤테이션을 적용하는 bulk 작업은 `Promise.allSettled`로 병렬 실행해야 한다.
-`for...of` + `await` 순차 처리는 N번 직렬 API 호출로 사용자 대기 시간이 N배가 되며,
-한 건 실패 시 나머지가 중단될 수 있다.
-
-**올바른 패턴 — `Promise.allSettled` + index-based 결과 매핑:**
-
-```typescript
-// ✅ 병렬 + 부분 실패 지원
-const results = await Promise.allSettled(
-  ids.map((id) => this.singleMutation(id, reason))
-);
-
-const success: string[] = [];
-const failed: string[] = [];
-results.forEach((result, i) => {
-  if (result.status === 'fulfilled') success.push(ids[i]);
-  else failed.push(ids[i]);
-});
-return { success, failed };
-
-// ❌ 금지 — 순차 처리 (N배 지연 + 중간 실패 시 나머지 중단)
-for (const id of ids) {
-  await this.singleMutation(id, reason);
-}
-```
-
-**탐지 — bulk 함수 내 for...of + await 순차 뮤테이션:**
-```bash
-# bulk* 함수 내 for...of + await 패턴 탐지
-grep -A5 "async.*bulk\|bulkApprove\|bulkReject\|bulkDelete" \
-  apps/frontend/lib/api/*.ts \
-  | grep "for.*of\|await.*forEach"
-```
-
-**PASS:** bulk 함수에서 `Promise.allSettled` 사용. **FAIL:** `for...of + await` 패턴 → `Promise.allSettled`로 교체.
-
-**근거:** `approvals-api.ts`의 `bulkReject()`에서 `Promise.allSettled` 도입 (AP-03, 2026-04-27).
-부분 실패 지원 필수 — `{ success: string[], failed: string[] }` 반환 타입이 API 계약.
-
-**예외:**
-- 순서 의존적 트랜잭션 (앞 항목 성공 후에만 다음 항목 처리 가능) — `for...of + await` 허용, 주석 필수.
-- 단일 뮤테이션 — 해당 없음.
-
-### Step 23: TanStack Query v5 `onError` snapshot rollback — `getQueriesData` + `forEach setQueryData` (2026-04-27 추가)
-
-`useOptimisticMutation` 없이 직접 `useMutation`을 사용하는 경우, optimistic update 롤백은
-`onMutate`에서 `getQueriesData` 스냅샷 → `onError`에서 `forEach setQueryData` 즉시 복원이 올바른 패턴.
-
-`onError`에서 `invalidateQueries`를 사용하면 refetch 왕복 시간 동안 UI가 낙관적 상태로 남아 사용자에게 깜빡임.
-
-**올바른 패턴 — `getQueriesData` 스냅샷 + `onError` forEach 즉시 복원:**
-
-```typescript
-// ✅ onMutate: 스냅샷 캡처 + optimistic update
-onMutate: async ({ id }) => {
-  await queryClient.cancelQueries({ queryKey: queryKeys.checkouts.view.all() });
-  const previousViewQueries = queryClient.getQueriesData<PaginatedResponse<T>>(
-    { queryKey: queryKeys.checkouts.view.all() }
-  );
-  queryClient.setQueriesData<PaginatedResponse<T>>(
-    { queryKey: queryKeys.checkouts.view.all() },
-    (old) => old ? { ...old, data: old.data.map((co) => co.id === id ? { ...co, status: newStatus } : co) } : old
-  );
-  return { previousViewQueries };
-},
-
-// ✅ onError: 스냅샷 즉시 복원 (refetch 없음)
-onError: (error, variables, context) => {
-  context?.previousViewQueries?.forEach(([key, data]) => {
-    queryClient.setQueryData(key, data);   // ← onError 컨텍스트 — 허용
-  });
-},
-
-// ❌ 금지 — invalidateQueries로 롤백 (UI 깜빡임)
-onError: () => {
-  queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.view.all() });
-}
-```
-
-**탐지 — `onError` 내 `invalidateQueries` 롤백 (스냅샷 없이):**
-```bash
-# onError에 invalidateQueries만 있고 previousViewQueries 없는 패턴 탐지
-grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
-  | grep "invalidateQueries" | grep -v "//\|self-audit"
-```
-
-**PASS:** `onError` 롤백이 스냅샷 복원 패턴 사용. **INFO:** `invalidateQueries`만 사용 시 의도적 여부 확인.
-
-**Note:** `onError`에서의 `setQueryData`는 **허용** — 스냅샷 타입이 왕복 보존됨 (TData/TCachedData 불일치 없음).
-`onSuccess`에서의 `setQueryData`만 금지 (Memory: useOptimisticMutation 버그 이력).
-
-**예외:**
-- `useOptimisticMutation` 사용 시 — 훅 내부에서 처리, 이 패턴 불필요.
-- optimistic update 없는 단순 뮤테이션 — `onError`에서 `invalidateQueries` 허용.
+3단계 승인 워크플로우는 `useCasGuardedMutation` fetch-before-mutate 패턴을 사용하고, 2-step 확인 다이얼로그는 confirm 진입 직전 최신 버전을 재조회한다. 상세: [references/step-details.md](references/step-details.md#step-40-usecasguardedmutation--2-step-dialog-ap-4--confirm-진입-전-version-재조회)
 
 ## Output Format
 
@@ -732,15 +413,27 @@ grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 | 14  | QUERY_CONFIG 스프레드 오버라이드 | PASS/INFO | `...QUERY_CONFIG.XXX, extraKey` 주석 없는 위치 |
 | 14b | placeholderData 순서        | PASS/FAIL | QUERY_CONFIG 스프레드 이전에 placeholderData 위치 |
-| 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 VERSION_CONFLICT 처리 또는 수동 casVersion 조합 위치 |
+| 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 처리 또는 수동 casVersion 조합 위치 |
 | 16  | raw async mutation 금지    | PASS/FAIL | onClick에서 await api.delete/remove/unlink 직접 호출 위치 |
 | 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |
 | 18  | *-api.ts React Hook 금지   | PASS/FAIL | lib/api/*-api.ts에 @tanstack/react-query import 위치 |
 | 19  | shared/ui 컴포넌트 useAuth 금지 | PASS/FAIL | components/shared·ui에서 useAuth import 위치 |
 | 20  | isMounted ref skip-first-render | PASS/FAIL | 상태 의존 포커스 effect에 isMounted guard 누락 위치 |
-| 21  | toast toastFn 외부 주입 + useOnboardingHint SSOT | PASS/FAIL | lib/ 레이어에서 useToast 직접 호출 위치 / onboarding-dismissed 하드코딩 위치 |
-| 22  | bulk 뮤테이션 `Promise.allSettled` 병렬 — `for...of` 순차 금지 | PASS/FAIL | bulk 함수 내 for...of+await 패턴 위치 |
-| 36  | 카운트 기반 `!!count` 방어 가드 | PASS/FAIL | `{someCount && <JSX/>}` 패턴(0 텍스트 노출) 위치 |
+| 21  | toast toastFn 외부 주입 + useOnboardingHint SSOT | PASS/FAIL | lib/ 레이어에서 useToast 직접 호출 위치 |
+| 22  | bulk 뮤테이션 `Promise.allSettled` 병렬 | PASS/FAIL | bulk 함수 내 for...of+await 패턴 위치 |
+| 23  | onError snapshot rollback  | PASS/INFO | invalidateQueries 롤백 패턴 위치 |
+| 24  | Dual-Mode 비대칭 props      | PASS/FAIL | controlled props 절반만 주입 위치 |
+| 25  | useEffect TDZ + memo useCallback | PASS/FAIL | TDZ 패턴 또는 inline arrow 위치 |
+| 31  | Nested interactive 차단    | PASS/FAIL | a-in-a / Link-in-Link 위치 |
+| 32  | useEffect deps useRef 안정화 | PASS/FAIL | eslint-disable 또는 t/toast deps 위치 |
+| 33  | TableRow router.push 금지  | PASS/FAIL | TableRow onClick router.push 위치 |
+| 34  | ActiveDialog discriminated union | PASS/FAIL | useState 6개 이상 반복 위치 |
+| 35  | runWithConcurrency worker pool | PASS/FAIL | Promise.allSettled 직접 호출 위치 |
+| 36  | 카운트 기반 `!!count` 방어 | PASS/FAIL | `{someCount && <JSX/>}` 패턴(0 텍스트 노출) 위치 |
+| 37  | sessionStorage 3패턴       | PASS/FAIL | try/catch·TTL·one-shot 누락 위치 |
+| 38  | useUndoableState SSOT      | PASS/FAIL | 인라인 pastRef/futureRef 위치 |
+| 39  | mutation version 전달      | PASS/FAIL | version 파라미터 누락 API 함수 |
+| 40  | useCasGuardedMutation + 2-step | PASS/FAIL | confirm 전 version 재조회 누락 위치 |
 ```
 
 ## Exceptions
@@ -766,654 +459,3 @@ grep -A 5 "onError\s*:" apps/frontend/components/**/*.tsx \
 19. **StorageImage.tsx의 useRef+useEffect blob URL revoke** — TanStack Query(gcTime=SHORT) 캐시 만료 후 blob URL 메모리 해제를 위한 의도적 패턴. `data.isBlob` 조건부 revoke + 언마운트 클린업이 정상.
 20. **DocumentPreviewDialog.tsx의 blobUrlRef+useEffect cleanup** — presigned/blob URL 미리보기용. `blobUrlRef.current`에 현재 blob URL 추적, cleanup에서 `revokeObjectURL` 호출. deps: `[open, doc?.id]`. 이 패턴은 stale closure 방지를 위한 ref 기반 cleanup으로 정상.
 21. **`staleTime: Infinity` (런타임 불변 서버 설정값)** — `QUERY_CONFIG` 프리셋이 없는 값이지만, 앱 재시작 없이 변경되지 않는 서버 설정(NextAuth 인증 제공자 목록, 기능 플래그 등)에 대해 `staleTime: Infinity`를 주석과 함께 직접 사용하는 것은 정상. 예: `AuthProviders.tsx`의 `useQuery({ queryFn: getProviders, staleTime: Infinity })`. 주석 없이 사용하면 QUERY_CONFIG 프리셋 누락으로 보고.
-
----
-
-### Step 21 확장: `useOnlineStatus` SSOT 훅 — 클라이언트 컴포넌트의 `navigator.onLine` 직접 사용 금지 (2026-04-28 추가)
-
-**규칙**: 오프라인/온라인 상태 감지가 필요한 컴포넌트는 반드시 `hooks/use-online-status.ts`의 `useOnlineStatus()` 훅을 경유. `navigator.onLine`, `'online'/'offline'` 이벤트 리스너 직접 등록 금지.
-
-**근거**: `useOnboardingHint`와 동일한 SSOT 훅 패턴. 다른 페이지에서 독자적인 오프라인 감지 로직이 생기면 (1) `navigator.onLine` false positive 처리 분산, (2) 이벤트 리스너 cleanup 누락, (3) `lastOnlineAt` 추적 일관성 깨짐.
-
-**검증 명령**:
-```bash
-grep -rEn "navigator\.onLine|addEventListener\(['\"](online|offline)['\"]" \
-  apps/frontend/components apps/frontend/app apps/frontend/hooks \
-  --include='*.ts' --include='*.tsx' \
-  | grep -v "use-online-status\|//\|node_modules"
-# 기대: 0건
-```
-
-**PASS**: 모든 사용처가 `useOnlineStatus()` 훅 경유.
-**FAIL**: 컴포넌트에서 `addEventListener('online'|'offline', ...)` 직접 등록 또는 `useState(navigator.onLine)` 초기값.
-**예외**: `hooks/use-online-status.ts` 자체.
-
-**관련 파일**:
-- `apps/frontend/hooks/use-online-status.ts` — SSOT
-- `apps/frontend/components/dashboard/OfflineBanner.tsx` — 소비처
-- `apps/frontend/components/checkouts/CheckoutEmptyState.tsx` — 소비처 (network variant)
-
----
-
-### Step 25: `useEffect` dependency array TDZ 패턴 — 선언 이전 변수 참조 금지 (2026-04-29 추가)
-
-React 함수 컴포넌트에서 `useEffect`의 dependency array는 **렌더 함수 실행 중 동기적으로 평가**된다.
-따라서 `const { data: teamsData } = useQuery(...)` 선언 이전에 `useEffect(() => {...}, [teamsData?.data])` 를 두면,
-dependency array 평가 시점에 `teamsData`가 Temporal Dead Zone(TDZ)에 있어 `ReferenceError`가 발생한다.
-
-콜백 함수 내부(`() => { teamsData?.data.find(...) }`)는 나중에 실행되는 클로저라서 괜찮지만,
-**dependency array 자체는 렌더 시 즉시 평가되는 표현식**이라 TDZ를 벗어나지 못한다.
-
-**규칙:** `useQuery`/`useState`/`useMemo`로 선언된 변수를 참조하는 `useEffect`는 해당 선언 이후에 위치해야 한다.
-
-**탐지 — useQuery 결과를 dep array에서 참조하는 useEffect가 선언보다 앞에 있는지:**
-
-정적 grep으로 정확한 순서를 판정하기는 어렵지만, 같은 파일에서 의심 패턴을 좁힐 수 있다:
-```bash
-# 컴포넌트 파일에서 useQuery 결과를 dep array에 쓰는 useEffect 패턴 탐지
-# (수동 검토: 해당 변수 선언이 useEffect 이후에 있는지 확인)
-grep -rn "useEffect" apps/frontend/components apps/frontend/app \
-  --include="*.tsx" -A 10 \
-  | grep -E "\[.*Data\?\.|\[.*data\?" \
-  | grep -v "node_modules\|// "
-```
-
-실질적인 검증은 빌드 타임 오류로 확인:
-```bash
-pnpm --filter frontend exec tsc --noEmit 2>&1 | grep "ReferenceError\|before initialization"
-```
-
-**❌ FAIL 패턴 (TDZ 유발):**
-```typescript
-// Effect B — teamsData를 dep array에서 참조
-useEffect(() => {
-  if (!teamsData?.data) return;          // 콜백 내부는 OK (클로저)
-  // ...
-}, [teamsData?.data, ...]);             // ← dep array 동기 평가 시 TDZ!
-
-// ← teamsData 선언이 아직 없음
-const { data: teamsData } = useQuery({ ... }); // 선언이 뒤에 있음
-```
-
-**✅ PASS 패턴 (선언 이후 배치):**
-```typescript
-const { data: teamsData } = useQuery({ ... }); // 선언 먼저
-
-useEffect(() => {
-  if (!teamsData?.data) return;
-  // ...
-}, [teamsData?.data, ...]);             // ← dep array 평가 시점에 teamsData 선언됨
-```
-
-**PASS:** `useQuery` 결과를 dep array에 사용하는 `useEffect`가 해당 `useQuery` 선언 이후에 위치.
-**FAIL:** `tsc --noEmit`에서 `Cannot access 'X' before initialization` 오류 발생.
-
-**배경:** `CreateCheckoutContent.tsx`의 Effect B가 `teamsData` useQuery 선언 이전에 위치해 `ReferenceError` 발생 (2026-04-29). Radix UI Select 초기화 순서 요구사항으로 인해 팀 시드 effect를 teamsData 로드 이후로 분리하면서 발견.
-
-**관련 파일:**
-- `apps/frontend/app/(dashboard)/checkouts/create/CreateCheckoutContent.tsx` — TDZ 수정 사례
-
-### Step 24: Dual-Mode 비대칭 props — controlled/uncontrolled 절반 주입 silent bug 탐지 (2026-04-28 추가)
-
-**규칙**: 컴포넌트가 `isControlled = propA !== undefined && propB !== undefined` 패턴으로 모드를 결정할 때, 호출처가 propA만 전달하고 propB를 누락하면 `isControlled=false`로 평가되어 자체 fetch 분기 활성화 → props + fetch 혼용 silent bug.
-
-**근거 (사례)**: `CheckoutCard.tsx`는 `upcomingCheckouts`+`overdueCheckouts` 양쪽 주입 시 controlled. 한쪽만 주입하면 `isControlled=false` → 자체 useQuery + 누락 prop 무시.
-
-**검증 명령**:
-```bash
-# 1. dual-mode 패턴 정의 위치 확인
-grep -rEn "isControlled\s*=" apps/frontend/components --include='*.tsx'
-
-# 2. 각 컴포넌트 호출처에서 양측 prop 모두 주입 확인 (수동 검토)
-grep -rn "<CheckoutCard\b" apps/frontend --include='*.tsx' | grep -v "//"
-```
-
-**PASS**: dual-mode 컴포넌트의 controlled props 양측을 모두 주입하거나 모두 omit.
-**FAIL**: prop 절반만 전달 — silent fetch 활성화.
-**개선 방안 (권장)**: discriminated union 타입으로 시그니처 강제.
-```ts
-type Props = { mode: 'controlled'; data: Data } | { mode: 'uncontrolled' };
-```
-
-**관련 파일**:
-- `apps/frontend/components/dashboard/cards/CheckoutCard.tsx` — dual-mode 정의
-
----
-
-### Step 25: `React.memo` atom 부모는 함수 prop을 `useCallback`으로 안정화 (2026-04-28 추가, REVIEW_RESULT.md §4.1 후속)
-
-`React.memo`로 wrap된 atom(예: `InlineActionButton`)을 호출하는 부모 컴포넌트가 `onClick` 등 함수 prop을 *inline arrow* `(e) => {...}`로 전달하면 매 렌더 새 함수 → memo가 매번 props mismatch 판정 → 리렌더 발생 → memo overhead만 누적 (가짜 최적화).
-
-부모가 atom의 memo 효과를 얻으려면:
-1. **함수 prop은 `useCallback`** — 의존성 배열 명시
-2. **객체 prop은 `useMemo`** (atom이 객체 prop을 받는 경우)
-3. **부모 자체가 React.memo** — 그래야 부모 위 변경이 자식까지 캐스케이드되지 않음
-
-```bash
-# memo'd atom 호출처에 inline arrow 탐지 (FAIL 패턴)
-# 1) memo'd atom 목록
-grep -rn "React.memo(\|export const \w\+ = React\.memo" apps/frontend/components/ui
-# 2) 각 atom 호출처에서 inline arrow onClick 찾기
-grep -rnE "<InlineActionButton[^>]*onClick=\\{?\\(e?\\) ?=>" apps/frontend/components apps/frontend/app
-# 기대: 0 hits (모두 useCallback 변수 또는 hoisted 함수 사용)
-
-# useCallback 사용 확인
-grep -n "useCallback" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: ≥ 1건 (handler가 stabilize됨)
-```
-
-**PASS:**
-- memo'd atom의 함수 prop은 모두 `useCallback` 결과 또는 module-level 함수
-- inline arrow 0건
-
-**FAIL:**
-- `<InlineActionButton onClick={() => doSomething()}>` 같은 inline arrow — 매 렌더 새 함수, memo 무력화
-- `<InlineActionButton onClick={(e) => { e.stopPropagation(); ... }}>` — 동일 문제
-- atom prop 객체 전달 시 inline literal `{...}` — referential identity 매 렌더 변경
-
-**예외:**
-- 부모가 자체 memo 안 된 경우, atom memo 자체의 효과는 *제한적*. 그래도 useCallback은 추가하는 게 좋다 (부모가 추후 memo로 wrap될 때 자동으로 효과 발생).
-
-**관련 파일:**
-- `apps/frontend/components/ui/inline-action-button.tsx` — `React.memo` atom
-- `apps/frontend/components/shared/NextStepPanel.tsx` — `handlePanelClick` / `handleCompactClick` `useCallback` 모범 사례
-
-**발생 이력 (2026-04-28)**: Phase 3 P0-3 마이그레이션 1차에서 NextStepPanel가 atom에 inline arrow `onClick={(e) => {...}}` 전달 → memo 무력화 → review-architecture/verify-implementation FAIL. useCallback로 stabilize 후 PASS.
-
----
-
-### Step 31: Nested interactive (a-in-a / Link-in-Link) 차단 (2026-04-28 추가)
-
-**근거:** HTML Interactive Content Model 위반(`<a>` 안 `<a>`/`<button>` 등)은 React 19 hydration error의 직접 원인. 정적/동적 양쪽으로 차단해야 회귀 0 보장.
-
-**검증:**
-
-```bash
-# 1) ESLint custom rule (no-restricted-syntax) 정의 + 적용 블록 검증
-grep -nE "NESTED_LINK_RULE|NESTED_ANCHOR_RULE" apps/frontend/eslint.config.mjs
-# 기대: ≥ 4 hits (정의 2 + 글로벌 룰 + 예외 블록 적용)
-
-# 2) lint 실측
-pnpm --filter frontend run lint 2>&1 | grep -E "Nested <Link>|Nested <a>"
-# 기대: 0 hits
-
-# 3) JSX 정적 검출 (lint 백업)
-grep -rEn "<Link[^>]*>[[:space:]]*<Link|<a[^>]*>[[:space:]]*<a" apps/frontend/components apps/frontend/app
-# 기대: 0 hits
-
-# 4) Playwright e2e 회귀 스펙 존재
-test -f apps/frontend/tests/e2e/features/layout/sidebar-nav-action.spec.ts && echo "OK"
-# 기대: OK
-```
-
-**PASS:**
-- ESLint `NESTED_LINK_RULE` / `NESTED_ANCHOR_RULE`이 frontend 전체에 적용
-- lint 실측 0 violation
-- 사이드바 nav row 패턴은 `NavRowWithSecondaryAction`을 사용 (sibling anchor)
-- e2e가 콘솔 hydration 에러 0건 + DOM `a > a` 0건 검증
-
-**FAIL:**
-- caller가 `<Link>` 안에 또 `<Link>` 직접 렌더 (NavBadge `badgeLinkHref` 분기로 Link 렌더한 회귀 사례)
-- caller가 `<a>` 안에 `<button onClick=router.push>` 사용 — WCAG 4.1.1 parsing 위반 + URL 공유/우클릭 새 탭 손실
-
-**예외 정책:**
-- 정당한 polymorphic 컴포넌트 충돌 (예: shadcn Slot가 Link로 리졸브되는 경우): `// eslint-disable-next-line no-restricted-syntax -- <사유>` 명시
-
-**해결 패턴 참조:**
-- `docs/references/frontend-patterns.md` "Row with Secondary Action Pattern" 섹션
-- `apps/frontend/components/layout/NavRowWithSecondaryAction.tsx` 구현 예시
-
-**발생 이력 (2026-04-28):** SidebarItem의 NavBadge가 `badgeLinkHref` optional prop 분기로 Link를 렌더 → `<a>` 안 `<a>` hydration error. `NavRowWithSecondaryAction` 신설 + discriminated union 데이터 모델 + ESLint 룰로 해결.
-
----
-
-### Step 32: useEffect deps 안정화 — useRef 패턴 (eslint-disable 회피) (2026-04-28 추가)
-
-**근거:** `t (next-intl)`, `toast (shadcn singleton)` 같은 stable ref이 useEffect deps에 포함되면 `react-hooks/exhaustive-deps` 만족하지만 향후 구현 변경(매 렌더 새 참조 반환)으로 re-render loop 회귀 위험. `eslint-disable-next-line react-hooks/exhaustive-deps`는 self-audit 7대 원칙(eslint-disable 0)에 위반. 시니어 표준은 useRef로 deps 외부화.
-
-**검증:**
-
-```bash
-# 1) eslint-disable react-hooks/exhaustive-deps 0건 (self-audit 정합)
-grep -rn "eslint-disable.*react-hooks/exhaustive-deps" \
-  apps/frontend/components apps/frontend/hooks 2>/dev/null
-# 기대: 0 hits
-
-# 2) toast/t 같은 stable ref가 useEffect deps에 포함되면 useRef 외부화 패턴 권고
-# (자동 검출 어려움 — 코드 리뷰에서 grep으로 확인)
-grep -nB 1 "useEffect" apps/frontend/components apps/frontend/hooks --include="*.tsx" -r 2>/dev/null | \
-  grep -E "}, \[.*toast|}, \[.*\bt[,)]"
-# 0 hits 기대 (있으면 useRef 패턴으로 교체)
-```
-
-**PASS:** eslint-disable react-hooks 0건 + stable ref(t/toast) deps 직접 포함 0건.
-**FAIL:** `}, [filters.id, t, toast]` 같은 deps 배열에 next-intl `t` 또는 shadcn `toast` 직접 포함.
-
-**해결 패턴:**
-```tsx
-const tRef = useRef(t);
-const toastRef = useRef(toast);
-useEffect(() => {
-  tRef.current = t;
-  toastRef.current = toast;
-});
-useEffect(() => {
-  // ...
-  toastRef.current({ title: tRef.current('key') });
-}, [otherDeps]); // t/toast 외부화
-```
-
-**예외:** `useTranslations(ns)` 결과를 `useMemo`로 처리 + dep로 포함 (권장 안 됨, useRef가 더 정합).
-
-**발생 이력 (2026-04-28):** EquipmentFilters useEffect reconcile 안전망에 `t/toast` deps 포함 → eslint-disable 추가 시 self-audit FAIL → useRef 패턴(`tRef/toastRef`) 적용으로 양쪽 정합.
-
----
-
-### Step 33: TableRow onClick 내 router.push 네비게이션 금지 (2026-04-29 추가)
-
-**규칙:** `<TableRow onClick={() => router.push(...)}>` 패턴으로 detail 페이지 이동 금지.
-올바른 방법: NavLink overlay 패턴 (`absolute inset-0` + `TableRow className="... relative"`) 또는 `useNavigateWithPending`.
-
-```bash
-# TableRow에 router.push 네비게이션 탐지
-grep -rn "TableRow" apps/frontend/app apps/frontend/components \
-  --include="*.tsx" -l | xargs grep -l "router\.push" | \
-  xargs grep -n "onClick.*router\.push\|router\.push.*DETAIL\|router\.push.*ROUTES"
-```
-
-각 결과 라인:
-1. `onClick={() => router.push(ROUTES.DETAIL(id))}` + 같은 파일에 NavLink overlay 없음 → ❌ 안티패턴
-2. `router.push` in ButtonClick / 폼 submit → ✅ 허용 (네비게이션 목적이 아닌 액션)
-3. `router.replace(...)` → ✅ URL sync 전용 허용
-
-**PASS:** `TableRow onClick` 내 detail 이동 목적 `router.push` 0건.
-**FAIL:** `<TableRow onClick={() => router.push(ROUTES.DETAIL(id))}>` 발견 → NavLink overlay로 전환.
-
-> **배경:** 2026-04-29 TestSoftwareListContent `<TableRow onClick={router.push}>` → NavLink overlay 전환으로 해결. `TableRow onClick` 패턴은 키보드 접근성(`Tab+Enter`) 불가, `aria-label` 제공 불가, GlobalProgressBar 미연동 3가지 결함 동시 발생.
-
----
-
-### Step 34: 다중 다이얼로그 상태 — discriminated union `ActiveDialog` 패턴 (2026-04-30 추가)
-
-**규칙:** 동일 컴포넌트에서 3종 이상의 다이얼로그를 관리할 때, `isOpen + target + comment` 트리플 `useState` 세트를 다이얼로그당 반복하는 대신 단일 discriminated union `ActiveDialog` 상태를 사용한다. TypeScript가 `type` 필드로 narrowing하므로 별도 null-check 불필요.
-
-```typescript
-// ✅ CORRECT — 단일 union 상태
-type ActiveDialog =
-  | { type: 'approve'; target: SomeEntity }
-  | { type: 'qualityApprove'; target: SomeEntity }
-  | { type: 'reject'; target: SomeEntity }
-  | null;
-
-const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
-
-// 다이얼로그 열기
-setActiveDialog({ type: 'approve', target: item });
-
-// 다이얼로그에서 target 접근 (TypeScript narrowing)
-if (activeDialog?.type === 'approve') {
-  mutation.mutate({ id: activeDialog.target.id });
-}
-
-// 닫기
-setActiveDialog(null);
-
-// ❌ WRONG — 다이얼로그당 3개 상태 × N개 다이얼로그 = 상태 폭발
-const [isApproveOpen, setIsApproveOpen] = useState(false);
-const [approveTarget, setApproveTarget] = useState<SomeEntity | null>(null);
-const [approveComment, setApproveComment] = useState('');
-const [isRejectOpen, setIsRejectOpen] = useState(false);
-const [rejectTarget, setRejectTarget] = useState<SomeEntity | null>(null);
-...
-```
-
-```bash
-# 동일 컴포넌트에서 다이얼로그 관련 useState 3쌍 이상 탐지
-grep -rn "useState<.*null>" apps/frontend --include="*.tsx" | \
-  awk -F: '{print $1}' | sort | uniq -c | sort -rn | \
-  awk '$1 >= 3 { print $2 }' | \
-  xargs -I{} grep -c "useState" {} | \
-  paste - - | awk '$2 >= 6 { print $1 " — useState", $2, "개 (union 패턴 검토)" }'
-```
-
-**PASS:** 동일 컴포넌트 내 `isXxxOpen + xxxTarget + xxxComment` 같은 3-tuple 반복 패턴 없이 `ActiveDialog` union 사용.  
-**FAIL:** 동일 기능 다이얼로그 제어용 `useState` 6개 이상 반복 — `ActiveDialog` discriminated union으로 통합 권장.
-
-**예외:** 독립적 목적의 다이얼로그(create + filter + detail 등 서로 다른 도메인)는 별도 boolean으로 유지 가능.
-
-**발생 이력 (2026-04-30):** `SoftwareValidationContent.tsx` approve/qualityApprove/reject 다이얼로그 8개 `useState` → `ActiveDialog` union 1개로 압축. 타입 narrowing 덕에 `if (approveTarget)` null-guard 불필요.
-
-**관련 파일:**
-- `apps/frontend/app/(dashboard)/software/[id]/validation/SoftwareValidationContent.tsx` — ActiveDialog union 패턴 참조 구현
-
-### Step 35: bulk approve/reject는 `runWithConcurrency` worker pool 패턴 — `Promise.allSettled` 직접 호출 금지 (2026-04-30 추가, tech-debt-batch-0430b)
-
-**규칙**: `bulkApprove` / `bulkReject` 같은 대량 비동기 작업은 `Promise.allSettled(ids.map(...))` 직접 호출을 금지하고, 동시성 제한 worker pool인 `runWithConcurrency(tasks, BULK_CONCURRENCY_LIMIT)` 패턴을 사용한다.
-
-**왜 직접 `Promise.allSettled`가 문제인가**: N개 항목 전체를 동시에 시작하면 백엔드 처리량을 초과해 rate-limit/timeout이 발생한다. Worker pool 패턴은 항상 `BULK_CONCURRENCY_LIMIT`개만 활성 상태를 유지하며, task 완료 즉시 다음 task를 grab하므로 slow outlier가 전체 배치를 지연시키지 않는다.
-
-**검증 명령**:
-```bash
-# bulkApprove / bulkReject 함수 본문에서 직접 Promise.allSettled 호출 탐지
-# (runWithConcurrency 내부에서의 사용은 허용)
-grep -n "Promise.allSettled" apps/frontend/lib/api/approvals/actions.ts | \
-  grep -v "runWithConcurrency"
-# 기대: 0건 — Promise.allSettled는 runWithConcurrency 내부에서만 허용
-```
-
-```bash
-# runWithConcurrency 존재 + BULK_CONCURRENCY_LIMIT 상수 확인
-grep -n "runWithConcurrency\|BULK_CONCURRENCY_LIMIT" \
-  apps/frontend/lib/api/approvals/actions.ts
-# 기대: runWithConcurrency 함수 정의 1건 + BULK_CONCURRENCY_LIMIT 상수 1건 + 사용처 2건(bulkApprove/bulkReject)
-```
-
-**PASS**: `bulkApprove`/`bulkReject` 본문에 `Promise.allSettled` 직접 호출 0건, `runWithConcurrency` 경유 확인  
-**FAIL**: 직접 호출 발견 → `runWithConcurrency` 함수로 래핑
-
-**올바른 패턴**:
-```typescript
-// ✅ CORRECT — worker pool: 항상 BULK_CONCURRENCY_LIMIT개만 active
-const results = await runWithConcurrency(
-  ids.map((id) => () => approve(category, id, comment, equipmentId, originalData)),
-  BULK_CONCURRENCY_LIMIT
-);
-
-// ❌ WRONG — N개 동시 실행 → rate-limit 위험
-const results = await Promise.allSettled(
-  ids.map((id) => approve(category, id, comment))
-);
-```
-
-**관련 파일**:
-- `apps/frontend/lib/api/approvals/actions.ts` — `runWithConcurrency` + `BULK_CONCURRENCY_LIMIT = 5` 정의 및 사용
-
-**발생 이력 (2026-04-30 신설)**: tech-debt-batch-0430b bulk-approve-rate-limit 작업. 초기 배치 방식(`chunk` 기반)에서 진짜 세마포어(worker pool) 방식으로 교체. 배치 방식은 slow outlier가 전체 chunk를 지연시키는 문제가 있어, `nextIndex` 공유 변수로 worker가 즉시 다음 task를 grab하는 구조로 개선.
-
-**예외 (2026-04-30 보강, Sprint 4.5 D2 delegation)**: 도메인이 backend bulk endpoint(`/api/<domain>/bulk-approve`, `/bulk-reject`)를 제공하는 경우, frontend는 `runWithConcurrency` 우회가 **허용**된다. 이유: backend가 `Promise.allSettled` + AuditLog `entityIdPath: 'body.ids'` 통합 기록 + DB transaction 단위로 처리하므로 frontend의 worker pool은 불필요. 이 경우 `approvalsApi.bulkApprove/bulkReject`에 `isCheckoutCategory(category)` 같은 도메인 분기를 두고 `checkoutApi.bulkApproveCheckouts`/`bulkRejectCheckouts`로 위임. 다른 도메인(equipment, calibration 등)은 기존 worker pool 패턴 유지.
-
-**Delegation 검증 명령**:
-```bash
-# 도메인 분기 + 단일 HTTP 호출 패턴 확인
-grep -B2 -A5 "isCheckoutCategory\|isCalibrationCategory\|is.*Category" \
-  apps/frontend/lib/api/approvals/actions.ts | grep -E "bulk(Approve|Reject)Checkouts|bulk(Approve|Reject)Calibrations"
-# 기대: domain-specific bulk 함수 호출 (return 1줄)
-
-# 도메인 카테고리 SSOT derive 확인 (인라인 배열 금지)
-grep -n "CHECKOUT_CATEGORIES\s*=" apps/frontend/lib/api/approvals/actions.ts
-# 기대: ApprovalCategoryValues.OUTGOING/INCOMING 같은 SSOT 경유 (리터럴 인라인 0)
-```
-
-### Step 36: 카운트 기반 조건부 UI — `!!count` 방어 가드 패턴 (2026-04-30 추가)
-
-**규칙**: 숫자 카운트를 기반으로 UI 요소를 조건부 렌더링하거나 레이블 조합에 포함할 때,
-`count > 0` 대신 `!!count`(또는 `count !== 0`) 방어 가드를 사용해야 한다.
-`count === 0`을 falsy로 취급해 UI에서 자동 제거되도록 처리하는 패턴이다.
-
-**규칙 근거:**
-- `count && <Badge>{count}</Badge>` — `count === 0`이면 `0`이 렌더링됨 (React 텍스트 노드 버그)
-- `!!count && <Badge>{count}</Badge>` — `count === 0`이면 `false`가 되어 렌더링 안 됨
-- `currentEquipmentCount` 같은 집계값은 데이터 로딩 중 `undefined`이거나 결과 0일 수 있음
-
-**올바른 패턴 (CheckoutListTabs.tsx 기준):**
-```typescript
-// ✅ !!count 방어 가드 — 0 또는 undefined 모두 렌더링 안 함
-{!!currentEquipmentCount && (
-  <Badge>{t('list.count.equipment', { count: currentEquipmentCount })}</Badge>
-)}
-
-// ❌ 미가드 — count === 0이면 React가 "0"을 렌더링
-{currentEquipmentCount && (
-  <Badge>{t('list.count.equipment', { count: currentEquipmentCount })}</Badge>
-)}
-```
-
-**탐지 — 숫자 카운트 미가드 렌더링 패턴:**
-```bash
-# 카운트 변수에 !! 없이 직접 && 렌더링하는 패턴 탐지
-grep -rn "{\s*\(current\|inbound\|outbound\|pending\|total\).*Count\s*&&" \
-  apps/frontend/components/checkouts/ \
-  apps/frontend/app/\(dashboard\)/checkouts/ \
-  --include="*.tsx" \
-  | grep -v "!!\|> 0\|!== 0\|// "
-# 기대: 0건 (모두 !!count 또는 count > 0 가드 사용)
-```
-
-```bash
-# CheckoutListTabs.tsx에서 !!currentEquipmentCount 가드 확인
-grep -n "!!currentEquipmentCount" \
-  apps/frontend/components/checkouts/CheckoutListTabs.tsx
-# 기대: 1건 이상 (조건부 렌더링 가드 존재)
-```
-
-**PASS:** 숫자 카운트 기반 JSX 조건부 렌더링에 `!!count` 또는 `count > 0` 가드 사용.
-**FAIL:** `{someCount && <Component />}` 패턴 — `count === 0` 시 "0" 텍스트 노드 노출.
-
-**예외:**
-- `count > 0 ? <A /> : <B />` ternary — 명시적 분기이므로 정상
-- 이미 `number | undefined` 타입인 경우 `!!count`는 `undefined`도 처리하므로 권장
-
-**관련 파일:**
-- `apps/frontend/components/checkouts/CheckoutListTabs.tsx` — `!!currentEquipmentCount` 방어 패턴 참조 구현
-
-### Step 37: sessionStorage TTL + try/catch + one-shot 패턴 (2026-04-30 추가, Sprint 4.5 U-07)
-
-**규칙**: `sessionStorage`/`localStorage`를 사용하는 클라이언트 헬퍼는 다음 3가지 패턴을 모두 만족해야 한다:
-
-1. **try/catch silent fallback** — `setItem`/`getItem`/`removeItem` 모든 호출이 try/catch로 감싸져 있어야 함 (private mode, 권한 차단, 용량 초과 시 silent fallback). 호출자에게 throw 전파 금지.
-2. **TTL 검증** — 시간 의존 데이터(컨텍스트 복원, 캐시 등)는 timestamp + TTL 비교 필수. 만료 시 null 반환 + storage에서 자동 삭제.
-3. **One-shot read** — 일회성 데이터(돌아가기 컨텍스트 등)는 read 후 자동 `removeItem`으로 두 번 복원되지 않도록 보장.
-
-**규칙 근거:**
-- private/incognito mode → sessionStorage `setItem` throw `QuotaExceededError`. throw 전파 시 페이지 crash.
-- TTL 없는 데이터는 사용자가 1주일 후 돌아왔을 때 stale context 복원 → 의도와 어긋난 UX.
-- one-shot 미적용 시 detail → list → detail → list 반복할 때 매번 같은 stale context 복원.
-
-**올바른 패턴 (`checkout-return-context.ts` 기준):**
-```typescript
-// ✅ try/catch 모든 storage 호출 wrap
-export function saveCheckoutListContext(searchParams: URLSearchParams | string): void {
-  try {
-    const query = typeof searchParams === 'string' ? searchParams : searchParams.toString();
-    if (!query) return;
-    const payload: StoredContext = { query, ts: Date.now() };
-    sessionStorage.setItem(CHECKOUT_RETURN_CONTEXT_KEY, JSON.stringify(payload));
-  } catch {
-    // private mode silent fallback (URL이 SSOT)
-  }
-}
-
-// ✅ TTL 검증 + one-shot removeItem
-export function restoreCheckoutListContext(): URLSearchParams | null {
-  try {
-    const raw = sessionStorage.getItem(CHECKOUT_RETURN_CONTEXT_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!isStoredContext(parsed)) return null;
-    if (Date.now() - parsed.ts > CHECKOUT_RETURN_CONTEXT_TTL_MS) {
-      sessionStorage.removeItem(CHECKOUT_RETURN_CONTEXT_KEY); // ← 만료 자동 청소
-      return null;
-    }
-    sessionStorage.removeItem(CHECKOUT_RETURN_CONTEXT_KEY); // ← one-shot
-    return new URLSearchParams(parsed.query);
-  } catch {
-    return null;
-  }
-}
-```
-
-**탐지 — try/catch 누락:**
-```bash
-# sessionStorage/localStorage setItem이 try/catch 외부에 있는 패턴 탐지
-grep -B5 "sessionStorage\.\(setItem\|getItem\|removeItem\)\|localStorage\.\(setItem\|getItem\|removeItem\)" \
-  apps/frontend/lib/utils/ apps/frontend/hooks/ \
-  --include="*.ts" --include="*.tsx" \
-  | grep -B5 -A1 "sessionStorage\|localStorage" | grep -v "try {" | grep "sessionStorage\|localStorage" | head -10
-# 기대: 0건 (모든 호출이 try block 내부)
-```
-
-**탐지 — TTL 누락:**
-```bash
-# 시간 의존 storage 헬퍼에 TTL/expires/timestamp 키워드 존재 확인
-grep -l "sessionStorage.setItem\|localStorage.setItem" apps/frontend/lib/utils/*.ts | \
-  while read f; do
-    if ! grep -qE "(TTL|EXPIRES|timestamp|ts:|expiresAt)" "$f"; then
-      echo "TTL 누락 의심: $f"
-    fi
-  done
-# 기대: 빈 출력 (storage 헬퍼는 TTL 또는 명시적 영구 보존 의도 주석 보유)
-```
-
-**탐지 — One-shot 패턴 (read 후 removeItem):**
-```bash
-# restore* 함수가 getItem 후 removeItem을 호출하는지 확인
-grep -A20 "export function restore" apps/frontend/lib/utils/ apps/frontend/hooks/ \
-  --include="*.ts" -r | grep -E "removeItem"
-# 기대: 호출자 함수당 1건 이상 (one-shot 의도가 있는 경우)
-```
-
-**PASS:** 3 패턴 모두 적용 — try/catch wrap + TTL 검증 + one-shot removeItem.
-**FAIL:** ① throw 전파 가능, ② TTL 없이 stale context 영구 보존, ③ 두 번 read 가능 → 헬퍼 재설계.
-
-**예외:**
-- 영구 사용자 설정 (예: 사이드바 collapsed 상태) — TTL 불필요, one-shot 불필요. try/catch만 필수.
-- 플래그성 boolean (예: 첫 방문 마커) — TTL/one-shot 의도 명시 후 패턴 선택.
-
-**관련 파일:**
-- `apps/frontend/lib/utils/checkout-return-context.ts` — 3 패턴 모두 적용 참조 구현 (Sprint 4.5 U-07, 2026-04-30 신설)
-- `apps/frontend/lib/utils/__tests__/checkout-return-context.test.ts` — TTL/private mode/one-shot 단위 테스트 20건
-
-**발생 이력 (2026-04-30 신설)**: Sprint 4.5 U-07 돌아가기 컨텍스트 보존 작업에서 `restoreCheckoutListContext()`가 한 번 사용 후 sessionStorage에서 자동 삭제되어야 한다는 요구. private mode에서 throw 발생 시 silent fallback + URL이 SSOT이므로 storage 차단되어도 동작 보장. 단위 테스트로 3 패턴 모두 검증.
-
-### Step 38: useUndoableState SSOT — 인라인 undo/redo 스택 컴포넌트 내 선언 금지 (2026-05-02 추가, VisualTableEditor 추출)
-
-**규칙**: 컴포넌트에서 undo/redo 히스토리 관리가 필요할 때 `pastRef`/`futureRef`를 인라인 선언하거나 `recomputeUndoRedo`/`pushHistory`/`undoStructural`/`redoStructural`을 직접 구현하지 말고 `useUndoableState` 훅을 사용해야 한다.
-
-**안티패턴:**
-```typescript
-// ❌ 인라인 undo 히스토리 — 56줄 보일러플레이트, deps 관리 복잡
-const pastRef = useRef<TableSnapshot[]>([]);
-const futureRef = useRef<TableSnapshot[]>([]);
-const [canUndo, setCanUndo] = useState(false);
-const recomputeUndoRedo = useCallback(() => { ... }, []);
-const pushHistory = useCallback(() => { ... }, [headers, rows, recomputeUndoRedo]);
-const undoStructural = useCallback(() => { ... }, [headers, rows, onChange, recomputeUndoRedo]);
-useEffect(() => { /* Ctrl+Z 단축키 */ }, [undoStructural, redoStructural]);
-```
-
-**올바른 패턴:**
-```typescript
-// ✅ useUndoableState 훅 위임 — 8줄
-const {
-  push: pushHistory,
-  undo: undoStructural,
-  redo: redoStructural,
-  canUndo,
-  canRedo,
-} = useUndoableState<TableSnapshot>({
-  current: { headers, rows },
-  onChange: (snap) => onChange(snap.headers, snap.rows),
-  clone: (snap) => cloneSnapshot(snap.headers, snap.rows),
-  limit: HISTORY_LIMIT,
-  enableKeyboard: true,  // Ctrl/Cmd+Z / Ctrl+Y 단축키 자동 등록 (IME 가드 내장)
-});
-```
-
-**탐지 — 인라인 undo 패턴 잔존:**
-```bash
-# pastRef + futureRef 조합 또는 recomputeUndoRedo 인라인 선언
-grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoStructural\|redoStructural" \
-  apps/frontend/components --include="*.tsx" --include="*.ts"
-# 기대: 0건 (모든 undo/redo는 useUndoableState 위임)
-```
-
-**예외:**
-- `apps/frontend/hooks/use-undoable-state.ts` — SSOT 정의 파일 자체는 제외
-- undo/redo가 1곳 이하인 단순 토글 (e.g. `const [prev, setPrev] = useState(...)`) — 보일러플레이트 3종 세트 없으면 제외
-
-**관련 파일:**
-- `apps/frontend/hooks/use-undoable-state.ts` — SSOT 정의 (2026-05-02, inspection-undo-hook-extraction-reject-spec)
-- `apps/frontend/hooks/__tests__/use-undoable-state.test.ts` — 7개 케이스: push→undo 복원, push→undo→redo, limit shift, 빈 stack undo no-op, 빈 stack redo no-op, push redo 스택 초기화, 참조 안정성
-- `apps/frontend/components/inspections/result-sections/VisualTableEditor.tsx` — 참조 구현 (인라인 56줄 → 위임 8줄)
-
-### Step 39: 프론트엔드 mutation에 version 전달 — CAS 무력화 차단 (2026-05-03 verify-cas Step 9 흡수)
-
-**규칙**: 상태 변경 API 함수(approve/reject/update/cancel/close)는 반드시 `version: number` 파라미터를 받아 서버에 전달해야 한다. 미전달 시 backend `updateWithVersion()`이 stale version으로 동작하여 CAS가 무력화됨.
-
-**탐지 명령어**:
-```bash
-# approve/reject API 함수에서 version 파라미터 누락 탐지
-grep -rn "version" apps/frontend/lib/api/checkout-api.ts \
-  apps/frontend/lib/api/calibration-api.ts \
-  apps/frontend/lib/api/non-conformances-api.ts \
-  apps/frontend/lib/api/equipment-api.ts | grep -i "approve\|reject\|update"
-# PASS: 모든 상태 변경 API 함수가 version 파라미터 포함
-# FAIL: version 누락 (CAS 비무력화 보장 깨짐)
-```
-
-**올바른 패턴**:
-```typescript
-// ✅ CORRECT — version 명시 전달
-export async function approveCheckout(id: string, version: number, dto: ApproveCheckoutDto) {
-  return apiClient.patch(`/checkouts/${id}/approve`, { ...dto, version });
-}
-
-// ❌ WRONG — version 누락
-export async function approveCheckout(id: string, dto: ApproveCheckoutDto) {
-  return apiClient.patch(`/checkouts/${id}/approve`, dto); // backend CAS 무력화
-}
-```
-
-**상세**: backend Step 19 + [verify-zod/references/cas-checks.md](../verify-zod/references/cas-checks.md) Step 1~11.
-
-### Step 40: useCasGuardedMutation + 2-step Dialog AP-4 — confirm 진입 전 version 재조회 (2026-05-03 verify-cas Step 12·13 흡수)
-
-**규칙 (40-A)**: 3단계 승인 워크플로우(submit/approve/reject/confirm)에서는 `useCasGuardedMutation` 훅으로 fetch-before-mutate 패턴을 사용한다. mutation 직전 최신 `casVersion` 을 API에서 조회하여 stale closure 위험을 완전히 차단.
-
-**규칙 (40-B)**: 2-step 확인 다이얼로그(input→confirm)에서 confirm 단계 진입 직전에 최신 버전을 재조회하여 다른 탭/세션의 stale 상태를 감지. NC Phase 4(AP-4)에서 도입.
-
-**필수 조건 (40-B)**:
-- `handleNext` 또는 confirm 진입 핸들러에서 API 재조회 후 version 비교
-- 불일치 시 toast + invalidateQueries + dialog 닫기
-
-**올바른 패턴**:
-```tsx
-// ✅ CORRECT — confirm 진입 직전 version 재확인
-const handleNext = form.handleSubmit(async () => {
-  const latest = await api.getEntity(entity.id);
-  if (latest.version !== entity.version) {
-    toast({ title: t('toasts.versionMismatch'), variant: 'destructive' });
-    queryClient.invalidateQueries({ queryKey: queryKeys.entity.detail(entity.id) });
-    onClose();
-    return;
-  }
-  setStep('confirm');
-});
-
-// ❌ WRONG — version 확인 없이 confirm 진입
-const handleNext = form.handleSubmit(async () => {
-  setStep('confirm'); // stale 상태로 submit 위험
-});
-```
-
-**탐지 명령어**:
-```bash
-# (40-A) useCasGuardedMutation 사용 확인 — calibration-plans submit/approve/reject/confirm
-grep -rln "useCasGuardedMutation" apps/frontend/components --include="*.tsx"
-# 기대: calibration-plans submit/approve/reject/confirm dialog에 적용
-
-# (40-B) 2-step dialog (step state) 컴포넌트에서 version 비교 패턴 확인
-grep -rln "step.*'confirm'\|setStep.*confirm" apps/frontend/components --include="*.tsx" | \
-  xargs grep -l "handleNext\|handleConfirm"
-# 위 파일 각각에서 version 비교가 있는지 확인:
-# grep -n "\.version\s*!==\|!.*version" <file>
-```
-
-**현재 적용**: `NCRepairDialog.tsx` (handleNext), `NCEditDialog.tsx` (useCasGuardedMutation 내부 처리).
-
-**예외**: confirm 없이 단일 step으로 submit하는 dialog — 패턴 불필요.
-
-**관련 파일**:
-- `apps/frontend/hooks/use-cas-guarded-mutation.ts` — fetch-before-mutate SSOT 훅
-- `apps/frontend/hooks/use-optimistic-mutation.ts` — VERSION_CONFLICT 통합 핸들러
-- backend 측 검증: verify-zod Step 19 + [verify-zod/references/cas-checks.md](../verify-zod/references/cas-checks.md)

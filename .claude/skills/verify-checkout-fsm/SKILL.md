@@ -54,348 +54,471 @@ schemas ← shared-constants ← schemas  (순환!)
 
 ### Step 1: Dependency Inversion — UserRole 직접 import 금지
 
-FSM 파일이 `UserRole` 또는 `Permission` enum을 직접 import하면 순환 의존성 발생.
+FSM 파일이 `UserRole` 또는 `Permission`을 직접 import하면 순환 의존성 발생.
 
-```bash
-# checkout-fsm.ts가 shared-constants나 UserRole을 직접 import하지 않는지 확인
-grep -n "from '@equipment-management/shared-constants'" \
-  packages/schemas/src/fsm/checkout-fsm.ts
-# 결과: 0건 (PASS)
+**PASS:** `shared-constants` import 0건 + `UserRole`/`Permission` import 0건.
+**FAIL:** shared-constants import 또는 UserRole/Permission import 발견.
 
-grep -n "UserRole\|Permission\b" \
-  packages/schemas/src/fsm/checkout-fsm.ts \
-  | grep "^.*import"
-# 결과: 0건 (PASS)
-```
-
-**PASS:** 0건. **FAIL:** `shared-constants` import 또는 `UserRole`/`Permission` import 발견.
+상세: [references/fsm-core.md](references/fsm-core.md#step-1-dependency-inversion--userrole-직접-import-금지)
 
 ### Step 2: 함수 시그니처 — readonly string[] 패턴
 
-`canPerformAction`, `getNextStep` 함수가 `userPermissions: readonly string[]`을 받는지 확인.
+`canPerformAction`, `getNextStep`이 `userPermissions: readonly string[]`을 받는지 확인.
 
-```bash
-# 공개 API 함수 시그니처 확인
-grep -n "userPermissions" packages/schemas/src/fsm/checkout-fsm.ts \
-  | grep -v "^.*//\|^.*\*"
-# 기대값: readonly string[] 타입으로 선언된 라인 존재
-```
+**PASS:** `readonly string[]` 타입 사용.
+**FAIL:** `UserRole[]` 또는 `Permission[]` 타입 사용.
 
-**PASS:** `readonly string[]` 타입 사용. **FAIL:** `UserRole[]` 또는 `Permission[]` 타입 사용.
+상세: [references/fsm-core.md](references/fsm-core.md#step-2-함수-시그니처--readonly-string-패턴)
 
 ### Step 3: assertFsmInvariants 모듈 로드 시 실행
 
-모듈 최상위(top-level) 레벨에서 `assertFsmInvariants(CHECKOUT_TRANSITIONS)` 가 호출되어야 함.
-import 시점에 FSM 불변식이 자동 검증됩니다.
+모듈 최상위 레벨에서 `assertFsmInvariants(CHECKOUT_TRANSITIONS)` 호출 확인.
 
-```bash
-# 모듈 최상위 레벨 호출 확인
-grep -n "assertFsmInvariants(CHECKOUT_TRANSITIONS)" \
-  packages/schemas/src/fsm/checkout-fsm.ts
-# 결과: 1건 이상 (함수 정의 내부가 아닌 모듈 최상위에 위치해야 함)
-```
+**PASS:** 1건 이상 + 함수 정의 외부(모듈 레벨) 위치.
+**FAIL:** 0건 또는 함수 내부에 위치.
 
-**PASS:** 1건 이상 + 함수 정의 외부(모듈 레벨) 위치. **FAIL:** 0건 또는 함수 내부에 위치.
+상세: [references/fsm-core.md](references/fsm-core.md#step-3-assertfsminvariants-모듈-로드-시-실행)
 
 ### Step 4: CheckoutPermissionKey와 Permission enum 동기화
 
-`CheckoutPermissionKey` 로컬 string union의 값이 `shared-constants`의 `Permission` enum과 일치하는지 확인.
+`CheckoutPermissionKey` 로컬 string union 값이 `shared-constants`의 `Permission` enum과 일치하는지 확인.
 
-```bash
-# CheckoutPermissionKey 로컬 정의 추출
-grep -A 10 "export type CheckoutPermissionKey" \
-  packages/schemas/src/fsm/checkout-fsm.ts
-```
+**PASS:** `CheckoutPermissionKey`의 모든 값이 `Permission` enum에 대응.
+**FAIL:** Permission enum에 없는 값이 CheckoutPermissionKey에 있거나, checkout 권한 추가 후 CheckoutPermissionKey에 없음.
 
-```bash
-# shared-constants의 checkout 관련 Permission 값 확인
-grep -n "checkout" packages/shared-constants/src/permissions.ts \
-  | grep -v "//\|import"
-# 결과와 CheckoutPermissionKey 값을 수동으로 대조
-```
-
-**PASS:** `CheckoutPermissionKey`의 모든 값이 `Permission` enum에 대응하는 값으로 존재.
-**FAIL:** `Permission` enum에 없는 값이 `CheckoutPermissionKey`에 있거나, checkout 권한이 추가됐는데 `CheckoutPermissionKey`에 없음.
+상세: [references/fsm-core.md](references/fsm-core.md#step-4-checkoutpermissionkey와-permission-enum-동기화)
 
 ### Step 5: FSM 소비자 브릿지 패턴 — req.user.permissions 경유 (PR-2 이후)
 
-PR-2 이후 서비스에서 `getPermissions(role)` 직접 호출 금지. `req.user?.permissions`(JwtStrategy.validate()에서 파생)를 사용.
-
-```bash
-# checkouts.service.ts에 getPermissions( 직접 호출 0건 확인
-grep -n "getPermissions(" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS)
-
-# userPermissions = req.user?.permissions 패턴 사용 확인
-grep -n "req\.user\?\.permissions\|userPermissions" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | head -10
-```
-
-```bash
-# UserRole을 직접 전달하는 잘못된 패턴 탐지
-grep -rn "canPerformAction.*role\b\|getNextStep.*role\b" \
-  apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" \
-  | grep -v "//\|test\|spec"
-# 결과: 0건 (PASS)
-```
+서비스에서 `getPermissions(role)` 직접 호출 금지. `req.user?.permissions` 경유 필수.
 
 **PASS:** 서비스에서 `getPermissions(` 0건 + `req.user?.permissions` 경유.
 **FAIL:** 서비스에서 `getPermissions(role)` 직접 호출하거나 `role` 값을 직접 전달.
 
-### Step 8: assertFsmAction 헬퍼 존재 및 패턴 (PR-2 이후)
-
-`assertFsmAction`이 private 헬퍼로 존재하고 7개 이상 guard site에서 호출되는지 확인.
-
-```bash
-# assertFsmAction 정의 확인
-grep -n "private assertFsmAction" apps/backend/src/modules/checkouts/checkouts.service.ts
-
-# 호출 횟수 (7개 guard site 이상)
-grep -c "assertFsmAction\|canPerformAction(" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 8 이상 (PASS)
-
-# 기존 레거시 에러 코드 잔존 금지
-grep -n "CHECKOUT_ONLY_PENDING_CAN_APPROVE\|CHECKOUT_ONLY_PENDING_CAN_REJECT\|CHECKOUT_ONLY_APPROVED_CAN_START\|CHECKOUT_ONLY_CHECKED_OUT_CAN_RETURN\|CHECKOUT_ONLY_RETURNED_CAN_APPROVE\|CHECKOUT_ONLY_PENDING_CAN_CANCEL" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS)
-```
-
-**PASS:** assertFsmAction 정의 1건 + 호출 ≥ 8건 + 레거시 에러 코드 0건.
-**FAIL:** 정의 없음, 호출 부족, 레거시 에러 코드 잔존.
-
-### Step 9: calculateAvailableActions sync 패턴 (PR-2 이후)
-
-`calculateAvailableActions`가 `async` 키워드 없이 동기 메서드인지 확인.
-
-```bash
-# async 잔존 금지
-grep -n "private async calculateAvailableActions" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS)
-
-grep -n "private calculateAvailableActions" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 1건 (PASS)
-
-# Permission 하드코딩 금지 (COMPLETE_CHECKOUT 예외)
-grep -n "Permission\." apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -v "COMPLETE_CHECKOUT"
-# 결과: 0건 (PASS)
-```
-
-**PASS:** `private async calculateAvailableActions` 0건 + `private calculateAvailableActions` 1건 + Permission 하드코딩 0건.
-
-### Step 10: buildNextStep + findOne 메타 포함 (PR-2 이후)
-
-`buildNextStep` private 메서드가 존재하고 `findOne` 메타 블록에서 호출되는지 확인.
-
-```bash
-grep -n "private buildNextStep" apps/backend/src/modules/checkouts/checkouts.service.ts
-
-grep -n "buildNextStep\|nextStep" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -v "interface\|type\|//" | head -5
-```
-
-**PASS:** `private buildNextStep` 1건 + `meta: { availableActions, nextStep }` 조합 존재.
-**FAIL:** 둘 중 하나 없음.
-
-### Step 11: FSM_TO_AUDIT_ACTION 모든 CheckoutAction 커버 (PR-2 이후)
-
-`FSM_TO_AUDIT_ACTION` static 매핑이 모든 `CheckoutAction` 값을 커버하는지 확인.
-
-```bash
-# FSM_TO_AUDIT_ACTION 매핑 존재 확인
-grep -n "FSM_TO_AUDIT_ACTION" apps/backend/src/modules/checkouts/checkouts.service.ts
-
-# CheckoutAction 정의의 모든 액션 수
-grep -A5 "export type CheckoutAction" packages/schemas/src/fsm/checkout-fsm.ts | head -20
-
-# 매핑 항목 수 (CheckoutAction 수와 일치해야 함)
-grep -A20 "FSM_TO_AUDIT_ACTION" apps/backend/src/modules/checkouts/checkouts.service.ts | head -20
-```
-
-**PASS:** `FSM_TO_AUDIT_ACTION`이 `Record<CheckoutAction, AuditAction>` 타입으로 선언 + tsc 통과(완전성 보장).
-**FAIL:** `Record<CheckoutAction, AuditAction>` 타입 없음 (부분 커버 시 컴파일 에러로 탐지되지 않음).
+상세: [references/fsm-core.md](references/fsm-core.md#step-5-fsm-소비자-브릿지-패턴--requserpermissions-경유-pr-2-이후)
 
 ### Step 6: CHECKOUT_TRANSITIONS 테이블 완전성 — 단위 테스트 커버리지 확인
 
-테스트 파일이 존재하며 불변식 테스트가 포함되어 있는지 확인.
+테스트 파일 존재 + 불변식 테스트 30건 이상.
 
-```bash
-# 테스트 파일 존재 확인
-ls packages/schemas/src/__tests__/checkout-fsm.test.ts 2>/dev/null \
-  && echo "EXISTS" || echo "MISSING"
+**PASS:** 테스트 파일 EXISTS + 테스트 30건 이상.
+**FAIL:** 파일 없거나 테스트 수 부족.
 
-# 테스트 수 확인
-grep -c "it\|test\b" packages/schemas/src/__tests__/checkout-fsm.test.ts 2>/dev/null || echo "0"
-```
+상세: [references/fsm-core.md](references/fsm-core.md#step-6-checkout_transitions-테이블-완전성--단위-테스트-커버리지-확인)
 
-**PASS:** 테스트 파일 존재 + 테스트 30건 이상. **FAIL:** 파일 없거나 테스트 수 부족.
+### Step 7: nextStep 필드 — 응답 스키마 + 프론트엔드 API 타입 동기화
 
-### Step 7: nextStep 필드 — 응답 스키마 + 프론트엔드 API 타입 동기화 확인
+`checkout.ts` backend + `checkout-api.ts` frontend 양쪽에 `nextStep` 필드 존재.
 
-`packages/schemas/src/checkout.ts`의 Checkout 응답 스키마에 `nextStep` 필드가 포함되어 있는지, AND 프론트엔드 API 타입(`checkout-api.ts:Checkout.meta`)에도 동기화되어 있는지 확인.
+**PASS:** backend `NextStepDescriptorSchema` + frontend `Checkout.meta.nextStep?: NextStepDescriptor | null` 선언.
+**FAIL:** 둘 중 하나라도 누락 → useCheckoutNextStep이 항상 client fallback으로 동작.
 
-```bash
-# backend schema 확인
-grep -n "nextStep" packages/schemas/src/checkout.ts
-# 결과: nextStep 필드 정의 라인 (선택적 필드)
+상세: [references/fsm-core.md](references/fsm-core.md#step-7-nextstep-필드--응답-스키마--프론트엔드-api-타입-동기화-확인)
 
-# frontend API 타입 동기화 확인 (Server-Driven UI 파이프라인 완결)
-grep -n "nextStep" apps/frontend/lib/api/checkout-api.ts
-# 결과: Checkout.meta에 nextStep?: NextStepDescriptor | null 포함
-```
+### Step 8: assertFsmAction 헬퍼 존재 및 패턴 (PR-2 이후)
 
-**PASS:**
-- backend: `nextStep` 필드가 `NextStepDescriptorSchema` 타입으로 포함
-- frontend: `Checkout.meta.nextStep?: NextStepDescriptor | null` 선언
-  (이 필드가 없으면 `useCheckoutNextStep`이 서버 응답을 무시하고 항상 client fallback으로 동작)
+private `assertFsmAction` 정의 1건 + 호출 ≥ 8건 + 레거시 에러 코드 0건.
 
-**FAIL:** 둘 중 하나라도 누락.
+**PASS:** 정의 1건 + 호출 ≥ 8건 + 레거시 에러 코드 0건.
+**FAIL:** 정의 없음, 호출 부족, 레거시 에러 코드 잔존.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-8-assertfsmaction-헬퍼-존재-및-패턴-pr-2-이후)
+
+### Step 9: calculateAvailableActions sync 패턴 (PR-2 이후)
+
+`private async calculateAvailableActions` 0건 + `private calculateAvailableActions` 1건 + Permission 하드코딩 0건.
+
+**PASS:** sync 메서드 1건 + Permission 하드코딩 0건.
+**FAIL:** async 잔존 또는 Permission 하드코딩 발견.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-9-calculateavailableactions-sync-패턴-pr-2-이후)
+
+### Step 10: buildNextStep + findOne 메타 포함 (PR-2 이후)
+
+`private buildNextStep` 1건 + `meta: { availableActions, nextStep }` 조합 존재.
+
+**PASS:** buildNextStep 정의 1건 + meta.nextStep 조합 존재.
+**FAIL:** 둘 중 하나 없음.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-10-buildnextstep--findone-메타-포함-pr-2-이후)
+
+### Step 11: FSM_TO_AUDIT_ACTION 모든 CheckoutAction 커버 (PR-2 이후)
+
+`FSM_TO_AUDIT_ACTION`이 `Record<CheckoutAction, AuditAction>` 타입으로 선언되어 tsc 완전성 보장.
+
+**PASS:** `Record<CheckoutAction, AuditAction>` 타입 선언 + tsc 통과.
+**FAIL:** Record 타입 없음 → 부분 커버 시 컴파일 에러로 탐지 불가.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-11-fsm_to_audit_action-모든-checkoutaction-커버-pr-2-이후)
 
 ### Step 12: assertFsmAction HTTP 의미론 — 403/400 분리 (세션 이후)
 
-`assertFsmAction`이 `invalid_transition`→`BadRequestException(400)`, permission denied→`ForbiddenException(403)` 를 구분하는지 확인.
+`invalid_transition`→400(BadRequestException), permission denied→403(ForbiddenException) 분리.
 
-```bash
-# invalid_transition → BadRequestException 확인
-grep -A 5 "invalid_transition" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "BadRequestException"
-# 결과: 1건 이상 (PASS)
+**PASS:** `invalid_transition`→400, `CHECKOUT_FORBIDDEN`→403 분리.
+**FAIL:** `CHECKOUT_FORBIDDEN`이 `BadRequestException`에 포함.
 
-# permission denied → ForbiddenException 확인 (BadRequestException 금지)
-grep -A 10 "assertFsmAction" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -A5 "check\.reason" | grep "ForbiddenException"
-# 결과: 1건 이상 (PASS)
-
-# assertFsmAction 내부에서 BadRequestException을 CHECKOUT_FORBIDDEN에 쓰면 위반
-grep -B2 "CHECKOUT_FORBIDDEN" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "BadRequestException"
-# 결과: 0건 (PASS)
-```
-
-**PASS:** `invalid_transition`→400, `CHECKOUT_FORBIDDEN`→403 분리. **FAIL:** `CHECKOUT_FORBIDDEN`이 `BadRequestException`에 포함.
+상세: [references/fsm-core.md](references/fsm-core.md#step-12-assertfsmaction-http-의미론--403400-분리-세션-이후)
 
 ### Step 13: Controller guard ↔ FSM permission 정렬 (세션 이후)
 
-approve/approve-return/reject-return 엔드포인트가 FSM 전이에서 요구하는 Permission과 동일한 guard를 갖는지 확인.
+approve→APPROVE_CHECKOUT, approve-return→APPROVE_CHECKOUT, reject-return→REJECT_CHECKOUT.
 
-```bash
-# approve 엔드포인트: APPROVE_CHECKOUT 요구
-grep -B1 "async approve\b" apps/backend/src/modules/checkouts/checkouts.controller.ts \
-  | grep "APPROVE_CHECKOUT"
-# 결과: 1건 (PASS)
-
-# approve-return 엔드포인트: APPROVE_CHECKOUT 요구
-grep -B3 "approve-return" apps/backend/src/modules/checkouts/checkouts.controller.ts \
-  | grep "APPROVE_CHECKOUT"
-# 결과: 1건 (PASS)
-
-# reject-return 엔드포인트: REJECT_CHECKOUT 요구
-grep -B3 "reject-return" apps/backend/src/modules/checkouts/checkouts.controller.ts \
-  | grep "REJECT_CHECKOUT"
-# 결과: 1건 (PASS)
-
-# VIEW_CHECKOUTS가 approve/approve-return/reject-return에 잔존하면 위반
-grep -A3 "'(:uuid/approve\|:uuid/approve-return\|:uuid/reject-return)" \
-  apps/backend/src/modules/checkouts/checkouts.controller.ts \
-  | grep "VIEW_CHECKOUTS"
-# 결과: 0건 (PASS)
-```
-
-**PASS:** approve→APPROVE_CHECKOUT, approve-return→APPROVE_CHECKOUT, reject-return→REJECT_CHECKOUT.
+**PASS:** 세 엔드포인트 guard가 FSM 요구 Permission과 일치.
 **FAIL:** VIEW_CHECKOUTS가 세 엔드포인트 중 하나에 사용됨.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-13-controller-guard--fsm-permission-정렬-세션-이후)
 
 ### Step 14: writeTransitionAudit best-effort 캡슐화 (세션 이후)
 
-`writeTransitionAudit` 메서드 내부에 try/catch가 있고, 콜사이트(7개 메서드)에는 없는지 확인.
+메서드 내부 try/catch 1건 + 콜사이트 try/catch 0건.
 
-```bash
-# 메서드 내부 try/catch 확인 (writeTransitionAudit 정의 블록 내)
-grep -A 20 "private async writeTransitionAudit" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "try {"
-# 결과: 1건 (PASS)
+**PASS:** 메서드 내부 try/catch 1건 + 콜사이트 0건.
+**FAIL:** 콜사이트에 try/catch 잔존.
 
-# 콜사이트 주변 try/catch 잔존 금지
-# writeTransitionAudit 호출 전후 5줄에 "} catch (auditErr)" 패턴 금지
-grep -B2 "await this\.writeTransitionAudit(" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "try {"
-# 결과: 0건 (PASS) — 콜사이트에 별도 try 없어야 함
-```
-
-**PASS:** 메서드 내부 try/catch 1건 + 콜사이트 try/catch 0건. **FAIL:** 콜사이트에 try/catch 잔존.
+상세: [references/fsm-core.md](references/fsm-core.md#step-14-writetransitionaudit-best-effort-캡슐화-세션-이후)
 
 ### Step 15: 예외 계층 일관화 — 7개 FSM 메서드 catch 블록 (세션 이후)
 
-approve/reject/startCheckout/returnCheckout/approveReturn/rejectReturn/cancel 7개 outer catch 블록이 `ForbiddenException`과 `ConflictException`을 모두 포함하는지 확인.
+ForbiddenException ≥ 7건 + ConflictException ≥ 7건 + lenderTeam ForbiddenException 2건/BadRequestException 0건.
 
-```bash
-# ForbiddenException이 모든 outer catch에 있는지 (7개 메서드 기준)
-grep -c "error instanceof ForbiddenException" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 7 이상 (PASS)
-
-# ConflictException이 모든 outer catch에 있는지 (7개 메서드 기준)
-grep -c "error instanceof ConflictException" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 7 이상 (PASS) — writeTransitionAudit 외부 catch 포함
-
-# lenderTeam 전용 체크가 ForbiddenException으로 일관화되었는지
-grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "ForbiddenException"
-# 결과: 2건 (approve + rejectReturn, PASS)
-
-grep -B2 "CHECKOUT_LENDER_TEAM_ONLY" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | grep "BadRequestException"
-# 결과: 0건 (PASS)
-```
-
-**PASS:** ForbiddenException ≥ 7건 + ConflictException ≥ 7건 + lenderTeam ForbiddenException 2건/BadRequestException 0건.
+**PASS:** 모든 카운트 충족.
 **FAIL:** 어느 하나라도 카운트 미달이거나 BadRequestException으로 잘못 분류.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-15-예외-계층-일관화--7개-fsm-메서드-catch-블록-세션-이후)
 
 ### Step 16: CheckoutErrorCode SSOT — 인라인 에러 코드 문자열 금지 (2026-04-22 이후)
 
-`checkouts.service.ts`와 `checkouts.controller.ts`에서 `code: 'CHECKOUT_*'` 인라인 문자열을 사용하지 않고 `CheckoutErrorCode` 상수를 경유하는지 확인.
+service.ts + controller.ts 모두 인라인 `'CHECKOUT_*'` 문자열 0건, `CheckoutErrorCode` import 존재.
 
-```bash
-# service.ts 인라인 에러 코드 문자열 탐지
-grep -c "code: 'CHECKOUT_" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0 (PASS)
+**PASS:** 인라인 문자열 0건 + CheckoutErrorCode import 존재.
+**FAIL:** 인라인 문자열 1건 이상 → checkout-error-codes.ts에 키 추가 후 참조 전환.
 
-# controller.ts 인라인 에러 코드 문자열 탐지
-grep -c "code: 'CHECKOUT_" \
-  apps/backend/src/modules/checkouts/checkouts.controller.ts
-# 결과: 0 (PASS)
-
-# CheckoutErrorCode import 확인
-grep "from './checkout-error-codes'" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: import 라인 1건 (PASS)
-```
-
-**PASS:** service.ts + controller.ts 모두 인라인 `'CHECKOUT_*'` 문자열 0건, `CheckoutErrorCode` import 존재.
-**FAIL:** 인라인 문자열 1건 이상 → `checkout-error-codes.ts`에 해당 키 추가 후 참조 전환.
+상세: [references/scope-identity.md](references/scope-identity.md#step-16-checkouterrorcode-ssot--인라인-에러-코드-문자열-금지-2026-04-22-이후)
 
 ### Step 17: Controller 레이어 경계 — 서비스 중복 검증 금지 (2026-04-22 이후)
 
-컨트롤러가 서비스 레이어의 비즈니스 검증을 복제하지 않는지 확인. reject 반려 사유 검증이 컨트롤러에서 다시 수행되면 에러 메시지가 달라지는 드리프트가 발생한다.
+controller에 `reason.*trim` 패턴 0건. 서비스가 비즈니스 검증 단일 경로.
 
-```bash
-# controller에서 reason 빈 문자열 직접 검증 탐지
-grep -n "reason.*trim\|reason.*length.*0" \
-  apps/backend/src/modules/checkouts/checkouts.controller.ts
-# 결과: 0건 (PASS) — 서비스 단일 경로
+**PASS:** controller reason.trim 패턴 0건.
+**FAIL:** controller에서 서비스와 동일한 코드/메시지로 BadRequestException throw.
 
-# controller의 BadRequestException 사용이 서비스 로직 복제가 아닌지 확인
-grep -n "BadRequestException" \
-  apps/backend/src/modules/checkouts/checkouts.controller.ts
-# 허용: handover token 상태 검증 등 컨트롤러 전용 흐름
-# 금지: 서비스와 동일한 code/message로 throw
-```
+상세: [references/scope-identity.md](references/scope-identity.md#step-17-controller-레이어-경계--서비스-중복-검증-금지-2026-04-22-이후)
 
-**PASS:** controller에 `reason.*trim` 패턴 0건. 서비스가 비즈니스 검증 단일 경로.
-**FAIL:** controller에서 서비스와 동일한 코드/메시지로 BadRequestException throw → 컨트롤러 블록 제거.
+### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
+
+외부 if 조건에 `&& approverTeamId` 없어야 함. `!approverTeamId` 분기 ≥ 1건.
+
+**PASS:** 외부 조건에 `&& approverTeamId` 0건 + `!approverTeamId` 분기 ≥ 1건 (approve만).
+**FAIL:** `if (... && lenderTeamId && approverTeamId)` 형태 잔존.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-18-lenderteam-identity-rule-강제-패턴--approverteamid-바이패스-금지-2026-04-22-이후)
+
+### Step 19: NO_EQUIPMENT 가드 배치 — enforceScopeFromData 이전 위치 확인 (2026-04-22 이후)
+
+`NO_EQUIPMENT` 가드 ≥ 4건 + `if (firstEquip)` 패턴 0건.
+
+**PASS:** NO_EQUIPMENT ≥ 4건 + if (firstEquip) 0건.
+**FAIL:** `if (firstEquip) { enforceScopeFromData }` 잔존.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-19-no_equipment-가드-배치--enforicescopefromdata-이전-위치-확인-2026-04-22-이후)
+
+### Step 20: rejectReturn checkTeamPermission unconditional 패턴 (checkout-lender-guard-p1p3 세션 이후)
+
+`rejectReturnDto.approverTeamId` 참조 0건 + `req.user?.teamId` 직접 참조 + for 루프가 if(approverTeamId) 외부에 위치.
+
+**PASS:** DTO 참조 0건 + req.user?.teamId 직접 참조 + unconditional for 루프.
+**FAIL:** rejectReturnDto.approverTeamId 잔존(Rule 2 위반) 또는 checkTeamPermission이 if(approverTeamId) 내부에 위치.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-20-rejectreturn-checkteampermission-unconditional-패턴-checkout-lender-guard-p1p3-세션-이후)
+
+### Step 21: checkTeamPermission ClassificationEnum SSOT — 하드코딩 금지 (2026-04-22 이후)
+
+`ClassificationEnum.enum.general_emc/general_rf` SSOT 참조 + 하드코딩 0건.
+
+**PASS:** ClassificationEnum import + SSOT 참조 + 하드코딩 문자열 0건.
+**FAIL:** `'general_emc'` / `'general_rf'` 문자열 리터럴 잔존.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-21-checkteampermission-classificationenum-ssot--하드코딩-금지-2026-04-22-이후)
+
+### Step 22: firstEquip 취득 패턴 — items 배열 순서 기준 (2026-04-24 이후)
+
+`values().next().value` 0건 + `get(items[0].equipmentId)` ≥ 3건.
+
+**PASS:** values().next().value 0건 + items[0] 기준 취득 ≥ 3건.
+**FAIL:** values().next().value 잔존 → 캐시 혼합 시 Map 삽입 순서 비결정성.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-22-firstequip-취득-패턴--items-배열-순서-기준-2026-04-24-이후)
+
+### Step 23: rejectReturn reason 검증 순서 — scope/FSM 이후 위치 (2026-04-24 이후)
+
+`REJECTION_REASON_REQUIRED` 라인 번호 > `enforceScopeFromData` 라인 번호.
+
+**PASS:** reason check 라인 > scope check 라인 (rejectReturn 메서드 내).
+**FAIL:** reason 검증이 scope 검증보다 앞 → 스코프 외 사용자 상태 역추론 가능.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-23-rejectreturn-reason-검증-순서--scopefsm-이후-위치-2026-04-24-이후)
+
+### Step 24: checkout-api.ts Checkout.meta.nextStep 타입 동기화 (2026-04-24 이후)
+
+`meta.nextStep?: NextStepDescriptor | null` 선언 존재.
+
+**PASS:** meta.nextStep 선언 존재.
+**FAIL:** meta 객체에 nextStep 누락 → useCheckoutNextStep이 항상 client fallback.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-24-checkout-apits-checkoutmetanextstep-타입-동기화-2026-04-24-이후)
+
+### Step 25: borrower 액터 identity-rule 강제 (2026-04-24 구현 완료, 상시 검사)
+
+borrowerApprove 구현 + scope-먼저 순서 + lenderTeamId emitAsync payload.
+
+**PASS:** borrowerApprove ≥ 1건 + scope 검증 < assertFsmAction 라인 + lenderTeamId payload.
+**FAIL:** borrowerApprove 미구현 또는 scope 순서 역전 또는 lenderTeamId 누락.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-25-borrower-액터-identity-rule-강제-2026-04-24-구현-완료-상시-검사)
+
+### Step 26: 프론트엔드 handleNextStepAction — CheckoutAction 완전 매핑 (2026-04-24 추가)
+
+모든 `router.push` / `href`가 `FRONTEND_ROUTES` 상수 경유.
+
+**PASS:** router.push/href 인라인 URL 0건.
+**FAIL:** 하드코딩된 URL 리터럴 잔존.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-26-프론트엔드-handlenextstepaction--checkoutaction-완전-매핑-2026-04-24-추가)
+
+### Step 27: useCheckoutGroupDescriptors N+1 방지 + feature flag 완전 제거 (2026-04-26 수정)
+
+getNextStep 단일 useMemo + isNextStepPanelEnabled 0곳.
+
+**PASS:** getNextStep useMemo 단독 + isNextStepPanelEnabled 0건.
+**FAIL:** getNextStep 루프 내 직접 호출 또는 feature flag 잔존.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-27-프론트엔드-usecheckoutgroupdescriptors--n1-방지--feature-flag-완전-제거-2026-04-26-수정)
+
+### Step 28: findCheckoutEntity 분리 — 순수 엔티티 취득 패턴 (Sprint 1.1)
+
+`findCheckoutEntity` 1건 + `this.findCheckoutEntity` 호출 ≥ 11건 + 내부 `findOne` 재호출 0건.
+
+**PASS:** findCheckoutEntity 1건 + this.findCheckoutEntity ≥ 11건 + 내부 findOne 재호출 0건.
+**FAIL:** findCheckoutEntity 미존재 또는 내부 메서드가 findOne 직접 호출.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-28-findcheckoutentity-분리--순수-엔티티-취득-패턴-sprint-11)
+
+### Step 29: findOne userPermissions 필수 파라미터 (Sprint 1.1)
+
+`userPermissions?` 0건 + `if (userPermissions)` 조건 0건.
+
+**PASS:** 선택적 파라미터 0건 + 조건부 분기 0건.
+**FAIL:** userPermissions? 선택적 잔존 → 일부 경로 meta 누락.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-29-findone-userpermissions-필수-파라미터-sprint-11)
+
+### Step 30: FSM drift safeParse 가드 — buildNextStep 내부 (Sprint 1.1)
+
+`NextStepDescriptorSchema.safeParse` 호출 ≥ 1건 + `[FSM drift]` Logger.warn ≥ 1건.
+
+**PASS:** safeParse ≥ 1건 + FSM drift warn ≥ 1건.
+**FAIL:** safeParse 없음 → 드리프트가 런타임에서 무증상으로 클라이언트 전달.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-30-fsm-drift-safeparse-가드--buildnextstep-내부-sprint-11)
+
+### Step 31: findOne 반환 타입 — CheckoutWithMeta 단일 타입 (Sprint 1.1)
+
+`Promise<CheckoutWithMeta>` 단일 반환 + 유니온 0건 + controller type cast 0건.
+
+**PASS:** 단일 반환 + 유니온 0건 + cast 0건.
+**FAIL:** 유니온 타입 잔존 → meta 누락 경로 묵시적 허용.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-31-findone-반환-타입--checkoutwithmeta-단일-타입-sprint-11)
+
+### Step 32: EXPECTED_ENTRY_COUNT 동적 table test 검증 (Sprint 1.1 신규, 2026-04-26 동적화)
+
+두 파일 모두 EXISTS + EXPECTED_ENTRY_COUNT 동적 상수 + buildDescriptorTable() + satisfies Record 가드.
+
+**PASS:** 파일 EXISTS + 동적 상수 + buildDescriptorTable + satisfies 컴파일 가드.
+**FAIL:** 파일 없음 또는 satisfies 없음 또는 하드코딩 숫자.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-32-expected_entry_count-동적-table-test-검증-sprint-11-신규-2026-04-26-동적화)
+
+### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
+
+rental-phase.ts 존재 + satisfies 가드 1건 + @ts-expect-error 1건 이상 + shared-constants import 0건 + checkout-fsm.ts re-export.
+
+**PASS:** 모든 조건 충족.
+**FAIL:** 파일 없음 또는 satisfies/ts-expect-error 없음 또는 circular dep.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-33-rental-phasets-ssot-exhaustiveness-guard-sprint-12-신규)
+
+### Step 34: `resolveActorVariant` 순수 함수 SSOT + `data-variant`/`data-actor-variant` 속성 (Sprint 4.1)
+
+resolveActorVariant 정의 1건 + NextActor exhaustive + data-variant/data-actor-variant ≥ 3건.
+
+**PASS:** 함수 정의 1건 + 모든 NextActor 케이스 + 속성 hero/compact 양쪽 존재.
+**FAIL:** resolveActorVariant 미존재 또는 data-variant 누락.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-34-resolveactorvariant-순수-함수-ssot--data-variantdata-actor-variant-테스트-선택자-sprint-41-신규-2026-04-27-추가)
+
+### Step 35: `roleToActorVariant` + `ActorVariant` schemas SSOT + `isMyTurn` `UserRoleValues.SYSTEM_ADMIN` (Sprint fsm-terminal-actor-variant)
+
+ActorVariant frontend 재정의 0건 + roleToActorVariant schemas import + UserRoleValues.SYSTEM_ADMIN 사용.
+
+**PASS:** frontend 재정의 0건 + schemas import만 사용 + UserRoleValues.SYSTEM_ADMIN.
+**FAIL:** frontend 재정의 또는 'system_admin' 리터럴 잔존.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-35-roletoactorvariant--actorvariant-schemas-ssot--ismyturn-userrolevaluessystem_admin-sprint-fsm-terminal-actor-variant-2026-04-27)
+
+### Step 36: `reachedStepIndex` — `NextStepDescriptor` 3분기 + `computeReachedStepIndex` `terminatedFromStatus` 위임 (Sprint fsm-terminal-actor-variant)
+
+getNextStep 3개 return 분기 모두 reachedStepIndex 포함 + computeReachedStepIndex terminatedFromStatus 파라미터 존재.
+
+**PASS:** reachedStepIndex 인터페이스+Zod 양쪽 + 3분기 포함 + terminatedFromStatus 파라미터.
+**FAIL:** reachedStepIndex 누락 분기 또는 terminatedFromStatus 없음.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-36-reachedstepindex--nextstepdescritor-3분기-필수--computereachedstepindex-terminatedfromstatus-위임-sprint-fsm-terminal-actor-variant-2026-04-27)
+
+### Step 37: `terminatedFromStatus` 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant)
+
+reject/borrowerReject/cancel에 terminatedFromStatus 설정 + 비-terminal 메서드에 미설정.
+
+**PASS:** terminatedFromStatus 총 4건 이상 + approve/returnCheckout 등 비-terminal에 0건.
+**FAIL:** terminal 메서드 중 누락 또는 비-terminal에 설정.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-37-terminatedfromstatus-저장-패턴--terminal-전환-시-직전-status-기록-sprint-fsm-terminal-actor-variant-2026-04-27)
+
+### Step 38: `revokeApproval` `writeTransitionAudit` `isRevocation` 마커 (2026-04-27 추가)
+
+revokeApproval writeTransitionAudit 호출에 `isRevocation: true` + `revokeReason` + `previousApprovedAt`.
+
+**PASS:** 3개 extraInfo 키 존재.
+**FAIL:** isRevocation 없음 → 감사 이력에서 취소 승인과 일반 반려 구분 불가.
+
+상세: [references/fsm-core.md](references/fsm-core.md#step-38-revokeapproval-writetransitionaudit-isrevocation-마커-2026-04-27-추가)
+
+### Step 39: `useCheckoutNextStep` hook `terminatedFromStatus` 입력 passthrough (2026-04-27 추가)
+
+UseCheckoutNextStepInput 인터페이스 + getNextStep 전달 + useMemo deps 포함.
+
+**PASS:** 인터페이스 선언 + getNextStep 호출 전달 + useMemo deps 포함.
+**FAIL:** 인터페이스 미포함 또는 useMemo deps 누락 → stale closure.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-39-usecheckoutnextstep-hook-terminatedfromstatus-입력-passthrough-2026-04-27-추가)
+
+### Step 40: compact `canAct` 분기 — span/button 이중 렌더 금지 (2026-04-27 추가, 2026-04-28 atom 갱신)
+
+`!canAct && <span>` 1건 + `canAct && <InlineActionButton>` 1건 + 동시 렌더 0건.
+
+**PASS:** 상호 배타적 분기 + InlineActionButton atom + stopPropagation 보존.
+**FAIL:** span 무조건 렌더 또는 raw button 잔존.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-40-compact-variant-canact-분기--spanbutton-이중-렌더-금지-2026-04-27-추가-2026-04-28-atom-갱신)
+
+### Step 41: `ProgressStepDescriptor` SSOT + `deriveProgressStepState` 5-state exhaustive (2026-04-28 추가)
+
+PROGRESS_STEP_STATES 5-tuple + deriveProgressStepState termination 인자 + 클램프 보장.
+
+**PASS:** 5-state + 4-arg 시그니처 + hook 클램프.
+**FAIL:** 4-state(terminated 누락) 또는 클램프 없음.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-41-progressstepdescriptor-ssot--deriveprogressstepstate-5-state-exhaustive-2026-04-28-추가-review_resultmd-p0-1)
+
+### Step 42: `CheckoutActorContext` SSOT + `TRANSITION_ACTOR_SIDE` 매핑 (rental-approval-workflow-fix, 2026-04-29)
+
+CheckoutActorContext interface + TRANSITION_ACTOR_SIDE Record + 'actor_team' blockingReason + BE/FE 동기.
+
+**PASS:** SSOT 정의 + canPerformAction actorCtx + BE/FE 동기 + ko/en parity.
+**FAIL:** actor identity 미반영 → 평택랩 TM이 borrower_approve 버튼 노출.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-42-checkoutactorcontext-ssot--transition_actor_side-매핑-rental-approval-workflow-fix-2026-04-29)
+
+### Step 43: `findAll` server-driven meta 항상 주입 (rental-approval-workflow-fix, 2026-04-29)
+
+findAll 시그니처 userPermissions?/userTeamId? + cache key에 user 정보 미포함 + post-cache meta 합성.
+
+**PASS:** user-specific meta post-cache 합성 + user 간 cache leak 없음.
+**FAIL:** meta가 cache에 포함 → user 간 leak 또는 warnMetaDrift 경고.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-43-findall-server-driven-meta-항상-주입-rental-approval-workflow-fix-2026-04-29)
+
+### Step 44: `getPendingChecks` borrower team EXISTS subquery 패턴 (rental-approval-workflow-fix, 2026-04-29)
+
+borrowerTeamPendingCondition EXISTS subquery + lender/borrowerAction/borrowerTeamPending 3-way OR.
+
+**PASS:** EXISTS subquery + 3-way OR 조합 일관성.
+**FAIL:** borrowerStatuses에 PENDING 단순 추가 → borrower TM nav 배지 누락.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-44-getpendingchecks-borrower-team-exists-subquery-패턴-rental-approval-workflow-fix-2026-04-29)
+
+### Step 45: `findAll` + `findOne` `user.team` 양측 완전성 (2026-04-29 추가)
+
+findAll/findOne 양측 `team: { id, name, site }` 포함 + checkout-api.ts 타입 포함.
+
+**PASS:** findAll + findOne 양측 site 포함 + frontend 타입 포함.
+**FAIL:** findAll만 team 포함하고 findOne 누락 → 단건 조회 소속 "-" 회귀.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-45-findall--findone-userteam-양측-완전성-2026-04-29-추가)
+
+### Step 46: ESCAPE_ACTIONS 집합 불변성 + getNextStep 4단계 우선순위 (2026-04-29 추가)
+
+ESCAPE_ACTIONS 4개 멤버 + fullyAvailableMain/permittedOnlyMain/firstMain/fullyAvailableEscape 4변수 + Main에 !ESCAPE_ACTIONS.has 필터.
+
+**PASS:** 4개 멤버 + 4단계 체인 + ESCAPE 필터.
+**FAIL:** ESCAPE_ACTIONS 멤버 변경 또는 4단계 체인 누락.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-46-escape_actions-집합-불변성--getnextstep-4단계-우선순위-2026-04-29-추가)
+
+### Step 47: checkout-scope.util.ts outbound predicate 불변성 — case 1+3만 (2026-04-29 추가)
+
+outbound 분기에 requesterIn 미참조 + isPending 0건 + SSOT 주석 3-case.
+
+**PASS:** requesterIn 미참조 + isPending 0건 + 3-case 주석.
+**FAIL:** requesterIn 재등장 또는 isPending 재선언 → case 4 회귀.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-47-checkout-scopeutilts-outbound-predicate-불변성--case-13만-2026-04-29-추가)
+
+### Step 48: CheckoutDetailClient availableToCurrentUser guard + canCancel 독립 버튼 (2026-04-29 추가)
+
+handleNextStepAction availableToCurrentUser early-return + canCancel 독립 버튼 + nextStep wiring.
+
+**PASS:** availableToCurrentUser guard + canCancel 독립 렌더링 + nextStep wiring.
+**FAIL:** guard 없음 → 403 페이지 새로고침 회귀 또는 canCancel 독립 버튼 없음.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-48-checkoutdetailclient-availabletocurrentuser-guard--cancancel-독립-버튼-2026-04-29-추가)
+
+### Step 49: `useCheckoutProgressSteps` fallback — `steps.indexOf` 금지, `computeStepIndex` SSOT 경유 필수 (2026-04-29 추가)
+
+steps.indexOf(status) 0건 + computeStepIndex SSOT 경유.
+
+**PASS:** steps.indexOf 0건 + computeStepIndex import + fallback 사용.
+**FAIL:** steps.indexOf 발견 → 비-display status에서 항상 1단계 활성화 버그.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-49-usecheckoutprogresssteps-fallback--stepsindexof-금지-computestepindex-ssot-경유-필수-2026-04-29-추가)
+
+### Step 50: rental `returnCheckout` purpose-aware validation — `workingStatusChecked` 서버 도출 (2026-04-29 추가)
+
+rental 분기에서 WORKING_STATUS_REQUIRED 예외 없음 + priorChecks.length > 0 도출 + resolvedWorkingStatusChecked 전달.
+
+**PASS:** rental 분기 검증 면제 + priorChecks.length > 0 (not every(normal)) + resolved 전달.
+**FAIL:** every(normal) 패턴 → 이상 장비 반입 차단 버그.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-50-rental-returncheckout-purpose-aware-validation--workingstatuschecked-서버-도출-dto-검증-면제-2026-04-29-추가)
+
+### Step 51: KPI 카드 value-filterStatus 상태 집합 정합성 — `CHECKOUT_STATUS_GROUPS` SSOT 경유 필수 (2026-04-30 추가)
+
+getSummary() inProgress/returnedToday가 CHECKOUT_STATUS_GROUPS 경유 + useStatCards value/filterStatus 동일 그룹.
+
+**PASS:** getSummary SSOT 경유 + value/filterStatus 동일 집합.
+**FAIL:** value: summary.approved + filterStatus: in_progress 집합 불일치.
+
+상세: [references/nextstep-progress-ui.md](references/nextstep-progress-ui.md#step-51-kpi-카드-value-filterstatus-상태-집합-정합성--checkout_status_groups-ssot-경유-필수-2026-04-30-추가)
+
+### Step 52: `revokeApproval` 5단계 fail-close 순서 검증 (2026-05-03 추가)
+
+scope → FSM(APPROVED) → reason → time-window → domain 5단계 순서.
+
+**PASS:** revokeApproval 내 5단계가 순서대로 존재.
+**FAIL:** reason 검증이 FSM 체크보다 앞 → 스코프 외 사용자 상태 역추론 취약점.
+
+상세: [references/scope-identity.md](references/scope-identity.md#step-52-revokeapproval-5단계-fail-close-순서-검증-2026-05-03-추가)
 
 ## Output Format
 
@@ -426,299 +549,35 @@ grep -n "BadRequestException" \
 | 22 | firstEquip 취득 패턴 — items[0] 기준        | PASS/FAIL | values().next().value 0건 + get(items[0].equipmentId) ≥ 3건 |
 | 23 | rejectReturn reason 검증 순서 — scope/FSM 이후 | PASS/FAIL | REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData 라인 |
 | 24 | checkout-api.ts Checkout.meta.nextStep 타입 동기화 | PASS/FAIL | meta.nextStep?: NextStepDescriptor \| null 선언 존재 |
-| 25 | borrower 액터 identity-rule 강제 (2026-04-24 상시) | PASS/FAIL | scope-먼저 순서 + lenderTeamId payload (Sprint 1.4: 프론트 const 기준 제거) |
+| 25 | borrower 액터 identity-rule 강제 (2026-04-24 상시) | PASS/FAIL | scope-먼저 순서 + lenderTeamId payload |
 | 26 | handleNextStepAction FRONTEND_ROUTES 완전 매핑 | PASS/FAIL | router.push/href 인라인 URL 0건 |
 | 27 | useCheckoutGroupDescriptors N+1 방지 (feature flag 완전 제거) | PASS/FAIL | getNextStep useMemo 단독 + isNextStepPanelEnabled 0곳 |
-| 28 | findCheckoutEntity 분리 — 순수 엔티티 취득 | PASS/FAIL | private findCheckoutEntity 1건 + this.findCheckoutEntity ≥ 2건 |
+| 28 | findCheckoutEntity 분리 — 순수 엔티티 취득 | PASS/FAIL | private findCheckoutEntity 1건 + this.findCheckoutEntity ≥ 11건 |
 | 29 | findOne userPermissions 필수 파라미터 (no ?) | PASS/FAIL | userPermissions? 0건 |
 | 30 | FSM drift safeParse 가드 — buildNextStep 내 | PASS/FAIL | NextStepDescriptorSchema.safeParse + [FSM drift] Logger.warn |
 | 31 | findOne 반환 타입 — CheckoutWithMeta 단일 | PASS/FAIL | Promise<CheckoutWithMeta> 선언 + 유니온 타입 0건 |
-| 32 | EXPECTED_ENTRY_COUNT 동적 table test (Sprint 1.1 신규, 2026-04-26 동적화) | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts — 하드코딩 숫자 금지, template literal 사용 |
-| 34 | resolveActorVariant 순수 함수 SSOT + data-variant/data-actor-variant 속성 (Sprint 4.1) | PASS/FAIL | 함수 정의 1건 + NextActor exhaustive + 속성 hero/compact 양쪽 존재 |
-| 35 | roleToActorVariant + ActorVariant schemas SSOT + isMyTurn UserRoleValues.SYSTEM_ADMIN (Sprint fsm-terminal-actor-variant) | PASS/FAIL | ActorVariant frontend 재정의 0건 + roleToActorVariant schemas import + UserRoleValues.SYSTEM_ADMIN 사용 |
-| 36 | reachedStepIndex — NextStepDescriptor 3분기 + computeReachedStepIndex terminatedFromStatus 위임 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | getNextStep 3개 return 분기 모두 reachedStepIndex 포함 + 함수 terminatedFromStatus 파라미터 존재 |
-| 37 | terminatedFromStatus 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant) | PASS/FAIL | reject/borrowerReject/cancel에 terminatedFromStatus 설정, 비-terminal 메서드에 미설정 |
-| 39 | useCheckoutNextStep hook terminatedFromStatus 입력 passthrough (2026-04-27) | PASS/FAIL | UseCheckoutNextStepInput 인터페이스 + getNextStep 전달 + useMemo deps 포함 |
-| 40 | compact canAct 분기 — !canAct span 단독 / canAct button 단독, 이중 렌더 금지 (2026-04-27) | PASS/FAIL | !canAct span 1건 + canAct button 1건 + 동시 렌더 0건 |
+| 32 | EXPECTED_ENTRY_COUNT 동적 table test | PASS/FAIL | checkout-fsm.table.test.ts + fixtures/descriptor-table.ts — 하드코딩 숫자 금지 |
+| 33 | rental-phase.ts SSOT exhaustiveness guard | PASS/FAIL | satisfies Record<CheckoutStatus, RentalPhase \| null> + @ts-expect-error |
+| 34 | resolveActorVariant SSOT + data-variant/data-actor-variant | PASS/FAIL | 함수 정의 1건 + NextActor exhaustive + 속성 ≥ 3건 |
+| 35 | roleToActorVariant + ActorVariant schemas SSOT + UserRoleValues.SYSTEM_ADMIN | PASS/FAIL | frontend 재정의 0건 + schemas import + UserRoleValues 사용 |
+| 36 | reachedStepIndex 3분기 + computeReachedStepIndex terminatedFromStatus | PASS/FAIL | 3개 return 분기 + terminatedFromStatus 파라미터 |
+| 37 | terminatedFromStatus 저장 패턴 | PASS/FAIL | reject/borrowerReject/cancel 설정 + 비-terminal 미설정 |
+| 38 | revokeApproval isRevocation 마커 | PASS/FAIL | isRevocation: true + revokeReason + previousApprovedAt |
+| 39 | useCheckoutNextStep terminatedFromStatus passthrough | PASS/FAIL | 인터페이스 + getNextStep 전달 + useMemo deps |
+| 40 | compact canAct 분기 이중 렌더 금지 | PASS/FAIL | !canAct span 1건 + canAct button 1건 + 동시 렌더 0건 |
+| 41 | ProgressStepDescriptor SSOT 5-state | PASS/FAIL | 5-tuple + deriveProgressStepState termination + 클램프 |
+| 42 | CheckoutActorContext SSOT + TRANSITION_ACTOR_SIDE | PASS/FAIL | interface + Record + actor_team blockingReason |
+| 43 | findAll server-driven meta 항상 주입 | PASS/FAIL | post-cache meta + user 정보 미캐시 |
+| 44 | getPendingChecks borrower team EXISTS | PASS/FAIL | EXISTS subquery + 3-way OR |
+| 45 | findAll + findOne user.team 양측 완전성 | PASS/FAIL | 양측 site 포함 + checkout-api.ts 타입 |
+| 46 | ESCAPE_ACTIONS + getNextStep 4단계 우선순위 | PASS/FAIL | 4개 멤버 + 4단계 체인 + ESCAPE 필터 |
+| 47 | outbound predicate case 1+3만 | PASS/FAIL | requesterIn 미참조 + isPending 0건 |
+| 48 | availableToCurrentUser guard + canCancel 독립 버튼 | PASS/FAIL | early-return guard + 독립 렌더링 |
+| 49 | steps.indexOf 금지 + computeStepIndex SSOT | PASS/FAIL | indexOf 0건 + SSOT fallback |
+| 50 | returnCheckout purpose-aware workingStatusChecked | PASS/FAIL | rental 면제 + priorChecks.length > 0 |
+| 51 | KPI value-filterStatus CHECKOUT_STATUS_GROUPS SSOT | PASS/FAIL | SSOT 경유 + 동일 집합 |
+| 52 | revokeApproval 5단계 fail-close 순서 | PASS/FAIL | scope → FSM → reason → window → domain |
 ```
-
-### Step 18: lenderTeam identity-rule 강제 패턴 — approverTeamId 바이패스 금지 (2026-04-22 이후)
-
-RENTAL + lenderTeamId 조건 성립 시 `approverTeamId`의 존재 유무와 **무관하게** identity 검증이 실행되어야 한다.
-`&& approverTeamId` 조건이 외부 if에 포함되면 팀 미소속 사용자가 바이패스 가능.
-
-`approve`만 RENTAL identity-rule 대상 (rejectReturn의 identity-rule은 `approve`와 동일 진입점에서 처리).
-
-```bash
-# approve: 올바른 패턴 — 외부 조건에 approverTeamId 없어야 함
-grep -A3 "purpose.*RENTAL.*lenderTeamId\|lenderTeamId.*purpose.*RENTAL" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -v "approverTeamId" | head -5
-# 기대: 'if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId)' 형태 존재
-
-# 구버전 바이패스 패턴 탐지 (금지)
-grep -n "RENTAL.*lenderTeamId.*approverTeamId\|lenderTeamId.*approverTeamId" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "if ("
-# 결과: 0건 (PASS) — && approverTeamId 외부 조건 잔존 금지
-
-# approve 내부에 !approverTeamId 분기 존재 확인 (1건)
-grep -n "!approverTeamId" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 1건 이상 (approve identity-rule 분기, PASS)
-```
-
-**PASS:** 외부 조건에 `&& approverTeamId` 0건 + `!approverTeamId` 분기 ≥ 1건.
-**FAIL:** `if (... && lenderTeamId && approverTeamId)` 형태 잔존 → approverTeamId 조건 제거 후 내부 `!approverTeamId` 분기 추가.
-
-> **Note (2026-04-22):** `rejectReturn`의 `approverTeamId`는 더 이상 DTO 경유가 아닌 `req.user?.teamId` 직접 참조 (Rule 2 패턴 통일). `rejectReturnDto.approverTeamId` 참조는 더 이상 존재하지 않으므로 grep 패턴에서 제거.
-
-### Step 19: NO_EQUIPMENT 가드 배치 — enforceScopeFromData 이전 위치 확인 (2026-04-22 이후)
-
-`approve`, `approveReturn`, `rejectReturn`에서 items가 빈 경우 `enforceScopeFromData`가 묵시적으로 통과되지 않도록
-`NO_EQUIPMENT` 가드가 scope 검증 **이전**에 위치해야 한다.
-
-```bash
-# NO_EQUIPMENT 가드 존재 확인 (approve + approveReturn + rejectReturn + 기타 포함 4건 이상)
-grep -c "NO_EQUIPMENT" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 4 이상 (PASS)
-
-# 가드 패턴: !firstEquip → throw BadRequestException(NO_EQUIPMENT)
-grep -n "!firstEquip\|!firstEquipment" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: approve + approveReturn + rejectReturn 각 1건 이상 (PASS)
-
-# 구버전 묵시적 통과 패턴 탐지 (금지): if (firstEquip) { enforceScopeFromData ...}
-grep -n "if (firstEquip)" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS) — 조건부 scope 검증 금지
-```
-
-**PASS:** `NO_EQUIPMENT` 가드 ≥ 4건 + `if (firstEquip)` 패턴 0건.
-**FAIL:** `if (firstEquip) { this.enforceScopeFromData(...) }` 잔존 → `!firstEquip` throw 패턴으로 변환.
-
-### Step 20: rejectReturn checkTeamPermission unconditional 패턴 (checkout-lender-guard-p1p3 세션 이후)
-
-`rejectReturn`에서 `checkTeamPermission`이 `approverTeamId` 유무와 무관하게 for 루프 내에서 **무조건** 호출되어야 한다.
-`approverTeamId`가 없으면 `approverClassification`이 `undefined`이 되고, `checkTeamPermission`은 `undefined`를 허용해야 한다.
-이전 패턴: `if (equip && approverTeamId)` → 승인자 팀 미제공 시 장비 분류 검증 바이패스 가능.
-
-> **2026-04-22 업데이트:** `approverTeamId`는 더 이상 DTO에서 전달받지 않고 `req.user?.teamId` 직접 참조 (Rule 2 통일).
-> `if (rejectReturnDto.approverTeamId)` 패턴은 더 이상 존재하지 않으며, `const approverTeamId = req.user?.teamId` + `if (approverTeamId)` 패턴을 사용.
-
-```bash
-# rejectReturn 내부에서 approverTeamId = req.user?.teamId 직접 참조 확인 (Rule 2)
-grep -A5 "async rejectReturn" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "req.user"
-# 기대: req.user?.teamId 참조 라인 존재
-
-# for 루프가 if (approverTeamId) 블록 밖에 위치하는지 확인
-grep -A 30 "let approverClassification" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -B5 "checkTeamPermission" | head -15
-# 기대: for (const item of items) 루프가 if (approverTeamId) 블록 밖에 위치
-
-# 금지 패턴: rejectReturnDto.approverTeamId DTO 필드 참조 잔존 (Rule 2 위반)
-grep -n "rejectReturnDto\.approverTeamId" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS) — DTO 필드 경유 금지, req.user?.teamId 직접 참조 필수
-```
-
-**PASS:** `rejectReturnDto.approverTeamId` 참조 0건 + `req.user?.teamId` 직접 참조 존재 + `for (const item of items)` 루프가 `if (approverTeamId)` 블록 외부에 위치 + 루프 내 `this.checkTeamPermission(equip, approverClassification)` 호출.
-**FAIL:** `rejectReturnDto.approverTeamId` 참조 잔존(Rule 2 위반) 또는 `checkTeamPermission`이 `if (approverTeamId)` 블록 내부에 포함되어 미소속 사용자 장비 분류 검증 바이패스됨.
-
-### Step 21: checkTeamPermission ClassificationEnum SSOT — 하드코딩 금지 (2026-04-22 이후)
-
-`checkTeamPermission`에서 팀 분류 비교 시 `'general_emc'`, `'general_rf'` 문자열 리터럴을 하드코딩하면 안 됩니다.
-`ClassificationEnum.enum.general_emc` / `ClassificationEnum.enum.general_rf` SSOT 참조를 사용해야 합니다.
-
-```bash
-# ClassificationEnum import 확인
-grep -n "ClassificationEnum" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | head -5
-# 기대: ClassificationEnum import 라인 존재
-
-# SSOT 참조 확인
-grep -n "ClassificationEnum\.enum\." \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: general_emc, general_rf 각 1건 이상
-
-# 하드코딩 잔존 탐지 (금지)
-grep -n "'general_emc'\|'general_rf'\|\"general_emc\"\|\"general_rf\"" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS) — 하드코딩 금지
-```
-
-**PASS:** `ClassificationEnum` import 존재 + `ClassificationEnum.enum.general_emc/general_rf` 참조 + 하드코딩 0건.
-**FAIL:** `'general_emc'` / `'general_rf'` 문자열 리터럴 잔존 → `ClassificationEnum.enum.*` SSOT 참조로 교체.
-
-### Step 22: firstEquip 취득 패턴 — items 배열 순서 기준 (2026-04-24 이후)
-
-`approve`, `approveReturn`, `rejectReturn` 세 메서드에서 `firstEquip`을 취득할 때
-`equipmentMap.values().next().value` 패턴은 캐시 혼합 시 `items[0]`과 다른 장비를 반환할 수 있다.
-`findByIds`는 캐시 히트 항목을 먼저 Map에 삽입하므로 `values()` 순서가 비결정적이다.
-반드시 `equipmentMap.get(items[0].equipmentId)` 패턴을 사용해야 한다.
-
-```bash
-# 금지 패턴: values().next().value 취득 (캐시 혼합 시 Map 삽입 순서 비결정성)
-grep -n "equipmentMap\.values()\.next()\.value" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS)
-
-# 올바른 패턴 확인: items 배열 순서 기준 취득 (3건 이상)
-grep -c "equipmentMap\.get(items\[0\]\.equipmentId)" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 3 이상 (approve + approveReturn + rejectReturn, PASS)
-```
-
-**PASS:** `values().next().value` 패턴 0건 + `get(items[0].equipmentId)` 패턴 ≥ 3건.
-**FAIL:** `values().next().value` 잔존 → `items.length > 0 ? equipmentMap.get(items[0].equipmentId) : undefined` 패턴으로 교체.
-
-### Step 23: rejectReturn reason 검증 순서 — scope/FSM 이후 위치 (2026-04-24 이후)
-
-`rejectReturn`에서 `reason` 빈값 검증이 `enforceScopeFromData` + `assertFsmAction` 이전에 위치하면,
-스코프 외 사용자가 `REJECTION_REASON_REQUIRED` 오류를 수신하여 checkout 상태를 역추론할 수 있다.
-`reason` 검증은 scope/FSM 검증 이후에 위치해야 한다.
-
-```bash
-# REJECTION_REASON_REQUIRED가 enforceScopeFromData보다 이전에 위치하는지 탐지
-# (라인 번호 비교: REJECTION_REASON_REQUIRED 라인 > enforceScopeFromData rejectReturn 라인)
-python3 - <<'EOF'
-import subprocess, re
-
-content = open('apps/backend/src/modules/checkouts/checkouts.service.ts').read()
-lines = content.split('\n')
-
-reject_return_start = next(
-  i for i, l in enumerate(lines) if 'async rejectReturn(' in l
-)
-scope_line = next(
-  (i for i, l in enumerate(lines[reject_return_start:], reject_return_start)
-   if 'enforceScopeFromData(' in l), None
-)
-reason_line = next(
-  (i for i, l in enumerate(lines[reject_return_start:], reject_return_start)
-   if 'REJECTION_REASON_REQUIRED' in l), None
-)
-
-if scope_line and reason_line:
-  if reason_line > scope_line:
-    print(f"PASS: reason check (L{reason_line+1}) after scope check (L{scope_line+1})")
-  else:
-    print(f"FAIL: reason check (L{reason_line+1}) BEFORE scope check (L{scope_line+1})")
-else:
-  print("WARN: could not locate both lines")
-EOF
-# 기대: PASS: reason check (L...) after scope check (L...)
-```
-
-**PASS:** `REJECTION_REASON_REQUIRED` 라인 번호 > `enforceScopeFromData` 라인 번호 (rejectReturn 메서드 내).
-**FAIL:** reason 검증이 scope 검증보다 앞에 위치 → reason 검증 블록을 `assertFsmAction` 이후로 이동.
-
-### Step 24: checkout-api.ts Checkout.meta.nextStep 타입 동기화 (2026-04-24 이후)
-
-Server-Driven UI 파이프라인: `서버 응답 → Checkout.meta.nextStep → useCheckoutNextStep(nextStep) → Zod parse → client fallback`.
-프론트엔드 API 타입에 `nextStep` 필드가 없으면 서버 응답이 타입 레벨에서 버려져 항상 client fallback 동작.
-
-```bash
-# Checkout.meta에 nextStep 필드 존재 확인
-grep -n "nextStep" apps/frontend/lib/api/checkout-api.ts
-# 기대: meta?: { availableActions: ...; nextStep?: NextStepDescriptor | null; }
-```
-
-**PASS:** `meta.nextStep?: NextStepDescriptor | null` 선언 존재.
-**FAIL:** meta 객체에 nextStep 누락 → `useCheckoutNextStep`이 항상 client fallback으로 동작 (설계 의도 역전).
-
-### Step 25: borrower 액터 identity-rule 강제 (2026-04-24 구현 완료, 상시 검사)
-
-rental 2-step 승인 워크플로우의 `borrowerApprove`/`borrowerReject` 메서드:
-
-- `req.user.teamId === checkout.requester.teamId` 강제 (차용 팀 TM만 승인 가능)
-- scope 검증 호출이 `assertFsmAction`보다 먼저 실행 — scope-먼저 원칙 준수
-- emitAsync payload에 `lenderTeamId` 포함 — composite 알림 전략(`CHECKOUT_BORROWER_APPROVED`) 전제 조건
-
-> **Sprint 1.4 업데이트 (2026-04-24):** 프론트엔드 `canBorrowerApprove`/`canBorrowerReject` const 검사 제거.
-> FSM descriptor 기반 패러다임으로 전환 — 백엔드 `resolveNextAction`이 권한 필터링을 담당하므로
-> `CheckoutDetailClient.tsx`의 클라이언트 측 permission guard는 LegacyActionsBlock과 함께 삭제됨.
-> 프론트엔드 검증 기준은 Step 26 (`handleNextStepAction` 완전 매핑)으로 이관.
-
-```bash
-# borrowerApprove 메서드 구현 확인
-grep -c "async borrowerApprove" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 1 이상 (PASS) — 0이면 Phase 구현 누락
-```
-
-```bash
-# scope-먼저 원칙: scope 검증이 assertFsmAction보다 앞에 위치하는지 확인
-python3 - <<'EOF'
-content = open('apps/backend/src/modules/checkouts/checkouts.service.ts').read()
-lines = content.split('\n')
-ba_start = next((i for i, l in enumerate(lines) if 'async borrowerApprove(' in l), None)
-if ba_start is None:
-    print("FAIL: borrowerApprove 미구현")
-else:
-    fsm_line = next((i for i, l in enumerate(lines[ba_start:], ba_start) if 'assertFsmAction' in l), None)
-    scope_line = next((i for i, l in enumerate(lines[ba_start:], ba_start)
-                       if 'enforceScopeFromData' in l or 'enforceScopeForBorrower' in l), None)
-    if scope_line and fsm_line and scope_line < fsm_line:
-        print(f"PASS: scope 검증(L{scope_line+1}) -> assertFsmAction(L{fsm_line+1}) 순서 정상")
-    elif scope_line and fsm_line:
-        print(f"FAIL: scope 검증(L{scope_line+1})이 assertFsmAction(L{fsm_line+1}) 이후 -- 순서 위반")
-    else:
-        print(f"WARN: scope_line={scope_line}, fsm_line={fsm_line} -- 수동 확인 필요")
-EOF
-```
-
-```bash
-# borrowerApprove emitAsync payload에 lenderTeamId 포함 확인 (composite 알림 전략 전제 조건)
-grep -A20 "emitAsync(NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "lenderTeamId"
-# 결과: lenderTeamId 포함 라인 1건 (PASS)
-```
-
-**PASS:**
-
-1. `borrowerApprove` 메서드 ≥ 1건 (구현됨)
-2. scope 검증 라인 번호 < `assertFsmAction` 라인 번호 (scope-먼저)
-3. `emitAsync` payload에 `lenderTeamId` 포함
-
-**FAIL:**
-
-- borrowerApprove 미구현 → Phase 3+4 구현 체크
-- scope 검증이 assertFsmAction 이후 → 순서 교정 (보안 fail-close 규칙)
-- payload에 `lenderTeamId` 누락 → composite 알림 전략 silent drop
-
-### Step 26: 프론트엔드 handleNextStepAction — CheckoutAction 완전 매핑 (2026-04-24 추가)
-
-`CheckoutDetailClient.tsx`의 `handleNextStepAction`은 FSM `CheckoutAction` 타입의 모든 값을 처리해야 한다.
-라우팅 액션(`lender_check`, `borrower_receive` 등)이 `FRONTEND_ROUTES` SSOT를 경유하는지 확인.
-
-```bash
-# handleNextStepAction의 case 분기 목록 추출
-grep -A60 "handleNextStepAction" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
-  | grep "case '"
-```
-
-```bash
-# FRONTEND_ROUTES 경유 라우팅 확인 — 하드코딩 URL 금지
-grep -n "router\.push\|href=" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
-  | grep -v "FRONTEND_ROUTES"
-# 결과: 0건 (PASS) — 모든 router.push/href가 FRONTEND_ROUTES 경유
-```
-
-```bash
-# CheckoutAction 타입에서 정의된 액션 값 목록
-grep -A5 "CheckoutAction\s*=" \
-  packages/schemas/src/fsm/checkout-fsm.ts \
-  | grep "'"
-```
-
-**PASS:** `handleNextStepAction`의 모든 `router.push` / `href`가 `FRONTEND_ROUTES` 상수 경유.
-**FAIL:** 하드코딩된 URL 리터럴 (`/checkouts/${id}/check`, `/checkouts/${id}/return` 등) 잔존.
 
 ## Exceptions
 
@@ -728,1027 +587,3 @@ grep -A5 "CheckoutAction\s*=" \
 4. **`NextStepDescriptorSchema`의 `z.enum` 인라인 값** — CheckoutAction/NextActor enum 값이 인라인으로 나열되어 있는 것은 Zod 스키마 특성상 허용 (SSOT는 TypeScript type `CheckoutAction`)
 5. **RENTAL purpose의 `reject_return` FSM 미지원** — FSM `reject_return` 전이는 `purposes: CAL_REPAIR`만 허용. RENTAL 반출의 `rejectReturn` 호출 시 `assertFsmAction`에서 INVALID_TRANSITION으로 차단되므로, `rejectReturn` 내부의 `LENDER_TEAM_ONLY` 체크는 RENTAL에 대해 dead code. Step 20은 CAL_REPAIR 목적 흐름만 검증 대상.
 6. **`mockChain.then` 테스트 패턴** — `chain.where.then` 오버라이드가 불가한 jest mock 제약으로 `mockChain.then`을 직접 오버라이드하는 패턴은 테스트 전용 관용구. 서비스 코드 검증 대상 아님.
-
-### Step 27: 프론트엔드 useCheckoutGroupDescriptors — N+1 방지 + feature flag 완전 제거 (2026-04-26 수정)
-
-`use-checkout-group-descriptors.ts` 훅은 `getNextStep`을 루프 내부에서 호출하는 대신 단일 `useMemo`로 Map을 일괄 계산해야 한다 (N+1 재계산 방지).
-`checkout-flags.ts` + `isNextStepPanelEnabled()` feature flag는 2026-04-26 완전 삭제됨 — 훅·컴포넌트 양쪽에 0건이어야 한다.
-
-```bash
-# getNextStep이 useMemo 외부(render 함수 직접)에서 호출되는지 확인 — PASS = 없어야 함
-grep -n "getNextStep" apps/frontend/hooks/use-checkout-group-descriptors.ts
-# useMemo 내부에서만 호출 → OK
-
-# feature flag 완전 제거 확인 — 0건이어야 함 (파일 삭제됨)
-grep -rn "isNextStepPanelEnabled\|checkout-flags" \
-  apps/frontend/hooks/ \
-  apps/frontend/components/checkouts/ \
-  apps/frontend/lib/ \
-  --include="*.ts" --include="*.tsx"
-# 기대: 0건 (PASS) — 1건 이상이면 stale import 또는 재도입 FAIL
-
-# permissions 안정화 — permissions를 먼저 useMemo로 memoize 후 descriptor Map의 dep으로 사용하는지
-grep -B2 -A8 "const permissions" apps/frontend/hooks/use-checkout-group-descriptors.ts
-# useMemo([userRole]) 패턴 확인
-```
-
-```
-✅ PASS: getNextStep이 단일 useMemo 내부에서만 호출됨
-✅ PASS: isNextStepPanelEnabled() / checkout-flags 참조 0건 (feature flag 완전 제거됨)
-✅ PASS: permissions를 별도 useMemo로 먼저 안정화 후 descriptor Map dep으로 사용
-```
-
-### Step 28: findCheckoutEntity 분리 — 순수 엔티티 취득 패턴 (Sprint 1.1)
-
-Sprint 1.1에서 `findOne`의 역할을 두 레이어로 분리:
-- `findCheckoutEntity` (private): 캐시/DB 취득 전담 — 순수 `Checkout` 엔티티 반환
-- `findOne` (public): 메타 조립 전담 — `availableActions` + `nextStep`을 항상 포함한 `CheckoutWithMeta` 반환
-
-이 분리가 없으면 내부 11개 메서드가 `findOne`을 재호출하여 불필요한 meta 조립이 반복 실행된다.
-
-```bash
-# private findCheckoutEntity 존재 확인
-grep -n "private async findCheckoutEntity" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 1건 (PASS) — 0건이면 Sprint 1.1 미구현
-
-# 내부 메서드가 findCheckoutEntity를 경유하는지 확인 (최소 2건 이상)
-grep -c "this\.findCheckoutEntity" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 11 이상 (findOne 1 + 내부 10 호출, PASS)
-
-# 내부 메서드가 잘못 findOne을 재호출하는지 탐지 (FAIL 패턴)
-grep -n "await this\.findOne(" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -v "^.*findOne\b.*async\|findOne.*userPermissions"
-# 기대: findOne 정의 라인만 존재, 내부 재호출 0건
-```
-
-**PASS:** `findCheckoutEntity` 1건 + `this.findCheckoutEntity` 호출 ≥ 11건 + 내부 메서드의 `findOne` 재호출 0건.
-**FAIL:** `findCheckoutEntity` 미존재(Sprint 1.1 누락) 또는 내부 메서드가 `findOne`을 직접 호출(meta 이중 조립).
-
-### Step 29: findOne userPermissions 필수 파라미터 (Sprint 1.1)
-
-Sprint 1.1 이전에는 `findOne(uuid: string, userPermissions?: readonly string[])` — `?` 선택적 파라미터였다.
-이 경우 `if (userPermissions)` 분기가 생겨 일부 응답 경로에서 meta가 누락된다.
-Sprint 1.1에서 `userPermissions: readonly string[]` (필수)로 변경하여 meta가 항상 조립됨을 보장한다.
-
-```bash
-# findOne 시그니처 확인: userPermissions 필수 선언
-grep -n "async findOne(" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: userPermissions: readonly string[] (? 없음)
-
-# 선택적 파라미터 잔존 탐지 (금지)
-grep -n "userPermissions?" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "findOne\|async"
-# 결과: 0건 (PASS)
-
-# if (userPermissions) 조건부 분기 잔존 탐지 (금지)
-grep -n "if (userPermissions)" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS) — 조건부 meta 조립 경로 존재 금지
-```
-
-**PASS:** `userPermissions?` 선언 0건 + `if (userPermissions)` 조건 0건.
-**FAIL:** `userPermissions?` 선택적 잔존 → `?` 제거 후 컨트롤러/서비스 모든 `findOne` 호출에 `req.user?.permissions ?? []` 추가.
-
-### Step 30: FSM drift safeParse 가드 — buildNextStep 내부 (Sprint 1.1)
-
-`buildNextStep`이 `getNextStep()`을 호출한 후 결과를 `NextStepDescriptorSchema.safeParse()`로 검증하여,
-FSM 구현이 Zod 스키마와 어긋날 경우 `Logger.warn('[FSM drift]...')`으로 경보.
-런타임에서 스키마/구현 간 드리프트를 감지하기 위한 안전망이다.
-
-```bash
-# buildNextStep 내부에 NextStepDescriptorSchema.safeParse 확인
-grep -n "NextStepDescriptorSchema\|safeParse" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: safeParse 호출 1건 이상 (PASS)
-
-# FSM drift 경고 로그 확인
-grep -n "\[FSM drift\]" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 1건 이상 (PASS)
-
-# NextStepDescriptorSchema import 확인 (packages/schemas 경유)
-grep -n "NextStepDescriptorSchema" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | head -3
-# 결과: import + safeParse 호출 라인 포함 (PASS)
-```
-
-**PASS:** `NextStepDescriptorSchema.safeParse` 호출 ≥ 1건 + `[FSM drift]` Logger.warn ≥ 1건.
-**FAIL:** safeParse 없음 → FSM 드리프트가 런타임에서 무증상으로 클라이언트로 전달됨.
-
-### Step 31: findOne 반환 타입 — CheckoutWithMeta 단일 타입 (Sprint 1.1)
-
-Sprint 1.1 이후 `findOne`은 항상 `Promise<CheckoutWithMeta>`를 반환해야 한다.
-유니온 타입 `Checkout | CheckoutWithMeta`가 존재하면 소비자가 조건부 narrowing을 해야 하며,
-meta 누락 경로가 묵시적으로 허용된다.
-
-```bash
-# findOne 반환 타입 확인
-grep -n "async findOne.*Promise" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: Promise<CheckoutWithMeta> (PASS)
-
-# 유니온 타입 혼재 탐지 (금지)
-grep -n "Checkout | CheckoutWithMeta\|CheckoutWithMeta | Checkout" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 결과: 0건 (PASS)
-
-# type cast (as Promise<CheckoutWithMeta>) 잔존 탐지 (금지 — 타입 시스템 우회)
-grep -n "as Promise<CheckoutWithMeta>" \
-  apps/backend/src/modules/checkouts/checkouts.controller.ts
-# 결과: 0건 (PASS)
-```
-
-**PASS:** `Promise<CheckoutWithMeta>` 단일 반환 + 유니온 0건 + controller type cast 0건.
-**FAIL:** 유니온 타입 잔존 → `findCheckoutEntity` + `buildNextStep` 분리 패턴으로 교체.
-
-### Step 32: EXPECTED_ENTRY_COUNT 동적 table test 검증 (Sprint 1.1 신규, 2026-04-26 동적화)
-
-Sprint 1.1에서 신규 도입된 exhaustive table test. 조합 수는 하드코딩 금지 — 반드시 동적 계산:
-- `EXPECTED_ENTRY_COUNT = TOTAL_STATUSES * TOTAL_PURPOSES * TOTAL_ROLES` (현재 14×4×5=280)
-- describe 문자열에 하드코딩 숫자 금지 → template literal `${EXPECTED_ENTRY_COUNT}` 사용
-- `DESCRIPTOR_TABLE`은 `buildDescriptorTable()` 동적 생성 — 상태/목적 추가 시 자동 확장
-- `NextStepDescriptorSchema.safeParse()` 모든 조합 검증
-- `DESCRIPTOR_TABLE satisfies Record<TableKey, TableRow>` compile-time 완전성 검사
-
-```bash
-# table test 파일 존재 확인
-ls packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts 2>/dev/null \
-  && echo "EXISTS" || echo "MISSING"
-
-# fixture 파일 존재 확인
-ls packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts 2>/dev/null \
-  && echo "EXISTS" || echo "MISSING"
-
-# EXPECTED_ENTRY_COUNT 동적 상수 선언 확인 (하드코딩 금지)
-grep -n "EXPECTED_ENTRY_COUNT\s*=" \
-  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts
-# 기대: TOTAL_STATUSES * TOTAL_PURPOSES * TOTAL_ROLES 형태 (1건)
-
-# describe 문자열 하드코딩 숫자 탐지 (0건 기대)
-grep -n "it('all [0-9]\+ combinations\|it(\"all [0-9]\+ combinations" \
-  packages/schemas/src/fsm/__tests__/checkout-fsm.table.test.ts
-# 결과: 0건 (PASS) — template literal 사용 중이어야 함
-
-# buildDescriptorTable 동적 생성 확인
-grep -n "buildDescriptorTable\|function buildDescriptorTable" \
-  packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts
-# 결과: 1건 (PASS)
-
-# satisfies 컴파일 가드 확인
-grep -n "satisfies Record<TableKey, TableRow>" \
-  packages/schemas/src/fsm/__tests__/fixtures/descriptor-table.ts
-# 결과: 1건 (PASS)
-```
-
-**PASS:** 두 파일 모두 EXISTS + `EXPECTED_ENTRY_COUNT` 동적 상수 + `buildDescriptorTable()` + `satisfies Record<TableKey, TableRow>`.
-**FAIL:**
-- 파일 없음 → Sprint 1.1 구현 누락
-- `satisfies` 없음 → 새 status/purpose 추가 시 조합 누락 탐지 불가
-- 하드코딩 숫자(예: `'all 280 combinations'`) → `EXPECTED_ENTRY_COUNT` template literal로 교체
-
-### Step 34: `resolveActorVariant` 순수 함수 SSOT + `data-variant`/`data-actor-variant` 테스트 선택자 (Sprint 4.1 신규, 2026-04-27 추가)
-
-Sprint 4.1에서 도입된 `resolveActorVariant(nextActor: NextActor): ActorVariant` 순수 함수는
-FSM `NextActor` 값을 `components/shared/NextStepPanel.tsx` 내부에서 UI `ActorVariant`(`requester | approver | receiver`)로 변환한다.
-이 함수는 `NextActor` enum의 **모든 값**을 처리하는 exhaustive 매핑이어야 하며, 미처리 값에 대한 fallback이 존재해야 한다.
-`data-variant` / `data-actor-variant` DOM 속성은 Playwright E2E 셀렉터 기반이므로 hero/compact 분기 양쪽에 반드시 존재해야 한다.
-
-```bash
-# resolveActorVariant 함수 정의 확인 (SSOT 위치)
-grep -n "function resolveActorVariant\|resolveActorVariant" \
-  apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 1건 이상 (정의 + 호출, PASS)
-
-# NextActor 값 목록 확인 (packages/schemas SSOT)
-grep -n "NextActor\b" packages/schemas/src/fsm/checkout-fsm.ts | head -10
-# 기대: type/enum NextActor 정의 확인
-
-# resolveActorVariant가 모든 NextActor 값을 처리하는지 확인 (switch 또는 Record 패턴)
-grep -A 20 "function resolveActorVariant" \
-  apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: requester/approver/receiver 3 케이스 + default fallback 존재
-
-# data-variant hero/compact 양쪽 존재 확인
-grep -c "data-variant" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 3 이상 (floating default + hero + compact 각 1건)
-
-# data-actor-variant hero/compact 양쪽 존재 확인
-grep -c "data-actor-variant" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 3 이상 (PASS)
-```
-
-**PASS:**
-1. `resolveActorVariant` 정의 1건 + `NextActor` 모든 케이스 처리 + fallback 존재
-2. `data-variant` 3건 이상 (hero/compact/default 분기 각각)
-3. `data-actor-variant` 3건 이상 (hero/compact/default 분기 각각)
-
-**FAIL:**
-- `resolveActorVariant` 미존재 → `NextActor → ActorVariant` 변환 로직이 JSX 인라인 조건식으로 분산 (SSOT 위반)
-- `NextActor` 새 값 추가 후 `resolveActorVariant` 미업데이트 → fallback으로 모든 신규 액터가 동일 스타일 사용
-- `data-variant` 누락 → Playwright 셀렉터 `[data-variant="hero"]` 탐지 불가
-
-**예외:**
-- `resolveActorVariant`의 `default` case 반환값 — `NextActor.requester`로 fallback 하는 것은 안전한 UI 기본값
-
-**관련 파일:**
-- `apps/frontend/components/shared/NextStepPanel.tsx` — `resolveActorVariant` 정의 + `data-variant`/`data-actor-variant` DOM 속성
-- `packages/schemas/src/fsm/checkout-fsm.ts` — `NextActor` 타입 SSOT
-- `apps/frontend/lib/design-tokens/components/workflow-panel.ts` — `WORKFLOW_PANEL_TOKENS.actor` (ActorVariant → 색상 토큰 매핑)
-
-### Step 35: `roleToActorVariant` + `ActorVariant` schemas SSOT + `isMyTurn` `UserRoleValues.SYSTEM_ADMIN` (Sprint fsm-terminal-actor-variant, 2026-04-27)
-
-`ActorVariant` 타입과 `roleToActorVariant` 함수는 `packages/schemas`에서만 정의/export되어야 한다.
-frontend(`apps/frontend`)에서 재정의하면 schemas 변경 시 불일치 발생.
-`isMyTurn` 로직의 `system_admin` 특수 케이스는 하드코딩 문자열 `'system_admin'`이 아닌 `UserRoleValues.SYSTEM_ADMIN`을 사용해야 한다.
-
-```bash
-# ActorVariant frontend 로컬 재정의 금지
-grep -rn "type ActorVariant\s*=" apps/frontend/ --include="*.ts" --include="*.tsx"
-# 기대: 0건 (PASS) — packages/schemas에만 존재해야 함
-
-# roleToActorVariant frontend 로컬 정의 금지
-grep -rn "function roleToActorVariant\|const roleToActorVariant\s*=" apps/frontend/ --include="*.ts" --include="*.tsx"
-# 기대: 0건 (PASS) — import only
-
-# roleToActorVariant schemas에서 import 사용 확인
-grep -n "roleToActorVariant" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: import 행 + 사용 행 (schemas 경유, PASS)
-
-# isMyTurn system_admin: UserRoleValues 사용, 하드코딩 금지
-grep -n "'system_admin'" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 0건 (PASS) — UserRoleValues.SYSTEM_ADMIN 사용
-
-grep -n "UserRoleValues.SYSTEM_ADMIN" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 1건 이상 (PASS)
-```
-
-**PASS:**
-1. `type ActorVariant` frontend 재정의 0건
-2. `roleToActorVariant` frontend 정의 0건, schemas import만 사용
-3. `'system_admin'` 하드코딩 0건, `UserRoleValues.SYSTEM_ADMIN` 사용
-
-**FAIL:**
-- `type ActorVariant = 'requester' | 'approver' | 'receiver'` frontend 재정의 → schemas 변경 시 불일치
-- `function roleToActorVariant` frontend 정의 → SSOT 분산
-- `'system_admin'` 리터럴 → UserRole rename 시 silent break
-
-**관련 파일:**
-- `packages/schemas/src/fsm/checkout-fsm.ts` — `ActorVariant`, `roleToActorVariant`, `UserRoleValues` SSOT
-- `apps/frontend/components/shared/NextStepPanel.tsx` — `isMyTurn` 로직
-
-### Step 36: `reachedStepIndex` — `NextStepDescriptor` 3분기 필수 + `computeReachedStepIndex` `terminatedFromStatus` 위임 (Sprint fsm-terminal-actor-variant, 2026-04-27)
-
-`getNextStep`의 3개 return 분기(terminal early-return / no-candidate / 정상 candidate) 모두 `reachedStepIndex` 필드를 포함해야 한다.
-누락 시 Zod `NextStepDescriptorSchema.safeParse` 실패 → FSM drift fallback 발동.
-`computeReachedStepIndex`는 `terminatedFromStatus` 옵셔널 파라미터를 받아 terminal 상태에서 정확한 단계를 반환해야 한다.
-
-```bash
-# NextStepDescriptor 인터페이스에 reachedStepIndex 필드 존재
-grep -n "reachedStepIndex" packages/schemas/src/fsm/checkout-fsm.ts
-# 기대: 인터페이스 + Zod 스키마 + computeReachedStepIndex 함수 3곳 이상 (PASS)
-
-# getNextStep 3개 return 분기 모두 reachedStepIndex 포함
-grep -c "reachedStepIndex," packages/schemas/src/fsm/checkout-fsm.ts
-# 기대: 3 이상 (terminal/no-candidate/normal 각 1건, PASS)
-
-# computeReachedStepIndex terminatedFromStatus 파라미터 확인
-grep -A 5 "function computeReachedStepIndex" packages/schemas/src/fsm/checkout-fsm.ts
-# 기대: terminatedFromStatus?: CheckoutStatus | null 파라미터 존재 (PASS)
-
-# buildNextStep에서 terminatedFromStatus 전달 확인
-grep -n "terminatedFromStatus" apps/backend/src/modules/checkouts/checkouts.service.ts | head -5
-# 기대: getNextStep 호출부에 terminatedFromStatus 전달 (PASS)
-```
-
-**PASS:**
-1. `reachedStepIndex` 인터페이스 + Zod 스키마 양쪽 선언
-2. `getNextStep` 3개 return 분기 모두 `reachedStepIndex` 포함
-3. `computeReachedStepIndex`에 `terminatedFromStatus` 파라미터 존재
-
-**FAIL:**
-- `reachedStepIndex` 누락된 return 분기 → Zod safeParse 실패 → FSM drift fallback
-- `computeReachedStepIndex`에 `terminatedFromStatus` 없음 → terminal 상태 항상 step 1 반환
-
-**관련 파일:**
-- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex`, `NextStepDescriptor`, `NextStepDescriptorSchema`
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `buildNextStep`
-
-### Step 37: `terminatedFromStatus` 저장 패턴 — terminal 전환 시 직전 status 기록 (Sprint fsm-terminal-actor-variant, 2026-04-27)
-
-`reject` / `borrowerReject` / `cancel` 메서드는 status 전환 직전 `checkout.status`를 `terminatedFromStatus`로 저장해야 한다.
-비-terminal 메서드(`approve`, `borrowerApprove`, `startCheckout`, `returnCheckout`, `approveReturn`, `rejectReturn`)에는 `terminatedFromStatus` 설정 없어야 한다.
-기존 `updateWithVersion` / `updateCheckoutStatus` CAS 경로는 그대로 유지 — `terminatedFromStatus`는 additionalData에만 추가.
-
-```bash
-# terminal 3개 메서드에 terminatedFromStatus 설정 확인
-grep -n "terminatedFromStatus" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: buildNextStep 전달(1건) + reject(1건) + borrowerReject(1건) + cancel(1건) = 4건 이상 (PASS)
-
-# 비-terminal 메서드에 terminatedFromStatus 미설정 확인 (approve/return 계열)
-grep -A 30 "async approve\b" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "terminatedFromStatus"
-# 기대: 0건 (PASS)
-
-grep -A 30 "async returnCheckout\b" apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "terminatedFromStatus"
-# 기대: 0건 (PASS)
-```
-
-**PASS:**
-1. `terminatedFromStatus` 총 4건 이상 (`buildNextStep` + 3개 terminal 메서드)
-2. `approve` / `returnCheckout` 등 비-terminal 메서드에 `terminatedFromStatus` 없음
-
-**FAIL:**
-- `reject`/`cancel`/`borrowerReject` 중 `terminatedFromStatus` 누락 → terminal 상태 `reachedStepIndex` 항상 1
-- 비-terminal 메서드에 `terminatedFromStatus` 설정 → 의미론 오염
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `reject`, `borrowerReject`, `cancel`, `buildNextStep`
-- `packages/db/src/schema/checkouts.ts` — `terminatedFromStatus` nullable 컬럼
-
-### Step 38: `revokeApproval` `writeTransitionAudit` `isRevocation` 마커 (2026-04-27 추가)
-
-`revokeApproval` 메서드는 FSM `reject` 액션을 재사용하지만, 감사 이력 검색에서 일반 반려와 구분되어야 한다.
-`CheckoutAction` 타입에 `'revoke'` 값이 없으므로 `writeTransitionAudit`의 `extraInfo`에
-`isRevocation: true` 마커를 추가해 구분한다.
-
-```bash
-# revokeApproval의 writeTransitionAudit 호출에 isRevocation 마커 확인
-grep -A 10 "async revokeApproval" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "isRevocation"
-# 기대: isRevocation: true 1건 (PASS)
-
-# isRevocation 마커가 revokeApproval 외부에 없는지 확인 (다른 메서드 오용 방지)
-grep -n "isRevocation" apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: revokeApproval 블록(3204 근처) 내 1건만 (PASS)
-```
-
-**PASS:** `revokeApproval` `writeTransitionAudit` 호출에 `isRevocation: true` + `revokeReason` + `previousApprovedAt` 3개 extraInfo 키 존재.
-**FAIL:** `isRevocation` 없음 → 감사 이력에서 취소 승인과 일반 반려 구분 불가.
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `revokeApproval` 메서드
-
-### Step 33: rental-phase.ts SSOT exhaustiveness guard (Sprint 1.2 신규)
-
-Sprint 1.2에서 신규 도입된 `rental-phase.ts`의 두 가지 컴파일 타임 안전장치 확인:
-1. `RENTAL_STATUS_TO_PHASE satisfies Record<CheckoutStatus, RentalPhase | null>` — 새 CheckoutStatus 추가 시 자동 컴파일 에러
-2. `@ts-expect-error` 네거티브 테스트 — 불완전 매핑이 실제로 타입 에러를 발생시킴을 증명
-
-```bash
-# 파일 존재 확인
-ls packages/schemas/src/fsm/rental-phase.ts 2>/dev/null \
-  && echo "EXISTS" || echo "MISSING"
-# 결과: EXISTS (PASS)
-
-# satisfies Record<CheckoutStatus, RentalPhase | null> 컴파일 가드 확인
-grep -n "satisfies Record<CheckoutStatus, RentalPhase | null>" \
-  packages/schemas/src/fsm/rental-phase.ts
-# 결과: 1건 (PASS)
-
-# @ts-expect-error 네거티브 테스트 존재 확인
-grep -n "ts-expect-error" \
-  packages/schemas/src/fsm/rental-phase.ts
-# 결과: 1건 이상 (PASS)
-
-# circular dep 방지 — shared-constants import 없어야 함
-grep -n "from '@equipment-management/shared-constants'" \
-  packages/schemas/src/fsm/rental-phase.ts
-# 결과: 0건 (PASS)
-
-# rental-phase.ts가 checkout-fsm.ts에서 re-export되는지 확인
-grep -n "rental-phase" \
-  packages/schemas/src/fsm/checkout-fsm.ts | head -5
-# 결과: import + re-export 라인 포함 (PASS)
-```
-
-**PASS:** rental-phase.ts 존재 + satisfies 가드 1건 + @ts-expect-error 1건 이상 + shared-constants import 0건 + checkout-fsm.ts re-export 존재.
-**FAIL:** 파일 없음 → Sprint 1.2 구현 누락. satisfies/ts-expect-error 없음 → CheckoutStatus 추가 시 RENTAL_STATUS_TO_PHASE 누락 컴파일 에러 미발생. circular dep 발견 → packages/schemas 빌드 실패.
-
-### Step 39: `useCheckoutNextStep` hook `terminatedFromStatus` 입력 passthrough (2026-04-27 추가)
-
-`computeReachedStepIndex`에 `terminatedFromStatus`가 추가됨(Step 36)에 따라,
-프론트엔드 훅 `use-checkout-next-step.ts`도 동일한 파라미터를 입력으로 받아 `getNextStep` 호출에 전달해야 한다.
-`UseCheckoutNextStepInput` 인터페이스에 누락 시 caller가 전달할 방법이 없어 terminal 상태에서 항상 step 1이 표시된다.
-
-```bash
-# UseCheckoutNextStepInput 인터페이스에 terminatedFromStatus 필드 존재
-grep -n "terminatedFromStatus" apps/frontend/hooks/use-checkout-next-step.ts
-# 기대: interface 선언(1건) + destructuring(1건) + getNextStep 호출(1건) + useMemo deps(1건) = 4건 이상 (PASS)
-
-# getNextStep 호출에 terminatedFromStatus 전달 확인
-grep -A 5 "getNextStep(" apps/frontend/hooks/use-checkout-next-step.ts | grep "terminatedFromStatus"
-# 기대: 1건 (PASS)
-
-# useMemo deps에 포함 확인
-grep -A 10 "useMemo" apps/frontend/hooks/use-checkout-next-step.ts | grep "terminatedFromStatus"
-# 기대: 1건 (PASS)
-```
-
-**PASS:**
-1. `UseCheckoutNextStepInput` 인터페이스에 `terminatedFromStatus?: CheckoutStatus | null` 필드
-2. destructuring에서 수신 후 `getNextStep({ ..., terminatedFromStatus })` 호출 전달
-3. `useMemo` deps 배열에 `terminatedFromStatus` 포함
-
-**FAIL:**
-- 인터페이스에 `terminatedFromStatus` 없음 → caller가 전달 불가 → terminal 상태 `reachedStepIndex` 항상 1
-- `getNextStep` 호출에 미전달 → schemas 함수 파라미터 존재해도 hook 레벨에서 누락
-- `useMemo` deps 미포함 → `terminatedFromStatus` 변경 시 재계산 안 됨 (stale closure)
-
-**관련 파일:**
-- `apps/frontend/hooks/use-checkout-next-step.ts` — `UseCheckoutNextStepInput`, `getNextStep` 호출부
-- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeReachedStepIndex` (Step 36 연동)
-
-### Step 40: compact variant `canAct` 분기 — span/button 이중 렌더 금지 (2026-04-27 추가, 2026-04-28 atom 갱신)
-
-`NextStepPanel.tsx` compact 분기에서 `canAct` 값에 따라 span과 액션 버튼을 **상호 배타적**으로 렌더해야 한다:
-- `canAct=false`: `{!canAct && <span>}` — 텍스트 레이블만 (버튼 없음)
-- `canAct=true`: `{canAct && <InlineActionButton>}` — 액션 atom만 (레이블 중복 없음)
-
-span이 조건 없이 항상 렌더되면 `canAct=true` 시 동일 텍스트가 span + button 두 곳에 노출되어 스크린리더가 두 번 읽는다.
-
-**Phase 3 (2026-04-28)**: 기존 raw `<button className={WORKFLOW_PANEL_TOKENS.variant.compact.actionButton}>` 패턴은 와이어프레임 04 spec(soft-tint inline action)에 따라 `<InlineActionButton variant={resolveInlineActionVariant({...})}>` atom으로 마이그레이션. 분기 *구조*(`!canAct &&` / `canAct &&`)는 절대 변경하지 않고 element만 swap. 이는 Step 40의 핵심 보호 대상.
-
-```bash
-# !canAct span 조건부 렌더 확인
-grep -n "!canAct" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 1건 이상 (PASS)
-
-# canAct InlineActionButton 조건부 렌더 확인
-grep -n "canAct &&" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 1건 이상 (PASS)
-
-# atom 사용 확인 — Phase 3 마이그레이션 후
-grep -n "InlineActionButton" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: import + canAct=true 분기 사용 (compact + hero 양쪽)
-
-# raw <button>이 canAct=true 분기에 잔존하지 않는지 (회귀 방지)
-grep -n "WORKFLOW_PANEL_TOKENS\.variant\.\(compact\|hero\)\.actionButton" \
-  apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: 0 hits (Phase 3에서 토큰 삭제됨)
-
-# stopPropagation 보존 — 행 클릭 충돌 회피
-grep -n "stopPropagation" apps/frontend/components/shared/NextStepPanel.tsx
-# 기대: ≥ 2 hits (compact action onClick + DropdownMenuTrigger overflow + DropdownMenuItem)
-```
-
-**PASS:**
-1. `{!canAct && <span>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
-2. `{canAct && <InlineActionButton>...{t('action.${descriptor.labelKey}')}...}` 패턴 compact 분기에 존재
-3. 두 분기가 상호 배타적 — 동일 조건 블록 내 동시 렌더 없음
-4. **(Phase 3)** action onClick 핸들러 내부에 `e.stopPropagation()` 보존 — 행 클릭과 충돌 회피
-5. **(Phase 3)** atom variant 결정은 `resolveInlineActionVariant({ urgency, nextAction, isMyTurn })` SSOT 헬퍼 경유
-
-**FAIL:**
-- span이 `!canAct` 없이 compact 분기 최상위에서 무조건 렌더 → `canAct=true` 시 이중 텍스트
-- button이 `canAct` 조건 없이 항상 렌더 → 권한 없는 사용자에게 버튼 노출
-- **(Phase 3)** raw `<button className={WORKFLOW_PANEL_TOKENS.variant.compact.actionButton}>` 잔존 → soft-tint 미적용 시각 회귀
-- **(Phase 3)** `e.stopPropagation()` 누락 → 행 클릭 vs 버튼 클릭 충돌 (이중 navigation)
-
-**관련 파일:**
-- `apps/frontend/components/shared/NextStepPanel.tsx` — compact 분기 (~라인 305-330) + hero canAct true/false (~라인 224-260)
-- `apps/frontend/components/ui/inline-action-button.tsx` — Phase 3 atom
-- `packages/shared-constants/src/checkout-thresholds.ts` — `resolveInlineActionVariant` 매핑 SSOT
-- `apps/frontend/components/shared/NextStepPanel.stories.tsx` — CompactVariantCanAct(canAct=true) + CompactVariantNoAct(canAct=false)
-
-### Step 41: `ProgressStepDescriptor` SSOT + `deriveProgressStepState` 5-state exhaustive (2026-04-28 추가, REVIEW_RESULT.md P0-1)
-
-상세 페이지 통합 stepper(`CheckoutProgressStepper`)를 위해 `NextStepDescriptor`와 보완 관계로 도입된 **`ProgressStepDescriptor[]`** 타입과 **`deriveProgressStepState`** 함수의 정합성을 강제:
-
-1. **타입 분리 — NextStep(현재 1점) vs Progress[](전체 N점)**: 두 타입의 필드 중복 0 보장. `ProgressStepDescriptor`는 schemas/fsm/progress-step.ts 단일 정의.
-2. **5-state exhaustive**: `PROGRESS_STEP_STATES = ['done', 'current', 'late', 'future', 'terminated']` const tuple + `as const` + `(typeof ...)[number]` 패턴. terminal 상태(rejected/canceled) 표현 누락 시 reachedStepIndex가 silent break.
-3. **`deriveProgressStepState` 4-arg signature**: `(stepIndex, currentStepIndex, isOverdue, termination)`. terminal일 때 currentStepIndex 위치 'terminated', 이전 'done', 이후 'future'.
-4. **`TerminationKind` 매핑**: `'rejected' | 'canceled' | null`. hook 측 `deriveTermination(status)` 헬퍼로 status → TerminationKind 변환.
-5. **descriptor 클램프 강제**: `Math.min(steps.length - 1, Math.max(0, currentStepIndex - 1))` — schema `.positive()` 만으로는 N+1 silent 통과.
-
-```bash
-# ProgressStepState 5-state 정의 확인
-grep -n "PROGRESS_STEP_STATES" packages/schemas/src/fsm/progress-step.ts
-# 기대: 'done', 'current', 'late', 'future', 'terminated' 5개 (PASS)
-
-# deriveProgressStepState 4-arg 시그니처 확인
-grep -A4 "export function deriveProgressStepState" packages/schemas/src/fsm/progress-step.ts
-# 기대: termination?: TerminationKind 4번째 인자 존재
-
-# TerminationKind 정의 확인
-grep -n "type TerminationKind" packages/schemas/src/fsm/progress-step.ts
-# 기대: 'rejected' | 'canceled' | null
-
-# Hook이 reachedStepIndex 우선 + currentStepIndex fallback 패턴 사용하는지
-grep -n "reachedStepIndex\|currentStepIndex" apps/frontend/hooks/use-checkout-progress-steps.ts
-# 기대: termination !== null && reachedStepIndex > 0 → reachedStepIndex - 1 분기 존재
-
-# 클램프 보장
-grep -n "Math.min.*steps.length\|Math.max(0," apps/frontend/hooks/use-checkout-progress-steps.ts
-# 기대: descriptor.currentStepIndex 비정상 값 양쪽 클램프
-```
-
-**PASS:**
-1. `PROGRESS_STEP_STATES` 5-tuple + `ProgressStepState` 타입 동기화
-2. `ProgressStepDescriptorSchema` Zod로 wire-level 검증 통로 확보 (향후 backend emit)
-3. `deriveProgressStepState` termination 인자 + terminal 분기
-4. Hook이 termination 추론 후 reachedStepIndex 사용 (terminal일 때) / currentStepIndex 사용 (비-terminal일 때)
-5. `[0, steps.length-1]` 양쪽 클램프
-
-**FAIL:**
-- 4-state(terminated 누락) → 반려/취소 stepper "X단계에서 종료" 표현 불가, current처럼 보임
-- termination 미전달 → terminal 상태도 'current' 반환 → 시각적 오인식
-- 클램프 부재 → descriptor.currentStepIndex=99 시 모든 step이 'done' 잘못 렌더
-- ProgressStepDescriptor 필드를 NextStepDescriptor에서 중복 정의 → 보완 관계 깨짐
-
-**관련 파일:**
-- `packages/schemas/src/fsm/progress-step.ts` — 단일 정의
-- `packages/schemas/src/fsm/index.ts` — re-export
-- `apps/frontend/hooks/use-checkout-progress-steps.ts` — descriptor 클램프 + termination 추론
-- `apps/frontend/components/checkouts/CheckoutProgressStepper.tsx` — 5-state 시각 (terminated: opacity-60 + line-through + X 아이콘)
-- `apps/frontend/components/checkouts/ProgressFlowSection.tsx` — ErrorBoundary 보호 + displayCurrent 클램프
-
----
-
-### Step 42: `CheckoutActorContext` SSOT + `TRANSITION_ACTOR_SIDE` 매핑 (rental-approval-workflow-fix, 2026-04-29)
-
-**왜 검증해야 하는가:** rental 2단계 승인에서 lender/borrower 양측 TM이 같은 role(`technical_manager`)이라 permission만으로는 분리 불가. FSM `canPerformAction`/`getNextStep`이 옵셔널 `actorCtx`를 받아 `TRANSITION_ACTOR_SIDE[action]`과 `userTeamId === {lenderTeamId|requesterTeamId}` 일치 검증을 수행해야 함. 누락 시 평택랩 TM이 차용자 측 `borrower_approve` 호출 → 403, 또는 `pending`에서 lender approve 직격 → 400.
-
-**검증 명령어:**
-```bash
-# 1. CheckoutActorContext + TRANSITION_ACTOR_SIDE SSOT 정의
-grep -n "CheckoutActorContext\|TRANSITION_ACTOR_SIDE" packages/schemas/src/fsm/checkout-fsm.ts
-
-# 2. blockingReason union에 'actor_team' 포함
-grep -n "actor_team" packages/schemas/src/fsm/checkout-fsm.ts
-
-# 3. canPerformAction/getNextStep 시그니처에 옵셔널 actorCtx
-grep -A2 "function canPerformAction\|function getNextStep" packages/schemas/src/fsm/checkout-fsm.ts | head -16
-
-# 4. BE service의 actorCtx 합류
-grep -n "actorCtx\|CheckoutActorContext\|buildActorCtx" apps/backend/src/modules/checkouts/checkouts.service.ts | head -8
-
-# 5. canBorrowerApprove/canBorrowerReject BE/FE 동기
-grep -n "canBorrowerApprove\|canBorrowerReject" apps/backend/src/modules/checkouts/checkouts.service.ts apps/frontend/lib/api/checkout-api.ts
-
-# 6. fsm.blocked.actor_team i18n parity
-grep -n "actor_team" apps/frontend/messages/ko/checkouts.json apps/frontend/messages/en/checkouts.json
-```
-
-**PASS:**
-1. `CheckoutActorContext` interface + `TRANSITION_ACTOR_SIDE` Record SSOT
-2. `canPerformAction` reason union에 `'actor_team'` 추가, 모든 호출처 업데이트
-3. `getNextStep` 우선순위: (1) permission+actor OK, (2) permission only → blockingReason='actor_team', (3) permission 없음
-4. BE `calculateAvailableActions`가 actorCtx 기반 단일 helper로 모든 boolean 도출 — 인라인 lenderTeamOk 분기 0
-5. FE `CheckoutAvailableActions`에 `canBorrowerApprove`/`canBorrowerReject` 동기
-6. `fsm.blocked.actor_team` ko/en parity
-
-**FAIL:**
-- actor identity 미반영 → 평택랩 TM이 borrower_approve 버튼 노출 → 403
-- canPerformAction 시그니처 변경으로 280-row table test 회귀
-- BE/FE drift → 타입 에러 또는 runtime undefined 접근
-
-**관련 파일:**
-- `packages/schemas/src/fsm/checkout-fsm.ts` — SSOT
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — actorCtx 합류
-- `apps/frontend/lib/api/checkout-api.ts` — type sync
-- `apps/frontend/messages/{ko,en}/checkouts.json` — fsm.blocked.actor_team
-
----
-
-### Step 43: `findAll` server-driven meta 항상 주입 (rental-approval-workflow-fix, 2026-04-29)
-
-**왜 검증해야 하는가:** FE `warnMetaDrift`가 list 응답에서 meta 누락 시 `[FSM drift] meta missing <id>` 경고 발생. `findAll`이 user-specific meta를 매 요청 신선하게 주입해야 함 — cache는 raw items만 (user-agnostic), post-cache step에서 actorCtx 기반 meta 합성. 그렇지 않으면 user A의 meta가 cache로 user B에게 leak.
-
-**검증 명령어:**
-```bash
-# 1. findAll 시그니처 — 옵셔널 user info
-grep -B2 -A6 "async findAll" apps/backend/src/modules/checkouts/checkouts.service.ts | head -20
-
-# 2. controller가 user info forward
-grep -B2 -A6 "checkoutsService.findAll" apps/backend/src/modules/checkouts/checkouts.controller.ts | head -10
-
-# 3. cache 후 post-process meta 패턴
-grep -B1 -A5 "user-specific meta post-process\|cachedResponse.items.map" apps/backend/src/modules/checkouts/checkouts.service.ts
-
-# 4. requesterTeamId 보존 (actorCtx 입력)
-grep -n "requesterTeamId" apps/backend/src/modules/checkouts/checkouts.service.ts
-```
-
-**PASS:**
-1. findAll 시그니처에 `userPermissions?` + `userTeamId?` 옵셔널 인자
-2. cache key에 user 정보 미포함 (post-cache 합성)
-3. items 매핑에 `requesterTeamId` 보존 (actor identity 평가 입력)
-4. user 정보 제공 시 매 요청 fresh meta 합성 — 누락 0
-
-**FAIL:**
-- meta가 cache에 포함되면 user 간 leak (보안 위반)
-- meta 누락 → `warnMetaDrift` console warning + 잘못된 버튼 노출
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll post-cache meta
-- `apps/backend/src/modules/checkouts/checkouts.controller.ts` — user info forward
-- `apps/frontend/lib/api/checkout-api.ts:warnMetaDrift` — drift 검출
-
----
-
-### Step 44: `getPendingChecks` borrower team EXISTS subquery 패턴 (rental-approval-workflow-fix, 2026-04-29)
-
-**왜 검증해야 하는가:** rental의 `pending` 상태는 차용자 측 TM이 1차 승인해야 하는 단계인데, 신청자(requester)와 borrower TM은 다른 사용자다. `requesterId === userId` 매칭만으로는 borrower TM이 자기 팀의 신청 건을 못 본다 → nav 배지에 "내 차례" 카운트 누락. EXISTS 서브쿼리로 `requester.teamId === userTeamId`를 매칭해야 borrower 팀 멤버 모두에게 노출.
-
-**검증 명령어:**
-```bash
-# 1. getPendingChecks(Count) borrower team EXISTS pattern
-grep -B1 -A5 "borrowerTeamPendingCondition\|EXISTS.*users.*team_id" apps/backend/src/modules/checkouts/checkouts.service.ts | head -40
-
-# 2. requester user team join 또는 EXISTS 패턴 — pending status 매칭 포함
-grep -n "CSVal.PENDING\|status.*pending" apps/backend/src/modules/checkouts/checkouts.service.ts | head -10
-# 기대: getPendingChecks/getPendingChecksCount 양쪽에서 PENDING 분기 존재
-
-# 3. 단일 user (`requesterId === userId`) 매칭만 사용하는 회귀 회피
-grep -B2 -A4 "requesterId.*userId" apps/backend/src/modules/checkouts/checkouts.service.ts | grep -A3 "borrowerStatuses"
-# 기대: borrowerActionCondition 와 borrowerTeamPendingCondition 분리 — 두 패턴 OR 조합
-```
-
-**PASS:**
-1. `getPendingChecks` + `getPendingChecksCount` 양쪽이 `borrowerTeamPendingCondition` (EXISTS subquery) 사용
-2. EXISTS 서브쿼리가 `users.id = checkouts.requesterId AND users.team_id = userTeamId` 형태
-3. 기존 `borrowerActionCondition` (requester action 단계) + 신규 `borrowerTeamPendingCondition` (1차 승인 대기) 둘 다 포함된 OR 조합
-4. lender + borrowerAction + borrowerTeamPending 3-way OR 조합 일관성
-
-**FAIL:**
-- borrower TM nav 배지에 pending+rental 누락 → 1차 승인 SLA 위반 위험
-- 단순히 `borrowerStatuses`에 `PENDING` 추가만 (requesterId 매칭) → 신청자만 자기 신청 보고 borrower TM은 못 봄
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts:getPendingChecks` + `getPendingChecksCount`
-- `packages/db/src/schema/checkouts.ts` — `requesterId` FK
-- `packages/db/src/schema/users.ts` — `teamId`
-
----
-
-### Step 45: `findAll` + `findOne` `user.team` 양측 완전성 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** 이번 세션에서 발견된 회귀 패턴 — `findAll`의 `userInfo` 구성에 `team: { id, name, site }`를 추가했지만 `findOne`은 누락. 결���적으로 목록 경로에서는 소속이 표시되지만 단건 조회 경로(CheckoutDetailClient)에서는 여전히 "-". `user.team`을 응답에 포함하는 코드 경로는 반드시 findAll/findOne 양측 모두 동일한 구조를 유지해야 한다.
-
-**검증 명령어:**
-```bash
-# 1. findAll userInfo에 team.site 포함 여부
-grep -A10 "const userInfo = item.requester" apps/backend/src/modules/checkouts/checkouts.service.ts | grep "site"
-# 기대: teamSite 또는 site 참조 존재
-
-# 2. findOne user 응답에 team.site 포함 여부
-grep -A15 "user: userRow\[0\]" apps/backend/src/modules/checkouts/checkouts.service.ts | grep "site"
-# 기대: teamSite 또는 site 참조 존재
-
-# 3. frontend 타입 — Checkout.user.team에 site 필드 포함
-grep "team\?:" apps/frontend/lib/api/checkout-api.ts | grep "site"
-# 기대: site?: string 포함
-
-# 4. approvals/mappers.ts mapCheckoutToApprovalItem — team?.site 직접 접근 (캐스트 금지)
-grep "requesterSite" apps/frontend/lib/api/approvals/mappers.ts
-# 기대: team?.site 직접 접근, (team as ...) 캐스트 0건
-```
-
-**PASS:**
-1. `findAll` `userInfo.team` → `{ id, name, site }` 포함
-2. `findOne` `user.team` → `{ id, name, site }` 포함 (leftJoin teams)
-3. `checkout-api.ts` `team?: { ... site?: string }` 타입 포함
-4. `approvals/mappers.ts` `requesterSite: team?.site` 직접 접근 (캐스트 없음)
-
-**FAIL:**
-- findAll만 team 포함하고 findOne 누락 → 단건 조��� 페이지 소속 "-" 회귀
-- `(team as { site?: string })?. site` 캐스트 재도입 → 타입 드리프트 신호
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — findAll userInfo + findOne user
-- `apps/frontend/lib/api/checkout-api.ts` — `Checkout.user.team` 타입
-- `apps/frontend/lib/api/approvals/mappers.ts` — `mapCheckoutToApprovalItem` requesterSite
-
-### Step 46: ESCAPE_ACTIONS 집합 불변성 + getNextStep 4단계 우선순위 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** 이번 세션에서 도입된 ESCAPE_ACTIONS 분리 패턴 — cancel/reject/reject_return/borrower_reject를 primary 워크플로우 액션에서 격리. 이 집합이 축소되거나 다른 액션이 추가되면 borrower가 cancel을 primary 액션으로 보게 되는 회귀가 발생. 4단계 우선순위(fullyAvailableMain→permittedOnlyMain→firstMain→fullyAvailableEscape)가 유지되지 않으면 권한 없는 사용자에게 escape 액션이 primary로 노출된다.
-
-**검증 명령어:**
-```bash
-# 1. ESCAPE_ACTIONS 정의 존재 및 4개 멤버 확인
-grep -A3 "ESCAPE_ACTIONS" packages/schemas/src/fsm/checkout-fsm.ts | head -8
-# 기대: new Set<CheckoutAction>(['cancel', 'reject', 'reject_return', 'borrower_reject'])
-
-# 2. getNextStep 4단계 우선순위 구조 — fullyAvailableMain 변수 존재
-grep -n "fullyAvailableMain\|permittedOnlyMain\|firstMain\|fullyAvailableEscape" \
-  packages/schemas/src/fsm/checkout-fsm.ts
-# 기대: 4개 변수 모두 존재
-
-# 3. candidate 결합 — 4단계 순서 확인
-grep -n "fullyAvailableMain ?? permittedOnlyMain ?? firstMain ?? fullyAvailableEscape" \
-  packages/schemas/src/fsm/checkout-fsm.ts
-# 기대: 1건
-
-# 4. ESCAPE_ACTIONS.has() 필터가 Main 후보에 적용되는지 (escape가 primary로 빠져나가는 회귀 방지)
-grep -B1 "fullyAvailableMain\s*=" packages/schemas/src/fsm/checkout-fsm.ts | grep "ESCAPE_ACTIONS"
-# 기대: !ESCAPE_ACTIONS.has 필터 존재
-```
-
-**PASS:**
-1. ESCAPE_ACTIONS 4개 멤버({cancel, reject, reject_return, borrower_reject}) 정확히 일치
-2. 4개 후보 변수(fullyAvailableMain/permittedOnlyMain/firstMain/fullyAvailableEscape) 모두 존재
-3. `fullyAvailableMain ?? permittedOnlyMain ?? firstMain ?? fullyAvailableEscape ?? transitions[0]` 체인
-4. Main 후보에 `!ESCAPE_ACTIONS.has(t.action)` 필터 적용
-
-**FAIL:**
-- ESCAPE_ACTIONS 멤버 변경(추가/삭제) → FSM 우선순위 의도 변경 신호, 리뷰 필요
-- 4단계 체인 구조 누락 → escape 액션이 primary로 노출될 수 있음
-- `!ESCAPE_ACTIONS.has` 필터 없음 → cancel이 primary 디스크립터로 다시 노출
-
-**관련 파일:**
-- `packages/schemas/src/fsm/checkout-fsm.ts` — ESCAPE_ACTIONS, getNextStep 4단계 우선순위
-
-### Step 47: checkout-scope.util.ts outbound predicate 불변성 — case 1+3만 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** rental borrower(requester) 팀은 status와 무관하게 항상 inbound로만 분류된다는 도메인 결정. direction='outbound'에 `requesterIn`이 포함되면(이전 case 4) pending 상태 rental 건이 반출 탭에도 노출되어 UX 이중 분류 회귀가 발생.
-
-**검증 명령어:**
-```bash
-# 1. outbound 분기에 requesterIn 사용 없음 확인
-grep -A5 "direction === 'outbound'" \
-  apps/backend/src/modules/checkouts/checkout-scope.util.ts
-# 기대: requesterIn이 outbound 분기 OR 표현식에 미포함
-
-# 2. outbound = case 1+3 (isNonRental+equip, isRental+lenderEq) 확인
-grep -A3 "direction === 'outbound'" \
-  apps/backend/src/modules/checkouts/checkout-scope.util.ts | grep "lenderEq\|inEquip"
-# 기대: lenderEq, inEquipTeam/inEquipSite만 등장
-
-# 3. isPending 변수가 checkout-scope.util.ts에서 선언되지 않음 (case 4 제거 후 불필요)
-grep -n "isPending" apps/backend/src/modules/checkouts/checkout-scope.util.ts
-# 기대: 0건 (case 4 재도입 시 1건 이상 나타남 → FAIL)
-
-# 4. SSOT 주석 3-case 정의 존재
-grep -n "SSOT 정의 (3-case)" apps/backend/src/modules/checkouts/checkout-scope.util.ts
-# 기대: 1건
-```
-
-**PASS:**
-1. `direction === 'outbound'` 분기에 `requesterIn` 변수 미참조
-2. outbound OR 구조: `(isNonRental, equip)` + `(isRental, lenderEq)` 2개 케이스만
-3. `isPending` 변수 선언 0건
-4. SSOT 주석 "3-case" 명시
-
-**FAIL:**
-- `requesterIn`이 outbound 분기에 재등장 → case 4 회귀
-- `isPending` 변수 재선언 → case 4 재도입 신호
-- outbound OR에 3개 이상 조건 → 도메인 의도 이탈
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkout-scope.util.ts` — buildCheckoutSiteCondition, buildCheckoutTeamCondition
-
-### Step 48: CheckoutDetailClient availableToCurrentUser guard + canCancel 독립 버튼 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** 권한 없는 사용자가 handleNextStepAction을 호출하면 서버에서 403이 반환되고 페이지가 새로고침됐던 버그. `availableToCurrentUser` early-return guard가 없으면 동일 회귀 발생. cancel 버튼이 독립 UI가 아니라 handleNextStepAction 내 'cancel' case로만 존재하면 cancel 외 다른 primary 액션이 있는 상태에서 취소가 불가능해진다.
-
-**검증 명령어:**
-```bash
-# 1. handleNextStepAction 상단 availableToCurrentUser early-return guard
-grep -A3 "handleNextStepAction" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx \
-  | grep "availableToCurrentUser"
-# 기대: if (!nextStepDescriptor.availableToCurrentUser) return; 존재
-
-# 2. canCancel 독립 버튼 — meta.availableActions.canCancel 게이트
-grep -n "canCancel" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx
-# 기대: checkout.meta?.availableActions.canCancel 기반 조건부 렌더링 존재
-
-# 3. handleNextStepAction 'cancel' case가 canCancel 게이트와 분리 — cancel case 내에서 직접 dialog open
-grep -A5 "case 'cancel'" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx | head -10
-# 기대: setDialogState cancel: true 또는 독립 버튼이 직접 dialog open
-
-# 4. nextStep: checkout.meta?.nextStep wiring — useCheckoutNextStep에 서버값 전달
-grep -n "nextStep: checkout\.meta" \
-  apps/frontend/app/\(dashboard\)/checkouts/\[id\]/CheckoutDetailClient.tsx
-# 기대: 1건 (useCheckoutNextStep 훅 호출 인수)
-```
-
-**PASS:**
-1. `handleNextStepAction` 진입 시 `if (!nextStepDescriptor.availableToCurrentUser) return;` 존재
-2. `checkout.meta?.availableActions.canCancel` 조건부 렌더링으로 cancel 버튼 독립 표시
-3. cancel 버튼이 nextAction 흐름과 별도로 항상 표시 가능(canCancel=true 시)
-4. `nextStep: checkout.meta?.nextStep`이 useCheckoutNextStep 훅에 전달
-
-**FAIL:**
-- `availableToCurrentUser` guard 없음 → 권한 없는 사용자 액션 시 403 → 페이지 새로고침 회귀
-- `canCancel` 독립 버튼 없음 → 특정 상태에서 취소 불가
-- `checkout.meta?.nextStep` wiring 없음 → 서버 actorCtx 기반 계산 무시, 클라이언트 FSM 폴백만 사용
-
-**관련 파일:**
-- `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx` — handleNextStepAction, canCancel 버튼
-
-### Step 49: `useCheckoutProgressSteps` fallback — `steps.indexOf` 금지, `computeStepIndex` SSOT 경유 필수 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** `CHECKOUT_DISPLAY_STEPS[purpose]`는 시각 표시용 status 배열로, `lender_received` 같이 FSM에는 존재하지만 stepper에 표시하지 않는 status를 포함하지 않는다. `Array.prototype.indexOf`로 이 배열에서 status를 찾으면 -1이 반환되고 묵묵히 index 0(첫 단계 활성화)으로 fallback되어 진행 상태가 항상 1단계를 가리키는 버그가 발생한다. `computeStepIndex(status, purpose)`는 모든 CheckoutStatus를 명시적으로 매핑하므로 어떤 status든 올바른 인덱스를 반환한다.
-
-**검증 명령어:**
-```bash
-# 1. steps.indexOf fallback 금지 확인
-grep -n "steps\.indexOf\|\.indexOf(status)" \
-  apps/frontend/hooks/use-checkout-progress-steps.ts
-# 기대: 0건 (주석 제외). hit 발생 시 computeStepIndex 로 교체 필요.
-
-# 2. computeStepIndex SSOT fallback 존재 확인
-grep -n "computeStepIndex" \
-  apps/frontend/hooks/use-checkout-progress-steps.ts
-# 기대: import 1건 + fallback 사용 1건 이상
-
-# 3. import 경로 — @equipment-management/schemas 경유
-grep -n "computeStepIndex" \
-  apps/frontend/hooks/use-checkout-progress-steps.ts \
-  | grep "from '@equipment-management/schemas'"
-# 기대: 0건이면 import 누락 → FAIL (위 grep에서 import 라인 직접 확인)
-```
-
-**PASS:**
-1. `steps.indexOf(status)` 호출 0건 (주석 내부 제외)
-2. `computeStepIndex(status, purpose) - 1` 패턴으로 fallback 계산
-3. `computeStepIndex`를 `@equipment-management/schemas`에서 import
-
-**FAIL:**
-- `steps.indexOf(status)` 발견 → `lender_received` 등 비-display status에서 항상 1단계 활성화 버그 회귀
-
-**관련 파일:**
-- `apps/frontend/hooks/use-checkout-progress-steps.ts` — fallback rawCurrent 계산
-- `packages/schemas/src/fsm/checkout-fsm.ts` — `computeStepIndex` SSOT 정의
-- `apps/frontend/lib/design-tokens/components/checkout-timeline.ts` — `CHECKOUT_DISPLAY_STEPS` (표시용 배열, 비-display status 미포함)
-
-**발생 이력 (2026-04-29 신설)**: rental `lender_received` 상태에서 진행 stepper가 항상 1단계(승인대기)를 활성화하는 버그. `CHECKOUT_DISPLAY_STEPS.rental`에 `lender_received`가 없어 `indexOf` → -1 → 0 으로 묵묵히 잘못 매핑. `computeStepIndex` SSOT 경유로 수정.
-
-### Step 50: rental `returnCheckout` purpose-aware validation — `workingStatusChecked` 서버 도출, DTO 검증 면제 (2026-04-29 추가)
-
-**왜 검증해야 하는가:** 대여 목적 반입은 4단계 상태확인(외관·작동 상태)이 이미 작동 여부 확인 기록을 대체한다. 모든 목적에 동일하게 `workingStatusChecked` DTO 필드를 검증하면 rental 반입 폼에서 중복 체크박스가 필요해지거나, 상태확인이 이상(abnormal)인 장비의 반입이 차단되는 버그가 발생한다. `workingStatusChecked`의 도메인 의미는 "확인을 수행했다"(performed)이지 "정상이다"(normal)가 아니므로, 이상 상태 장비도 반입은 가능해야 한다.
-
-**검증 명령어:**
-```bash
-# 1. rental purpose 시 DTO workingStatusChecked 검증 면제 확인
-grep -A20 "purpose === CPVal.RENTAL" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -A5 "workingStatusChecked"
-# 기대: rental 분기 내에서 WORKING_STATUS_REQUIRED 예외를 throw하지 않음
-
-# 2. rental 분기 — condition_checks 서버 도출 패턴
-grep -B2 -A5 "resolvedWorkingStatusChecked" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts | head -20
-# 기대: rental → priorChecks.length > 0, 교정/수리 → returnDto.workingStatusChecked
-
-# 3. resolvedWorkingStatusChecked = priorChecks.length > 0 (performed 의미)
-grep -n "priorChecks\.length > 0\|priorChecks\.every" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: priorChecks.length > 0 사용. priorChecks.every(operationStatus === 'normal') 금지
-# every(normal) 는 "정상이어야" 의미로 이상 장비 반입 차단 버그 유발.
-
-# 4. updateWithVersion에 resolvedWorkingStatusChecked 전달
-grep -n "workingStatusChecked: resolved" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts
-# 기대: 1건 (returnDto.workingStatusChecked 직접 전달이면 rental 도출 로직 우회)
-```
-
-**PASS:**
-1. `purpose === CPVal.RENTAL` 분기에서 `WORKING_STATUS_REQUIRED` 예외 없음
-2. rental 분기: `priorChecks.length > 0`으로 도출 (not `every(normal)`)
-3. `updateWithVersion` 호출에 `resolvedWorkingStatusChecked` 전달 (not `returnDto.workingStatusChecked`)
-
-**FAIL:**
-- `if (!returnDto.workingStatusChecked) throw WORKING_STATUS_REQUIRED` 조건이 목적 구분 없이 모든 목적에 적용 → rental 반입 시 DTO 필드 강제 필요 (UX 중복)
-- `priorChecks.every(c => c.operationStatus === 'normal')` 패턴 → 이상 상태 장비 반입 차단 버그 (의미론적 오류)
-- `workingStatusChecked: returnDto.workingStatusChecked` 직접 전달 (rental 도출 로직 우회)
-
-**관련 파일:**
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — returnCheckout, resolvedWorkingStatusChecked
-- `apps/frontend/components/checkouts/ReturnInspectionForm.tsx` — RETURN_INSPECTION_PURPOSE_CONFIG.rental.workingUserProvided=false
-- `apps/frontend/app/(dashboard)/checkouts/[id]/return/ReturnCheckoutClient.tsx` — derivedWorkingStatusChecked = conditionChecks.length > 0
-
-**발생 이력 (2026-04-29 신설)**: rental 반입 시 (1) 중복 체크박스 UX 문제, (2) `workingStatusChecked` 의미론적 오류(`every(normal)` → 이상 장비 반입 차단) 동시 발견. purpose-aware 검증 분리 + 서버 도출 패턴으로 수정.
-
-### Step 51: KPI 카드 value-filterStatus 상태 집합 정합성 — `CHECKOUT_STATUS_GROUPS` SSOT 경유 필수 (2026-04-30 추가)
-
-**규칙**: `OutboundCheckoutsTab`의 `useStatCards` 배열에서 각 카드의 `value`(숫자)와 `filterStatus`(클릭 필터)는 반드시 동일한 상태 집합을 기준으로 해야 한다. 백엔드 `getSummary()` 집계 필드와 `getCheckoutStatusGroupFilterValue()` 헬퍼가 같은 `CHECKOUT_STATUS_GROUPS` 상수를 참조할 때만 이 불변성이 보장된다.
-
-**왜 중요한가**: 카드에 표시된 숫자(예: 5)를 클릭했을 때 목록에 5건이 나와야 한다. `value`와 `filterStatus`가 다른 상태 집합을 가리키면 "카드 숫자 ≠ 클릭 후 목록 수"인 UX 버그가 발생한다. `CheckoutSummary.approved`가 `status='approved'` 하나만 카운트하면서 `filterStatus`는 `in_progress` 그룹(approved 미포함) 전체를 참조하던 것이 이 패턴의 실패 사례다.
-
-**검증 명령어**:
-```bash
-# 1. getSummary() inProgress 카운트가 CHECKOUT_STATUS_GROUPS.in_progress 경유인지 확인
-grep -A5 "inProgress:" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "CHECKOUT_STATUS_GROUPS\|inProgressStatuses"
-# 기대: CHECKOUT_STATUS_GROUPS.in_progress 경유 (하드코딩 상태 목록 0건)
-
-# 2. getSummary() returnedToday 카운트가 completed 그룹 경유인지 확인
-grep -A3 "returnedToday:" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep "CHECKOUT_STATUS_GROUPS\|completedStatuses"
-# 기대: CHECKOUT_STATUS_GROUPS.completed 경유
-
-# 3. KPI 카드 checkedOut value가 summary.inProgress 사용인지 확인
-grep -B2 -A2 "variantKey: 'checkedOut'" \
-  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
-  | grep "inProgress"
-# 기대: value: summary.inProgress (summary.approved 리터럴 0건)
-
-# 4. checkedOut 카드 filterStatus가 SSOT 헬퍼 경유인지 확인
-grep -A5 "variantKey: 'checkedOut'" \
-  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
-  | grep "getCheckoutStatusGroupFilterValue"
-# 기대: filterStatus: getCheckoutStatusGroupFilterValue('in_progress')
-
-# 5. returned 카드도 filterStatus가 SSOT 헬퍼 경유인지 확인
-grep -A5 "variantKey: 'returned'" \
-  apps/frontend/app/\(dashboard\)/checkouts/tabs/OutboundCheckoutsTab.tsx \
-  | grep "getCheckoutStatusGroupFilterValue"
-# 기대: filterStatus: getCheckoutStatusGroupFilterValue('completed')
-```
-
-**PASS**:
-1. `getSummary()` `inProgress` 카운트 → `CHECKOUT_STATUS_GROUPS.in_progress` spread + sql.join
-2. `getSummary()` `returnedToday` 카운트 → `CHECKOUT_STATUS_GROUPS.completed` spread + sql.join
-3. `useStatCards` 내 `checkedOut.value = summary.inProgress` (not `summary.approved`)
-4. `filterStatus = getCheckoutStatusGroupFilterValue('in_progress')` SSOT 헬퍼 경유
-
-**FAIL**:
-- `value: summary.approved` + `filterStatus: getCheckoutStatusGroupFilterValue('in_progress')` 조합 → 집합 불일치 (approved ∉ in_progress)
-- `inProgress` 카운트가 하드코딩 상태 목록(`'approved','checked_out',...`) 인라인 → CHECKOUT_STATUS_GROUPS SSOT 우회
-- `returnedToday` 카운트가 `CSVal.RETURNED` 단일 → completed 그룹 우회 (return_approved 누락)
-
-**올바른 패턴**:
-```typescript
-// ✅ 백엔드 — SSOT 그룹에서 배열 도출
-const inProgressStatuses = [...CHECKOUT_STATUS_GROUPS.in_progress];
-const completedStatuses = [...CHECKOUT_STATUS_GROUPS.completed];
-inProgress: sql`COUNT(*) FILTER (WHERE status IN (${sql.join(inProgressStatuses.map(s => sql`${s}`), sql`, `)}))`,
-returnedToday: sql`COUNT(*) FILTER (WHERE status IN (${sql.join(completedStatuses.map(s => sql`${s}`), sql`, `)}) AND DATE(...) = CURRENT_DATE)`,
-
-// ✅ 프론트엔드 — summary 필드명과 filterStatus가 같은 그룹을 가리킴
-{ variantKey: 'checkedOut', value: summary.inProgress, filterStatus: getCheckoutStatusGroupFilterValue('in_progress') }
-{ variantKey: 'returned',   value: summary.returnedToday, filterStatus: getCheckoutStatusGroupFilterValue('completed') }
-
-// ❌ WRONG — 집합 불일치
-{ value: summary.approved, filterStatus: getCheckoutStatusGroupFilterValue('in_progress') }
-// summary.approved = status='approved' 1개, filterStatus = borrower_approved,...,lender_received 6개
-```
-
-**관련 파일**:
-- `packages/schemas/src/enums/labels.ts` — `CHECKOUT_STATUS_GROUPS` SSOT 정의 (in_progress, completed)
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `getSummary()` inProgress/returnedToday 카운트
-- `packages/schemas/src/checkout.ts` — `CheckoutSummary` 인터페이스 (inProgress 필드명)
-- `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — `useStatCards` KPI 카드 배열
-
-### Step 52: `revokeApproval` 5단계 fail-close 순서 검증 (2026-05-03 추가)
-
-**규칙**: `revokeApproval` 메서드는 반드시 `scope → FSM(APPROVED) → reason → time-window → domain` 5단계 순서로 fail-close해야 한다. 보안 원칙: FSM 이전에 scope 체크를 완료해야 스코프 외 사용자가 FSM 오류 메시지로 승인 상태를 역추론하는 것을 차단한다. reason 검증은 FSM 이후 — 미승인 상태에서 reason 조건을 먼저 확인할 필요가 없고, fail-fast 원칙에 따라 FSM 체크가 더 값싼 연산이다.
-
-**5단계 순서**:
-1. `enforceScopeFromCheckout()` — site/team scope 위반 403 차단
-2. FSM 상태 확인 (`status !== APPROVED`) — `RevocationWindowExpired` 또는 FSM 오류 400
-3. `dto.reason` 최소 길이 확인 (`REVOCATION_REASON_MIN_LENGTH`) — `RevocationReasonRequired` 400
-4. time-window 확인 (`approvedAt + APPROVAL_REVOCATION_WINDOW_MS`) — `RevocationWindowExpired` 403
-5. domain 확인 (`checkout.approverId !== approverId`) — `Forbidden` 403
-
-**검증 명령어**:
-```bash
-# revokeApproval 메서드 구조 — 단계 순서 확인
-grep -n "enforceScopeFromCheckout\|RevocationReasonRequired\|RevocationWindowExpired\|REVOCATION_REASON_MIN_LENGTH\|APPROVAL_REVOCATION_WINDOW\|approverId" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts \
-  | grep -A0 "" | head -20
-# 기대: scope(enforceScopeFromCheckout) → FSM(ErrorCode.Invalid*) → reason(REVOCATION_REASON_MIN_LENGTH) → window(RevocationWindowExpired) → domain(approverId)
-
-# reason 검증이 FSM 체크보다 먼저 나오는지 탐지 (역전 탐지)
-python3 -c "
-import re
-with open('apps/backend/src/modules/checkouts/checkouts.service.ts') as f:
-    src = f.read()
-# revokeApproval 블록 추출
-m = re.search(r'async revokeApproval\b[^{]*{(.+?)(?=\n  async |\nAsync |\Z)', src, re.DOTALL)
-if not m: print('WARN: revokeApproval 메서드 미발견'); exit()
-block = m.group(1)
-reason_pos = block.find('RevocationReasonRequired')
-fsm_pos = min(
-    (block.find(x) for x in ['INVALID_TRANSITION','APPROVED','InvalidTransition'] if x in block),
-    default=99999
-)
-if reason_pos < fsm_pos and reason_pos != -1:
-    print('FAIL: reason 검증이 FSM 체크 이전 — scope/FSM 우선 원칙 위반')
-else:
-    print('PASS: scope → FSM → reason 순서 확인')
-" 2>/dev/null
-```
-
-**PASS**: `revokeApproval` 메서드 내 5단계가 순서대로 존재.
-**FAIL**: reason 검증이 FSM 체크보다 앞에 위치 → 스코프 외 사용자 상태 역추론 취약점.
-
-**관련 파일**:
-- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `revokeApproval` 메서드
-- `apps/backend/src/modules/checkouts/dto/revoke-approval.dto.ts` — `REVOCATION_REASON_MIN_LENGTH` Zod 스키마
-- `packages/schemas/src/errors.ts` — `RevocationReasonRequired`(400), `RevocationWindowExpired`(403) 매핑
-
-**발생 이력 (2026-04-30 신설)**: KPI 카드 검토 중 "반출 중" 카드 `value = summary.approved`(status='approved' 단일 카운트)와 `filterStatus = in_progress 그룹`(approved 미포함 6개 상태)이 완전 불일치임을 발견. 또한 `returnedToday`가 `returned` 단일 카운트인데 클릭 필터는 `returned + return_approved`로 구성되어 있어 숫자보다 목록이 더 많은 버그도 존재. 두 카운트 모두 `CHECKOUT_STATUS_GROUPS` 그룹 SSOT에서 배열을 도출하는 패턴으로 수정하여 value-filterStatus 정합성 확보.
