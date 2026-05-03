@@ -30,6 +30,12 @@ jest.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({ can: mockCan }),
 }));
 
+jest.mock('@/hooks/use-date-formatter', () => ({
+  useDateFormatter: () => ({
+    fmtDate: (date: string | Date | undefined | null) => (date ? String(date).slice(0, 10) : ''),
+  }),
+}));
+
 jest.mock('@/lib/api/error', () => ({
   isConflictError: jest.fn(() => false),
   isNotFoundError: jest.fn(() => false),

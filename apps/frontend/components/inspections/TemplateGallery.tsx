@@ -22,7 +22,7 @@
  * - skip checkbox: aria-label + tab order 정상
  */
 
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ClipboardList, FilePlus2 } from 'lucide-react';
 import {
@@ -41,6 +41,7 @@ import type { InspectionTemplateGalleryEntry } from '@/lib/api/inspection-templa
 import { markGallerySkipped } from '@/lib/inspection/template-gallery-skip';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface TemplateGalleryProps {
   open: boolean;
@@ -66,9 +67,8 @@ export function TemplateGallery({
   const t = useTranslations(inspectionType === 'intermediate' ? 'calibration' : 'equipment');
   const tPrefix = inspectionType === 'intermediate' ? 'intermediateInspection' : 'selfInspection';
   const k = (suffix: string) => `${tPrefix}.gallery.${suffix}` as Parameters<typeof t>[0];
+  const { fmtDate } = useDateFormatter();
 
-  const titleId = useId();
-  const descId = useId();
   const [skipNextTime, setSkipNextTime] = useState(false);
 
   const handleClose = (selectedEntry: InspectionTemplateGalleryEntry | null) => {
@@ -87,10 +87,10 @@ export function TemplateGallery({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl" aria-labelledby={titleId} aria-describedby={descId}>
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle id={titleId}>{t(k('title'))}</DialogTitle>
-          <DialogDescription id={descId}>{t(k('description'))}</DialogDescription>
+          <DialogTitle>{t(k('title'))}</DialogTitle>
+          <DialogDescription>{t(k('description'))}</DialogDescription>
         </DialogHeader>
 
         <div className={INSPECTION_TEMPLATE_GALLERY_CARD_TOKENS.grid}>
@@ -133,7 +133,7 @@ export function TemplateGallery({
               <span className={INSPECTION_TEMPLATE_GALLERY_CARD_TOKENS.cardMeta}>
                 {t(k('cardMeta'), {
                   version: entry.template.version,
-                  date: entry.template.createdAt.slice(0, 10),
+                  date: fmtDate(entry.template.createdAt),
                 })}
               </span>
             </button>

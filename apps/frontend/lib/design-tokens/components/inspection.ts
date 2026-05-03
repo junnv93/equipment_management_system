@@ -148,11 +148,11 @@ export const INSPECTION_MOTION = {
  */
 export const INSPECTION_ITEM_CARD = {
   /** 기본 카드 */
-  base: ['border rounded-lg p-3 relative', INSPECTION_MOTION.itemCard].join(' '),
+  base: ['border rounded-md p-3 relative', INSPECTION_MOTION.itemCard].join(' '),
   /** 항목 번호 */
   number: 'text-sm font-medium text-muted-foreground',
   /** 그리드 레이아웃 */
-  fieldGrid: 'grid grid-cols-2 gap-3',
+  fieldGrid: 'grid grid-cols-1 gap-3 sm:grid-cols-2',
   /** 필드 라벨 */
   fieldLabel: 'text-xs',
 } as const;
@@ -184,6 +184,40 @@ export const INSPECTION_TABLE = {
   stripe: 'even:bg-muted/30 dark:even:bg-muted/20',
   rowHover: ['hover:bg-muted/50', TRANSITION_PRESETS.instantBg].join(' '),
   numericCell: 'font-mono tabular-nums text-sm',
+} as const;
+
+// ============================================================================
+// 7b. INSPECTION_FORM_LAYOUT — responsive field grids
+// ============================================================================
+
+/**
+ * 점검 폼 공통 responsive layout.
+ *
+ * SSOT: Dialog 내부 field grid는 고정 `grid-cols-*` 대신 이 토큰을 사용.
+ */
+export const INSPECTION_FORM_LAYOUT = {
+  twoColumn: 'grid grid-cols-1 gap-4 sm:grid-cols-2',
+  threeColumn: 'grid grid-cols-1 gap-4 md:grid-cols-3',
+  sectionHeader: 'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
+  actionRow: 'grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
+  specialNoteRow:
+    'grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_9rem_2rem] sm:items-center',
+  stickyFooter:
+    'sticky bottom-0 -mx-6 -mb-6 border-t bg-background/95 px-6 pt-3 pb-[calc(theme(spacing.3)+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80',
+} as const;
+
+// ============================================================================
+// 7c. INSPECTION_HISTORY — shared history list/card affordances
+// ============================================================================
+
+export const INSPECTION_HISTORY = {
+  card: 'rounded-md border p-4 space-y-3 [content-visibility:auto] [contain-intrinsic-size:1px_18rem]',
+  cardHeader: 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between',
+  cardTitleRow: 'flex min-w-0 flex-wrap items-center gap-2',
+  textClamp: 'min-w-0 break-words',
+  mutedTextClamp: 'min-w-0 break-words text-sm text-muted-foreground',
+  rejectionAlert:
+    'rounded-md border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive break-words',
 } as const;
 
 // ============================================================================
@@ -408,7 +442,7 @@ export const INSPECTION_NESTED_DIALOG_BACKDROP = {
  */
 export const INSPECTION_SECTION_TYPE_CHIP = {
   /** chip 컨테이너 — 3개 칩 동일 폭 grid */
-  group: 'mt-2 grid grid-cols-3 gap-1.5',
+  group: 'mt-2 grid grid-cols-1 gap-1.5 min-[380px]:grid-cols-3',
   /** chip 단위 — min-w 강제 + 32px hit height + 아이콘 + 텍스트 */
   chip: 'inline-flex h-8 min-w-20 items-center justify-center gap-1 rounded-md border bg-background px-2 text-xs font-medium hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary',
   /** chip 아이콘 */
@@ -574,11 +608,12 @@ export const INSPECTION_CHECKITEM_ROW_STATE = {
  */
 export const INSPECTION_CHECKITEM_ROW_GRID = {
   /** desktop 6-cell grid */
-  containerCols: 'grid grid-cols-[28px_1.5fr_0.8fr_1fr_180px_28px] gap-2 items-center',
+  containerCols:
+    'grid grid-cols-1 gap-2 min-[760px]:grid-cols-[28px_minmax(0,1.5fr)_minmax(0,0.8fr)_minmax(0,1fr)_180px_28px] min-[760px]:items-center',
   /** mobile 760px 이하 flex stack — sm:hidden 브레이크포인트 매핑 (실제 사용처에서 sm: 적용) */
   containerColsMobile: 'flex flex-col gap-2',
   /** 인덱스 셀 (28px) */
-  cellIndex: 'text-xs text-muted-foreground text-right shrink-0 tabular-nums',
+  cellIndex: 'text-xs text-muted-foreground text-left min-[760px]:text-right shrink-0 tabular-nums',
   /** 측정값 / 기준 입력 셀 공통 (도메인 mono font 권장) */
   cellInput: 'font-mono tabular-nums text-sm',
   /** 삭제 버튼 셀 */

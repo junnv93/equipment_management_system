@@ -71,6 +71,8 @@ import {
   getSemanticBadgeClasses,
   getInspectionStatusSemantic,
   INSPECTION_KIND_BADGE,
+  INSPECTION_HISTORY,
+  INSPECTION_TABLE,
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
@@ -255,7 +257,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <AlertTriangle className="h-8 w-8 text-brand-warning" aria-hidden="true" />
             <p className="text-muted-foreground mt-2 text-sm">{tSI('error')}</p>
           </div>
         </CardContent>
@@ -266,8 +268,8 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex flex-wrap items-center gap-2">
+        <CardHeader className={INSPECTION_HISTORY.cardHeader}>
+          <CardTitle className={INSPECTION_HISTORY.cardTitleRow}>
             {tSI('title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
             {/* Phase 0B: 분류 시각 — 중간점검과 색·라벨 차이 (디자인 리뷰 b8) */}
@@ -275,7 +277,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
           </CardTitle>
           {canSubmit && (
             <Button size="sm" onClick={() => setIsFormOpen(true)}>
-              <FileText className="h-4 w-4 mr-1" />
+              <FileText className="h-4 w-4 mr-1" aria-hidden="true" />
               {t('inspection.createButton')}
             </Button>
           )}
@@ -319,9 +321,9 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                   canDoDelete;
 
                 return (
-                  <div key={inspection.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                  <div key={inspection.id} className={INSPECTION_HISTORY.card}>
+                    <div className={INSPECTION_HISTORY.cardHeader}>
+                      <div className={INSPECTION_HISTORY.cardTitleRow}>
                         <Button
                           type="button"
                           variant="ghost"
@@ -335,12 +337,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                           onClick={() => setExpandedId(isExpanded ? null : inspection.id)}
                         >
                           {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-4 w-4" aria-hidden="true" />
                           ) : (
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
                           )}
                         </Button>
-                        <span className="font-medium">{inspectionDateLabel}</span>
+                        <span className="font-medium tabular-nums">{inspectionDateLabel}</span>
                         <Badge
                           className={getSemanticBadgeClasses(
                             getInspectionStatusSemantic(approvalStatus)
@@ -375,19 +377,19 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   inspectionDateLabel
                                 )}
                               >
-                                <MoreHorizontal className="h-3.5 w-3.5" />
+                                <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {canDoEdit && (
                                 <DropdownMenuItem onClick={() => setEditTarget(inspection)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
+                                  <Pencil className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.edit')}
                                 </DropdownMenuItem>
                               )}
                               {canDoResubmitEdit && approvalStatus === 'rejected' && (
                                 <DropdownMenuItem onClick={() => setEditTarget(inspection)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
+                                  <Pencil className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.edit')}
                                 </DropdownMenuItem>
                               )}
@@ -401,7 +403,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   }
                                   disabled={submitMutation.isPending}
                                 >
-                                  <SendHorizontal className="h-4 w-4 mr-2" />
+                                  <SendHorizontal className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.submit')}
                                 </DropdownMenuItem>
                               )}
@@ -415,7 +417,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   }
                                   disabled={withdrawMutation.isPending}
                                 >
-                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.withdraw')}
                                 </DropdownMenuItem>
                               )}
@@ -429,7 +431,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   }
                                   disabled={approveMutation.isPending}
                                 >
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  <CheckCircle2 className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.approve')}
                                 </DropdownMenuItem>
                               )}
@@ -439,7 +441,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                     setRejectTarget(inspection);
                                   }}
                                 >
-                                  <XCircle className="h-4 w-4 mr-2" />
+                                  <XCircle className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.reject')}
                                 </DropdownMenuItem>
                               )}
@@ -453,7 +455,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                   }
                                   disabled={resubmitMutation.isPending}
                                 >
-                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  <RotateCcw className="h-4 w-4 mr-2" aria-hidden="true" />
                                   {tSI('actions.resubmit')}
                                 </DropdownMenuItem>
                               )}
@@ -464,7 +466,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                                     onClick={() => setDeleteTarget(inspection)}
                                     className={MENU_ITEM_TOKENS.destructive}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
                                     {tSI('actions.delete')}
                                   </DropdownMenuItem>
                                 </>
@@ -477,37 +479,41 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
 
                     {/* 반려 사유 표시 */}
                     {approvalStatus === 'rejected' && inspection.rejectionReason && (
-                      <div className="bg-destructive/10 rounded p-2 text-sm text-destructive">
+                      <div className={INSPECTION_HISTORY.rejectionAlert}>
                         <span className="font-medium">{tSI('rejectDialog.reasonLabel')}:</span>{' '}
                         {inspection.rejectionReason}
                       </div>
                     )}
 
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-16">{tSI('itemNumber')}</TableHead>
-                          <TableHead>{tSI('checkItem')}</TableHead>
-                          <TableHead className="w-24">{tSI('checkResult')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((item) => (
-                          <TableRow key={`${inspection.id}-${item.itemNumber}`}>
-                            <TableCell>{item.itemNumber}</TableCell>
-                            <TableCell>{item.checkItem}</TableCell>
-                            <TableCell>
-                              <Badge className={getJudgmentBadgeClasses(item.checkResult)}>
-                                {tSI(`judgment.${item.checkResult}`)}
-                              </Badge>
-                            </TableCell>
+                    <div className={INSPECTION_TABLE.wrapper}>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-16">{tSI('itemNumber')}</TableHead>
+                            <TableHead>{tSI('checkItem')}</TableHead>
+                            <TableHead className="w-24">{tSI('checkResult')}</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item) => (
+                            <TableRow key={`${inspection.id}-${item.itemNumber}`}>
+                              <TableCell className="tabular-nums">{item.itemNumber}</TableCell>
+                              <TableCell className={INSPECTION_HISTORY.textClamp}>
+                                {item.checkItem}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getJudgmentBadgeClasses(item.checkResult)}>
+                                  {tSI(`judgment.${item.checkResult}`)}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
 
                     {inspection.remarks && (
-                      <p className="text-muted-foreground text-sm">
+                      <p className={INSPECTION_HISTORY.mutedTextClamp}>
                         <span className="font-medium">{tSI('remarks')}:</span> {inspection.remarks}
                       </p>
                     )}
@@ -517,9 +523,9 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                       inspection.specialNotes.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{tSI('specialNotes.label')}</p>
-                          <ul className="text-sm text-muted-foreground list-disc list-inside space-y-0.5">
+                          <ul className="list-inside list-disc space-y-0.5 text-sm text-muted-foreground">
                             {inspection.specialNotes.map((note, i) => (
-                              <li key={i}>
+                              <li key={i} className="break-words">
                                 {note.content}
                                 {note.date && <span className="ml-2 text-xs">({note.date})</span>}
                               </li>
@@ -591,6 +597,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
             <AlertDialogCancel>{tSI('deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault();
                 if (deleteTarget) deleteMutation.mutate({ id: deleteTarget.id });

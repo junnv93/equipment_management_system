@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import {
   ClipboardList,
+  ChevronDown,
+  ChevronRight,
   FileText,
   Send,
   CheckCircle,
@@ -29,6 +31,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -47,8 +59,6 @@ import type { InspectionApprovalStatus } from '@equipment-management/schemas';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import RejectModal from '@/components/approvals/RejectModal';
 import { mapIntermediateInspectionErrorToToast } from '@/lib/errors/intermediate-inspection-errors';
-import { format } from 'date-fns';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -58,6 +68,7 @@ import {
   INSPECTION_TABLE,
   INSPECTION_FOCUS,
   INSPECTION_KIND_BADGE,
+  INSPECTION_HISTORY,
   getResultBadgeClasses,
   getSemanticLeftBorderClasses,
   getInspectionStatusSemantic,
@@ -65,6 +76,7 @@ import {
   MENU_ITEM_TOKENS,
 } from '@/lib/design-tokens';
 import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 const InspectionFormDialog = dynamic(
   () => import('@/components/inspections/InspectionFormDialog'),
@@ -86,9 +98,11 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const [rejectingTarget, setRejectingTarget] = useState<{ id: string; version: number } | null>(
     null
   );
+  const [deleteTarget, setDeleteTarget] = useState<IntermediateInspection | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { can, user } = useAuth();
   const { toast } = useToast();
+  const { fmtDate } = useDateFormatter();
 
   const primaryQueryKey = queryKeys.equipment.intermediateInspections(equipmentId);
   const crossInvalidateKeys = [
@@ -213,6 +227,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.deleteSuccess'),
     errorMessage: t('intermediateInspection.toasts.deleteError'),
+    onSuccessCallback: () => setDeleteTarget(null),
   });
 
   const isPending =
@@ -246,7 +261,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
 
   const renderActions = (inspection: IntermediateInspection) => {
     const { id, version, approvalStatus } = inspection;
-    const inspectionDateLabel = format(new Date(inspection.inspectionDate), 'yyyy-MM-dd');
+    const inspectionDateLabel = fmtDate(inspection.inspectionDate);
 
     // 삭제 가시성: 시험실무자(draft/submitted/rejected), 기술책임자(모든 상태)
     const showDelete =
@@ -268,7 +283,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'draft' && canSubmit) {
       items.push({
         key: 'submit',
-        icon: <Send className="h-4 w-4 mr-2" />,
+        icon: <Send className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.submit'),
         onClick: () => submitMutation.mutate({ id, version }),
       });
@@ -276,7 +291,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'submitted' && canWithdraw && inspection.submittedBy === user?.id) {
       items.push({
         key: 'withdraw',
-        icon: <Undo2 className="h-4 w-4 mr-2" />,
+        icon: <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.withdraw'),
         onClick: () => withdrawMutation.mutate({ id, version }),
       });
@@ -284,7 +299,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'submitted' && canReview) {
       items.push({
         key: 'review',
-        icon: <CheckCircle className="h-4 w-4 mr-2" />,
+        icon: <CheckCircle className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.review'),
         onClick: () => reviewMutation.mutate({ id, version }),
       });
@@ -292,7 +307,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if ((approvalStatus === 'submitted' || approvalStatus === 'reviewed') && canReject) {
       items.push({
         key: 'reject',
-        icon: <XCircle className="h-4 w-4 mr-2" />,
+        icon: <XCircle className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.reject'),
         onClick: () => setRejectingTarget({ id, version }),
       });
@@ -300,7 +315,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'reviewed' && canApprove) {
       items.push({
         key: 'approve',
-        icon: <CheckCircle className="h-4 w-4 mr-2" />,
+        icon: <CheckCircle className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.approve'),
         onClick: () => approveMutation.mutate({ id, version }),
       });
@@ -308,7 +323,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'rejected' && canSubmit) {
       items.push({
         key: 'resubmit',
-        icon: <Undo2 className="h-4 w-4 mr-2" />,
+        icon: <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.resubmit'),
         onClick: () => resubmitMutation.mutate({ id, version }),
       });
@@ -316,7 +331,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (approvalStatus === 'approved' && canExport) {
       items.push({
         key: 'export',
-        icon: <Download className="h-4 w-4 mr-2" />,
+        icon: <Download className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.exportForm'),
         onClick: () => handleExport(id),
       });
@@ -324,9 +339,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     if (showDelete) {
       items.push({
         key: 'delete',
-        icon: <Trash2 className="h-4 w-4 mr-2" />,
+        icon: <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />,
         label: t('intermediateInspection.actions.delete'),
-        onClick: () => deleteMutation.mutate({ id }),
+        onClick: () => setDeleteTarget(inspection),
         destructive: true,
       });
     }
@@ -349,7 +364,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               date: inspectionDateLabel,
             })}
           >
-            <MoreHorizontal className="h-3.5 w-3.5" />
+            <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -412,8 +427,8 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex flex-wrap items-center gap-2">
+        <CardHeader className={INSPECTION_HISTORY.cardHeader}>
+          <CardTitle className={INSPECTION_HISTORY.cardTitleRow}>
             {tEquip('inspection.intermediateTitle')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
             {/* Phase 0B: 분류 시각 — 자체점검과 색·라벨 차이 (디자인 리뷰 b8) */}
@@ -422,7 +437,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             </span>
           </CardTitle>
           <Button size="sm" onClick={() => setIsFormOpen(true)}>
-            <FileText className="h-4 w-4 mr-1" />
+            <FileText className="h-4 w-4 mr-1" aria-hidden="true" />
             {tEquip('inspection.createButton')}
           </Button>
         </CardHeader>
@@ -483,9 +498,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
                           <TableCell className={INSPECTION_TABLE.numericCell}>
                             <span className="mr-1 inline-block w-4">
                               {expandedId === inspection.id ? (
-                                <ChevronDown className="h-3 w-3" />
+                                <ChevronDown className="h-3 w-3" aria-hidden="true" />
                               ) : (
-                                <ChevronRight className="h-3 w-3" />
+                                <ChevronRight className="h-3 w-3" aria-hidden="true" />
                               )}
                               <span className="sr-only">
                                 {expandedId === inspection.id
@@ -493,7 +508,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
                                   : tEquip('inspection.expand')}
                               </span>
                             </span>
-                            {format(new Date(inspection.inspectionDate), 'yyyy-MM-dd')}
+                            {fmtDate(inspection.inspectionDate)}
                           </TableCell>
                           <TableCell>
                             {inspection.overallResult ? (
@@ -579,6 +594,30 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
         title={t('intermediateInspection.actions.reject')}
         description={t('intermediateInspection.rejectionReasonPlaceholder')}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('intermediateInspection.deleteDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('intermediateInspection.deleteDialog.message')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('intermediateInspection.deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteTarget) deleteMutation.mutate({ id: deleteTarget.id });
+              }}
+            >
+              {t('intermediateInspection.deleteDialog.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

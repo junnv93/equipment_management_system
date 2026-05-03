@@ -37,12 +37,14 @@ import {
   INSPECTION_CHECKITEM_ROW_GRID,
   INSPECTION_OVERALL_RESULT_TOGGLE,
   INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
+  INSPECTION_FORM_LAYOUT,
   getInspectionStatusBadgeClasses,
 } from '@/lib/design-tokens';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CheckItemPresetSelect from './CheckItemPresetSelect';
 import { cn } from '@/lib/utils';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useLatestTemplate } from '@/hooks/use-inspection-template';
 import { track } from '@/lib/analytics/track';
@@ -132,12 +134,19 @@ const CheckItemRow = memo(function CheckItemRow({
     >
       <span className={INSPECTION_CHECKITEM_ROW_GRID.cellIndex}>{index + 1}</span>
       <Input
+        id={`self-inspection-item-${index}-name`}
+        name={`selfInspectionItems.${index}.checkItem`}
+        autoComplete="off"
         value={item.checkItem}
         onChange={(e) => onItemChange(index, 'checkItem', e.target.value)}
         placeholder={t('selfInspection.form.itemNamePlaceholder')}
         aria-label={t('selfInspection.checkItem')}
       />
       <Input
+        id={`self-inspection-item-${index}-measurement`}
+        name={`selfInspectionItems.${index}.measurement`}
+        autoComplete="off"
+        inputMode="decimal"
         value={item.measurement}
         onChange={(e) => onItemChange(index, 'measurement', e.target.value)}
         placeholder={t('selfInspection.measurementPlaceholder')}
@@ -146,6 +155,9 @@ const CheckItemRow = memo(function CheckItemRow({
         className={INSPECTION_CHECKITEM_ROW_GRID.cellInput}
       />
       <Input
+        id={`self-inspection-item-${index}-criteria`}
+        name={`selfInspectionItems.${index}.criteria`}
+        autoComplete="off"
         value={item.criteria}
         onChange={(e) => onItemChange(index, 'criteria', e.target.value)}
         placeholder={t('selfInspection.criteriaPlaceholder')}
@@ -193,7 +205,7 @@ const CheckItemRow = memo(function CheckItemRow({
         aria-label={t('selfInspection.form.removeItem')}
         className="h-7 w-7 p-0"
       >
-        <Trash2 className="h-4 w-4 text-destructive" />
+        <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
       </Button>
     </div>
   );
@@ -237,6 +249,7 @@ function SelfInspectionFormDialogInner({
   const tErrors = useTranslations('errors');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { fmtDate } = useDateFormatter();
 
   const isEdit = !!initialData;
 
@@ -507,7 +520,7 @@ function SelfInspectionFormDialogInner({
       }}
     >
       <DialogContent
-        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        className="max-h-[85vh] max-w-2xl overflow-y-auto overscroll-contain"
         // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
@@ -529,7 +542,7 @@ function SelfInspectionFormDialogInner({
                 className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
                 aria-label={t('selfInspection.template.versionBadgeAria', {
                   version: currentTemplate.version,
-                  date: currentTemplate.createdAt.slice(0, 10),
+                  date: fmtDate(currentTemplate.createdAt),
                   author:
                     currentTemplate.createdByName ?? t('selfInspection.template.systemAuthor'),
                 })}
@@ -548,7 +561,7 @@ function SelfInspectionFormDialogInner({
                   ·
                 </span>
                 <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.meta}>
-                  {currentTemplate.createdAt.slice(0, 10)}
+                  {fmtDate(currentTemplate.createdAt)}
                   {' · '}
                   {currentTemplate.createdByName ?? t('selfInspection.template.systemAuthor')}
                 </span>
@@ -605,11 +618,14 @@ function SelfInspectionFormDialogInner({
 
         <div className="space-y-4">
           {/* 점검일 + 종합결과 + 점검 주기 */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className={INSPECTION_FORM_LAYOUT.threeColumn}>
             <div className="space-y-2">
-              <Label>{t('selfInspection.date')}</Label>
+              <Label htmlFor="self-inspection-date">{t('selfInspection.date')}</Label>
               <Input
+                id="self-inspection-date"
+                name="selfInspectionDate"
                 type="date"
+                autoComplete="off"
                 value={inspectionDate}
                 onChange={(e) => setInspectionDate(e.target.value)}
                 required
@@ -652,11 +668,17 @@ function SelfInspectionFormDialogInner({
               </ToggleGroup>
             </div>
             <div className="space-y-2">
-              <Label>{t('selfInspection.inspectionCycle.label')}</Label>
+              <Label htmlFor="self-inspection-cycle">
+                {t('selfInspection.inspectionCycle.label')}
+              </Label>
               <Input
+                id="self-inspection-cycle"
+                name="selfInspectionCycle"
                 type="number"
                 min={1}
                 max={60}
+                inputMode="numeric"
+                autoComplete="off"
                 value={inspectionCycle}
                 onChange={(e) => setInspectionCycle(Number(e.target.value))}
               />
@@ -668,14 +690,16 @@ function SelfInspectionFormDialogInner({
             <p className="text-xs font-medium text-muted-foreground">
               {t('selfInspection.form.snapshotSectionLabel')}
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={INSPECTION_FORM_LAYOUT.twoColumn}>
               <div className="space-y-2">
-                <Label>{t('selfInspection.snapshotClassificationLabel')}</Label>
+                <Label htmlFor="self-inspection-classification">
+                  {t('selfInspection.snapshotClassificationLabel')}
+                </Label>
                 <Select
                   value={classification}
                   onValueChange={(v) => setClassification(v as EquipmentClassification)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="self-inspection-classification">
                     <SelectValue placeholder={t('selfInspection.form.selectClassification')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -689,8 +713,13 @@ function SelfInspectionFormDialogInner({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('selfInspection.snapshotCalibrationValidityPeriodLabel')}</Label>
+                <Label htmlFor="self-inspection-calibration-validity-period">
+                  {t('selfInspection.snapshotCalibrationValidityPeriodLabel')}
+                </Label>
                 <Input
+                  id="self-inspection-calibration-validity-period"
+                  name="selfInspectionCalibrationValidityPeriod"
+                  autoComplete="off"
                   value={calibrationValidityPeriod}
                   onChange={(e) => setCalibrationValidityPeriod(e.target.value)}
                   placeholder={t('selfInspection.form.calibrationValidityPeriodPlaceholder')}
@@ -702,14 +731,17 @@ function SelfInspectionFormDialogInner({
 
           {/* 점검 항목 — Phase 0C: 정합성 alert + segmented + preset prominent */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className={INSPECTION_FORM_LAYOUT.sectionHeader}>
               <Label className="text-base font-semibold">{t('selfInspection.checkItem')}</Label>
             </div>
 
             {/* Phase 0C: 종합↔항목 정합성 alert (role=alert, WCAG 4.1.3) */}
             {showConsistencyAlert && (
               <div role="alert" className={INSPECTION_CHECKITEM_ROW_STATE.consistencyAlert}>
-                <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+                <AlertCircle
+                  className="h-4 w-4 shrink-0 text-destructive mt-0.5"
+                  aria-hidden="true"
+                />
                 <div className="flex-1 space-y-1">
                   <p className={INSPECTION_CHECKITEM_ROW_STATE.consistencyAlertTitle}>
                     {t('selfInspection.consistencyAlert.title')}
@@ -731,10 +763,10 @@ function SelfInspectionFormDialogInner({
             )}
 
             {/* Phase 0C: 프리셋 + 직접 추가 — prominent 위치 (디자인 리뷰 b8) */}
-            <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+            <div className={INSPECTION_FORM_LAYOUT.actionRow}>
               <CheckItemPresetSelect onSelect={(checkItem) => handlePresetSelect(checkItem)} />
               <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
                 {t('selfInspection.preset.addCustomLabel')}
               </Button>
             </div>
@@ -755,8 +787,11 @@ function SelfInspectionFormDialogInner({
 
           {/* 비고 */}
           <div className="space-y-2">
-            <Label>{t('selfInspection.remarks')}</Label>
+            <Label htmlFor="self-inspection-remarks">{t('selfInspection.remarks')}</Label>
             <Textarea
+              id="self-inspection-remarks"
+              name="selfInspectionRemarks"
+              autoComplete="off"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder={t('selfInspection.form.remarksPlaceholder')}
@@ -766,7 +801,7 @@ function SelfInspectionFormDialogInner({
 
           {/* 기타 특기사항 (QP-18-05 섹션 3) */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className={INSPECTION_FORM_LAYOUT.sectionHeader}>
               <Label className="text-base font-semibold">
                 {t('selfInspection.specialNotes.label')}
               </Label>
@@ -776,18 +811,21 @@ function SelfInspectionFormDialogInner({
                 size="sm"
                 onClick={() => setSpecialNotes((prev) => [...prev, { content: '', date: '' }])}
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
                 {t('selfInspection.specialNotes.addButton')}
               </Button>
             </div>
             {specialNotes.length > 0 && (
               <div className="space-y-2">
                 {specialNotes.map((note, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className={INSPECTION_FORM_LAYOUT.specialNoteRow}>
                     <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
                       {index + 1}
                     </span>
                     <Input
+                      id={`self-inspection-special-note-${index}-content`}
+                      name={`selfInspectionSpecialNotes.${index}.content`}
+                      autoComplete="off"
                       value={note.content}
                       onChange={(e) =>
                         setSpecialNotes((prev) =>
@@ -795,9 +833,12 @@ function SelfInspectionFormDialogInner({
                         )
                       }
                       placeholder={t('selfInspection.specialNotes.contentPlaceholder')}
-                      className="flex-1"
+                      className="min-w-0"
                     />
                     <Input
+                      id={`self-inspection-special-note-${index}-date`}
+                      name={`selfInspectionSpecialNotes.${index}.date`}
+                      autoComplete="off"
                       value={note.date}
                       onChange={(e) =>
                         setSpecialNotes((prev) =>
@@ -805,7 +846,7 @@ function SelfInspectionFormDialogInner({
                         )
                       }
                       placeholder={t('selfInspection.specialNotes.datePlaceholder')}
-                      className="w-36"
+                      className="w-full"
                       type="date"
                     />
                     <Button
@@ -813,8 +854,12 @@ function SelfInspectionFormDialogInner({
                       variant="ghost"
                       size="sm"
                       onClick={() => setSpecialNotes((prev) => prev.filter((_, i) => i !== index))}
+                      aria-label={t('selfInspection.specialNotes.removeButton', {
+                        number: index + 1,
+                      })}
+                      className="h-8 w-8 p-0"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                     </Button>
                   </div>
                 ))}
@@ -823,7 +868,7 @@ function SelfInspectionFormDialogInner({
           </div>
         </div>
 
-        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <DialogFooter className={INSPECTION_FORM_LAYOUT.stickyFooter}>
           <Button variant="outline" onClick={close.requestClose}>
             {t('selfInspection.form.cancel')}
           </Button>

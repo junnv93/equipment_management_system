@@ -362,7 +362,7 @@
       "remarksPlaceholder": "비고 사항을 입력하세요",
       "cancel": "취소",
       "save": "저장",
-      "saving": "저장 중...",
+      "saving": "저장 중…",
       "createSuccess": "자체점검 기록이 생성되었습니다.",
       "createError": "자체점검 기록 생성에 실패했습니다.",
       "editTitle": "자체점검 기록 수정",
@@ -426,6 +426,7 @@
     "specialNotes": {
       "label": "기타 특기사항",
       "addButton": "항목 추가",
+      "removeButton": "{number}번 특기사항 삭제",
       "contentPlaceholder": "조치 내용을 입력하세요",
       "datePlaceholder": "날짜 (선택)"
     },

@@ -56,6 +56,7 @@ import {
   INSPECTION_PREFILL,
   INSPECTION_PREFILL_NOTICE,
   INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS,
+  INSPECTION_FORM_LAYOUT,
   getJudgmentCardClasses,
   ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
@@ -64,6 +65,7 @@ import { templateStructureToPrefill } from '@/lib/inspection/template-source';
 import { buildCurrentStructure, diffFormAgainstTemplate } from '@/lib/inspection/structure-diff';
 import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form-context';
 import { useFormDialogClose } from '@/hooks/use-form-dialog-close';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   useLatestTemplate,
   useUpsertTemplate,
@@ -145,6 +147,7 @@ function InspectionFormDialogInner({
   const tEquip = useTranslations('equipment');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { fmtDate } = useDateFormatter();
 
   // Phase 1A-b: prefill state는 InspectionFormContext SSOT로 통합.
   // Phase 0A-ext++: master state 이중 sourcing 제거 (addMasterPrefilledField 직접 호출)
@@ -781,7 +784,7 @@ function InspectionFormDialogInner({
       }}
     >
       <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="max-h-[90vh] max-w-3xl overflow-y-auto overscroll-contain"
         // Phase 0A: outside-click → form reset → 작성 중 데이터 손실 방지 (디자인 리뷰 b6)
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
@@ -801,7 +804,7 @@ function InspectionFormDialogInner({
                 className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
                 aria-label={t('intermediateInspection.template.versionBadgeAria', {
                   version: currentTemplate.version,
-                  date: currentTemplate.createdAt.slice(0, 10),
+                  date: fmtDate(currentTemplate.createdAt),
                   author:
                     currentTemplate.createdByName ??
                     t('intermediateInspection.template.systemAuthor'),
@@ -821,7 +824,7 @@ function InspectionFormDialogInner({
                   ·
                 </span>
                 <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.meta}>
-                  {currentTemplate.createdAt.slice(0, 10)}
+                  {fmtDate(currentTemplate.createdAt)}
                   {' · '}
                   {currentTemplate.createdByName ??
                     t('intermediateInspection.template.systemAuthor')}
@@ -866,7 +869,7 @@ function InspectionFormDialogInner({
               }}
               aria-label={t('intermediateInspection.prefill.banner.dismiss')}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -891,28 +894,35 @@ function InspectionFormDialogInner({
         <div className={INSPECTION_SPACING.section}>
           {isEquipmentError && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>{t('intermediateInspection.equipmentLoadError')}</AlertDescription>
             </Alert>
           )}
           {/* 점검일 + 종합 판정 */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className={INSPECTION_FORM_LAYOUT.twoColumn}>
             <div className={INSPECTION_SPACING.field}>
-              <Label>{t('intermediateInspection.inspectionDate')}</Label>
+              <Label htmlFor="intermediate-inspection-date">
+                {t('intermediateInspection.inspectionDate')}
+              </Label>
               <Input
+                id="intermediate-inspection-date"
+                name="intermediateInspectionDate"
                 type="date"
+                autoComplete="off"
                 value={inspectionDate}
                 onChange={(e) => setInspectionDate(e.target.value)}
                 required
               />
             </div>
             <div className={INSPECTION_SPACING.field}>
-              <Label>{t('intermediateInspection.overallResult')}</Label>
+              <Label htmlFor="intermediate-inspection-overall-result">
+                {t('intermediateInspection.overallResult')}
+              </Label>
               <Select
                 value={overallResult}
                 onValueChange={(v) => setOverallResult(v as InspectionResult)}
               >
-                <SelectTrigger>
+                <SelectTrigger id="intermediate-inspection-overall-result">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -932,7 +942,7 @@ function InspectionFormDialogInner({
 
           {/* 점검 주기 + 교정 유효기간 */}
           {isEquipmentLoading ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className={INSPECTION_FORM_LAYOUT.twoColumn}>
               <div className={INSPECTION_SPACING.field}>
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-10 w-full" />
@@ -943,13 +953,18 @@ function InspectionFormDialogInner({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className={INSPECTION_FORM_LAYOUT.twoColumn}>
               <div className={INSPECTION_SPACING.field}>
                 <div className="flex items-center">
-                  <Label>{t('intermediateInspection.inspectionCycle')}</Label>
+                  <Label htmlFor="intermediate-inspection-cycle">
+                    {t('intermediateInspection.inspectionCycle')}
+                  </Label>
                   {renderPrefillBadge('inspectionCycle')}
                 </div>
                 <Input
+                  id="intermediate-inspection-cycle"
+                  name="intermediateInspectionCycle"
+                  autoComplete="off"
                   value={inspectionCycle}
                   onChange={(e) => {
                     setInspectionCycle(e.target.value);
@@ -960,10 +975,15 @@ function InspectionFormDialogInner({
               </div>
               <div className={INSPECTION_SPACING.field}>
                 <div className="flex items-center">
-                  <Label>{t('intermediateInspection.calibrationValidityPeriod')}</Label>
+                  <Label htmlFor="intermediate-inspection-calibration-validity-period">
+                    {t('intermediateInspection.calibrationValidityPeriod')}
+                  </Label>
                   {renderPrefillBadge('calibrationValidityPeriod')}
                 </div>
                 <Input
+                  id="intermediate-inspection-calibration-validity-period"
+                  name="intermediateInspectionCalibrationValidityPeriod"
+                  autoComplete="off"
                   value={calibrationValidityPeriod}
                   onChange={(e) => {
                     setCalibrationValidityPeriod(e.target.value);
@@ -977,7 +997,7 @@ function InspectionFormDialogInner({
 
           {/* 점검 항목 동적 배열 */}
           <div className={INSPECTION_SPACING.group}>
-            <div className="flex items-center justify-between">
+            <div className={INSPECTION_FORM_LAYOUT.sectionHeader}>
               <Label className="text-base font-semibold">
                 {t('intermediateInspection.items.title')}
               </Label>
@@ -990,7 +1010,7 @@ function InspectionFormDialogInner({
                   onClick={handleAddItem}
                   aria-label={t('intermediateInspection.items.addItem')}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
                   {t('intermediateInspection.items.addItem')}
                 </Button>
               </div>
@@ -1059,47 +1079,68 @@ function InspectionFormDialogInner({
                         onClick={() => handleRemoveItem(index)}
                         aria-label={t('intermediateInspection.items.removeItem')}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                       </Button>
                     </div>
 
                     <div className={INSPECTION_ITEM_CARD.fieldGrid}>
                       <div className={INSPECTION_SPACING.field}>
-                        <Label className={INSPECTION_ITEM_CARD.fieldLabel}>
+                        <Label
+                          htmlFor={`intermediate-inspection-item-${index}-check-item`}
+                          className={INSPECTION_ITEM_CARD.fieldLabel}
+                        >
                           {t('intermediateInspection.items.checkItem')}
                         </Label>
                         <Input
+                          id={`intermediate-inspection-item-${index}-check-item`}
+                          name={`intermediateInspectionItems.${index}.checkItem`}
+                          autoComplete="off"
                           value={item.checkItem}
                           onChange={(e) => handleItemChange(index, 'checkItem', e.target.value)}
                         />
                       </div>
                       <div className={INSPECTION_SPACING.field}>
-                        <Label className={INSPECTION_ITEM_CARD.fieldLabel}>
+                        <Label
+                          htmlFor={`intermediate-inspection-item-${index}-criteria`}
+                          className={INSPECTION_ITEM_CARD.fieldLabel}
+                        >
                           {t('intermediateInspection.items.checkCriteria')}
                         </Label>
                         <Input
+                          id={`intermediate-inspection-item-${index}-criteria`}
+                          name={`intermediateInspectionItems.${index}.checkCriteria`}
+                          autoComplete="off"
                           value={item.checkCriteria}
                           onChange={(e) => handleItemChange(index, 'checkCriteria', e.target.value)}
                         />
                       </div>
                       <div className={INSPECTION_SPACING.field}>
-                        <Label className={INSPECTION_ITEM_CARD.fieldLabel}>
+                        <Label
+                          htmlFor={`intermediate-inspection-item-${index}-result`}
+                          className={INSPECTION_ITEM_CARD.fieldLabel}
+                        >
                           {t('intermediateInspection.items.checkResult')}
                         </Label>
                         <Input
+                          id={`intermediate-inspection-item-${index}-result`}
+                          name={`intermediateInspectionItems.${index}.checkResult`}
+                          autoComplete="off"
                           value={item.checkResult}
                           onChange={(e) => handleItemChange(index, 'checkResult', e.target.value)}
                         />
                       </div>
                       <div className={INSPECTION_SPACING.field}>
-                        <Label className={INSPECTION_ITEM_CARD.fieldLabel}>
+                        <Label
+                          htmlFor={`intermediate-inspection-item-${index}-judgment`}
+                          className={INSPECTION_ITEM_CARD.fieldLabel}
+                        >
                           {t('intermediateInspection.items.judgment')}
                         </Label>
                         <Select
                           value={item.judgment}
                           onValueChange={(v) => handleItemChange(index, 'judgment', v)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id={`intermediate-inspection-item-${index}-judgment`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1121,7 +1162,7 @@ function InspectionFormDialogInner({
 
           {/* 측정 장비 리스트 */}
           <div className={INSPECTION_SPACING.group}>
-            <div className="flex items-center justify-between">
+            <div className={INSPECTION_FORM_LAYOUT.sectionHeader}>
               <Label className="text-base font-semibold">
                 {t('intermediateInspection.measurementEquipment.title')}
               </Label>
@@ -1181,7 +1222,7 @@ function InspectionFormDialogInner({
                             onClick={() => handleRemoveMeasurementEquipment(idx)}
                             aria-label={t('intermediateInspection.items.removeItem')}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </td>
                       </tr>
@@ -1194,8 +1235,13 @@ function InspectionFormDialogInner({
 
           {/* 비고 */}
           <div className={INSPECTION_SPACING.field}>
-            <Label>{t('intermediateInspection.remarks')}</Label>
+            <Label htmlFor="intermediate-inspection-remarks">
+              {t('intermediateInspection.remarks')}
+            </Label>
             <Textarea
+              id="intermediate-inspection-remarks"
+              name="intermediateInspectionRemarks"
+              autoComplete="off"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder={t('intermediateInspection.remarksPlaceholder')}
@@ -1208,7 +1254,7 @@ function InspectionFormDialogInner({
           <InlineResultSectionsEditor sections={resultSections} onChange={setResultSections} />
         </div>
 
-        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <DialogFooter className={INSPECTION_FORM_LAYOUT.stickyFooter}>
           <Button variant="outline" onClick={close.requestClose}>
             {t('intermediateInspection.cancel')}
           </Button>

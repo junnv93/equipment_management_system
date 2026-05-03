@@ -195,7 +195,7 @@ export default function InlineResultSectionsEditor({
                         className={INSPECTION_SECTION_TYPE_CHIP.chip}
                         onClick={() => handleSelectType(idx, 'table')}
                       >
-                        <Table2 className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        <Table2 className={INSPECTION_SECTION_TYPE_CHIP.icon} aria-hidden="true" />
                         {t('types.table')}
                       </button>
                       <button
@@ -203,7 +203,7 @@ export default function InlineResultSectionsEditor({
                         className={INSPECTION_SECTION_TYPE_CHIP.chip}
                         onClick={() => handleSelectType(idx, 'photo')}
                       >
-                        <Image className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        <Image className={INSPECTION_SECTION_TYPE_CHIP.icon} aria-hidden="true" />
                         {t('types.photo')}
                       </button>
                       <button
@@ -211,7 +211,10 @@ export default function InlineResultSectionsEditor({
                         className={INSPECTION_SECTION_TYPE_CHIP.chip}
                         onClick={() => handleSelectType(idx, 'text')}
                       >
-                        <FileText className={INSPECTION_SECTION_TYPE_CHIP.icon} />
+                        <FileText
+                          className={INSPECTION_SECTION_TYPE_CHIP.icon}
+                          aria-hidden="true"
+                        />
                         {t('types.text')}
                       </button>
                     </div>

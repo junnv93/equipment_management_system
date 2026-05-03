@@ -385,13 +385,13 @@ export default function VisualTableEditor({
   return (
     <div className={INSPECTION_SPACING.group}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" onClick={addColumn} className="text-xs">
-          <Plus className="h-3 w-3 mr-1" />
+          <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
           {t('form.addColumn')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={addRow} className="text-xs">
-          <Plus className="h-3 w-3 mr-1" />
+          <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
           {t('form.addRow')}
         </Button>
 
@@ -406,7 +406,7 @@ export default function VisualTableEditor({
           title={`${t('keyboardHints.undo')} (${undoShortcutLabel})`}
           className="text-xs"
         >
-          <Undo2 className="h-3 w-3" />
+          <Undo2 className="h-3 w-3" aria-hidden="true" />
         </Button>
         <Button
           type="button"
@@ -414,19 +414,17 @@ export default function VisualTableEditor({
           variant="ghost"
           onClick={redoStructural}
           disabled={!canRedo}
-          aria-label="redo"
-          title="redo"
+          aria-label={t('keyboardHints.redo')}
+          title={t('keyboardHints.redo')}
           className="text-xs"
         >
-          <Redo2 className="h-3 w-3" />
+          <Redo2 className="h-3 w-3" aria-hidden="true" />
         </Button>
-
-        <div className="flex-1" />
 
         {/* Phase 0A: Keyboard hint bar (dismissible) */}
         {!hintsDismissed && (
           <div
-            className={INSPECTION_KEYBOARD_HINT.bar}
+            className={cn(INSPECTION_KEYBOARD_HINT.bar, 'ml-auto')}
             role="note"
             aria-label={t('keyboardHints.ariaLabel')}
           >
@@ -449,7 +447,7 @@ export default function VisualTableEditor({
               aria-label={t('keyboardHints.dismiss')}
               title={t('keyboardHints.dismiss')}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -616,9 +614,11 @@ export default function VisualTableEditor({
                   className="relative group border-b border-r last:border-r-0 bg-muted/50"
                 >
                   <Input
+                    name={`resultSectionHeader.${ci}`}
+                    aria-label={t('form.columnHeaderAriaLabel', { number: ci + 1 })}
                     value={h}
                     onChange={(e) => updateHeader(ci, e.target.value)}
-                    placeholder={`Col ${ci + 1}`}
+                    placeholder={t('form.defaultColumnHeader', { number: ci + 1 })}
                     className={cn(
                       'border-0 rounded-none bg-transparent text-xs font-semibold h-9 px-2',
                       'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-primary/5'
@@ -638,7 +638,7 @@ export default function VisualTableEditor({
                       )}
                       aria-label={t('form.deleteColumn')}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   )}
                 </th>
@@ -687,6 +687,11 @@ export default function VisualTableEditor({
                       )}
                       {cell.type === 'text' ? (
                         <Input
+                          name={`resultSectionCell.${ri}.${ci}`}
+                          aria-label={t('form.tableCellAriaLabel', {
+                            row: ri + 1,
+                            column: ci + 1,
+                          })}
                           value={cell.value}
                           onChange={(e) =>
                             updateCell(ri, ci, { type: 'text', value: e.target.value })
@@ -732,7 +737,7 @@ export default function VisualTableEditor({
                             }}
                             aria-label={t('types.text')}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </div>
                       )}
@@ -751,8 +756,12 @@ export default function VisualTableEditor({
                             TRANSITION_PRESETS.fastBg
                           )}
                           title={t('types.photo')}
+                          aria-label={t('types.photo')}
                         >
-                          <Upload className="h-2.5 w-2.5 text-muted-foreground" />
+                          <Upload
+                            className="h-2.5 w-2.5 text-muted-foreground"
+                            aria-hidden="true"
+                          />
                         </button>
                       )}
                     </td>
@@ -769,7 +778,7 @@ export default function VisualTableEditor({
                     onClick={() => removeRow(ri)}
                     aria-label={t('form.deleteRow')}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </td>
               </tr>

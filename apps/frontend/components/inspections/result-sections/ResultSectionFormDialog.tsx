@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { INSPECTION_SPACING } from '@/lib/design-tokens';
+import { INSPECTION_FORM_LAYOUT, INSPECTION_SPACING } from '@/lib/design-tokens';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import { documentApi } from '@/lib/api/document-api';
 import { useToast } from '@/components/ui/use-toast';
@@ -235,7 +236,9 @@ export default function ResultSectionFormDialog({
         break;
       case 'table':
         dto.richTableData = {
-          headers: tableHeaders.map((h) => h || `Col`),
+          headers: tableHeaders.map((h, index) =>
+            h.trim() ? h.trim() : t('form.defaultColumnHeader', { number: index + 1 })
+          ),
           rows: tableRows,
         };
         break;
@@ -289,14 +292,18 @@ export default function ResultSectionFormDialog({
                 ? t('editSection')
                 : t('addSection')}
           </DialogTitle>
+          <DialogDescription>{t('form.description')}</DialogDescription>
         </DialogHeader>
 
         <div className={`${INSPECTION_SPACING.group} py-2`}>
           {/* 검사 항목명 — 인라인 타입 선택 진입 시 숨김 */}
           {!isInlineTypeEntry && (
             <div className={INSPECTION_SPACING.field}>
-              <Label>{t('form.inspectionItemName')}</Label>
+              <Label htmlFor="result-section-title">{t('form.inspectionItemName')}</Label>
               <Input
+                id="result-section-title"
+                name="resultSectionTitle"
+                autoComplete="off"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t('form.inspectionItemNamePlaceholder')}
@@ -307,12 +314,12 @@ export default function ResultSectionFormDialog({
           {/* 결과 형식 선택 */}
           {!isInlineTypeEntry && (!editTarget || editTarget.sectionType === 'title') && (
             <div className={INSPECTION_SPACING.field}>
-              <Label>{t('form.resultFormat')}</Label>
+              <Label htmlFor="result-section-type">{t('form.resultFormat')}</Label>
               <Select
                 value={sectionType}
                 onValueChange={(v) => setSectionType(v as SectionTypeOption)}
               >
-                <SelectTrigger>
+                <SelectTrigger id="result-section-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -330,8 +337,15 @@ export default function ResultSectionFormDialog({
 
           {sectionType === 'text' && (
             <div className={INSPECTION_SPACING.field}>
-              <Label>{t('form.content')}</Label>
-              <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} />
+              <Label htmlFor="result-section-content">{t('form.content')}</Label>
+              <Textarea
+                id="result-section-content"
+                name="resultSectionContent"
+                autoComplete="off"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={5}
+              />
             </div>
           )}
 
@@ -355,11 +369,15 @@ export default function ResultSectionFormDialog({
                 label={t('form.selectFile')}
                 disabled={isUploading}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className={INSPECTION_FORM_LAYOUT.twoColumn}>
                 <div className={INSPECTION_SPACING.field}>
-                  <Label>{t('form.imageWidth')}</Label>
+                  <Label htmlFor="result-section-image-width">{t('form.imageWidth')}</Label>
                   <Input
+                    id="result-section-image-width"
+                    name="resultSectionImageWidthCm"
                     type="number"
+                    inputMode="decimal"
+                    autoComplete="off"
                     value={imageWidthCm}
                     onChange={(e) => setImageWidthCm(Number(e.target.value))}
                     min={1}
@@ -367,9 +385,13 @@ export default function ResultSectionFormDialog({
                   />
                 </div>
                 <div className={INSPECTION_SPACING.field}>
-                  <Label>{t('form.imageHeight')}</Label>
+                  <Label htmlFor="result-section-image-height">{t('form.imageHeight')}</Label>
                   <Input
+                    id="result-section-image-height"
+                    name="resultSectionImageHeightCm"
                     type="number"
+                    inputMode="decimal"
+                    autoComplete="off"
                     value={imageHeightCm}
                     onChange={(e) => setImageHeightCm(Number(e.target.value))}
                     min={1}
@@ -381,7 +403,7 @@ export default function ResultSectionFormDialog({
           )}
         </div>
 
-        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <DialogFooter className={INSPECTION_FORM_LAYOUT.stickyFooter}>
           <Button variant="outline" onClick={close.requestClose}>
             {t('form.cancel')}
           </Button>

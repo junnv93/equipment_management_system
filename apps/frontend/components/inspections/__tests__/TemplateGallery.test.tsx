@@ -28,6 +28,12 @@ jest.mock('next-intl', () => ({
   },
 }));
 
+jest.mock('@/hooks/use-date-formatter', () => ({
+  useDateFormatter: () => ({
+    fmtDate: (date: string | Date | undefined | null) => (date ? String(date).slice(0, 10) : ''),
+  }),
+}));
+
 jest.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }));

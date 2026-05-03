@@ -804,7 +804,7 @@
       "cancel": "계속 작성"
     },
     "save": "저장",
-    "saving": "저장 중...",
+    "saving": "저장 중…",
     "records": "점검 기록",
     "noRecords": "점검 기록이 없습니다",
     "loadError": "점검 기록을 불러오는 중 오류가 발생했습니다",
@@ -828,6 +828,12 @@
       "deleteError": "삭제에 실패했습니다.",
       "versionConflict": "다른 사용자가 이미 처리했습니다.",
       "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요."
+    },
+    "deleteDialog": {
+      "title": "중간점검 삭제",
+      "message": "이 중간점검 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+      "action": "삭제",
+      "cancel": "취소"
     }
   },
   "notFound": {
@@ -857,10 +863,14 @@
       "table": "테이블"
     },
     "form": {
+      "description": "점검 결과에 포함할 표, 사진, 텍스트 또는 제목 섹션을 작성합니다.",
       "resultFormat": "결과 형식",
       "inspectionItemName": "검사 항목명",
       "inspectionItemNamePlaceholder": "예: 주파수 응답, 출력 레벨, 외관 상태",
       "content": "내용",
+      "defaultColumnHeader": "열 {number}",
+      "columnHeaderAriaLabel": "{number}번 열 헤더",
+      "tableCellAriaLabel": "{row}행 {column}열 셀",
       "pasteData": "데이터 붙여넣기 (탭 구분)",
       "imageWidth": "이미지 너비 (cm)",
       "imageHeight": "이미지 높이 (cm)",
@@ -901,6 +911,7 @@
       "nextRow": "다음 행",
       "cellNav": "셀 이동",
       "undo": "되돌리기",
+      "redo": "다시 실행",
       "dismiss": "힌트 숨기기"
     },
     "inlineDelete": {

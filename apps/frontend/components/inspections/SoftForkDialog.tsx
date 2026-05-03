@@ -75,9 +75,6 @@ export function SoftForkDialog({
   // ⚠️ Type-checked path keys for next-intl `t()` — Parameters<typeof t>[0]로 캐스트 회피
   const k = (suffix: string) => `${tPrefix}.softFork.${suffix}` as Parameters<typeof t>[0];
 
-  const titleId = useId();
-  const descId = useId();
-
   // Default 선택: 권한 있으면 apply_forward 권장 (양식 통제 표준), 없으면 this_only
   const [selectedChoice, setSelectedChoice] = useState<ForkChoice>(
     canApplyForward ? 'apply_forward' : 'this_only'
@@ -126,8 +123,6 @@ export function SoftForkDialog({
     >
       <DialogContent
         className="max-w-xl"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
         // ESC = cancel (focus trap은 Radix가 자동 제공)
         onEscapeKeyDown={(e) => {
           if (isProcessing) {
@@ -138,8 +133,8 @@ export function SoftForkDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>{t(k('title'))}</DialogTitle>
-          <DialogDescription id={descId}>{t(k('description'))}</DialogDescription>
+          <DialogTitle>{t(k('title'))}</DialogTitle>
+          <DialogDescription>{t(k('description'))}</DialogDescription>
         </DialogHeader>
 
         {/* Diff 요약 — 추가/삭제/변경 카운트 chip */}
@@ -283,7 +278,7 @@ export function SoftForkDialog({
             const parsed = ForkChoiceEnum.safeParse(v);
             if (parsed.success) setSelectedChoice(parsed.data);
           }}
-          aria-labelledby={titleId}
+          aria-label={t(k('title'))}
           className="gap-3"
         >
           {/* this_only */}

@@ -362,7 +362,7 @@
       "remarksPlaceholder": "Enter remarks",
       "cancel": "Cancel",
       "save": "Save",
-      "saving": "Saving...",
+      "saving": "Saving…",
       "createSuccess": "Self inspection record created successfully.",
       "createError": "Failed to create self inspection record.",
       "editTitle": "Edit Self Inspection Record",
@@ -426,6 +426,7 @@
     "specialNotes": {
       "label": "Special Notes",
       "addButton": "Add Item",
+      "removeButton": "Remove special note {number}",
       "contentPlaceholder": "Enter action taken",
       "datePlaceholder": "Date (optional)"
     },

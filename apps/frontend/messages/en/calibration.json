@@ -804,7 +804,7 @@
       "cancel": "Keep editing"
     },
     "save": "Save",
-    "saving": "Saving...",
+    "saving": "Saving…",
     "records": "Inspection Records",
     "noRecords": "No inspection records yet",
     "loadError": "Failed to load inspection records",
@@ -828,6 +828,12 @@
       "deleteError": "Failed to delete inspection.",
       "versionConflict": "Already processed by another user.",
       "versionConflictDesc": "Data has been updated. Please check the latest status."
+    },
+    "deleteDialog": {
+      "title": "Delete Intermediate Inspection",
+      "message": "Delete this intermediate inspection record? This cannot be undone.",
+      "action": "Delete",
+      "cancel": "Cancel"
     }
   },
   "notFound": {
@@ -857,10 +863,14 @@
       "table": "Table"
     },
     "form": {
+      "description": "Create a table, photo, text, or title section for the inspection result.",
       "resultFormat": "Result Format",
       "inspectionItemName": "Inspection Item",
       "inspectionItemNamePlaceholder": "e.g., Frequency Response, Output Level, Visual Inspection",
       "content": "Content",
+      "defaultColumnHeader": "Column {number}",
+      "columnHeaderAriaLabel": "Column {number} header",
+      "tableCellAriaLabel": "Row {row}, column {column} cell",
       "pasteData": "Paste data (tab-separated)",
       "imageWidth": "Image Width (cm)",
       "imageHeight": "Image Height (cm)",
@@ -901,6 +911,7 @@
       "nextRow": "next row",
       "cellNav": "cell nav",
       "undo": "undo",
+      "redo": "redo",
       "dismiss": "Hide hints"
     },
     "inlineDelete": {
