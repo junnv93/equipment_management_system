@@ -8,7 +8,7 @@ import {
   VM,
   uuidString,
 } from '@equipment-management/schemas';
-import { MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { MAX_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export { RepairResultEnum, REPAIR_RESULT_VALUES, type RepairResult };
@@ -34,9 +34,23 @@ const dateStringSchema = z.string().refine(
  */
 export const createRepairHistorySchema = z.object({
   repairDate: dateStringSchema,
-  repairDescription: z.string().min(10, VM.string.min('수리 내용', 10)),
+  repairDescription: z
+    .string()
+    .trim()
+    .min(10, VM.string.min('수리 내용', 10))
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('수리 내용', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
   repairResult: RepairResultEnum.optional(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   attachmentPath: z.string().optional(),
   nonConformanceId: uuidString(VM.uuid.invalid('부적합')).optional(),
 });

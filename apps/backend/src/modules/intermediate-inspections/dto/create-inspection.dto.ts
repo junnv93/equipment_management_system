@@ -8,16 +8,29 @@ import {
   VM,
 } from '@equipment-management/schemas';
 import { createResultSectionSchema } from './result-section.dto';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 const inspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
-  checkItem: z.string().min(1, VM.required('점검 항목')).max(300, VM.string.max('점검 항목', 300)),
+  checkItem: z
+    .string()
+    .trim()
+    .min(1, VM.required('점검 항목'))
+    .max(300, VM.string.max('점검 항목', 300)),
   checkCriteria: z
     .string()
+    .trim()
     .min(1, VM.required('점검 기준'))
     .max(300, VM.string.max('점검 기준', 300)),
-  checkResult: z.string().max(300, VM.string.max('점검 결과', 300)).optional(),
-  detailedResult: z.string().optional(),
+  checkResult: z.string().trim().max(300, VM.string.max('점검 결과', 300)).optional(),
+  detailedResult: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('상세 결과', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   judgment: InspectionJudgmentEnum.optional(),
 });
 
@@ -30,10 +43,31 @@ export const createInspectionSchema = z.object({
   calibrationId: uuidString(VM.uuid.invalid('교정 기록')).optional(),
   inspectionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다'),
   classification: EquipmentClassificationEnum.optional(),
-  inspectionCycle: z.string().max(20, VM.string.max('점검 주기', 20)).optional(),
-  calibrationValidityPeriod: z.string().max(50, VM.string.max('교정 유효기간', 50)).optional(),
+  inspectionCycle: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH,
+      VM.string.max('점검 주기', VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  calibrationValidityPeriod: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.MANAGEMENT_NUMBER_MAX_LENGTH,
+      VM.string.max('교정 유효기간', VALIDATION_RULES.MANAGEMENT_NUMBER_MAX_LENGTH)
+    )
+    .optional(),
   overallResult: InspectionResultEnum.optional(),
-  remarks: z.string().optional(),
+  remarks: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   items: z.array(inspectionItemSchema).optional(),
   measurementEquipment: z.array(inspectionEquipmentSchema).optional(),
   resultSections: z.array(createResultSectionSchema).optional(),

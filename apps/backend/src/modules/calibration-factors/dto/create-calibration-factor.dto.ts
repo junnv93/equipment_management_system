@@ -9,6 +9,7 @@ import {
   VM,
   uuidString,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export {
@@ -29,10 +30,21 @@ export const createCalibrationFactorSchema = z.object({
   factorType: CalibrationFactorTypeEnum,
   factorName: z
     .string()
+    .trim()
     .min(1, VM.calibrationFactor.name.required)
-    .max(200, VM.string.max('보정계수 이름', 200)),
+    .max(
+      VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH,
+      VM.string.max('보정계수 이름', VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH)
+    ),
   factorValue: z.number({ message: VM.calibrationFactor.value.invalid }),
-  unit: z.string().min(1, VM.calibrationFactor.unit.required).max(20, VM.string.max('단위', 20)),
+  unit: z
+    .string()
+    .trim()
+    .min(1, VM.calibrationFactor.unit.required)
+    .max(
+      VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH,
+      VM.string.max('단위', VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH)
+    ),
   parameters: z.record(z.string(), z.unknown()).optional(),
   effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: VM.date.invalidYMD,

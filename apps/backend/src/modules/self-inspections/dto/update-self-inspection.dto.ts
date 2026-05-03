@@ -6,15 +6,24 @@ import {
   SpecialNoteSchema,
   SELF_INSPECTION_MEASUREMENT_MAX_LENGTH,
   SELF_INSPECTION_CRITERIA_MAX_LENGTH,
+  VM,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 const selfInspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
-  checkItem: z.string().min(1).max(300),
+  checkItem: z.string().trim().min(1, VM.required('점검 항목')).max(300),
   measurement: z.string().trim().max(SELF_INSPECTION_MEASUREMENT_MAX_LENGTH).optional(),
   criteria: z.string().trim().max(SELF_INSPECTION_CRITERIA_MAX_LENGTH).optional(),
   checkResult: SelfInspectionItemJudgmentEnum,
-  detailedResult: z.string().optional(),
+  detailedResult: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('상세 결과', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export const updateSelfInspectionSchema = z.object({
@@ -25,7 +34,14 @@ export const updateSelfInspectionSchema = z.object({
   // 유연한 점검 항목 (전체 교체)
   items: z.array(selfInspectionItemSchema).min(1).optional(),
   overallResult: SelfInspectionResultEnum.optional(),
-  remarks: z.string().optional(),
+  remarks: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   specialNotes: z.array(SpecialNoteSchema).optional(),
   inspectionCycle: z.number().int().min(1).max(120).optional(),
   version: z.number().int().min(1),

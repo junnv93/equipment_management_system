@@ -26,6 +26,9 @@ export const VALIDATION_RULES = {
   /** 일반 텍스트 필드 최대 길이 (name, department 등 varchar(100)) */
   TEXT_FIELD_MAX_LENGTH: 100,
 
+  /** 짧은 텍스트 필드 최대 길이 (unit, cycle 등 varchar(20)) */
+  SHORT_TEXT_MAX_LENGTH: 20,
+
   /** 장기 텍스트 필드 최대 길이 (description, reason 등 varchar(500)) */
   LONG_TEXT_MAX_LENGTH: 500,
 

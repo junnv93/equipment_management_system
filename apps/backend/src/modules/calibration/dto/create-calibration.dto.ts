@@ -13,6 +13,7 @@ import {
   optionalUuid,
   uuidString,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -27,14 +28,42 @@ export const calibrationBaseSchema = z.object({
   nextCalibrationDate: z.coerce.date({ message: VM.date.invalid }).optional(),
   managementMethod: ManagementMethodEnum.optional().default('external_calibration'),
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
-  calibrationAgency: z.string().min(1, VM.calibration.agency.required).max(100),
-  certificateNumber: z.string().max(100).optional(),
+  calibrationAgency: z
+    .string()
+    .trim()
+    .min(1, VM.calibration.agency.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('교정 기관', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
+  certificateNumber: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('교정성적서 번호', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
   result: CalibrationResultEnum.optional(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('교정 결과 메모', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   intermediateCheckDate: z.coerce.date().optional(),
   registeredBy: optionalUuid(),
   registeredByRole: CalibrationRegisteredByRoleEnum.optional(),
-  registrarComment: z.string().optional(),
+  registrarComment: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('등록자 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 /**
@@ -44,7 +73,7 @@ export const createCalibrationSchema = calibrationBaseSchema.refine(
   (data) => {
     // 기술책임자가 직접 등록할 경우 코멘트 필수
     if (data.registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager) {
-      return !!data.registrarComment;
+      return Boolean(data.registrarComment);
     }
     return true;
   },

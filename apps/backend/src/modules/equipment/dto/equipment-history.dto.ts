@@ -7,6 +7,7 @@ import {
   type IncidentType,
   VM,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export { IncidentTypeEnum, INCIDENT_TYPE_VALUES, type IncidentType };
@@ -32,8 +33,22 @@ const dateStringSchema = z.string().refine(
  */
 export const createLocationHistorySchema = z.object({
   changedAt: dateStringSchema,
-  newLocation: z.string().min(1, VM.required('위치')).max(100, VM.string.max('위치', 100)),
-  notes: z.string().optional(),
+  newLocation: z
+    .string()
+    .trim()
+    .min(1, VM.required('위치'))
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('위치', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -109,7 +124,14 @@ export class LocationHistoryResponseDto {
  */
 export const createMaintenanceHistorySchema = z.object({
   performedAt: dateStringSchema,
-  content: z.string().min(1, VM.required('내용')),
+  content: z
+    .string()
+    .trim()
+    .min(1, VM.required('내용'))
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('내용', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 export type CreateMaintenanceHistoryInput = z.infer<typeof createMaintenanceHistorySchema>;
@@ -167,12 +189,26 @@ export class MaintenanceHistoryResponseDto {
 export const createIncidentHistorySchema = z.object({
   occurredAt: dateStringSchema,
   incidentType: IncidentTypeEnum,
-  content: z.string().min(1, VM.required('내용')).max(500, VM.string.max('내용', 500)),
+  content: z
+    .string()
+    .trim()
+    .min(1, VM.required('내용'))
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('내용', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 
   // 부적합 생성 관련 필드 (선택)
   createNonConformance: z.boolean().optional(),
   changeEquipmentStatus: z.boolean().optional(),
-  actionPlan: z.string().max(500, VM.string.max('조치 계획', 500)).optional(),
+  actionPlan: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('조치 계획', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type CreateIncidentHistoryInput = z.infer<typeof createIncidentHistorySchema>;

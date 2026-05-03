@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { UserRoleEnum, VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 /**
  * 역할 변경 스키마 (Zod)
@@ -26,7 +27,15 @@ export const changeRoleSchema = z.object({
   currentRole: z.enum(CHANGEABLE_ROLES as ['test_engineer', 'technical_manager'], {
     message: VM.user.currentRole.invalid,
   }),
-  reason: z.string().min(1).max(500).optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(1, VM.required('역할 변경 사유'))
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('역할 변경 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type ChangeRoleInput = z.infer<typeof changeRoleSchema>;
