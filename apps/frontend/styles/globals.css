@@ -69,14 +69,17 @@
 
   --color-brand-border-subtle: hsl(var(--brand-border-subtle));
   --color-brand-border: hsl(var(--brand-border-default));
+  --color-brand-border-default: hsl(var(--brand-border-default));
   --color-brand-border-strong: hsl(var(--brand-border-strong));
 
+  --color-brand-primary: hsl(var(--primary));
   --color-brand-text-primary: hsl(var(--brand-text-primary));
   --color-brand-text-secondary: hsl(var(--brand-text-secondary));
   --color-brand-text-muted: hsl(var(--brand-text-muted));
   --color-brand-text-inverse: hsl(var(--brand-text-inverse));
 
   --color-brand-ok: hsl(var(--brand-color-ok));
+  --color-brand-success: hsl(var(--brand-color-success));
   --color-brand-warning: hsl(var(--brand-color-warning));
   --color-brand-critical: hsl(var(--brand-color-critical));
   --color-brand-info: hsl(var(--brand-color-info));
@@ -462,6 +465,7 @@
     --brand-text-inverse: 220 15% 96%;
 
     --brand-color-ok: 160 84% 39%;
+    --brand-color-success: 151 100% 32%;
     --brand-color-warning: 38 92% 50%;
     --brand-color-critical: 0 84% 60%;
     --brand-color-info: 217 91% 60%;
@@ -561,6 +565,7 @@
     --brand-text-inverse: 220 15% 8%;
 
     --brand-color-ok: 160 84% 39%;
+    --brand-color-success: 151 100% 40%;
     --brand-color-warning: 38 92% 50%;
     --brand-color-critical: 0 84% 60%;
     --brand-color-info: 217 91% 60%;

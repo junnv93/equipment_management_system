@@ -594,6 +594,7 @@
   "factorsRegistry": {
     "title": "보정계수 대장",
     "subtitle": "전체 장비의 현재 적용 중인 보정계수 현황",
+    "formExport": "양식 내보내기",
     "csvExport": "CSV 내보내기",
     "stats": {
       "totalEquipments": "총 장비 수",

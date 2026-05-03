@@ -143,6 +143,16 @@
       "If already requested, wait until the administrator completes processing and retry"
     ]
   },
+  "DOCUMENT_NOT_FOUND": {
+    "title": "Document Not Found",
+    "message": "The requested document could not be found.",
+    "solutions": ["The document may have been deleted", "Refresh the list and try again"]
+  },
+  "FILE_NOT_FOUND": {
+    "title": "File Not Found",
+    "message": "The document file is not available in storage.",
+    "solutions": ["Ask the system administrator to check the file status", "Please try again later"]
+  },
   "SERVER_ERROR": {
     "title": "Server Error",
     "message": "An error occurred on the server.",

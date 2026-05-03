@@ -6,6 +6,7 @@ import { SessionProvider, useSession, signOut, getSession } from 'next-auth/reac
 import { ThemeProvider } from 'next-themes';
 import { clearTokenCache } from '@/lib/api/api-client';
 import { AuthenticatedClientProvider } from '@/lib/api/authenticated-client-provider';
+import { installAnalyticsBridge } from '@/lib/analytics/bridge';
 import { CACHE_TIMES } from '@/lib/api/query-config';
 import { patchPerformanceMeasure } from '@/lib/utils/patch-performance-measure';
 import {
@@ -176,6 +177,8 @@ function AuthSync({ children }: { children: ReactNode }) {
 
   // ─── Idle Timeout ────────────────────────────────────────────────────────────
   const { isWarningVisible, secondsRemaining, handleContinue, handleLogout } = useIdleTimeout();
+
+  useEffect(() => installAnalyticsBridge(window), []);
 
   // ─── Multi-tab BroadcastChannel 수신 ─────────────────────────────────────────
   // logout / idle-logout 메시지를 수신해 다른 탭에서 발생한 로그아웃을 동기화

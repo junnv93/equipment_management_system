@@ -511,6 +511,7 @@
     "pendingSub": "Needs immediate action",
     "inProgressSub": "Currently off-site",
     "overdueSub": "Immediate action required",
+    "overdueMeta": "Avg delay {average}d · max D+{max}",
     "returnedSub": "This month completed",
     "overdueGroupLabel": "Overdue",
     "activeFilter": "▼ Filter active",
@@ -795,10 +796,6 @@
         "title": "Return Submitted",
         "description": "Return request submitted. Awaiting approver review."
       },
-      "completed": {
-        "title": "Completed",
-        "description": "All checkout and return procedures are complete."
-      },
       "canceled": {
         "title": "Canceled",
         "description": "The checkout request has been canceled."
@@ -806,10 +803,6 @@
       "overdue": {
         "title": "Overdue",
         "description": "The return deadline has passed. Immediate return processing is required."
-      },
-      "return_rejected": {
-        "title": "Return Rejected",
-        "description": "The return was rejected during review. Please check the status and reprocess."
       },
       "return_approved": {
         "title": "Return Approved",
@@ -822,6 +815,16 @@
       "borrower_approved": {
         "title": "Borrower Approved",
         "description": "The borrower team's technical manager has given first approval. Awaiting final approval from the technical manager."
+      }
+    },
+    "statusUi": {
+      "completed": {
+        "title": "Completed",
+        "description": "All checkout and return procedures are complete."
+      },
+      "return_rejected": {
+        "title": "Return Rejected",
+        "description": "The return was rejected during review. Please check the status and reprocess."
       }
     }
   },

@@ -43,7 +43,8 @@
     "total": "총 {count}건"
   },
   "charCounter": {
-    "ratio": "{count} / {max}"
+    "ratio": "{count} / {max}",
+    "min": "{min}자 이상 입력해주세요 (현재: {count}자)"
   },
   "validation": {
     "required": "필수 항목입니다",

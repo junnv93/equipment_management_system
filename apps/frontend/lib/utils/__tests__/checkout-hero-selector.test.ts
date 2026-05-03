@@ -1,10 +1,7 @@
-import { selectHeroVariant } from '../checkout-hero-selector';
+import { PENDING_HERO_THRESHOLD, selectHeroVariant } from '../checkout-hero-selector';
 
 /**
- * Phase 4 boundary: overdue 단일 hero. pending hero 승격은 Phase 5 결정.
- *
- * negative test (case 5): Phase 5에서 pending > threshold → 'pending' 승격 시
- * 본 테스트가 fail해야 정책 변경이 검출된다 (회귀 차단 가드).
+ * Priority: overdue > pending threshold > no hero.
  */
 
 describe('selectHeroVariant()', () => {
@@ -15,11 +12,17 @@ describe('selectHeroVariant()', () => {
     });
   });
 
-  it('overdue=0, pending=15 → null (Phase 4 boundary — pending hero 미승격)', () => {
-    // negative test: Phase 5에서 pending hero 승격 도입 시 본 expect가 fail해야 함
-    expect(selectHeroVariant({ overdue: 0, pending: 15 })).toEqual({
+  it('overdue=0, pending=10 → null (pending threshold boundary)', () => {
+    expect(selectHeroVariant({ overdue: 0, pending: PENDING_HERO_THRESHOLD })).toEqual({
       heroVariantKey: null,
       reason: null,
+    });
+  });
+
+  it('overdue=0, pending=11 → pending (Phase 5 pending hero 승격)', () => {
+    expect(selectHeroVariant({ overdue: 0, pending: PENDING_HERO_THRESHOLD + 1 })).toEqual({
+      heroVariantKey: 'pending',
+      reason: 'pending',
     });
   });
 
@@ -37,8 +40,8 @@ describe('selectHeroVariant()', () => {
     });
   });
 
-  it('overdue=1, pending=15 → overdue (overdue 우선순위)', () => {
-    expect(selectHeroVariant({ overdue: 1, pending: 15 })).toEqual({
+  it('overdue=1, pending=11 → overdue (overdue 우선순위)', () => {
+    expect(selectHeroVariant({ overdue: 1, pending: PENDING_HERO_THRESHOLD + 1 })).toEqual({
       heroVariantKey: 'overdue',
       reason: 'overdue',
     });

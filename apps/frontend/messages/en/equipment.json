@@ -871,6 +871,8 @@
     "approval": {
       "approve": "Approve",
       "reject": "Reject",
+      "approveAriaLabel": "Approve calibration from {date}",
+      "rejectAriaLabel": "Reject calibration from {date}",
       "rejectDescription": "Please provide a rejection reason ({min} characters or more).",
       "approveSuccess": "Calibration has been approved.",
       "rejectSuccess": "Calibration has been rejected."
@@ -1441,6 +1443,8 @@
     "pendingTableActions": "Actions",
     "approveButton": "Approve",
     "rejectButton": "Reject",
+    "approveButtonAriaLabel": "Approve calibration factor {name}",
+    "rejectButtonAriaLabel": "Reject calibration factor {name}",
     "approveSuccess": "Calibration factor approved.",
     "rejectSuccess": "Calibration factor rejected.",
     "rejectTitle": "Reject Calibration Factor",

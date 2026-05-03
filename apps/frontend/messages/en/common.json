@@ -43,7 +43,8 @@
     "total": "Total: {count} items"
   },
   "charCounter": {
-    "ratio": "{count} / {max}"
+    "ratio": "{count} / {max}",
+    "min": "Min {min} characters required (current: {count})"
   },
   "validation": {
     "required": "This field is required",

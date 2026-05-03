@@ -511,6 +511,7 @@
     "pendingSub": "즉시 처리 필요",
     "inProgressSub": "현재 외부 보유",
     "overdueSub": "즉시 조치 필요",
+    "overdueMeta": "평균 지연 {average}일 · 최장 D+{max}",
     "returnedSub": "이번 달 완료",
     "overdueGroupLabel": "기한 초과",
     "activeFilter": "▼ 필터 적용됨",
@@ -795,10 +796,6 @@
         "title": "반입 신청 완료",
         "description": "반입 신청이 접수되었습니다. 승인자 검토를 기다리고 있습니다."
       },
-      "completed": {
-        "title": "반입 완료",
-        "description": "모든 반출/반입 절차가 완료되었습니다."
-      },
       "canceled": {
         "title": "취소됨",
         "description": "반출 신청이 취소되었습니다."
@@ -806,10 +803,6 @@
       "overdue": {
         "title": "기한 초과",
         "description": "반납 기한이 초과되었습니다. 즉시 반납 처리가 필요합니다."
-      },
-      "return_rejected": {
-        "title": "반입 반려",
-        "description": "반입 검토에서 반려되었습니다. 상태를 확인하고 재처리해주세요."
       },
       "return_approved": {
         "title": "반입 최종 승인",
@@ -822,6 +815,16 @@
       "borrower_approved": {
         "title": "1차 승인 완료",
         "description": "사용 부서 기술책임자가 1차 승인했습니다. 기술책임자의 최종 승인을 기다리고 있습니다."
+      }
+    },
+    "statusUi": {
+      "completed": {
+        "title": "반입 완료",
+        "description": "모든 반출/반입 절차가 완료되었습니다."
+      },
+      "return_rejected": {
+        "title": "반입 반려",
+        "description": "반입 검토에서 반려되었습니다. 상태를 확인하고 재처리해주세요."
       }
     }
   },

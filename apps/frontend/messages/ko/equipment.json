@@ -871,6 +871,8 @@
     "approval": {
       "approve": "승인",
       "reject": "반려",
+      "approveAriaLabel": "{date} 교정 승인",
+      "rejectAriaLabel": "{date} 교정 반려",
       "rejectDescription": "반려 사유를 {min}자 이상 입력하세요.",
       "approveSuccess": "교정이 승인되었습니다.",
       "rejectSuccess": "교정이 반려되었습니다."
@@ -1441,6 +1443,8 @@
     "pendingTableActions": "액션",
     "approveButton": "승인",
     "rejectButton": "반려",
+    "approveButtonAriaLabel": "{name} 보정계수 승인",
+    "rejectButtonAriaLabel": "{name} 보정계수 반려",
     "approveSuccess": "보정계수가 승인되었습니다.",
     "rejectSuccess": "보정계수가 반려되었습니다.",
     "rejectTitle": "보정계수 반려",

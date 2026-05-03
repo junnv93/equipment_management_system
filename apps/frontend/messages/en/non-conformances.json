@@ -348,6 +348,10 @@
         "title": "Repair history required first",
         "body": "Correction and closure approval are available only after repair history is registered. Ask the operator to register repair if needed."
       },
+      "openBlockedRepair_quality_manager": {
+        "title": "Repair history required",
+        "body": "Corrective action is available after repair history is registered. Please request repair history registration from the repair owner."
+      },
       "openBlockedRecalibration_operator": {
         "title": "Complete recalibration first",
         "body": "Calibration-overdue non-conformances require a new calibration before correction. After registering and getting the calibration approved, you can enter the corrective action.",

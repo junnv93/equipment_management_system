@@ -8,6 +8,7 @@
     "build": "npx next build",
     "start": "npx next start",
     "lint": "eslint .",
+    "verify:design-tokens": "node --experimental-strip-types scripts/verify-design-tokens.ts",
     "type-check": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "test": "jest",

@@ -594,6 +594,7 @@
   "factorsRegistry": {
     "title": "Calibration Factors Registry",
     "subtitle": "Current calibration factors applied to all equipment",
+    "formExport": "Export Form",
     "csvExport": "Export CSV",
     "stats": {
       "totalEquipments": "Total Equipment",

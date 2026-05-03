@@ -63,6 +63,11 @@
     "error": "양식 등록에 실패했습니다.",
     "errorNumberExists": "이미 사용된 양식 번호입니다."
   },
+  "errors": {
+    "title": "양식 오류",
+    "notFound": "요청한 양식을 찾을 수 없습니다.",
+    "inspectionTemplateNotFound": "요청한 점검 양식 템플릿을 찾을 수 없습니다."
+  },
   "historyDialog": {
     "title": "개정 이력",
     "error": "개정 이력을 불러오지 못했습니다.",
