@@ -16,6 +16,7 @@ import {
   INSERTABLE_STATUSES,
   ApprovalStatusValues,
   EquipmentStatusEnum,
+  VM,
 } from '@equipment-management/schemas';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import type { AppDatabase } from '@equipment-management/db';
@@ -27,15 +28,25 @@ import type {
 } from '../types/data-migration.types';
 import { EQUIPMENT_COLUMN_MAPPING } from '../constants/equipment-column-mapping';
 import { SHARED_EQUIPMENT_COLUMN_MAPPING } from '../constants/shared-equipment-column-mapping';
-import { MigrationErrorCode } from '@equipment-management/shared-constants';
+import { MigrationErrorCode, VALIDATION_RULES } from '@equipment-management/shared-constants';
+
+const requiredMigrationText = (fieldName: string, requiredMessage: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, requiredMessage)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max(fieldName, VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    );
 
 /**
  * 공용장비 마이그레이션 전용 Zod 스키마
  * baseEquipmentSchema에서 공용장비 필수 필드만 추려서 검증
  */
 const createSharedEquipmentMigrationSchema = baseEquipmentSchema.extend({
-  initialLocation: z.string().min(1, '설치위치는 필수입니다.'),
-  owner: z.string().min(1, '소유처는 필수입니다.'),
+  initialLocation: requiredMigrationText('설치위치', '설치위치는 필수입니다.'),
+  owner: requiredMigrationText('소유처', '소유처는 필수입니다.'),
   classification: ClassificationEnum,
   usagePeriodStart: z.coerce.date(),
 });

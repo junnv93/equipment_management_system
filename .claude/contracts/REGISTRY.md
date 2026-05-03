@@ -11,7 +11,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 |------|------|--------|
 | `github-actions-ci-stability` | GitHub Actions failing workflow stabilization | 2026-05-03 |
 | `zod-trim-max-system-wide-residual` | Zod trim/max 시스템 전반 잔여 hardening | 2026-05-03 |
-| `equipment-import-invalidation-keys-ssot` | Equipment import optimistic invalidateKeys SSOT | 2026-05-03 |
 ---
 
 ## Backlog (계획됨, 미착수)
@@ -46,4 +45,4 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 ## Completed
 
-`completed/` 폴더에 229개 (2026-05-03: +quality-audit-ssot, +quality-audit-auth-routes, +validation-rules-domain-constants, +data-migration-preview-windowing, +validation-message-pagination-residual, +revoke-approval-dto-trim-symmetry, +calibration-created-linked-plan-item-sse, +frontend-error-enum-ssot-migration, +inspection-mobile-760-e2e, +user-error-backend-code-routing, +frontend-mapper-unit-test, +software-validation-pagesize-ssot). 검색: `ls .claude/contracts/completed/ | grep <slug>`
+`completed/` 폴더에 230개 (2026-05-03: +quality-audit-ssot, +quality-audit-auth-routes, +validation-rules-domain-constants, +data-migration-preview-windowing, +validation-message-pagination-residual, +revoke-approval-dto-trim-symmetry, +calibration-created-linked-plan-item-sse, +frontend-error-enum-ssot-migration, +inspection-mobile-760-e2e, +user-error-backend-code-routing, +frontend-mapper-unit-test, +software-validation-pagesize-ssot, +equipment-import-invalidation-keys-ssot). 검색: `ls .claude/contracts/completed/ | grep <slug>`
