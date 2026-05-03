@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -174,8 +175,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
 
         {/* 상단: 실제 컬러 UL 로고 */}
         <div className="relative z-10 px-12 pt-12">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/ul-logo.svg"
             alt="UL Solutions"
             width={160}
@@ -255,8 +255,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
         <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
           {/* 모바일 전용 로고 */}
           <div className="lg:hidden mb-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/images/ul-logo.svg"
               alt="UL Solutions"
               width={130}
