@@ -26,6 +26,7 @@ import {
   generateTemporaryManagementNumber,
   SITE_TO_CODE,
   TEMPORARY_EQUIPMENT_PREFIX,
+  VM,
   type Classification,
   type EquipmentStatus,
   type Site,
@@ -104,7 +105,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     if (usagePeriodEnd <= usagePeriodStart) {
       throw new BadRequestException({
         code: ErrorCode.EquipmentImportEndDateBeforeStart,
-        message: 'Usage end date must be after the start date.',
+        message: VM.equipmentImport.dateRangeInvalid,
       });
     }
 

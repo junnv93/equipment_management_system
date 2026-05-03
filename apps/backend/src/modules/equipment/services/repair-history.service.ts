@@ -10,6 +10,7 @@ import {
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
 import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
 import { ErrorCode, RepairResultValues } from '@equipment-management/schemas';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CACHE_EVENTS, type RepairHistoryCachePayload } from '../../../common/cache/cache-events';
 
@@ -92,7 +93,7 @@ export class RepairHistoryService {
     } = query;
 
     const page = query.page ? Number(query.page) : 1;
-    const pageSize = query.pageSize ? Number(query.pageSize) : 20;
+    const pageSize = query.pageSize ? Number(query.pageSize) : DEFAULT_PAGE_SIZE;
 
     const conditions = [eq(repairHistory.equipmentId, equipmentUuid)];
     if (!includeDeleted) conditions.push(eq(repairHistory.isDeleted, false));

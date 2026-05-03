@@ -2166,3 +2166,35 @@ grep -rn "\.max(200," apps/backend/src/modules --include="*.dto.ts"
 - 용도: 소프트웨어명, 제조사명, URL, linkUrl, externalIdentifier 등 varchar(200) 필드
 
 **발생 이력**: `zod-trim-max-system-wide-residual` sprint (2026-05-03) — notification.dto의 `.max(200, ...)` 인라인에서 상수 신설. 기존 매직넘버 전수 교체 완료.
+
+---
+
+### Step 59: Backend pagination default/max SSOT — 서비스·컨트롤러 clamp 매직넘버 금지 (2026-05-03 추가)
+
+**배경**: pagination canonical source가 `packages/schemas/src/pagination.ts`로 승격되었고 `packages/shared-constants/src/pagination.ts`는 재수출 전용이다. DTO만 `MAX_PAGE_SIZE`를 사용해도 controller/service에서 `Math.min(..., 100)` 또는 `pageSize = 20`을 유지하면 문서·검증·런타임 정책이 갈라진다.
+
+**규칙**:
+- backend controller/service의 페이지네이션 기본값은 `DEFAULT_PAGE_SIZE` 경유
+- backend controller/service의 최대 clamp는 `MAX_PAGE_SIZE` 경유
+- Swagger 설명도 동일 상수 interpolation 사용
+- 특별한 도메인 limit이 필요하면 pagination SSOT에 별도 named constant를 추가하고 그 상수를 사용
+
+**탐지 명령**:
+
+```bash
+# backend 런타임 경계에서 pagination 매직넘버 직접 사용 탐지
+grep -rnE "Math\.min\([^\\n]*(100|20|30)|pageSize\\s*=\\s*20|limit\\s*=\\s*20|limit\\s*=\\s*30|기본값: 20, 최대: 100|기본값: 100" \
+  apps/backend/src/modules --include="*.ts" \
+  | grep -v "__tests__"
+# 기대: 0건. 발견 시 DEFAULT_PAGE_SIZE/MAX_PAGE_SIZE 또는 named SSOT 상수 경유.
+```
+
+**PASS 기준**: backend production controller/service에서 pagination 기본값·최대값 매직넘버 직접 사용 0건.
+
+**FAIL 기준**: 1건 이상 → `DEFAULT_PAGE_SIZE`/`MAX_PAGE_SIZE` import로 교체하거나, 도메인별 의미가 다르면 shared pagination SSOT에 named constant 추가.
+
+**SSOT 체인**:
+- `packages/schemas/src/pagination.ts` — `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`
+- `packages/shared-constants/src/pagination.ts` — 기존 import surface 호환용 재수출
+
+**발생 이력**: `validation-message-pagination-residual` follow-up (2026-05-03) — audit controller, equipment repair history service, self-inspection service에 남은 `20/30/100` runtime clamp를 SSOT로 교체.

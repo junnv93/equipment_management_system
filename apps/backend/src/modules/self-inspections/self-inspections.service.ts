@@ -37,6 +37,7 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
   CACHE_TTL,
+  DEFAULT_PAGE_SIZE,
   SELF_INSPECTION_DATA_SCOPE,
   VALIDATION_RULES,
   type UserScopeContext,
@@ -171,8 +172,8 @@ export class SelfInspectionsService extends VersionedBaseService {
 
   async findByEquipment(
     equipmentId: string,
-    page = 1,
-    pageSize = 20
+    page: number = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE
   ): Promise<{ data: SelfInspectionWithItems[]; total: number }> {
     const cacheKey = this.buildCacheKey('list-equip', `${equipmentId}:${page}:${pageSize}`);
     return this.cacheService.getOrSet(

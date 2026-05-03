@@ -17,6 +17,8 @@ import {
 import { AuditLogQueryValidationPipe, type AuditLogQueryInput } from './dto/audit-log-query.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
   Permission,
   resolveDataScope,
   AUDIT_LOG_SCOPE,
@@ -57,7 +59,7 @@ export class AuditController {
     name: 'limit',
     required: false,
     type: Number,
-    description: '페이지당 항목 수 (기본값: 20, 최대: 100)',
+    description: `페이지당 항목 수 (기본값: ${DEFAULT_PAGE_SIZE}, 최대: ${MAX_PAGE_SIZE})`,
   })
   @ApiQuery({ name: 'userId', required: false, type: String, description: '사용자 ID 필터' })
   @ApiQuery({
@@ -126,13 +128,13 @@ export class AuditController {
 
     // cursor 파라미터 → 커서 모드, page 파라미터 → offset 모드 (하위 호환)
     if (query.cursor !== undefined || query.page === undefined) {
-      const limit = Math.min(query.limit ?? 30, 100);
+      const limit = Math.min(query.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
       return this.auditService.findAllCursor(filter, query.cursor, limit);
     }
 
     const pagination: PaginationOptions = {
       page: query.page,
-      limit: Math.min(query.limit ?? 20, 100),
+      limit: Math.min(query.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
     };
 
     return this.auditService.findAll(filter, pagination);
@@ -210,7 +212,7 @@ export class AuditController {
     name: 'limit',
     required: false,
     type: Number,
-    description: '조회 개수 (기본값: 100)',
+    description: `조회 개수 (기본값: ${MAX_PAGE_SIZE})`,
   })
   @ApiResponse({ status: 200, description: '사용자 감사 로그 조회 성공' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
@@ -228,7 +230,7 @@ export class AuditController {
       },
       AUDIT_LOG_SCOPE
     );
-    const parsedLimit = Math.min(parseInt(limit ?? '', 10) || 100, 100);
+    const parsedLimit = Math.min(parseInt(limit ?? '', 10) || MAX_PAGE_SIZE, MAX_PAGE_SIZE);
     const logs = await this.auditService.findByUser(userId, parsedLimit, scope);
     return {
       items: logs,
