@@ -101,7 +101,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.APPROVED as EquipmentImportStatus }),
-    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    invalidateKeys: EquipmentImportCacheInvalidation.statusMutationInvalidateKeys,
     successMessage: t('equipmentImport.toasts.approveSuccess'),
     errorMessage: t('equipmentImport.toasts.approveFailed'),
     onSuccessCallback: () => {
@@ -116,7 +116,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.REJECTED as EquipmentImportStatus }),
-    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    invalidateKeys: EquipmentImportCacheInvalidation.statusMutationInvalidateKeys,
     successMessage: t('equipmentImport.toasts.rejectSuccess'),
     errorMessage: t('equipmentImport.toasts.rejectFailed'),
     onSuccessCallback: () => {
@@ -139,7 +139,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       ...old!,
       status: EISVal.RETURN_REQUESTED as EquipmentImportStatus,
     }),
-    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    invalidateKeys: EquipmentImportCacheInvalidation.statusMutationInvalidateKeys,
     successMessage: t('equipmentImport.toasts.returnStarted'),
     errorMessage: t('equipmentImport.toasts.returnFailed'),
     onSuccessCallback: () => {
@@ -154,7 +154,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.CANCELED as EquipmentImportStatus }),
-    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    invalidateKeys: EquipmentImportCacheInvalidation.statusMutationInvalidateKeys,
     successMessage: t('equipmentImport.toasts.cancelSuccess'),
     errorMessage: t('equipmentImport.toasts.cancelFailed'),
     onSuccessCallback: () => {

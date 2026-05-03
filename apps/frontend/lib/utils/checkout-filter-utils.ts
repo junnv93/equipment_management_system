@@ -32,6 +32,7 @@ import {
   CHECKOUT_PURPOSE_VALUES,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   EquipmentImportStatusValues as EIV,
+  type InboundOverviewQueryInput,
   type CheckoutStatus,
   type CheckoutPurpose,
   type EquipmentImportStatus,
@@ -144,6 +145,8 @@ export interface ApiCheckoutParams {
   checkoutFrom?: string;
   checkoutTo?: string;
 }
+
+export type InboundOverviewQueryParams = InboundOverviewQueryInput;
 
 /**
  * UI 필터 기본값
@@ -271,6 +274,20 @@ export function convertFiltersToApiParams(filters: UICheckoutFilters): ApiChecko
     destination: filters.destination !== 'all' ? filters.destination : undefined,
     purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
     ...periodToDateRange(filters.period),
+  };
+}
+
+export function buildInboundOverviewQuery(
+  filters: Pick<UICheckoutFilters, 'status' | 'search' | 'subTab'>,
+  limitPerSection: number = DEFAULT_PAGE_SIZE
+): InboundOverviewQueryParams {
+  const statusFilter =
+    filters.status !== 'all' ? filters.status : SUBTAB_STATUS_GROUPS[filters.subTab].join(',');
+
+  return {
+    statusFilter,
+    searchTerm: filters.search || undefined,
+    limitPerSection,
   };
 }
 

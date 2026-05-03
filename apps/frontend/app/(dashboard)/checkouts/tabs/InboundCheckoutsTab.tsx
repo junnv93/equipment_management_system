@@ -27,7 +27,7 @@ import {
   type EquipmentImportStatus,
   EquipmentImportStatusValues,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import CheckoutListTabs from '@/components/checkouts/CheckoutListTabs';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
@@ -40,9 +40,9 @@ import {
   getSemanticBadgeClasses,
 } from '@/lib/design-tokens';
 import {
+  buildInboundOverviewQuery,
   countActiveFilters,
   filtersToSearchParams,
-  SUBTAB_STATUS_GROUPS,
   IMPORT_SUBTAB_STATUS_GROUPS,
   type UICheckoutFilters,
   type CheckoutSubTab,
@@ -72,7 +72,7 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     [navigateWithPending]
   );
 
-  const { status: statusFilter, search: searchTerm, subTab } = filters;
+  const { subTab } = filters;
   const filterActive = countActiveFilters(filters) > 0;
 
   const handleSubTabChange = useCallback(
@@ -92,9 +92,7 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     [filters, router]
   );
 
-  // status='all'이면 subTab 기반 상태 목록 전달, 명시 statusFilter는 우선
-  const effectiveStatusFilter =
-    statusFilter !== 'all' ? statusFilter : SUBTAB_STATUS_GROUPS[subTab].join(',');
+  const inboundOverviewQuery = useMemo(() => buildInboundOverviewQuery(filters), [filters]);
 
   const {
     data: overviewData,
@@ -102,16 +100,8 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     isError: overviewError,
     refetch: refetchOverview,
   } = useQuery({
-    queryKey: queryKeys.checkouts.view.inboundOverview({
-      statusFilter: effectiveStatusFilter,
-      searchTerm,
-    }),
-    queryFn: () =>
-      checkoutApi.getInboundOverview({
-        statusFilter: effectiveStatusFilter,
-        searchTerm: searchTerm || undefined,
-        limitPerSection: DEFAULT_PAGE_SIZE,
-      }),
+    queryKey: queryKeys.checkouts.view.inboundOverview(inboundOverviewQuery),
+    queryFn: () => checkoutApi.getInboundOverview(inboundOverviewQuery),
     ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 

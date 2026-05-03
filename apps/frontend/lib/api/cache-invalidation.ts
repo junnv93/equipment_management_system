@@ -262,6 +262,14 @@ export class EquipmentCacheInvalidation {
  */
 export class EquipmentImportCacheInvalidation {
   /**
+   * 상세 화면 상태 mutation의 optimistic refresh 대상.
+   *
+   * 상세 query는 `useOptimisticMutation.queryKey`가 직접 갱신하므로, 공통
+   * invalidateKeys에는 목록 축만 둔다.
+   */
+  static readonly statusMutationInvalidateKeys = [queryKeys.equipmentImports.lists()] as const;
+
+  /**
    * 모든 장비 반입 캐시 무효화 (목록 + 상세)
    */
   static async invalidateAll(queryClient: QueryClient): Promise<void> {
