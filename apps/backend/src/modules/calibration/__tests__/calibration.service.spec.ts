@@ -266,6 +266,63 @@ describe('CalibrationService', () => {
     });
   });
 
+  describe('createHistoricalRecord()', () => {
+    it('creates an approved completed calibration record without requiring documents', async () => {
+      const insertedRow = {
+        ...MOCK_CALIBRATION_ROW,
+        approvalStatus: 'approved',
+        status: 'completed',
+      };
+      chain.limit.mockResolvedValueOnce([
+        {
+          calibrationCycle: 12,
+          name: '오실로스코프',
+          managementNumber: 'SUW-E0001',
+          teamId: 'team-1',
+          site: 'suwon',
+        },
+      ]);
+      chain.returning.mockResolvedValueOnce([insertedRow]);
+      chain.returning.mockResolvedValueOnce([{ id: 'eq-uuid-1' }]);
+
+      const result = await service.createHistoricalRecord(
+        'eq-uuid-1',
+        {
+          calibrationDate: new Date('2024-01-01'),
+          nextCalibrationDate: new Date('2025-01-01'),
+          calibrationAgency: '한국교정',
+          result: 'pass',
+        },
+        'user-uuid-1',
+        'test_engineer'
+      );
+
+      expect(mockFileUploadService.saveFiles).not.toHaveBeenCalled();
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.approvalStatus).toBe('approved');
+      expect(result.status).toBe('completed');
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalledWith(
+        expect.stringContaining('calibration:list:')
+      );
+    });
+
+    it('throws NotFoundException when equipment does not exist', async () => {
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        service.createHistoricalRecord(
+          'missing-equipment',
+          {
+            calibrationDate: new Date('2024-01-01'),
+            calibrationAgency: '한국교정',
+          },
+          'user-uuid-1',
+          'test_engineer'
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('approveCalibration()', () => {
     it('pending_approval이 아닌 교정 승인 시 BadRequestException을 던진다', async () => {
       // findOne이 이미 승인된 교정 반환

@@ -61,7 +61,6 @@ export interface CreateCalibrationFactorDto {
   parameters?: Record<string, unknown>;
   effectiveDate: string;
   expiryDate?: string;
-  requestedBy: string;
 }
 
 export interface ApproveCalibrationFactorDto {

@@ -117,6 +117,15 @@ export interface CreateCalibrationDto {
   intermediateCheckDate?: string;
 }
 
+export interface CreateHistoricalCalibrationDto {
+  calibrationDate: string;
+  nextCalibrationDate?: string;
+  calibrationAgency: string;
+  certificateNumber?: string;
+  result?: 'pass' | 'fail' | 'conditional';
+  notes?: string;
+}
+
 export interface UpdateCalibrationDto extends Partial<CreateCalibrationDto> {}
 
 export interface ApproveCalibrationDto {
@@ -295,6 +304,18 @@ const calibrationApi = {
   createCalibrationWithFile: async (formData: FormData): Promise<CalibrationCreateResponse> => {
     const response = await apiClient.post(API_ENDPOINTS.CALIBRATIONS.CREATE, formData);
     return transformSingleResponse<CalibrationCreateResponse>(response);
+  },
+
+  // 과거 교정 이력 등록 (장비 생성/마이그레이션용, 성적서 파일 없음)
+  createHistoricalCalibration: async (
+    equipmentId: string,
+    data: CreateHistoricalCalibrationDto
+  ): Promise<Calibration> => {
+    const response = await apiClient.post(
+      API_ENDPOINTS.CALIBRATIONS.HISTORY_IMPORT(equipmentId),
+      data
+    );
+    return transformSingleResponse<Calibration>(response);
   },
 
   // 교정 정보 수정

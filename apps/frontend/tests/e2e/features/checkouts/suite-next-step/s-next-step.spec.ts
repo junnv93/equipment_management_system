@@ -2,7 +2,7 @@
  * Suite Next-Step: NextStepPanel FSM 렌더링 검증 (Serial)
  *
  * 검증 대상:
- * - `NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true` 환경에서 NextStepPanel 렌더 확인
+ * - NextStepPanel 렌더 확인
  * - FSM 상태별 data-next-action / data-urgency / data-testid 속성 정합성
  * - 역할별 panel 가시성 및 버튼 활성/비활성 상태
  * - terminal 상태에서 role="status", 액션 버튼 미표시
@@ -11,11 +11,9 @@
  *
  * 사이트: Suwon (모든 픽스처가 Suwon 소속)
  *
- * Feature Flag 감지 방식:
- *   process.env는 테스트 러너(Node.js) 환경 변수로, Next.js 빌드 타임에 번들된
- *   NEXT_PUBLIC_* 값을 반영하지 않는다.
+ * Panel 감지 방식:
  *   beforeAll에서 실제 브라우저로 페이지를 방문해 DOM에 section[data-checkout-id]가
- *   존재하는지 확인하는 방식으로 플래그 활성 여부를 판단한다.
+ *   존재하는지 확인한다.
  */
 
 import path from 'path';
@@ -41,7 +39,7 @@ const panelStatus = (page: import('@playwright/test').Page) =>
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
-  let flagEnabled = false;
+  let panelAvailable = false;
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({
@@ -51,16 +49,13 @@ test.describe('Suite Next-Step: NextStepPanel FSM 렌더링', () => {
     const probe = await context.newPage();
     await probe.goto(`/checkouts/${CHECKOUT_050_ID}`);
     await probe.waitForLoadState('domcontentloaded');
-    flagEnabled = await probe.locator('section[data-checkout-id]').isVisible();
+    panelAvailable = await probe.locator('section[data-checkout-id]').isVisible();
     await context.close();
   });
 
   test.beforeEach(async ({}, testInfo) => {
-    if (!flagEnabled) {
-      testInfo.skip(
-        true,
-        'NextStepPanel 미렌더 — NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 플래그 비활성'
-      );
+    if (!panelAvailable) {
+      testInfo.skip(true, 'NextStepPanel 미렌더');
     }
   });
 

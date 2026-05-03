@@ -122,7 +122,6 @@ export const API_ENDPOINTS = {
     /** 대여 1차 반려 (사용 부서 TM) */
     BORROWER_REJECT: (id: string) => `/api/checkouts/${id}/borrower-reject`,
     START: (id: string) => `/api/checkouts/${id}/start`,
-    COMPLETE: (id: string) => `/api/checkouts/${id}/complete`,
     CANCEL: (id: string) => `/api/checkouts/${id}/cancel`,
     RETURN: (id: string) => `/api/checkouts/${id}/return`,
     APPROVE_RETURN: (id: string) => `/api/checkouts/${id}/approve-return`,
@@ -170,6 +169,7 @@ export const API_ENDPOINTS = {
     OVERDUE: '/api/calibration/overdue',
     UPCOMING: (days?: number) => `/api/calibration/upcoming${days ? `?days=${days}` : ''}`,
     HISTORY: (equipmentId: string) => `/api/calibration/equipment/${equipmentId}`,
+    HISTORY_IMPORT: (equipmentId: string) => `/api/calibration/equipment/${equipmentId}/history`,
     HISTORY_LIST: '/api/calibration',
     INTERMEDIATE_CHECKS: {
       ALL: '/api/calibration/intermediate-checks/all',
@@ -222,8 +222,6 @@ export const API_ENDPOINTS = {
     EXTERNAL_EQUIPMENT: '/api/calibration-plans/equipment/external',
     PENDING_REVIEW: '/api/calibration-plans?status=pending_review',
     PENDING_APPROVAL: '/api/calibration-plans?status=pending_approval',
-    VERSIONS: (year?: number, siteId?: string) =>
-      `/api/calibration-plans/versions${year || siteId ? '?' : ''}${year ? `year=${year}` : ''}${year && siteId ? '&' : ''}${siteId ? `siteId=${siteId}` : ''}`,
   },
 
   // ============================================================================

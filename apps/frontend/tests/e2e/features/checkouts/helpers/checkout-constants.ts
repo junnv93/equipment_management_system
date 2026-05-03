@@ -240,7 +240,6 @@ export const SUITE_20 = {
 
 // ============================================================================
 // Suite NS: Next-Step Panel (parallel, read-only) — Suwon 시드
-// NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true 환경에서만 의미 있음
 // ============================================================================
 export const SUITE_NS = {
   PENDING_CAL: CHECKOUT_001_ID, // Suwon, pending, calibration

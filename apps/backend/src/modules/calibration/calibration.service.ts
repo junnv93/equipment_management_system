@@ -8,7 +8,10 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
-import { CreateCalibrationDto } from './dto/create-calibration.dto';
+import {
+  CreateCalibrationDto,
+  type CreateHistoricalCalibrationInput,
+} from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
@@ -486,6 +489,93 @@ export class CalibrationService extends VersionedBaseService {
       }
       throw error;
     }
+  }
+
+  /**
+   * 과거 교정 이력 등록 (증빙 파일 없음).
+   *
+   * 정식 교정 등록은 createWithDocuments()를 통해 파일 필수 + 승인 대기 흐름을 유지한다.
+   * 이 경로는 장비 생성/마이그레이션에서 이미 수행된 교정을 이력으로 남기기 위한 narrow API다.
+   */
+  async createHistoricalRecord(
+    equipmentId: string,
+    input: CreateHistoricalCalibrationInput,
+    actorId: string,
+    registeredByRole?: string
+  ): Promise<CalibrationRecord> {
+    const [equipForCreate] = await this.db
+      .select({
+        calibrationCycle: schema.equipment.calibrationCycle,
+        name: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        teamId: schema.equipment.teamId,
+        site: schema.equipment.site,
+      })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, equipmentId))
+      .limit(1);
+
+    if (!equipForCreate) {
+      throw new NotFoundException({
+        code: ErrorCode.EquipmentNotFound,
+        message: `Equipment ${equipmentId} not found.`,
+      });
+    }
+
+    const computedNextDate = calculateNextCalibrationDate(
+      input.calibrationDate,
+      equipForCreate.calibrationCycle ?? undefined
+    );
+    const dto: CreateCalibrationDto = {
+      ...input,
+      equipmentId,
+      calibrationManagerId: actorId,
+      registeredBy: actorId,
+      registeredByRole: registeredByRole as CreateCalibrationDto['registeredByRole'],
+      status: CalibrationStatusEnum.enum.completed,
+      nextCalibrationDate: input.nextCalibrationDate ?? computedNextDate ?? input.calibrationDate,
+      registrarComment: input.notes ? `Historical import: ${input.notes}` : 'Historical import',
+    };
+
+    const calibrationRow = await this.db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(schema.calibrations)
+        .values(this.transformDtoToInsert(dto, CalibrationApprovalStatusEnum.enum.approved))
+        .returning();
+
+      await this.updateEquipmentCalibrationDates(
+        tx,
+        equipmentId,
+        dto.calibrationDate,
+        undefined,
+        undefined,
+        equipForCreate.calibrationCycle ?? undefined,
+        dto.nextCalibrationDate
+      );
+
+      return inserted;
+    });
+
+    this.logger.log(`과거 교정 이력 등록: ${calibrationRow.id} (장비: ${equipmentId})`);
+
+    await this.invalidateCalibrationCache(undefined, equipmentId);
+    await this.invalidateAfterCalibrationApproval(equipmentId);
+
+    try {
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.CALIBRATION_CREATED, {
+        calibrationId: calibrationRow.id,
+        equipmentId,
+        calibrationDate: calibrationRow.calibrationDate,
+        teamId: equipForCreate.teamId ?? '',
+        actorId,
+        documentIds: [],
+        linkedPlanItemId: null,
+      });
+    } catch (error) {
+      this.logger.warn(`과거 교정 이력 캐시 이벤트 발행 실패 (${calibrationRow.id}): ${error}`);
+    }
+
+    return this.transformDbToRecord(calibrationRow, null);
   }
 
   /**
@@ -1175,7 +1265,9 @@ export class CalibrationService extends VersionedBaseService {
 
   async findScheduled(
     fromDate: Date,
-    toDate: Date
+    toDate: Date,
+    site?: CalibrationQueryDto['site'],
+    teamId?: string
   ): Promise<{
     items: CalibrationRecord[];
     meta: {
@@ -1186,7 +1278,13 @@ export class CalibrationService extends VersionedBaseService {
       currentPage: number;
     };
   }> {
-    return this.findAll({ fromDate, toDate, statuses: CalibrationStatusEnum.enum.scheduled });
+    return this.findAll({
+      fromDate,
+      toDate,
+      statuses: CalibrationStatusEnum.enum.scheduled,
+      site,
+      teamId,
+    });
   }
 
   // 교정 상태 변경 (CAS 보호)
@@ -1221,7 +1319,11 @@ export class CalibrationService extends VersionedBaseService {
     });
   }
 
-  async findByManager(calibrationManagerId: string): Promise<{
+  async findByManager(
+    calibrationManagerId: string,
+    site?: CalibrationQueryDto['site'],
+    teamId?: string
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -1231,10 +1333,14 @@ export class CalibrationService extends VersionedBaseService {
       currentPage: number;
     };
   }> {
-    return this.findAll({ calibrationManagerId });
+    return this.findAll({ calibrationManagerId, site, teamId });
   }
 
-  async findDueCalibrations(days: number): Promise<{
+  async findDueCalibrations(
+    days: number,
+    site?: CalibrationQueryDto['site'],
+    teamId?: string
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -1250,6 +1356,8 @@ export class CalibrationService extends VersionedBaseService {
     return this.findAll({
       nextFromDate: today,
       nextToDate: dueDate,
+      site,
+      teamId,
     });
   }
 
@@ -1493,7 +1601,9 @@ export class CalibrationService extends VersionedBaseService {
     calibrationId?: string,
     approverId?: string,
     /** 호출자가 이미 조회한 calibrationCycle (DB 이중 조회 방지) */
-    preloadedCycle?: number
+    preloadedCycle?: number,
+    /** 과거 이력 입력처럼 record 자체의 차기 교정일을 신뢰해야 하는 좁은 경로 */
+    nextCalibrationDateOverride?: Date
   ): Promise<void> {
     try {
       // 장비의 교정 주기: 호출자가 전달하면 재사용, 아니면 tx로 조회
@@ -1509,7 +1619,9 @@ export class CalibrationService extends VersionedBaseService {
 
       // 차기 교정일 = 교정일 + 교정주기(개월) — SSOT 유틸리티 사용
       const nextCalibrationDate =
-        calculateNextCalibrationDate(calibrationDate, cycle) ?? calibrationDate;
+        nextCalibrationDateOverride ??
+        calculateNextCalibrationDate(calibrationDate, cycle) ??
+        calibrationDate;
 
       // outer tx 공유 — 별도 db.transaction 불필요
       // 과거 교정이력 승인 시 최신 교정일을 더 오래된 날짜로 덮어쓰지 않도록 조건부 갱신
@@ -1700,10 +1812,20 @@ export class CalibrationService extends VersionedBaseService {
    * ✅ DB 쿼리 사용 (기존 인메모리 필터 → DB 조회로 수정)
    */
   async findUpcomingIntermediateChecks(
-    days: number = CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS
+    days: number = CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS,
+    site?: CalibrationQueryDto['site'],
+    teamId?: string
   ): Promise<CalibrationRecord[]> {
     const today = getUtcStartOfDay();
     const futureDate = getUtcEndOfDay(addDaysUtc(today, days));
+
+    const conditions: SQL[] = [
+      sql`${schema.calibrations.intermediateCheckDate} IS NOT NULL`,
+      sql`${schema.calibrations.intermediateCheckDate}::date >= ${today.toISOString().split('T')[0]}::date`,
+      sql`${schema.calibrations.intermediateCheckDate}::date <= ${futureDate.toISOString().split('T')[0]}::date`,
+    ];
+    if (site) conditions.push(eq(schema.equipment.site, site));
+    if (teamId) conditions.push(eq(schema.equipment.teamId, teamId));
 
     const rows = await this.db
       .select({
@@ -1713,13 +1835,8 @@ export class CalibrationService extends VersionedBaseService {
         >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = ${DocumentTypeValues.CALIBRATION_CERTIFICATE} AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
       })
       .from(schema.calibrations)
-      .where(
-        and(
-          sql`${schema.calibrations.intermediateCheckDate} IS NOT NULL`,
-          sql`${schema.calibrations.intermediateCheckDate}::date >= ${today.toISOString().split('T')[0]}::date`,
-          sql`${schema.calibrations.intermediateCheckDate}::date <= ${futureDate.toISOString().split('T')[0]}::date`
-        )
-      )
+      .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .where(and(...conditions))
       .orderBy(asc(schema.calibrations.intermediateCheckDate))
       .limit(QUERY_SAFETY_LIMITS.INTERMEDIATE_CHECKS_UPCOMING);
 
@@ -1919,5 +2036,28 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     return result[0];
+  }
+
+  /**
+   * 장비의 사이트 및 팀 조회
+   * 교정 생성/장비별 조회처럼 calibration row 생성 전 또는 equipmentId 기반 경로에서 사용.
+   */
+  async getEquipmentSiteAndTeam(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, equipmentId))
+      .limit(1);
+
+    if (!result) {
+      throw new NotFoundException({
+        code: ErrorCode.EquipmentNotFound,
+        message: `Equipment ${equipmentId} not found.`,
+      });
+    }
+
+    return result;
   }
 }

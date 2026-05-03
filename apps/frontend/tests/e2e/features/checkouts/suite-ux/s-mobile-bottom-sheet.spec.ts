@@ -4,7 +4,7 @@
  * 375px 모바일 viewport에서 CheckoutDetailClient의
  * vaul Drawer peek + expand 동작을 검증합니다.
  *
- * Feature Flag 의존: NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL=true
+ * NextStepPanel 모바일 CTA 렌더가 전제입니다.
  * 조건: nextStepDescriptor.nextAction !== null (pending 상태 반출)
  */
 

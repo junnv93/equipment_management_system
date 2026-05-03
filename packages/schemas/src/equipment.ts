@@ -29,9 +29,8 @@ import { uuidString, nullableOptionalUuid, optionalUuid } from './utils/fields';
  * 4. `pnpm --filter @equipment-management/schemas build` 실행하여 빌드 확인
  *
  * 🔄 향후 개선 방향:
- * - Zod v4 호환성 해결 후 drizzle-zod 자동 생성 활성화
- *   - `import { equipment } from '@equipment-management/db/schema/equipment';`
- *   - `export const equipmentSchema = createSelectSchema(equipment);`
+ * - Zod v4 호환성 해결 후 drizzle-zod 자동 생성 재검토
+ * - 자동 생성 스크립트는 현재 없음. 추가 시 stub가 아니라 실제 생성 + CI 검증까지 함께 도입
  * - 자세한 내용: docs/development/schema-sync-strategies.md 참고
  */
 

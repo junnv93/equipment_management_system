@@ -92,7 +92,9 @@ services:
       - /tmp
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=/api
+      # Same-Origin Reverse-Proxy 모델 (ADR-0006): API_ENDPOINTS가 이미 /api prefix를 포함한다.
+      - NEXT_PUBLIC_API_URL=
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - INTERNAL_BACKEND_URL=http://backend:3001
     depends_on:
       backend:
@@ -144,6 +146,7 @@ services:
       - DB_SSL_REJECT_UNAUTHORIZED=${DB_SSL_REJECT_UNAUTHORIZED:-true}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - HANDOVER_TOKEN_SECRET=${HANDOVER_TOKEN_SECRET}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - PERMISSIONS_GUARD_MODE=${PERMISSIONS_GUARD_MODE:-DENY}
       - FRONTEND_URL=${FRONTEND_URL}

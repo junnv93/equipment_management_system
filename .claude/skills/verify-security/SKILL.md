@@ -213,6 +213,34 @@ grep -n "NotSubmitter\|OnlyRequesterCanCancel" \
 **PASS:** service `BadRequestException` scope throw 0건 + 모든 scope 코드 403 매핑 + `SECURITY_AUDITABLE_CODES` 등록 확인.
 **FAIL:** `BadRequestException`으로 scope 위반 throw ≥1건 OR 403 매핑 누락 OR `SECURITY_AUDITABLE_CODES` 미등록.
 
+### Step 16: Controller spec 뮤테이션 스코프 커버리지 (2026-05-03 추가)
+
+`enforceXxxAccess` private 헬퍼를 보유한 컨트롤러는 spec 파일에
+`describe('mutation scope enforcement')` 블록이 있어야 한다.
+이 블록은 모든 mutation 엔드포인트(PATCH/DELETE/POST 중 헬퍼를 호출하는 것)에 대해
+cross-site `ForbiddenException` + 서비스 메서드 `not.toHaveBeenCalled()` assertion을 포함해야 한다.
+
+새 mutation 엔드포인트 추가 시 scope 가드 호출을 누락해도 테스트가 조용히 통과되는 것을 방지한다
+(2026-05-03 calibration.controller.spec.ts 8건 추가 사례).
+
+```bash
+# enforceXxxAccess 헬퍼 보유 컨트롤러 파일 수 (기준)
+grep -rln "private async enforce.*Access" \
+  apps/backend/src/modules --include="*.controller.ts" | wc -l
+
+# 대응 spec 파일에 mutation scope enforcement 블록 존재 여부
+grep -rln "mutation scope enforcement" \
+  apps/backend/src/modules --include="*.spec.ts" | wc -l
+# 기대: 두 수치 일치
+
+# 블록 내 ForbiddenException 검증 밀도 확인 (헬퍼 보유 spec당 ≥3건)
+grep -rn "rejects.toThrow(ForbiddenException)" \
+  apps/backend/src/modules --include="*.spec.ts"
+```
+
+**PASS:** 컨트롤러 파일 수 == 블록 보유 spec 수 + 각 spec의 ForbiddenException assertion ≥3건.
+**FAIL:** 블록 미존재 spec ≥1개 OR ForbiddenException assertion < 3건인 블록 존재.
+
 ## Output Format
 
 ```markdown
