@@ -101,6 +101,14 @@ describe('bulkRejectSchema', () => {
       expect(result.success).toBe(false);
     });
 
+    it(`앞뒤 공백 포함 정확히 ${MIN}자 → 통과 (.trim() 후 min 충족)`, () => {
+      const result = bulkRejectSchema.safeParse({
+        ids: [VALID_UUID],
+        reason: '  ' + 'x'.repeat(MIN) + '  ',
+      });
+      expect(result.success).toBe(true);
+    });
+
     it('reason 누락 → 실패', () => {
       const result = bulkRejectSchema.safeParse({ ids: [VALID_UUID] });
       expect(result.success).toBe(false);

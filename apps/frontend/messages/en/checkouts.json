@@ -896,6 +896,7 @@
   },
   "errors": {
     "title": "Error",
+    "genericError": "An error occurred while processing the request.",
     "notFound": "Checkout record not found.",
     "alreadyApproved": "This checkout request has already been approved.",
     "notPending": "This checkout request is not in a pending state.",
