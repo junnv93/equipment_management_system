@@ -114,6 +114,14 @@ module.exports = {
         message:
           "Dynamic import('crypto') is not allowed. Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
       },
+      // CommonJS require alias 우회 차단:
+      // `const { randomUUID: rid } = require('node:crypto')`는 no-restricted-imports가 보지 못한다.
+      {
+        selector:
+          "VariableDeclarator[init.type='CallExpression'][init.callee.name='require'][init.arguments.0.value=/^(node:crypto|crypto)$/] Property[key.name='randomUUID']",
+        message:
+          "Do not destructure randomUUID from require('node:crypto'/'crypto'). Use IdentifierService (DI) or generateXxxId() from '@/common/identifiers/identifier.service'. See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+      },
       {
         selector:
           "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -175,6 +183,13 @@ module.exports = {
             message:
               "Dynamic import('crypto') is not allowed. Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
           },
+          // CommonJS require alias 우회 차단 (controller override는 global rule을 대체하므로 중복 필요).
+          {
+            selector:
+              "VariableDeclarator[init.type='CallExpression'][init.callee.name='require'][init.arguments.0.value=/^(node:crypto|crypto)$/] Property[key.name='randomUUID']",
+            message:
+              "Do not destructure randomUUID from require('node:crypto'/'crypto'). Use IdentifierService (DI). See verify-ssot Step 44 / docs/references/identifier-policy.md.",
+          },
           {
             selector:
               "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
@@ -197,7 +212,8 @@ module.exports = {
       },
     },
     {
-      // seed-data fixture, 테스트 spec, 테스트 헬퍼는 리터럴 사용이 정상 — SSOT 룰 제외
+      // seed-data fixture, 테스트 spec, 테스트 헬퍼는 리터럴 사용이 정상 — SSOT 룰 제외.
+      // Spec 내부 helper는 모듈 경계가 아니므로 반환 타입 추론을 허용한다.
       files: [
         'src/database/seed-data/**/*.ts',
         '**/__tests__/**/*.spec.ts',
@@ -206,6 +222,7 @@ module.exports = {
       ],
       rules: {
         'no-restricted-syntax': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
       },
     },
     {

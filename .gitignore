@@ -79,6 +79,7 @@ apps/frontend/tests/e2e/output/
 *.png
 !apps/frontend/public/**/*.png
 !docs/**/*.png
+!apps/frontend/tests/e2e/visual/**/*.png
 
 # Visual regression baseline output (env var SCREENSHOT_OUTPUT_DIR로 override 가능)
 apps/frontend/__screenshots__/
