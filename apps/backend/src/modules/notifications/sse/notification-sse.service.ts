@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { Subject, Observable, map, finalize, interval, merge } from 'rxjs';
+import { Subject, Observable, map, finalize, interval, merge, takeUntil } from 'rxjs';
 import { SSE_APPROVAL_CHANGED_SENTINEL } from '@equipment-management/shared-constants';
 
 /**
@@ -43,6 +43,9 @@ export class NotificationSseService implements OnModuleDestroy {
   // userId → Subject (각 사용자별 SSE 스트림)
   private readonly connections = new Map<string, Subject<SseNotificationPayload>>();
 
+  // userId → stream 종료 signal (heartbeat interval까지 함께 종료)
+  private readonly closeSignals = new Map<string, Subject<void>>();
+
   // userId → 활성 구독 수 (Reference Counting)
   // 마지막 구독 해제 시 Subject 정리 트리거
   private readonly subscriptionCounts = new Map<string, number>();
@@ -69,11 +72,13 @@ export class NotificationSseService implements OnModuleDestroy {
     // 기존 커넥션이 없으면 생성 (다중 탭 = 같은 Subject 공유)
     if (!this.connections.has(userId)) {
       this.connections.set(userId, new Subject<SseNotificationPayload>());
+      this.closeSignals.set(userId, new Subject<void>());
       this.subscriptionCounts.set(userId, 0);
       this.logger.debug(`SSE 커넥션 생성: userId=${userId}`);
     }
 
     const subject = this.connections.get(userId)!;
+    const closeSignal = this.closeSignals.get(userId)!;
     const newCount = (this.subscriptionCounts.get(userId) ?? 0) + 1;
     this.subscriptionCounts.set(userId, newCount);
     this.logger.debug(`SSE 구독 추가: userId=${userId}, 활성 구독=${newCount}`);
@@ -90,6 +95,7 @@ export class NotificationSseService implements OnModuleDestroy {
     // Heartbeat 스트림 (30초마다 SSE 이벤트로 커넥션 유지)
     // 프록시/로드밸런서가 유휴 연결을 종료하지 않도록 주기적 데이터 전송
     const heartbeat$ = interval(this.HEARTBEAT_INTERVAL_MS).pipe(
+      takeUntil(closeSignal),
       map(() => ({ data: '', type: 'heartbeat' }) as MessageEvent)
     );
 
@@ -101,12 +107,7 @@ export class NotificationSseService implements OnModuleDestroy {
 
         // 마지막 구독이 해제되면 Subject를 정리하여 메모리 누수 방지
         if (remaining <= 0) {
-          const s = this.connections.get(userId);
-          if (s && !s.closed) {
-            s.complete();
-          }
-          this.connections.delete(userId);
-          this.subscriptionCounts.delete(userId);
+          this.closeConnection(userId);
           this.logger.debug(`SSE 커넥션 정리 (마지막 구독 해제): userId=${userId}`);
         }
       })
@@ -140,7 +141,10 @@ export class NotificationSseService implements OnModuleDestroy {
    * approval counts 쿼리를 무효화하게 한다.
    * 2분 폴링 → SSE 실시간 갱신으로 전환.
    */
-  broadcastApprovalChanged(triggerEvent: string): void {
+  broadcastApprovalChanged(
+    triggerEvent: string,
+    options: { linkedPlanItemId?: string | null } = {}
+  ): void {
     const activeCount = this.connections.size;
     if (activeCount === 0) return;
 
@@ -156,8 +160,8 @@ export class NotificationSseService implements OnModuleDestroy {
           category: 'approval',
           priority: 'low',
           linkUrl: null,
-          entityType: 'approval',
-          entityId: null,
+          entityType: options.linkedPlanItemId ? 'calibrationPlanItem' : 'approval',
+          entityId: options.linkedPlanItemId ?? null,
           equipmentId: null,
           createdAt: new Date(),
         });
@@ -178,13 +182,27 @@ export class NotificationSseService implements OnModuleDestroy {
    * 특정 사용자 커넥션 강제 종료 (로그아웃 시)
    */
   disconnectUser(userId: string): void {
-    const subject = this.connections.get(userId);
-    if (subject) {
-      subject.complete();
-      this.connections.delete(userId);
-      this.subscriptionCounts.delete(userId);
+    if (this.connections.has(userId)) {
+      this.closeConnection(userId);
       this.logger.debug(`SSE 강제 종료: userId=${userId}`);
     }
+  }
+
+  private closeConnection(userId: string): void {
+    const closeSignal = this.closeSignals.get(userId);
+    if (closeSignal && !closeSignal.closed) {
+      closeSignal.next();
+      closeSignal.complete();
+    }
+
+    const subject = this.connections.get(userId);
+    if (subject && !subject.closed) {
+      subject.complete();
+    }
+
+    this.connections.delete(userId);
+    this.closeSignals.delete(userId);
+    this.subscriptionCounts.delete(userId);
   }
 
   /**
@@ -197,8 +215,7 @@ export class NotificationSseService implements OnModuleDestroy {
     this.heartbeatInterval = setInterval(() => {
       for (const [userId, subject] of this.connections) {
         if (subject.closed) {
-          this.connections.delete(userId);
-          this.subscriptionCounts.delete(userId);
+          this.closeConnection(userId);
           this.logger.debug(`SSE 정리 (closed Subject): userId=${userId}`);
         }
       }
@@ -214,11 +231,11 @@ export class NotificationSseService implements OnModuleDestroy {
       this.heartbeatInterval = null;
     }
 
-    for (const [userId, subject] of this.connections) {
-      subject.complete();
-      this.connections.delete(userId);
+    for (const userId of [...this.connections.keys()]) {
+      this.closeConnection(userId);
     }
     this.subscriptionCounts.clear();
+    this.closeSignals.clear();
 
     this.logger.log('SSE 서비스 종료: 모든 커넥션 해제');
   }

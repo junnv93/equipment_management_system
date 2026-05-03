@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationSseService } from '../notifications/sse/notification-sse.service';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
@@ -63,8 +63,12 @@ const APPROVAL_AFFECTING_EVENTS = [
 ] as const;
 
 @Injectable()
-export class ApprovalSseListener implements OnModuleInit {
+export class ApprovalSseListener implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ApprovalSseListener.name);
+  private readonly registeredHandlers: Array<{
+    eventName: (typeof APPROVAL_AFFECTING_EVENTS)[number];
+    handler: (payload?: { linkedPlanItemId?: string | null }) => void;
+  }> = [];
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
@@ -73,12 +77,21 @@ export class ApprovalSseListener implements OnModuleInit {
 
   onModuleInit(): void {
     for (const eventName of APPROVAL_AFFECTING_EVENTS) {
-      this.eventEmitter.on(eventName, () => {
-        this.broadcastApprovalChanged(eventName);
-      });
+      const handler = (payload: { linkedPlanItemId?: string | null } = {}): void => {
+        this.broadcastApprovalChanged(eventName, payload.linkedPlanItemId ?? null);
+      };
+      this.eventEmitter.on(eventName, handler);
+      this.registeredHandlers.push({ eventName, handler });
     }
 
     this.logger.log(`승인 변경 SSE 리스너 등록 완료: ${APPROVAL_AFFECTING_EVENTS.length}개 이벤트`);
+  }
+
+  onModuleDestroy(): void {
+    for (const { eventName, handler } of this.registeredHandlers) {
+      this.eventEmitter.off(eventName, handler);
+    }
+    this.registeredHandlers.length = 0;
   }
 
   /**
@@ -88,7 +101,7 @@ export class ApprovalSseListener implements OnModuleInit {
    * 전체 브로드캐스트한다. 프론트엔드에서 queryClient.invalidateQueries로
    * 자기 역할의 counts만 refetch한다.
    */
-  private broadcastApprovalChanged(triggerEvent: string): void {
-    this.sseService.broadcastApprovalChanged(triggerEvent);
+  private broadcastApprovalChanged(triggerEvent: string, linkedPlanItemId: string | null): void {
+    this.sseService.broadcastApprovalChanged(triggerEvent, { linkedPlanItemId });
   }
 }

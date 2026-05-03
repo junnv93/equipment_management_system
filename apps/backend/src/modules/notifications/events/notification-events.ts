@@ -157,6 +157,7 @@ export interface CalibrationNotificationEvent extends BaseNotificationEvent {
   equipmentName: string;
   managementNumber: string;
   teamId: string;
+  linkedPlanItemId?: string | null;
   reason?: string;
 }
 

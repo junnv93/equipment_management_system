@@ -102,6 +102,14 @@ export function useNotificationStream() {
                   queryClient.invalidateQueries({
                     queryKey: queryKeys.approvals.countsAll,
                   });
+                  if (
+                    notification.entityType === 'calibrationPlanItem' &&
+                    typeof notification.entityId === 'string'
+                  ) {
+                    queryClient.invalidateQueries({
+                      queryKey: queryKeys.calibrationPlans.all,
+                    });
+                  }
                   continue;
                 }
 

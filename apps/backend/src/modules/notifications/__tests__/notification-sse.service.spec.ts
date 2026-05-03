@@ -139,6 +139,26 @@ describe('NotificationSseService', () => {
         service.broadcastApprovalChanged('checkout.approved');
       }).not.toThrow();
     });
+
+    it('linkedPlanItemId가 있으면 calibrationPlanItem entity로 브로드캐스트한다', () => {
+      const received: SseNotificationPayload[] = [];
+      const sub = service.createStream(MOCK_USER_ID).subscribe((event) => {
+        received.push(event.data as SseNotificationPayload);
+      });
+
+      service.broadcastApprovalChanged('calibration.created', {
+        linkedPlanItemId: 'plan-item-uuid-1',
+      });
+
+      expect(received).toHaveLength(1);
+      expect(received[0]).toMatchObject({
+        content: 'calibration.created',
+        entityType: 'calibrationPlanItem',
+        entityId: 'plan-item-uuid-1',
+      });
+
+      sub.unsubscribe();
+    });
   });
 
   // ─── disconnectUser ───────────────────────────────────────────────────────
