@@ -368,4 +368,39 @@ describe('CalibrationFactorsController', () => {
       expect(result).toEqual(expectedResult);
     });
   });
+
+  describe('mutation scope enforcement', () => {
+    const uuid = '550e8400-e29b-41d4-a716-446655440021';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const req = {
+      user: {
+        userId: '550e8400-e29b-41d4-a716-446655440010',
+        roles: ['test_engineer'],
+        site: 'suwon',
+        teamId: 'team-uuid',
+      },
+    } as never;
+
+    beforeEach(() => {
+      mockCalibrationFactorsService.getFactorSiteAndTeam.mockResolvedValue({
+        site: 'busan',
+        teamId: 'team-uuid',
+      });
+    });
+
+    it('should block approve for cross-site factor', async () => {
+      await expect(controller.approve(uuid, {} as never, req)).rejects.toThrow(ForbiddenException);
+      expect(service.approve).not.toHaveBeenCalled();
+    });
+
+    it('should block reject for cross-site factor', async () => {
+      await expect(controller.reject(uuid, {} as never, req)).rejects.toThrow(ForbiddenException);
+      expect(service.reject).not.toHaveBeenCalled();
+    });
+
+    it('should block remove for cross-site factor', async () => {
+      await expect(controller.remove(uuid, 1, req)).rejects.toThrow(ForbiddenException);
+      expect(service.remove).not.toHaveBeenCalled();
+    });
+  });
 });
