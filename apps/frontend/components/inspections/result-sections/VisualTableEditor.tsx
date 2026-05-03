@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { ClipboardPaste, Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
+import { ClipboardPaste, FileUp, Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,6 +32,7 @@ import DocumentImage from '@/components/shared/DocumentImage';
 import type { RichCell } from '@/lib/api/calibration-api';
 import { useInspectionForm } from '@/lib/inspection/form-context';
 import { useUndoableState } from '@/hooks/use-undoable-state';
+import { parseCsvTable } from '@/lib/utils/csv-utils';
 
 // ============================================================================
 // Types
@@ -75,6 +76,9 @@ const isMacPlatform = (): boolean => {
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
 };
 
+const toTextCells = (row: string[]): RichCell[] =>
+  row.map((value) => ({ type: 'text' as const, value }));
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -90,6 +94,7 @@ export default function VisualTableEditor({
   const [focusedCell, setFocusedCell] = useState<{ r: number; c: number } | null>(null);
   const [showPasteArea, setShowPasteArea] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
+  const csvFileRef = useRef<HTMLInputElement>(null);
 
   // Phase 1A-b: InspectionFormContext consumer (Provider 부재 시 NO_OP).
   // 셀 단위 provenance(prefilled vs user-modified) 시각 SSOT.
@@ -257,36 +262,46 @@ export default function VisualTableEditor({
 
   // ── Paste fill ──
 
-  /**
-   * paste 영역 텍스트 → 헤더 + 행 배열로 파싱.
-   * delimiter: 탭 우선, 없으면 콤마.
-   */
-  const parsePasteText = useCallback(
+  const parseDelimitedTable = useCallback(
     (raw: string): { headers: string[]; rows: RichCell[][] } | null => {
       const lines = raw
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
       if (lines.length === 0) return null;
 
       const delimiter = lines[0].includes('\t') ? '\t' : ',';
-      const parsedHeaders = lines[0].split(delimiter).map((h) => h.trim());
-      const parsedRows: RichCell[][] = lines
-        .slice(1)
-        .map((line) =>
-          line.split(delimiter).map((v) => ({ type: 'text' as const, value: v.trim() }))
-        );
+      if (delimiter === ',') {
+        const parsedCsv = parseCsvTable(raw);
+        if (!parsedCsv) return null;
+        return {
+          headers: parsedCsv.headers,
+          rows: parsedCsv.rows.map(toTextCells),
+        };
+      }
 
-      // Pad rows to match header count
+      const parsedHeaders = lines[0].split(delimiter).map((header) => header.trim());
       const colCount = parsedHeaders.length;
-      const paddedRows = parsedRows.map((row) => {
-        while (row.length < colCount) row.push({ type: 'text', value: '' });
-        return row.slice(0, colCount);
+      const parsedRows = lines.slice(1).map((line) => {
+        const values = line.split(delimiter).map((value) => value.trim());
+        while (values.length < colCount) values.push('');
+        return toTextCells(values.slice(0, colCount));
       });
 
-      return { headers: parsedHeaders, rows: paddedRows };
+      return { headers: parsedHeaders, rows: parsedRows };
     },
     []
+  );
+
+  /**
+   * paste 영역 텍스트/CSV 파일 → 헤더 + 행 배열로 파싱.
+   * 탭 구분은 Excel/Sheets 복붙용, 콤마 구분은 csv-utils의 RFC 4180 파서를 사용.
+   */
+  const parsePasteText = useCallback(
+    (raw: string): { headers: string[]; rows: RichCell[][] } | null => {
+      return parseDelimitedTable(raw);
+    },
+    [parseDelimitedTable]
   );
 
   const hasExistingTextData = useCallback(
@@ -323,7 +338,10 @@ export default function VisualTableEditor({
   const handlePasteFill = useCallback(
     (raw: string) => {
       const parsed = parsePasteText(raw);
-      if (!parsed) return;
+      if (!parsed) {
+        toast({ variant: 'destructive', description: t('toasts.csvImportError') });
+        return;
+      }
       if (pasteMode === 'replace' && hasExistingTextData()) {
         // confirmation 분기 — replace + 기존 데이터 → AlertDialog
         setReplaceConfirmText(raw);
@@ -334,16 +352,67 @@ export default function VisualTableEditor({
       } else {
         applyPasteAppend(parsed);
       }
+      toast({
+        description: t('toasts.csvImportSuccess', {
+          rowCount: parsed.rows.length,
+          columnCount: parsed.headers.length,
+        }),
+      });
     },
-    [pasteMode, parsePasteText, hasExistingTextData, applyPasteReplace, applyPasteAppend]
+    [pasteMode, parsePasteText, hasExistingTextData, applyPasteReplace, applyPasteAppend, t, toast]
+  );
+
+  const handleCsvImport = useCallback(
+    (raw: string) => {
+      const parsed = parsePasteText(raw);
+      if (!parsed) {
+        toast({ variant: 'destructive', description: t('toasts.csvImportError') });
+        return;
+      }
+      if (hasExistingTextData()) {
+        setReplaceConfirmText(raw);
+        return;
+      }
+      applyPasteReplace(parsed);
+      toast({
+        description: t('toasts.csvImportSuccess', {
+          rowCount: parsed.rows.length,
+          columnCount: parsed.headers.length,
+        }),
+      });
+    },
+    [parsePasteText, hasExistingTextData, applyPasteReplace, t, toast]
+  );
+
+  const handleCsvFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+
+      try {
+        handleCsvImport(await file.text());
+      } catch {
+        toast({ variant: 'destructive', description: t('toasts.csvImportError') });
+      }
+    },
+    [handleCsvImport, t, toast]
   );
 
   const confirmReplace = useCallback(() => {
     if (replaceConfirmText === null) return;
     const parsed = parsePasteText(replaceConfirmText);
-    if (parsed) applyPasteReplace(parsed);
+    if (parsed) {
+      applyPasteReplace(parsed);
+      toast({
+        description: t('toasts.csvImportSuccess', {
+          rowCount: parsed.rows.length,
+          columnCount: parsed.headers.length,
+        }),
+      });
+    }
     setReplaceConfirmText(null);
-  }, [replaceConfirmText, parsePasteText, applyPasteReplace]);
+  }, [replaceConfirmText, parsePasteText, applyPasteReplace, t, toast]);
 
   const cancelReplace = useCallback(() => setReplaceConfirmText(null), []);
 
@@ -475,6 +544,15 @@ export default function VisualTableEditor({
       {/* Paste area (collapsible) */}
       {showPasteArea && (
         <div className={INSPECTION_SPACING.field}>
+          <input
+            ref={csvFileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleCsvFileChange}
+            aria-label={t('form.importCsv')}
+          />
+
           {/* Phase 0A: Mode 라디오 (append default / replace warning) */}
           <fieldset className="space-y-1.5">
             <legend className="text-xs font-medium text-muted-foreground">
@@ -531,6 +609,25 @@ export default function VisualTableEditor({
               </div>
             )}
           </fieldset>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 p-3">
+            <div>
+              <div className="text-sm font-medium">{t('pasteMode.csvImportTitle')}</div>
+              <div className="text-xs text-muted-foreground">
+                {t('pasteMode.csvImportDescription')}
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => csvFileRef.current?.click()}
+              className="text-xs"
+            >
+              <FileUp className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              {t('form.importCsv')}
+            </Button>
+          </div>
 
           <textarea
             ref={pasteRef}
