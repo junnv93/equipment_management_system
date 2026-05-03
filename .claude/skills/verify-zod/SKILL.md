@@ -507,7 +507,7 @@ grep -A20 "ApproveValidationPipe\|QualityApproveValidationPipe" \
 - 정당화 없는 underscore prefix 파라미터 1건 이상
 - DTO 필드가 service 시그니처에 누락되어 사용자 입력 silent loss
 
-### Step 15: Frontend `< N` 하드코딩 ↔ Backend Zod `.min(N)` SSOT 동기화 강제 (REJECTION_REASON_MIN_LENGTH 동기화, VALIDATION_RULES 동기화) (2026-05-01 추가)
+### Step 15: Frontend `< N` 하드코딩 ↔ Backend Zod `.min(N)`/`.max(N)` SSOT 동기화 강제 (REJECTION_REASON_MIN_LENGTH + REVOCATION_REASON_MIN_LENGTH + EXTENDED_TEXT_MAX_LENGTH 동기화) (2026-05-01 추가, 2026-05-03 보강)
 
 **탐지 대상**: `rejectionReason`, `opinion`, `comment`, `reason`, `cause` 등 사용자 자유 텍스트 필드의 frontend ↔ backend 검증 강도 불일치 — `VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH` SSOT 미경유. frontend에 `< 10` 같은 매직 넘버 하드코딩이 박혀있고 backend Zod는 `.min(1)` 만 적용된 케이스(=defense-in-depth gap, frontend 우회 시 1자도 통과).
 
@@ -839,6 +839,39 @@ it('trims surrounding whitespace before length check — accept (trim 후 정확
 
 **관련 사고**:
 - `inspection-undo-hook-extraction-reject-spec` (2026-05-02): Evaluator iter 1 M1 FAIL — trim→accept 케이스 누락. iter 2에서 추가 후 PASS.
+
+---
+
+### Step 18: `z.string().uuid()` 직접 사용 금지 — `uuidString()` SSOT 경유 필수 (2026-05-03 추가)
+
+**배경**: Zod v4는 RFC 9562 UUID를 엄격히 검증하므로 시드 UUID(`00000000-0000-0000-0000-000000000001` 등)를 거부한다. 프로젝트 E2E 시드 데이터가 이 형식을 사용하므로 `z.string().uuid()` 직접 사용 시 테스트에서 422 오류가 발생한다. `packages/schemas/src/utils/fields.ts`의 `uuidString()` helper는 8-4-4-4-12 hex regex로 관대하게 검증하여 시드 UUID를 허용한다.
+
+**규칙**: 백엔드 DTO UUID 필드는 `z.string().uuid()` 직접 사용 금지 — `uuidString(msg)` SSOT 경유 필수.
+
+**탐지 명령**:
+
+```bash
+# DTO 파일에서 z.string().uuid() 직접 사용 탐지
+grep -rn "z\.string()\.uuid(" apps/backend/src/modules --include="*.dto.ts"
+# 기대: 0건 (uuidString() SSOT 경유 필수)
+```
+
+**PASS 기준**: `z.string().uuid(` 0건.
+
+**FAIL 기준**: 1건 이상 → `uuidString(VM.uuid.invalid('필드명'))` 또는 `uuidString(VM.uuid.generic)`으로 교체.
+
+**올바른 패턴** (`bulk-reject.dto.ts`, 2026-05-03):
+
+```typescript
+// ✅ CORRECT — uuidString SSOT (시드 UUID 허용)
+import { VM, uuidString } from '@equipment-management/schemas';
+ids: z.array(uuidString(VM.uuid.generic)).min(1, '...')
+
+// ❌ WRONG — Zod v4 RFC 9562 strict → seed UUID 거부
+ids: z.array(z.string().uuid(VM.uuid.generic)).min(1, '...')
+```
+
+**발생 이력**: `zod-trim-max-system-wide-residual` sprint (2026-05-03) — bulk-reject/approve DTO에서 발견. Evaluator grep으로 탐지 후 즉시 수정.
 
 ## Exceptions
 

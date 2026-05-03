@@ -181,6 +181,15 @@ grep -rn "SECURITY_AUDITABLE_CODES" apps/backend/src/common/ --include="*.ts" \
 grep -rn "throw new BadRequestException" apps/backend/src/modules --include="*.service.ts" -A5 \
   | grep -E "NotSubmitter|OnlyRequesterCan|OnlyXxxCan"
 
+# scope → FSM 순서 역전 탐지 — cancel()/취소 메서드에서 FSM 체크가 scope 체크보다 먼저 나오면
+# 스코프 외 사용자가 FSM 오류 메시지로 내부 상태를 역추론 가능 (정보 누출)
+# 패턴: ForbiddenException(소유권) throw가 BadRequestException(FSM) throw보다 나중에 나오는 메서드
+# 사례: equipment-imports.service.ts cancel() — 2026-05-03 ForbiddenException 순서 수정
+grep -n "throw new ForbiddenException\|throw new BadRequestException" \
+  apps/backend/src/modules/equipment-imports/equipment-imports.service.ts \
+  | awk -F: 'NR==1{first_type=$0} {print}' | head -10
+# 기대: ForbiddenException(소유권) 라인이 BadRequestException(FSM) 라인보다 먼저 위치
+
 # scope 위반 코드가 errorCodeToStatusCode에서 403 외 다른 값으로 매핑됐는지 탐지
 # (NotSubmitter/OnlyRequesterCanCancel 패턴 코드 라인이 403 포함 여부 교차 확인)
 python3 -c "

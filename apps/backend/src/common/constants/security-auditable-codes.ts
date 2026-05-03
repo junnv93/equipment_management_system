@@ -29,7 +29,6 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.CannotSelfApprove,
   ErrorCode.FormHistoryDownloadForbidden,
   ErrorCode.RevocationWindowExpired,
-  ErrorCode.RevocationReasonRequired,
   ErrorCode.IntermediateInspectionWithdrawNotSubmitter,
   ErrorCode.SelfInspectionWithdrawNotSubmitter,
   ErrorCode.EquipmentImportOnlyRequesterCanCancel,
@@ -60,6 +59,9 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.CalibrationPlanItemNotExecuted,
   ErrorCode.CalibrationPlanNonExportableStatus,
 
+  // ─── 철회/반려 사유 defense-in-depth fail-close ───────────────────────
+  // (frontend ≥10자 룰의 backend 페어링 — HTTP 400이지만 bypass 차단 감사 대상)
+  ErrorCode.RevocationReasonRequired,
   // ─── 7 도메인 reject defense-in-depth fail-close ─────────────────────
   // (frontend RejectReasonSchema ≥10자 룰의 backend 페어링)
   ErrorCode.EquipmentImportRejectionReasonRequired,

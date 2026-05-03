@@ -1703,4 +1703,52 @@ returnedToday: sql`COUNT(*) FILTER (WHERE status IN (${sql.join(completedStatuse
 - `packages/schemas/src/checkout.ts` — `CheckoutSummary` 인터페이스 (inProgress 필드명)
 - `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx` — `useStatCards` KPI 카드 배열
 
+### Step 52: `revokeApproval` 5단계 fail-close 순서 검증 (2026-05-03 추가)
+
+**규칙**: `revokeApproval` 메서드는 반드시 `scope → FSM(APPROVED) → reason → time-window → domain` 5단계 순서로 fail-close해야 한다. 보안 원칙: FSM 이전에 scope 체크를 완료해야 스코프 외 사용자가 FSM 오류 메시지로 승인 상태를 역추론하는 것을 차단한다. reason 검증은 FSM 이후 — 미승인 상태에서 reason 조건을 먼저 확인할 필요가 없고, fail-fast 원칙에 따라 FSM 체크가 더 값싼 연산이다.
+
+**5단계 순서**:
+1. `enforceScopeFromCheckout()` — site/team scope 위반 403 차단
+2. FSM 상태 확인 (`status !== APPROVED`) — `RevocationWindowExpired` 또는 FSM 오류 400
+3. `dto.reason` 최소 길이 확인 (`REVOCATION_REASON_MIN_LENGTH`) — `RevocationReasonRequired` 400
+4. time-window 확인 (`approvedAt + APPROVAL_REVOCATION_WINDOW_MS`) — `RevocationWindowExpired` 403
+5. domain 확인 (`checkout.approverId !== approverId`) — `Forbidden` 403
+
+**검증 명령어**:
+```bash
+# revokeApproval 메서드 구조 — 단계 순서 확인
+grep -n "enforceScopeFromCheckout\|RevocationReasonRequired\|RevocationWindowExpired\|REVOCATION_REASON_MIN_LENGTH\|APPROVAL_REVOCATION_WINDOW\|approverId" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  | grep -A0 "" | head -20
+# 기대: scope(enforceScopeFromCheckout) → FSM(ErrorCode.Invalid*) → reason(REVOCATION_REASON_MIN_LENGTH) → window(RevocationWindowExpired) → domain(approverId)
+
+# reason 검증이 FSM 체크보다 먼저 나오는지 탐지 (역전 탐지)
+python3 -c "
+import re
+with open('apps/backend/src/modules/checkouts/checkouts.service.ts') as f:
+    src = f.read()
+# revokeApproval 블록 추출
+m = re.search(r'async revokeApproval\b[^{]*{(.+?)(?=\n  async |\nAsync |\Z)', src, re.DOTALL)
+if not m: print('WARN: revokeApproval 메서드 미발견'); exit()
+block = m.group(1)
+reason_pos = block.find('RevocationReasonRequired')
+fsm_pos = min(
+    (block.find(x) for x in ['INVALID_TRANSITION','APPROVED','InvalidTransition'] if x in block),
+    default=99999
+)
+if reason_pos < fsm_pos and reason_pos != -1:
+    print('FAIL: reason 검증이 FSM 체크 이전 — scope/FSM 우선 원칙 위반')
+else:
+    print('PASS: scope → FSM → reason 순서 확인')
+" 2>/dev/null
+```
+
+**PASS**: `revokeApproval` 메서드 내 5단계가 순서대로 존재.
+**FAIL**: reason 검증이 FSM 체크보다 앞에 위치 → 스코프 외 사용자 상태 역추론 취약점.
+
+**관련 파일**:
+- `apps/backend/src/modules/checkouts/checkouts.service.ts` — `revokeApproval` 메서드
+- `apps/backend/src/modules/checkouts/dto/revoke-approval.dto.ts` — `REVOCATION_REASON_MIN_LENGTH` Zod 스키마
+- `packages/schemas/src/errors.ts` — `RevocationReasonRequired`(400), `RevocationWindowExpired`(403) 매핑
+
 **발생 이력 (2026-04-30 신설)**: KPI 카드 검토 중 "반출 중" 카드 `value = summary.approved`(status='approved' 단일 카운트)와 `filterStatus = in_progress 그룹`(approved 미포함 6개 상태)이 완전 불일치임을 발견. 또한 `returnedToday`가 `returned` 단일 카운트인데 클릭 필터는 `returned + return_approved`로 구성되어 있어 숫자보다 목록이 더 많은 버그도 존재. 두 카운트 모두 `CHECKOUT_STATUS_GROUPS` 그룹 SSOT에서 배열을 도출하는 패턴으로 수정하여 value-filterStatus 정합성 확보.

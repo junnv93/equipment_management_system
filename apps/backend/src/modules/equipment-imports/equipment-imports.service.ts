@@ -742,18 +742,20 @@ export class EquipmentImportsService extends VersionedBaseService {
   async cancel(id: string, userId: string, version: number): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
-      throw new BadRequestException({
-        code: ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel,
-        message: 'Only pending or approved import requests can be canceled.',
-      });
-    }
-
-    // 본인만 취소 가능 (소유권 위반 = 403 Forbidden)
+    // ① scope: 본인만 취소 가능 (소유권 위반 = 403 Forbidden) — FSM보다 먼저 체크해야
+    // 스코프 외 사용자가 FSM 오류 메시지로 상태를 역추론하는 것을 차단
     if (equipmentImport.requesterId !== userId) {
       throw new ForbiddenException({
         code: ErrorCode.EquipmentImportOnlyRequesterCanCancel,
         message: 'Only the requester can cancel their own import request.',
+      });
+    }
+
+    // ② FSM: pending/approved 상태만 취소 가능
+    if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
+      throw new BadRequestException({
+        code: ErrorCode.EquipmentImportOnlyPendingOrApprovedCanCancel,
+        message: 'Only pending or approved import requests can be canceled.',
       });
     }
 
