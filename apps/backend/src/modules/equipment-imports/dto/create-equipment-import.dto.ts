@@ -8,6 +8,7 @@ import {
   type EquipmentImportSource,
   VM,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 const classificationValues = Object.keys(CLASSIFICATION_LABELS) as [string, ...string[]];
 
@@ -22,17 +23,59 @@ const classificationValues = Object.keys(CLASSIFICATION_LABELS) as [string, ...s
  * baseImportSchemaRaw(refinement 없음)로 extend → 각 스키마에 refinement 개별 적용.
  */
 const baseImportSchemaRaw = z.object({
-  equipmentName: z.string().min(1, VM.equipmentImport.name.required).max(100),
-  modelName: z.string().max(100).optional(),
-  manufacturer: z.string().max(100).optional(),
-  serialNumber: z.string().max(100).optional(),
-  description: z.string().optional(),
+  equipmentName: z
+    .string()
+    .trim()
+    .min(1, VM.equipmentImport.name.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('장비명', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
+  modelName: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('모델명', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  manufacturer: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('제조사', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  serialNumber: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('일련번호', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('장비 설명', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   classification: z.enum(classificationValues, {
     message: VM.equipmentImport.classification.invalid,
   }),
   usagePeriodStart: z.string().datetime({ message: VM.date.invalid }),
   usagePeriodEnd: z.string().datetime({ message: VM.date.invalid }),
-  reason: z.string().min(1, VM.equipmentImport.reason.required),
+  reason: z
+    .string()
+    .trim()
+    .min(1, VM.equipmentImport.reason.required)
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반입 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 const dateRangeCheck = (data: { usagePeriodStart: string; usagePeriodEnd: string }): boolean =>
@@ -45,9 +88,30 @@ const dateRangeParams = {
 // Rental import schema (외부 렌탈 업체)
 const rentalImportSchemaRaw = baseImportSchemaRaw.extend({
   sourceType: z.literal('rental'),
-  vendorName: z.string().min(1, VM.equipmentImport.rentalCompany.required).max(100),
-  vendorContact: z.string().max(100).optional(),
-  externalIdentifier: z.string().max(100).optional(),
+  vendorName: z
+    .string()
+    .trim()
+    .min(1, VM.equipmentImport.rentalCompany.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('렌탈 업체명', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
+  vendorContact: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('업체 연락처', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  externalIdentifier: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('업체 장비번호', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
   // Internal shared fields should be undefined for rental
   ownerDepartment: z.undefined().optional(),
   internalContact: z.undefined().optional(),
@@ -59,10 +123,38 @@ const rentalImportSchema = rentalImportSchemaRaw.refine(dateRangeCheck, dateRang
 const internalSharedImportSchema = baseImportSchemaRaw
   .extend({
     sourceType: z.literal('internal_shared'),
-    ownerDepartment: z.string().min(1, VM.equipmentImport.ownerDepartment.required).max(100),
-    internalContact: z.string().max(100).optional(),
-    borrowingJustification: z.string().optional(),
-    externalIdentifier: z.string().max(100).optional(),
+    ownerDepartment: z
+      .string()
+      .trim()
+      .min(1, VM.equipmentImport.ownerDepartment.required)
+      .max(
+        VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+        VM.string.max('소유 부서', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+      ),
+    internalContact: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+        VM.string.max('내부 연락처', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+      )
+      .optional(),
+    borrowingJustification: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('반입 상세 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+    externalIdentifier: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+        VM.string.max('업체 장비번호', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+      )
+      .optional(),
     // Vendor fields should be undefined for internal shared
     vendorName: z.undefined().optional(),
     vendorContact: z.undefined().optional(),

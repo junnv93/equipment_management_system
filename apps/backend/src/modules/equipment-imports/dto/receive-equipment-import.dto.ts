@@ -10,6 +10,7 @@ import {
   type ConditionStatus,
   type AccessoriesStatus,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 export const receiveEquipmentImportSchema = z
   .object({
@@ -18,7 +19,14 @@ export const receiveEquipmentImportSchema = z
       appearance: ConditionStatusEnum.describe('외관 상태를 선택해주세요'),
       operation: ConditionStatusEnum.describe('작동 상태를 선택해주세요'),
       accessories: AccessoriesStatusEnum.describe('부속품 상태를 선택해주세요'),
-      notes: z.string().optional(),
+      notes: z
+        .string()
+        .trim()
+        .max(
+          VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+          VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+        )
+        .optional(),
     }),
 
     // 교정 정보 추가 (선택적)
@@ -27,7 +35,15 @@ export const receiveEquipmentImportSchema = z
         managementMethod: ManagementMethodEnum,
         calibrationCycle: z.number().int().positive().optional(),
         lastCalibrationDate: z.string().optional(), // ISO 8601 형식
-        calibrationAgency: z.string().min(1).optional(),
+        calibrationAgency: z
+          .string()
+          .trim()
+          .min(1, VM.required('교정 기관'))
+          .max(
+            VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+            VM.string.max('교정 기관', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+          )
+          .optional(),
       })
       .optional(),
   })

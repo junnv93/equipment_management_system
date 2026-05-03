@@ -9,7 +9,10 @@ import {
   optionalUuid,
   uuidString,
 } from '@equipment-management/schemas';
-import { CHECKOUT_MAX_EQUIPMENT_COUNT } from '@equipment-management/shared-constants';
+import {
+  CHECKOUT_MAX_EQUIPMENT_COUNT,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -27,14 +30,56 @@ export const createCheckoutSchema = z.object({
   purpose: z.enum(CHECKOUT_PURPOSE_VALUES, {
     message: VM.checkout.purpose.invalid,
   }),
-  destination: z.string().min(1, VM.checkout.destination.required),
-  phoneNumber: z.string().optional(),
-  address: z.string().optional(),
-  reason: z.string().min(1, VM.checkout.reason.required),
+  destination: z
+    .string()
+    .trim()
+    .min(1, VM.checkout.destination.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('반출 장소', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
+  phoneNumber: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.PHONE_MAX_LENGTH,
+      VM.string.max('전화번호', VALIDATION_RULES.PHONE_MAX_LENGTH)
+    )
+    .optional(),
+  address: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('주소', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(1, VM.checkout.reason.required)
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반출 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
   expectedReturnDate: z.string().datetime({ message: VM.date.invalid }),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   lenderTeamId: optionalUuid(VM.uuid.invalid('대여 팀')),
-  lenderSiteId: z.string().optional(),
+  lenderSiteId: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('대여 사이트 ID', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;

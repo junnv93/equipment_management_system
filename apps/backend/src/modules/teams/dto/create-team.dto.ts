@@ -11,6 +11,7 @@ import {
   type Site,
   optionalUuid,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -21,13 +22,27 @@ import {
  * ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
  */
 export const createTeamSchema = z.object({
-  name: z.string().min(1, VM.team.name.required).max(100),
+  name: z
+    .string()
+    .trim()
+    .min(1, VM.team.name.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('팀 이름', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    ),
   classification: ClassificationEnum, // ← type → classification
   site: SiteEnum,
   classificationCode: z
     .enum(Object.values(CLASSIFICATION_TO_CODE) as [string, ...string[]])
     .optional(),
-  description: z.string().max(500).optional(),
+  description: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('팀 설명', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   leaderId: optionalUuid(VM.uuid.invalid('팀장')),
 });
 

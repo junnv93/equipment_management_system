@@ -8,6 +8,7 @@ import {
   type ConditionCheckStep,
   VM,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
@@ -28,9 +29,30 @@ export const createConditionCheckSchema = z.object({
     message: VM.checkout.conditionCheck.operation.invalid,
   }),
   accessoriesStatus: z.enum(ACCESSORIES_STATUS_VALUES).optional(),
-  abnormalDetails: z.string().optional(),
-  comparisonWithPrevious: z.string().optional(),
-  notes: z.string().optional(),
+  abnormalDetails: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('이상 상세', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  comparisonWithPrevious: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('이전 비교', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type CreateConditionCheckInput = z.infer<typeof createConditionCheckSchema>;

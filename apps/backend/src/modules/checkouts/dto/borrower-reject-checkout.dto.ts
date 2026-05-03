@@ -18,7 +18,10 @@ export const borrowerRejectCheckoutSchema = z.object({
     .string()
     .trim()
     .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, VM.approval.rejectReason.required)
-    .max(VALIDATION_RULES.LONG_TEXT_MAX_LENGTH),
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반려 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    ),
 });
 
 export type BorrowerRejectCheckoutInput = z.infer<typeof borrowerRejectCheckoutSchema>;

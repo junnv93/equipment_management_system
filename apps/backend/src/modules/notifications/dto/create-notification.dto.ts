@@ -36,10 +36,12 @@ export {
 export const createNotificationSchema = z.object({
   title: z
     .string()
+    .trim()
     .min(1, VM.notification.title.required)
     .max(100, VM.string.max('알림 제목', 100)),
   content: z
     .string()
+    .trim()
     .min(1, VM.notification.content.required)
     .max(500, VM.string.max('알림 내용', 500)),
   type: NotificationTypeEnum,
@@ -49,7 +51,7 @@ export const createNotificationSchema = z.object({
   equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
   rentalId: uuidString(VM.uuid.invalid('대여')).optional(),
-  linkUrl: z.string().max(200, VM.string.max('링크 URL', 200)).optional(),
+  linkUrl: z.string().trim().max(200, VM.string.max('링크 URL', 200)).optional(),
 });
 
 export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;

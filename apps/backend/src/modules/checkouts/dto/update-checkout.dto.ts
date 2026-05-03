@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { VM } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -11,13 +13,50 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const updateCheckoutSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  destination: z.string().min(1).optional(),
-  phoneNumber: z.string().optional(),
-  address: z.string().optional(),
-  reason: z.string().min(1).optional(),
+  destination: z
+    .string()
+    .trim()
+    .min(1, VM.checkout.destination.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('반출 장소', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
+  phoneNumber: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.PHONE_MAX_LENGTH,
+      VM.string.max('전화번호', VALIDATION_RULES.PHONE_MAX_LENGTH)
+    )
+    .optional(),
+  address: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('주소', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(1, VM.checkout.reason.required)
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('반출 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   // ✅ status는 전용 상태 전이 메서드(approve/reject/cancel 등)를 통해서만 변경 가능
-  expectedReturnDate: z.string().datetime().optional(),
-  notes: z.string().optional(),
+  expectedReturnDate: z.string().datetime({ message: VM.date.invalid }).optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
 });
 
 export type UpdateCheckoutInput = z.infer<typeof updateCheckoutSchema>;

@@ -8,6 +8,7 @@ import {
   nullableOptionalUuid,
   VM,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 /**
  * 팀 업데이트 스키마
@@ -16,13 +17,28 @@ import {
  * ✅ leaderId: nullable() — null 전송 시 팀장 해제
  */
 export const updateTeamSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, VM.team.name.required)
+    .max(
+      VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH,
+      VM.string.max('팀 이름', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
+    )
+    .optional(),
   classification: ClassificationEnum.optional(),
   site: SiteEnum.optional(),
   classificationCode: z
     .enum(Object.values(CLASSIFICATION_TO_CODE) as [string, ...string[]])
     .optional(),
-  description: z.string().max(500).optional(),
+  description: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('팀 설명', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
   leaderId: nullableOptionalUuid(VM.uuid.invalid('팀장')),
 });
 
