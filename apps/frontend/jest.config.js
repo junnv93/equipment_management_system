@@ -11,6 +11,12 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@equipment-management/shared-constants$':
+      '<rootDir>/../../packages/shared-constants/src/index.ts',
+    '^@equipment-management/shared-constants/(.*)$':
+      '<rootDir>/../../packages/shared-constants/src/$1',
+    '^@equipment-management/schemas$': '<rootDir>/../../packages/schemas/src/index.ts',
+    '^@equipment-management/schemas/(.*)$': '<rootDir>/../../packages/schemas/src/$1',
   },
   testMatch: ['**/__tests__/**/*.test.ts?(x)'],
   collectCoverageFrom: [
