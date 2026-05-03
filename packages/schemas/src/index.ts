@@ -18,6 +18,7 @@ export * from './equipment-history';
 export * from './user';
 export * from './team';
 export * from './checkout';
+export * from './checkout-display';
 export * from './calibration';
 export * from './types/disposal';
 export * from './settings';

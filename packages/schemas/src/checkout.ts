@@ -21,6 +21,18 @@ export interface CheckoutSummary {
   inProgress: number;
   overdue: number;
   returnedToday: number;
+  /** Late currently-overdue or late-returned checkouts average delay in days. */
+  avgDelayDays: number;
+  /** Maximum delay in days across currently-overdue or late-returned checkouts. */
+  maxOverdueDays: number;
+  /** Recent 14-day outbound trend arrays for KPI sparklines. */
+  trends: {
+    total: number[];
+    pending: number[];
+    inProgress: number[];
+    overdue: number[];
+    returnedToday: number[];
+  };
 }
 
 // 반출 스키마 (DB: checkouts 테이블 필드명과 일치)

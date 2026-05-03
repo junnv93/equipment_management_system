@@ -12,6 +12,7 @@ import {
   computeReachedStepIndex,
   roleToActorVariant,
 } from '../fsm/checkout-fsm';
+import { CHECKOUT_DISPLAY_STEPS } from '../checkout-display';
 import type { CheckoutStatus, CheckoutPurpose } from '../enums/checkout';
 
 // Permission key strings matching @equipment-management/shared-constants Permission enum.
@@ -128,6 +129,20 @@ describe('computeStepIndex — calibration path', () => {
     expect(computeStepIndex('overdue', purpose)).toBe(3));
   it('returned → 4', () => expect(computeStepIndex('returned', purpose)).toBe(4));
   it('return_approved → 5', () => expect(computeStepIndex('return_approved', purpose)).toBe(5));
+});
+
+describe('CHECKOUT_DISPLAY_STEPS', () => {
+  it('keeps non-rental display order aligned with computeStepIndex', () => {
+    expect(
+      CHECKOUT_DISPLAY_STEPS.nonRental.map((status) => computeStepIndex(status, 'calibration'))
+    ).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('keeps rental display order aligned with computeStepIndex', () => {
+    expect(
+      CHECKOUT_DISPLAY_STEPS.rental.map((status) => computeStepIndex(status, 'rental'))
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
 });
 
 describe('computeStepIndex — rental path', () => {

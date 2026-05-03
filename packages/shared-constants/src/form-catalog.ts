@@ -126,7 +126,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: '보정인자 및 파라미터 관리대장',
     retentionYears: 5,
     retentionLabel: '5년',
-    implemented: false,
+    implemented: true,
     category: 'technical',
   },
 
