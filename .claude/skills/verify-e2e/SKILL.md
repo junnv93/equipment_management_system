@@ -1221,3 +1221,35 @@ pnpm --filter frontend exec playwright test --config playwright.a11y.config.ts -
 
 **PASS:** 공개 a11y config가 `login.a11y.spec.ts`만 수집하고, spec/workflow가 `quality-audit-routes.json` SSOT를 경유.
 **FAIL:** `/login` 같은 route literal이 spec/workflow/config에 직접 박히거나, auth-required a11y spec이 public config에 포함됨.
+
+### Step 28: 워크플로우 커버리지 (verify-workflows 통합 — 2026-05-03)
+
+`docs/workflows/critical-workflows.md`에 정의된 크리티컬 워크플로우(WF-01~WF-35 + WF-AP 시리즈)가 E2E 테스트로 올바르게 커버되는지 검증한다. 2026-05-03 verify-workflows 스킬이 verify-e2e의 sub-domain으로 흡수되었다.
+
+**핵심 invariant 7가지** (모두 cross-feature E2E 도메인):
+1. **커버리지** — P0 (WF-03/10/11) 100% + P1 일부 + WF-AP 시리즈
+2. **단계 완전성** — 워크플로우 문서 step ≥ test 'Step N'
+3. **역할 정확성** — TE/TM/QM/LM ↔ testOperatorPage/techManagerPage/qualityManagerPage/siteAdminPage
+4. **상태 전이 assertion** — `expectEquipmentStatus` 또는 유사 (available → checked_out → available 등)
+5. **부수 효과 검증** — 교정일 갱신, NC 자동 CORRECTED, 수리이력 연결
+6. **serial 모드** — 워크플로우 테스트는 `mode: 'serial'` 필수
+7. **DB 리셋 + 캐시 클리어** — `beforeAll`/`afterAll` + `resetEquipmentForWorkflow`/`cleanupSharedPool`
+
+**진입 명령어**:
+```bash
+# WF-01~WF-35 spec 파일 존재 확인
+for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16; do
+  ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
+done
+
+# WF-AP 시리즈 (승인 UI 전용 — wf-ap* 프리픽스, 2026-04-27 추가)
+ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
+
+# serial 모드 + role fixture 정합
+grep -L "mode.*serial" apps/frontend/tests/e2e/workflows/*.spec.ts
+```
+
+**상세 체크리스트 (Step 1~7 + Output Format + Exceptions)**: [references/workflows-coverage.md](references/workflows-coverage.md)
+
+**PASS:** P0 워크플로우(WF-03/10/11) 모두 spec 존재 + 문서 step 90% 이상 커버 + serial 모드 + role fixture 정합.
+**FAIL:** P0 spec 누락 또는 핵심 상태 전이 assertion 누락 또는 serial 모드 누락.

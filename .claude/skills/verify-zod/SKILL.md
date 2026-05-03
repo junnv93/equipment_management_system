@@ -873,6 +873,55 @@ ids: z.array(z.string().uuid(VM.uuid.generic)).min(1, '...')
 
 **발생 이력**: `zod-trim-max-system-wide-residual` sprint (2026-05-03) — bulk-reject/approve DTO에서 발견. Evaluator grep으로 탐지 후 즉시 수정.
 
+### Step 19: CAS DTO/서비스 검증 — VersionedBaseService + versionedSchema (2026-05-03 verify-cas 흡수)
+
+상태 변경이 수반되는 백엔드 DTO/서비스가 CAS(Optimistic Locking) 패턴을 준수하는지 검증합니다.
+2026-05-03 verify-cas 스킬을 verify-zod로 흡수: backend DTO/service 패턴은 본질적으로 Zod 스키마 검증의 연장.
+
+**4가지 핵심 invariant** (모두 backend 도메인):
+
+1. **VersionedBaseService 상속** — 상태 변경 서비스가 VersionedBaseService를 상속
+2. **versionedSchema DTO** — 상태 변경 DTO에 `version` 필드 spread (approve/reject/update/close DTO 전수)
+3. **updateWithVersion 사용** — `.update()` 대신 `updateWithVersion()` 호출
+4. **`onVersionConflict` 훅 + 캐시 무효화** — ConflictException(409) 발생 시 detail 캐시를 단일 지점에서 삭제
+
+**관련 파일**:
+- `apps/backend/src/common/base/versioned-base.service.ts` — 베이스 클래스 + `onVersionConflict` 훅
+- `apps/backend/src/common/dto/base-versioned.dto.ts` — versionedSchema 정의
+- `apps/backend/src/common/cache/cache-invalidation.helper.ts` — 캐시 무효화 헬퍼
+
+**탐지 명령어 요약**:
+
+```bash
+# (1) VersionedBaseService 상속 (기대 13개)
+grep -rln "extends VersionedBaseService" apps/backend/src/modules --include="*.service.ts" | wc -l
+
+# (2) 상태 변경 DTO 중 versionedSchema 누락 탐지
+for f in $(find apps/backend/src/modules/*/dto -name "approve-*.dto.ts" -o -name "reject-*.dto.ts" -o -name "close-*.dto.ts" -o -name "update-status*.dto.ts" -o -name "cancel-*.dto.ts"); do
+  grep -L "versionedSchema" "$f" 2>/dev/null
+done
+# 기대: 0건
+
+# (3) 직접 .update() 호출 탐지 (CAS 적용 서비스)
+grep -rn "\.update(" apps/backend/src/modules/checkouts/checkouts.service.ts apps/backend/src/modules/calibration/calibration.service.ts | grep -v "updateWithVersion\|// \|updateAt\|updatedAt\|cacheService"
+# 기대: 0건 (CAS 서비스에서 직접 .update() 금지)
+
+# (4) inline ConflictException catch 잔존 (onVersionConflict 훅 우회)
+grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanceof ConflictException"
+# 기대: raw tx.update 수동 CAS 경로(import-orphan-scheduler 등)만 남음
+```
+
+**상세 체크 + Step 5~11 (트랜잭션, equipment 직접 업데이트, 보상 트랜잭션, 승인 시 version 교체, version 인자 출처)**: [references/cas-checks.md](references/cas-checks.md)
+
+**Frontend CAS 검증** (mutation에서 version 전달, useCasGuardedMutation, 2-step Dialog pre-confirm version 재조회): **verify-frontend-state Step 39·40** 참조 (2026-05-03 verify-cas Step 9·12·13 이전).
+
+**예외**:
+- TeamsService, UsersService — 관리자 전용 CRUD, 동시 수정 위험 낮음
+- DashboardService, ReportsService — 읽기 전용
+- NotificationsService — append-only
+- CalibrationPlansService의 casVersion — 의도적 설계 (`updateWithVersion(..., casColumnKey: 'casVersion')`)
+- raw `tx.update` 수동 CAS 경로(`equipment-imports.service.onReturnCompleted`, `import-orphan-scheduler.detectAndRecover`) — 인라인 catch 정당
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

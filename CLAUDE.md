@@ -304,7 +304,7 @@ Components: feature-grouped (`equipment/`, `checkouts/`, `calibration/`, `non-co
 
 This project has 25+ custom Claude Code skills in `.claude/skills/` organized by role:
 - **Domain guides**: equipment-management, nextjs-16
-- **Verify skills (22)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -cache-events / -handover-security / -qr-ssot / -routing-origin / -checkout-fsm / -click-feedback / -implementation
+- **Verify skills (20)**: verify-auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -filters / -cache-events / -handover-qr / -routing-origin / -checkout-fsm / -click-feedback / -bulk-action-bar / -implementation. (2026-05-03 통합: verify-cas → verify-zod Step 19 + verify-frontend-state Step 39·40 / verify-workflows → verify-e2e Step 28 / verify-qr-ssot + verify-handover-security → verify-handover-qr. 같은 일자에 pre-existing orphan verify-bulk-action-bar 정식 등록)
 - **자동 정적 분석 (pre-push 통합)**: `pnpm --filter backend run verify:e2e-actors` — verify-e2e Step 23/24/25를 ts-morph 기반 invariant로 승격 (4-place TestRole SSOT, fixture 권한 격리, scope spec actor 정합)
 - **Review skills**: review-architecture, review-design
 - **Orchestrators**: generate-prompts, manage-skills, playwright-e2e, harness

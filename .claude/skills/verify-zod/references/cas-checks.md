@@ -1,4 +1,8 @@
-# CAS 검증 상세 체크리스트
+# CAS 검증 상세 체크리스트 (Backend)
+
+> **참조**: 본 파일은 verify-zod Step 19에서 링크되는 backend CAS 체크리스트.
+> Frontend CAS 검증(useCasGuardedMutation, 2-step Dialog pre-confirm version 재조회, mutation version 전달)은
+> **verify-frontend-state** Step 39·40 참조 (2026-05-03 verify-cas → verify-frontend-state 흡수).
 
 ## Step 1: CAS 적용 서비스 목록 확인
 
@@ -146,14 +150,7 @@ try {
 }
 ```
 
-## Step 9: 프론트엔드 mutation에서 version 전달
-
-```bash
-# approve/reject API 함수에서 version 파라미터 확인
-grep -rn "version" apps/frontend/lib/api/checkout-api.ts apps/frontend/lib/api/calibration-api.ts apps/frontend/lib/api/non-conformances-api.ts apps/frontend/lib/api/equipment-api.ts | grep -i "approve\|reject\|update"
-```
-
-**PASS 기준:** 상태 변경 API 함수에 version 파라미터가 포함되어 있어야 함.
+## Step 9: 프론트엔드 mutation에서 version 전달 → **verify-frontend-state Step 26 으로 이전 (2026-05-03)**
 
 ## Step 10: 승인 프로세스의 CAS version 교체 검증
 
@@ -199,45 +196,6 @@ await this.updateWithVersion(table, uuid, dto.version, updateData, '엔티티');
 
 **예외:** Step 10의 승인 프로세스처럼 stale requestData의 version을 현재 DB version으로 의도적으로 교체하는 경우는 정상.
 
-## Step 13: 2-step Dialog AP-4 — confirm 진입 전 version 재조회 (2026-04-24 추가)
+## Step 12·13: Frontend CAS → **verify-frontend-state Step 27 으로 이전 (2026-05-03)**
 
-2-step 확인 다이얼로그(input→confirm)에서 confirm 단계 진입 직전에 최신 버전을 재조회하여
-다른 탭/세션의 stale 상태를 감지하는 패턴. NC Phase 4(AP-4)에서 도입.
-
-**필수 조건:**
-- `handleNext` 또는 confirm 진입 핸들러에서 API 재조회 후 version 비교
-- 불일치 시 toast + invalidateQueries + dialog 닫기
-
-```tsx
-// ✅ CORRECT — confirm 진입 직전 version 재확인
-const handleNext = form.handleSubmit(async () => {
-  const latest = await api.getEntity(entity.id);
-  if (latest.version !== entity.version) {
-    toast({ title: t('toasts.versionMismatch'), variant: 'destructive' });
-    queryClient.invalidateQueries({ queryKey: queryKeys.entity.detail(entity.id) });
-    onClose();
-    return;
-  }
-  setStep('confirm');
-});
-
-// ❌ WRONG — version 확인 없이 confirm 진입
-const handleNext = form.handleSubmit(async () => {
-  setStep('confirm'); // stale 상태로 submit 위험
-});
-```
-
-**탐지 명령어:**
-```bash
-# 2-step dialog (step state) 가 있는 컴포넌트에서 version 비교 패턴 확인
-grep -rln "step.*'confirm'\|setStep.*confirm" apps/frontend/components --include="*.tsx" | \
-  xargs grep -l "handleNext\|handleConfirm"
-# 위 파일 각각에서 version 비교가 있는지 확인
-# grep -n "\.version\s*!==\|!.*version" <file>
-```
-
-**PASS:** 2-step dialog의 confirm 진입 핸들러에서 version 비교 존재.
-**FAIL:** `setStep('confirm')` 직전에 version 비교 없음.
-
-**현재 적용:** `NCRepairDialog.tsx` (handleNext), `NCEditDialog.tsx` (useCasGuardedMutation 내부 처리).
-**예외:** confirm 없이 단일 step으로 submit하는 dialog — 이 패턴 불필요.
+useCasGuardedMutation, 2-step Dialog AP-4 (confirm 진입 전 version 재조회) 패턴은 frontend 도메인이므로 verify-frontend-state로 이전.

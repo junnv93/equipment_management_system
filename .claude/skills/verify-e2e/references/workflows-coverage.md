@@ -1,19 +1,15 @@
----
-name: verify-workflows
-description: Verifies cross-feature workflow E2E test coverage against critical-workflows.md checklist. Checks WF-01~WF-35 coverage, step completeness, role correctness, side-effect verification, and status transition assertions. Run after adding workflow tests or before PR.
-disable-model-invocation: true
-argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
----
+# 워크플로우 E2E 커버리지 체크리스트 (verify-workflows 통합 — 2026-05-03)
 
-# 워크플로우 E2E 커버리지 검증
+> **참조**: 본 파일은 verify-e2e Step 28에서 링크되는 cross-feature 워크플로우 커버리지 체크리스트.
+> 2026-05-03 verify-workflows 스킬을 verify-e2e/references/workflows-coverage.md로 흡수.
 
 ## Purpose
 
-`docs/workflows/critical-workflows.md`에 정의된 크리티컬 워크플로우가 E2E 테스트로 올바르게 커버되는지 검증합니다:
+`docs/workflows/critical-workflows.md`에 정의된 크리티컬 워크플로우(WF-01~WF-35)가 E2E 테스트로 올바르게 커버되는지 검증합니다:
 
-1. **커버리지** — 각 워크플로우(WF-01~WF-16)에 대응하는 테스트 파일 존재 여부
-2. **단계 완전성** — 워크플로우 문서의 모든 단계가 테스트에 포함되는지
-3. **역할 정확성** — 각 단계에서 올바른 역할(TE/TM/QM/LM)이 사용되는지
+1. **커버리지** — 각 워크플로우(WF-01~WF-16)에 대응하는 테스트 파일 존재
+2. **단계 완전성** — 워크플로우 문서의 모든 단계가 테스트에 포함
+3. **역할 정확성** — 각 단계에서 올바른 역할(TE/TM/QM/LM) 사용
 4. **상태 전이 검증** — 장비/반출/NC 상태 전이 assertion 존재
 5. **부수 효과 검증** — 교정일 갱신, NC 자동 조치, 캐시 무효화 등
 
@@ -31,9 +27,7 @@ argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
 | `apps/frontend/tests/e2e/workflows/` | 워크플로우 E2E 테스트 디렉토리 |
 | `apps/frontend/tests/e2e/workflows/helpers/workflow-helpers.ts` | 워크플로우 공통 헬퍼 |
 
-## Workflow
-
-### Step 1: 워크플로우 테스트 존재 여부
+## Step 1: 워크플로우 테스트 존재 여부
 
 **검사:**
 ```bash
@@ -51,7 +45,7 @@ ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
 - `wf-ap*.spec.ts` — 승인 UI 전용 워크플로우 (ARIA/접근성/bulk 액션 등 UI 패턴)
   - `wf-ap01-*` → 승인 목록 stepper/ARIA 균일성
   - `wf-ap02-*` → 승인 일괄 액션 (BulkActionBar/RejectModal)
-  
+
 두 네이밍 모두 `critical-workflows.md`에 등재되어야 한다.
 
 **PASS:** P0 워크플로우(WF-03, WF-10, WF-11) 100% 커버
@@ -59,7 +53,7 @@ ls apps/frontend/tests/e2e/workflows/wf-ap*.spec.ts 2>/dev/null
 **INFO:** WF-20 자체점검 결재 워크플로우(P3): wf-20-self-inspection-confirmation.spec.ts, wf-20-self-inspection-ui.spec.ts, wf-20b-self-inspection-export.spec.ts 3파일 커버 (draft→submitted→approved, rejected→resubmit, export)
 **INFO:** WF-AP 시리즈(P1): wf-ap01-approvals-mini-stepper.spec.ts(ARIA 균일성), wf-ap02-approvals-bulk-reject.spec.ts(일괄 반려) 커버
 
-### Step 2: 단계 완전성
+## Step 2: 단계 완전성
 
 **검사:** 각 워크플로우 테스트 파일 내 `test('Step N:` 패턴으로 단계 수 확인.
 
@@ -72,7 +66,7 @@ grep -c "test('Step" apps/frontend/tests/e2e/workflows/wf-03-*.spec.ts
 **WARN:** 50% 미만 단계 커버
 **FAIL:** 핵심 상태 전이 단계 누락
 
-### Step 3: 역할 정확성
+## Step 3: 역할 정확성
 
 **검사:** 각 Step에서 사용하는 fixture가 문서의 역할과 일치하는지 확인.
 
@@ -93,7 +87,7 @@ grep -n "testOperatorPage\|techManagerPage\|qualityManagerPage\|siteAdminPage" \
 **PASS:** 모든 Step의 역할이 문서와 일치
 **FAIL:** 역할 불일치 (예: TM 단계에서 testOperatorPage 사용)
 
-### Step 4: 상태 전이 Assertion
+## Step 4: 상태 전이 Assertion
 
 **검사:** 장비 상태 변경이 있는 단계에서 `expectEquipmentStatus` 또는 유사 assertion 존재.
 
@@ -115,7 +109,7 @@ grep -n "expectEquipmentStatus\|expect.*status.*toBe" \
 **PASS:** 모든 필수 상태 전이에 assertion 존재
 **FAIL:** 핵심 전이 assertion 누락
 
-### Step 5: 부수 효과 검증
+## Step 5: 부수 효과 검증
 
 **검사:** 워크플로우별 부수 효과가 테스트에 포함되는지.
 
@@ -138,7 +132,7 @@ grep -c "corrected" apps/frontend/tests/e2e/workflows/wf-10-*.spec.ts
 **PASS:** 핵심 부수 효과 검증 존재
 **WARN:** 일부 부수 효과 미검증 (대시보드 카운트 등 보조 검증)
 
-### Step 6: serial 모드 설정
+## Step 6: serial 모드 설정
 
 **검사:** 워크플로우 테스트는 반드시 `mode: 'serial'`이어야 함.
 
@@ -149,7 +143,7 @@ grep -L "mode.*serial" apps/frontend/tests/e2e/workflows/*.spec.ts
 **PASS:** 모든 워크플로우 테스트에 serial 모드 설정
 **FAIL:** serial 모드 미설정 파일 존재
 
-### Step 7: DB 리셋 + 캐시 클리어
+## Step 7: DB 리셋 + 캐시 클리어
 
 **검사:** `beforeAll`에서 장비 리셋, `afterAll`에서 정리.
 

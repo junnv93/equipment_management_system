@@ -10,24 +10,22 @@
 
 ## Verify Skills (정적 패턴 검증)
 
-- **verify-cas** — CAS/Optimistic Locking (version, VersionedBaseService, cache invalidation on 409)
 - **verify-auth** — 서버사이드 인증 (req.user.userId, @RequirePermissions, @AuditLog)
-- **verify-zod** — Zod validation (ZodValidationPipe, controller pipe, query DTO consistency, ZodResponse ↔ ZodSerializerInterceptor pairing, 2xx-only ZodResponse). Step 14: Pipe DTO 통과 필드 ↔ service 호출 인자 매핑 silent loss 차단 (`_paramName` underscore prefix lint-bypass 정적 검출, escape hatch `// allowed:`)
+- **verify-zod** — Zod validation (ZodValidationPipe, controller pipe, query DTO consistency, ZodResponse ↔ ZodSerializerInterceptor pairing, 2xx-only ZodResponse). Step 14: Pipe DTO 통과 필드 ↔ service 호출 인자 매핑 silent loss 차단 (`_paramName` underscore prefix lint-bypass 정적 검출, escape hatch `// allowed:`). Step 19: CAS DTO/서비스 검증 — VersionedBaseService 상속, versionedSchema, updateWithVersion, onVersionConflict 훅 (2026-05-03 verify-cas 흡수)
 - **verify-ssot** — SSOT import source (package imports, no local redefinitions, lucide-react). Step 44: Supply-Chain SSOT — raw uuid import 금지 (IdentifierService 경유) + pnpm.overrides caret 잠금 (`>=` 패턴 0건)
 - **verify-hardcoding** — 하드코딩 탐지 (API paths, queryKeys, env, cache keys, token TTL, ErrorCode, Korean UI)
-- **verify-frontend-state** — TanStack Query (no onSuccess setQueryData, dynamic imports)
+- **verify-frontend-state** — TanStack Query (no onSuccess setQueryData, dynamic imports). Step 39·40: 프론트엔드 mutation version 전달 + useCasGuardedMutation + 2-step Dialog AP-4 confirm 진입 전 version 재조회 (2026-05-03 verify-cas 흡수)
 - **verify-click-feedback** — Click-Feedback 5-Layer (FEEDBACK_KEYS SSOT, loading.tsx a11y I3, 409 retry, useDebouncedSearch/useAutoSave/useExportAction 패턴, motion-safe:animate-spin)
 - **verify-nextjs** — Next.js 16 패턴 (await params, useActionState, Server Components)
 - **verify-design-tokens** — Design Token 3-Layer (no transition-all, focus-visible, import paths)
 - **verify-security** — OWASP Top 10 (access control, injection, CSP, auth, logging, SSRF)
 - **verify-i18n** — i18n 일관성 (en/ko key matching, empty translations, Zod hardcoded)
 - **verify-sql-safety** — SQL 안전성 (LIKE escaping, N+1, COUNT(DISTINCT) fan-out, RBAC INNER JOIN)
-- **verify-e2e** — E2E 테스트 패턴 + 아키텍처 커버리지 (auth fixtures, locator, CAS 복구, cache invalidation, site scope, global-setup). Step 23/24/25는 `pnpm --filter backend run verify:e2e-actors` (ts-morph 정적 분석)으로 승격 — pre-push hook 자동 실행
+- **verify-e2e** — E2E 테스트 패턴 + 아키텍처 커버리지 (auth fixtures, locator, CAS 복구, cache invalidation, site scope, global-setup). Step 23/24/25는 `pnpm --filter backend run verify:e2e-actors` (ts-morph 정적 분석)으로 승격 — pre-push hook 자동 실행. Step 28: 워크플로우 커버리지 (WF-01~WF-35 + WF-AP, 역할/상태 전이/serial/DB 리셋, 2026-05-03 verify-workflows 흡수)
 - **verify-seed-integrity** — Seed 3-way SSOT triangle (seed-test-new wiring + Phase 0 truncate + verification.ts checkCount)
-- **verify-workflows** — Cross-feature workflow E2E coverage (WF-01~WF-16, 역할, 상태 전이)
 - **verify-filters** — URL-driven filter SSOT (filter-utils, hooks, page.tsx server parsing)
-- **verify-qr-ssot** — QR URL 빌더/파서·설정·액션이 SSOT(qr-url.ts, qr-config.ts, qr-access.ts) 경유하는지 검증
-- **verify-handover-security** — Handover/OneTimeToken 보안 (시크릿 분리, jti nonce 소비, TTL SSOT, 권한 가드, 토큰 영속화 금지)
+- **verify-handover-qr** — QR + Handover 통합 (2026-05-03 verify-qr-ssot + verify-handover-security 통합). Section A: QR URL/설정/액션 SSOT(qr-url.ts/qr-config.ts/qr-access.ts), Section B: OneTimeToken 보안(시크릿 분리, jti nonce 소비, TTL SSOT, 권한 가드, 토큰 영속화 금지, dev 엔드포인트 이중 가드)
+- **verify-bulk-action-bar** — BulkActionBar 패턴 SSOT (count chip aria-live, role=toolbar, Esc clear, indeterminate Radix, focus management, IME guard). 도메인 무관 generic 컴포넌트(`components/common/BulkActionBar.tsx`)와 도메인 wrapper(`components/approvals/BulkActionBar.tsx`) 분리 검증. 일괄 작업 UI 변경 시 트리거
 - **verify-routing-origin** — Same-Origin Reverse-Proxy(ADR-0006) 정합. 4 레이어 동기화(api-routing.ts SSOT / next.config.js / nginx lan.conf+template / proxy.ts), env 절대 URL 잠입, BACKEND ∩ NEXTAUTH disjoint, SW NetworkOnly /api/\* 룰
 - **verify-implementation** — 통합 실행 (모든 verify-\* 순차 실행 + 결합 리포트)
 
