@@ -617,11 +617,19 @@ grep -c "ErrorCode\." apps/backend/src/modules/equipment/equipment.service.ts
 grep -c "ErrorCode\." apps/backend/src/modules/equipment/services/equipment-approval.service.ts
 # expected: ≥ 28 (equipment-approval service codes, 2026-05-02 격상)
 
-# 3. service layer fail-close 비대칭 — rejectionReason length 검증 강도 일관성
-grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length" \
+# 3. service layer fail-close 비대칭 — rejectionReason/revocationReason length 검증 강도 일관성
+grep -rn "rejectionReason\?\?\?\.\?trim()\.\?\?length\|comment\.trim()\.\?length\|revocationReason\?\?\?\.\?trim()\.\?\?length\|dto\.reason\.trim()\.\?length" \
   apps/backend/src/modules --include="*.service.ts" 2>/dev/null \
   | grep -v ".spec.ts" | grep -v "__tests__"
-# 모든 reject service fail-close가 REJECTION_REASON_MIN_LENGTH 비교를 사용해야 함 (`> 0` 패턴 0건)
+# reject fail-close: REJECTION_REASON_MIN_LENGTH 비교 필수 (`> 0` 패턴 0건)
+# revoke fail-close: REVOCATION_REASON_MIN_LENGTH 비교 필수 (revokeApproval, 2026-05-03)
+
+# 3b. revoke-approval.dto.ts fail-close 특이사항 — reason 검증 순서
+# scope → FSM(APPROVED 상태) → reason(REVOCATION_REASON_MIN_LENGTH) → time-window → domain 순서 필수
+# (FSM 통과 후 reason 검증 — 미승인 상태에서는 reason 검증 불필요, fail-fast 원칙)
+grep -n "REVOCATION_REASON_MIN_LENGTH\|RevocationReasonRequired" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts 2>/dev/null | head -5
+# expected: 1+ 라인 — service fail-close 존재 확인
 
 # 4. 다른 도메인 인라인 error code (점진적 마이그레이션 추적)
 grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/null \
@@ -652,6 +660,14 @@ test -f apps/frontend/lib/errors/intermediate-inspection-errors.ts && grep -c "m
 # SoftwareValidationErrorCode + getSoftwareValidationErrorMessageKey() 패턴이 발생 사례.
 grep -rn "^export enum.*ErrorCode\b" apps/frontend/lib/errors/ --include="*.ts" 2>/dev/null
 # expected: 0건 — 레거시 로컬 enum 발견 시 WARN + tech-debt 등록 권고
+
+# 5c. Mapper I18N_VARS SSOT 파라미터 주입 패턴 (2026-05-03 추가)
+# ErrorCode별 i18n 파라미터({min}/{max} 등)를 VALIDATION_RULES.* 경유 주입해야 함
+# 하드코딩 숫자 직접 주입 패턴: { min: 10 } → FAIL, { min: VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH } → PASS
+# 참고: CHECKOUT_ERROR_I18N_VARS, NON_CONFORMANCE_ERROR_I18N_VARS 패턴 (checkout/non-conformance-errors.ts)
+grep -rn "I18N_VARS\b" apps/frontend/lib/errors/ --include="*.ts" 2>/dev/null \
+  | grep -v "VALIDATION_RULES"
+# expected: 0건 — I18N_VARS 맵에 VALIDATION_RULES 미경유 숫자 리터럴 발견 시 FAIL
 
 # 6. Mapper 호출처 적용 — onError에서 mapper 사용 강제 (도메인 dialog/client)
 grep -c "mapDisposalErrorToToast\|disposal-errors" apps/frontend/components/equipment/disposal/DisposalApprovalDialog.tsx
