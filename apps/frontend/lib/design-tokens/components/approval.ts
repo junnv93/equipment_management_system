@@ -451,7 +451,7 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   },
   /** KPI 카드 내 콘텐츠 z-index (hover wash 위에 표시) */
   contentZ: 'relative z-[1]',
-  /** KPI 핵심 숫자 — 32px DM Sans Bold로 시선 유도 */
+  /** KPI 핵심 숫자 — display font bold로 시선 유도 */
   value: 'text-3xl font-bold tabular-nums leading-tight font-display tracking-tight',
   /** KPI 0값 — muted 처리 (실제 0건, 준비는 됨) */
   valueZero: 'text-muted-foreground/50',

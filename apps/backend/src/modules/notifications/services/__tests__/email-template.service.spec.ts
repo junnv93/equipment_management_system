@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DOCUMENT_FONT_POLICY } from '@equipment-management/shared-constants';
 import { EmailTemplateService } from '../email-template.service';
 
 describe('EmailTemplateService', () => {
@@ -156,11 +157,11 @@ describe('EmailTemplateService', () => {
       expect(html).toContain('#1e40af');
     });
 
-    it('한국어 폰트(Malgun Gothic)가 지정된다', () => {
+    it('공유 이메일 폰트 정책이 지정된다', () => {
       const { html } = service.buildCalibrationOverdueBatchEmail([
         { equipmentName: 'E', managementNumber: 'M', dueDate: '2025-01-01' },
       ]);
-      expect(html).toContain('Malgun Gothic');
+      expect(html).toContain(`font-family:${DOCUMENT_FONT_POLICY.email.bodyFontFamily};`);
     });
 
     it('Outlook 호환 table 기반 레이아웃을 포함한다', () => {

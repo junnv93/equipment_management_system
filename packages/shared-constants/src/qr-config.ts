@@ -6,6 +6,7 @@
  * - 라벨 PDF 생성 (Web Worker)은 LABEL_CONFIG 사용
  * - 셀 치수·폰트 크기·필드명·절제선 하드코딩 금지 — 모두 여기서 참조
  */
+import { CSS_FONT_STACKS } from './font-policy';
 
 /**
  * XL 라벨 높이 (mm) — 폰트 스케일 기준이자 xl preset의 heightMm SSOT.
@@ -102,12 +103,8 @@ export const LABEL_CONFIG = {
     qrPaddingLeftMm: 2,
     qrSizeMm: 25,
     textPaddingLeftMm: 2,
-    /**
-     * CSS font-stack — OffscreenCanvas 렌더링 시 사용.
-     * 한국 Windows(맑은 고딕), macOS(Apple SD Gothic Neo), Linux(Noto Sans KR) 순 fallback.
-     */
-    fontStack:
-      '"맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "나눔고딕", sans-serif',
+    /** CSS font-stack — OffscreenCanvas 렌더링 시 사용. */
+    fontStack: CSS_FONT_STACKS.koreanUi,
     /** 테이블 필드명(관리번호·장비명·일련번호) 폰트 크기 */
     fieldLabelFontPt: 6,
     /** 관리번호 값 폰트 크기 */

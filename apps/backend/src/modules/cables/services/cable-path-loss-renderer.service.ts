@@ -1,7 +1,11 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { toExcelLoadableBuffer } from '../../../common/utils/excel-buffer';
-import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  DOCUMENT_FONT_POLICY,
+} from '@equipment-management/shared-constants';
 import {
   FORM_NUMBER,
   SHEET_NAMES,
@@ -51,7 +55,7 @@ export class CablePathLossRendererService {
     LIST_SHEET_HEADERS.forEach((h, i) => {
       const cell = headerRow.getCell(i + 1);
       cell.value = h;
-      cell.font = { bold: true };
+      cell.font = { ...DOCUMENT_FONT_POLICY.excel.korean, bold: true };
       cell.border = {
         top: { style: 'thin' },
         bottom: { style: 'thin' },
@@ -103,7 +107,10 @@ export class CablePathLossRendererService {
 
       const infoRow = dataSheet.getRow(DETAIL_SHEET.infoRow);
       infoRow.getCell(DETAIL_SHEET.freqCol).value = `Cable: ${cable.managementNumber}`;
-      infoRow.getCell(DETAIL_SHEET.freqCol).font = { bold: true };
+      infoRow.getCell(DETAIL_SHEET.freqCol).font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+      };
 
       const dateRow = dataSheet.getRow(DETAIL_SHEET.dateRow);
       dateRow.getCell(DETAIL_SHEET.freqCol).value =
@@ -113,7 +120,7 @@ export class CablePathLossRendererService {
       headerRow.getCell(DETAIL_SHEET.freqCol).value = `Freq(MHz)`;
       headerRow.getCell(DETAIL_SHEET.lossCol).value = `Data(dB)`;
       [DETAIL_SHEET.freqCol, DETAIL_SHEET.lossCol].forEach((c) => {
-        headerRow.getCell(c).font = { bold: true };
+        headerRow.getCell(c).font = { ...DOCUMENT_FONT_POLICY.excel.korean, bold: true };
         headerRow.getCell(c).border = {
           top: { style: 'thin' },
           bottom: { style: 'thin' },

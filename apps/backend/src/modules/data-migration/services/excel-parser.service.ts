@@ -40,7 +40,7 @@ import {
   CHECKOUT_COLUMN_MAPPING,
 } from '../constants/checkout-column-mapping';
 import { detectSheetType, type MigrationSheetType } from '../constants/sheet-config';
-import { MigrationErrorCode } from '@equipment-management/shared-constants';
+import { DOCUMENT_FONT_POLICY, MigrationErrorCode } from '@equipment-management/shared-constants';
 import {
   EXCEL_COLORS,
   EXCEL_PAGE_SETUP,
@@ -391,7 +391,11 @@ export class ExcelParserService {
 
     const summaryHeaderRow = summarySheet.getRow(1);
     summaryHeaderRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+        color: { argb: EXCEL_COLORS.WHITE },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -430,7 +434,11 @@ export class ExcelParserService {
     // 헤더 스타일
     const headerRow = sheet.getRow(1);
     headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+        color: { argb: EXCEL_COLORS.WHITE },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -517,7 +525,11 @@ export class ExcelParserService {
     const equipHeaderRow = equipSheet.getRow(1);
     equipHeaderRow.eachCell((cell, colIdx) => {
       const entry = EQUIPMENT_COLUMN_MAPPING[colIdx - 1];
-      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+        color: { argb: EXCEL_COLORS.WHITE },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -828,7 +840,11 @@ export class ExcelParserService {
     const headerRow = sheet.getRow(1);
     headerRow.eachCell((cell, colIdx) => {
       const isRequired = requiredFlags[colIdx - 1] ?? false;
-      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+        color: { argb: EXCEL_COLORS.WHITE },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',

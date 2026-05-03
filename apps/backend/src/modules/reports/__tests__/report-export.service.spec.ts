@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs';
+import { DOCUMENT_FONT_POLICY } from '@equipment-management/shared-constants';
 import { ReportExportService, type ReportData } from '../report-export.service';
 
 jest.setTimeout(30000);
@@ -48,6 +50,18 @@ describe('ReportExportService', () => {
       const result = await service.generate(emptyData, 'excel');
 
       expect(result.buffer.length).toBeGreaterThan(0);
+    });
+
+    it('공유 Excel 폰트 정책을 제목/헤더에 적용한다', async () => {
+      const result = await service.generate(MOCK_DATA, 'excel');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(
+        result.buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]
+      );
+      const sheet = workbook.worksheets[0];
+
+      expect(sheet.getCell(1, 1).font).toMatchObject(DOCUMENT_FONT_POLICY.excel.korean);
+      expect(sheet.getRow(3).getCell(1).font).toMatchObject(DOCUMENT_FONT_POLICY.excel.korean);
     });
   });
 

@@ -12,6 +12,9 @@ import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 import { NavigationPendingProvider } from '@/hooks/use-navigation-pending';
 import { GlobalProgressBar } from '@/components/layout/global-progress-bar';
 import { ConnectionBanner } from '@/components/layout/connection-banner';
+import { FONT_CSS_VARIABLES } from '@equipment-management/shared-constants';
+
+type FontCssVariables = React.CSSProperties & Record<`--${string}`, string>;
 
 export const metadata: Metadata = {
   title: 'Equipment Management System',
@@ -52,7 +55,11 @@ export const viewport: Viewport = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={DEFAULT_LOCALE} suppressHydrationWarning>
+    <html
+      lang={DEFAULT_LOCALE}
+      suppressHydrationWarning
+      style={FONT_CSS_VARIABLES as FontCssVariables}
+    >
       <body className="font-sans bg-background text-foreground">
         <Suspense>
           <IntlProvider>{children}</IntlProvider>

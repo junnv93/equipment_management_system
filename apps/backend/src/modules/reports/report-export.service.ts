@@ -5,6 +5,7 @@ import type { ReportFormat } from '@equipment-management/schemas';
 import {
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
+  DOCUMENT_FONT_POLICY,
   REPORT_EXPORT_MIME,
 } from '@equipment-management/shared-constants';
 
@@ -87,7 +88,7 @@ export class ReportExportService {
     sheet.mergeCells(1, 1, 1, data.columns.length);
     const titleCell = sheet.getCell(1, 1);
     titleCell.value = data.title;
-    titleCell.font = { bold: true, size: 14 };
+    titleCell.font = { ...DOCUMENT_FONT_POLICY.excel.korean, bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(1).height = 30;
 
@@ -96,7 +97,11 @@ export class ReportExportService {
     const subCell = sheet.getCell(2, 1);
     const generatedAt = data.generatedAt ?? new Date();
     subCell.value = `생성일시: ${generatedAt.toLocaleString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`;
-    subCell.font = { color: { argb: 'FF666666' }, size: 10 };
+    subCell.font = {
+      ...DOCUMENT_FONT_POLICY.excel.korean,
+      color: { argb: 'FF666666' },
+      size: 10,
+    };
     subCell.alignment = { horizontal: 'right' };
 
     // 헤더 행 (3행)
@@ -109,7 +114,11 @@ export class ReportExportService {
     data.columns.forEach((col, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = col.header;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = {
+        ...DOCUMENT_FONT_POLICY.excel.korean,
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -195,9 +204,11 @@ export class ReportExportService {
       doc.on('error', reject);
 
       // 제목
-      doc.font('Helvetica-Bold').fontSize(16).text(data.title, { align: 'center' });
+      doc.font(DOCUMENT_FONT_POLICY.pdf.coreBold).fontSize(16).text(data.title, {
+        align: 'center',
+      });
       doc
-        .font('Helvetica')
+        .font(DOCUMENT_FONT_POLICY.pdf.coreRegular)
         .fontSize(9)
         .fillColor('#666666')
         .text(
@@ -223,7 +234,9 @@ export class ReportExportService {
         cols.forEach((text, idx) => {
           const x = 40 + idx * colWidth;
           doc
-            .font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
+            .font(
+              isHeader ? DOCUMENT_FONT_POLICY.pdf.coreBold : DOCUMENT_FONT_POLICY.pdf.coreRegular
+            )
             .fontSize(8)
             .fillColor(isHeader ? '#FFFFFF' : '#111827')
             .text(String(text ?? '').slice(0, 30), x + 3, y + 5, {
@@ -277,7 +290,7 @@ export class ReportExportService {
       for (let i = 0; i < pageCount; i++) {
         doc.switchToPage(i);
         doc
-          .font('Helvetica')
+          .font(DOCUMENT_FONT_POLICY.pdf.coreRegular)
           .fontSize(8)
           .fillColor('#9CA3AF')
           .text(`${i + 1} / ${pageCount}`, 40, doc.page.height - 30, {

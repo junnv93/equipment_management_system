@@ -1,4 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
+import { DOCUMENT_FONT_POLICY } from '@equipment-management/shared-constants';
 import PizZip from 'pizzip';
 
 /**
@@ -10,10 +11,10 @@ import PizZip from 'pizzip';
  * XML 구조: <w:tbl> → <w:tr ...>(<w:trPr/>)(<w:tc>...</w:tc>)+</w:tr> → ...
  */
 /**
- * 동적 콘텐츠(appendParagraph, appendTable 등)에 적용할 굴림체 폰트 rPr.
- * 원본 양식이 굴림체/굴림을 사용하므로 동적 생성 콘텐츠도 일치시킨다.
+ * 동적 콘텐츠(appendParagraph, appendTable 등)에 적용할 템플릿 폰트 rPr.
+ * 원본 양식 폰트와 일치해야 동적 생성 콘텐츠도 인쇄 양식과 어긋나지 않는다.
  */
-const GULIM_FONT_RPR = '<w:rFonts w:ascii="굴림체" w:eastAsia="굴림체" w:hAnsi="굴림체"/>';
+const TEMPLATE_FONT_RPR = DOCUMENT_FONT_POLICY.docx.templateRunFontsXml;
 
 /**
  * 양식 템플릿의 numbering.xml에서 추출한 bullet 타입별 numId 매핑.
@@ -358,11 +359,11 @@ export class DocxTemplate {
       | { type: 'image'; buffer: Buffer; ext: 'png' | 'jpeg'; widthCm?: number; heightCm?: number }
     >
   ): void {
-    // 제목 단락 (볼드 + 굴림체)
-    const titlePara = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(title)}</w:t></w:r></w:p>`;
+    // 제목 단락 (볼드 + 템플릿 폰트)
+    const titlePara = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr>${TEMPLATE_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(title)}</w:t></w:r></w:p>`;
 
     // 블록 변환
-    const fontRPr = `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
+    const fontRPr = `<w:rPr>${TEMPLATE_FONT_RPR}</w:rPr>`;
     const blockXmls = blocks.map((block) => {
       if (block.type === 'text') {
         return this.buildMultilineParagraphs('', fontRPr, block.value);
@@ -395,7 +396,7 @@ export class DocxTemplate {
       pageBreakBefore?: boolean;
     }
   ): void {
-    const rPrParts: string[] = [GULIM_FONT_RPR];
+    const rPrParts: string[] = [TEMPLATE_FONT_RPR];
     if (options?.bold) rPrParts.push('<w:b/>');
     if (options?.fontSize) {
       const halfPt = options.fontSize * 2;
@@ -408,7 +409,7 @@ export class DocxTemplate {
     if (options?.numId) {
       pPrParts.push(`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${options.numId}"/></w:numPr>`);
     }
-    pPrParts.push(`<w:rPr>${GULIM_FONT_RPR}</w:rPr>`);
+    pPrParts.push(`<w:rPr>${TEMPLATE_FONT_RPR}</w:rPr>`);
     const pPr = pPrParts.length > 0 ? `<w:pPr>${pPrParts.join('')}</w:pPr>` : '';
 
     const paraXml = `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(text)}</w:t></w:r></w:p>`;
@@ -427,8 +428,8 @@ export class DocxTemplate {
 
     const buildCell = (val: string, bold: boolean): string => {
       const rPr = bold
-        ? `<w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr>`
-        : `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
+        ? `<w:rPr>${TEMPLATE_FONT_RPR}<w:b/></w:rPr>`
+        : `<w:rPr>${TEMPLATE_FONT_RPR}</w:rPr>`;
       return `<w:tc><w:p><w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(val)}</w:t></w:r></w:p></w:tc>`;
     };
 
@@ -465,14 +466,14 @@ export class DocxTemplate {
     const borderAttr = 'w:val="single" w:sz="4" w:space="0" w:color="000000"';
     const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
 
-    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr>${TEMPLATE_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
 
     const dataRows = rows
       .map((row) => {
         const cells = row
           .map((cell) => {
             if (cell.type === 'text') {
-              return `<w:tc><w:p><w:r><w:rPr>${GULIM_FONT_RPR}</w:rPr><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
+              return `<w:tc><w:p><w:r><w:rPr>${TEMPLATE_FONT_RPR}</w:rPr><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
             }
             const rId = this.addImageResource(cell.buffer, cell.ext);
             const cx = Math.round((cell.widthCm ?? 8) * 360000);
@@ -636,10 +637,10 @@ export class DocxTemplate {
     const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
     const pPr = pPrMatch ? pPrMatch[0] : '';
 
-    // 첫 번째 rPr 보존 — 폰트를 굴림체로 강제 교체 (템플릿 셀의 Times New Roman 등 대체)
+    // 첫 번째 rPr 보존 — 폰트를 템플릿 정책으로 강제 교체 (템플릿 셀의 대체 폰트 방지)
     const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
     let rPr = rPrMatch ? rPrMatch[0] : '';
-    rPr = DocxTemplate.forceGulimFont(rPr);
+    rPr = DocxTemplate.forceTemplateFont(rPr);
 
     // 셀 시작 태그만 캡처 — <w:tc> 또는 <w:tc attr="..."> (내부 자식 태그 포함 방지)
     const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
@@ -657,7 +658,7 @@ export class DocxTemplate {
     const pPr = pPrMatch ? pPrMatch[0] : '';
     const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
     let rPr = rPrMatch ? rPrMatch[0] : '';
-    rPr = DocxTemplate.forceGulimFont(rPr);
+    rPr = DocxTemplate.forceTemplateFont(rPr);
     const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
 
     const paragraphs = this.buildMultilineParagraphs(pPr, rPr, text);
@@ -741,15 +742,15 @@ export class DocxTemplate {
   }
 
   /**
-   * rPr 내 폰트를 굴림체로 강제 교체.
+   * rPr 내 폰트를 템플릿 정책으로 강제 교체.
    * 기존 rFonts가 있으면 교체, 없으면 추가.
    */
-  private static forceGulimFont(rPr: string): string {
-    if (!rPr) return `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
+  private static forceTemplateFont(rPr: string): string {
+    if (!rPr) return `<w:rPr>${TEMPLATE_FONT_RPR}</w:rPr>`;
     if (rPr.includes('<w:rFonts')) {
-      return rPr.replace(/<w:rFonts[^/]*\/>/g, GULIM_FONT_RPR);
+      return rPr.replace(/<w:rFonts[^/]*\/>/g, TEMPLATE_FONT_RPR);
     }
-    return rPr.replace('<w:rPr>', `<w:rPr>${GULIM_FONT_RPR}`);
+    return rPr.replace('<w:rPr>', `<w:rPr>${TEMPLATE_FONT_RPR}`);
   }
 
   /**

@@ -14,6 +14,7 @@
  * 프론트엔드 미참조: 양식 셀 레이아웃은 프론트 UI에 노출되지 않는다.
  * 공용 양식 메타(번호/이름/보존연한)는 `packages/shared-constants/src/form-catalog.ts` 참조.
  */
+import { buildDocxRunPropertiesXml } from '@equipment-management/shared-constants';
 
 /** 양식 번호 (에러 메시지 prefix, 파일명 등에 사용) */
 export const FORM_NUMBER = 'UL-QP-18-02' as const;
@@ -22,11 +23,10 @@ export const FORM_NUMBER = 'UL-QP-18-02' as const;
 export const DATE_FORMAT = 'YYYY/MM/DD' as const;
 
 /**
- * DOCX 셀 주입용 런(run) 공통 속성 — 굴림체 9pt (템플릿 기본 폰트 유지).
+ * DOCX 셀 주입용 런(run) 공통 속성 — 템플릿 기본 폰트 9pt 유지.
  * 양식 원본과 동일한 폰트로 표시되어야 인쇄물이 기존 양식과 구분되지 않는다.
  */
-export const RUN_RPR_XML =
-  '<w:rPr><w:rFonts w:ascii="굴림체" w:eastAsia="굴림체" w:hAnsi="굴림체"/><w:sz w:val="18"/></w:rPr>';
+export const RUN_RPR_XML = buildDocxRunPropertiesXml(18);
 
 /**
  * 이미지 EMU 치수 (English Metric Units, 1 cm = 360000 EMU).

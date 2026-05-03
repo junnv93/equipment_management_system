@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { EmailContent } from '../config/notification-registry';
-import { CALIBRATION_THRESHOLDS } from '@equipment-management/shared-constants';
+import {
+  CALIBRATION_THRESHOLDS,
+  DOCUMENT_FONT_POLICY,
+} from '@equipment-management/shared-constants';
 
 /** 배치 이메일에 포함될 개별 장비 정보 */
 export interface OverdueEquipmentItem {
@@ -305,7 +308,7 @@ export class EmailTemplateService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${this.escapeHtml(title)}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Malgun Gothic','맑은 고딕',sans-serif;">
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:${DOCUMENT_FONT_POLICY.email.bodyFontFamily};">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;">
     <tr>
       <td align="center" style="padding:32px 16px;">

@@ -16,6 +16,7 @@
  * - 긴급도 피드백 → visual-feedback.ts (URGENCY_FEEDBACK_MAP)
  * - 이 파일은 위 SSOT를 중복 정의하지 않음
  */
+import { FONT_USAGE_CLASSES } from '@equipment-management/shared-constants';
 
 // ============================================================================
 // 1. Color Reference (프로그래밍 참조용 — 런타임 사용은 Tailwind 클래스)
@@ -80,13 +81,13 @@ export const BRAND_THEME_META_COLORS = {
  */
 export const FONT = {
   /** 헤딩, 페이지 타이틀, 네비게이션 아이템 */
-  heading: 'font-display',
+  heading: FONT_USAGE_CLASSES.heading,
   /** 본문 텍스트, 폼 라벨, 설명 */
-  body: 'font-body',
+  body: FONT_USAGE_CLASSES.body,
   /** 관리번호, 타임스탬프, 코드 — tabular-nums 포함 */
-  mono: 'font-mono tabular-nums',
+  mono: FONT_USAGE_CLASSES.mono,
   /** KPI 대형 카운터 (대시보드) */
-  kpi: 'font-mono tabular-nums font-semibold',
+  kpi: FONT_USAGE_CLASSES.kpi,
 } as const;
 
 // ============================================================================

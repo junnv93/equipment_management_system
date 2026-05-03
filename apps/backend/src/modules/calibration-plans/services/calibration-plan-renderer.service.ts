@@ -7,9 +7,13 @@ import {
   clearTrailingRows,
 } from '../../reports/xlsx-helper';
 import * as Layout from '../calibration-plan.layout';
-import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import { SITE_LABELS } from '@equipment-management/schemas';
-import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import {
+  FORM_CATALOG,
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  DOCUMENT_FONT_POLICY,
+} from '@equipment-management/shared-constants';
 import { toExcelLoadableBuffer } from '../../../common/utils';
 import type { CalibrationPlanDetail, CalibrationPlanItemDetail } from '../calibration-plans.types';
 
@@ -47,7 +51,7 @@ export class CalibrationPlanRendererService {
 
     const titleCell = sheet.getRow(1).getCell(1);
     titleCell.value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
-    titleCell.font = { bold: true, size: 18, name: '맑은 고딕', charset: 129 };
+    titleCell.font = { ...DOCUMENT_FONT_POLICY.excel.korean, bold: true, size: 18 };
     titleCell.alignment = Layout.ALIGNMENT.CENTER_MIDDLE;
 
     const styles = captureRowStyles(sheet, Layout.DATA_START_ROW, Layout.COLUMN_COUNT);

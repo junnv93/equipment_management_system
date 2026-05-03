@@ -307,6 +307,19 @@ export {
   type FormNumber,
 } from './form-catalog';
 
+// 폰트 정책 SSOT (Web UI + 출력물 공통)
+export {
+  FONT_FAMILY,
+  FONT_STACKS,
+  CSS_FONT_STACKS,
+  FONT_CSS_VARIABLE_NAMES,
+  FONT_CSS_VARIABLES,
+  FONT_USAGE_CLASSES,
+  DOCUMENT_FONT_POLICY,
+  toCssFontFamily,
+  buildDocxRunPropertiesXml,
+} from './font-policy';
+
 // 에러 코드 (백엔드 throw payload.code + 프론트엔드 비교 SSOT)
 export {
   MigrationErrorCode,

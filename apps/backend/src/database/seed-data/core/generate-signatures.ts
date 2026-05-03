@@ -9,6 +9,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import sharp from 'sharp';
+import { FONT_FAMILY } from '@equipment-management/shared-constants';
 
 /** 서명 생성에 필요한 사용자 정보 */
 interface SignatureUser {
@@ -80,7 +81,7 @@ function generateSignatureSvg(name: string, userId: string): string {
         stroke-linejoin="round"/>
   <text x="${width / 2}" y="${height - 10}"
         text-anchor="middle"
-        font-family="serif"
+        font-family="${FONT_FAMILY.signatureFallback}"
         font-size="11"
         fill="#333"
         opacity="0.6">${name}</text>

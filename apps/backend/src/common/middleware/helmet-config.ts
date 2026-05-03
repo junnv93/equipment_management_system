@@ -14,10 +14,8 @@ export class HelmetConfigService {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: isProduction
-            ? ["'self'", 'https://fonts.googleapis.com']
-            : ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          styleSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'"],
+          fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           connectSrc: isProduction
             ? ["'self'", this.configService.get('FRONTEND_URL') ?? "'none'"]
