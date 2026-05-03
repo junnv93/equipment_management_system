@@ -31,15 +31,12 @@ import { type DisposalRequest } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
+import { CharsCounter } from '@/components/common/CharsCounter';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/errors/equipment-errors';
 import { mapDisposalErrorToToast } from '@/lib/errors/disposal-errors';
-import {
-  DISPOSAL_BUTTON_TOKENS,
-  DISPOSAL_INFO_CARD_TOKENS,
-  CONTENT_TOKENS,
-} from '@/lib/design-tokens';
+import { DISPOSAL_BUTTON_TOKENS, DISPOSAL_INFO_CARD_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
@@ -206,15 +203,13 @@ export function DisposalApprovalDialog({
                 aria-describedby={showRejectInput ? 'comment-hint' : undefined}
               />
               {showRejectInput && (
-                <p
+                <CharsCounter
+                  mode="min"
                   id="comment-hint"
-                  className={`${DISPOSAL_INFO_CARD_TOKENS.rejectCount} ${CONTENT_TOKENS.numeric.tabular}`}
-                >
-                  {t('charCountMin', {
-                    count: comment.length,
-                    min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
-                  })}
-                </p>
+                  count={comment.length}
+                  min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
+                  className={DISPOSAL_INFO_CARD_TOKENS.rejectCount}
+                />
               )}
             </div>
 

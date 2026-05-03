@@ -50,13 +50,25 @@ import {
   getCheckoutStatusGroupFilterValue,
   CheckoutStatusValues as CSVal,
 } from '@equipment-management/schemas';
+import type { CheckoutSummary } from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
   filters: UICheckoutFilters;
-  summary: import('@equipment-management/schemas').CheckoutSummary;
+  summary: CheckoutSummary;
   onStatCardClick: (status: string) => void;
   onResetFilters: () => void;
+}
+
+function deriveSparklineTrend(values: readonly number[]): 'up' | 'down' | 'flat' {
+  if (values.length <= 1) return 'flat';
+  const firstHalf = values.slice(0, Math.floor(values.length / 2));
+  const secondHalf = values.slice(Math.floor(values.length / 2));
+  const sum = (items: readonly number[]) => items.reduce((total, item) => total + item, 0);
+  const delta = sum(secondHalf) - sum(firstHalf);
+  if (delta > 0) return 'up';
+  if (delta < 0) return 'down';
+  return 'flat';
 }
 
 /** 반출 탭 통계 카드 데이터 정의 — referential stability 보장 (Phase 4 P1-1) */
@@ -68,6 +80,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         labelKey: 'outbound.totalCheckouts',
         subKey: 'outbound.totalSub',
         value: summary.total,
+        trendKey: 'total' as const,
         icon: ClipboardList,
         filterStatus: 'all',
         dotColor: 'bg-brand-info',
@@ -77,6 +90,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         labelKey: 'outbound.pendingApproval',
         subKey: 'outbound.pendingSub',
         value: summary.pending,
+        trendKey: 'pending' as const,
         icon: Clock,
         filterStatus: 'pending',
         dotColor: 'bg-brand-warning',
@@ -86,6 +100,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         labelKey: 'outbound.inProgress',
         subKey: 'outbound.inProgressSub',
         value: summary.inProgress,
+        trendKey: 'inProgress' as const,
         icon: PackageOpen,
         filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
         dotColor: 'bg-brand-purple',
@@ -95,6 +110,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         labelKey: 'outbound.overdue',
         subKey: 'outbound.overdueSub',
         value: summary.overdue,
+        trendKey: 'overdue' as const,
         icon: AlertTriangle,
         filterStatus: CSVal.OVERDUE,
         dotColor: 'bg-brand-critical',
@@ -104,6 +120,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
         labelKey: 'outbound.returnToday',
         subKey: 'outbound.returnedSub',
         value: summary.returnedToday,
+        trendKey: 'returnedToday' as const,
         icon: PackageCheck,
         filterStatus: getCheckoutStatusGroupFilterValue('completed'),
         dotColor: 'bg-brand-ok',
@@ -247,9 +264,6 @@ export default function OutboundCheckoutsTab({
     [summary.overdue, summary.pending]
   );
 
-  // SparklineMini 플레이스홀더 — 실제 시계열 데이터는 Phase 4.6에서 연결 예정
-  const sparklineValues: number[] = [];
-
   // 카드 활성화 핸들러 — useCallback으로 referential stability (memo'd 자식 회귀 차단)
   const handleStatActivate = useCallback(
     (filterStatus: string) => {
@@ -297,6 +311,15 @@ export default function OutboundCheckoutsTab({
               {t('outbound.priorityBadge')}
             </span>
           ) : null;
+          const metaNode =
+            card.variantKey === 'overdue' && summary.overdue > 0 ? (
+              <span>
+                {t('outbound.overdueMeta', {
+                  average: summary.avgDelayDays,
+                  max: summary.maxOverdueDays,
+                })}
+              </span>
+            ) : undefined;
           // SR aria-label — isAlert 시 "{label}, 우선 항목" 합성 (시각 배지와 SR 정보 대칭)
           const heroAriaLabel = isAlert
             ? t('outbound.priorityHeroAriaLabel', { label: t(card.labelKey) })
@@ -322,6 +345,7 @@ export default function OutboundCheckoutsTab({
                 value={card.value}
                 variant="critical"
                 badge={priorityBadgeNode}
+                meta={metaNode}
               />
             </div>
           );
@@ -339,6 +363,8 @@ export default function OutboundCheckoutsTab({
         const iconColorClass = isActive
           ? CHECKOUT_STATS_VARIANTS[card.variantKey].iconColor
           : 'text-muted-foreground';
+        const sparklineValues = summary.trends?.[card.trendKey] ?? [];
+        const sparklineTrend = deriveSparklineTrend(sparklineValues);
 
         return (
           <Card
@@ -397,9 +423,8 @@ export default function OutboundCheckoutsTab({
                   {t('outbound.activeFilter')}
                 </p>
               )}
-              {/* SparklineMini 슬롯 — values.length <= 1이면 빈 SVG 반환 (PR-x에서 실제 데이터 연결) */}
               {sparklineValues.length > 1 && (
-                <SparklineMini values={sparklineValues} trend="flat" variant="info" />
+                <SparklineMini values={sparklineValues} trend={sparklineTrend} variant="info" />
               )}
             </CardContent>
           </Card>

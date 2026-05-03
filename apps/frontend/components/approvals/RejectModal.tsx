@@ -31,6 +31,8 @@ import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { CharsCounter } from '@/components/common/CharsCounter';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
+import checkoutApi from '@/lib/api/checkout-api';
+import type { RejectionPreset } from '@/lib/api/checkout-api';
 
 /**
  * RejectModal — discriminated union mode prop (AP-03)
@@ -74,8 +76,6 @@ type RejectModalProps =
       showTemplates?: boolean;
     };
 
-const TEMPLATE_KEYS = ['spec', 'schedule', 'calibration', 'document', 'other'] as const;
-
 export default function RejectModal(props: RejectModalProps) {
   const { mode, isOpen, onClose } = props;
   const t = useTranslations('approvals');
@@ -85,6 +85,7 @@ export default function RejectModal(props: RejectModalProps) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [rejectPresets, setRejectPresets] = useState<RejectionPreset[]>([]);
 
   // 모달 열릴 때 상태 초기화
   useEffect(() => {
@@ -95,13 +96,25 @@ export default function RejectModal(props: RejectModalProps) {
     }
   }, [isOpen]);
 
-  const rejectTemplates = [
-    { value: '', label: t('rejectModal.directInput') },
-    ...TEMPLATE_KEYS.map((key) => ({
-      value: t(`rejectModal.templates.${key}`),
-      label: t(`rejectModal.templates.${key}`),
-    })),
-  ];
+  const showTemplates = mode === 'single' || (mode === 'domain' && props.showTemplates === true);
+
+  useEffect(() => {
+    if (!isOpen || !showTemplates) return;
+
+    let mounted = true;
+    checkoutApi
+      .getRejectionPresets()
+      .then((presets) => {
+        if (mounted) setRejectPresets(presets);
+      })
+      .catch(() => {
+        if (mounted) setRejectPresets([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen, showTemplates]);
 
   const handleReasonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -160,8 +173,6 @@ export default function RejectModal(props: RejectModalProps) {
 
   const submitLabel = mode === 'domain' ? (props.submitLabel ?? props.title) : title;
 
-  const showTemplates = mode === 'single' || (mode === 'domain' && props.showTemplates === true);
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -180,9 +191,10 @@ export default function RejectModal(props: RejectModalProps) {
                   <SelectValue placeholder={t('rejectModal.templateSelectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {rejectTemplates.map((template) => (
-                    <SelectItem key={template.value || 'direct'} value={template.value || 'direct'}>
-                      {template.label}
+                  <SelectItem value="direct">{t('rejectModal.directInput')}</SelectItem>
+                  {rejectPresets.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.template || preset.label}>
+                      {preset.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

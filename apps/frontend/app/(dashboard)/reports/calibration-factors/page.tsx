@@ -13,38 +13,12 @@ import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import CalibrationFactorsRegistryContent from './CalibrationFactorsRegistryContent';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { CalibrationFactorsLoadingSkeleton } from './CalibrationFactorsLoadingSkeleton';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
-
-export function CalibrationFactorsLoadingSkeleton() {
-  return (
-    <div className={getPageContainerClasses()}>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-10 w-32" />
-      </div>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 export default function CalibrationFactorsRegistryPage(_props: PageProps) {
   return (

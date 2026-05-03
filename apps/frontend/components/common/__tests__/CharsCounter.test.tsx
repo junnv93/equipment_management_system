@@ -14,6 +14,9 @@ import { CHAR_COUNTER_TOKENS } from '@/lib/design-tokens';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
+    if (params && 'count' in params && 'min' in params) {
+      return `min ${params.min}, current ${params.count}`;
+    }
     if (params && 'count' in params && 'max' in params) {
       return `${params.count}/${params.max}`;
     }
@@ -80,6 +83,25 @@ describe('CharsCounter', () => {
         </CharsCounter>
       );
       expect(screen.getByText('400 chars remaining')).toBeInTheDocument();
+    });
+
+    it('renders common.charCounter.min i18n text in min mode', () => {
+      render(<CharsCounter mode="min" count={7} min={10} />);
+      expect(screen.getByText('min 10, current 7')).toBeInTheDocument();
+    });
+  });
+
+  describe('min mode', () => {
+    it('renders destructive class when count is below min', () => {
+      const { container } = render(<CharsCounter mode="min" count={9} min={10} />);
+      const span = container.querySelector('span[role="status"]');
+      expect(span).toHaveClass(CHAR_COUNTER_TOKENS.destructiveClass);
+    });
+
+    it('renders without destructive class when count reaches min', () => {
+      const { container } = render(<CharsCounter mode="min" count={10} min={10} />);
+      const span = container.querySelector('span[role="status"]');
+      expect(span).not.toHaveClass(CHAR_COUNTER_TOKENS.destructiveClass);
     });
   });
 

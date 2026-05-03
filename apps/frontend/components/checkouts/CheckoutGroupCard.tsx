@@ -50,7 +50,7 @@ import {
   MICRO_TYPO,
   ANIMATION_PRESETS,
   getStaggerFadeInStyle,
-  STAGGER_ROW_LIMIT,
+  shouldUseStaggerFadeIn,
 } from '@/lib/design-tokens';
 
 // ============================================================================
@@ -217,19 +217,21 @@ function CheckoutGroupCard({
   );
 
   // ── Row overflow actions (reject → 상세 이동, fail-closed) ────────────────
+  const rejectActionLabel = useMemo(() => t('actions.reject'), [t]);
+
   const buildRowOverflowActions = useCallback(
     (row: EquipmentRow): OverflowAction[] => {
       const actions: OverflowAction[] = [];
       if (row.canApproveItem && row.status === CSVal.PENDING) {
         actions.push({
-          label: t('actions.reject'),
+          label: rejectActionLabel,
           onClick: () => onCheckoutClick(row.checkoutId),
           variant: 'destructive',
         });
       }
       return actions;
     },
-    [t, onCheckoutClick]
+    [rejectActionLabel, onCheckoutClick]
   );
 
   // ── Group card 스타일 ─────────────────────────────────────────────────────
@@ -271,6 +273,22 @@ function CheckoutGroupCard({
     if (!onToggleGroup) return;
     onToggleGroup(groupRowIds, groupSelectionState === 'all');
   }, [groupRowIds, groupSelectionState, onToggleGroup]);
+  const handleCheckoutRowClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const checkoutId = event.currentTarget.dataset.checkoutId;
+      if (checkoutId) onCheckoutClick(checkoutId);
+    },
+    [onCheckoutClick]
+  );
+  const handleCheckoutRowKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const checkoutId = event.currentTarget.dataset.checkoutId;
+      if (checkoutId) onCheckoutClick(checkoutId);
+    },
+    [onCheckoutClick]
+  );
 
   return (
     <TooltipProvider>
@@ -437,34 +455,27 @@ function CheckoutGroupCard({
                   const rowBaseClass = isRowOverdue
                     ? `${CHECKOUT_ITEM_ROW_TOKENS.container} ${CHECKOUT_ITEM_ROW_TOKENS.containerOverdue}`
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
+                  const shouldAnimateRow = shouldUseStaggerFadeIn(rowIndex);
 
                   return (
                     <div
                       key={`${row.checkoutId}-${row.equipmentId}`}
                       role="row"
                       tabIndex={0}
+                      data-checkout-id={row.checkoutId}
                       aria-label={t('groupCard.rowAria', {
                         equipment: row.equipmentName,
                         status: t(`status.${row.status}`),
                         dday: daysRemaining !== null ? formatDday(daysRemaining) : '',
                       })}
-                      onClick={() => onCheckoutClick(row.checkoutId)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          onCheckoutClick(row.checkoutId);
-                        }
-                      }}
+                      onClick={handleCheckoutRowClick}
+                      onKeyDown={handleCheckoutRowKeyDown}
                       className={cn(
                         rowBaseClass,
                         CHECKOUT_ITEM_ROW_TOKENS.grid,
-                        rowIndex < STAGGER_ROW_LIMIT && ANIMATION_PRESETS.staggerFadeInItem
+                        shouldAnimateRow && ANIMATION_PRESETS.staggerFadeInItem
                       )}
-                      style={
-                        rowIndex < STAGGER_ROW_LIMIT
-                          ? getStaggerFadeInStyle(rowIndex, 'grid')
-                          : undefined
-                      }
+                      style={shouldAnimateRow ? getStaggerFadeInStyle(rowIndex, 'grid') : undefined}
                     >
                       {/* Zone 1: purposeBar (3px) */}
                       <span

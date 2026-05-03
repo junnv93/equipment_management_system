@@ -87,12 +87,18 @@ export function ApprovalStepIndicator({
             {/* 단계 아이콘 */}
             <div
               className={cn(
+                'relative',
                 getApprovalStepperNodeClasses(stepperStatus),
                 getTransitionClasses('fast', ['border-color', 'background-color', 'color'])
               )}
               aria-current={isCurrent ? 'step' : undefined}
               aria-label={index === 0 ? t('steps.startNodeLabel') : undefined}
             >
+              {type === 'disposal' && index === 0 && (
+                <span className={APPROVAL_STEPPER_TOKENS.startNodeLabel.visual} aria-hidden="true">
+                  ▸
+                </span>
+              )}
               {isRejected && isCurrent ? (
                 <XCircle className={APPROVAL_STEPPER_TOKENS.icon} />
               ) : isCompleted ? (

@@ -97,7 +97,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
     );
     setIsUploading(false);
 
-    const failed = results.filter((r) => r.status === 'rejected').length; // eslint-disable-line no-restricted-syntax -- Promise.allSettled result status; self-audit-exception
+    const failed = results.reduce((count, result) => count + ('reason' in result ? 1 : 0), 0);
     const succeeded = results.length - failed;
     if (failed > 0) {
       toast({

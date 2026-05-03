@@ -1,14 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { Button } from '@/components/ui/button';
-import {
-  EMPTY_STATE_TOKENS,
-  CHECKOUT_EMPTY_STATE_TOKENS,
-  CHECKOUT_ICON_MAP,
-} from '@/lib/design-tokens';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { CHECKOUT_EMPTY_STATE_TOKENS, CHECKOUT_ICON_MAP } from '@/lib/design-tokens';
 import type { CheckoutEmptyStateVariant } from '@/lib/design-tokens';
 
 export interface CheckoutEmptyStatePrimaryAction {
@@ -70,19 +65,23 @@ export default function CheckoutEmptyState({
       : undefined);
 
   return (
-    <div
-      className={[EMPTY_STATE_TOKENS.container, className].filter(Boolean).join(' ')}
+    <EmptyState
+      variant="no-data"
+      icon={Icon}
+      title={title}
+      description={description}
+      primaryAction={primaryAction}
+      secondaryAction={resolvedSecondary}
+      canAct={showPrimary}
+      className={className}
       role={networkOffline ? 'alert' : 'status'}
-      aria-live={networkOffline ? 'assertive' : 'polite'}
-      data-testid={`empty-state-${variant}`}
+      ariaLive={networkOffline ? 'assertive' : 'polite'}
+      testId={`empty-state-${variant}`}
+      iconColorClass={iconColorClass}
+      iconBgClass={iconBgClass}
+      primaryActionDisabled={networkOffline}
+      primaryActionAriaDescribedBy={networkOffline ? 'offline-reason' : undefined}
     >
-      <div className={[EMPTY_STATE_TOKENS.iconContainer, iconBgClass].filter(Boolean).join(' ')}>
-        <Icon className={[EMPTY_STATE_TOKENS.icon, iconColorClass].join(' ')} aria-hidden="true" />
-      </div>
-
-      <h3 className={EMPTY_STATE_TOKENS.title}>{title}</h3>
-      <p className={EMPTY_STATE_TOKENS.description}>{description}</p>
-
       {variant === 'network' && isOnline && (
         <p className="mt-1 text-xs text-brand-ok bg-brand-ok/10 rounded px-2 py-1 inline-block">
           {t('emptyState.network.restored')}
@@ -91,6 +90,7 @@ export default function CheckoutEmptyState({
 
       {networkOffline && (
         <p
+          id="offline-reason"
           className="mt-1 text-xs text-brand-critical bg-brand-critical/10 rounded px-2 py-1 inline-block"
           aria-live="assertive"
         >
@@ -103,43 +103,6 @@ export default function CheckoutEmptyState({
           {roleLabel}
         </p>
       )}
-
-      {(showPrimary && primaryAction) || resolvedSecondary ? (
-        <div className={EMPTY_STATE_TOKENS.actions}>
-          {showPrimary &&
-            primaryAction &&
-            (primaryAction.href ? (
-              <Button asChild disabled={networkOffline}>
-                <Link
-                  href={primaryAction.href}
-                  aria-disabled={networkOffline || undefined}
-                  tabIndex={networkOffline ? -1 : undefined}
-                >
-                  {primaryAction.label}
-                </Link>
-              </Button>
-            ) : (
-              <Button
-                onClick={primaryAction.onClick}
-                type="button"
-                disabled={networkOffline}
-                aria-describedby={networkOffline ? 'offline-reason' : undefined}
-              >
-                {primaryAction.label}
-              </Button>
-            ))}
-          {resolvedSecondary &&
-            (resolvedSecondary.href ? (
-              <Button variant="outline" asChild>
-                <Link href={resolvedSecondary.href}>{resolvedSecondary.label}</Link>
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={resolvedSecondary.onClick} type="button">
-                {resolvedSecondary.label}
-              </Button>
-            ))}
-        </div>
-      ) : null}
-    </div>
+    </EmptyState>
   );
 }

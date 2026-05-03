@@ -83,6 +83,9 @@ export function CalibrationApprovalActions({
           size="sm"
           variant="outline"
           className={getCalibrationActionButtonClasses('approve')}
+          aria-label={t('calibrationHistoryTab.approval.approveAriaLabel', {
+            date: calibration.calibrationDate ?? calibration.id,
+          })}
           disabled={isPending}
           loading={isPending}
           onClick={() =>
@@ -96,6 +99,9 @@ export function CalibrationApprovalActions({
           size="sm"
           variant="outline"
           className={getCalibrationActionButtonClasses('reject')}
+          aria-label={t('calibrationHistoryTab.approval.rejectAriaLabel', {
+            date: calibration.calibrationDate ?? calibration.id,
+          })}
           disabled={isPending}
           loading={isPending}
           onClick={() => setIsRejectDialogOpen(true)}

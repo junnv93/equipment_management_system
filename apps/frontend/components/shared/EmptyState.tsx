@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { AlertCircle, Check, Circle } from 'lucide-react';
+import { EmptyStateLayout } from '@/components/shared/EmptyStateLayout';
 import { Button } from '@/components/ui/button';
 import { EMPTY_STATE_TOKENS } from '@/lib/design-tokens';
 import type { EmptyStateVariant } from '@/lib/design-tokens';
@@ -21,14 +24,15 @@ export interface EmptyStatePrimaryAction {
 
 export interface EmptyStateSecondaryAction {
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
+  href?: string;
 }
 
 export interface EmptyStateProps {
   variant: EmptyStateVariant;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
-  description: string;
+  description?: string;
   primaryAction?: EmptyStatePrimaryAction;
   secondaryAction?: EmptyStateSecondaryAction;
   className?: string;
@@ -40,11 +44,18 @@ export interface EmptyStateProps {
   canAct?: boolean;
   /** E2E 테스트용 testid. 전달 시 root div에 data-testid 바인딩. */
   testId?: string;
+  role?: 'status' | 'presentation' | 'alert';
+  ariaLive?: 'polite' | 'assertive';
+  children?: ReactNode;
+  iconColorClass?: string;
+  iconBgClass?: string;
+  primaryActionDisabled?: boolean;
+  primaryActionAriaDescribedBy?: string;
 }
 
 export function EmptyState({
   variant,
-  icon: Icon,
+  icon,
   title,
   description,
   primaryAction,
@@ -52,46 +63,90 @@ export function EmptyState({
   className,
   canAct,
   testId,
+  role,
+  ariaLive,
+  children,
+  iconColorClass,
+  iconBgClass,
+  primaryActionDisabled,
+  primaryActionAriaDescribedBy,
 }: EmptyStateProps) {
   const showPrimary = canAct !== false;
+  const Icon = icon ?? DEFAULT_EMPTY_STATE_ICONS[variant] ?? Circle;
+  const computedRole = role ?? (variant === 'error' ? 'alert' : 'status');
 
-  const iconColorClass = EMPTY_STATE_TOKENS.variantIconColor[variant];
-  const iconBgClass = EMPTY_STATE_TOKENS.variantIconBg[variant];
+  const resolvedIconColorClass = iconColorClass ?? EMPTY_STATE_TOKENS.variantIconColor[variant];
+  const resolvedIconBgClass = iconBgClass ?? EMPTY_STATE_TOKENS.variantIconBg[variant];
 
   return (
-    <div
-      className={[EMPTY_STATE_TOKENS.container, className].filter(Boolean).join(' ')}
-      role="status"
-      aria-live="polite"
-      data-testid={testId}
-    >
-      <div className={[EMPTY_STATE_TOKENS.iconContainer, iconBgClass].filter(Boolean).join(' ')}>
-        <Icon className={[EMPTY_STATE_TOKENS.icon, iconColorClass].join(' ')} aria-hidden="true" />
-      </div>
-
-      <h3 className={EMPTY_STATE_TOKENS.title}>{title}</h3>
-      <p className={EMPTY_STATE_TOKENS.description}>{description}</p>
-
-      {(showPrimary && primaryAction) || secondaryAction ? (
-        <div className={EMPTY_STATE_TOKENS.actions}>
-          {showPrimary &&
-            primaryAction &&
-            (primaryAction.href ? (
-              <Button asChild>
-                <Link href={primaryAction.href}>{primaryAction.label}</Link>
-              </Button>
-            ) : (
-              <Button onClick={primaryAction.onClick} type="button">
-                {primaryAction.label}
-              </Button>
-            ))}
-          {secondaryAction && (
-            <Button variant="outline" onClick={secondaryAction.onClick} type="button">
-              {secondaryAction.label}
-            </Button>
-          )}
-        </div>
-      ) : null}
-    </div>
+    <EmptyStateLayout
+      containerClassName={EMPTY_STATE_TOKENS.container}
+      className={className}
+      role={computedRole}
+      ariaLive={
+        ariaLive ??
+        (computedRole === 'alert' ? 'assertive' : computedRole === 'status' ? 'polite' : undefined)
+      }
+      testId={testId}
+      iconContainerClassName={[EMPTY_STATE_TOKENS.iconContainer, resolvedIconBgClass]
+        .filter(Boolean)
+        .join(' ')}
+      icon={
+        <Icon
+          className={[EMPTY_STATE_TOKENS.icon, resolvedIconColorClass].join(' ')}
+          aria-hidden="true"
+        />
+      }
+      title={title}
+      titleClassName={EMPTY_STATE_TOKENS.title}
+      description={description}
+      descriptionClassName={EMPTY_STATE_TOKENS.description}
+      children={children}
+      actionsClassName={EMPTY_STATE_TOKENS.actions}
+      actions={
+        (showPrimary && primaryAction) || secondaryAction ? (
+          <>
+            {showPrimary &&
+              primaryAction &&
+              (primaryAction.href ? (
+                <Button asChild disabled={primaryActionDisabled}>
+                  <Link
+                    href={primaryAction.href}
+                    aria-disabled={primaryActionDisabled || undefined}
+                    tabIndex={primaryActionDisabled ? -1 : undefined}
+                  >
+                    {primaryAction.label}
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  onClick={primaryAction.onClick}
+                  type="button"
+                  disabled={primaryActionDisabled}
+                  aria-describedby={primaryActionAriaDescribedBy}
+                >
+                  {primaryAction.label}
+                </Button>
+              ))}
+            {secondaryAction &&
+              (secondaryAction.href ? (
+                <Button variant="outline" asChild>
+                  <Link href={secondaryAction.href}>{secondaryAction.label}</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={secondaryAction.onClick} type="button">
+                  {secondaryAction.label}
+                </Button>
+              ))}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
+
+const DEFAULT_EMPTY_STATE_ICONS: Partial<Record<EmptyStateVariant, LucideIcon>> = {
+  neutral: Circle,
+  success: Check,
+  error: AlertCircle,
+};

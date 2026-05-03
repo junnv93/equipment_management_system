@@ -19,6 +19,7 @@ interface HeroKPIProps {
    * Phase 4.5 (GAP-3): wireframe 우상단 우선 배지 매칭.
    */
   badge?: ReactNode;
+  meta?: ReactNode;
 }
 
 export const HeroKPI = React.memo(function HeroKPI({
@@ -27,6 +28,7 @@ export const HeroKPI = React.memo(function HeroKPI({
   trend,
   variant,
   badge,
+  meta,
 }: HeroKPIProps) {
   const tokens = CHECKOUT_STATS_VARIANTS.hero;
   const valueColorClass = variant ? getSemanticContainerTextClasses(variant) : '';
@@ -40,6 +42,7 @@ export const HeroKPI = React.memo(function HeroKPI({
         {badge}
       </div>
       <span className={`${tokens.kpi} ${valueColorClass}`.trim()}>{value}</span>
+      {meta && <div className="text-xs text-muted-foreground leading-tight">{meta}</div>}
       {trend && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           {trend === 'up' && (

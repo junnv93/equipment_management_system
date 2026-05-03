@@ -20,6 +20,7 @@ import { reviewDisposal } from '@/lib/api/disposal-api';
 import { type DisposalRequest } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { EquipmentHistorySummary } from './EquipmentHistorySummary';
+import { CharsCounter } from '@/components/common/CharsCounter';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/errors/equipment-errors';
@@ -27,7 +28,6 @@ import {
   DISPOSAL_BUTTON_TOKENS,
   DISPOSAL_INFO_CARD_TOKENS,
   DISPOSAL_FILE_LINK_TOKENS,
-  CONTENT_TOKENS,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
@@ -182,15 +182,12 @@ export function DisposalReviewDialog({
               className="resize-none"
               aria-describedby="opinion-hint"
             />
-            <p
+            <CharsCounter
+              mode="min"
               id="opinion-hint"
-              className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
-            >
-              {t('charCountMin', {
-                count: opinion.length,
-                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
-              })}
-            </p>
+              count={opinion.length}
+              min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
+            />
           </div>
 
           {showRejectInput && (

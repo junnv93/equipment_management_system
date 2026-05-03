@@ -75,7 +75,7 @@ export function TemplateGallery({
     if (skipNextTime) {
       markGallerySkipped(equipmentTypeId, inspectionType);
     }
-    track(ANALYTICS_EVENTS.INSPECTION_GALLERY_SELECTED, {
+    track(ANALYTICS_EVENTS.GALLERY_USED, {
       inspectionType,
       matchingReason: selectedEntry?.matchReason ?? 'blank',
       skippedNextTime: skipNextTime,

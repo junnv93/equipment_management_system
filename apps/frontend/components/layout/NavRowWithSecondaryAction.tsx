@@ -88,11 +88,11 @@ export const NavRowWithSecondaryAction = memo(function NavRowWithSecondaryAction
 
   // 분기 3: expanded + 보조 액션 — sibling anchors
   if (!isCollapsed && hasBadge && secondaryAction) {
-    const secondaryAriaLabel = t(secondaryAction.ariaKey as Parameters<typeof t>[0], {
+    const secondaryAriaLabel = t(secondaryAction.ariaKey, {
       count: badge ?? 0,
     });
     // 메인 anchor에 명시 aria-label — 보조 anchor와 의미 구분 (SR 안내 명료성)
-    const primaryAriaLabel = t(secondaryAction.primaryAriaKey as Parameters<typeof t>[0]);
+    const primaryAriaLabel = t(secondaryAction.primaryAriaKey);
     return (
       <div className={cn(SIDEBAR_ROW_TOKENS.container)}>
         <NavLink

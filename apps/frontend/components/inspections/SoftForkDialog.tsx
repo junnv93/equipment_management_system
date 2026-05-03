@@ -89,7 +89,7 @@ export function SoftForkDialog({
   const changedCount = diff.itemsChanged.length + diff.sectionsTypeChanged.length;
 
   const handleConfirm = () => {
-    track(ANALYTICS_EVENTS.INSPECTION_SOFT_FORK, {
+    track(ANALYTICS_EVENTS.SOFT_FORK_DECIDED, {
       inspectionType,
       choice: selectedChoice,
       itemsAdded: diff.itemsAdded.length,
@@ -103,7 +103,7 @@ export function SoftForkDialog({
   };
 
   const handleCancel = () => {
-    track(ANALYTICS_EVENTS.INSPECTION_SOFT_FORK, {
+    track(ANALYTICS_EVENTS.SOFT_FORK_DECIDED, {
       inspectionType,
       choice: 'cancel',
       itemsAdded: diff.itemsAdded.length,

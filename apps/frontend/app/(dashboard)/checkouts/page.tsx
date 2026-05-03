@@ -28,6 +28,25 @@ import { RouteLoading } from '@/components/loading';
 import type { CheckoutSummary } from '@/lib/api/checkout-api';
 import { parseCheckoutFiltersFromSearchParams } from '@/lib/utils/checkout-filter-utils';
 
+const EMPTY_CHECKOUT_SUMMARY_TRENDS: CheckoutSummary['trends'] = {
+  total: [],
+  pending: [],
+  inProgress: [],
+  overdue: [],
+  returnedToday: [],
+};
+
+const EMPTY_CHECKOUT_SUMMARY: CheckoutSummary = {
+  total: 0,
+  pending: 0,
+  inProgress: 0,
+  overdue: 0,
+  returnedToday: 0,
+  avgDelayDays: 0,
+  maxOverdueDays: 0,
+  trends: EMPTY_CHECKOUT_SUMMARY_TRENDS,
+};
+
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -65,23 +84,11 @@ async function CheckoutsContentAsync({
       `${API_ENDPOINTS.CHECKOUTS.LIST}?pageSize=1&includeSummary=true`
     );
     const transformed = transformPaginatedResponse<unknown, CheckoutSummary>(listResponse);
-    initialSummary = transformed.meta.summary ?? {
-      total: 0,
-      pending: 0,
-      inProgress: 0,
-      overdue: 0,
-      returnedToday: 0,
-    };
+    initialSummary = transformed.meta.summary ?? EMPTY_CHECKOUT_SUMMARY;
   } catch (error) {
     // 에러 발생 시 기본값으로 시작 (Client에서 live query로 갱신)
     console.error('[CheckoutsPage] Initial fetch error:', error);
-    initialSummary = {
-      total: 0,
-      pending: 0,
-      inProgress: 0,
-      overdue: 0,
-      returnedToday: 0,
-    };
+    initialSummary = EMPTY_CHECKOUT_SUMMARY;
   }
 
   return <CheckoutsContent initialSummary={initialSummary} initialFilters={initialFilters} />;

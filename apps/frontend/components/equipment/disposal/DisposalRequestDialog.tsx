@@ -17,10 +17,11 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Upload, X } from 'lucide-react';
 import { DisposalReasonSelector } from './DisposalReasonSelector';
+import { CharsCounter } from '@/components/common/CharsCounter';
 import { requestDisposal } from '@/lib/api/disposal-api';
 import type { DisposalReason } from '@equipment-management/schemas';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { DISPOSAL_BUTTON_TOKENS, CONTENT_TOKENS } from '@/lib/design-tokens';
+import { DISPOSAL_BUTTON_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import {
   DOCUMENT_FILE_RULES,
@@ -146,15 +147,12 @@ export function DisposalRequestDialog({
               className="resize-none"
               aria-describedby="reasonDetail-hint"
             />
-            <p
+            <CharsCounter
+              mode="min"
               id="reasonDetail-hint"
-              className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
-            >
-              {t('charCountMin', {
-                count: reasonDetail.length,
-                min: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
-              })}
-            </p>
+              count={reasonDetail.length}
+              min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
+            />
           </div>
 
           <div className="space-y-2">

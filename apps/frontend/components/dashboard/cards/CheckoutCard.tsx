@@ -22,7 +22,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { DDayTag } from '@/components/dashboard/atoms/DDayTag';
-import { EmptyState } from '@/components/dashboard/atoms/EmptyState';
+import { EmptyState } from '@/components/shared/EmptyState';
 import {
   dashboardApi,
   type OverdueCheckout,

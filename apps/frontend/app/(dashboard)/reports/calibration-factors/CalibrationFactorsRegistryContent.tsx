@@ -24,6 +24,7 @@ import calibrationFactorsApi, {
 import { format } from 'date-fns';
 import { Calculator, ChevronDown, ChevronRight, FileDown, Search, Building2 } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { exportFormTemplate } from '@/lib/api/reports-api';
 import Link from 'next/link';
 import {
   CAL_FACTORS_HEADER_TOKENS,
@@ -146,6 +147,10 @@ export default function CalibrationFactorsRegistryContent({
     link.click();
   };
 
+  const exportOfficialForm = () => {
+    void exportFormTemplate('UL-QP-18-11');
+  };
+
   if (isLoading) {
     return (
       <div className={getPageContainerClasses()}>
@@ -186,10 +191,16 @@ export default function CalibrationFactorsRegistryContent({
           <h1 className={CAL_FACTORS_HEADER_TOKENS.title}>{t('factorsRegistry.title')}</h1>
           <p className={CAL_FACTORS_HEADER_TOKENS.subtitle}>{t('factorsRegistry.subtitle')}</p>
         </div>
-        <Button onClick={exportToCSV} variant="outline">
-          <FileDown className="h-4 w-4 mr-2" />
-          {t('factorsRegistry.csvExport')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={exportOfficialForm} variant="outline">
+            <FileDown className="h-4 w-4 mr-2" />
+            {t('factorsRegistry.formExport')}
+          </Button>
+          <Button onClick={exportToCSV} variant="outline">
+            <FileDown className="h-4 w-4 mr-2" />
+            {t('factorsRegistry.csvExport')}
+          </Button>
+        </div>
       </div>
 
       {/* 요약 카드 */}

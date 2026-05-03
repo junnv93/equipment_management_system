@@ -450,6 +450,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                             size="sm"
                             variant="outline"
                             className={getCalibrationActionButtonClasses('approve')}
+                            aria-label={t('approveButtonAriaLabel', { name: factor.factorName })}
                             disabled={isFactorActionPending}
                             loading={approveFactorMutation.isPending}
                             onClick={() =>
@@ -466,6 +467,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                             size="sm"
                             variant="outline"
                             className={getCalibrationActionButtonClasses('reject')}
+                            aria-label={t('rejectButtonAriaLabel', { name: factor.factorName })}
                             disabled={isFactorActionPending}
                             loading={rejectFactorMutation.isPending}
                             onClick={() => setRejectingFactorId(factor.id)}

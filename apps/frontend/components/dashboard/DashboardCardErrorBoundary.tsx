@@ -15,7 +15,7 @@
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { EmptyState } from '@/components/dashboard/atoms/EmptyState';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 interface DashboardCardErrorBoundaryProps {
   /** 디버깅/식별용 카드 이름 (Sentry/콘솔 로깅 + aria-label 보조). */
@@ -43,7 +43,7 @@ export function DashboardCardErrorBoundary({
             variant="error"
             title={t('title')}
             description={t('description')}
-            cta={{ label: t('retry'), onClick: reset }}
+            primaryAction={{ label: t('retry'), onClick: reset }}
             className="my-auto"
           />
         </Card>

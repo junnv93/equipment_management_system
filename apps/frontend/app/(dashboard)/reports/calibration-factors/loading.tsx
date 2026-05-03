@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
-import { CalibrationFactorsLoadingSkeleton } from './page';
+import { CalibrationFactorsLoadingSkeleton } from './CalibrationFactorsLoadingSkeleton';
 
 export default async function CalibrationFactorsLoading() {
   const t = await getTranslations();

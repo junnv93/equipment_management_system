@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   Dialog,
@@ -15,6 +17,12 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, XCircle, FileText, Download } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { TAB_META } from '@/lib/api/approvals-api';
+import { auditApi } from '@/lib/api/audit-api';
+import { queryKeys } from '@/lib/api/query-config';
+import {
+  mapAuditLogsToApprovalHistory,
+  resolveApprovalAuditEntity,
+} from '@/lib/api/approvals/audit-history';
 import { computeUrgency } from '@equipment-management/schemas';
 import type { CheckoutStatus } from '@equipment-management/schemas';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
@@ -63,6 +71,26 @@ export default function ApprovalDetailModal({
 
   const meta = TAB_META[item.category];
   const isMultiStep = meta.totalApprovalSteps > 1;
+  const auditEntity = useMemo(() => resolveApprovalAuditEntity(item), [item]);
+  const shouldFetchAuditHistory =
+    isOpen && Boolean(auditEntity) && !(item.approvalHistory && item.approvalHistory.length > 0);
+  const { data: auditHistoryData } = useQuery({
+    queryKey: auditEntity
+      ? [
+          ...queryKeys.auditLogs.all,
+          'approval-history',
+          auditEntity.entityType,
+          auditEntity.entityId,
+        ]
+      : [...queryKeys.auditLogs.all, 'approval-history', 'disabled'],
+    queryFn: () => auditApi.getEntityAuditLogs(auditEntity!.entityType, auditEntity!.entityId),
+    enabled: shouldFetchAuditHistory,
+    retry: false,
+  });
+  const approvalHistory =
+    item.approvalHistory && item.approvalHistory.length > 0
+      ? item.approvalHistory
+      : mapAuditLogsToApprovalHistory(auditHistoryData?.items ?? []);
 
   const elapsedDays = item.requestedAt
     ? Math.floor((Date.now() - new Date(item.requestedAt).getTime()) / 86_400_000)
@@ -80,13 +108,13 @@ export default function ApprovalDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] data-[state=open]:motion-safe:duration-300 data-[state=open]:motion-safe:ease-spring-pop">
+      <DialogContent className={APPROVAL_DETAIL_MODAL_TOKENS.content}>
         <DialogHeader>
           <DialogTitle>{t('detail.title')}</DialogTitle>
           <DialogDescription>{t('detail.description')}</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto pr-4">
+        <div className={APPROVAL_DETAIL_MODAL_TOKENS.scrollBody}>
           <div className="space-y-6">
             {/* 기본 정보 */}
             <div className="space-y-4">
@@ -160,7 +188,7 @@ export default function ApprovalDetailModal({
                   <ApprovalStepIndicator
                     type={meta.multiStepType!}
                     currentStatus={item.status}
-                    history={item.approvalHistory}
+                    history={approvalHistory}
                   />
                 </DetailSection>
                 <Separator />
@@ -211,11 +239,11 @@ export default function ApprovalDetailModal({
             )}
 
             {/* 승인 이력 */}
-            {item.approvalHistory && item.approvalHistory.length > 0 && (
+            {approvalHistory.length > 0 && (
               <>
                 <Separator />
                 <DetailSection title={t('detail.approvalHistory')}>
-                  <ApprovalHistoryCard history={item.approvalHistory} />
+                  <ApprovalHistoryCard history={approvalHistory} />
                 </DetailSection>
               </>
             )}

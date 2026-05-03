@@ -10,6 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import CheckoutGroupCard from '../CheckoutGroupCard';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import type { Checkout } from '@/lib/api/checkout-api';
+import { CHECKOUT_ITEM_ROW_TOKENS } from '@/lib/design-tokens';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -206,5 +207,17 @@ describe('CheckoutGroupCard 헤더 체크박스 — 콜백', () => {
     const checkbox = screen.getByTestId('group-header-checkbox');
     fireEvent.keyDown(checkbox, { key: ' ' });
     expect(onToggle).toHaveBeenCalledWith(['c1', 'c2'], false);
+  });
+});
+
+describe('CheckoutGroupCard 행 모바일 스택 토큰', () => {
+  it('Zone 4 action 영역은 모바일에서 identity 아래로 스택되고 sm 이상에서 4열로 복귀한다', () => {
+    expect(CHECKOUT_ITEM_ROW_TOKENS.grid).toContain('grid-cols-[3px_72px_1fr]');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.grid).toContain('sm:grid-cols-[3px_72px_1fr_auto]');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('col-start-3');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('min-w-0');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('justify-end');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('sm:col-auto');
+    expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('sm:shrink-0');
   });
 });

@@ -6,7 +6,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Upload, FileUp } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { FORM_TEMPLATE_FILE_RULE } from '@equipment-management/shared-constants';
-import { ErrorCode } from '@equipment-management/schemas';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +23,7 @@ import {
   replaceFormTemplateFile,
   type FormTemplateHistoryItem,
 } from '@/lib/api/form-templates-api';
-import { translateApiError } from '@/lib/api/error';
+import { mapFormTemplateErrorToToast } from '@/lib/errors/form-template-errors';
 import { FORM_TEMPLATES_UPLOAD_TOKENS, FORM_TEMPLATES_MOTION } from '@/lib/design-tokens';
 
 /**
@@ -41,16 +40,6 @@ interface FormTemplateUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-/**
- * 업로드 에러 코드 → i18n 키 매핑 (SSOT: schemas/errors.ts ErrorCode enum).
- * 모듈 로컬 매핑으로 두어 이 다이얼로그만의 맥락을 명확히 표현합니다.
- */
-const UPLOAD_ERROR_CODE_MAP: Readonly<Record<string, string>> = {
-  [ErrorCode.FormNumberAlreadyExists]: 'uploadDialog.errorNumberExists',
-  [ErrorCode.InvalidFormName]: 'uploadDialog.error',
-  [ErrorCode.InvalidFormNumberFormat]: 'uploadDialog.error',
-} as const;
 
 export default function FormTemplateUploadDialog({
   formName,
@@ -102,11 +91,8 @@ export default function FormTemplateUploadDialog({
 
   const onError = (error: unknown) => {
     toast({
+      ...mapFormTemplateErrorToToast(error, t),
       variant: 'destructive',
-      description: translateApiError(error, t, {
-        codeMap: UPLOAD_ERROR_CODE_MAP,
-        fallbackKey: 'uploadDialog.error',
-      }),
     });
   };
 

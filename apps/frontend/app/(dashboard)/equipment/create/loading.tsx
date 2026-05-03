@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { FEEDBACK_KEYS } from '@/lib/i18n/feedback-keys';
-import { CreateEquipmentFormSkeleton } from './page';
+import { CreateEquipmentFormSkeleton } from './CreateEquipmentFormSkeleton';
 
 export default async function CreateEquipmentLoading() {
   const t = await getTranslations();

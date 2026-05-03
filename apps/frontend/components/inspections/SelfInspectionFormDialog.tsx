@@ -47,6 +47,7 @@ import { InspectionFormProvider, useInspectionForm } from '@/lib/inspection/form
 import { useLatestTemplate } from '@/hooks/use-inspection-template';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
+import { getFeatureFlag } from '@/lib/feature-flags';
 import {
   Select,
   SelectContent,
@@ -244,14 +245,19 @@ function SelfInspectionFormDialogInner({
   // version badge만 표시하여 사용자가 어느 버전 양식인지 인지하도록 한다 (M-12.3 / M-14.1).
   const { setTemplate, state: inspectionFormState } = useInspectionForm();
   const currentTemplate = inspectionFormState.template;
+  const isInspectionTemplateEnabled = getFeatureFlag('INSPECTION_TEMPLATE');
   const {
     data: latestTemplate,
     isError: isTemplateError,
     error: templateError,
-  } = useLatestTemplate(equipmentId, 'self', { enabled: open && !isEdit });
-  const isTemplateMissing = isTemplateError && isNotFoundError(templateError);
+  } = useLatestTemplate(equipmentId, 'self', {
+    enabled: open && !isEdit && isInspectionTemplateEnabled,
+  });
+  const isTemplateMissing =
+    isInspectionTemplateEnabled && isTemplateError && isNotFoundError(templateError);
 
   useEffect(() => {
+    if (!isInspectionTemplateEnabled) return;
     if (!latestTemplate) return;
     setTemplate({
       id: latestTemplate.id,
@@ -263,7 +269,7 @@ function SelfInspectionFormDialogInner({
       inspectionType: 'self',
       templateVersion: latestTemplate.version,
     });
-  }, [latestTemplate, setTemplate]);
+  }, [isInspectionTemplateEnabled, latestTemplate, setTemplate]);
 
   const [inspectionDate, setInspectionDate] = useState('');
   const [overallResult, setOverallResult] = useState<SelfInspectionResult | ''>('');
@@ -518,7 +524,7 @@ function SelfInspectionFormDialogInner({
             {/* Phase 0B: 분류 시각 (intermediate vs self), 디자인 리뷰 b8 */}
             <span className={INSPECTION_KIND_BADGE.self}>{t('inspection.kindLabel.self')}</span>
             {/* Phase 1B-D: template version badge — create 모드에서만 표시 */}
-            {!isEdit && currentTemplate ? (
+            {!isEdit && isInspectionTemplateEnabled && currentTemplate ? (
               <span
                 className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
                 aria-label={t('selfInspection.template.versionBadgeAria', {
@@ -547,7 +553,7 @@ function SelfInspectionFormDialogInner({
                   {currentTemplate.createdByName ?? t('selfInspection.template.systemAuthor')}
                 </span>
               </span>
-            ) : !isEdit && isTemplateMissing ? (
+            ) : !isEdit && isInspectionTemplateEnabled && isTemplateMissing ? (
               <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.missing}>
                 {t('selfInspection.template.missingBadge')}
               </span>

@@ -78,6 +78,7 @@ import { TemplateGallery } from './TemplateGallery';
 import type { InspectionTemplateGalleryEntry } from '@/lib/api/inspection-template-api';
 import { track } from '@/lib/analytics/track';
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
+import { getFeatureFlag } from '@/lib/feature-flags';
 import { cn } from '@/lib/utils';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -163,6 +164,7 @@ function InspectionFormDialogInner({
   const prefillBannerDismissed = inspectionFormState.latest.bannerDismissed;
   // Phase 1B-D: template state — DialogHeader version badge + 1B-E SoftFork base
   const currentTemplate = inspectionFormState.template;
+  const isInspectionTemplateEnabled = getFeatureFlag('INSPECTION_TEMPLATE');
 
   // Form state — classification은 항상 "교정기기"로 고정 (중간점검은 교정기기 전용)
   const [inspectionDate, setInspectionDate] = useState('');
@@ -253,8 +255,11 @@ function InspectionFormDialogInner({
     data: latestTemplate,
     isError: isTemplateError,
     error: templateError,
-  } = useLatestTemplate(equipmentId, 'intermediate', { enabled: open });
-  const isTemplateMissing = isTemplateError && isNotFoundError(templateError);
+  } = useLatestTemplate(equipmentId, 'intermediate', {
+    enabled: open && isInspectionTemplateEnabled,
+  });
+  const isTemplateMissing =
+    isInspectionTemplateEnabled && isTemplateError && isNotFoundError(templateError);
 
   /**
    * Phase 1B-F: TemplateGallery — 첫 점검 + template 부재 시 비슷한 장비 양식 가져오기.
@@ -270,6 +275,7 @@ function InspectionFormDialogInner({
    */
   const galleryEnabled =
     open &&
+    isInspectionTemplateEnabled &&
     isTemplateMissing &&
     !hasShownGallery &&
     !!equipment &&
@@ -333,9 +339,10 @@ function InspectionFormDialogInner({
    * SSOT: templateStructureToPrefill (lib/inspection/template-source.ts)
    */
   const templatePrefill = useMemo(() => {
+    if (!isInspectionTemplateEnabled) return null;
     if (!latestTemplate) return null;
     return templateStructureToPrefill(latestTemplate.structure);
-  }, [latestTemplate]);
+  }, [isInspectionTemplateEnabled, latestTemplate]);
 
   useEffect(() => {
     if (!open || !usePreviousInspection || previousInspectionApplied) return;
@@ -657,7 +664,7 @@ function InspectionFormDialogInner({
     if (!inspectionDate || hasInvalidItems) return;
     const dto = buildDto();
 
-    if (!latestTemplate) {
+    if (!isInspectionTemplateEnabled || !latestTemplate) {
       createMutation.mutate(dto);
       return;
     }
@@ -789,7 +796,7 @@ function InspectionFormDialogInner({
             {t('intermediateInspection.formTitle')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
             {/* Phase 1B-D: template version badge — UL-QP-18 §7.5 양식 통제 */}
-            {currentTemplate ? (
+            {isInspectionTemplateEnabled && currentTemplate ? (
               <span
                 className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.container}
                 aria-label={t('intermediateInspection.template.versionBadgeAria', {
@@ -820,7 +827,7 @@ function InspectionFormDialogInner({
                     t('intermediateInspection.template.systemAuthor')}
                 </span>
               </span>
-            ) : isTemplateMissing ? (
+            ) : isInspectionTemplateEnabled && isTemplateMissing ? (
               <span className={INSPECTION_TEMPLATE_VERSION_BADGE_TOKENS.missing}>
                 {t('intermediateInspection.template.missingBadge')}
               </span>
@@ -1281,7 +1288,7 @@ function InspectionFormDialogInner({
       </AlertDialog>
 
       {/* Phase 1B-E: SoftForkDialog — 표 구조 변경 감지 시 사용자 의사결정 */}
-      {softForkDiff && (
+      {isInspectionTemplateEnabled && softForkDiff && (
         <SoftForkDialog
           open={softForkOpen}
           onOpenChange={setSoftForkOpen}
@@ -1294,7 +1301,7 @@ function InspectionFormDialogInner({
       )}
 
       {/* Phase 1B-F: TemplateGallery — 첫 점검 + template 부재 시 자동 노출 */}
-      {galleryData && (
+      {isInspectionTemplateEnabled && galleryData && (
         <TemplateGallery
           open={galleryOpen}
           onOpenChange={setGalleryOpen}
