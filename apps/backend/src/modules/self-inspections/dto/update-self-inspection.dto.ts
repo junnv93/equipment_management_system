@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
+  EquipmentClassificationEnum,
   SelfInspectionItemJudgmentEnum,
   SelfInspectionResultEnum,
   SpecialNoteSchema,
@@ -44,6 +45,16 @@ export const updateSelfInspectionSchema = z.object({
     .optional(),
   specialNotes: z.array(SpecialNoteSchema).optional(),
   inspectionCycle: z.number().int().min(1).max(120).optional(),
+  // UL-QP-18-05 양식 헤더 snapshot (draft 수정 시 기록 시점 값 보정 허용).
+  classification: EquipmentClassificationEnum.optional(),
+  calibrationValidityPeriod: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.MANAGEMENT_NUMBER_MAX_LENGTH,
+      VM.string.max('교정 유효기간', VALIDATION_RULES.MANAGEMENT_NUMBER_MAX_LENGTH)
+    )
+    .optional(),
   version: z.number().int().min(1),
   // 하위 호환: 기존 고정 컬럼 (선택)
   appearance: SelfInspectionItemJudgmentEnum.optional(),

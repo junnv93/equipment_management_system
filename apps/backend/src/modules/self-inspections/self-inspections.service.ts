@@ -274,6 +274,10 @@ export class SelfInspectionsService extends VersionedBaseService {
       if (dto.overallResult) updateData.overallResult = dto.overallResult;
       if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
       if (dto.specialNotes !== undefined) updateData.specialNotes = dto.specialNotes;
+      if (dto.classification !== undefined) updateData.classification = dto.classification;
+      if (dto.calibrationValidityPeriod !== undefined) {
+        updateData.calibrationValidityPeriod = dto.calibrationValidityPeriod;
+      }
       if (dto.inspectionCycle) {
         updateData.inspectionCycle = dto.inspectionCycle;
         const baseDate = dto.inspectionDate

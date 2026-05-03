@@ -328,6 +328,37 @@ describe('SelfInspectionsService', () => {
       expect(result.version).toBe(2);
     });
 
+    it('should persist QP-18-05 header snapshot fields when draft is updated', async () => {
+      const updateDtoWithHeader = {
+        version: 1,
+        classification: 'non_calibrated' as const,
+        calibrationValidityPeriod: 'N/A',
+      };
+      const updatedInspection = {
+        ...MOCK_INSPECTION,
+        classification: 'non_calibrated',
+        calibrationValidityPeriod: 'N/A',
+        version: 2,
+      };
+      const updateChain = createDrizzleChain([updatedInspection]);
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      (mockDb.update as jest.Mock).mockReturnValueOnce(updateChain);
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      const result = await service.update(INSPECTION_ID, updateDtoWithHeader, USER_ID);
+
+      expect(updateChain.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          classification: 'non_calibrated',
+          calibrationValidityPeriod: 'N/A',
+        })
+      );
+      expect(result.classification).toBe('non_calibrated');
+      expect(result.calibrationValidityPeriod).toBe('N/A');
+    });
+
     it('should throw ConflictException on version mismatch', async () => {
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, version: 2 }]))
