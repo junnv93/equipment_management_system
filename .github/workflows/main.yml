@@ -407,6 +407,60 @@ jobs:
         run: pnpm audit --prod --audit-level=critical
 
   # ─────────────────────────────────────────────
+  # Gate 3d: 백업·DR 복원 리허설 (Phase K)
+  # ─────────────────────────────────────────────
+  backup-restore-rehearsal:
+    name: Backup Restore Rehearsal
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    services:
+      postgres:
+        image: postgres:15.13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: equipment_management
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Backup and restore rehearsal
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          SOURCE_DB: equipment_management
+          RESTORE_DB: equipment_management_restore_rehearsal
+        run: |
+          set -euo pipefail
+
+          psql -d "$SOURCE_DB" -v ON_ERROR_STOP=1 -c "CREATE TABLE dr_rehearsal_probe (id integer PRIMARY KEY, checksum text NOT NULL);"
+          psql -d "$SOURCE_DB" -v ON_ERROR_STOP=1 -c "INSERT INTO dr_rehearsal_probe (id, checksum) VALUES (1, 'phase-k-restore-rehearsal') ON CONFLICT (id) DO UPDATE SET checksum = EXCLUDED.checksum;"
+
+          pg_dump -d "$SOURCE_DB" | gzip > "$RUNNER_TEMP/phase-k-restore-rehearsal.sql.gz"
+          gzip -t "$RUNNER_TEMP/phase-k-restore-rehearsal.sql.gz"
+
+          dropdb --if-exists "$RESTORE_DB"
+          createdb "$RESTORE_DB"
+          gunzip -c "$RUNNER_TEMP/phase-k-restore-rehearsal.sql.gz" | psql -d "$RESTORE_DB" -v ON_ERROR_STOP=1
+
+          restored_checksum="$(psql -d "$RESTORE_DB" -Atc "SELECT checksum FROM dr_rehearsal_probe WHERE id = 1")"
+          test "$restored_checksum" = "phase-k-restore-rehearsal"
+
+  # ─────────────────────────────────────────────
   # E2E 테스트는 별도 nightly workflow로 분리 (e2e-nightly.yml)
   # PR에서는 Lint + TypeScript + Unit Tests + Build만 실행하여 빠른 피드백 제공
   # ─────────────────────────────────────────────
@@ -418,7 +472,7 @@ jobs:
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [secret-scan, unit-test, build, dep-audit]
+    needs: [secret-scan, unit-test, build, dep-audit, backup-restore-rehearsal]
     # 실제 배포 시작 전까지는 workflow_dispatch로만 실행 (Docker Hub secrets 필요)
     # 배포 재개 시: 이 조건을 `github.ref == 'refs/heads/main' && github.event_name == 'push'`로 복구
     if: github.event_name == 'workflow_dispatch'
