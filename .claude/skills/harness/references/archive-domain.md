@@ -5,6 +5,118 @@
 
 ---
 
+## ~~2026-05-03 — Production env/API endpoint SSOT drift 보강~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: generate-prompts + review-architecture 스캔. prod/LAN/CI 환경변수와 shared API endpoint SSOT drift 확인.
+> **완료**: same-origin API 정책, handover token secret 주입, 실제 backend 라우트와 맞지 않는 endpoint 상수 정리를 완료.
+
+### ~~🔴 CRITICAL — Production env/API endpoint SSOT drift 보강 (Mode 1)~~ ✅ 완료
+
+```
+조치: prod compose frontend NEXT_PUBLIC_API_URL 빈 값 유지 + NEXTAUTH_SECRET 주입
+     prod/LAN backend compose, GitHub Actions backend coverage, .env.ci.example에 HANDOVER_TOKEN_SECRET 추가
+     packages/shared-constants CHECKOUTS.COMPLETE / CALIBRATION_PLANS.VERSIONS 제거
+     checkout RENTAL reject_return 주석은 의도된 서비스 설계로 정리
+검증: rg "NEXT_PUBLIC_API_URL=/api|/api/checkouts/\\$\\{id\\}/complete|CALIBRATION_PLANS\\.VERSIONS|VERSIONS: \\(" → 0 hit
+     rg "HANDOVER_TOKEN_SECRET" infra/compose/prod.override.yml infra/compose/lan.override.yml .github/workflows/main.yml .env.ci.example → 4 hit
+     pnpm --filter frontend run type-check PASS
+     pnpm --filter backend run type-check PASS
+     pnpm --filter backend run test -- test-auth-forge PASS
+```
+
+---
+
+## ~~2026-05-03 — scan/handover route error boundary 추가~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: generate-prompts 스캔. QR 딥링크/인수인계 확인서 라우트에 segment-level `error.tsx` 누락 확인.
+> **완료**: 두 라우트에 Next.js client error boundary와 ko/en i18n 메시지를 추가.
+
+### ~~🟡 MEDIUM — scan/ + handover/ 라우트 error.tsx 누락 (Mode 0)~~ ✅ 완료
+
+```
+조치: apps/frontend/app/(dashboard)/scan/error.tsx 추가
+     apps/frontend/app/(dashboard)/handover/error.tsx 추가
+     apps/frontend/messages/{ko,en}/common.json errors.scanError* / errors.handoverError* 키 추가
+검증: pnpm --filter frontend run type-check PASS
+     ls apps/frontend/app/(dashboard)/scan/error.tsx apps/frontend/app/(dashboard)/handover/error.tsx PASS
+     rg "scanError|handoverError" apps/frontend/messages/ko/common.json apps/frontend/messages/en/common.json PASS
+```
+
+---
+
+## ~~2026-05-03 — Checkout PR-16/PR-23 접근성·플래그 마무리~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: 반출입 관리 페이지 아키텍처 개선 Phase 잔여 프롬프트. 현재 코드 기준으로 skip link와 tablist는 이미 구현되어 있었고, NextStepPanel focus/aria-live 및 PR-23 잔여 문구만 보강 대상이었음.
+> **완료**: NextStepPanel 전 variant의 critical live region, 상태 전이 후 focus 복귀, stale feature flag 흔적 제거를 완료.
+
+### ~~🟡 MEDIUM — PR-16: 접근성 강화 / PR-23: NextStepPanel 플래그 상시화 마무리~~ ✅ 완료
+
+```
+조치: DashboardShell SkipLink + main-content, CheckoutListTabs tablist/arrow nav는 기존 구현 확인
+     NextStepPanel hero/compact/inline/floating에 aria-live={liveMode}, tabIndex=-1, 상태 전이 후 focus 복귀 추가
+     NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL 관련 테스트 주석/skip 메시지 잔재 제거
+     guidance.urgency.normal 빈 문자열은 이미 ko/en 모두 의미 있는 값으로 정리된 상태 확인
+검증: pnpm --filter frontend run type-check PASS
+     rg "NEXT_PUBLIC_CHECKOUT_NEXT_STEP_PANEL|showNextStepPanel|LegacyActionsBlock|LegacyInlineActions|\\\"normal\\\": \\\"\\\"" apps/frontend .env.example → 0 hit
+     rg "aria-live=\\{liveMode\\}|tabIndex=\\{-1\\}|setRootRef|ArrowRight|ArrowLeft|role=\\\"tablist\\\"|aria-selected|SkipLink|id=\\\"main-content\\\"" PASS
+```
+
+---
+
+## ~~2026-05-03 — packages/schemas generate-from-drizzle stub 제거~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: generate-prompts 추가 스캔. `generate:from-drizzle` 스크립트가 공개되어 있었지만 실제 생성 대신 템플릿 파일만 쓰는 stub였음.
+> **완료**: 공개 script, stub 파일, schemas 패키지의 불필요한 `drizzle-zod` devDependency를 제거하고 문서를 현재 수동 동기화 정책으로 정리.
+
+### ~~🟢 LOW — packages/schemas generate:from-drizzle 스크립트가 실제 생성 대신 stub만 쓰는 문제 정리 (Mode 0)~~ ✅ 완료
+
+```
+조치: packages/schemas/package.json generate:from-drizzle 제거
+     packages/schemas/scripts/generate-from-drizzle.ts 삭제
+     pnpm-lock.yaml에서 packages/schemas importer의 drizzle-zod devDependency 제거
+     docs/development/schema-sync-strategies.md + packages/schemas/src/equipment.ts 정책 문구 정리
+검증: pnpm --filter @equipment-management/schemas run build PASS
+     rg "generate:from-drizzle|generate-from-drizzle|equipment.generated|현재는 템플릿만|TODO: Drizzle 스키마를 import" packages/schemas → 0 hit
+```
+
+---
+
+## ~~2026-05-03 — 장비 생성 과거 교정 이력 저장 지원~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: generate-prompts 추가 스캔. 장비 생성 폼에서 임시 교정 이력을 저장 성공으로 표시하지만 실제 저장하지 않는 silent success 경로 확인.
+> **완료**: 파일 없는 과거 교정 이력 전용 API를 추가하고, 장비 생성 후 이력 저장 유틸이 실제 API 결과를 반영하도록 수정.
+
+### ~~🟠 HIGH — 장비 생성 시 임시 교정 이력이 저장 성공으로 오표시되는 문제 보강 (Mode 1)~~ ✅ 완료
+
+```
+조치: POST /api/calibration/equipment/:equipmentId/history 추가.
+     정식 교정 등록의 성적서 파일 필수 + pending_approval 흐름은 유지.
+     과거 이력은 completed + approved 기록으로 저장하고, 장비 last/next calibration date와 캐시를 갱신.
+     frontend saveHistoryInParallel()은 calibrationApi.createHistoricalCalibration()을 호출하고 실패를 rejected로 반환.
+검증: backend calibration.controller/service spec, frontend equipment-history-utils spec, backend/frontend type-check PASS.
+```
+
+---
+
+## ~~2026-05-03 — Calibration/CalibrationFactors 리소스 스코프 가드 보강~~ ✅ 완료 (2026-05-03)
+
+> **발견 배경**: `/review-architecture` 수동 검증. calibration/calibration-factors 단건·파생 조회 및 생성 경로의 site/team 스코프 경계 누락 확인.
+> **완료**: 반복 #4 최종 PASS. contracts/completed/calibration-scope-guards.md 완료.
+> **핵심 수정**: create/findByEquipment는 `enforceEquipmentAccess`, findOne/approve/reject/remove는 `enforceFactorAccess`, 컬렉션 조회는 `@SiteScoped`+`CurrentEnforcedScope`. `scope.teamId ?? query.teamId` raw fallback 전체 제거. 프론트 `CreateCalibrationFactorDto`에서 `requestedBy` 제거.
+
+### ~~🔴 CRITICAL — Calibration/CalibrationFactors 리소스 스코프 누락 보강 (Mode 1)~~ ✅ 완료 (2026-05-03, 4 iters)
+
+```
+조치: CalibrationFactorsController create/findByEquipment → enforceEquipmentAccess
+     findOne/approve/reject/remove → enforceFactorAccess (site+team 검증 포함)
+     CalibrationController create/findByEquipment/findOne → enforceSiteAccess
+     컬렉션 조회 전체 → @SiteScoped + CurrentEnforcedScope, scope.teamId만 전달
+     프론트 CreateCalibrationFactorDto.requestedBy 필드 제거
+     calibration.controller.spec.ts 신규 추가 (cross-site/team ForbiddenException 테스트)
+```
+
+---
+
 ## ~~2026-04-17 신규 — QR Phase 1-3 후속 개선 (10건)~~ ✅ 전체 완료 (2026-04-20)
 
 > **발견 배경**: QR 모바일 워크플로우 Phase 1-3 완료 후 "SSOT/비하드코딩/워크플로우/성능/보안/접근성" 자체 감사에서 도출. 2-agent 병렬 verify (SHOULD 항목 + 시스템 와이드 구조적 개선). 모든 항목 `confirmed` — file:line 증거 포함.

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { useSession } from 'next-auth/react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import RejectModal from '@/components/approvals/RejectModal';
@@ -84,7 +83,6 @@ interface CalibrationFactorsClientProps {
 export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClientProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const { can } = useAuth();
   const t = useTranslations('equipment.calibrationFactorsClient');
   const tCal = useTranslations('calibration');
@@ -248,7 +246,6 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
       effectiveDate: newFactor.effectiveDate,
       expiryDate: newFactor.expiryDate || undefined,
       parameters,
-      requestedBy: session?.user?.id as string,
     });
   };
 

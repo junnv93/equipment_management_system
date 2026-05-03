@@ -55,8 +55,6 @@ export const createCalibrationFactorSchema = z.object({
       message: VM.date.invalidYMD,
     })
     .optional(),
-  // 서버에서 JWT를 통해 추출하므로 클라이언트 전송 불필요 (하위 호환성을 위해 optional 유지)
-  requestedBy: uuidString(VM.uuid.invalid('요청자')).optional(),
 });
 
 export type CreateCalibrationFactorInput = z.infer<typeof createCalibrationFactorSchema>;
@@ -124,11 +122,4 @@ export class CreateCalibrationFactorDto {
     required: false,
   })
   expiryDate?: string;
-
-  @ApiProperty({
-    description: '요청자 UUID (서버에서 JWT로 자동 추출, 클라이언트 전송 불필요)',
-    example: '550e8400-e29b-41d4-a716-446655440003',
-    required: false,
-  })
-  requestedBy?: string;
 }

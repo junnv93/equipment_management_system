@@ -8,12 +8,10 @@
     "build": "rimraf dist && tsc -p tsconfig.json --skipLibCheck",
     "test": "jest",
     "clean": "rimraf dist",
-    "generate:from-drizzle": "tsx scripts/generate-from-drizzle.ts",
     "gen:descriptor-table": "tsx scripts/gen-descriptor-table.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.2",
-    "drizzle-zod": "^0.8.3",
     "jest": "^29.5.0",
     "rimraf": "^5.0.5",
     "ts-jest": "^29.4.9",

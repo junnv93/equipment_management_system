@@ -35,7 +35,12 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { CalibrationService } from './calibration.service';
-import { CreateCalibrationDto, createCalibrationSchema } from './dto/create-calibration.dto';
+import {
+  CreateCalibrationDto,
+  createCalibrationSchema,
+  CreateHistoricalCalibrationDto,
+  createHistoricalCalibrationSchema,
+} from './dto/create-calibration.dto';
 import {
   UpdateCalibrationDto,
   UpdateCalibrationValidationPipe,
@@ -106,6 +111,15 @@ export class CalibrationController {
   /** 크로스사이트/크로스팀 접근 제어 — calibrations → equipment 경유 */
   private async enforceCalibrationAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
     const { site, teamId } = await this.calibrationService.getCalibrationSiteAndTeam(uuid);
+    enforceSiteAccess(req, site, CALIBRATION_DATA_SCOPE, teamId);
+  }
+
+  /** 크로스사이트/크로스팀 접근 제어 — equipment UUID 기반 생성/조회 경유 */
+  private async enforceEquipmentAccess(
+    equipmentId: string,
+    req: AuthenticatedRequest
+  ): Promise<void> {
+    const { site, teamId } = await this.calibrationService.getEquipmentSiteAndTeam(equipmentId);
     enforceSiteAccess(req, site, CALIBRATION_DATA_SCOPE, teamId);
   }
 
@@ -196,6 +210,8 @@ export class CalibrationController {
     const registeredBy = extractUserId(req);
     const registeredByRole = req.user?.roles?.[0] as CalibrationRegisteredByRole | undefined;
 
+    await this.enforceEquipmentAccess(parsedPayload.equipmentId, req);
+
     return this.calibrationService.createWithDocuments(
       // Rule 2: registeredBy + calibrationManagerId는 서버 추출값으로 덮어씀 (body 신뢰 금지)
       { ...parsedPayload, registeredBy, registeredByRole, calibrationManagerId: registeredBy },
@@ -203,6 +219,49 @@ export class CalibrationController {
       documentTypes,
       descriptions,
       registeredBy
+    );
+  }
+
+  @Post('equipment/:equipmentId/history')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: '과거 교정 이력 등록',
+    description:
+      '장비 생성/마이그레이션용 증빙 없는 과거 교정 이력을 등록합니다. 정식 교정 등록의 성적서 파일 필수 흐름은 유지됩니다.',
+  })
+  @ApiParam({ name: 'equipmentId', description: '장비 UUID' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '과거 교정 이력이 등록되었습니다.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.CREATE_CALIBRATION)
+  @AuditLog({
+    action: 'create',
+    entityType: 'calibration',
+    entityIdPath: 'response.id',
+  })
+  async createHistoricalRecord(
+    @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
+    @Body() body: CreateHistoricalCalibrationDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationRecord> {
+    await this.enforceEquipmentAccess(equipmentId, req);
+
+    let parsedPayload: CreateHistoricalCalibrationDto;
+    try {
+      parsedPayload = await createHistoricalCalibrationSchema.parseAsync(body);
+    } catch {
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationPayloadInvalid,
+        message: '과거 교정 이력 데이터가 유효하지 않습니다.',
+      });
+    }
+
+    return this.calibrationService.createHistoricalRecord(
+      equipmentId,
+      parsedPayload,
+      extractUserId(req),
+      req.user?.roles?.[0]
     );
   }
 
@@ -249,13 +308,9 @@ export class CalibrationController {
     @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto,
     @CurrentEnforcedScope() scope: EnforcedScope
   ): ReturnType<CalibrationService['findPendingApprovals']> {
-    // failLoud: enforced scope 값을 권한 차단 후 직접 전달.
-    return this.calibrationService.findPendingApprovals(
-      1,
-      20,
-      scope.site,
-      scope.teamId ?? query.teamId
-    );
+    void query;
+    // QueryPipe는 all-scope 요청 검증용이며, 실제 데이터 범위 SSOT는 enforced scope다.
+    return this.calibrationService.findPendingApprovals(1, 20, scope.site, scope.teamId);
   }
 
   @Get('intermediate-checks')
@@ -267,15 +322,21 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   findUpcomingIntermediateChecks(
     @Query(
       'days',
       new DefaultValuePipe(CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS),
       ParseIntPipe
     )
-    days: number
+    days: number,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<CalibrationRecord[]> {
-    return this.calibrationService.findUpcomingIntermediateChecks(days);
+    return this.calibrationService.findUpcomingIntermediateChecks(
+      days,
+      scope.site as CalibrationQueryDto['site'],
+      scope.teamId
+    );
   }
 
   @Get('intermediate-checks/all')
@@ -287,6 +348,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -295,11 +357,10 @@ export class CalibrationController {
   })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   findAllIntermediateChecks(
+    @CurrentEnforcedScope() scope: EnforcedScope,
     @Query('status') status?: string,
     @Query('equipmentId') equipmentId?: string,
-    @Query('managerId') managerId?: string,
-    @Query('teamId') teamId?: string,
-    @Query('site') site?: string
+    @Query('managerId') managerId?: string
   ): ReturnType<CalibrationService['findAllIntermediateChecks']> {
     // status 파라미터 유효성 검증
     let validatedStatus: IntermediateCheckStatus | undefined;
@@ -318,8 +379,8 @@ export class CalibrationController {
       status: validatedStatus,
       equipmentId,
       managerId,
-      teamId,
-      site,
+      teamId: scope.teamId,
+      site: scope.site as CalibrationQueryDto['site'],
     });
   }
 
@@ -362,7 +423,10 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findByEquipment(@Param('equipmentId') equipmentId: string): Promise<{
+  async findByEquipment(
+    @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -372,6 +436,7 @@ export class CalibrationController {
       currentPage: number;
     };
   }> {
+    await this.enforceEquipmentAccess(equipmentId, req);
     return this.calibrationService.findByEquipment(equipmentId);
   }
 
@@ -384,9 +449,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   findDueCalibrations(
     @Query('days', new DefaultValuePipe(CALIBRATION_THRESHOLDS.WARNING_DAYS), ParseIntPipe)
-    days: number
+    days: number,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<{
     items: CalibrationRecord[];
     meta: {
@@ -397,7 +464,11 @@ export class CalibrationController {
       currentPage: number;
     };
   }> {
-    return this.calibrationService.findDueCalibrations(days);
+    return this.calibrationService.findDueCalibrations(
+      days,
+      scope.site as CalibrationQueryDto['site'],
+      scope.teamId
+    );
   }
 
   @Get('manager/:managerId')
@@ -410,7 +481,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findByManager(@Param('managerId') managerId: string): Promise<{
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
+  findByManager(
+    @Param('managerId', ParseUUIDPipe) managerId: string,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -420,7 +495,11 @@ export class CalibrationController {
       currentPage: number;
     };
   }> {
-    return this.calibrationService.findByManager(managerId);
+    return this.calibrationService.findByManager(
+      managerId,
+      scope.site as CalibrationQueryDto['site'],
+      scope.teamId
+    );
   }
 
   @Get('scheduled')
@@ -432,7 +511,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   findScheduled(
+    @CurrentEnforcedScope() scope: EnforcedScope,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string
   ): Promise<{
@@ -467,7 +548,12 @@ export class CalibrationController {
       toDateObj.setMonth(toDateObj.getMonth() + 3);
     }
 
-    return this.calibrationService.findScheduled(fromDateObj, toDateObj);
+    return this.calibrationService.findScheduled(
+      fromDateObj,
+      toDateObj,
+      scope.site as CalibrationQueryDto['site'],
+      scope.teamId
+    );
   }
 
   @Get('summary')
@@ -476,12 +562,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getSummary(
-    @Query('teamId') teamId?: string,
-    @Query('site') site?: string
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<{ total: number; overdueCount: number; dueInMonthCount: number }> {
-    return this.calibrationService.getSummary(teamId, site);
+    return this.calibrationService.getSummary(scope.teamId, scope.site);
   }
 
   @Get('overdue')
@@ -490,11 +576,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
-  getOverdueCalibrations(
-    @Query('teamId') teamId?: string,
-    @Query('site') site?: string
-  ): Promise<
+  getOverdueCalibrations(@CurrentEnforcedScope() scope: EnforcedScope): Promise<
     {
       id: string;
       equipmentId: string;
@@ -507,7 +591,7 @@ export class CalibrationController {
       calibrationAgency: string;
     }[]
   > {
-    return this.calibrationService.getOverdueCalibrations(teamId, site);
+    return this.calibrationService.getOverdueCalibrations(scope.teamId, scope.site);
   }
 
   @Get('upcoming')
@@ -516,12 +600,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getUpcomingCalibrations(
     @Query('days', new DefaultValuePipe(CALIBRATION_THRESHOLDS.WARNING_DAYS), ParseIntPipe)
     days: number,
-    @Query('teamId') teamId?: string,
-    @Query('site') site?: string
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<
     {
       id: string;
@@ -535,7 +619,7 @@ export class CalibrationController {
       calibrationAgency: string;
     }[]
   > {
-    return this.calibrationService.getUpcomingCalibrations(days, teamId, site);
+    return this.calibrationService.getUpcomingCalibrations(days, scope.teamId, scope.site);
   }
 
   @Get(':uuid')
@@ -549,7 +633,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<CalibrationRecord> {
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     return this.calibrationService.findOne(uuid);
   }
 

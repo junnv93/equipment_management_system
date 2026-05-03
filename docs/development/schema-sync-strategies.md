@@ -58,13 +58,15 @@ export const updateEquipmentSchema = createInsertSchema(equipment).partial();
 # package.json
 {
   "scripts": {
-    "generate:schemas": "tsx scripts/generate-from-drizzle.ts",
+    "generate:schemas": "tsx scripts/generate-schemas.ts",
     "postdb:migrate": "pnpm generate:schemas"
   }
 }
 ```
 
-**현재 상태:** 템플릿 스크립트 생성됨 (`packages/schemas/scripts/generate-from-drizzle.ts`)
+**현재 상태:** 미구현. 동작하지 않는 템플릿 스크립트는 제거됨.
+자동 생성이 실제로 필요해지면 `@equipment-management/db` 스키마 import, 출력 파일의 public API
+사용 여부, CI 검증까지 함께 설계한 뒤 새 스크립트를 추가한다.
 
 ---
 
@@ -137,7 +139,6 @@ packages/
 ### 단기 (현재)
 
 1. **수동 동기화 유지** + **검증 스크립트 추가**
-
    - 스키마 변경 시 검증 스크립트 실행
    - CI/CD에서 자동 검증
 
@@ -148,12 +149,11 @@ packages/
 ### 중기 (Zod v4 호환성 해결 후)
 
 1. **drizzle-zod 자동 생성 활성화**
-
    - Zod v4 호환성 문제 해결 시 즉시 적용
    - 가장 안전하고 효율적인 방법
 
-2. **빌드 스크립트 개선**
-   - 자동 생성 스크립트 완성
+2. **빌드 스크립트 신설**
+   - stub가 아닌 실제 자동 생성 스크립트 작성
    - 마이그레이션 후 자동 검증
 
 ### 장기 (구조 개선)
@@ -201,13 +201,11 @@ generateValidators({
 ## 현재 프로젝트 권장 사항
 
 1. **즉시 적용 가능:**
-
    - 검증 스크립트 추가 (`scripts/validate-schema-sync.ts`)
    - 스키마 변경 체크리스트 문서화
    - CI/CD에서 자동 검증
 
 2. **Zod v4 호환성 해결 후:**
-
    - `drizzle-zod` 자동 생성 활성화
    - 기존 수동 스키마를 자동 생성으로 마이그레이션
 

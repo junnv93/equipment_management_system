@@ -8,6 +8,7 @@
  *    라벨/메시지는 호출자(컴포넌트)에서 i18n으로 주입합니다.
  */
 import equipmentApi from '@/lib/api/equipment-api';
+import calibrationApi from '@/lib/api/calibration-api';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import type { PendingHistoryData } from '@/components/equipment/EquipmentForm';
 
@@ -69,11 +70,22 @@ export async function saveHistoryInParallel(
       }))
   );
 
-  // TODO(Phase-import): 교정 이력 일괄 임포트 — 교정 등록이 multipart(파일 필수)로 전환됨에 따라
-  // 파일 없는 과거 이력 임포트는 별도 import 엔드포인트 설계 필요 (Phase 관리 방식).
-  // 현재는 교정 이력 항목을 skip하고 fulfilled로 처리.
-  const calibrationPromises = (pendingHistory.calibrationHistory || []).map((_item, index) =>
-    Promise.resolve({ type: 'calibration' as const, index, status: 'fulfilled' as const })
+  const calibrationPromises = (pendingHistory.calibrationHistory || []).map((item, index) =>
+    calibrationApi
+      .createHistoricalCalibration(equipmentUuid, {
+        calibrationDate: item.calibrationDate,
+        nextCalibrationDate: item.nextCalibrationDate,
+        calibrationAgency: item.calibrationAgency,
+        result: item.result,
+        notes: item.notes,
+      })
+      .then(() => ({ type: 'calibration' as const, index, status: 'fulfilled' as const }))
+      .catch((err) => ({
+        type: 'calibration' as const,
+        index,
+        status: 'rejected' as const,
+        error: fallbackError(err),
+      }))
   );
 
   return Promise.all([

@@ -909,9 +909,8 @@ describe('CheckoutsService', () => {
 
     it('should throw BadRequestException (INVALID_TRANSITION) for RENTAL checkout — FSM does not permit reject_return for rental purpose', async () => {
       // 아키텍처 제약: FSM이 reject_return을 CAL_REPAIR 목적에만 허용 (checkout-fsm.ts purposes: CAL_REPAIR)
-      // RENTAL 반출의 rejectReturn은 assertFsmAction에서 INVALID_TRANSITION으로 차단됨.
-      // 결과적으로 rejectReturn 내부의 LENDER_TEAM_ONLY 체크는 RENTAL에 대해 dead code가 됨.
-      // TODO: FSM에 RENTAL reject_return 추가 또는 dead code 제거 검토 필요
+      // RENTAL 반납 거부는 UL-QP-18 워크플로우에 없음 — 손상/불량 반납은 NC(부적합) 프로세스로 처리.
+      // RENTAL 반출의 rejectReturn은 assertFsmAction에서 INVALID_TRANSITION으로 차단됨 (의도적 설계).
       const eqId = '550e8400-e29b-41d4-a716-446655440001';
       const rentalReturnedCheckout = {
         id: checkoutId,

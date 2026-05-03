@@ -60,11 +60,21 @@ export class CalibrationFactorsController {
   constructor(private readonly calibrationFactorsService: CalibrationFactorsService) {}
 
   /** 크로스사이트 접근 제어 — calibration_factors → equipment 경유 */
-  private async enforceFactorAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
+  private async enforceFactorAccess(
+    uuid: string,
+    req: AuthenticatedRequest
+  ): Promise<CalibrationFactorRecord> {
     const factor = await this.calibrationFactorsService.findOne(uuid);
-    const siteAndTeam = await this.calibrationFactorsService.getFactorSiteAndTeam(
-      factor.equipmentId
-    );
+    await this.enforceEquipmentAccess(factor.equipmentId, req);
+    return factor;
+  }
+
+  /** 크로스사이트 접근 제어 — equipment UUID 기반 생성/조회 경유 */
+  private async enforceEquipmentAccess(
+    equipmentUuid: string,
+    req: AuthenticatedRequest
+  ): Promise<void> {
+    const siteAndTeam = await this.calibrationFactorsService.getFactorSiteAndTeam(equipmentUuid);
     enforceSiteAccess(req, siteAndTeam.site, CALIBRATION_DATA_SCOPE, siteAndTeam.teamId);
   }
 
@@ -87,6 +97,7 @@ export class CalibrationFactorsController {
     @Body() createDto: CreateCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
+    await this.enforceEquipmentAccess(createDto.equipmentId, req);
     const requestedBy = extractUserId(req);
     return this.calibrationFactorsService.create(createDto, requestedBy);
   }
@@ -143,11 +154,9 @@ export class CalibrationFactorsController {
       currentPage: number;
     };
   }> {
-    // failLoud: enforced scope 값 직접 전달.
-    return this.calibrationFactorsService.findPendingApprovals(
-      scope.site,
-      scope.teamId ?? query.teamId
-    );
+    void query;
+    // QueryPipe는 all-scope 요청 검증용이며, 실제 데이터 범위 SSOT는 enforced scope다.
+    return this.calibrationFactorsService.findPendingApprovals(scope.site, scope.teamId);
   }
 
   @Get('registry')
@@ -173,8 +182,9 @@ export class CalibrationFactorsController {
     totalFactors: number;
     generatedAt: Date;
   }> {
-    // failLoud: enforced scope 값 직접 전달.
-    return this.calibrationFactorsService.getRegistry(scope.site, scope.teamId ?? query.teamId);
+    void query;
+    // QueryPipe는 all-scope 요청 검증용이며, 실제 데이터 범위 SSOT는 enforced scope다.
+    return this.calibrationFactorsService.getRegistry(scope.site, scope.teamId);
   }
 
   @Get('equipment/:equipmentUuid')
@@ -187,11 +197,15 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findByEquipment(@Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string): Promise<{
+  async findByEquipment(
+    @Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{
     equipmentId: string;
     factors: CalibrationFactorRecord[];
     count: number;
   }> {
+    await this.enforceEquipmentAccess(equipmentUuid, req);
     return this.calibrationFactorsService.findByEquipment(equipmentUuid);
   }
 
@@ -206,8 +220,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<CalibrationFactorRecord> {
-    return this.calibrationFactorsService.findOne(uuid);
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationFactorRecord> {
+    return this.enforceFactorAccess(uuid, req);
   }
 
   @Patch(':uuid/approve')

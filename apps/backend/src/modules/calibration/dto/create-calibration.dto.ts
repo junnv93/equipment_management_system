@@ -82,6 +82,31 @@ export const createCalibrationSchema = calibrationBaseSchema.refine(
 
 export type CreateCalibrationInput = z.infer<typeof createCalibrationSchema>;
 
+/**
+ * 장비 생성/마이그레이션 흐름에서 쓰는 과거 교정 이력 입력 스키마.
+ *
+ * 정식 교정 등록(createCalibrationSchema)은 성적서 파일 + 승인 대기 워크플로우를 탄다.
+ * 이 스키마는 이미 수행된 과거 교정을 "증빙 없는 이력"으로 남기기 위한 좁은 경로이며,
+ * actor/scope/status/approvalStatus는 서버가 결정한다.
+ */
+export const createHistoricalCalibrationSchema = calibrationBaseSchema
+  .pick({
+    calibrationDate: true,
+    nextCalibrationDate: true,
+    calibrationAgency: true,
+    certificateNumber: true,
+    result: true,
+    notes: true,
+  })
+  .refine(
+    (data) =>
+      !data.nextCalibrationDate ||
+      data.nextCalibrationDate.getTime() >= data.calibrationDate.getTime(),
+    { message: '다음 교정 예정일은 교정 일자 이후여야 합니다.', path: ['nextCalibrationDate'] }
+  );
+
+export type CreateHistoricalCalibrationInput = z.infer<typeof createHistoricalCalibrationSchema>;
+
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class CreateCalibrationDto {
@@ -151,4 +176,28 @@ export class CreateCalibrationDto {
 
   @ApiProperty({ description: '등록자 코멘트', required: false })
   registrarComment?: string;
+}
+
+export class CreateHistoricalCalibrationDto {
+  @ApiProperty({ description: '교정 일자', example: '2023-05-20' })
+  calibrationDate: Date;
+
+  @ApiProperty({ description: '다음 교정 예정일', example: '2024-05-20', required: false })
+  nextCalibrationDate?: Date;
+
+  @ApiProperty({ description: '교정 기관/업체', example: '한국계측기술원' })
+  calibrationAgency: string;
+
+  @ApiProperty({ description: '교정성적서 번호', required: false })
+  certificateNumber?: string;
+
+  @ApiProperty({
+    description: '교정 결과',
+    enum: CalibrationResultEnum.options,
+    required: false,
+  })
+  result?: CalibrationResult;
+
+  @ApiProperty({ description: '교정 결과 메모', required: false })
+  notes?: string;
 }

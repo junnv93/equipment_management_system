@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { CalibrationFactorsController } from '../calibration-factors.controller';
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import { CalibrationFactorTypeValues } from '../dto/create-calibration-factor.dto';
@@ -95,8 +96,29 @@ describe('CalibrationFactorsController', () => {
 
       const result = await controller.create(createDto as never, mockReq);
 
+      expect(service.getFactorSiteAndTeam).toHaveBeenCalledWith(createDto.equipmentId);
       expect(service.create).toHaveBeenCalledWith(createDto, requestedBy);
       expect(result).toEqual(expectedResult);
+    });
+
+    it('should reject cross-site equipment when creating a calibration factor', async () => {
+      const createDto = {
+        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+        factorType: CalibrationFactorType.ANTENNA_GAIN,
+        factorName: '3GHz 안테나 이득',
+        factorValue: 12.5,
+        unit: 'dBi',
+        effectiveDate: '2024-01-15',
+      };
+      const mockReq = {
+        user: { userId: 'user-1', roles: ['test_engineer'], site: 'busan', teamId: 'team-uuid' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any;
+
+      await expect(controller.create(createDto as never, mockReq)).rejects.toThrow(
+        ForbiddenException
+      );
+      expect(service.create).not.toHaveBeenCalled();
     });
   });
 
@@ -203,8 +225,14 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findByEquipment.mockResolvedValue(expectedResult);
 
-      const result = await controller.findByEquipment(equipmentUuid);
+      const mockReq = {
+        user: { userId: 'user-1', roles: ['test_engineer'], site: 'suwon', teamId: 'team-uuid' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any;
 
+      const result = await controller.findByEquipment(equipmentUuid, mockReq);
+
+      expect(service.getFactorSiteAndTeam).toHaveBeenCalledWith(equipmentUuid);
       expect(service.findByEquipment).toHaveBeenCalledWith(equipmentUuid);
       expect(result).toEqual(expectedResult);
     });
@@ -215,13 +243,19 @@ describe('CalibrationFactorsController', () => {
       const uuid = 'factor-uuid';
       const expectedResult = {
         id: uuid,
+        equipmentId: 'equip-uuid',
         factorName: 'Test Factor',
         approvalStatus: 'approved',
       };
 
       mockCalibrationFactorsService.findOne.mockResolvedValue(expectedResult);
 
-      const result = await controller.findOne(uuid);
+      const mockReq = {
+        user: { userId: 'user-1', roles: ['test_engineer'], site: 'suwon', teamId: 'team-uuid' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any;
+
+      const result = await controller.findOne(uuid, mockReq);
 
       expect(service.findOne).toHaveBeenCalledWith(uuid);
       expect(result).toEqual(expectedResult);
