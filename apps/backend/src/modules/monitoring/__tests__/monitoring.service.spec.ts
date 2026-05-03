@@ -149,6 +149,27 @@ describe('MonitoringService', () => {
       expect(topEndpoints.some((e) => e.endpoint === '/api/equipment/:id')).toBe(true);
     });
 
+    it('/api/auth/* 404는 NextAuth 라우팅 회귀 경고를 남긴다', () => {
+      service.recordHttpRequest('/api/auth/csrf', 404, 20);
+
+      expect(mockLoggerService.warn).toHaveBeenCalledWith(
+        'NextAuth route reached backend and returned 404',
+        {
+          endpoint: '/api/auth/csrf',
+          statusCode: 404,
+        }
+      );
+    });
+
+    it('/api/auth/* 2xx는 회귀 경고를 남기지 않는다', () => {
+      service.recordHttpRequest('/api/auth/csrf', 200, 20);
+
+      expect(mockLoggerService.warn).not.toHaveBeenCalledWith(
+        'NextAuth route reached backend and returned 404',
+        expect.anything()
+      );
+    });
+
     it('MAX_TRACKED_ENDPOINTS 초과 시 최소 요청 수 엔트리를 제거한다', () => {
       const max = MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS;
 

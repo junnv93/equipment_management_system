@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CheckoutsService } from '../checkouts.service';
+import type { Checkout } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
@@ -53,6 +54,8 @@ describe('CheckoutsService', () => {
       'execute',
       'leftJoin',
       'innerJoin',
+      'groupBy',
+      'having',
     ];
     for (const m of chainMethods) {
       chain[m] = jest.fn().mockReturnValue(chain);
@@ -584,6 +587,92 @@ describe('CheckoutsService', () => {
       await expect(service.reject(checkoutId, emptyReasonDto, mockReq)).rejects.toThrow(
         BadRequestException
       );
+    });
+  });
+
+  describe('bulk approve/reject read reuse', () => {
+    type CheckoutServiceInternals = {
+      findCheckoutEntity: (uuid: string) => Promise<Checkout>;
+      approveInternal: (
+        uuid: string,
+        approveDto: { version: number; approverId: string },
+        req: AuthenticatedRequest,
+        preloadedCheckout?: Checkout
+      ) => Promise<Checkout>;
+      rejectInternal: (
+        uuid: string,
+        rejectDto: { version: number; reason: string; approverId: string },
+        req: AuthenticatedRequest,
+        preloadedCheckout?: Checkout
+      ) => Promise<Checkout>;
+    };
+
+    const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
+    const approverId = '550e8400-e29b-41d4-a716-446655440004';
+
+    function checkout(version: number): Checkout {
+      return {
+        id: checkoutId,
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'pending',
+        purpose: 'calibration',
+        version,
+      } as Checkout;
+    }
+
+    it('bulkApprove reuses the version lookup checkout in the internal approve path', async () => {
+      const internals = service as unknown as CheckoutServiceInternals;
+      const preloaded = checkout(7);
+      const updated = { ...preloaded, status: 'approved', version: 8 } as Checkout;
+      const findSpy = jest.fn() as jest.MockedFunction<
+        CheckoutServiceInternals['findCheckoutEntity']
+      >;
+      findSpy.mockResolvedValueOnce(preloaded);
+      const approveSpy = jest.fn() as jest.MockedFunction<
+        CheckoutServiceInternals['approveInternal']
+      >;
+      approveSpy.mockResolvedValueOnce(updated);
+      internals.findCheckoutEntity = findSpy;
+      internals.approveInternal = approveSpy;
+
+      const result = await service.bulkApprove([checkoutId], approverId, mockReq);
+
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      expect(approveSpy).toHaveBeenCalledWith(
+        checkoutId,
+        { version: 7, approverId },
+        mockReq,
+        preloaded
+      );
+      expect(result).toEqual({ approved: [{ id: checkoutId, version: 8 }], failed: [] });
+    });
+
+    it('bulkReject reuses the version lookup checkout in the internal reject path', async () => {
+      const internals = service as unknown as CheckoutServiceInternals;
+      const reason = '장비 상태가 좋지 않아 반출이 불가합니다.';
+      const preloaded = checkout(3);
+      const updated = { ...preloaded, status: 'rejected', version: 4 } as Checkout;
+      const findSpy = jest.fn() as jest.MockedFunction<
+        CheckoutServiceInternals['findCheckoutEntity']
+      >;
+      findSpy.mockResolvedValueOnce(preloaded);
+      const rejectSpy = jest.fn() as jest.MockedFunction<
+        CheckoutServiceInternals['rejectInternal']
+      >;
+      rejectSpy.mockResolvedValueOnce(updated);
+      internals.findCheckoutEntity = findSpy;
+      internals.rejectInternal = rejectSpy;
+
+      const result = await service.bulkReject([checkoutId], reason, approverId, mockReq);
+
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      expect(rejectSpy).toHaveBeenCalledWith(
+        checkoutId,
+        { version: 3, reason, approverId },
+        mockReq,
+        preloaded
+      );
+      expect(result).toEqual({ rejected: [{ id: checkoutId, version: 4 }], failed: [] });
     });
   });
 
@@ -1265,6 +1354,42 @@ describe('CheckoutsService', () => {
       expect(mockImportsService.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ status: undefined })
       );
+    });
+  });
+
+  describe('getSummary', () => {
+    it('should return delay metadata and 14-day KPI trend arrays', async () => {
+      const summaryRow = {
+        total: 12,
+        pending: 2,
+        inProgress: 5,
+        overdue: 1,
+        returnedToday: 4,
+        avgDelayDays: 2.34,
+        maxOverdueDays: 8,
+      };
+      const summaryChain = {
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockResolvedValue([summaryRow]),
+      };
+      mockDrizzle.select.mockReturnValueOnce(summaryChain);
+
+      const result = await service.getSummary();
+
+      expect(result).toMatchObject({
+        total: 12,
+        pending: 2,
+        inProgress: 5,
+        overdue: 1,
+        returnedToday: 4,
+        avgDelayDays: 2.3,
+        maxOverdueDays: 8,
+      });
+      expect(result.trends.total).toHaveLength(14);
+      expect(result.trends.pending).toHaveLength(14);
+      expect(result.trends.inProgress).toHaveLength(14);
+      expect(result.trends.overdue).toHaveLength(14);
+      expect(result.trends.returnedToday).toHaveLength(14);
     });
   });
 });

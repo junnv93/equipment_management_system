@@ -31,6 +31,9 @@ import { FORM_NUMBER as CABLE_FORM_NUMBER } from '../cables/services/cable-path-
 import { EquipmentImportFormExportDataService } from '../equipment-imports/services/equipment-import-form-export-data.service';
 import { EquipmentImportFormRendererService } from '../equipment-imports/services/equipment-import-form-renderer.service';
 import { FORM_NUMBER as EQUIPMENT_IMPORT_FORM_NUMBER } from '../equipment-imports/services/equipment-import-form.layout';
+import { CalibrationFactorRegisterDataService } from './services/calibration-factor-register-data.service';
+import { CalibrationFactorRegisterRendererService } from './services/calibration-factor-register-renderer.service';
+import { FORM_NUMBER as CALIBRATION_FACTOR_REGISTER_FORM_NUMBER } from './layouts/calibration-factor-register.layout';
 
 interface ExportResult {
   buffer: Buffer;
@@ -44,7 +47,7 @@ const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingm
 /**
  * 공식 양식 템플릿 기반 내보내기 서비스
  *
- * UL-QP-18-01 ~ UL-QP-18-11 양식을 xlsx로 내보냅니다.
+ * UL-QP-18/19 공식 양식을 템플릿 기반 DOCX/XLSX로 내보냅니다.
  * 구현되지 않은 양식은 501 Not Implemented를 반환합니다.
  */
 @Injectable()
@@ -69,7 +72,9 @@ export class FormTemplateExportService {
     private readonly cablePathLossData: CablePathLossExportDataService,
     private readonly cablePathLossRenderer: CablePathLossRendererService,
     private readonly equipmentImportFormData: EquipmentImportFormExportDataService,
-    private readonly equipmentImportFormRenderer: EquipmentImportFormRendererService
+    private readonly equipmentImportFormRenderer: EquipmentImportFormRendererService,
+    private readonly calibrationFactorRegisterData: CalibrationFactorRegisterDataService,
+    private readonly calibrationFactorRegisterRenderer: CalibrationFactorRegisterRendererService
   ) {}
 
   /**
@@ -126,6 +131,7 @@ export class FormTemplateExportService {
       'UL-QP-18-08': (p, f) => this.exportCablePathLoss(p, f),
       'UL-QP-18-09': (p, f) => this.exportSoftwareValidation(p, f),
       'UL-QP-18-10': (p, f) => this.exportEquipmentImport(p, f),
+      'UL-QP-18-11': (_p, f) => this.exportCalibrationFactorRegister(f),
     };
 
     const exporter = exporters[formNumber];
@@ -322,6 +328,20 @@ export class FormTemplateExportService {
       EQUIPMENT_IMPORT_FORM_NUMBER
     );
     const buffer = await this.equipmentImportFormRenderer.render(data, templateBuf);
+    return { buffer, mimeType: DOCX_MIME, filename: `${entry.formNumber}_${entry.name}.docx` };
+  }
+
+  // ============================================================================
+  // UL-QP-18-11: 보정인자 및 파라미터 관리대장
+  // ============================================================================
+
+  private async exportCalibrationFactorRegister(filter: EnforcedScope): Promise<ExportResult> {
+    const entry = FORM_CATALOG[CALIBRATION_FACTOR_REGISTER_FORM_NUMBER];
+    const data = await this.calibrationFactorRegisterData.getData(filter);
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(
+      CALIBRATION_FACTOR_REGISTER_FORM_NUMBER
+    );
+    const buffer = this.calibrationFactorRegisterRenderer.render(data, templateBuf);
     return { buffer, mimeType: DOCX_MIME, filename: `${entry.formNumber}_${entry.name}.docx` };
   }
 }

@@ -31,6 +31,9 @@ const UUID_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
 // 숫자 ID 패턴 (경로 정규화용)
 const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;
 
+// NextAuth routes must be handled by frontend/nginx. Backend 404 means single-origin routing regressed.
+const BACKEND_AUTH_ROUTE_PATTERN = /^\/api\/auth(?:\/|$)/;
+
 @Injectable()
 export class MonitoringService implements OnModuleDestroy {
   // 시스템 시작 시간
@@ -197,6 +200,13 @@ export class MonitoringService implements OnModuleDestroy {
 
     // 경로 정규화 (UUID, 숫자 ID → :id 플레이스홀더)
     const normalizedEndpoint = this.normalizeEndpointPath(endpoint);
+
+    if (statusCode === 404 && BACKEND_AUTH_ROUTE_PATTERN.test(normalizedEndpoint)) {
+      this.logger.warn('NextAuth route reached backend and returned 404', {
+        endpoint: normalizedEndpoint,
+        statusCode,
+      });
+    }
 
     // 엔드포인트별 요청 수 기록
     const currentCount = this.httpStats.requestsByEndpoint.get(normalizedEndpoint) || 0;

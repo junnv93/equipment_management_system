@@ -1197,6 +1197,70 @@ export class CheckoutsService extends VersionedBaseService {
     return this.fillDailyArray(rows, DAYS, since);
   }
 
+  private getTrendWindow(days = 14): { days: number; since: Date } {
+    const since = new Date();
+    since.setDate(since.getDate() - days + 1);
+    since.setHours(0, 0, 0, 0);
+    return { days, since };
+  }
+
+  private async buildCheckoutSummaryTrend(
+    teamId: string | undefined,
+    extraCondition?: SQL<unknown>,
+    dateColumn: typeof checkouts.createdAt | typeof checkouts.actualReturnDate = checkouts.createdAt
+  ): Promise<number[]> {
+    const { days, since } = this.getTrendWindow();
+    const conditions: SQL<unknown>[] = [gte(dateColumn, since)];
+
+    if (teamId) {
+      const requestersByTeam = this.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.teamId, teamId));
+
+      conditions.push(
+        or(
+          sql`${checkouts.requesterId} IN (${requestersByTeam})`,
+          eq(checkouts.lenderTeamId, teamId)
+        )!
+      );
+    }
+
+    if (extraCondition) conditions.push(extraCondition);
+
+    const dayExpr = sql<string>`DATE(${dateColumn})`;
+    const rows = await this.db
+      .select({
+        day: dayExpr,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(checkouts)
+      .where(and(...conditions))
+      .groupBy(dayExpr)
+      .orderBy(dayExpr);
+
+    return this.fillDailyArray(rows, days, since);
+  }
+
+  private async buildCheckoutSummaryTrends(teamId?: string): Promise<CheckoutSummary['trends']> {
+    const inProgressStatuses = [...CHECKOUT_STATUS_GROUPS.in_progress];
+    const completedStatuses = [...CHECKOUT_STATUS_GROUPS.completed];
+
+    const [total, pending, inProgress, overdue, returnedToday] = await Promise.all([
+      this.buildCheckoutSummaryTrend(teamId),
+      this.buildCheckoutSummaryTrend(teamId, eq(checkouts.status, CSVal.PENDING)),
+      this.buildCheckoutSummaryTrend(teamId, inArray(checkouts.status, inProgressStatuses)),
+      this.buildCheckoutSummaryTrend(teamId, eq(checkouts.status, CSVal.OVERDUE)),
+      this.buildCheckoutSummaryTrend(
+        teamId,
+        inArray(checkouts.status, completedStatuses),
+        checkouts.actualReturnDate
+      ),
+    ]);
+
+    return { total, pending, inProgress, overdue, returnedToday };
+  }
+
   private fillDailyArray(
     rows: { day: string; count: number }[],
     days: number,
@@ -1242,29 +1306,38 @@ export class CheckoutsService extends VersionedBaseService {
           // 단일 쿼리로 모든 상태별 카운트 집계
           const inProgressStatuses = [...CHECKOUT_STATUS_GROUPS.in_progress];
           const completedStatuses = [...CHECKOUT_STATUS_GROUPS.completed];
-          const [summaryData] = await this.db
-            .select({
-              total: sql<number>`COUNT(*)`,
-              pending: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.PENDING})`,
-              inProgress: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
-                inProgressStatuses.map((s) => sql`${s}`),
-                sql`, `
-              )}))`,
-              overdue: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.OVERDUE})`,
-              returnedToday: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
-                completedStatuses.map((s) => sql`${s}`),
-                sql`, `
-              )}) AND DATE(${checkouts.actualReturnDate}) = CURRENT_DATE)`,
-            })
-            .from(checkouts)
-            .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+          const [summaryData, trends] = await Promise.all([
+            this.db
+              .select({
+                total: sql<number>`COUNT(*)`,
+                pending: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.PENDING})`,
+                inProgress: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
+                  inProgressStatuses.map((s) => sql`${s}`),
+                  sql`, `
+                )}))`,
+                overdue: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} = ${CSVal.OVERDUE})`,
+                returnedToday: sql<number>`COUNT(*) FILTER (WHERE ${checkouts.status} IN (${sql.join(
+                  completedStatuses.map((s) => sql`${s}`),
+                  sql`, `
+                )}) AND DATE(${checkouts.actualReturnDate}) = CURRENT_DATE)`,
+                avgDelayDays: sql<number>`COALESCE(AVG(GREATEST(0, EXTRACT(DAY FROM (COALESCE(${checkouts.actualReturnDate}, CURRENT_DATE)::timestamp - ${checkouts.expectedReturnDate}::timestamp)))) FILTER (WHERE ${checkouts.status} = ${CSVal.OVERDUE} OR ${checkouts.actualReturnDate} > ${checkouts.expectedReturnDate}), 0)`,
+                maxOverdueDays: sql<number>`COALESCE(MAX(GREATEST(0, EXTRACT(DAY FROM (COALESCE(${checkouts.actualReturnDate}, CURRENT_DATE)::timestamp - ${checkouts.expectedReturnDate}::timestamp)))) FILTER (WHERE ${checkouts.status} = ${CSVal.OVERDUE} OR ${checkouts.actualReturnDate} > ${checkouts.expectedReturnDate}), 0)`,
+              })
+              .from(checkouts)
+              .where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
+            this.buildCheckoutSummaryTrends(teamId),
+          ]);
+          const [summaryRow] = summaryData;
 
           return {
-            total: Number(summaryData.total || 0),
-            pending: Number(summaryData.pending || 0),
-            inProgress: Number(summaryData.inProgress || 0),
-            overdue: Number(summaryData.overdue || 0),
-            returnedToday: Number(summaryData.returnedToday || 0),
+            total: Number(summaryRow.total || 0),
+            pending: Number(summaryRow.pending || 0),
+            inProgress: Number(summaryRow.inProgress || 0),
+            overdue: Number(summaryRow.overdue || 0),
+            returnedToday: Number(summaryRow.returnedToday || 0),
+            avgDelayDays: Math.round(Number(summaryRow.avgDelayDays || 0) * 10) / 10,
+            maxOverdueDays: Number(summaryRow.maxOverdueDays || 0),
+            trends,
           };
         } catch (error) {
           this.logger.error(
@@ -1895,6 +1968,15 @@ export class CheckoutsService extends VersionedBaseService {
     approveDto: ApproveCheckoutDto & { approverId: string },
     req: AuthenticatedRequest
   ): Promise<Checkout> {
+    return this.approveInternal(uuid, approveDto, req);
+  }
+
+  private async approveInternal(
+    uuid: string,
+    approveDto: ApproveCheckoutDto & { approverId: string },
+    req: AuthenticatedRequest,
+    preloadedCheckout?: Checkout
+  ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
@@ -1908,7 +1990,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
       this.validateUuid(approveDto.approverId, 'approverId');
 
-      const checkout = await this.findCheckoutEntity(uuid);
+      const checkout = preloadedCheckout ?? (await this.findCheckoutEntity(uuid));
 
       // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크 (배치 조회)
       const items = await this.db
@@ -2269,6 +2351,15 @@ export class CheckoutsService extends VersionedBaseService {
     rejectDto: RejectCheckoutDto & { approverId: string },
     req: AuthenticatedRequest
   ): Promise<Checkout> {
+    return this.rejectInternal(uuid, rejectDto, req);
+  }
+
+  private async rejectInternal(
+    uuid: string,
+    rejectDto: RejectCheckoutDto & { approverId: string },
+    req: AuthenticatedRequest,
+    preloadedCheckout?: Checkout
+  ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
@@ -2276,7 +2367,7 @@ export class CheckoutsService extends VersionedBaseService {
         this.validateUuid(rejectDto.approverId, 'approverId');
       }
 
-      const checkout = await this.findCheckoutEntity(uuid);
+      const checkout = preloadedCheckout ?? (await this.findCheckoutEntity(uuid));
       await this.enforceScopeFromCheckout(checkout, req);
       const rejectPermissions: readonly string[] = req.user?.permissions ?? [];
       this.assertFsmAction(checkout, 'reject', rejectPermissions);
@@ -3333,7 +3424,7 @@ export class CheckoutsService extends VersionedBaseService {
    * cross-team 거부는 개별 approve() 호출 내부에서 처리됨.
    * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
    *
-   * **의도적 double findCheckoutEntity** — bulkReject와 동일 trade-off (단건 path 일관성 우선).
+   * bulk version 획득 시 조회한 checkout을 단건 internal path에 재사용해 2N read를 방지한다.
    */
   async bulkApprove(
     ids: string[],
@@ -3348,7 +3439,7 @@ export class CheckoutsService extends VersionedBaseService {
         const checkout = await this.findCheckoutEntity(id);
         // Rule 11 예외: bulk UX상 클라이언트가 per-item version을 전달할 수 없으므로
         // DB 최신값 사용. CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리됨.
-        return this.approve(id, { version: checkout.version, approverId }, req);
+        return this.approveInternal(id, { version: checkout.version, approverId }, req, checkout);
       })
     );
 
@@ -3381,12 +3472,7 @@ export class CheckoutsService extends VersionedBaseService {
    * ✅ Rule 2: approverId = extractUserId(req) — 컨트롤러에서 주입
    * ✅ Rule 11 예외: bulk UX상 클라이언트가 per-item version 전달 불가 → DB 최신값 사용.
    *    CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리.
-   *
-   * **의도적 double findCheckoutEntity** (50건 max × 2 = 100 reads / ~100ms 추가):
-   *   - 외부 fetch는 version 획득 전용. 단건 reject() 내부에서 다시 fetch가 일어남.
-   *   - "단건 path와 정확히 같은 fail-close 순서·audit·notification 보장"을 우선 — 코드 중복 회피.
-   *   - 측정된 병목 발생 시 `_rejectWithEntity` 분리로 N reads로 감축 (tech-debt-tracker 등록).
-   *   - bulkApprove도 동일 패턴 — 일관성 유지.
+   * bulk version 획득 시 조회한 checkout을 단건 internal path에 재사용해 2N read를 방지한다.
    */
   async bulkReject(
     ids: string[],
@@ -3400,7 +3486,12 @@ export class CheckoutsService extends VersionedBaseService {
     const results = await Promise.allSettled(
       ids.map(async (id) => {
         const checkout = await this.findCheckoutEntity(id);
-        return this.reject(id, { version: checkout.version, reason, approverId }, req);
+        return this.rejectInternal(
+          id,
+          { version: checkout.version, reason, approverId },
+          req,
+          checkout
+        );
       })
     );
 

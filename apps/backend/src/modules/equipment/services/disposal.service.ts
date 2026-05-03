@@ -173,6 +173,17 @@ export class DisposalService extends VersionedBaseService {
     reviewDto: ReviewDisposalInput,
     reviewedBy: string
   ): Promise<DisposalRequestWithRelations | null> {
+    const trimmedOpinion = reviewDto.opinion?.trim() ?? '';
+    if (
+      reviewDto.decision === 'reject' &&
+      trimmedOpinion.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
+    ) {
+      throw new BadRequestException({
+        code: ErrorCode.DisposalRejectCommentRequired,
+        message: `반려 검토 의견은 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
+      });
+    }
+
     // 1. 현재 요청 조회
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
@@ -234,7 +245,7 @@ export class DisposalService extends VersionedBaseService {
             reviewStatus: DRVal.REVIEWED,
             reviewedBy,
             reviewedAt: new Date(),
-            reviewOpinion: reviewDto.opinion,
+            reviewOpinion: trimmedOpinion,
           },
           '폐기요청',
           tx as AppDatabase,
@@ -250,7 +261,7 @@ export class DisposalService extends VersionedBaseService {
             reviewStatus: DRVal.REJECTED,
             rejectedBy: reviewedBy,
             rejectedAt: new Date(),
-            rejectionReason: reviewDto.opinion,
+            rejectionReason: trimmedOpinion,
             rejectionStep: 'review',
           },
           '폐기요청',
@@ -300,7 +311,7 @@ export class DisposalService extends VersionedBaseService {
         requesterId: request.requestedBy,
         requesterTeamId: equipmentItem.teamId ?? '',
         site: equipmentItem.site ?? '',
-        reason: reviewDto.opinion ?? '',
+        reason: trimmedOpinion,
         rejectionStep: 'review',
         actorId: reviewedBy,
         actorName: '',

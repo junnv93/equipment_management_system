@@ -7,6 +7,8 @@ import { RetentionService } from './retention.service';
 import { FormTemplateExportService } from './form-template-export.service';
 import { EquipmentRegistryDataService } from './services/equipment-registry-data.service';
 import { EquipmentRegistryRendererService } from './services/equipment-registry-renderer.service';
+import { CalibrationFactorRegisterDataService } from './services/calibration-factor-register-data.service';
+import { CalibrationFactorRegisterRendererService } from './services/calibration-factor-register-renderer.service';
 import { SoftwareValidationsModule } from '../software-validations/software-validations.module';
 import { IntermediateInspectionsModule } from '../intermediate-inspections/intermediate-inspections.module';
 import { SelfInspectionsModule } from '../self-inspections/self-inspections.module';
@@ -33,6 +35,8 @@ import { EquipmentImportsModule } from '../equipment-imports/equipment-imports.m
     FormTemplateExportService,
     EquipmentRegistryDataService,
     EquipmentRegistryRendererService,
+    CalibrationFactorRegisterDataService,
+    CalibrationFactorRegisterRendererService,
   ],
   exports: [ReportsService, RetentionService, FormTemplateExportService],
 })

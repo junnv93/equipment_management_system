@@ -330,7 +330,7 @@ describe('DashboardService', () => {
       activeUsers?: { userId: string }[];
       maxUsersCount?: number;
       errorCount24h?: number;
-    }): void {
+    }) {
       const {
         dbSizeBytes,
         capacityBytes = 100 * 1024 * 1024 * 1024,

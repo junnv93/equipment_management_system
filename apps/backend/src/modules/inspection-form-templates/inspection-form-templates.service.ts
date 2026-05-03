@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   inspectionFormTemplates,
@@ -397,6 +397,22 @@ export class InspectionFormTemplatesService {
     }>
   > {
     const limit = query.limit ?? 8;
+    const matchConditions = [
+      query.modelName ? eq(equipment.modelName, query.modelName) : undefined,
+      query.classificationCode
+        ? eq(equipment.classificationCode, query.classificationCode)
+        : undefined,
+    ].filter((condition): condition is Exclude<typeof condition, undefined> => !!condition);
+
+    if (matchConditions.length === 0) {
+      return [];
+    }
+
+    const priorityOrder = sql<number>`CASE
+      WHEN ${query.modelName ?? null} IS NOT NULL AND ${equipment.modelName} = ${query.modelName ?? ''} THEN 2
+      WHEN ${query.classificationCode ?? null} IS NOT NULL AND ${equipment.classificationCode} = ${query.classificationCode ?? ''} THEN 1
+      ELSE 0
+    END`;
 
     // current templates (supersededBy IS NULL) + equipment join
     const rows = await this.db
@@ -412,10 +428,12 @@ export class InspectionFormTemplatesService {
         and(
           eq(inspectionFormTemplates.inspectionType, query.inspectionType),
           isNull(inspectionFormTemplates.supersededBy),
-          isNull(inspectionFormTemplates.deletedAt)
+          isNull(inspectionFormTemplates.deletedAt),
+          or(...matchConditions)
         )
       )
-      .orderBy(desc(inspectionFormTemplates.createdAt));
+      .orderBy(desc(priorityOrder), desc(inspectionFormTemplates.createdAt))
+      .limit(limit);
 
     // 우선순위 점수 매핑 (weight: modelName=2, classificationCode=1)
     const matched = rows
@@ -443,8 +461,7 @@ export class InspectionFormTemplatesService {
           matchReason: 'modelName' | 'classificationCode';
         } => m.matchReason !== null
       )
-      .sort((a, b) => b.priority - a.priority)
-      .slice(0, limit);
+      .sort((a, b) => b.priority - a.priority);
 
     return matched.map((m) => ({
       template: m.row.template,

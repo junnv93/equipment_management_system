@@ -1,4 +1,17 @@
-import { Controller, Get, Query, ParseUUIDPipe, Param, Request, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Request,
+  UsePipes,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -15,6 +28,7 @@ import {
   type AuditActionCounts,
 } from './audit.service';
 import { AuditLogQueryValidationPipe, type AuditLogQueryInput } from './dto/audit-log-query.dto';
+import { SimulateRoleAuditDto, SimulateRoleAuditPipe } from './dto/simulate-role-audit.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
   DEFAULT_PAGE_SIZE,
@@ -26,6 +40,7 @@ import {
 import {
   AUDIT_ACTION_VALUES,
   AUDIT_ENTITY_TYPE_VALUES,
+  UserRoleValues,
   type UserRole,
   type CursorPaginatedAuditLogsResponse,
 } from '@equipment-management/schemas';
@@ -45,6 +60,49 @@ import type { AuthenticatedRequest } from '../../types/auth';
 @Controller('audit-logs')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
+
+  @Post('simulate-role')
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+  @UsePipes(SimulateRoleAuditPipe)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: '역할 시뮬레이션 감사 기록',
+    description:
+      'SYSTEM_ADMIN이 UI 역할 시뮬레이션을 활성화했을 때 누가 어떤 역할을 시뮬레이션했는지 audit_logs에 기록합니다.',
+  })
+  @ApiResponse({ status: 201, description: '역할 시뮬레이션 감사 기록 성공' })
+  @ApiResponse({ status: 403, description: 'SYSTEM_ADMIN만 역할 시뮬레이션 감사 기록 가능' })
+  async recordRoleSimulation(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: SimulateRoleAuditDto
+  ): Promise<{ recorded: true }> {
+    const userRole = req.user.roles[0];
+    if (userRole !== UserRoleValues.SYSTEM_ADMIN) {
+      throw new ForbiddenException('Only system_admin can simulate roles');
+    }
+
+    await this.auditService.create({
+      userId: req.user.userId,
+      userName: req.user.name || 'System Admin',
+      userRole,
+      action: 'read',
+      entityType: 'user',
+      entityId: req.user.userId,
+      entityName: req.user.name || 'System Admin',
+      details: {
+        additionalInfo: {
+          event: 'role_simulation_started',
+          actualRole: userRole,
+          simulatedRole: dto.simulatedRole,
+          path: dto.path,
+        },
+      },
+      userSite: req.user.site,
+      userTeamId: req.user.teamId,
+    });
+
+    return { recorded: true };
+  }
 
   @Get()
   @RequirePermissions(Permission.VIEW_AUDIT_LOGS)

@@ -44,7 +44,7 @@ interface BackfillOptions {
   verbose: boolean;
 }
 
-interface BackfillResult {
+export interface BackfillResult {
   inspectionType: InspectionType;
   equipmentId: string;
   inspectionId: string;
@@ -52,8 +52,7 @@ interface BackfillResult {
   reason?: string;
 }
 
-function parseOptions(): BackfillOptions {
-  const args = process.argv.slice(2);
+export function parseBackfillOptions(args = process.argv.slice(2)): BackfillOptions {
   const opts: BackfillOptions = {
     dryRun: args.includes('--dry-run'),
     typeFilter: null,
@@ -74,7 +73,7 @@ function parseOptions(): BackfillOptions {
   return opts;
 }
 
-async function backfillIntermediate(
+export async function backfillIntermediate(
   db: ReturnType<typeof drizzle>,
   opts: BackfillOptions
 ): Promise<BackfillResult[]> {
@@ -210,7 +209,7 @@ async function backfillIntermediate(
   return results;
 }
 
-async function backfillSelf(
+export async function backfillSelf(
   db: ReturnType<typeof drizzle>,
   opts: BackfillOptions
 ): Promise<BackfillResult[]> {
@@ -341,7 +340,7 @@ async function backfillSelf(
 }
 
 async function main(): Promise<void> {
-  const opts = parseOptions();
+  const opts = parseBackfillOptions();
 
   console.log('🔄 Inspection Template Backfill 시작');
   console.log(
@@ -407,4 +406,6 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+if (require.main === module) {
+  void main();
+}

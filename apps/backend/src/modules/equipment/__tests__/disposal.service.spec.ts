@@ -34,6 +34,8 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
   let mockDb: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCacheService: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockEventEmitter: any;
   let updateWithVersionSpy: jest.SpyInstance;
 
   beforeEach(async () => {
@@ -57,6 +59,7 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
       deleteByPattern: jest.fn().mockResolvedValue(undefined),
       deleteByPrefix: jest.fn(),
     };
+    mockEventEmitter = { emitAsync: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -69,7 +72,7 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
         },
         {
           provide: EventEmitter2,
-          useValue: { emitAsync: jest.fn().mockResolvedValue(undefined) },
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();
@@ -178,6 +181,95 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
   // ============================================================================
   // Layer 2: Service layer fail-close (approveDisposal reject 분기)
   // ============================================================================
+
+  describe('reviewDisposal reject branch — service layer fail-close', () => {
+    const equipmentId = 'eq-1234-5678-uuid';
+    const reviewedBy = 'reviewer-uuid';
+
+    beforeEach(() => {
+      mockDb.query.disposalRequests.findFirst.mockResolvedValue({
+        id: 'disposal-req-uuid',
+        equipmentId,
+        reviewStatus: 'pending',
+        version: 1,
+        requestedBy: 'requester-uuid',
+      });
+      mockDb.query.equipment.findFirst.mockResolvedValue({
+        id: equipmentId,
+        name: 'eq',
+        managementNumber: 'M-1',
+        teamId: 'team-1',
+        site: 'suwon',
+      });
+      mockDb.query.users.findFirst.mockResolvedValue({
+        id: reviewedBy,
+        role: 'technical_manager',
+        teamId: 'team-1',
+      });
+    });
+
+    it.each([
+      ['undefined opinion', undefined],
+      ['empty string', ''],
+      [`whitespace only ${MIN} chars`, ' '.repeat(MIN)],
+      [`${MIN - 1} chars`, 'a'.repeat(MIN - 1)],
+      [`whitespace + ${MIN - 1} chars (trim 후 below min)`, ` ${'a'.repeat(MIN - 1)} `],
+    ])(
+      'fail-close %s — throws BadRequestException with code DISPOSAL_REJECT_COMMENT_REQUIRED',
+      async (_label, opinion) => {
+        const dto = {
+          version: 1,
+          decision: 'reject' as const,
+          opinion,
+        };
+
+        try {
+          await service.reviewDisposal(equipmentId, dto as never, reviewedBy);
+          fail('expected BadRequestException');
+        } catch (e) {
+          expect(e).toBeInstanceOf(BadRequestException);
+          expect(e).toMatchObject({
+            response: { code: ErrorCode.DisposalRejectCommentRequired },
+          });
+        }
+
+        expect(mockDb.query.disposalRequests.findFirst).not.toHaveBeenCalled();
+        expect(mockDb.transaction).not.toHaveBeenCalled();
+        expect(updateWithVersionSpy).not.toHaveBeenCalled();
+      }
+    );
+
+    it('reject 통과 — rejectionReason 및 이벤트 reason에 trim된 opinion 사용', async () => {
+      const opinion = ` ${'a'.repeat(MIN)} `;
+      await service.reviewDisposal(
+        equipmentId,
+        { version: 1, decision: 'reject', opinion },
+        reviewedBy
+      );
+
+      expect(mockDb.transaction).toHaveBeenCalledTimes(1);
+      const callArgs = updateWithVersionSpy.mock.calls[0];
+      const updatePayload = callArgs[3];
+      expect(updatePayload.rejectionReason).toBe(opinion.trim());
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ reason: opinion.trim(), rejectionStep: 'review' })
+      );
+    });
+
+    it('approve 통과 — reviewOpinion에 trim된 opinion 사용', async () => {
+      const opinion = ` ${'a'.repeat(MIN)} `;
+      await service.reviewDisposal(
+        equipmentId,
+        { version: 1, decision: 'approve', opinion },
+        reviewedBy
+      );
+
+      const callArgs = updateWithVersionSpy.mock.calls[0];
+      const updatePayload = callArgs[3];
+      expect(updatePayload.reviewOpinion).toBe(opinion.trim());
+    });
+  });
 
   describe('approveDisposal reject branch — service layer fail-close', () => {
     const equipmentId = 'eq-1234-5678-uuid';

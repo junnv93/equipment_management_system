@@ -700,7 +700,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     // 반려 단계 결정
     const rejectionStage = plan.status === CPStatus.PENDING_REVIEW ? 'review' : 'approval';
 
-    const { casVersion, rejectedBy, rejectionReason } = rejectDto;
+    const { casVersion, rejectedBy } = rejectDto;
 
     await this.updateWithVersion(
       calibrationPlans,
@@ -710,7 +710,7 @@ export class CalibrationPlansService extends VersionedBaseService {
         status: CPStatus.REJECTED,
         rejectedBy,
         rejectedAt: new Date(),
-        rejectionReason,
+        rejectionReason: trimmedReason,
         rejectionStage,
       },
       '교정계획서',
@@ -726,7 +726,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       site: plan.siteId,
       teamId: plan.teamId ?? '',
       createdBy: plan.createdBy,
-      reason: rejectionReason,
+      reason: trimmedReason,
       actorId: rejectedBy,
       actorName: '',
       timestamp: new Date(),

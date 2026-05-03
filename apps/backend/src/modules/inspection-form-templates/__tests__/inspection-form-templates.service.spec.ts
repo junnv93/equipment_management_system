@@ -326,6 +326,15 @@ describe('InspectionFormTemplatesService', () => {
   });
 
   describe('findGallery()', () => {
+    it('modelName/classificationCode가 없으면 DB 조회 없이 빈 배열', async () => {
+      const result = await service.findGallery({
+        inspectionType: 'intermediate',
+      });
+
+      expect(result).toEqual([]);
+      expect(mockDb.select).not.toHaveBeenCalled();
+    });
+
     it('modelName 정확 일치 priority=2', async () => {
       mockDb.select.mockReturnValueOnce(
         createSelectChain([

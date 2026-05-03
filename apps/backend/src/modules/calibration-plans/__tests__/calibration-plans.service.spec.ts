@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { ErrorCode } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { CalibrationPlansService } from '../calibration-plans.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -31,6 +32,8 @@ const MOCK_PLAN = {
   updatedAt: new Date('2024-01-01'),
 };
 
+const MIN_REJECTION_REASON_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
+
 describe('CalibrationPlansService', () => {
   let service: CalibrationPlansService;
   let mockCacheService: ReturnType<typeof createMockCacheService>;
@@ -41,6 +44,7 @@ describe('CalibrationPlansService', () => {
     update: jest.Mock;
     transaction: jest.Mock;
   };
+  let updateWithVersionSpy: jest.SpyInstance;
 
   /** select chain — limit을 마지막으로 사용하는 findOneBasic/create용 */
   const createSelectChain = (value: unknown): Record<string, jest.Mock> => {
@@ -109,6 +113,10 @@ describe('CalibrationPlansService', () => {
     }).compile();
 
     service = module.get<CalibrationPlansService>(CalibrationPlansService);
+    updateWithVersionSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(service as any, 'updateWithVersion')
+      .mockResolvedValue(undefined);
   });
 
   describe('create()', () => {
@@ -281,6 +289,65 @@ describe('CalibrationPlansService', () => {
       expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('calibrationPlan'),
         expect.objectContaining({ planId: 'plan-uuid-1' })
+      );
+    });
+  });
+
+  describe('reject()', () => {
+    it.each([
+      ['undefined rejectionReason', undefined],
+      ['empty string', ''],
+      [
+        `whitespace only ${MIN_REJECTION_REASON_LENGTH} chars`,
+        ' '.repeat(MIN_REJECTION_REASON_LENGTH),
+      ],
+      [`${MIN_REJECTION_REASON_LENGTH - 1} chars`, 'a'.repeat(MIN_REJECTION_REASON_LENGTH - 1)],
+      [
+        `whitespace + ${MIN_REJECTION_REASON_LENGTH - 1} chars`,
+        ` ${'a'.repeat(MIN_REJECTION_REASON_LENGTH - 1)} `,
+      ],
+    ])('fail-close %s before CAS update', async (_label, rejectionReason) => {
+      const pendingReviewPlan = { ...MOCK_PLAN, status: 'pending_review' };
+      mockDb.select.mockReturnValue(createSelectChain([pendingReviewPlan]));
+
+      await expect(
+        service.reject('plan-uuid-1', {
+          casVersion: 1,
+          rejectedBy: 'rejecter-1',
+          rejectionReason,
+        } as never)
+      ).rejects.toMatchObject({
+        response: { code: ErrorCode.CalibrationPlanRejectionReasonRequired },
+      });
+
+      expect(updateWithVersionSpy).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emitAsync).not.toHaveBeenCalled();
+    });
+
+    it('stores and emits the trimmed rejection reason for direct service callers', async () => {
+      const pendingReviewPlan = { ...MOCK_PLAN, status: 'pending_review' };
+      const rejectedPlan = { ...pendingReviewPlan, status: 'rejected', casVersion: 2 };
+      const findOneRow = { plan: rejectedPlan, authorName: 'test-user', teamName: 'test-team' };
+      const planChain = createSelectChain([findOneRow]);
+      const itemsChain = createSelectChain([]);
+      const rejectionReason = ` ${'a'.repeat(MIN_REJECTION_REASON_LENGTH)} `;
+
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([pendingReviewPlan]))
+        .mockReturnValueOnce(planChain)
+        .mockReturnValueOnce(itemsChain);
+
+      await service.reject('plan-uuid-1', {
+        casVersion: 1,
+        rejectedBy: 'rejecter-1',
+        rejectionReason,
+      });
+
+      const updatePayload = updateWithVersionSpy.mock.calls[0][3];
+      expect(updatePayload.rejectionReason).toBe(rejectionReason.trim());
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        expect.stringContaining('calibrationPlan'),
+        expect.objectContaining({ planId: 'plan-uuid-1', reason: rejectionReason.trim() })
       );
     });
   });
