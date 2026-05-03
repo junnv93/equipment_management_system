@@ -1,6 +1,7 @@
 import {
   EquipmentErrorCode,
   ApiError,
+  ErrorCode,
   mapBackendErrorCode,
   isConflictError,
   isRetryableError,
@@ -13,7 +14,9 @@ import {
 // ──────────────────────────────────────────
 describe('mapBackendErrorCode()', () => {
   it('VERSION_CONFLICT → EquipmentErrorCode.VERSION_CONFLICT', () => {
-    expect(mapBackendErrorCode('VERSION_CONFLICT')).toBe(EquipmentErrorCode.VERSION_CONFLICT);
+    expect(mapBackendErrorCode(ErrorCode.VersionConflict)).toBe(
+      EquipmentErrorCode.VERSION_CONFLICT
+    );
   });
 
   it('소문자도 대소문자 무시하여 매핑', () => {
@@ -21,13 +24,25 @@ describe('mapBackendErrorCode()', () => {
   });
 
   it('DUPLICATE_MANAGEMENT_NUMBER → 정확한 코드로 매핑', () => {
-    expect(mapBackendErrorCode('DUPLICATE_MANAGEMENT_NUMBER')).toBe(
+    expect(mapBackendErrorCode(ErrorCode.DuplicateManagementNumber)).toBe(
       EquipmentErrorCode.DUPLICATE_MANAGEMENT_NUMBER
     );
   });
 
   it('FORBIDDEN → PERMISSION_DENIED로 매핑', () => {
-    expect(mapBackendErrorCode('FORBIDDEN')).toBe(EquipmentErrorCode.PERMISSION_DENIED);
+    expect(mapBackendErrorCode(ErrorCode.Forbidden)).toBe(EquipmentErrorCode.PERMISSION_DENIED);
+  });
+
+  it('schemas ErrorCode 기반 calibration/document backend code를 UI validation으로 라우팅', () => {
+    expect(mapBackendErrorCode(ErrorCode.DocumentTypeCountMismatch)).toBe(
+      EquipmentErrorCode.VALIDATION_ERROR
+    );
+    expect(mapBackendErrorCode(ErrorCode.CalibrationFileRequired)).toBe(
+      EquipmentErrorCode.VALIDATION_ERROR
+    );
+    expect(mapBackendErrorCode(ErrorCode.CalibrationPlanItemNotExecuted)).toBe(
+      EquipmentErrorCode.VALIDATION_ERROR
+    );
   });
 
   it('undefined → UNKNOWN_ERROR', () => {

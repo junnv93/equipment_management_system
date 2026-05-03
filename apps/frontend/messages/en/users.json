@@ -7,6 +7,7 @@
     "cannotChangeOwnRole": "You cannot change your own role.",
     "cannotChangeSeniorRole": "You cannot change the role of a user with a higher role.",
     "teamScopeOnly": "Only team-scoped permissions are allowed.",
-    "siteScopeOnly": "Only site-scoped permissions are allowed."
+    "siteScopeOnly": "Only site-scoped permissions are allowed.",
+    "unknown": "An unknown user error occurred."
   }
 }
