@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
       - name: Delete branches with no activity for 30+ days
         uses: beatlabs/delete-old-branches-action@6e94df089372a619c01ae2c2f666bf474f890911 # v0.0.10
         with:
@@ -22,6 +26,6 @@ jobs:
           date: 30d
           dry_run: false
           # main, develop, dependabot/* 은 절대 삭제하지 않음
-          exclude_branch_regex: ^(main|develop|dependabot/.*)$
+          extra_protected_branch_regex: ^(main|develop|dependabot/.*)$
           # PR이 열려있는 브랜치는 삭제하지 않음
           exclude_open_pr_branches: true

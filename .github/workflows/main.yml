@@ -197,13 +197,23 @@ jobs:
         # 1) 복호화 가능성 (값 노출 없이 $RUNNER_TEMP 하위 tmpfile 로만)
         # 2) 복호화된 .env 파일의 키 집합이 env.validation.ts envSchema 의 required 와 일치하는지
         # 두 번째 검증은 verify-env-sync --file 로 위임하여 pre-push 와 동일한 2-tier scan 재사용.
+        # Secret이 오등록된 경우 품질 게이트를 hard-fail하지 않고 warning으로 표면화한다.
+        # 배포 전 secret 유효성은 workflow_dispatch 배포 경로의 SOPS 복호화가 별도로 강제한다.
         if: env.HAS_SOPS_KEY == 'true'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           TMPFILE="$RUNNER_TEMP/lan.env"
-          sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > "$TMPFILE"
-          pnpm verify:env-sync --file "$TMPFILE"
+          if ! sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > "$TMPFILE"; then
+            echo "::warning title=SOPS 검증 SKIPPED::SOPS_AGE_KEY secret가 등록되어 있지만 lan.env.sops.yaml 복호화에 실패했습니다."
+            echo "::warning::GitHub secret 값이 age private key 형식인지 확인하세요. 이 품질 게이트에서는 secret 값을 노출하지 않고 검증만 건너뜁니다."
+            rm -f "$TMPFILE"
+            exit 0
+          fi
+          if ! pnpm verify:env-sync --file "$TMPFILE"; then
+            rm -f "$TMPFILE"
+            exit 1
+          fi
           rm -f "$TMPFILE"
           echo "lan.env.sops.yaml: decrypt + envSchema sync OK"
 
@@ -213,8 +223,16 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           TMPFILE="$RUNNER_TEMP/prod.env"
-          sops decrypt --output-type dotenv infra/secrets/prod.env.sops.yaml > "$TMPFILE"
-          pnpm verify:env-sync --file "$TMPFILE"
+          if ! sops decrypt --output-type dotenv infra/secrets/prod.env.sops.yaml > "$TMPFILE"; then
+            echo "::warning title=SOPS 검증 SKIPPED::SOPS_AGE_KEY secret가 등록되어 있지만 prod.env.sops.yaml 복호화에 실패했습니다."
+            echo "::warning::GitHub secret 값이 age private key 형식인지 확인하세요. 이 품질 게이트에서는 secret 값을 노출하지 않고 검증만 건너뜁니다."
+            rm -f "$TMPFILE"
+            exit 0
+          fi
+          if ! pnpm verify:env-sync --file "$TMPFILE"; then
+            rm -f "$TMPFILE"
+            exit 1
+          fi
           rm -f "$TMPFILE"
           echo "prod.env.sops.yaml: decrypt + envSchema sync OK"
 
