@@ -242,4 +242,26 @@ test.describe('WF-20 UI: 자체점검 작성/수정/제출/승인 동선 (QP-18-
     // Export 버튼은 노출됨 (approved 상태)
     await expect(card.getByRole('button', { name: /양식 내보내기/ })).toBeVisible();
   });
+
+  test('Step 7: 760px viewport → 자체점검 row stack fallback 가로 overflow 없음', async ({
+    techManagerPage: page,
+  }) => {
+    await page.setViewportSize({ width: 760, height: 1024 });
+    await clearBackendCache();
+    await page.goto(`/equipment/${WF_EQUIPMENT_ID}?tab=inspection`);
+
+    const card = selfInspectionCard(page);
+    await expect(card.getByText(L.statusApproved).first()).toBeVisible({ timeout: 15000 });
+    await expect(card.getByRole('button', { name: /양식 내보내기/ })).toBeVisible();
+
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+
+    const cardBox = await card.boundingBox();
+    expect(cardBox, 'self-inspection card bounding box should be available').not.toBeNull();
+    expect(cardBox!.width).toBeLessThanOrEqual(760);
+  });
 });

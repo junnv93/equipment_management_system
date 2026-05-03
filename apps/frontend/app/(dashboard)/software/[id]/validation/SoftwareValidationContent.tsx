@@ -29,7 +29,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { mapSoftwareValidationErrorToToast } from '@/lib/errors/software-validation-errors';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  FRONTEND_ROUTES,
+  Permission,
+} from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { ValidationCreateDialog } from './_components/ValidationCreateDialog';
@@ -129,7 +133,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         ? { ...old, data: old.data.map((v) => (v.id === id ? { ...v, status } : v)) }
         : ({
             data: [],
-            meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 1 } },
+            meta: {
+              pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 1 },
+            },
           } as ValidationCache);
 
   const createMutation = useOptimisticMutation<
@@ -143,7 +149,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
       old ??
       ({
         data: [],
-        meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 1 } },
+        meta: {
+          pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 1 },
+        },
       } as ValidationCache),
     invalidateKeys: commonInvalidateKeys,
     successMessage: t('toast.validationCreateSuccess'),
