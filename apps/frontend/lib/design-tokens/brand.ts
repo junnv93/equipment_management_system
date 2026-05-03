@@ -67,8 +67,7 @@ export const BRAND_THEME_META_COLORS = {
  * 폰트 용도별 Tailwind 클래스
  *
  * CSS 변수 체인:
- *   layout.tsx (next/font) → --font-display / --font-body / --font-mono
- *   tailwind.config.js → fontFamily.display / .body / .mono
+ *   styles/globals.css @theme → --font-display / --font-body / --font-mono
  *   → font-display / font-body / font-mono 클래스 사용 가능
  *
  * 규칙:

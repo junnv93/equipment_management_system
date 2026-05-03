@@ -39,6 +39,8 @@ module.exports = {
       startServerReadyTimeout: 30000,
       numberOfRuns: 1,
       settings: {
+        // Desktop audit: screenEmulation.mobile=false와 formFactor를 명시적으로 동기화.
+        formFactor: 'desktop',
         // CI 환경 Chrome 플래그
         chromeFlags: '--no-sandbox --disable-gpu --disable-dev-shm-usage',
         // PWA 관련 감사 제외 (현재 개발 단계)

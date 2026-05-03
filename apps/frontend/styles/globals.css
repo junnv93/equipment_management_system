@@ -9,15 +9,15 @@
 
 /* ============================================================================
    @theme inline — utility generation referencing var() WITHOUT emitting :root
-   variables. Avoids recursion with Next.js font-loader vars (--font-sans etc.)
-   and the runtime HSL token bridge defined in @layer base below.
+   variables. Font stacks live here rather than next/font/google so production
+   builds do not depend on external font downloads.
    ============================================================================ */
 @theme inline {
-  /* Font families — Next.js font loader sets these on <html> */
-  --font-sans: var(--font-sans), var(--font-inter), system-ui, sans-serif;
-  --font-display: var(--font-display), var(--font-sans), system-ui, sans-serif;
-  --font-body: var(--font-body), var(--font-sans), system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  /* Font families — deterministic CI-safe system stacks */
+  --font-sans: 'Noto Sans KR', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'DM Sans', 'Noto Sans KR', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Noto Sans KR', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
   /* Border radius */
   --radius-lg: var(--radius);

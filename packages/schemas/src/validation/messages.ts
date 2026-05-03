@@ -123,6 +123,7 @@ const equipmentImport = {
   rentalCompany: { required: '렌탈 업체명을 입력해주세요' },
   ownerDepartment: { required: '소유 부서를 입력해주세요' },
   classification: { invalid: '유효하지 않은 분류입니다' },
+  dateRangeInvalid: '사용 종료일은 사용 시작일 이후여야 합니다',
   calibrationRequired: '외부 교정 선택 시 교정 주기, 최종 교정일, 교정 기관을 모두 입력해야 합니다',
 } as const;
 

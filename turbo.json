@@ -4,6 +4,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "ANALYZE",
+        "ANALYZE_MODE",
+        "ANALYZE_OPEN",
+        "DATABASE_URL",
+        "ENABLE_LOCAL_AUTH",
+        "INTERNAL_BACKEND_URL",
+        "NEXTAUTH_SECRET",
+        "NEXTAUTH_URL"
+      ],
       "outputs": ["dist/**", ".next/**", "public/dist/**"]
     },
     "lint": {

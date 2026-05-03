@@ -121,6 +121,23 @@ print('yes' if 'ALL' in caps else 'no')
       echo "::error::${env_name}/${svc}: cap_drop ALL 누락"
       ((errors++))
     fi
+
+    # read_only 검증 — 예외는 호출부에서 명시적으로 전달해 audit trail을 남긴다.
+    if [[ " ${readonly_exceptions} " != *" ${svc} "* ]]; then
+      local has_read_only
+      has_read_only=$(python3 -c "
+import yaml
+with open('${config_file}') as f:
+    d = yaml.safe_load(f)
+svc = d['services'].get('${svc}', {})
+print('yes' if svc.get('read_only') is True else 'no')
+")
+
+      if [[ "$has_read_only" != "yes" ]]; then
+        echo "::error::${env_name}/${svc}: read_only true 누락"
+        ((errors++))
+      fi
+    fi
   done
 
   if [[ $errors -eq 0 ]]; then
