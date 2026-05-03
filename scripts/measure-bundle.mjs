@@ -79,7 +79,7 @@ function buildWithAnalyze() {
   );
 
   try {
-    execSync('pnpm --filter frontend run build', {
+    execSync('pnpm --filter frontend exec next build --webpack', {
       cwd: ROOT,
       stdio: 'inherit',
       timeout: 360_000,

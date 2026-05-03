@@ -30,6 +30,12 @@
 ./scripts/backup/pg-restore.sh /opt/equipment-management/backups/postgres/equipment_management_20260217_020000.sql.gz
 ```
 
+## 복원 리허설 CI
+
+GitHub Actions `Backup Restore Rehearsal` job은 PR/push마다 PostgreSQL 15.13 service DB에 probe row를 만들고,
+`pg_dump | gzip` 백업을 생성한 뒤 새 DB(`equipment_management_restore_rehearsal`)에 복원합니다.
+복원 후 `dr_rehearsal_probe.checksum`을 조회해 백업 파일 무결성(`gzip -t`)과 실제 restore 경로를 함께 검증합니다.
+
 ## RTO/RPO 목표
 
 | 지표                 | 목표               |

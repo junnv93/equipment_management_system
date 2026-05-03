@@ -24,7 +24,7 @@ import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
-import { runDiagnosis, REPO_ROOT, NEXT_DEV_DIR } from './dev-doctor.mjs';
+import { runDiagnosis, REPO_ROOT, NEXT_DEV_DIR, NEXT_DEV_LOCK_PATH } from './dev-doctor.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -137,6 +137,23 @@ function cleanNextDevCache({ dryRun }) {
   }
 }
 
+function cleanNextDevLock({ dryRun }) {
+  const target = path.join(REPO_ROOT, NEXT_DEV_LOCK_PATH);
+  if (!existsSync(target)) {
+    return { cleaned: false, path: target, reason: 'absent' };
+  }
+  if (dryRun) {
+    log(c('cyan', '[dry-run]'), `rm -f ${path.relative(REPO_ROOT, target)}`);
+    return { cleaned: false, path: target, reason: 'dry-run' };
+  }
+  try {
+    rmSync(target, { force: true });
+    return { cleaned: true, path: target };
+  } catch (e) {
+    return { cleaned: false, path: target, reason: `error: ${e.code ?? e.message}` };
+  }
+}
+
 /**
  * pnpm dev를 spawn (TTY=foreground attach, non-TTY=detached).
  *
@@ -195,7 +212,9 @@ async function main() {
   const report = runDiagnosis(REPO_ROOT);
 
   log(c('dim', '진단:'));
-  log(`  active=${report.active.length}, zombies=${report.zombies.length}, manifest=${report.manifest.state}`);
+  log(
+    `  active=${report.active.length}, zombies=${report.zombies.length}, manifest=${report.manifest.state}, nextLock=${report.nextLock.state}`
+  );
   for (const issue of report.issues) {
     log(`  ${issue.severity === 'fail' ? c('red', '!') : c('yellow', '·')} ${issue.message}`);
   }
@@ -220,6 +239,9 @@ async function main() {
   }
   if (report.manifest.state === 'desync' || report.manifest.state === 'unreadable') {
     log(`  Next.js dev 캐시: ${NEXT_DEV_DIR} (매니페스트 desync)`);
+  }
+  if (report.nextLock.state === 'stale' || report.nextLock.state === 'unreadable') {
+    log(`  Next.js dev lock: ${NEXT_DEV_LOCK_PATH} (${report.nextLock.state})`);
   }
 
   if (FLAGS.dryRun) {
@@ -257,6 +279,14 @@ async function main() {
   if (report.manifest.state === 'desync' || report.manifest.state === 'unreadable') {
     log(c('bold', '\n→ clean .next/dev'));
     const clean = cleanNextDevCache({ dryRun: false });
+    if (clean.cleaned) {
+      log(c('green', `  removed ${path.relative(REPO_ROOT, clean.path)}`));
+    } else {
+      log(c('dim', `  (no-op: ${clean.reason})`));
+    }
+  } else if (report.nextLock.state === 'stale' || report.nextLock.state === 'unreadable') {
+    log(c('bold', '\n→ clean Next.js lock'));
+    const clean = cleanNextDevLock({ dryRun: false });
     if (clean.cleaned) {
       log(c('green', `  removed ${path.relative(REPO_ROOT, clean.path)}`));
     } else {

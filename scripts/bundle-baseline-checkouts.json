@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-05-03",
+  "thresholdKb": 8,
+  "routes": {
+    "/static/chunks/app/(dashboard)/checkouts/[id]/page-7014801be6c33c5a.js": 22.5537109375,
+    "/static/chunks/app/(dashboard)/checkouts/create/page-8ffb3dde54d2bbbf.js": 11.6943359375,
+    "/static/chunks/app/(dashboard)/checkouts/pending-checks/page-985582ca37566a9f.js": 9.9921875,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/return/page-8f2be5d0dc7b2f90.js": 6.2880859375,
+    "/static/chunks/app/(dashboard)/checkouts/page-1ab9d0af906f4d7d.js": 6.2314453125,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/check/page-5f1c07ae2a39cb30.js": 3.9404296875,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/check/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/return/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/create/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/import/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/pending-checks/loading-6da09f5ba9dc9540.js": 0.4150390625,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/check/error-a547054dbc26d135.js": 0.2587890625,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/error-e7a3798148350d04.js": 0.2607421875,
+    "/static/chunks/app/(dashboard)/checkouts/create/error-c2c57f9b7c328e81.js": 0.2607421875,
+    "/static/chunks/app/(dashboard)/checkouts/error-f45a5f6e2091053d.js": 0.2587890625,
+    "/static/chunks/app/(dashboard)/checkouts/import/[id]/error-ee2925bfb99cd9ea.js": 0.2587890625,
+    "/static/chunks/app/(dashboard)/checkouts/[id]/return/error-ccd8d337e9ceb8f2.js": 0.259765625,
+    "/static/chunks/app/(dashboard)/checkouts/import/[id]/page-91b9a76b5bd5d430.js": 0.1943359375,
+    "/static/chunks/app/(dashboard)/checkouts/import/[id]/receive/page-54ffc3a9f2cbdb3f.js": 0.1943359375,
+    "/static/chunks/app/(dashboard)/checkouts/import/rental/page-c5f9b570ccb4a853.js": 0.1943359375,
+    "/static/chunks/app/(dashboard)/checkouts/import/shared/page-8aba799af4888968.js": 0.1943359375,
+    "/static/chunks/app/(dashboard)/checkouts/import/page-31ad927f52802008.js": 0.181640625,
+    "/static/chunks/app/(dashboard)/checkouts/manage/page-31ad927f52802008.js": 0.181640625
+  }
+}

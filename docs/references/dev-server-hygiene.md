@@ -121,20 +121,21 @@ pnpm dev
 
 ### 4.2 워크플로 권장
 
-| 상황                                         | 권장 동작                                 |
-| -------------------------------------------- | ----------------------------------------- |
-| PC 부팅 직후, 첫 `pnpm dev`                  | 정상 흐름                                 |
-| 다른 세션이 dev 중일 때 신규 `pnpm dev` 시작 | 중단 권장 — 기존 세션에서 작업            |
-| 세션 시작 시 `[dev-hygiene]` 경고 출력       | `pnpm dev:fresh` 1회 실행                 |
-| 갑자기 `/login` 404 / ClientFetchError       | `pnpm dev:fresh`                          |
-| 정상 종료 시 (`Ctrl+C`)                      | 별도 정리 불필요                          |
-| `kill -9` 또는 터미널 강제 종료 직후         | 다음 dev 시작 전에 `pnpm dev:doctor` 권장 |
+| 상황                                         | 권장 동작                                                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| PC 부팅 직후, 첫 `pnpm dev`                  | 정상 흐름                                                                                                                            |
+| 다른 세션이 dev 중일 때 신규 `pnpm dev` 시작 | 중단 권장 — 기존 세션에서 작업. Next가 `Another next dev server is already running`을 출력하면 `pnpm dev:doctor`로 lock PID/URL 확인 |
+| 세션 시작 시 `[dev-hygiene]` 경고 출력       | `pnpm dev:fresh` 1회 실행                                                                                                            |
+| 갑자기 `/login` 404 / ClientFetchError       | `pnpm dev:fresh`                                                                                                                     |
+| 정상 종료 시 (`Ctrl+C`)                      | 별도 정리 불필요                                                                                                                     |
+| `kill -9` 또는 터미널 강제 종료 직후         | 다음 dev 시작 전에 `pnpm dev:doctor` 권장                                                                                            |
 
 ### 4.3 SSOT
 
 | 항목                                                                 | 정의 위치                                                                                                                                       |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | 좀비 감지 패턴 (`turbo run dev` / `next dev` / `nest start --watch`) | `scripts/dev-doctor.mjs` `DEV_PROCESS_SIGNATURES`                                                                                               |
+| Next.js dev lock 경로                                                | `scripts/dev-doctor.mjs` `NEXT_DEV_LOCK_PATH`                                                                                                   |
 | 매니페스트 경로                                                      | `scripts/dev-doctor.mjs` `NEXT_DEV_MANIFEST_PATH`                                                                                               |
 | Desync 임계값                                                        | `scripts/dev-doctor.mjs` `MANIFEST_SYNC_THRESHOLD` (기본 0.5)                                                                                   |
 | Cold-start 가드 (false positive 방지)                                | `scripts/dev-doctor.mjs` `MANIFEST_MIN_COMPILED_FOR_DESYNC` (기본 8) — 컴파일된 라우트가 이 값 미만이면 `cold-start`로 분류해 desync 경고 안 함 |

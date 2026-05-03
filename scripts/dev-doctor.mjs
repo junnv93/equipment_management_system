@@ -45,6 +45,7 @@ export const DEV_PROCESS_SIGNATURES = [
 
 // Next.js dev 빌드 산출물 루트 (SSOT 앵커) — dev-fresh의 캐시 클린 대상도 이 값을 참조한다.
 export const NEXT_DEV_DIR = 'apps/frontend/.next/dev';
+export const NEXT_DEV_LOCK_PATH = `${NEXT_DEV_DIR}/lock`;
 
 // 매니페스트 desync 감지: per-route 컴파일된 manifest 수 vs 글로벌 매니페스트 등록 수의 비율.
 export const NEXT_DEV_MANIFEST_PATH = `${NEXT_DEV_DIR}/server/app-paths-manifest.json`;
@@ -56,6 +57,53 @@ export const MANIFEST_SYNC_THRESHOLD = 0.5;
 // Cold-start 가드: dev 서버 부팅 직후 사용자가 1~2개 라우트만 방문해서 compiled가 작을 때
 // 비율로 desync 판정하면 false positive 발생. 최소 이 값 이상의 라우트가 컴파일된 후에만 비율 검사.
 export const MANIFEST_MIN_COMPILED_FOR_DESYNC = 8;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Next.js dev lock 검사
+// ─────────────────────────────────────────────────────────────────────────────
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM means the process exists but this user cannot signal it.
+    return e?.code === 'EPERM';
+  }
+}
+
+function commandForPid(snapshot, pid) {
+  return snapshot.find((p) => p.pid === pid)?.cmd ?? null;
+}
+
+export function checkNextDevLock(repoRoot = REPO_ROOT, snapshot = snapshotProcesses()) {
+  const lockPath = path.join(repoRoot, NEXT_DEV_LOCK_PATH);
+  if (!existsSync(lockPath)) {
+    return { state: 'absent', path: lockPath, info: null, pidAlive: false, command: null };
+  }
+
+  let content = '';
+  let info = null;
+  try {
+    content = readFileSync(lockPath, 'utf8');
+    info = JSON.parse(content);
+  } catch {
+    return { state: 'unreadable', path: lockPath, info: null, pidAlive: false, command: null };
+  }
+
+  const pid = Number(info?.pid);
+  const pidAlive = isPidAlive(pid);
+  const command = pidAlive ? commandForPid(snapshot, pid) : null;
+  const isNextDev = command ? /\bnext\s+dev\b/.test(command) : false;
+
+  if (!pidAlive) {
+    return { state: 'stale', path: lockPath, info, pidAlive, command };
+  }
+  if (!isNextDev) {
+    return { state: 'foreign-pid', path: lockPath, info, pidAlive, command };
+  }
+  return { state: 'active', path: lockPath, info, pidAlive, command };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 프로세스 발견
@@ -287,6 +335,7 @@ export function runDiagnosis(repoRoot = REPO_ROOT) {
   const procs = findDevProcesses(snapshot);
   const { active, zombies } = groupZombies(procs);
   const manifest = checkManifestSync(repoRoot);
+  const nextLock = checkNextDevLock(repoRoot, snapshot);
   const ports = findDevPorts(procs, snapshot);
 
   const issues = [];
@@ -306,12 +355,27 @@ export function runDiagnosis(repoRoot = REPO_ROOT) {
       detail: manifest,
     });
   }
+  if (nextLock.state === 'stale' || nextLock.state === 'unreadable') {
+    issues.push({
+      severity: 'warn',
+      kind: 'next-dev-lock',
+      message: `Next.js dev lock 정리 필요 (${path.relative(repoRoot, nextLock.path)}, state=${nextLock.state}). pnpm dev:fresh 권장.`,
+      detail: nextLock,
+    });
+  } else if (nextLock.state === 'foreign-pid') {
+    issues.push({
+      severity: 'warn',
+      kind: 'next-dev-lock',
+      message: `Next.js dev lock PID가 next dev가 아님 (pid=${nextLock.info?.pid}). pnpm dev:fresh 권장.`,
+      detail: nextLock,
+    });
+  }
 
   let level = 'ok';
   if (issues.some((i) => i.severity === 'fail')) level = 'fail';
   else if (issues.length > 0) level = 'warn';
 
-  return { level, issues, active, zombies, manifest, ports };
+  return { level, issues, active, zombies, manifest, nextLock, ports };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -370,6 +434,21 @@ function printHumanReport(report) {
     );
   }
 
+  console.log(c('dim', '\n  Next.js dev lock:'));
+  const lock = report.nextLock;
+  if (lock.state === 'absent') {
+    console.log('    absent');
+  } else {
+    const stateColor = lock.state === 'active' ? 'green' : 'yellow';
+    const info = lock.info;
+    const details = [
+      `pid=${info?.pid ?? 'n/a'}`,
+      info?.appUrl ? `url=${info.appUrl}` : null,
+      lock.command ? `cmd=${lock.command}` : null,
+    ].filter(Boolean);
+    console.log(`    ${c(stateColor, lock.state)}  ${details.join(' ')}`);
+  }
+
   if (report.ports.length > 0) {
     console.log(c('dim', '\n  dev-bound ports:'));
     for (const port of report.ports) {
@@ -401,7 +480,8 @@ export function formatHintLine(report) {
   const z = report.zombies?.length ?? 0;
   const pgids = new Set((report.zombies ?? []).map((p) => p.pgid)).size;
   const m = report.manifest?.state ?? 'unknown';
-  return `[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} — pnpm dev:doctor / pnpm dev:fresh`;
+  const lock = report.nextLock?.state ?? 'unknown';
+  return `[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} nextLock=${lock} — pnpm dev:doctor / pnpm dev:fresh`;
 }
 
 const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
