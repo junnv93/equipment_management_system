@@ -61,7 +61,6 @@ jobs:
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
 
       # Turbo + node_modules 캐시
       - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
