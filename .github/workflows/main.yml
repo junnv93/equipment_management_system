@@ -319,7 +319,7 @@ jobs:
           PERMISSIONS_GUARD_MODE: DENY
 
       - name: Run Frontend Unit Tests
-        run: pnpm --filter frontend run test -- --passWithNoTests
+        run: pnpm --filter frontend exec jest --passWithNoTests
         env:
           NODE_ENV: test
 
