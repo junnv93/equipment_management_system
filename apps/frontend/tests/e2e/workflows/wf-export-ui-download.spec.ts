@@ -22,11 +22,9 @@
  *     SSOT helper 회귀 가드)
  *   - UL-QP-18-09: 시험 소프트웨어 유효성확인 (`ValidationDetailContent` — validation 상세 진입 후 클릭)
  *   - UL-QP-18-10: 공용장비 사용/반납 확인서 (`EquipmentImportDetail`)
+ *   - UL-QP-18-11: 보정인자 및 파라미터 관리대장 (`CalibrationFactorsRegistryContent`)
  *
  *   - UL-QP-19-01: 연간 교정계획서 (`CalibrationPlanDetailClient`, approved 플랜 상세 — 내보내기 버튼)
- *
- * 미커버 (UI 진입점 부재):
- *   - UL-QP-18-11 보정인자 및 파라미터 관리대장 — `implemented: false` (backend exporter 미구현).
  *
  * @see apps/frontend/tests/e2e/shared/helpers/download-helpers.ts (SSOT helper)
  * @see .claude/exec-plans/tech-debt-tracker.md
@@ -110,6 +108,22 @@ test.describe('WF-Export-UI: 양식 export 사용자 클릭 동선', () => {
     });
 
     expect(download.suggestedFilename()).toMatch(/UL-QP-18-08.*\.(docx|xlsx)$/);
+  });
+
+  test('QP-18-11 보정인자 및 파라미터 관리대장 — testEngineer 클릭 → 다운로드 + 파일명 가드', async ({
+    testOperatorPage: page,
+  }) => {
+    await page.goto('/reports/calibration-factors');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const exportButton = page.getByRole('button', { name: '양식 내보내기' });
+    await expect(exportButton).toBeVisible();
+
+    const download = await expectFileDownload(page, async () => {
+      await exportButton.click();
+    });
+
+    expect(download.suggestedFilename()).toMatch(/UL-QP-18-11.*\.docx$/);
   });
 
   test('QP-18-09 시험 SW 유효성확인 — labManager 클릭 → 다운로드 + 파일명 가드', async ({

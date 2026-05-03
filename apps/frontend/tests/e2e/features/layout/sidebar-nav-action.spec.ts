@@ -19,7 +19,7 @@
  * 실행:
  *   pnpm --filter frontend exec playwright test sidebar-nav-action --project=chromium
  */
-import { test, expect, type ConsoleMessage } from '@playwright/test';
+import { test, expect, type ConsoleMessage, type Page } from '@playwright/test';
 import path from 'path';
 
 const AUTH_DIR = path.join(__dirname, '..', '..', '.auth');
@@ -52,9 +52,20 @@ interface ConsoleViolation {
   text: string;
 }
 
+async function stubYourTurnBadge(page: Page) {
+  await page.route('**/api/checkouts/pending-count', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ count: 1 }),
+    });
+  });
+}
+
 test.describe('Sidebar — nested anchor / hydration regression', () => {
   test('사이드바 진입 시 hydration / nested-anchor 콘솔 위반 0건', async ({ page }) => {
     const violations: ConsoleViolation[] = [];
+    await stubYourTurnBadge(page);
 
     // Listener는 navigate 전에 등록 — 첫 SSR/hydration 단계 메시지도 캐치
     page.on('console', (msg) => {
@@ -94,6 +105,7 @@ test.describe('Sidebar — nested anchor / hydration regression', () => {
   });
 
   test('사이드바 DOM에 nested anchor (a > a) 0건', async ({ page }) => {
+    await stubYourTurnBadge(page);
     await page.goto('/checkouts', { waitUntil: 'domcontentloaded' });
     // hydration 안정화 — sidebar element가 attach되고 nav 첫 항목이 렌더될 때까지
     await page
@@ -111,17 +123,11 @@ test.describe('Sidebar — nested anchor / hydration regression', () => {
   });
 
   test('보조 anchor 렌더 시 Tab 순서: 메인 anchor → 보조 anchor', async ({ page }) => {
+    await stubYourTurnBadge(page);
     await page.goto('/checkouts', { waitUntil: 'domcontentloaded' });
 
     const secondaryAnchor = page.locator('aside#desktop-sidebar a[href*="view=yourTurn"]');
-    const secondaryCount = await secondaryAnchor.count();
-
-    if (secondaryCount === 0) {
-      // 시드에 yourTurn 건이 0이면 보조 anchor가 렌더되지 않음 — Tab 순서 검증은 의미 없음.
-      // 본 케이스는 다른 두 테스트로 충분히 회귀 차단.
-      test.skip(true, 'No yourTurn checkouts in seed — secondary anchor not rendered');
-      return;
-    }
+    await expect(secondaryAnchor.first()).toBeVisible();
 
     const primaryAnchor = page.locator('aside#desktop-sidebar a[href="/checkouts"]').first();
 

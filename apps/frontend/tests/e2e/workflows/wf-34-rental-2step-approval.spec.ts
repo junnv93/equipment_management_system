@@ -164,7 +164,7 @@ test.describe('WF-34: rental 2-step 승인 워크플로우', () => {
   // --------------------------------------------------------------------------
 
   test('T2: 사용 부서 TM borrower-approve → BORROWER_APPROVED', async ({
-    techManagerPage: page,
+    testOperatorPage: page,
   }) => {
     await clearBackendCache();
 

@@ -9,12 +9,13 @@
  *   1. 변경 *없음* → 직접 제출 (SoftForkDialog 안 뜸) — 회귀 가드
  *   2. 변경 *있음* + 권한 미보유(TE) → SoftForkDialog 노출 + apply_forward radio disabled
  *   3. cancel → SoftForkDialog 닫힘 + 점검 미생성 (DB 검증)
- *   4. API-level 권한 분기 — POST /api/equipment/:id/inspection-template:
+ *   4. apply_forward 실제 제출 → template v+1 + inspection 생성
+ *   5. API-level 권한 분기 — POST /api/equipment/:id/inspection-template:
  *      - TE/TM(권한 미보유) → 403
  *      - LM(MANAGE_INSPECTION_TEMPLATE 보유) → 201
  *
- * 더 깊은 인터랙션(this_only / apply_forward 실제 제출, diff visualization 디테일)은
- * RTL 단위 test (`SoftForkDialog.test.tsx` 4 tests)가 cover. 본 e2e는 *경계 검증*에 집중.
+ * 더 깊은 diff visualization 디테일은 RTL 단위 test (`SoftForkDialog.test.tsx` 4 tests)가 cover.
+ * 본 e2e는 제출 경계와 권한 경계 검증에 집중.
  *
  * @see apps/frontend/components/inspections/SoftForkDialog.tsx
  * @see apps/backend/src/modules/inspection-form-templates/inspection-form-templates.controller.ts
@@ -209,10 +210,74 @@ test.describe('WF-19f-2: 표 구조 변경 있음 → SoftForkDialog 노출 + �
 });
 
 // =============================================================================
-// 시나리오 3: API-level 권한 분기 — POST /inspection-template
+// 시나리오 3: 변경 있음 + 권한 보유 → apply_forward 실제 제출
 // =============================================================================
 
-test.describe('WF-19f-3: API 권한 분기 — POST /inspection-template', () => {
+test.describe('WF-19f-3: 표 구조 변경 있음 + 권한 보유 → apply_forward 제출', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    try {
+      await resetIntermediateInspections(WF_CALIBRATION_ID);
+      await seedReferenceTemplate(page);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test.afterAll(async () => {
+    await resetIntermediateInspections(WF_CALIBRATION_ID);
+    await resetInspectionTemplates(WF_EQUIPMENT_ID);
+    await cleanupSharedPool();
+  });
+
+  test('S3: system_admin — apply_forward 선택 → template v2 + 점검 생성', async ({
+    systemAdminPage: page,
+  }) => {
+    await openInspectionDialog(page);
+    const dialog = page.getByRole('dialog');
+
+    await selectOverallResult(page, '적합');
+    await modifyStructure(page);
+
+    await dialog.getByRole('button', { name: '저장' }).click();
+    await expect(page.getByText('양식 구조가 변경되었습니다')).toBeVisible();
+
+    const applyForwardRadio = page.getByRole('radio', {
+      name: /다음 점검부터 변경 적용/,
+    });
+    await expect(applyForwardRadio).toBeEnabled();
+    await expect(applyForwardRadio).toBeChecked();
+
+    await page.getByRole('button', { name: '선택대로 제출' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 10000 });
+
+    const pool = getSharedPool();
+    const inspection = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM intermediate_inspections
+       WHERE calibration_id = $1 AND id::text NOT LIKE 'ffff%'`,
+      [WF_CALIBRATION_ID]
+    );
+    expect(Number(inspection.rows[0].count)).toBe(1);
+
+    const template = await pool.query<{ count: string; latest_version: number }>(
+      `SELECT COUNT(*)::text AS count, MAX(version)::int AS latest_version
+       FROM inspection_form_templates
+       WHERE equipment_id = $1 AND inspection_type = 'intermediate' AND deleted_at IS NULL`,
+      [WF_EQUIPMENT_ID]
+    );
+    expect(Number(template.rows[0].count)).toBeGreaterThanOrEqual(2);
+    expect(template.rows[0].latest_version).toBe(2);
+  });
+});
+
+// =============================================================================
+// 시나리오 4: API-level 권한 분기 — POST /inspection-template
+// =============================================================================
+
+test.describe('WF-19f-4: API 권한 분기 — POST /inspection-template', () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeAll(async () => {

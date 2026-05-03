@@ -8,22 +8,24 @@
  * Playwright `toHaveScreenshot()` 재사용. 의존성 추가 0.
  *
  * 실행:
- *   pnpm --filter frontend exec playwright test visual/dday-6level --project=chromium
+ *   pnpm --filter frontend exec playwright test --config playwright.visual.config.ts visual/dday-6level --project=chromium
  *
  * Baseline 갱신 (의도된 디자인 토큰 변경 시):
- *   pnpm --filter frontend exec playwright test visual/dday-6level --update-snapshots
+ *   pnpm --filter frontend exec playwright test --config playwright.visual.config.ts visual/dday-6level --update-snapshots
  *
- * Fixture: apps/frontend/app/(dashboard)/__visual__/dday/page.tsx (dev-only, production은 notFound)
+ * Fixture: apps/frontend/app/(dashboard)/visual-fixtures/dday/page.tsx (dev-only, production은 notFound)
  */
 
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
 const AUTH_DIR = path.join(__dirname, '../.auth');
-const FIXTURE_PATH = '/__visual__/dday';
+const FIXTURE_PATH = '/visual-fixtures/dday';
 
 // 6-level은 fixture page에서 SSOT 임계값으로 자동 매핑 — 본 spec은 level 카운트만 alert.
 const EXPECTED_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+
+test.use({ trace: 'retain-on-failure' });
 
 test.describe('D-day 6-level visual regression (light)', () => {
   test.use({

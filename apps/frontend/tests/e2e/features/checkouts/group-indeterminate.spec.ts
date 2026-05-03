@@ -20,6 +20,7 @@ const FIXTURE_PATH = '/__visual__/group-indeterminate';
 
 test.use({
   storageState: path.join(AUTH_DIR, 'test-engineer.json'),
+  trace: 'retain-on-failure',
 });
 
 test.describe('CheckoutGroupCard 헤더 indeterminate', () => {

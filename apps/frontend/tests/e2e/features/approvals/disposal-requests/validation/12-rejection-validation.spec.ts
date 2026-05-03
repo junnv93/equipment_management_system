@@ -90,7 +90,7 @@ test.describe('Rejection - Group C', () => {
     await expect(rejectButton).toBeDisabled();
 
     // 13. Verify character count hint shows current length
-    const charCountHint = techManagerPage.locator('p#opinion-hint');
+    const charCountHint = techManagerPage.locator('#opinion-hint');
     await expect(charCountHint).toBeVisible();
     await expect(charCountHint).toContainText(/현재:\s*5자/i);
 
@@ -179,7 +179,7 @@ test.describe('Rejection - Group C', () => {
     await expect(rejectButton).toBeDisabled();
 
     // 13. Verify character count hint
-    const charCountHint = siteAdminPage.locator('p#comment-hint');
+    const charCountHint = siteAdminPage.locator('#comment-hint');
     await expect(charCountHint).toBeVisible();
     await expect(charCountHint).toContainText(/현재:\s*5자/i);
 

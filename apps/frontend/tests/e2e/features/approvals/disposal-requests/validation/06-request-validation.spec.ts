@@ -37,7 +37,7 @@ test.describe('Exceptions - Group D', () => {
     await expect(submitButton).toBeDisabled();
 
     // 6. Verify character count: "현재: 5자 / 최소 10자"
-    const charCountHint = testOperatorPage.locator('p#reasonDetail-hint');
+    const charCountHint = testOperatorPage.locator('#reasonDetail-hint');
     await expect(charCountHint).toContainText('현재: 5자');
 
     // 7. Fill reasonDetail with 10+ chars
