@@ -89,6 +89,23 @@
       "author": "Author",
       "createdAt": "Created"
     },
+    "approvalBar": {
+      "title": "YOUR TURN · Approval Required",
+      "reviewMessage": "This plan needs your review confirmation.",
+      "approveMessage": "This plan needs your final approval.",
+      "meta": "Waiting {days} days · {total} items · external {external} / internal {internal}"
+    },
+    "metaCards": {
+      "year": "Plan Year",
+      "items": "Equipment",
+      "unit": "units",
+      "itemBreakdown": "external {external} · internal {internal}",
+      "status": "Progress",
+      "completed": "Approved",
+      "pendingDays": "Waiting {days} days",
+      "version": "Version",
+      "updatedAt": "Updated"
+    },
     "actions": {
       "exportExcel": "Export Excel",
       "delete": "Delete",
@@ -253,9 +270,14 @@
     "registerButton": "Register Calibration",
     "stats": {
       "total": "Total Calibration Equipment",
+      "totalSmall": "Total",
+      "thisMonthDue": "Due This Month",
       "compliant": "Compliant Equipment",
       "overdue": "Calibration Overdue",
+      "overdueHint": "Immediate action needed",
       "upcoming": "Due Within 30 Days",
+      "completedThisQuarter": "Quarter Pass",
+      "approvedResultHint": "Approved records",
       "unit": "{count} units",
       "unitSuffix": "units",
       "viewDetails": "View Details"
@@ -303,6 +325,16 @@
       "list": "Calibration List",
       "selfInspection": "Self-Inspection"
     },
+    "monthlyCalendar": {
+      "title": "6-Month Calibration Due",
+      "overdueLegend": "Overdue",
+      "warningLegend": "D-30",
+      "normalLegend": "Normal",
+      "currentMonth": "This Month",
+      "overdueCount": "Overdue {count}",
+      "warningCount": "D-30 {count}",
+      "empty": "None"
+    },
     "timeline": {
       "moreItems": "+{count} more",
       "segmentLabel": "{month} calibrations: {count}",
@@ -326,7 +358,9 @@
       "calibrationAgency": "Agency",
       "status": "Status",
       "action": "Action",
-      "registerCalibration": "Register"
+      "registerCalibration": "Register",
+      "editCalibration": "Edit",
+      "viewDetail": "Detail"
     },
     "statusText": {
       "none": "Unregistered",
@@ -516,6 +550,19 @@
       "error": "An error occurred while loading the plan list.",
       "empty": "No calibration plans found"
     },
+    "yourTurn": {
+      "title": "Awaiting My Approval · {count}",
+      "description": "Plans that can be processed with your current permissions.",
+      "filterAction": "Show My Turn",
+      "waitDays": "Waiting {days}d",
+      "openAction": "Open"
+    },
+    "viewMode": {
+      "label": "Plan list view mode",
+      "cards": "Card view",
+      "table": "Table view"
+    },
+    "rejectionInline": "Rejected: {reason}",
     "yearUnit": "{year}",
     "rowAriaLabel": "{year} {site} Calibration Plan, status: {status}. View details",
     "table": {
@@ -871,7 +918,9 @@
       "defaultColumnHeader": "Column {number}",
       "columnHeaderAriaLabel": "Column {number} header",
       "tableCellAriaLabel": "Row {row}, column {column} cell",
+      "tableCellPlaceholder": "Enter value",
       "pasteData": "Paste data (tab-separated)",
+      "pasteButton": "Paste",
       "imageWidth": "Image Width (cm)",
       "imageHeight": "Image Height (cm)",
       "selectFile": "Select File",
@@ -935,12 +984,36 @@
     "cycleOption": "{months} months",
     "nextCalibrationDate": "Next Calibration Date",
     "suggestedLabel": "auto-calculated",
+    "autoCalculated": "Auto",
+    "nextCalibrationHint": "Calculated from the {months}-month calibration cycle. You can still edit it.",
+    "flow": {
+      "label": "After Submit",
+      "author": "Draft",
+      "reviewer": "Manager Review",
+      "done": "Approved",
+      "eta": "ETA 1-2 days"
+    },
+    "sections": {
+      "when": "1. When",
+      "certificate": "2. Agency and Certificate",
+      "result": "3. Result",
+      "attachment": "4. Attachment and Notes"
+    },
     "calibrationAgency": "Calibration Agency",
     "calibrationAgencyPlaceholder": "Name of the calibration agency",
     "certificateNumber": "Certificate Number",
     "certificateNumberPlaceholder": "Calibration certificate number (optional)",
     "result": "Calibration Result",
     "resultPlaceholder": "Select result",
+    "resultDescriptions": {
+      "pass": "All points are within tolerance",
+      "conditional": "Pass after adjustment or recalibration",
+      "fail": "Requires restriction and non-conformance review"
+    },
+    "failWorkflow": {
+      "title": "Fail Follow-up",
+      "description": "A failed calibration requires equipment use restriction and non-conformance review."
+    },
     "certificateFile": "Calibration Certificate (Required)",
     "certificateFileDrop": "Drop file here or click to upload",
     "certificateFileHint": "PDF, JPG, PNG supported · Max 10MB",
@@ -949,6 +1022,11 @@
     "cancel": "Cancel",
     "submit": "Register Calibration (Request Approval)",
     "submitting": "Processing...",
+    "sticky": {
+      "step": "Step 4/4 · Required fields check",
+      "defaultHint": "Submitting sends an approval request to the technical manager.",
+      "failHint": "Failed results require follow-up non-conformance handling."
+    },
     "successTitle": "Calibration Registered",
     "successDesc": "Calibration record registered. It will be applied after technical manager approval.",
     "errorTitle": "Registration Failed",

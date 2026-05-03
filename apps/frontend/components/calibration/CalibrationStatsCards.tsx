@@ -17,6 +17,7 @@ interface Stats {
   compliant: number;
   overdue: number;
   upcoming: number;
+  completedThisQuarter: number;
 }
 
 interface Props {
@@ -75,28 +76,40 @@ export default function CalibrationStatsCards({ stats }: Props) {
 
   return (
     <div className={CALIBRATION_KPI.grid}>
-      {/* Hero Card — 전체 관리 장비 (1.8fr) */}
-      <KpiCard type="total" staggerIndex={0}>
+      {/* Hero Card — 이번 달/30일 이내 도래 */}
+      <KpiCard type="upcoming" staggerIndex={0}>
         <CardContent className="pt-5 pb-4">
-          <div className={CALIBRATION_KPI.label}>{t('content.stats.total')}</div>
-          <div className={CALIBRATION_KPI.hero.value} data-testid="calibration-stat-total">
-            {stats.total}
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.thisMonthDue')}</div>
+          <div className={CALIBRATION_KPI.hero.value} data-testid="calibration-stat-upcoming">
+            {stats.upcoming}
             <span className={CALIBRATION_KPI.hero.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
           <div className={CALIBRATION_KPI.hero.sub}>
-            {t('content.stats.compliant')}{' '}
-            <span className={CALIBRATION_KPI.hero.subOk}>{stats.compliant}</span>
-            {' · '}
             {t('content.stats.overdue')}{' '}
             <span className={CALIBRATION_KPI.hero.subCritical}>{stats.overdue}</span>
             {' · '}
-            {t('content.stats.upcoming')} {stats.upcoming}
+            {t('content.stats.totalSmall')} {stats.total}
           </div>
         </CardContent>
       </KpiCard>
 
-      {/* Compact — 교정 적합 (링크 없음: total - overdue 파생값) */}
-      <KpiCard type="compliant" staggerIndex={1}>
+      {/* Compact — 기한 초과 */}
+      <KpiCard type="overdue" staggerIndex={1}>
+        <CardContent className="pt-5 pb-4">
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.overdue')}</div>
+          <div
+            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.overdue}`}
+            data-testid="calibration-stat-overdue"
+          >
+            {stats.overdue}
+            <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
+          </div>
+          <div className="text-xs text-muted-foreground">{t('content.stats.overdueHint')}</div>
+        </CardContent>
+      </KpiCard>
+
+      {/* Compact — 정상 장비 */}
+      <KpiCard type="compliant" staggerIndex={2}>
         <CardContent className="pt-5 pb-4">
           <div className={CALIBRATION_KPI.label}>{t('content.stats.compliant')}</div>
           <div
@@ -109,30 +122,19 @@ export default function CalibrationStatsCards({ stats }: Props) {
         </CardContent>
       </KpiCard>
 
-      {/* Compact — 기한 초과 */}
-      <KpiCard type="overdue" staggerIndex={2}>
+      {/* Compact — 이번 분기 완료 대체 지표 */}
+      <KpiCard type="total" staggerIndex={3}>
         <CardContent className="pt-5 pb-4">
-          <div className={CALIBRATION_KPI.label}>{t('content.stats.overdue')}</div>
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.completedThisQuarter')}</div>
           <div
-            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.overdue}`}
-            data-testid="calibration-stat-overdue"
+            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.compliant}`}
+            data-testid="calibration-stat-completed-quarter"
           >
-            {stats.overdue}
+            {stats.completedThisQuarter}
             <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
-        </CardContent>
-      </KpiCard>
-
-      {/* Compact — 교정 예정 (30일) */}
-      <KpiCard type="upcoming" staggerIndex={3}>
-        <CardContent className="pt-5 pb-4">
-          <div className={CALIBRATION_KPI.label}>{t('content.stats.upcoming')}</div>
-          <div
-            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.upcoming}`}
-            data-testid="calibration-stat-upcoming"
-          >
-            {stats.upcoming}
-            <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
+          <div className="text-xs text-muted-foreground">
+            {t('content.stats.approvedResultHint')}
           </div>
         </CardContent>
       </KpiCard>

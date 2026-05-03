@@ -89,6 +89,23 @@
       "author": "작성자",
       "createdAt": "작성일"
     },
+    "approvalBar": {
+      "title": "YOUR TURN · 결재 차례",
+      "reviewMessage": "이 계획서의 확인 완료가 필요합니다.",
+      "approveMessage": "이 계획서의 최종 승인이 필요합니다.",
+      "meta": "{days}일 대기 · 대상 {total}대 · 외부 {external} / 자체 {internal}"
+    },
+    "metaCards": {
+      "year": "계획 년도",
+      "items": "대상 장비",
+      "unit": "대",
+      "itemBreakdown": "외부 {external} · 자체 {internal}",
+      "status": "진행 상태",
+      "completed": "승인 완료",
+      "pendingDays": "{days}일째 대기",
+      "version": "계획서 버전",
+      "updatedAt": "최종 수정"
+    },
     "actions": {
       "exportExcel": "Excel 내보내기",
       "delete": "삭제",
@@ -253,9 +270,14 @@
     "registerButton": "교정 정보 등록",
     "stats": {
       "total": "전체 교정 장비",
+      "totalSmall": "전체",
+      "thisMonthDue": "이번 달 교정 도래",
       "compliant": "정상 장비",
       "overdue": "교정 기한 초과",
+      "overdueHint": "즉시 조치 필요",
       "upcoming": "30일 이내 교정 필요",
+      "completedThisQuarter": "이번 분기 적합",
+      "approvedResultHint": "승인 완료 기준",
       "unit": "{count}대",
       "unitSuffix": "대",
       "viewDetails": "확인하기"
@@ -303,6 +325,16 @@
       "list": "교정목록",
       "selfInspection": "자체점검"
     },
+    "monthlyCalendar": {
+      "title": "6개월 교정 도래",
+      "overdueLegend": "초과",
+      "warningLegend": "D-30",
+      "normalLegend": "정상",
+      "currentMonth": "이번 달",
+      "overdueCount": "초과 {count}",
+      "warningCount": "D-30 {count}",
+      "empty": "예정 없음"
+    },
     "timeline": {
       "moreItems": "+{count}개 더",
       "segmentLabel": "{month} 교정 {count}건",
@@ -326,7 +358,9 @@
       "calibrationAgency": "교정 기관",
       "status": "상태",
       "action": "관리",
-      "registerCalibration": "교정 등록"
+      "registerCalibration": "교정 등록",
+      "editCalibration": "수정",
+      "viewDetail": "상세"
     },
     "statusText": {
       "none": "미등록",
@@ -516,6 +550,19 @@
       "error": "계획서 목록을 불러오는 중 오류가 발생했습니다.",
       "empty": "등록된 교정계획서가 없습니다"
     },
+    "yourTurn": {
+      "title": "내 결재 대기 · {count}건",
+      "description": "본인 권한으로 처리할 수 있는 계획서입니다.",
+      "filterAction": "내 차례만 보기",
+      "waitDays": "{days}일 대기",
+      "openAction": "열기"
+    },
+    "viewMode": {
+      "label": "계획서 목록 보기 방식",
+      "cards": "카드 보기",
+      "table": "표 보기"
+    },
+    "rejectionInline": "반려: {reason}",
     "yearUnit": "{year}년",
     "rowAriaLabel": "{year}년 {site} 교정계획서, 상태: {status}. 상세 보기",
     "table": {
@@ -871,7 +918,9 @@
       "defaultColumnHeader": "열 {number}",
       "columnHeaderAriaLabel": "{number}번 열 헤더",
       "tableCellAriaLabel": "{row}행 {column}열 셀",
+      "tableCellPlaceholder": "값 입력",
       "pasteData": "데이터 붙여넣기 (탭 구분)",
+      "pasteButton": "붙여넣기",
       "imageWidth": "이미지 너비 (cm)",
       "imageHeight": "이미지 높이 (cm)",
       "selectFile": "파일 선택",
@@ -990,12 +1039,36 @@
     "cycleOption": "{months}개월",
     "nextCalibrationDate": "다음 교정 예정일",
     "suggestedLabel": "자동 계산",
+    "autoCalculated": "자동 계산",
+    "nextCalibrationHint": "교정 주기 {months}개월 기준으로 계산됩니다. 필요 시 수정할 수 있습니다.",
+    "flow": {
+      "label": "등록 후 흐름",
+      "author": "작성",
+      "reviewer": "팀장 검토",
+      "done": "승인 완료",
+      "eta": "예상 1~2일"
+    },
+    "sections": {
+      "when": "① 언제",
+      "certificate": "② 어디서·어떻게",
+      "result": "③ 결과",
+      "attachment": "④ 첨부·비고"
+    },
     "calibrationAgency": "교정 기관",
     "calibrationAgencyPlaceholder": "교정을 수행한 기관 이름",
     "certificateNumber": "성적서 번호",
     "certificateNumberPlaceholder": "교정 성적서 번호 (선택)",
     "result": "교정 결과",
     "resultPlaceholder": "교정 결과 선택",
+    "resultDescriptions": {
+      "pass": "전 항목 허용 범위 이내",
+      "conditional": "조정·재교정 후 적합",
+      "fail": "사용 중지 및 부적합 처리 필요"
+    },
+    "failWorkflow": {
+      "title": "불합격 후속 조치",
+      "description": "불합격 등록 시 장비 사용 제한과 부적합 처리 검토가 필요합니다."
+    },
     "certificateFile": "교정 성적서 (필수)",
     "certificateFileDrop": "파일을 여기에 놓거나 클릭하여 업로드",
     "certificateFileHint": "PDF, JPG, PNG 파일 지원 · 최대 10MB",
@@ -1004,6 +1077,11 @@
     "cancel": "취소",
     "submit": "교정 정보 등록 (승인 요청)",
     "submitting": "처리 중...",
+    "sticky": {
+      "step": "단계 4/4 · 필수 입력 확인",
+      "defaultHint": "등록 시 기술책임자에게 승인 요청이 발송됩니다.",
+      "failHint": "불합격 등록 시 후속 부적합 조치를 함께 검토해야 합니다."
+    },
     "successTitle": "교정 기록 등록 완료",
     "successDesc": "교정 기록이 등록되었습니다. 기술책임자의 승인 후 반영됩니다.",
     "errorTitle": "교정 기록 등록 실패",

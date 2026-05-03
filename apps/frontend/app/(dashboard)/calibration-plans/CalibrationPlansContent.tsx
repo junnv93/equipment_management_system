@@ -1,11 +1,14 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { NavLink } from '@/components/navigation/nav-link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Table,
   TableBody,
@@ -33,10 +36,23 @@ import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filter
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { Plus, FileText, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  FileText,
+  Users,
+  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Table2,
+  Eye,
+} from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
-import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import {
+  CALIBRATION_PLAN_STATUS_VALUES,
+  CalibrationPlanStatusValues as CPStatus,
+} from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import {
@@ -77,6 +93,7 @@ export default function CalibrationPlansContent({
   initialFilters,
 }: CalibrationPlansContentProps) {
   const currentYear = new Date().getFullYear();
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { session, can } = useAuth();
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('calibration');
@@ -101,6 +118,8 @@ export default function CalibrationPlansContent({
 
   // 계획서 생성 권한 체크 (QM은 CREATE_CALIBRATION_PLAN 없음)
   const canCreatePlan = can(Permission.CREATE_CALIBRATION_PLAN);
+  const canReviewPlan = can(Permission.REVIEW_CALIBRATION_PLAN);
+  const canApprovePlan = can(Permission.APPROVE_CALIBRATION_PLAN);
 
   // 팀 목록 조회 (필터링용)
   const { data: teamsData } = useQuery({
@@ -133,7 +152,7 @@ export default function CalibrationPlansContent({
     ...QUERY_CONFIG.CALIBRATION_PLANS,
   });
 
-  const plans = data?.data || [];
+  const plans = useMemo(() => data?.data ?? [], [data?.data]);
   // ✅ 서버 집계 summary 사용 (페이지네이션에 무관한 정확한 전체 통계)
   const summary = data?.meta?.summary;
 
@@ -150,6 +169,16 @@ export default function CalibrationPlansContent({
 
   // 연도 옵션 생성 (현재 연도 기준 +-2년)
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+
+  const yourTurnPlans = useMemo(
+    () =>
+      plans.filter(
+        (plan) =>
+          (plan.status === CPStatus.PENDING_REVIEW && canReviewPlan) ||
+          (plan.status === CPStatus.PENDING_APPROVAL && canApprovePlan)
+      ),
+    [plans, canReviewPlan, canApprovePlan]
+  );
 
   const kpiItems: Array<{
     key: string;
@@ -276,6 +305,77 @@ export default function CalibrationPlansContent({
         })}
       </div>
 
+      {yourTurnPlans.length > 0 && (
+        <section className="rounded-lg border border-info/30 bg-info/5 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-info">
+                {t('plansList.yourTurn.title', { count: yourTurnPlans.length })}
+              </h2>
+              <p className="text-xs text-muted-foreground">{t('plansList.yourTurn.description')}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                updateStatus(
+                  canReviewPlan && !canApprovePlan
+                    ? CPStatus.PENDING_REVIEW
+                    : CPStatus.PENDING_APPROVAL
+                )
+              }
+            >
+              {t('plansList.yourTurn.filterAction')}
+            </Button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {yourTurnPlans.slice(0, 4).map((plan) => {
+              const teamName =
+                plan.teamName ||
+                (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
+              const waitBase = plan.submittedAt ?? plan.createdAt;
+              const waitDays = Math.max(
+                0,
+                Math.floor((Date.now() - new Date(waitBase).getTime()) / 86_400_000)
+              );
+
+              return (
+                <Link
+                  key={plan.id}
+                  href={FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(plan.id)}
+                  className="rounded-md border bg-background p-3 no-underline transition hover:border-info/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium">
+                        {t('plansList.yearUnit', { year: plan.year })}{' '}
+                        {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {teamName || '-'} · {resolveDisplayName(plan.authorName, plan.createdBy)}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(waitDays >= 3 && 'border-brand-warning text-brand-warning')}
+                    >
+                      {t('plansList.yourTurn.waitDays', { days: waitDays })}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <PlanStatusBadge status={plan.status} />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-info">
+                      <Eye className="h-3.5 w-3.5" />
+                      {t('plansList.yourTurn.openAction')}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── 필터 바 ──────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_FILTER_TOKENS.bar}>
         <div className="space-y-1">
@@ -376,6 +476,31 @@ export default function CalibrationPlansContent({
 
       {/* ── 계획서 목록 ────────────────────────────── */}
       <div className={CALIBRATION_PLAN_LIST_TOKENS.container.wrapper}>
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold">{t('plansList.list.title')}</h2>
+            <p className="text-xs text-muted-foreground">
+              {t('plansList.list.description', {
+                count: data?.meta?.pagination?.total ?? plans.length,
+              })}
+            </p>
+          </div>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(value) => {
+              if (value === 'cards' || value === 'table') setViewMode(value);
+            }}
+            aria-label={t('plansList.viewMode.label')}
+          >
+            <ToggleGroupItem value="cards" aria-label={t('plansList.viewMode.cards')}>
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label={t('plansList.viewMode.table')}>
+              <Table2 className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
         {isLoading ? (
           <div className="p-4 space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -404,6 +529,72 @@ export default function CalibrationPlansContent({
                 </Link>
               </Button>
             )}
+          </div>
+        ) : viewMode === 'cards' ? (
+          <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+            {plans.map((plan: CalibrationPlan, index: number) => {
+              const key = plan.id || `plan-card-fallback-${plan.year}-${plan.siteId}-${index}`;
+              const teamName =
+                plan.teamName ||
+                (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
+              const waitBase = plan.submittedAt ?? plan.createdAt;
+              const waitDays = Math.max(
+                0,
+                Math.floor((Date.now() - new Date(waitBase).getTime()) / 86_400_000)
+              );
+              const isYourTurn =
+                (plan.status === CPStatus.PENDING_REVIEW && canReviewPlan) ||
+                (plan.status === CPStatus.PENDING_APPROVAL && canApprovePlan);
+
+              return (
+                <Link
+                  key={key}
+                  href={FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(plan.id)}
+                  className={cn(
+                    'rounded-lg border bg-card p-4 no-underline transition hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    isYourTurn && 'border-info/40 bg-info/5'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-semibold">
+                        {t('plansList.yearUnit', { year: plan.year })}{' '}
+                        {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {teamName || '-'} · {resolveDisplayName(plan.authorName, plan.createdBy)}
+                      </div>
+                    </div>
+                    {isYourTurn && (
+                      <Badge className="bg-info text-info-foreground">YOUR TURN</Badge>
+                    )}
+                  </div>
+                  <div className="mt-4">
+                    <PlanStatusBadge status={plan.status} />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {t('plansList.table.createdAt')}: {fmtDate(plan.createdAt)}
+                    </span>
+                    {plan.status !== CPStatus.APPROVED && (
+                      <span
+                        className={cn(
+                          'font-mono',
+                          waitDays >= 3 && 'font-semibold text-brand-warning'
+                        )}
+                      >
+                        {t('plansList.yourTurn.waitDays', { days: waitDays })}
+                      </span>
+                    )}
+                  </div>
+                  {plan.status === CPStatus.REJECTED && plan.rejectionReason && (
+                    <div className="mt-3 line-clamp-1 rounded-md border border-brand-critical/20 bg-brand-critical/5 px-2 py-1.5 text-xs text-brand-critical">
+                      {t('plansList.rejectionInline', { reason: plan.rejectionReason })}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <Table>

@@ -38,6 +38,7 @@ import CalibrationTimeline, {
 } from '@/components/calibration/CalibrationTimeline';
 import CalibrationListTable from '@/components/calibration/CalibrationListTable';
 import CalibrationAlertBanners from '@/components/calibration/CalibrationAlertBanners';
+import MonthlyCalibrationCalendar from '@/components/calibration/MonthlyCalibrationCalendar';
 
 interface CalibrationContentProps {
   initialSummary?: CalibrationSummary;
@@ -58,6 +59,7 @@ export default function CalibrationContent({
     updateApprovalStatus,
     updateResult,
     updateCalibrationDueStatus,
+    updateDateRange,
     clearFilters,
   } = useCalibrationFilters(initialFilters);
 
@@ -114,11 +116,23 @@ export default function CalibrationContent({
     const params: Record<string, string | undefined> = {
       teamId: defaultTeamId,
       site: defaultSite,
+      approvalStatus: filters.approvalStatus || undefined,
+      result: filters.result || undefined,
       calibrationDueStatus: filters.calibrationDueStatus || undefined,
+      startDate: filters.startDate || undefined,
+      endDate: filters.endDate || undefined,
     };
     // undefined 값 제거 (queryKey 안정성)
     return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined));
-  }, [defaultTeamId, defaultSite, filters.calibrationDueStatus]);
+  }, [
+    defaultTeamId,
+    defaultSite,
+    filters.approvalStatus,
+    filters.result,
+    filters.calibrationDueStatus,
+    filters.startDate,
+    filters.endDate,
+  ]);
 
   const { data: calibrationHistoryData, isLoading: isHistoryLoading } = useQuery({
     queryKey: queryKeys.calibrations.historyList(
@@ -148,6 +162,7 @@ export default function CalibrationContent({
     compliant: (summaryData?.total ?? 0) - (summaryData?.overdueCount ?? 0),
     overdue: summaryData?.overdueCount ?? 0,
     upcoming: summaryData?.dueInMonthCount ?? 0,
+    completedThisQuarter: summaryData?.passCount ?? 0,
   };
 
   // overdueData + upcomingData + historyData에서 nextCalibrationDate 있는 항목 수집 (중복 제거)
@@ -216,6 +231,19 @@ export default function CalibrationContent({
 
       {/* 통계 카드 */}
       <CalibrationStatsCards stats={stats} />
+
+      <MonthlyCalibrationCalendar
+        items={timelineItems}
+        selectedStartDate={filters.startDate}
+        selectedEndDate={filters.endDate}
+        onSelectMonth={({ startDate, endDate }) => {
+          if (filters.startDate === startDate && filters.endDate === endDate) {
+            updateDateRange('', '');
+            return;
+          }
+          updateDateRange(startDate, endDate);
+        }}
+      />
 
       {/* 필터 바 (Compact Filter Bar — CHECKOUT_FILTER_BAR_TOKENS 대칭) */}
       <div className={CALIBRATION_FILTER_BAR.container}>
@@ -405,6 +433,16 @@ export default function CalibrationContent({
                 onClick={() => updateCalibrationDueStatus('')}
               >
                 {t(`content.filters.calibrationDueStatusOptions.${filters.calibrationDueStatus}`)}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
+            {filters.startDate && filters.endDate && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateDateRange('', '')}
+              >
+                {filters.startDate} ~ {filters.endDate}
                 <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
               </button>
             )}

@@ -2,7 +2,7 @@
 
 import { NavLink } from '@/components/navigation/nav-link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, Clock } from 'lucide-react';
+import { CalendarDays, Clock, Eye, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -27,6 +27,17 @@ import {
 } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { CalibrationHistory } from '@/lib/api/calibration-api';
+
+function resolveRowAction(
+  item: CalibrationHistory,
+  days: number | null
+): 'register' | 'edit' | 'detail' | null {
+  if (item.approvalStatus === 'pending_approval') return 'detail';
+  if (item.approvalStatus === 'rejected') return 'edit';
+  if (item.approvalStatus === 'approved') return 'detail';
+  if (days !== null && days <= 30) return 'register';
+  return null;
+}
 
 interface Props {
   data: CalibrationHistory[];
@@ -120,7 +131,7 @@ export default function CalibrationListTable({
               <TableRow
                 key={item.id}
                 ref={isHighlighted ? highlightRef : undefined}
-                className={`${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover} ${rowClasses} ${
+                className={`group ${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover} ${rowClasses} ${
                   isHighlighted
                     ? 'ring-2 ring-blue-400 ring-inset bg-blue-50 dark:bg-blue-950/40'
                     : ''
@@ -151,16 +162,34 @@ export default function CalibrationListTable({
                 </TableCell>
                 {canRegister && (
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        router.push(`/calibration/register?equipmentId=${item.equipmentId}`)
-                      }
-                    >
-                      <Clock className="h-4 w-4 mr-1" />
-                      {t('content.table.registerCalibration')}
-                    </Button>
+                    {(() => {
+                      const action = resolveRowAction(item, days);
+                      if (!action) return <span className="text-xs text-muted-foreground">-</span>;
+
+                      const isRegisterLike = action === 'register' || action === 'edit';
+                      const href = isRegisterLike
+                        ? `/calibration/register?equipmentId=${item.equipmentId}`
+                        : FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.equipmentId);
+                      const Icon = action === 'edit' ? Pencil : action === 'detail' ? Eye : Clock;
+                      const label =
+                        action === 'edit'
+                          ? t('content.table.editCalibration')
+                          : action === 'detail'
+                            ? t('content.table.viewDetail')
+                            : t('content.table.registerCalibration');
+
+                      return (
+                        <Button
+                          variant={isRegisterLike ? 'outline' : 'ghost'}
+                          size="sm"
+                          className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                          onClick={() => router.push(href)}
+                        >
+                          <Icon className="h-4 w-4 mr-1" />
+                          {label}
+                        </Button>
+                      );
+                    })()}
                   </TableCell>
                 )}
               </TableRow>

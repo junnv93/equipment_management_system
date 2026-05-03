@@ -187,6 +187,38 @@ export const INSPECTION_TABLE = {
 } as const;
 
 // ============================================================================
+// 7a. INSPECTION_VISUAL_TABLE_EDITOR — result section table editor
+// ============================================================================
+
+/**
+ * 결과 섹션 테이블 편집기 시각 토큰.
+ *
+ * SSOT: VisualTableEditor의 toolbar/table/delete affordance.
+ */
+export const INSPECTION_VISUAL_TABLE_EDITOR = {
+  toolbar: 'flex flex-col gap-2 min-[720px]:flex-row min-[720px]:items-center',
+  toolbarGroup: 'flex flex-wrap items-center gap-2',
+  toolbarHelpGroup: 'flex flex-wrap items-center gap-2 min-[720px]:ml-auto min-[720px]:justify-end',
+  pasteButton: 'text-xs',
+  tableViewport: 'relative max-h-[16rem] overflow-auto rounded border bg-background',
+  table: 'min-w-[42rem] w-full border-collapse',
+  headerCell: 'group relative border-b border-r bg-muted/45 last:border-r-0',
+  headerInput:
+    'h-10 rounded-none border-0 bg-transparent px-3 text-xs font-semibold focus-visible:bg-primary/5 focus-visible:ring-0 focus-visible:ring-offset-0',
+  deleteColumnButton:
+    'absolute right-1 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 group-hover:opacity-100',
+  cell: 'relative border-r border-b p-0 last:border-r-0',
+  cellInput:
+    'h-11 rounded-none border-0 bg-transparent px-3 font-mono text-xs tabular-nums focus-visible:bg-primary/5 focus-visible:ring-0 focus-visible:ring-offset-0',
+  imageToggleButton:
+    'absolute bottom-0 right-0 z-10 flex h-6 w-6 items-center justify-center rounded-tl-md bg-muted/80 hover:bg-primary/10',
+  rowDeleteCell: 'w-12 border-b p-0 text-center align-middle',
+  rowDeleteButton:
+    'h-11 w-11 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/60',
+  emptyCell: 'h-24 text-center text-sm text-muted-foreground',
+} as const;
+
+// ============================================================================
 // 7b. INSPECTION_FORM_LAYOUT — responsive field grids
 // ============================================================================
 

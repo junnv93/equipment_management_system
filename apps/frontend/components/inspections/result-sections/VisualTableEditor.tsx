@@ -2,17 +2,17 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
+import { ClipboardPaste, Plus, Trash2, Upload, X, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   INSPECTION_SPACING,
   INSPECTION_TABLE,
+  INSPECTION_VISUAL_TABLE_EDITOR,
   INSPECTION_TABLE_PASTE_MODE,
   INSPECTION_KEYBOARD_HINT,
   INSPECTION_TABLE_FOCUS_RING,
   INSPECTION_CELL_PROVENANCE,
-  TRANSITION_PRESETS,
   type InspectionPasteMode,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -385,85 +385,91 @@ export default function VisualTableEditor({
   return (
     <div className={INSPECTION_SPACING.group}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={addColumn} className="text-xs">
-          <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
-          {t('form.addColumn')}
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={addRow} className="text-xs">
-          <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
-          {t('form.addRow')}
-        </Button>
+      <div className={INSPECTION_VISUAL_TABLE_EDITOR.toolbar}>
+        <div className={INSPECTION_VISUAL_TABLE_EDITOR.toolbarGroup}>
+          <Button type="button" size="sm" variant="outline" onClick={addColumn} className="text-xs">
+            <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
+            {t('form.addColumn')}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={addRow} className="text-xs">
+            <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
+            {t('form.addRow')}
+          </Button>
 
-        {/* Phase 0A: Undo / Redo */}
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={undoStructural}
-          disabled={!canUndo}
-          aria-label={t('keyboardHints.undo')}
-          title={`${t('keyboardHints.undo')} (${undoShortcutLabel})`}
-          className="text-xs"
-        >
-          <Undo2 className="h-3 w-3" aria-hidden="true" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={redoStructural}
-          disabled={!canRedo}
-          aria-label={t('keyboardHints.redo')}
-          title={t('keyboardHints.redo')}
-          className="text-xs"
-        >
-          <Redo2 className="h-3 w-3" aria-hidden="true" />
-        </Button>
-
-        {/* Phase 0A: Keyboard hint bar (dismissible) */}
-        {!hintsDismissed && (
-          <div
-            className={cn(INSPECTION_KEYBOARD_HINT.bar, 'ml-auto')}
-            role="note"
-            aria-label={t('keyboardHints.ariaLabel')}
+          {/* Phase 0A: Undo / Redo */}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={undoStructural}
+            disabled={!canUndo}
+            aria-label={t('keyboardHints.undo')}
+            title={`${t('keyboardHints.undo')} (${undoShortcutLabel})`}
+            className="h-8 w-8 p-0"
           >
-            <span className={INSPECTION_KEYBOARD_HINT.item}>
-              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↵</kbd>
-              {t('keyboardHints.nextRow')}
-            </span>
-            <span className={INSPECTION_KEYBOARD_HINT.item}>
-              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↑↓</kbd>
-              {t('keyboardHints.cellNav')}
-            </span>
-            <span className={INSPECTION_KEYBOARD_HINT.item}>
-              <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>{undoShortcutLabel}</kbd>
-              {t('keyboardHints.undo')}
-            </span>
-            <button
-              type="button"
-              className={INSPECTION_KEYBOARD_HINT.dismissButton}
-              onClick={() => setHintsDismissed(true)}
-              aria-label={t('keyboardHints.dismiss')}
-              title={t('keyboardHints.dismiss')}
-            >
-              <X className="h-3 w-3" aria-hidden="true" />
-            </button>
-          </div>
-        )}
+            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={redoStructural}
+            disabled={!canRedo}
+            aria-label={t('keyboardHints.redo')}
+            title={t('keyboardHints.redo')}
+            className="h-8 w-8 p-0"
+          >
+            <Redo2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        </div>
 
-        <Button
-          type="button"
-          size="sm"
-          variant={showPasteArea ? 'default' : 'ghost'}
-          onClick={() => {
-            setShowPasteArea(!showPasteArea);
-            if (!showPasteArea) setTimeout(() => pasteRef.current?.focus(), 50);
-          }}
-          className="text-xs"
-        >
-          {t('form.pasteData')}
-        </Button>
+        <div className={INSPECTION_VISUAL_TABLE_EDITOR.toolbarHelpGroup}>
+          {/* Phase 0A: Keyboard hint bar (dismissible) */}
+          {!hintsDismissed && (
+            <div
+              className={INSPECTION_KEYBOARD_HINT.bar}
+              role="note"
+              aria-label={t('keyboardHints.ariaLabel')}
+            >
+              <span className={INSPECTION_KEYBOARD_HINT.item}>
+                <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↵</kbd>
+                {t('keyboardHints.nextRow')}
+              </span>
+              <span className={INSPECTION_KEYBOARD_HINT.item}>
+                <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>↑↓</kbd>
+                {t('keyboardHints.cellNav')}
+              </span>
+              <span className={INSPECTION_KEYBOARD_HINT.item}>
+                <kbd className={INSPECTION_KEYBOARD_HINT.kbd}>{undoShortcutLabel}</kbd>
+                {t('keyboardHints.undo')}
+              </span>
+              <button
+                type="button"
+                className={INSPECTION_KEYBOARD_HINT.dismissButton}
+                onClick={() => setHintsDismissed(true)}
+                aria-label={t('keyboardHints.dismiss')}
+                title={t('keyboardHints.dismiss')}
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            size="sm"
+            variant={showPasteArea ? 'default' : 'outline'}
+            onClick={() => {
+              setShowPasteArea(!showPasteArea);
+              if (!showPasteArea) setTimeout(() => pasteRef.current?.focus(), 50);
+            }}
+            className={INSPECTION_VISUAL_TABLE_EDITOR.pasteButton}
+            title={t('form.pasteData')}
+          >
+            <ClipboardPaste className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+            {t('form.pasteButton')}
+          </Button>
+        </div>
       </div>
 
       {/* Paste area (collapsible) */}
@@ -603,39 +609,26 @@ export default function VisualTableEditor({
       </AlertDialog>
 
       {/* Visual table grid */}
-      <div className={cn(INSPECTION_TABLE.wrapper, 'relative')}>
-        <table className="w-full border-collapse">
+      <div className={INSPECTION_VISUAL_TABLE_EDITOR.tableViewport}>
+        <table className={INSPECTION_VISUAL_TABLE_EDITOR.table}>
           {/* Header row */}
           <thead>
             <tr>
               {headers.map((h, ci) => (
-                <th
-                  key={ci}
-                  className="relative group border-b border-r last:border-r-0 bg-muted/50"
-                >
+                <th key={ci} className={INSPECTION_VISUAL_TABLE_EDITOR.headerCell}>
                   <Input
                     name={`resultSectionHeader.${ci}`}
                     aria-label={t('form.columnHeaderAriaLabel', { number: ci + 1 })}
                     value={h}
                     onChange={(e) => updateHeader(ci, e.target.value)}
                     placeholder={t('form.defaultColumnHeader', { number: ci + 1 })}
-                    className={cn(
-                      'border-0 rounded-none bg-transparent text-xs font-semibold h-9 px-2',
-                      'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-primary/5'
-                    )}
+                    className={INSPECTION_VISUAL_TABLE_EDITOR.headerInput}
                   />
                   {headers.length > 1 && (
-                    // Phase 0B: 항상 노출 + 28×28 hit area (WCAG SC 2.4.7, 디자인 리뷰 b6)
                     <button
                       type="button"
                       onClick={() => removeColumn(ci)}
-                      className={cn(
-                        'absolute -top-2 -right-2 z-10 flex h-7 w-7 items-center justify-center',
-                        'rounded-full bg-destructive text-destructive-foreground',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/60 focus-visible:ring-offset-1',
-                        'hover:scale-110',
-                        TRANSITION_PRESETS.fastOpacity
-                      )}
+                      className={INSPECTION_VISUAL_TABLE_EDITOR.deleteColumnButton}
                       aria-label={t('form.deleteColumn')}
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -668,7 +661,7 @@ export default function VisualTableEditor({
                     <td
                       key={ci}
                       className={cn(
-                        'relative border-r last:border-r-0 border-b p-0',
+                        INSPECTION_VISUAL_TABLE_EDITOR.cell,
                         // Phase 1A-b: 셀 provenance 시각 (sky/primary left border)
                         provenanceClass,
                         // Phase 0B: focus ring 강화 (WCAG SC 1.4.11, 디자인 리뷰 b6/b11)
@@ -708,11 +701,8 @@ export default function VisualTableEditor({
                             if (el) cellRefs.current.set(key, el);
                             else cellRefs.current.delete(key);
                           }}
-                          className={cn(
-                            'border-0 rounded-none bg-transparent h-9 px-2',
-                            'font-mono tabular-nums text-xs',
-                            'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-primary/5'
-                          )}
+                          placeholder={t('form.tableCellPlaceholder')}
+                          className={INSPECTION_VISUAL_TABLE_EDITOR.cellInput}
                         />
                       ) : (
                         <div className="flex items-center gap-1 px-1 h-9">
@@ -751,9 +741,8 @@ export default function VisualTableEditor({
                             toggleCellToImage(ri, ci);
                           }}
                           className={cn(
-                            'absolute bottom-0 right-0 z-10 h-5 w-5 rounded-tl-md',
-                            'bg-muted/80 hover:bg-primary/10 flex items-center justify-center',
-                            TRANSITION_PRESETS.fastBg
+                            INSPECTION_VISUAL_TABLE_EDITOR.imageToggleButton,
+                            'text-muted-foreground'
                           )}
                           title={t('types.photo')}
                           aria-label={t('types.photo')}
@@ -769,12 +758,12 @@ export default function VisualTableEditor({
                 })}
 
                 {/* Row delete button — Phase 0A: hit area 48×48 (WCAG SC 2.5.5, 디자인 리뷰 b6) */}
-                <td className="w-12 border-b text-center align-middle p-0">
+                <td className={INSPECTION_VISUAL_TABLE_EDITOR.rowDeleteCell}>
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-12 w-12 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/60"
+                    className={INSPECTION_VISUAL_TABLE_EDITOR.rowDeleteButton}
                     onClick={() => removeRow(ri)}
                     aria-label={t('form.deleteRow')}
                   >
@@ -789,7 +778,7 @@ export default function VisualTableEditor({
               <tr>
                 <td
                   colSpan={headers.length + 1}
-                  className="h-20 text-center text-sm text-muted-foreground"
+                  className={INSPECTION_VISUAL_TABLE_EDITOR.emptyCell}
                 >
                   {t('form.addRow')}
                 </td>

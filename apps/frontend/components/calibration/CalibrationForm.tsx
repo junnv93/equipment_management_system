@@ -9,6 +9,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Form,
   FormControl,
@@ -42,6 +44,7 @@ import {
 import { FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { toDate, formatDate } from '@/lib/utils/date';
 import { addMonths } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export interface CalibrationFormProps {
   mode: 'page' | 'dialog' | 'plan-item';
@@ -160,6 +163,12 @@ export function CalibrationForm({
   };
 
   const isCompact = mode === 'dialog' || mode === 'plan-item';
+  const selectedResult = form.watch('result');
+  const calibrationCycle = form.watch('calibrationCycle');
+  const calibrationCycleMonths =
+    typeof calibrationCycle === 'number' && Number.isFinite(calibrationCycle)
+      ? calibrationCycle
+      : 12;
 
   return (
     <Form {...form}>
@@ -168,224 +177,292 @@ export function CalibrationForm({
         className="space-y-4"
         aria-label={t('form.aria.label')}
       >
+        <div className="rounded-lg border border-info/30 bg-info/5 px-3 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="border-info/30 text-info">
+              {t('form.flow.label')}
+            </Badge>
+            <span>{t('form.flow.author')}</span>
+            <span className="text-muted-foreground">→</span>
+            <span>{t('form.flow.reviewer')}</span>
+            <span className="text-muted-foreground">→</span>
+            <span>{t('form.flow.done')}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{t('form.flow.eta')}</span>
+          </div>
+        </div>
+
         {/* 교정 날짜 + 주기 */}
-        <div
-          className={isCompact ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-4'}
-        >
+        <section className="rounded-lg border bg-card p-4">
+          <div className="mb-3 text-sm font-semibold">{t('form.sections.when')}</div>
+          <div
+            className={
+              isCompact ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-4'
+            }
+          >
+            <FormField
+              control={form.control}
+              name="calibrationDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('form.calibrationDate')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      disabled={disabled}
+                      value={field.value ? formatDate(field.value, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => {
+                        const date = toDate(e.target.value);
+                        field.onChange(date);
+                        handleDateOrCycleChange(date ?? undefined, undefined);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="calibrationCycle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('form.calibrationCycle')}</FormLabel>
+                  <Select
+                    disabled={disabled}
+                    value={String(field.value ?? 12)}
+                    onValueChange={(v) => {
+                      const cycle = parseInt(v, 10);
+                      field.onChange(cycle);
+                      handleDateOrCycleChange(undefined, cycle);
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {[3, 6, 12, 24, 36].map((m) => (
+                        <SelectItem key={m} value={String(m)}>
+                          {t('form.cycleOption', { months: m })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* 다음 교정 예정일 */}
           <FormField
             control={form.control}
-            name="calibrationDate"
+            name="nextCalibrationDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('form.calibrationDate')}</FormLabel>
+                <FormLabel>
+                  {t('form.nextCalibrationDate')}
+                  <Badge
+                    variant="outline"
+                    className="ml-2 h-5 border-info/30 px-1.5 text-[10px] text-info"
+                  >
+                    {t('form.autoCalculated')}
+                  </Badge>
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="date"
                     disabled={disabled}
+                    className="border-info/30 bg-info/5"
                     value={field.value ? formatDate(field.value, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => {
-                      const date = toDate(e.target.value);
-                      field.onChange(date);
-                      handleDateOrCycleChange(date ?? undefined, undefined);
-                    }}
+                    onChange={(e) => field.onChange(toDate(e.target.value))}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  {t('form.nextCalibrationHint', {
+                    months: calibrationCycleMonths,
+                  })}
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
+
+        <section className="rounded-lg border bg-card p-4">
+          <div className="mb-3 text-sm font-semibold">{t('form.sections.certificate')}</div>
+          {/* 교정 기관 */}
+          <FormField
+            control={form.control}
+            name="calibrationAgency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.calibrationAgency')}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t('form.calibrationAgencyPlaceholder')}
+                    disabled={disabled}
+                    {...field}
+                    value={field.value ?? ''}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          {/* 성적서 번호 */}
           <FormField
             control={form.control}
-            name="calibrationCycle"
+            name="certificateNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('form.calibrationCycle')}</FormLabel>
-                <Select
-                  disabled={disabled}
-                  value={String(field.value ?? 12)}
-                  onValueChange={(v) => {
-                    const cycle = parseInt(v, 10);
-                    field.onChange(cycle);
-                    handleDateOrCycleChange(undefined, cycle);
-                  }}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {[3, 6, 12, 24, 36].map((m) => (
-                      <SelectItem key={m} value={String(m)}>
-                        {t('form.cycleOption', { months: m })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormLabel>{t('form.certificateNumber')}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t('form.certificateNumberPlaceholder')}
+                    disabled={disabled}
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
+        </section>
 
-        {/* 다음 교정 예정일 */}
-        <FormField
-          control={form.control}
-          name="nextCalibrationDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                {t('form.nextCalibrationDate')}
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({t('form.suggestedLabel')})
-                </span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="date"
-                  disabled={disabled}
-                  value={field.value ? formatDate(field.value, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => field.onChange(toDate(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 교정 기관 */}
-        <FormField
-          control={form.control}
-          name="calibrationAgency"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('form.calibrationAgency')}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t('form.calibrationAgencyPlaceholder')}
-                  disabled={disabled}
-                  {...field}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 성적서 번호 */}
-        <FormField
-          control={form.control}
-          name="certificateNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('form.certificateNumber')}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t('form.certificateNumberPlaceholder')}
-                  disabled={disabled}
-                  {...field}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 교정 결과 */}
-        <FormField
-          control={form.control}
-          name="result"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('form.result')}</FormLabel>
-              <Select disabled={disabled} value={field.value} onValueChange={field.onChange}>
+        <section className="rounded-lg border bg-card p-4">
+          <div className="mb-3 text-sm font-semibold">{t('form.sections.result')}</div>
+          {/* 교정 결과 */}
+          <FormField
+            control={form.control}
+            name="result"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.result')}</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('form.resultPlaceholder')} />
-                  </SelectTrigger>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {CalibrationResultEnum.options.map((value) => {
+                      const isSelected = field.value === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          disabled={disabled}
+                          className={cn(
+                            'rounded-md border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+                            isSelected && 'border-info bg-info/5',
+                            value === 'fail' &&
+                              isSelected &&
+                              'border-brand-critical bg-brand-critical/5'
+                          )}
+                          aria-pressed={isSelected}
+                          onClick={() => field.onChange(value)}
+                        >
+                          <div className="text-sm font-medium">
+                            {CALIBRATION_RESULT_LABELS[value]}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {t(`form.resultDescriptions.${value}` as Parameters<typeof t>[0])}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </FormControl>
-                <SelectContent>
-                  {CalibrationResultEnum.options.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {CALIBRATION_RESULT_LABELS[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {selectedResult === 'fail' && (
+            <Alert variant="destructive" className="mt-3">
+              <AlertTitle>{t('form.failWorkflow.title')}</AlertTitle>
+              <AlertDescription>{t('form.failWorkflow.description')}</AlertDescription>
+            </Alert>
           )}
-        />
+        </section>
 
         {/* 교정성적서 파일 (필수) */}
-        <FormField
-          control={form.control}
-          name="certificateFile"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('form.certificateFile')}</FormLabel>
-              <FormControl>
-                <FileUpload
-                  files={field.value ? [{ file: field.value, status: 'pending' as const }] : []}
-                  onChange={(uploadedFiles: UploadedFile[]) => {
-                    field.onChange(uploadedFiles[0]?.file ?? null);
-                  }}
-                  accept={CERTIFICATE_ACCEPT}
-                  maxSize={FILE_UPLOAD_LIMITS.MAX_FILE_SIZE}
-                  maxFiles={1}
-                  disabled={disabled}
-                  label={t('form.certificateFileDrop')}
-                  description={t('form.certificateFileHint')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <section className="rounded-lg border bg-card p-4">
+          <div className="mb-3 text-sm font-semibold">{t('form.sections.attachment')}</div>
+          <FormField
+            control={form.control}
+            name="certificateFile"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.certificateFile')}</FormLabel>
+                <FormControl>
+                  <FileUpload
+                    files={field.value ? [{ file: field.value, status: 'pending' as const }] : []}
+                    onChange={(uploadedFiles: UploadedFile[]) => {
+                      field.onChange(uploadedFiles[0]?.file ?? null);
+                    }}
+                    accept={CERTIFICATE_ACCEPT}
+                    maxSize={FILE_UPLOAD_LIMITS.MAX_FILE_SIZE}
+                    maxFiles={1}
+                    disabled={disabled}
+                    label={t('form.certificateFileDrop')}
+                    description={t('form.certificateFileHint')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* 메모 */}
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('form.notes')}</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t('form.notesPlaceholder')}
-                  rows={3}
-                  disabled={disabled}
-                  {...field}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          {/* 메모 */}
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('form.notes')}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder={t('form.notesPlaceholder')}
+                    rows={3}
+                    disabled={disabled}
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
 
         {/* 액션 버튼 */}
-        <div className="flex justify-end gap-2 pt-2">
-          {onCancel && (
+        <div className="sticky bottom-0 z-10 flex flex-col gap-2 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted-foreground">
+            <div className="font-medium text-foreground">{t('form.sticky.step')}</div>
+            <div>
+              {selectedResult === 'fail' ? t('form.sticky.failHint') : t('form.sticky.defaultHint')}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={mutation.isPending}
+                loading={mutation.isPending}
+              >
+                {t('form.cancel')}
+              </Button>
+            )}
             <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={mutation.isPending}
+              type="submit"
+              disabled={disabled || mutation.isPending}
               loading={mutation.isPending}
             >
-              {t('form.cancel')}
+              {mutation.isPending ? t('form.submitting') : t('form.submit')}
             </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={disabled || mutation.isPending}
-            loading={mutation.isPending}
-          >
-            {mutation.isPending ? t('form.submitting') : t('form.submit')}
-          </Button>
+          </div>
         </div>
       </form>
     </Form>

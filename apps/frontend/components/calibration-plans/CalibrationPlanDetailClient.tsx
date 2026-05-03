@@ -302,11 +302,24 @@ export function CalibrationPlanDetailClient({
 
   // 액션 가능 여부 — 상태×Permission SSOT (role-permissions.ts 자동 반영)
   const canSubmitForReview = (isDraft || isRejected) && can(Permission.SUBMIT_CALIBRATION_PLAN);
+  const canReview = isPendingReview && can(Permission.REVIEW_CALIBRATION_PLAN);
   const canApprove = isPendingApproval && can(Permission.APPROVE_CALIBRATION_PLAN);
   const canReject =
     (isPendingApproval || isPendingReview) && can(Permission.REJECT_CALIBRATION_PLAN);
   const canDelete = isDraft && can(Permission.DELETE_CALIBRATION_PLAN);
   const canExport = isCalibrationPlanExportable(plan.status) && can(Permission.EXPORT_REPORTS);
+  const isMyTurn = canReview || canApprove;
+  const itemCount = plan.items?.length ?? 0;
+  const externalCount =
+    plan.items?.filter((item) =>
+      Boolean(item.plannedCalibrationAgency || item.snapshotCalibrationAgency)
+    ).length ?? 0;
+  const internalCount = Math.max(0, itemCount - externalCount);
+  const pendingSince = plan.submittedAt ?? plan.createdAt;
+  const pendingDays = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(pendingSince).getTime()) / 86_400_000)
+  );
 
   return (
     <div className={getPageContainerClasses()}>
@@ -401,6 +414,48 @@ export function CalibrationPlanDetailClient({
         </div>
       </div>
 
+      {isMyTurn && (
+        <section className="flex flex-col gap-3 rounded-lg border border-info/30 bg-info/5 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-info/10 p-2 text-info">
+              <UserCheck className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-info">
+                {t('planDetail.approvalBar.title')}
+              </div>
+              <p className="text-sm">
+                {canReview
+                  ? t('planDetail.approvalBar.reviewMessage')
+                  : t('planDetail.approvalBar.approveMessage')}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('planDetail.approvalBar.meta', {
+                  days: pendingDays,
+                  total: itemCount,
+                  external: externalCount,
+                  internal: internalCount,
+                })}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            {canReject && (
+              <Button variant="outline" onClick={() => setIsRejectDialogOpen(true)}>
+                <XCircle className="mr-2 h-4 w-4" />
+                {t('planDetail.actions.reject')}
+              </Button>
+            )}
+            {canApprove && (
+              <Button onClick={() => setIsApproveDialogOpen(true)}>
+                <UserCheck className="mr-2 h-4 w-4" />
+                {t('planDetail.actions.finalApprove')}
+              </Button>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* 3단계 승인 타임라인 */}
       <ApprovalTimeline
         plan={plan}
@@ -449,6 +504,57 @@ export function CalibrationPlanDetailClient({
           </CardContent>
         </Card>
       )}
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
+          <CardContent className="pt-5">
+            <div className="text-xs text-muted-foreground">{t('planDetail.metaCards.year')}</div>
+            <div className="mt-1 font-mono text-2xl font-semibold">{plan.year}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0])}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
+          <CardContent className="pt-5">
+            <div className="text-xs text-muted-foreground">{t('planDetail.metaCards.items')}</div>
+            <div className="mt-1 font-mono text-2xl font-semibold">
+              {itemCount}
+              <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">
+                {t('planDetail.metaCards.unit')}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {t('planDetail.metaCards.itemBreakdown', {
+                external: externalCount,
+                internal: internalCount,
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
+          <CardContent className="pt-5">
+            <div className="text-xs text-muted-foreground">{t('planDetail.metaCards.status')}</div>
+            <div className="mt-2">
+              <PlanStatusBadge status={plan.status} />
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {plan.status === CPStatus.APPROVED
+                ? t('planDetail.metaCards.completed')
+                : t('planDetail.metaCards.pendingDays', { days: pendingDays })}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
+          <CardContent className="pt-5">
+            <div className="text-xs text-muted-foreground">{t('planDetail.metaCards.version')}</div>
+            <div className="mt-1 font-mono text-2xl font-semibold">v{plan.version}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {t('planDetail.metaCards.updatedAt')}: {fmtDateTime(plan.updatedAt)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 항목 테이블 (W-1 진행률 + W-2 컬럼그룹 + W-3 접이식 버전이력) */}
       <PlanItemsTable plan={plan} planUuid={planUuid} />
