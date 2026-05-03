@@ -25,6 +25,8 @@ export * from './audit-log';
 export * from './field-labels';
 export * from './form-template';
 export * from './monitoring';
+export * from './pagination';
+export * from './schema-validation-rules';
 
 // ============================================================
 // Enums - Single Source of Truth

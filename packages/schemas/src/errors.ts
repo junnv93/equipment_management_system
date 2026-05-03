@@ -539,6 +539,14 @@ export enum ErrorCode {
   // ============================================================================
   /** 교정 파일 첨부 필수. */
   CalibrationFileRequired = 'CALIBRATION_FILE_REQUIRED',
+  /** 교정 인증서 첨부 필수. */
+  CalibrationCertificateRequired = 'CALIBRATION_CERTIFICATE_REQUIRED',
+  /** 교정 파일 개수 제한 초과. */
+  CalibrationFileLimitExceeded = 'CALIBRATION_FILE_LIMIT_EXCEEDED',
+  /** 같은 날짜 교정 이력 중복. */
+  CalibrationDuplicateSameDay = 'CALIBRATION_DUPLICATE_SAME_DAY',
+  /** 교정 트랜잭션 실패. */
+  CalibrationTxFailed = 'CALIBRATION_TX_FAILED',
   /** 교정 요청 payload 파싱 실패. */
   CalibrationPayloadInvalid = 'CALIBRATION_PAYLOAD_INVALID',
   /** 폐기된 엔드포인트 — 신규 엔드포인트 사용 필요. */
@@ -934,6 +942,10 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
 
   // 교정(Calibration) 도메인 — 추가 에러
   [ErrorCode.CalibrationFileRequired]: 400,
+  [ErrorCode.CalibrationCertificateRequired]: 400,
+  [ErrorCode.CalibrationFileLimitExceeded]: 400,
+  [ErrorCode.CalibrationDuplicateSameDay]: 409,
+  [ErrorCode.CalibrationTxFailed]: 500,
   [ErrorCode.CalibrationPayloadInvalid]: 400,
   [ErrorCode.EndpointDeprecated]: 410,
 
@@ -1086,3 +1098,25 @@ export function handleZodError(error: z.ZodError): AppError {
     issues: error.format(),
   });
 }
+
+/**
+ * Calibration frontend error routing codes — shared SSOT for backend code → i18n key maps.
+ *
+ * These remain API-level error code strings. Frontend mappers own UX copy, but
+ * the code set comes from schemas instead of local enums.
+ */
+export const CALIBRATION_ERROR_CODES = {
+  FILE_REQUIRED: ErrorCode.CalibrationFileRequired,
+  CERTIFICATE_REQUIRED: ErrorCode.CalibrationCertificateRequired,
+  DOCUMENT_TYPE_COUNT_MISMATCH: ErrorCode.DocumentTypeCountMismatch,
+  DOCUMENT_TYPE_INVALID: ErrorCode.DocumentTypeInvalid,
+  FILE_LIMIT_EXCEEDED: ErrorCode.CalibrationFileLimitExceeded,
+  DUPLICATE_SAME_DAY: ErrorCode.CalibrationDuplicateSameDay,
+  TX_FAILED: ErrorCode.CalibrationTxFailed,
+  NOT_FOUND: ErrorCode.CalibrationNotFound,
+  ENDPOINT_DEPRECATED: ErrorCode.EndpointDeprecated,
+  PLAN_ITEM_NOT_EXECUTED: ErrorCode.CalibrationPlanItemNotExecuted,
+} as const;
+
+export type CalibrationErrorCode =
+  (typeof CALIBRATION_ERROR_CODES)[keyof typeof CALIBRATION_ERROR_CODES];

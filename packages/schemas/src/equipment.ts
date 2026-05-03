@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './pagination';
+import { SCHEMA_VALIDATION_RULES } from './schema-validation-rules';
 import {
   ManagementMethodEnum,
   EquipmentStatusEnum,
@@ -39,7 +41,7 @@ import { uuidString, nullableOptionalUuid, optionalUuid } from './utils/fields';
 // updateEquipmentSchema에서 .partial()을 사용하여 모든 필드를 선택적으로 만듭니다.
 export const baseEquipmentSchema = z.object({
   // 필수 필드 (생성 시에만 필수, 업데이트 시에는 .partial()로 선택적)
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(SCHEMA_VALIDATION_RULES.EQUIPMENT_NAME_MAX_LENGTH),
   managementNumber: z.string().min(2).max(50),
 
   // 관리번호 컴포넌트 (선택적 - 서비스 레이어에서 파싱하여 자동 설정)
@@ -186,7 +188,13 @@ export const equipmentFilterSchema = z.object({
     .optional(), // 공용장비 필터 (true: 공용장비만, false: 일반장비만)
   // 페이지네이션은 선택적이며, 기본값은 서비스 레이어에서 처리
   page: z.coerce.number().int().positive().optional().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(MAX_PAGE_SIZE)
+    .optional()
+    .default(DEFAULT_PAGE_SIZE),
 });
 
 // 타입 정의

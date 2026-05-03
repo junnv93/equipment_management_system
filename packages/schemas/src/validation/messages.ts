@@ -63,6 +63,10 @@ const array = {
   min: (fieldName: string, min: number) => `최소 ${min}개의 ${fieldName}을(를) 선택해야 합니다`,
   /** 최대 개수 */
   max: (fieldName: string, max: number) => `최대 ${max}개까지 선택 가능합니다`,
+  /** 업무 건수 단위 최소 개수 */
+  minCases: (min: number) => `최소 ${min}건 이상 선택해야 합니다`,
+  /** 업무 건수 단위 최대 개수 */
+  maxCases: (max: number) => `최대 ${max}건까지 처리할 수 있습니다`,
 } as const;
 
 /** 숫자 검증 메시지 */
@@ -94,6 +98,7 @@ const version = {
 const checkout = {
   destination: { required: '반출 장소를 입력해주세요' },
   reason: { required: '반출 사유를 입력해주세요' },
+  duplicateEquipment: '동일한 장비를 중복으로 선택할 수 없습니다',
   purpose: { invalid: '유효하지 않은 반출 목적입니다' },
   status: { invalid: '유효하지 않은 반출 상태값입니다' },
   conditionCheck: {
@@ -185,6 +190,11 @@ const audit = {
   action: { invalid: '유효하지 않은 액션입니다' },
 } as const;
 
+/** 인수인계(Handover) 검증 메시지 */
+const handover = {
+  token: { required: '토큰을 입력해주세요' },
+} as const;
+
 // ============================================================================
 // Export: VM (Validation Messages) — 단축 alias
 // ============================================================================
@@ -233,6 +243,7 @@ export const VM = {
   disposal,
   approval,
   audit,
+  handover,
 } as const;
 
 /** VM 타입 (테스트/확장용) */

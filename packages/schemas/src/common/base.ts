@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { uuidString } from '../utils/fields';
+import { MAX_PAGE_SIZE } from '../pagination';
 
 // 기본 엔티티 스키마
 export const baseEntitySchema = z.object({
@@ -16,7 +17,7 @@ export const softDeleteEntitySchema = baseEntitySchema.extend({
 // 페이지네이션 파라미터 스키마
 export const paginationParamsSchema = z.object({
   page: z.number().int().positive(),
-  pageSize: z.number().int().positive().max(100),
+  pageSize: z.number().int().positive().max(MAX_PAGE_SIZE),
 });
 
 // 페이지네이션된 응답을 위한 제네릭 함수

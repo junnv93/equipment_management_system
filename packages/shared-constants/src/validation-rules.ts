@@ -37,6 +37,18 @@ export const VALIDATION_RULES = {
 
   /** 중간 텍스트 필드 최대 길이 (소프트웨어명, 제조사, URL 등 varchar(200)) */
   EXTENDED_TEXT_MAX_LENGTH: 200,
+
+  /** 케이블 관리번호/길이/손실값 등 짧은 케이블 도메인 텍스트 최대 길이 */
+  CABLE_SHORT_TEXT_MAX_LENGTH: 20,
+
+  /** 케이블 위치 최대 길이 */
+  CABLE_LOCATION_MAX_LENGTH: 50,
+
+  /** 케이블 시리얼번호 최대 길이 */
+  CABLE_SERIAL_NUMBER_MAX_LENGTH: 100,
+
+  /** 일괄 작업 최대 처리 건수 */
+  BULK_OPERATION_MAX_COUNT: 50,
 } as const;
 
 // ============================================================================
