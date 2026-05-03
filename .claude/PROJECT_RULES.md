@@ -75,6 +75,15 @@
 
 ## ✅ 필수 규칙
 
+### 0. Harness 계약/커밋 범위 예외
+
+Harness Mode 2 계약은 도메인 변경과 harness 산출물을 구분해서 평가한다.
+
+- Planner/contract/evaluation 같은 `.claude/` 산출물은 가능하면 별도 `chore(harness)` 커밋으로 분리한다.
+- 부득이하게 도메인 변경 커밋에 `.claude/` 산출물이 함께 들어가면, 계약의 surgical scope/M1 판정에서 도메인 파일과 분리해 "harness collateral"로 명시한다.
+- PostToolUse Prettier가 자동 포맷한 파일은 formatting-only diff임을 확인하고 파일 목록을 평가서에 적은 경우에만 M9 surgical scope 예외로 허용한다.
+- 예외는 의미 변경을 숨기기 위한 통로가 아니다. import 정렬, 공백, 줄바꿈을 넘는 변경은 일반 도메인 변경으로 계산한다.
+
 ### 1. DB 관련 작업
 
 #### 스키마 변경 시
