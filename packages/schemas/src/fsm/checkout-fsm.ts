@@ -388,6 +388,17 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     hintKey: 'checkedOutSubmitReturn',
     auditEventSuffix: 'return_approved',
   },
+  {
+    from: 'lender_received',
+    action: 'reject_return',
+    to: 'in_use', // rental: lender 최종 검토 실패 시 borrower가 재반납하도록 사용 상태로 복귀
+    purposes: RENTAL,
+    requires: 'reject:checkout',
+    nextActor: 'borrower',
+    labelKey: 'reject_return',
+    hintKey: 'returnedRejectReturn',
+    auditEventSuffix: 'return_rejected',
+  },
   // ── checked_out ───────────────────────────────────────────────────────────
   {
     from: 'checked_out',
@@ -465,6 +476,7 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
 
   // Rental path traversability (2-step approval: pending → borrower_approved → approved)
   // rental은 condition check 4단계 완료 후 lender_received에서 submit_return 시 return_approved로 직접 전환.
+  // lender_received에서 reject_return 시 in_use로 되돌아가 borrower 재반납 루프를 허용한다.
   // 'returned' 중간 상태는 rental 경로에서 제거됨 (cal/repair 전용).
   const rentalPath: CheckoutStatus[] = [
     'pending',
@@ -514,8 +526,9 @@ function assertFsmInvariants(transitions: readonly TransitionRule[]): void {
     }
   }
 
-  // Note: the FSM intentionally has one cycle — reject_return sends
-  // 'returned' back to 'checked_out' (equipment re-enters use after failed inspection).
+  // Note: the FSM intentionally has cycles — reject_return sends
+  // 'returned' back to 'checked_out' for non-rental, and 'lender_received' back to
+  // 'in_use' for rental (equipment re-enters use after failed inspection).
   // A strict DAG invariant is therefore NOT enforced here.
 }
 

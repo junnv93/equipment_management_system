@@ -2917,6 +2917,18 @@ export class CheckoutsService extends VersionedBaseService {
       this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
       this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
+      // 대여 반납 반려는 빌려주는 팀(lenderTeamId)의 기술책임자만 가능.
+      // enforceSiteAccess의 site fallback과 별개로 lender identity rule은 fail-close로 강제한다.
+      const approverTeamId = req.user?.teamId;
+      if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId) {
+        if (!approverTeamId || approverTeamId !== checkout.lenderTeamId) {
+          throw new ForbiddenException({
+            code: CheckoutErrorCode.LENDER_TEAM_ONLY,
+            message: 'Only the technical manager of the lending team can reject rental return',
+          });
+        }
+      }
+
       if (
         !rejectReturnDto.reason ||
         rejectReturnDto.reason.trim().length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
@@ -2927,7 +2939,6 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      const approverTeamId = req.user?.teamId;
       let approverClassification: string | null | undefined;
       if (approverTeamId) {
         const approverTeam = await this.teamsService.findOne(approverTeamId);
@@ -2941,30 +2952,45 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
-      // ✅ Optimistic locking: returned → checked_out (재반입 프로세스)
-      // 클라이언트가 보낸 version으로 CAS 수행 (서버 최신값 사용 금지)
-      const updated = await this.updateCheckoutStatus(
-        uuid,
-        { ...checkout, version: rejectReturnDto.version },
-        CSVal.CHECKED_OUT as CheckoutStatus,
-        {
-          rejectionReason: rejectReturnDto.reason.trim(),
-          // 검사 결과 초기화 — 재검사 필요 (스키마: boolean NOT NULL default false)
-          calibrationChecked: false,
-          repairChecked: false,
-          workingStatusChecked: false,
-          inspectionNotes: null,
-          actualReturnDate: null,
-        }
-      );
+      const isRental = checkout.purpose === CPVal.RENTAL;
+      const nextStatus = (isRental ? CSVal.IN_USE : CSVal.CHECKED_OUT) as CheckoutStatus;
 
-      await this.writeTransitionAudit(
-        checkout,
-        'reject_return',
-        uuid,
-        CSVal.CHECKED_OUT as CheckoutStatus,
-        req
-      );
+      // ✅ Optimistic locking:
+      // - non-rental: returned → checked_out (재반입 프로세스)
+      // - rental: lender_received → in_use (borrower 재반납 필요)
+      // 클라이언트가 보낸 version으로 CAS 수행 (서버 최신값 사용 금지)
+      const updated = await this.db.transaction(async (tx) => {
+        const result = await this.updateWithVersion<Checkout>(
+          checkouts,
+          uuid,
+          rejectReturnDto.version,
+          {
+            status: nextStatus,
+            rejectionReason: rejectReturnDto.reason.trim(),
+            // 검사 결과 초기화 — 재검사 필요 (스키마: boolean NOT NULL default false)
+            calibrationChecked: false,
+            repairChecked: false,
+            workingStatusChecked: false,
+            inspectionNotes: null,
+            actualReturnDate: null,
+          },
+          '반출',
+          tx
+        );
+
+        if (isRental) {
+          await this.equipmentService.updateStatusBatch(
+            equipmentIds,
+            ESVal.CHECKED_OUT,
+            ESVal.AVAILABLE,
+            tx
+          );
+        }
+
+        return result;
+      });
+
+      await this.writeTransitionAudit(checkout, 'reject_return', uuid, nextStatus, req);
 
       // ✅ 캐시 무효화 — items/equipmentMap은 이미 보유, 팀 ID만 추가 조회
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2984,7 +3010,7 @@ export class CheckoutsService extends VersionedBaseService {
           reason: rejectReturnDto.reason,
           actorId: rejectReturnDto.approverId,
           actorName: '',
-          nextActor: this.resolveNextActor(checkout.purpose, CSVal.CHECKED_OUT as CheckoutStatus),
+          nextActor: this.resolveNextActor(checkout.purpose, nextStatus),
           timestamp: new Date(),
         });
       }

@@ -907,41 +907,91 @@ describe('CheckoutsService', () => {
       );
     });
 
-    it('should throw BadRequestException (INVALID_TRANSITION) for RENTAL checkout — FSM does not permit reject_return for rental purpose', async () => {
-      // 아키텍처 제약: FSM이 reject_return을 CAL_REPAIR 목적에만 허용 (checkout-fsm.ts purposes: CAL_REPAIR)
-      // RENTAL 반납 거부는 UL-QP-18 워크플로우에 없음 — 손상/불량 반납은 NC(부적합) 프로세스로 처리.
-      // RENTAL 반출의 rejectReturn은 assertFsmAction에서 INVALID_TRANSITION으로 차단됨 (의도적 설계).
+    it('should reject RENTAL return from lender_received and move back to in_use', async () => {
       const eqId = '550e8400-e29b-41d4-a716-446655440001';
-      const rentalReturnedCheckout = {
+      const lenderTeamId = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1';
+      const rentalLenderReceivedCheckout = {
         id: checkoutId,
         requesterId: '550e8400-e29b-41d4-a716-446655440002',
-        status: 'returned',
+        status: 'lender_received',
         purpose: 'rental',
-        lenderTeamId: 'aabb1234-82b8-488e-9ea5-4fe71bb086e1',
+        lenderTeamId,
+        lenderSiteId: 'suwon',
         version: 1,
-        site: 'suwon',
-        teamId: null,
       };
-      const dtoNoTeam = {
-        version: 1,
-        reason: '반입 검사 항목 미충족',
-        approverId,
-        approverTeamId: undefined as string | undefined,
+      const updatedCheckout = {
+        ...rentalLenderReceivedCheckout,
+        status: 'in_use',
+        version: 2,
       };
 
-      // scope-먼저 패턴: items + equipment 로드 후 scope 통과 → assertFsmAction에서 INVALID_TRANSITION
-      mockCacheService.getOrSet.mockResolvedValue(rentalReturnedCheckout);
+      mockCacheService.getOrSet.mockResolvedValue(rentalLenderReceivedCheckout);
       const originalThen = mockChain.then;
       mockChain.then = jest
         .fn()
         .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([{ equipmentId: eqId }]))
         .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
       mockEquipmentService.findByIds.mockResolvedValueOnce(
-        new Map([[eqId, { id: eqId, site: 'suwon', teamId: null }]])
+        new Map([
+          [
+            eqId,
+            {
+              id: eqId,
+              name: 'Rental Equipment',
+              managementNumber: 'SUW-R0001',
+              site: 'suwon',
+              teamId: lenderTeamId,
+              team: { classification: 'general_rf' },
+            },
+          ],
+        ])
+      );
+      mockTeamsService.findOne.mockResolvedValueOnce({
+        id: lenderTeamId,
+        classification: 'general_rf',
+      });
+      mockDrizzle.returning.mockResolvedValueOnce([updatedCheckout]);
+      mockEquipmentService.updateStatusBatch.mockResolvedValueOnce([]);
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: lenderTeamId }]);
+
+      const result = await service.rejectReturn(checkoutId, mockRejectReturnDto, mockReq);
+
+      expect(result.status).toBe('in_use');
+      expect(mockEquipmentService.updateStatusBatch).toHaveBeenCalledWith(
+        [eqId],
+        'checked_out',
+        'available',
+        mockDrizzle
       );
 
-      await expect(service.rejectReturn(checkoutId, dtoNoTeam, mockReq)).rejects.toThrow(
-        BadRequestException
+      mockChain.then = originalThen;
+    });
+
+    it('should throw ForbiddenException (LENDER_TEAM_ONLY) when non-lender team rejects RENTAL return', async () => {
+      const eqId = '550e8400-e29b-41d4-a716-446655440001';
+      const lenderTeamId = 'aabb1234-82b8-488e-9ea5-4fe71bb086e1';
+      const rentalLenderReceivedCheckout = {
+        id: checkoutId,
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'lender_received',
+        purpose: 'rental',
+        lenderTeamId,
+        lenderSiteId: 'suwon',
+        version: 1,
+      };
+
+      mockCacheService.getOrSet.mockResolvedValue(rentalLenderReceivedCheckout);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([{ equipmentId: eqId }]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      mockEquipmentService.findByIds.mockResolvedValueOnce(
+        new Map([[eqId, { id: eqId, site: 'suwon', teamId: lenderTeamId }]])
+      );
+
+      await expect(service.rejectReturn(checkoutId, mockRejectReturnDto, mockReq)).rejects.toThrow(
+        ForbiddenException
       );
 
       mockChain.then = originalThen;

@@ -229,6 +229,12 @@ describe('getTransitionsFor', () => {
     expect(calActions).toContain('submit_return');
     expect(rentalActions).toContain('submit_return');
   });
+
+  it('returns submit_return/reject_return from lender_received for rental', () => {
+    const transitions = getTransitionsFor('lender_received', 'rental');
+    expect(transitions.map((t) => t.action)).toEqual(['submit_return', 'reject_return']);
+    expect(transitions.find((t) => t.action === 'reject_return')?.to).toBe('in_use');
+  });
 });
 
 // ============================================================================
@@ -285,6 +291,16 @@ describe('canPerformAction', () => {
     expect(canPerformAction(returned, 'approve_return', TECHNICAL_MANAGER_PERMS).ok).toBe(true);
   });
 
+  it('technical_manager can reject_return from rental lender_received', () => {
+    const lenderReceivedRental = {
+      status: 'lender_received' as CheckoutStatus,
+      purpose: 'rental' as CheckoutPurpose,
+    };
+    expect(
+      canPerformAction(lenderReceivedRental, 'reject_return', TECHNICAL_MANAGER_PERMS).ok
+    ).toBe(true);
+  });
+
   // UL-QP-18 직무분리: 승인(approve)은 기술책임자 전담, 신청·수정·취소·시작·반입은 실무자도 가능
   describe('test_engineer — 신청·수정·취소·시작·반입 가능, 승인 불가 (UL-QP-18 직무분리)', () => {
     it('cannot approve pending (승인 권한 없음)', () => {
@@ -313,8 +329,10 @@ describe('canPerformAction', () => {
       expect(canPerformAction(approvedCal, 'start', TEST_ENGINEER_PERMS).ok).toBe(true);
     });
 
-    it('can submit_return from checked_out (반입 처리 가능)', () => {
-      expect(canPerformAction(checkedOut, 'submit_return', TEST_ENGINEER_PERMS).ok).toBe(true);
+    it('cannot submit_return from checked_out (기술책임자 전용)', () => {
+      const result = canPerformAction(checkedOut, 'submit_return', TEST_ENGINEER_PERMS);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toBe('permission');
     });
 
     it('cannot approve_return from returned (반입 최종 승인 불가)', () => {
@@ -402,12 +420,12 @@ describe('getNextStep', () => {
     expect(result.totalSteps).toBe(5);
   });
 
-  it('pending + calibration + test_engineer → nextAction=cancel, available=true', () => {
-    // getNextStep은 user가 실행 가능한 첫 번째 전이를 우선 선택 (approve:불가, cancel:가능)
+  it('pending + calibration + test_engineer → nextAction=approve, blockingReason=permission', () => {
+    // getNextStep은 진행 액션(primary)을 우선 표시하고 cancel/reject는 availableActions로 노출한다.
     const result = getNextStep({ status: 'pending', purpose: 'calibration' }, TEST_ENGINEER_PERMS);
-    expect(result.nextAction).toBe('cancel');
-    expect(result.availableToCurrentUser).toBe(true);
-    expect(result.blockingReason).toBeNull();
+    expect(result.nextAction).toBe('approve');
+    expect(result.availableToCurrentUser).toBe(false);
+    expect(result.blockingReason).toBe('permission');
   });
 
   it('approved + calibration + technical_manager → nextAction=start', () => {
