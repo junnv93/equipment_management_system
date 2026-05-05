@@ -1045,7 +1045,8 @@ export class CheckoutsService extends VersionedBaseService {
               teamId: teamId ?? undefined,
               direction: 'inbound',
               search,
-              statuses: statusFilter,
+              // statuses는 optionalCsvEnum이 CheckoutStatus[]로 변환 — 단일 statusFilter도 배열로 wrap
+              statuses: statusFilter ? [statusFilter as CheckoutStatus] : undefined,
               page: 1,
               pageSize: limitPerSection,
             } as CheckoutQueryDto,
