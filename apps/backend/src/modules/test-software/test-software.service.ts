@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, desc, sql, asc } from 'drizzle-orm';
+import { eq, and, sql, asc } from 'drizzle-orm';
 import {
   testSoftware,
   equipmentTestSoftware,
@@ -8,6 +8,7 @@ import {
   type TestSoftware,
 } from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { resolveTestSoftwareOrderBy } from './utils/test-software-sort-mapper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -165,16 +166,8 @@ export class TestSoftwareService extends VersionedBaseService {
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-        const [sortField, sortOrder] = sort.split('.');
-        const sortColumn =
-          sortField === 'name'
-            ? testSoftware.name
-            : sortField === 'managementNumber'
-              ? testSoftware.managementNumber
-              : sortField === 'testField'
-                ? testSoftware.testField
-                : testSoftware.createdAt;
-        const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+        // sort enum + mapper SSOT (utils/test-software-sort-mapper.ts)
+        const orderBy = resolveTestSoftwareOrderBy(sort);
 
         const [rows, [{ count }]] = await Promise.all([
           this.db

@@ -68,6 +68,7 @@ import {
 } from '@equipment-management/shared-constants';
 import { eq, and, gte, lte, or, desc, asc, sql, SQL, isNull, inArray } from 'drizzle-orm';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { resolveCheckoutOrderBy } from './utils/checkout-sort-mapper';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import type { AppDatabase } from '@equipment-management/db';
@@ -211,16 +212,6 @@ export interface CheckoutListResponse {
 export class CheckoutsService extends VersionedBaseService {
   private readonly logger = new Logger(CheckoutsService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CHECKOUTS;
-
-  // 인덱스가 있는 필드 목록 (정렬 최적화용)
-  private readonly INDEXED_FIELDS = [
-    'status',
-    'requesterId',
-    'approverId',
-    'checkoutDate',
-    'expectedReturnDate',
-    'createdAt',
-  ] as const;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
@@ -540,15 +531,12 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(eq(checkouts.destination, destination));
     }
 
-    // 상태 필터링
-    if (statuses) {
-      const statusArray = statuses.split(',').map((s) => s.trim());
-      if (statusArray.length === 1) {
-        whereConditions.push(eq(checkouts.status, statusArray[0] as CheckoutStatus));
+    // 상태 필터링 — statuses는 optionalCsvEnum이 토큰 단위 enum 검증 + 배열 변환 완료
+    if (statuses && statuses.length > 0) {
+      if (statuses.length === 1) {
+        whereConditions.push(eq(checkouts.status, statuses[0]));
       } else {
-        const statusConditions = statusArray.map((status) =>
-          eq(checkouts.status, status as CheckoutStatus)
-        );
+        const statusConditions = statuses.map((status) => eq(checkouts.status, status));
         whereConditions.push(or(...statusConditions)!);
       }
     }
@@ -602,45 +590,8 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(buildCheckoutTeamCondition(this.db, teamId, direction));
     }
 
-    // 정렬 설정
-    const orderBy: SQL<unknown>[] = [];
-    if (sort) {
-      const [field, sortDirection] = sort.split('.');
-      if (field && this.INDEXED_FIELDS.includes(field as (typeof this.INDEXED_FIELDS)[number])) {
-        switch (field) {
-          case 'status':
-            orderBy.push(sortDirection === 'asc' ? asc(checkouts.status) : desc(checkouts.status));
-            break;
-          case 'requesterId':
-            orderBy.push(
-              sortDirection === 'asc' ? asc(checkouts.requesterId) : desc(checkouts.requesterId)
-            );
-            break;
-          case 'checkoutDate':
-            orderBy.push(
-              sortDirection === 'asc' ? asc(checkouts.checkoutDate) : desc(checkouts.checkoutDate)
-            );
-            break;
-          case 'expectedReturnDate':
-            orderBy.push(
-              sortDirection === 'asc'
-                ? asc(checkouts.expectedReturnDate)
-                : desc(checkouts.expectedReturnDate)
-            );
-            break;
-          case 'createdAt':
-          default:
-            orderBy.push(
-              sortDirection === 'asc' ? asc(checkouts.createdAt) : desc(checkouts.createdAt)
-            );
-            break;
-        }
-      } else {
-        orderBy.push(desc(checkouts.createdAt));
-      }
-    } else {
-      orderBy.push(desc(checkouts.createdAt));
-    }
+    // 정렬 — sort enum + mapper SSOT (utils/checkout-sort-mapper.ts)
+    const orderBy: SQL<unknown>[] = [resolveCheckoutOrderBy(sort)];
 
     return { whereConditions, orderBy };
   }

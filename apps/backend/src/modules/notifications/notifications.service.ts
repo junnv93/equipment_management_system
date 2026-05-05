@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -9,7 +9,12 @@ import {
   DEFAULT_PAGE_SIZE,
   NOTIFICATION_RETENTION_DAYS,
 } from '@equipment-management/shared-constants';
-import { ErrorCode, NotificationTypeValues } from '@equipment-management/schemas';
+import {
+  ErrorCode,
+  NotificationTypeValues,
+  type NotificationSortValue,
+} from '@equipment-management/schemas';
+import { resolveNotificationOrderBy } from './utils/notification-sort-mapper';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
@@ -81,7 +86,7 @@ interface FindAllQuery {
   search?: string;
   fromDate?: string;
   toDate?: string;
-  sort?: string;
+  sort?: NotificationSortValue;
   page?: number;
   pageSize?: number;
 }
@@ -120,6 +125,7 @@ export class NotificationsService {
       search,
       fromDate,
       toDate,
+      sort,
       page = 1,
       pageSize = DEFAULT_PAGE_SIZE,
     } = query;
@@ -168,12 +174,12 @@ export class NotificationsService {
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
-    // Data query
+    // Data query — sort enum + mapper SSOT (utils/notification-sort-mapper.ts)
     const items = await this.db
       .select()
       .from(schema.notifications)
       .where(whereClause)
-      .orderBy(desc(schema.notifications.createdAt))
+      .orderBy(resolveNotificationOrderBy(sort))
       .limit(pageSize)
       .offset(offset);
 
@@ -325,6 +331,7 @@ export class NotificationsService {
       isRead,
       search,
       recipientSite,
+      sort,
       page = 1,
       pageSize = DEFAULT_PAGE_SIZE,
     } = query;
@@ -362,11 +369,12 @@ export class NotificationsService {
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
+    // sort enum + mapper SSOT (utils/notification-sort-mapper.ts)
     const items = await this.db
       .select()
       .from(schema.notifications)
       .where(whereClause)
-      .orderBy(desc(schema.notifications.createdAt))
+      .orderBy(resolveNotificationOrderBy(sort))
       .limit(pageSize)
       .offset(offset);
 

@@ -120,7 +120,8 @@ describe('CheckoutsService — SQL shape regression', () => {
 
   describe('status filter', () => {
     it('should emit a single equality when only one status is provided', async () => {
-      const rendered = await captureWhereSql({ statuses: 'pending' });
+      // optionalCsvEnum이 토큰 단위 enum 검증 후 CheckoutStatus[]로 변환 — service는 배열만 처리
+      const rendered = await captureWhereSql({ statuses: ['pending'] });
       expect(rendered.sql).toContain('"status" =');
       expect(rendered.params).toContain('pending');
       // 단일 상태는 or(...) 가 아닌 eq 만 사용됨을 보장
@@ -128,7 +129,9 @@ describe('CheckoutsService — SQL shape regression', () => {
     });
 
     it('should emit OR of equalities when multiple statuses are provided', async () => {
-      const rendered = await captureWhereSql({ statuses: 'pending,approved,checked_out' });
+      const rendered = await captureWhereSql({
+        statuses: ['pending', 'approved', 'checked_out'],
+      });
       expect(rendered.sql).toContain('"status" =');
       expect(rendered.sql).toContain(' or ');
       expect(rendered.params).toEqual(

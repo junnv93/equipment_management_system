@@ -56,6 +56,7 @@ import {
   calculateNextCalibrationDate,
 } from '../../common/utils';
 import * as schema from '@equipment-management/db/schema';
+import { resolveCalibrationOrderBy } from './utils/calibration-sort-mapper';
 import {
   and,
   eq,
@@ -1089,11 +1090,11 @@ export class CalibrationService extends VersionedBaseService {
       whereConditions.push(eq(schema.calibrations.technicianId, calibrationManagerId));
     }
 
-    if (statuses) {
-      const statusArray = statuses.split(',').map((s) => s.trim());
+    // 상태 필터링 — statuses는 optionalCsvEnum이 토큰 단위 enum 검증 + 배열 변환 완료
+    if (statuses && statuses.length > 0) {
       whereConditions.push(
         sql`${schema.calibrations.status} IN (${sql.join(
-          statusArray.map((s) => sql`${s}`),
+          statuses.map((s) => sql`${s}`),
           sql`, `
         )})`
       );
@@ -1179,25 +1180,8 @@ export class CalibrationService extends VersionedBaseService {
     const whereArg = whereConditions.length > 0 ? and(...whereConditions) : undefined;
     const offset = (page - 1) * pageSize;
 
-    // ========== 3. Build ORDER BY ==========
-    let orderByClause;
-    if (sort) {
-      const [field, direction] = sort.split('.');
-      const isAsc = direction === 'asc';
-
-      const sortColumn =
-        {
-          calibrationDate: schema.calibrations.calibrationDate,
-          nextCalibrationDate: schema.calibrations.nextCalibrationDate,
-          status: schema.calibrations.status,
-          agencyName: schema.calibrations.agencyName,
-          equipmentName: schema.equipment.name,
-        }[field] || schema.calibrations.calibrationDate;
-
-      orderByClause = isAsc ? asc(sortColumn) : desc(sortColumn);
-    } else {
-      orderByClause = desc(schema.calibrations.calibrationDate);
-    }
+    // ========== 3. Build ORDER BY (sort enum + mapper SSOT) ==========
+    const orderByClause = resolveCalibrationOrderBy(sort);
 
     // ========== 2+4. Count + Fetch data 병렬 실행 ==========
     // ✅ Phase 4: 전체 행 조회 후 transformDbToRecord()로 정규화
@@ -1283,7 +1267,7 @@ export class CalibrationService extends VersionedBaseService {
     return this.findAll({
       fromDate,
       toDate,
-      statuses: CalibrationStatusEnum.enum.scheduled,
+      statuses: [CalibrationStatusEnum.enum.scheduled],
       site,
       teamId,
     });

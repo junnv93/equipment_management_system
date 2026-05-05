@@ -1,14 +1,24 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
-import { CableConnectorTypeEnum, CableStatusEnum, SiteEnum } from '@equipment-management/schemas';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
+import {
+  CableConnectorTypeEnum,
+  CableSortEnum,
+  CableStatusEnum,
+  SiteEnum,
+  optionalTrimmedString,
+} from '@equipment-management/schemas';
 
 export const cableQuerySchema = z.object({
-  search: z.string().optional(),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   connectorType: CableConnectorTypeEnum.optional(),
   status: CableStatusEnum.optional(),
   site: SiteEnum.optional(),
-  sort: z.string().optional(),
+  sort: CableSortEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),

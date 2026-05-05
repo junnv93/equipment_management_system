@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, inArray, and, sql, count, asc, desc, type SQL } from 'drizzle-orm';
+import { eq, inArray, and, sql, count, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { createVersionConflictException } from '../../common/base/versioned-base.service';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
@@ -26,7 +26,7 @@ import {
   getPermissions,
   Permission,
 } from '@equipment-management/shared-constants';
-import { parseSortString } from '../../common/utils/sort';
+import { resolveUserOrderBy } from './utils/user-sort-mapper';
 
 interface JwtPayload {
   userId: string;
@@ -42,32 +42,6 @@ export class UsersService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase
   ) {}
-
-  /** 정렬 가능한 컬럼 매핑 (동적 sort 파라미터 → Drizzle 컬럼) */
-  private static getSortColumn(
-    field?: string
-  ):
-    | typeof usersTable.email
-    | typeof usersTable.role
-    | typeof usersTable.site
-    | typeof usersTable.createdAt
-    | typeof usersTable.updatedAt
-    | typeof usersTable.name {
-    switch (field) {
-      case 'email':
-        return usersTable.email;
-      case 'role':
-        return usersTable.role;
-      case 'site':
-        return usersTable.site;
-      case 'createdAt':
-        return usersTable.createdAt;
-      case 'updatedAt':
-        return usersTable.updatedAt;
-      default:
-        return usersTable.name;
-    }
-  }
 
   async findAll(query: UserQueryDto): Promise<PaginatedResponseType<User>> {
     // 필터 조건들을 수집
@@ -93,9 +67,9 @@ export class UsersService {
       );
     }
 
-    if (query.roles) {
-      const roleList = query.roles.split(',') as (typeof usersTable.role._)['data'][];
-      conditions.push(inArray(usersTable.role, roleList));
+    // roles는 optionalCsvEnum이 토큰 단위 enum 검증 + 배열 변환 완료 (USER_ROLE_VALUES)
+    if (query.roles && query.roles.length > 0) {
+      conditions.push(inArray(usersTable.role, query.roles));
     }
 
     if (query.teams) {
@@ -116,10 +90,8 @@ export class UsersService {
     const pageSize = query.pageSize || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
 
-    // 정렬 설정 (Promise.all 전에 동기 처리)
-    const sortConfig = parseSortString(query.sort);
-    const sortColumn = UsersService.getSortColumn(sortConfig?.field);
-    const sortDirection = sortConfig?.direction === 'desc' ? desc : asc;
+    // 정렬 — sort enum + mapper SSOT (utils/user-sort-mapper.ts)
+    const orderByClause = resolveUserOrderBy(query.sort);
 
     // Count 쿼리와 데이터 쿼리를 병렬 실행 (독립적이므로 Promise.all 적용)
     const [countResult, rows] = await Promise.all([
@@ -130,7 +102,7 @@ export class UsersService {
         .select()
         .from(usersTable)
         .where(whereClause)
-        .orderBy(sortDirection(sortColumn))
+        .orderBy(orderByClause)
         .limit(pageSize)
         .offset(offset),
     ]);

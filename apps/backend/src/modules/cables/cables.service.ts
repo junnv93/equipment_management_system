@@ -10,6 +10,7 @@ import {
   type CableLossDataPoint,
 } from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { resolveCableOrderBy } from './utils/cable-sort-mapper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CABLES_CACHE_PREFIX } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -120,14 +121,8 @@ export class CablesService extends VersionedBaseService {
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-        const [sortField, sortOrder] = sort.split('.');
-        const sortColumn =
-          sortField === 'managementNumber'
-            ? cables.managementNumber
-            : sortField === 'lastMeasurementDate'
-              ? cables.lastMeasurementDate
-              : cables.createdAt;
-        const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+        // sort enum + mapper SSOT (utils/cable-sort-mapper.ts)
+        const orderBy = resolveCableOrderBy(sort);
 
         const [rows, [{ count }]] = await Promise.all([
           this.db

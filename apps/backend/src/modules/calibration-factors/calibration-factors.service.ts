@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
+import { eq, and, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { calibrationFactors, CalibrationFactor, equipment } from '@equipment-management/db/schema';
+import { resolveCalibrationFactorOrderBy } from './utils/calibration-factor-sort-mapper';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
@@ -181,14 +182,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
         if (site) conditions.push(eq(equipment.site, site));
         if (teamId) conditions.push(eq(equipment.teamId, teamId));
 
-        const [sortField, sortOrder] = sort.split('.');
-        const sortColumn =
-          sortField === 'effectiveDate'
-            ? calibrationFactors.effectiveDate
-            : sortField === 'requestedAt'
-              ? calibrationFactors.requestedAt
-              : calibrationFactors.createdAt;
-        const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+        // sort enum + mapper SSOT (utils/calibration-factor-sort-mapper.ts)
+        const orderBy = resolveCalibrationFactorOrderBy(sort);
 
         const baseQuery = needsEquipmentJoin
           ? this.db

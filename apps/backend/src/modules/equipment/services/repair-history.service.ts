@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
-import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { repairHistory, RepairHistory, equipment } from '@equipment-management/db/schema';
+import { resolveRepairHistoryOrderBy } from '../utils/repair-history-sort-mapper';
 import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
@@ -84,13 +85,7 @@ export class RepairHistoryService {
       totalPages: number;
     };
   }> {
-    const {
-      fromDate,
-      toDate,
-      repairResult,
-      includeDeleted = false,
-      sort = 'repairDate.desc',
-    } = query;
+    const { fromDate, toDate, repairResult, includeDeleted = false, sort } = query;
 
     const page = query.page ? Number(query.page) : 1;
     const pageSize = query.pageSize ? Number(query.pageSize) : DEFAULT_PAGE_SIZE;
@@ -101,10 +96,8 @@ export class RepairHistoryService {
     if (toDate) conditions.push(lte(repairHistory.repairDate, new Date(toDate)));
     if (repairResult) conditions.push(eq(repairHistory.repairResult, repairResult));
 
-    const [sortField, sortOrder] = sort.split('.');
-    const sortColumn =
-      sortField === 'repairDate' ? repairHistory.repairDate : repairHistory.createdAt;
-    const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+    // sort enum + mapper SSOT (utils/repair-history-sort-mapper.ts)
+    const orderBy = resolveRepairHistoryOrderBy(sort);
 
     const [items, [{ count }]] = await Promise.all([
       this.db

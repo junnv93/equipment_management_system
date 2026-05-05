@@ -4,10 +4,13 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   NotificationTypeEnum,
   NotificationPriorityEnum,
+  NotificationSortEnum,
+  type NotificationSortValue,
   NOTIFICATION_TYPE_VALUES,
   NOTIFICATION_PRIORITY_VALUES,
   VM,
   uuidString,
+  optionalTrimmedString,
   type NotificationType,
   type NotificationPriority,
 } from '@equipment-management/schemas';
@@ -15,6 +18,7 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   NOTIFICATION_CATEGORIES,
+  VALIDATION_RULES,
   type NotificationCategory,
 } from '@equipment-management/shared-constants';
 
@@ -39,7 +43,7 @@ export const notificationQuerySchema = z.object({
   recipientId: uuidString(VM.uuid.invalid('수신자')).optional(),
   teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   // @SiteScoped 인터셉터가 관리자 엔드포인트에서 주입하는 필드
-  recipientSite: z.string().optional(),
+  recipientSite: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '수신자 사이트'),
   equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
   rentalId: uuidString(VM.uuid.invalid('대여')).optional(),
@@ -47,7 +51,7 @@ export const notificationQuerySchema = z.object({
     (val) => (val === 'true' ? true : val === 'false' ? false : undefined),
     z.boolean().optional()
   ),
-  search: z.string().optional(),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   types: z.preprocess((val) => toArray<string>(val), z.array(NotificationTypeEnum).optional()),
   priorities: z.preprocess(
     (val) => toArray<string>(val),
@@ -55,7 +59,7 @@ export const notificationQuerySchema = z.object({
   ),
   fromDate: z.string().datetime({ message: VM.date.invalid }).optional(),
   toDate: z.string().datetime({ message: VM.date.invalid }).optional(),
-  sort: z.string().default('createdAt.desc'),
+  sort: NotificationSortEnum.optional().default('createdAt.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
@@ -118,8 +122,11 @@ export class NotificationQueryDto {
   @ApiPropertyOptional({ description: '종료 날짜 (ISO 형식)' })
   toDate?: string;
 
-  @ApiPropertyOptional({ description: '정렬 기준 (예: createdAt.desc)' })
-  sort?: string = 'createdAt.desc';
+  @ApiPropertyOptional({
+    description: '정렬 기준 (예: createdAt.desc)',
+    enum: NotificationSortEnum.options,
+  })
+  sort?: NotificationSortValue = 'createdAt.desc';
 
   @ApiPropertyOptional({
     description: '페이지 번호',

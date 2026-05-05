@@ -4,7 +4,9 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   RepairResultEnum,
   REPAIR_RESULT_VALUES,
+  RepairHistorySortEnum,
   type RepairResult,
+  type RepairHistorySortValue,
   VM,
   uuidString,
 } from '@equipment-management/schemas';
@@ -73,7 +75,7 @@ export const repairHistoryQuerySchema = z.object({
   toDate: z.string().optional(),
   repairResult: RepairResultEnum.optional(),
   includeDeleted: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
-  sort: z.string().optional(),
+  sort: RepairHistorySortEnum.optional(),
   page: z.preprocess(
     (val) => (val ? Number(val) : undefined),
     z.number().int().positive().optional()
@@ -169,9 +171,10 @@ export class RepairHistoryQueryDto {
 
   @ApiPropertyOptional({
     description: '정렬 기준',
+    enum: RepairHistorySortEnum.options,
     example: 'repairDate.desc',
   })
-  sort?: string;
+  sort?: RepairHistorySortValue;
 
   @ApiPropertyOptional({
     description: '페이지 번호',

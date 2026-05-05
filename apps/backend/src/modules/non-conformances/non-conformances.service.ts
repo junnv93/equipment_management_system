@@ -6,6 +6,7 @@ import {
   type NonConformance,
 } from '@equipment-management/db/schema/non-conformances';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { resolveNonConformanceOrderBy } from './utils/non-conformance-sort-mapper';
 import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
@@ -422,23 +423,8 @@ export class NonConformancesService extends VersionedBaseService {
                 },
               },
             },
-            orderBy: (nc, { desc: descFn, asc: ascFn }) => {
-              const [sortField, sortDirection] = sort.split('.');
-              const isAsc = sortDirection === 'asc';
-
-              switch (sortField) {
-                case 'discoveryDate':
-                  return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
-                case 'status':
-                  return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
-                case 'createdAt':
-                  return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
-                case 'updatedAt':
-                  return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
-                default:
-                  return [descFn(nc.discoveryDate)];
-              }
-            },
+            // sort enum + mapper SSOT (utils/non-conformance-sort-mapper.ts)
+            orderBy: [resolveNonConformanceOrderBy(sort)],
             limit: pageSize,
             offset: (page - 1) * pageSize,
           }),

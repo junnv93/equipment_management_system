@@ -8,6 +8,7 @@ import {
   equipment as equipmentTable,
 } from '@equipment-management/db/schema';
 import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
+import { resolveTeamOrderBy } from './utils/team-sort-mapper';
 import { ErrorCode, Team, type PaginatedResponseType } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
@@ -89,7 +90,7 @@ export class TeamsService {
           teamsTable.createdAt,
           teamsTable.updatedAt
         )
-        .orderBy(teamsTable.name)
+        .orderBy(resolveTeamOrderBy(query.sort))
         .limit(pageSize)
         .offset(offset),
     ]);

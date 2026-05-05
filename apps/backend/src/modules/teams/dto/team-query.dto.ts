@@ -1,12 +1,19 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import {
   SiteEnum,
   type Site,
   ClassificationEnum,
   type Classification,
+  TeamSortEnum,
+  type TeamSortValue,
+  optionalTrimmedString,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -17,11 +24,11 @@ import {
  * ✅ 사이트 필터 추가: 사용자 사이트에 맞는 팀만 조회
  */
 export const teamQuerySchema = z.object({
-  ids: z.string().optional(),
-  search: z.string().optional(),
+  ids: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   site: SiteEnum.optional(),
   classification: ClassificationEnum.optional(), // ✅ type → classification (장비 분류와 동일)
-  sort: z.string().optional(),
+  sort: TeamSortEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
@@ -64,10 +71,11 @@ export class TeamQueryDto {
   classification?: Classification;
 
   @ApiPropertyOptional({
-    description: '정렬 기준 (예: name.asc,createdAt.desc)',
+    description: '정렬 기준 (예: name.asc, createdAt.desc)',
+    enum: TeamSortEnum.options,
     example: 'name.asc',
   })
-  sort?: string;
+  sort?: TeamSortValue;
 
   @ApiPropertyOptional({
     description: '페이지 번호',

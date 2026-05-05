@@ -4,6 +4,8 @@ import {
   EquipmentFilter,
   equipmentFilterSchema,
   EquipmentStatus,
+  EquipmentSortEnum,
+  type EquipmentSortValue,
   ManagementMethod,
   Classification,
   Site,
@@ -95,9 +97,10 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',
+    enum: EquipmentSortEnum.options,
     example: 'managementNumber.asc',
   })
-  sort?: string;
+  sort?: EquipmentSortValue;
 
   @ApiPropertyOptional({
     description: '페이지 번호',

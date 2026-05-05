@@ -463,6 +463,7 @@ export class InboundOverviewQueryDto {
 | 12  | required string .trim() 여부   | PASS/FAIL | .min(1) 앞 .trim() 누락 DTO 위치 |
 | 13  | .default() 필드 non-optional   | PASS/FAIL | .default() 있는데 DTO 클래스 optional 선언 위치 |
 | 14  | Pipe DTO 통과 필드 ↔ service 호출 인자 (silent loss 차단) | PASS/FAIL | underscore prefix 의심 위치 + DTO 필드 미전달 호출 |
+| 20  | Query DTO trim/max + sort enum SSOT | PASS/FAIL | optionalTrimmedString 미경유 / `sort: z.string()` / mapper satisfies 누락 위치 |
 ```
 
 ### Step 14: Pipe DTO 통과 필드 ↔ service 호출 인자 매핑 정합 — silent loss 차단 (2026-04-28 추가)
@@ -921,6 +922,89 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 - NotificationsService — append-only
 - CalibrationPlansService의 casVersion — 의도적 설계 (`updateWithVersion(..., casColumnKey: 'casVersion')`)
 - raw `tx.update` 수동 CAS 경로(`equipment-imports.service.onReturnCompleted`, `import-orphan-scheduler.detectAndRecover`) — 인라인 catch 정당
+
+---
+
+### Step 20: Query DTO trim/max + sort enum SSOT 강제 (2026-05-05 추가)
+
+**배경**: Backend Query DTO에서 `z.string().optional()`로 정의된 자유 텍스트 필드(search/manufacturer/destination 등)는 trim/max 미적용 시 두 가지 위험:
+1. **DoS 표면**: 50KB+ 페이로드 파싱 (max 부재)
+2. **whitespace bypass**: 공백만 입력해도 검증 통과 (trim 부재)
+
+`sort` 필드의 `z.string()` 직접 사용은 추가 위험:
+3. **SQL 의도치 않은 정렬 / injection 표면**: service-layer ORDER BY가 unknown field default fallback에 의존, allowlist enum 부재.
+
+본 Step은 `query-dto-validation-ssot` sprint(2026-05-05)에서 도입된 3-layer SSOT 강제:
+- **자유 텍스트**: `optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH | LONG_CSV_MAX_LENGTH, '<라벨>')` (`packages/schemas/src/utils/fields.ts`)
+- **sort 필드**: per-domain `XxxSortEnum.optional()` (`packages/schemas/src/sort/<domain>-sort.ts`)
+- **service ORDER BY**: `XXX_SORT_COLUMN_MAP satisfies Record<XxxSortField, PgColumn>` mapper SSOT (`apps/backend/src/modules/<domain>/utils/<domain>-sort-mapper.ts`)
+
+**규칙**:
+- `*-query.dto.ts`의 자유 텍스트 optional → `optionalTrimmedString(VALIDATION_RULES.<상수>, '<라벨>')` 경유 필수
+- `sort` 필드 → `z.string()` 금지, per-domain `XxxSortEnum.optional()` 사용
+- service ORDER BY → 인라인 `sort.split('.')` switch 금지, `resolveXxxOrderBy(query.sort)` mapper 호출
+- mapper는 `as const satisfies Record<XxxSortField, PgColumn>` 패턴으로 컴파일타임 exhaustive 강제
+
+**검증 명령**:
+
+```bash
+# 1. Query DTO 자유 텍스트 optional → optionalTrimmedString 미사용 탐지
+grep -rn "z\.string()\.optional()" apps/backend/src/modules/*/dto/*-query.dto.ts \
+  | grep -v "optionalTrimmedString\|audit-log-query\|report-query"
+# 기대: 0건 (자유 텍스트는 모두 SSOT 헬퍼 경유, audit/reports는 별도 도메인)
+
+# 2. sort: z.string() 직접 사용 탐지 (allowlist 부재)
+grep -rnE "sort:\s*z\.string\(\)" apps/backend/src/modules/*/dto/*-query.dto.ts \
+  packages/schemas/src/equipment.ts
+# 기대: 0건
+
+# 3. per-domain sort enum 파일 존재 (≥ 11)
+ls packages/schemas/src/sort/*-sort.ts | grep -v _shared | wc -l
+# 기대: ≥ 11
+
+# 4. mapper exhaustive satisfies 강제 (≥ 11)
+grep -rnE "satisfies Record<\w+SortField, PgColumn>" apps/backend/src/modules/*/utils/*-sort-mapper.ts | wc -l
+# 기대: ≥ 11
+
+# 5. optionalTrimmedString SSOT 도입 확인
+grep -c "export function optionalTrimmedString" packages/schemas/src/utils/fields.ts
+# 기대: ≥ 1
+
+# 6. 인라인 sort.split('.') 잔존 탐지 (mapper 도입 후 0건)
+grep -rn "sort\.split('\\.'" apps/backend/src/modules/**/*.service.ts 2>/dev/null
+# 기대: 0건
+```
+
+**PASS 기준**: 명령 1, 2, 6 = 0건 + 3, 4, 5 = ≥ 임계값.
+
+**FAIL 기준**: 위 임계값 위반 시 즉시 수정.
+
+**올바른 패턴** (`checkout-query.dto.ts`, 2026-05-05):
+
+```typescript
+// ✅ CORRECT — SSOT 헬퍼 + sort enum
+import { optionalTrimmedString, CheckoutSortEnum } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+
+export const checkoutQuerySchema = z.object({
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
+  statuses: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '반출 상태 목록'),
+  sort: CheckoutSortEnum.optional(),
+});
+
+// ❌ WRONG — DoS 표면 + sort SSOT 우회
+export const checkoutQuerySchema = z.object({
+  search: z.string().optional(),  // trim/max 부재
+  sort: z.string().optional(),    // allowlist 부재
+});
+```
+
+**예외**:
+- `audit-log-query.dto.ts` — `cursor`, `startDate`, `endDate`는 별도 정책 (날짜 / pagination cursor 형식)
+- `report-query.dto.ts` — 보고서 전용 enum (status/period 등) 별도 도메인
+- `equipment-imports`의 `sortBy` + `sortOrder` 분리형 (frontend `?sortBy=&sortOrder=` 호환 보존) — 결합형 sort enum과 다름
+
+**관련 sprint**: `query-dto-validation-ssot` (2026-05-05) — 11 Query DTO + equipmentFilterSchema + 11 sort enum + 11 service mapper + 12 spec (185 케이스).
 
 ## Exceptions
 

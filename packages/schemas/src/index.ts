@@ -58,7 +58,21 @@ export * from './validation';
 // Shared Field Utilities (Form-safe validators)
 // ============================================================
 
-export { uuidString, optionalUuid, nullableOptionalUuid } from './utils/fields';
+export {
+  uuidString,
+  optionalUuid,
+  nullableOptionalUuid,
+  optionalTrimmedString,
+  optionalIsoDateString,
+  optionalCursor,
+  optionalCsvEnum,
+} from './utils/fields';
+
+// ============================================================
+// Sort Enums (per-domain SSOT — Query DTO + service mapper 동일 참조)
+// ============================================================
+
+export * from './sort';
 
 // ============================================================
 // Inspection Template (UL-QP-18-03 / UL-QP-18-05 Build-Once Workflow)

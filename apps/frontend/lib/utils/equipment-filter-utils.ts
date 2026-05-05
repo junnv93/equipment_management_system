@@ -33,11 +33,16 @@
  * ============================================================================
  */
 
-import type {
-  Site,
-  EquipmentStatus,
-  ManagementMethod,
-  Classification,
+import {
+  type Site,
+  type EquipmentStatus,
+  type ManagementMethod,
+  type Classification,
+  type EquipmentSortField,
+  type EquipmentSortValue,
+  type SortDirection,
+  EQUIPMENT_SORT_FIELDS,
+  SORT_DIRECTION_VALUES,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@equipment-management/shared-constants';
 
@@ -57,8 +62,8 @@ export interface UIEquipmentFilters {
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: 'all' | 'due_soon' | 'overdue' | 'normal';
   teamId: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortBy: EquipmentSortField;
+  sortOrder: SortDirection;
   page: number;
   pageSize: number;
 }
@@ -77,7 +82,7 @@ export interface ApiEquipmentFilters {
   calibrationDueAfter?: number;
   calibrationOverdue?: boolean;
   teamId?: string;
-  sort?: string;
+  sort?: EquipmentSortValue;
   showRetired?: boolean;
   page: number;
   pageSize: number;
@@ -170,8 +175,19 @@ export function parseEquipmentFiltersFromSearchParams(
   // ✅ teamId도 "_all" 변환
   const teamIdRaw = get('teamId') || DEFAULT_UI_FILTERS.teamId;
   const teamId = teamIdRaw === '_all' ? '' : teamIdRaw;
-  const sortBy = get('sortBy') || DEFAULT_UI_FILTERS.sortBy;
-  const sortOrder = (get('sortOrder') || DEFAULT_UI_FILTERS.sortOrder) as 'asc' | 'desc';
+  // sort SSOT 화이트리스트 검증 — 잘못된 URL 값은 default로 fallback (silent ignore)
+  const sortByRaw = get('sortBy') ?? '';
+  const sortBy: EquipmentSortField = (EQUIPMENT_SORT_FIELDS as readonly string[]).includes(
+    sortByRaw
+  )
+    ? (sortByRaw as EquipmentSortField)
+    : DEFAULT_UI_FILTERS.sortBy;
+  const sortOrderRaw = get('sortOrder') ?? '';
+  const sortOrder: SortDirection = (SORT_DIRECTION_VALUES as readonly string[]).includes(
+    sortOrderRaw
+  )
+    ? (sortOrderRaw as SortDirection)
+    : DEFAULT_UI_FILTERS.sortOrder;
   const page = parseInt(get('page') || String(DEFAULT_UI_FILTERS.page), 10);
   const pageSize = parseInt(get('pageSize') || String(DEFAULT_UI_FILTERS.pageSize), 10);
 
@@ -229,7 +245,11 @@ export function convertFiltersToApiParams(filters: UIEquipmentFilters): ApiEquip
     calibrationDueAfter,
     calibrationOverdue,
     teamId: filters.teamId || undefined,
-    sort: filters.sortBy ? `${filters.sortBy}.${filters.sortOrder}` : undefined,
+    // EquipmentSortValue 결합형 SSOT — sortBy(EquipmentSortField) + sortOrder(SortDirection) 둘 다
+    // 좁혀진 타입이므로 결합 결과가 자동으로 EquipmentSortValue union에 속함. cast 불필요 (시스템 전반 SSOT).
+    sort: filters.sortBy
+      ? (`${filters.sortBy}.${filters.sortOrder}` satisfies EquipmentSortValue)
+      : undefined,
     page: filters.page,
     pageSize: filters.pageSize,
   };

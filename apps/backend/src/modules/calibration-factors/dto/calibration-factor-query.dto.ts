@@ -1,11 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import {
   CalibrationFactorTypeEnum,
   CalibrationFactorApprovalStatusEnum,
   CalibrationFactorApprovalStatusValues,
+  CalibrationFactorSortEnum,
+  type CalibrationFactorSortValue,
   CALIBRATION_FACTOR_TYPE_VALUES,
   CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
   type CalibrationFactorType,
@@ -14,6 +20,7 @@ import {
   type Site,
   VM,
   uuidString,
+  optionalTrimmedString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -32,12 +39,12 @@ export const calibrationFactorQuerySchema = z.object({
   equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   approvalStatus: CalibrationFactorApprovalStatusEnum.optional(),
   factorType: CalibrationFactorTypeEnum.optional(),
-  search: z.string().optional(),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   /** @SiteScoped에 의해 자동 주입 — 직접 설정 금지 */
   site: SiteEnum.optional(),
   /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
   teamId: uuidString(VM.uuid.invalid('팀')).optional(),
-  sort: z.string().optional(),
+  sort: CalibrationFactorSortEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
@@ -95,10 +102,11 @@ export class CalibrationFactorQueryDto {
 
   @ApiProperty({
     description: '정렬 기준 (필드.방향)',
+    enum: CalibrationFactorSortEnum.options,
     example: 'effectiveDate.desc',
     required: false,
   })
-  sort?: string;
+  sort?: CalibrationFactorSortValue;
 
   @ApiProperty({
     description: '페이지 번호',

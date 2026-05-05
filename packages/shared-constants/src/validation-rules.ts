@@ -1,8 +1,16 @@
+import { SCHEMA_VALIDATION_RULES } from '@equipment-management/schemas';
+
 /**
  * 검증 규칙 공유 상수 — Backend DTO / Frontend Form SSOT
  *
  * 프론트엔드와 백엔드가 동일한 검증 규칙을 적용하기 위한 단일 소스입니다.
  * DTO의 `.min()`, `.max()` 값과 프론트엔드 폼 검증에서 동일한 상수를 사용합니다.
+ *
+ * SSOT 단방향 import:
+ * - `EXTENDED_TEXT_MAX_LENGTH`는 `packages/schemas`의 `SCHEMA_VALIDATION_RULES`가 source-of-truth.
+ *   schemas 패키지는 shared-constants 의존 불가(의존 그래프 최하층)이므로 schemas 내부에서
+ *   `equipmentFilterSchema` 등 자체 SSOT를 사용해야 한다. 그 값을 본 객체에 단방향 wire하여
+ *   mirror 상수 분기(어긋날 위험) 제거.
  *
  * @example
  * // Backend DTO
@@ -38,8 +46,14 @@ export const VALIDATION_RULES = {
   /** 관리번호 최대 길이 */
   MANAGEMENT_NUMBER_MAX_LENGTH: 50,
 
-  /** 중간 텍스트 필드 최대 길이 (소프트웨어명, 제조사, URL 등 varchar(200)) */
-  EXTENDED_TEXT_MAX_LENGTH: 200,
+  /**
+   * 중간 텍스트 필드 최대 길이 (소프트웨어명, 제조사, URL, Query DTO 자유 텍스트 등 varchar(200)).
+   *
+   * **SSOT 단방향**: source-of-truth는 `SCHEMA_VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH`
+   * (`packages/schemas`). schemas가 shared-constants에 의존 불가하므로 schemas 측 정의를
+   * 그대로 노출. 두 값이 어긋날 수 없다 — 단일 import 경로.
+   */
+  EXTENDED_TEXT_MAX_LENGTH: SCHEMA_VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH,
 
   /** 케이블 관리번호/길이/손실값 등 짧은 케이블 도메인 텍스트 최대 길이 */
   CABLE_SHORT_TEXT_MAX_LENGTH: 20,
@@ -52,6 +66,15 @@ export const VALIDATION_RULES = {
 
   /** 일괄 작업 최대 처리 건수 */
   BULK_OPERATION_MAX_COUNT: 50,
+
+  /**
+   * Query DTO CSV 다중값 필드 최대 길이 (statuses, methods, roles, teams, ids 등)
+   *
+   * 단일 검색어 가정인 EXTENDED_TEXT_MAX_LENGTH(200)와 분리 — 다수 enum 토큰을
+   * `'a,b,c,...'` 형식으로 보낼 때 200자 초과 가능. 1000자 = 약 166개 토큰 (현실적 상한).
+   * 토큰별 enum 검증은 service-layer 책임 (점진 도입).
+   */
+  LONG_CSV_MAX_LENGTH: 1000,
 } as const;
 
 // ============================================================================

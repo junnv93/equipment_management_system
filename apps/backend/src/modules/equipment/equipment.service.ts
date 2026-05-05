@@ -21,20 +21,9 @@ import {
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
-import {
-  eq,
-  and,
-  or,
-  ne,
-  desc,
-  asc,
-  sql,
-  SQL,
-  inArray,
-  notInArray,
-  getTableColumns,
-} from 'drizzle-orm';
+import { eq, and, or, ne, asc, sql, SQL, inArray, notInArray, getTableColumns } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { resolveEquipmentOrderBy } from './utils/equipment-sort-mapper';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import type { AppDatabase } from '@equipment-management/db';
@@ -89,20 +78,6 @@ const EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)));
 export class EquipmentService extends VersionedBaseService {
   private readonly logger = new Logger(EquipmentService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.EQUIPMENT;
-
-  // 인덱스가 있는 필드 목록 (정렬 최적화용)
-  private readonly INDEXED_FIELDS = [
-    'managementNumber',
-    'status',
-    'location',
-    'manufacturer',
-    'teamId',
-    'managerId',
-    'nextCalibrationDate',
-    'modelName',
-    'isActive',
-    'name',
-  ] as const;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
@@ -324,69 +299,8 @@ export class EquipmentService extends VersionedBaseService {
       );
     }
 
-    // 정렬 설정
-    const orderBy: SQL<unknown>[] = [];
-    if (sort) {
-      const [field, direction] = sort.split('.');
-      if (field && this.INDEXED_FIELDS.includes(field as (typeof this.INDEXED_FIELDS)[number])) {
-        // 필드명에 따라 적절한 컬럼 참조 사용
-        switch (field) {
-          case 'managementNumber':
-            orderBy.push(
-              direction === 'asc'
-                ? asc(equipment.managementNumber)
-                : desc(equipment.managementNumber)
-            );
-            break;
-          case 'status':
-            orderBy.push(direction === 'asc' ? asc(equipment.status) : desc(equipment.status));
-            break;
-          case 'location':
-            orderBy.push(direction === 'asc' ? asc(equipment.location) : desc(equipment.location));
-            break;
-          case 'manufacturer':
-            orderBy.push(
-              direction === 'asc' ? asc(equipment.manufacturer) : desc(equipment.manufacturer)
-            );
-            break;
-          case 'teamId':
-            orderBy.push(direction === 'asc' ? asc(equipment.teamId) : desc(equipment.teamId));
-            break;
-          case 'managerId':
-            orderBy.push(
-              direction === 'asc' ? asc(equipment.managerId) : desc(equipment.managerId)
-            );
-            break;
-          case 'nextCalibrationDate':
-            orderBy.push(
-              direction === 'asc'
-                ? asc(equipment.nextCalibrationDate)
-                : desc(equipment.nextCalibrationDate)
-            );
-            break;
-          case 'modelName':
-            orderBy.push(
-              direction === 'asc' ? asc(equipment.modelName) : desc(equipment.modelName)
-            );
-            break;
-          case 'isActive':
-            orderBy.push(direction === 'asc' ? asc(equipment.isActive) : desc(equipment.isActive));
-            break;
-          case 'name':
-            orderBy.push(direction === 'asc' ? asc(equipment.name) : desc(equipment.name));
-            break;
-          default:
-            orderBy.push(asc(equipment.managementNumber));
-            break;
-        }
-      } else {
-        // 인덱스가 없는 필드는 기본 정렬 사용
-        orderBy.push(asc(equipment.managementNumber));
-      }
-    } else {
-      // 기본 정렬: 관리번호 오름차순 (unique 인덱스 있음)
-      orderBy.push(asc(equipment.managementNumber));
-    }
+    // 정렬 — sort enum + mapper SSOT (utils/equipment-sort-mapper.ts)
+    const orderBy: SQL<unknown>[] = [resolveEquipmentOrderBy(sort)];
 
     return { whereConditions, orderBy };
   }

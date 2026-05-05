@@ -145,7 +145,9 @@
       "Bash(grep -v \"^0$\")",
       "Bash(sed -i '/^- \\\\[x\\\\]/d' /home/kmjkds/equipment_management_system/.claude/exec-plans/tech-debt-tracker.md)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/backlog/calibration-phase4-7.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/calibration-phase4-7.md)",
-      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/rejection-reason-notfound-systemic-closure.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/rejection-reason-notfound-systemic-closure.md)"
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/contracts/rejection-reason-notfound-systemic-closure.md /home/kmjkds/equipment_management_system/.claude/contracts/completed/rejection-reason-notfound-systemic-closure.md)",
+      "Bash(mv .claude/exec-plans/active/2026-05-05-nextauth-csrf-verify-harness.md .claude/exec-plans/completed/)",
+      "Bash(mv .claude/contracts/nextauth-csrf-verify-harness.md .claude/contracts/completed/)"
     ],
     "deny": [],
     "ask": []

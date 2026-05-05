@@ -5,15 +5,18 @@ import {
   REPORT_PERIOD_VALUES,
   AUDIT_ACTION_VALUES,
   AUDIT_ENTITY_TYPE_VALUES,
+  EQUIPMENT_STATUS_VALUES,
+  CALIBRATION_STATUS_VALUES,
   SiteEnum,
   optionalUuid,
+  optionalIsoDateString,
 } from '@equipment-management/schemas';
 
-// ── 통계 엔드포인트 공통 날짜 스키마 ─────────────────────────────────────────
+// ── 통계 엔드포인트 공통 날짜 스키마 (verify-zod Step 20 SSOT) ──────────────
 
 const dateRangeFields = {
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: optionalIsoDateString('시작일'),
+  endDate: optionalIsoDateString('종료일'),
 };
 
 // ── 통계 쿼리 스키마 ─────────────────────────────────────────────────────────
@@ -28,7 +31,7 @@ export const EquipmentUsageQueryPipe = new ZodValidationPipe(equipmentUsageQuery
 });
 
 export const calibrationStatusQuerySchema = z.object({
-  status: z.string().optional(),
+  status: z.enum(CALIBRATION_STATUS_VALUES).optional(),
   timeframe: z.enum(REPORT_PERIOD_VALUES).optional(),
 });
 export type CalibrationStatusQueryInput = z.infer<typeof calibrationStatusQuerySchema>;
@@ -81,7 +84,7 @@ export const ExportEquipmentUsageQueryPipe = new ZodValidationPipe(
 export const exportEquipmentInventoryQuerySchema = z.object({
   format: z.enum(REPORT_FORMAT_VALUES),
   site: SiteEnum.optional(),
-  status: z.string().optional(),
+  status: z.enum(EQUIPMENT_STATUS_VALUES).optional(),
   teamId: optionalUuid(),
 });
 export type ExportEquipmentInventoryQueryInput = z.infer<
@@ -94,7 +97,7 @@ export const ExportEquipmentInventoryQueryPipe = new ZodValidationPipe(
 
 export const exportCalibrationStatusQuerySchema = z.object({
   ...exportBaseFields,
-  status: z.string().optional(),
+  status: z.enum(CALIBRATION_STATUS_VALUES).optional(),
 });
 export type ExportCalibrationStatusQueryInput = z.infer<typeof exportCalibrationStatusQuerySchema>;
 export const ExportCalibrationStatusQueryPipe = new ZodValidationPipe(
@@ -104,7 +107,7 @@ export const ExportCalibrationStatusQueryPipe = new ZodValidationPipe(
 
 export const exportUtilizationQuerySchema = z.object({
   ...exportBaseFields,
-  period: z.string().optional(),
+  period: z.enum(REPORT_PERIOD_VALUES).optional(),
   site: SiteEnum.optional(),
 });
 export type ExportUtilizationQueryInput = z.infer<typeof exportUtilizationQuerySchema>;

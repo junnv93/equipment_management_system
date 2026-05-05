@@ -1,17 +1,24 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 // ✅ SSOT: schemas 패키지에서 import
 import {
   NON_CONFORMANCE_STATUS_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
+  NonConformanceSortEnum,
+  type NonConformanceSortValue,
   NonConformanceStatusValues,
   SiteEnum,
   type NonConformanceStatus as NCStatus,
   type NonConformanceType as NCType,
   VM,
   uuidString,
+  optionalTrimmedString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility (service, tests에서 사용)
@@ -37,8 +44,8 @@ export const nonConformanceQuerySchema = z.object({
   site: SiteEnum.optional(),
   /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
   teamId: uuidString(VM.uuid.invalid('팀')).optional(),
-  search: z.string().optional(),
-  sort: z.string().optional(),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
+  sort: NonConformanceSortEnum.optional(),
   pendingClose: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
   includeSummary: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
@@ -85,9 +92,10 @@ export class NonConformanceQueryDto {
 
   @ApiPropertyOptional({
     description: '정렬 (예: discoveryDate.desc)',
+    enum: NonConformanceSortEnum.options,
     default: 'discoveryDate.desc',
   })
-  sort?: string;
+  sort?: NonConformanceSortValue;
 
   @ApiPropertyOptional({
     description: '종료 승인 대기 목록 필터 (수리 필요 유형은 수리 이력 필수)',

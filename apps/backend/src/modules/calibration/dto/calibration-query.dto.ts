@@ -1,12 +1,22 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 import {
   CalibrationApprovalStatusEnum,
+  CalibrationSortEnum,
+  CALIBRATION_STATUS_VALUES,
+  type CalibrationSortValue,
+  type CalibrationStatus,
   SiteEnum,
   type Site,
   optionalUuid,
+  optionalTrimmedString,
+  optionalCsvEnum,
 } from '@equipment-management/schemas';
 
 /**
@@ -31,20 +41,24 @@ export type CalibrationDueStatus = z.infer<typeof CalibrationDueStatusEnum>;
 export const calibrationQuerySchema = z.object({
   equipmentId: optionalUuid(),
   calibrationManagerId: optionalUuid(),
-  statuses: z.string().optional(),
-  methods: z.string().optional(),
-  calibrationAgency: z.string().optional(),
+  statuses: optionalCsvEnum(
+    CALIBRATION_STATUS_VALUES,
+    VALIDATION_RULES.LONG_CSV_MAX_LENGTH,
+    '교정 상태 목록'
+  ),
+  methods: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '교정 방법 목록'),
+  calibrationAgency: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '교정 기관'),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
   nextFromDate: z.coerce.date().optional(),
   nextToDate: z.coerce.date().optional(),
-  isPassed: z.string().optional(),
-  search: z.string().optional(),
+  isPassed: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '교정 합격 여부'),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   approvalStatus: CalibrationApprovalStatusEnum.optional(),
   teamId: optionalUuid(),
   site: SiteEnum.optional(),
   calibrationDueStatus: CalibrationDueStatusEnum.optional(),
-  sort: z.string().default('calibrationDate.desc'),
+  sort: CalibrationSortEnum.optional().default('calibrationDate.desc'),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(DEFAULT_PAGE_SIZE),
 });
@@ -70,10 +84,11 @@ export class CalibrationQueryDto {
   calibrationManagerId?: string;
 
   @ApiPropertyOptional({
-    description: '교정 상태 (여러 상태 가능, 쉼표로 구분)',
+    description:
+      '교정 상태 (여러 상태 가능, 쉼표로 구분 — optionalCsvEnum 토큰 검증 후 CalibrationStatus[] 변환)',
     example: 'scheduled,in_progress,completed',
   })
-  statuses?: string;
+  statuses?: CalibrationStatus[];
 
   @ApiPropertyOptional({
     description: '교정 방법 (여러 방법 가능, 쉼표로 구분)',
@@ -152,9 +167,10 @@ export class CalibrationQueryDto {
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',
+    enum: CalibrationSortEnum.options,
     example: 'calibrationDate.desc',
   })
-  sort?: string = 'calibrationDate.desc';
+  sort?: CalibrationSortValue = 'calibrationDate.desc';
 
   @ApiPropertyOptional({
     description: '페이지 번호',

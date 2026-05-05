@@ -5,6 +5,15 @@
 
 ---
 
+## ~~2026-05-05 — Backend Query DTO trim/max + sort enum SSOT 전면 적용~~ ✅ 완료 (2026-05-05, Mode 2 harness 14/14 MUST + 10/10 SHOULD PASS)
+
+> **발견 배경**: generate-prompts 스캔 옵션 A — 11 Query DTO (+ packages/schemas equipmentFilterSchema + repair-history senior-closure 추가) 자유 텍스트 `z.string().optional()` 무제한 → DoS 50KB+ 표면. sort 필드 `z.string()` allowlist 부재.
+> **완료**: `optionalTrimmedString` SSOT helper + per-domain sort enum (12개) + service mapper SSOT (13개·`as const satisfies Record<XxxSortField, PgColumn>`) + verify-zod Step 20 신설 + 12 spec / 185 cases. 인라인 `sort.split('.')` switch 13 도메인 일괄 제거.
+> **검증**: backend 122 suites/1498 tests + schemas 9 suites/669 tests + lint + tsc + 전체 build PASS. iter 1 lint FAIL → iter 2 PASS.
+> **상세**: `.claude/exec-plans/completed/2026-05-05-query-dto-validation-ssot.md` + `.claude/contracts/completed/query-dto-validation-ssot.md` + `project_query_dto_validation_ssot_20260505.md`
+
+---
+
 ## ~~2026-05-03 — Production env/API endpoint SSOT drift 보강~~ ✅ 완료 (2026-05-03)
 
 > **발견 배경**: generate-prompts + review-architecture 스캔. prod/LAN/CI 환경변수와 shared API endpoint SSOT drift 확인.

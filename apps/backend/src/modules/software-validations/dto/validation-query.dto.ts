@@ -4,6 +4,7 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-c
 import {
   ValidationStatusEnum,
   ValidationTypeEnum,
+  SoftwareValidationSortEnum,
   SiteEnum,
   VM,
   uuidString,
@@ -16,7 +17,7 @@ export const validationQuerySchema = z.object({
   site: SiteEnum.optional(),
   /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
   teamId: uuidString(VM.uuid.invalid('팀')).optional(),
-  sort: z.string().optional(),
+  sort: SoftwareValidationSortEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),

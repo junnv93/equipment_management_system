@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-03 (calibration-scope-guards 4 iters PASS + 아카이브. production env/API SSOT, scan/handover error.tsx, checkout PR-16/PR-23, 장비 생성 교정 이력 저장, schema generator stub 완료 후 아카이브. sticky-header는 trigger condition unmet 유지.)**
+> **마지막 정리일: 2026-05-05 (query-dto-validation-ssot Mode 2 harness PASS — 14/14 MUST + 10/10 SHOULD. Query DTO trim/max + sort enum SSOT 13 도메인 + verify-zod Step 20 + 185 spec cases. archive 이동 완료.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -176,6 +176,227 @@ Agent C (`name="fleet-infra"`, `subagent_type="Explore"`, `run_in_background=tru
 
 > **완료된 항목은 [example-prompts-archive.md](./example-prompts-archive.md)로 분리 (2026-04-09 36차 정리).**
 > 현재 파일은 활성(미해결) harness 프롬프트만 포함. 새 프롬프트는 활성 영역에 추가.
+
+---
+
+## 🆕 2026-05-05 — generate-prompts 스캔 신규 발견 (8건 confirmed · 9 false positive · 5 사용자 결정)
+
+> **발견 배경**: scan-backend·scan-frontend·scan-infra 3 parallel Explore agent + Read/Grep 직접 verify.
+> **Verify 결과**:
+> - **False positive 9건**: `.env` git 추적(미추적·.env.example만 tracked), PaginationPrevious "Previous"(dead export·0 callers), TeamListContent searchInput(debounce-then-sync 표준), loading.tsx 누락 5경로((auth)/error 자체가 error route·login fast form·help 정적·visual-fixtures group·handover error.tsx 있음), Drizzle relations() 5건 미정의(approvalDelegations·rejection-presets·csp-reports·system-settings·inspection-result-sections — `db.query.<table>` 사용처 0건, leaf entity)
+> - **사용자 결정 5건**: Backend Query DTO trim/max 11건(verify-zod Step 12는 .min(N) required만 강제·c82ae0ef는 Create/Update DTO만 처리·Query optional은 정책 미정), use-inspection-template.ts TODO(Phase 1B-E 호출자 등장으로 outdated — 코멘트만 update or 제거)
+
+### 🟠 HIGH — ApprovalRow React.memo 누락 (Mode 0)
+
+```
+배경: 승인 목록 행 렌더링 ApprovalRow가 React.memo 없이 export — list re-render 시 모든 행 재렌더.
+ApprovalList.tsx:100에서 map으로 다수 렌더링됨. 동일 도메인 row 컴포넌트(YourTurnBadge·NextStepPanel·ProgressFlowSection)는 모두 memo 적용됨.
+
+위치:
+- apps/frontend/components/approvals/ApprovalRow.tsx:53 (export function ApprovalRow)
+- 호출자: apps/frontend/components/approvals/ApprovalList.tsx:100 (<ApprovalRow ...>)
+
+작업:
+1. ApprovalRow를 React.memo로 wrap:
+   const ApprovalRowComponent = (props: ApprovalRowProps) => { ... }
+   export const ApprovalRow = React.memo(ApprovalRowComponent);
+2. props에 함수형 콜백(onApprove/onReject/onToggleSelect/onViewDetail)이 매 렌더 새로 생성되지 않도록
+   ApprovalList에서 useCallback으로 안정화 검토.
+
+검증:
+- pnpm tsc --noEmit exit 0
+- grep "React.memo\|memo(" ApprovalRow.tsx → 1건 hit
+- 기존 e2e/spec PASS
+```
+
+### 🟠 HIGH — GitHub Actions setup-node v4 → v6 일관성 (Mode 0)
+
+```
+배경: bundle-size·accessibility-audit·performance-audit 3개 워크플로가 setup-node@v4 사용 중인 반면,
+main·codeql·supply-chain-gate·e2e-nightly·copilot-setup-steps는 모두 v6 (SHA pinned). 버전 드리프트.
+
+위치:
+- .github/workflows/bundle-size.yml:36
+- .github/workflows/accessibility-audit.yml:37
+- .github/workflows/performance-audit.yml:37
+
+작업:
+1. 3개 파일 모두 main.yml 패턴 차용:
+   uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+2. cache 옵션도 main.yml과 동일하게 추가 (cache: pnpm or 별도 actions/cache 패턴 일관)
+
+검증:
+- grep "setup-node@v4" .github/workflows/ → 0건
+- 3 workflow 로컬 푸시 또는 PR로 green 확인
+```
+
+### 🟠 HIGH — main.yml dep-audit job pnpm cache 누락 (Mode 0)
+
+```
+배경: main.yml dep-audit job(.github/workflows/main.yml:389)가 setup-node에 cache: pnpm 옵션 없이
+node_modules만 actions/cache. pnpm metadata fetch가 매 런마다 발생 → CI 시간 낭비.
+다른 job들은 setup-node cache: pnpm 또는 동등 패턴 사용.
+
+위치:
+- .github/workflows/main.yml:389-401 (dep-audit job)
+
+작업:
+1. setup-node에 cache: pnpm 추가 (다른 job 패턴 참고):
+   uses: actions/setup-node@... # v6
+   with:
+     node-version: ${{ env.NODE_VERSION }}
+     cache: pnpm
+2. 기존 actions/cache(node_modules)와 충돌 시, 한쪽 선택 (대부분 pnpm cache가 더 효율).
+
+검증:
+- main.yml dep-audit job push → cache hit log 확인 (Cache Restored)
+- CI 전체 시간 측정 (before/after)
+```
+
+### 🟡 MEDIUM — HeroKPI sr-only 한국어 하드코딩 (Mode 0)
+
+```
+배경: 트렌드 아이콘(TrendingUp/Down/Minus)의 sr-only 텍스트가 한국어 하드코딩.
+i18n SSOT(messages/{ko,en}/checkouts.json) 우회.
+
+위치:
+- apps/frontend/components/checkouts/HeroKPI.tsx:51 ("증가 추세")
+- apps/frontend/components/checkouts/HeroKPI.tsx:57 ("감소 추세")
+- apps/frontend/components/checkouts/HeroKPI.tsx:63 ("변동 없음")
+
+작업:
+1. messages/ko/checkouts.json + messages/en/checkouts.json에 키 추가:
+   "heroKpi": { "trendUp": "증가 추세", "trendDown": "감소 추세", "trendFlat": "변동 없음" }
+   en: "Trend Up" / "Trend Down" / "No Change"
+2. HeroKPI에 useTranslations('checkouts') hook 추가 + t('heroKpi.trendUp/Down/Flat') 사용
+3. 기존 sr-only 클래스 유지
+
+검증:
+- grep -E "(증가|감소|변동) 추세|변동 없음" HeroKPI.tsx → 0건
+- pnpm tsc --noEmit exit 0
+- ko/en parity: grep -c "trendUp\|trendDown\|trendFlat" messages/{ko,en}/checkouts.json → 양쪽 동일
+```
+
+### 🟡 MEDIUM — CalibrationValidityChecker 한국어 Alert 하드코딩 (Mode 0)
+
+```
+배경: 교정 유효기간 검증 Alert의 title/description이 한국어 하드코딩. 영문 환경에서 Korean 노출.
+
+위치:
+- apps/frontend/components/equipment/CalibrationValidityChecker.tsx:51,53-55 ("교정 유효기간 부족", "차기교정일...")
+- apps/frontend/components/equipment/CalibrationValidityChecker.tsx:63,65 ("교정 유효기간 확인됨", "차기교정일까지 N일...")
+
+작업:
+1. messages/ko/equipment.json + messages/en/equipment.json에 키 추가:
+   "calibrationValidity": {
+     "insufficient": { "title": "교정 유효기간 부족", "description": "..." },
+     "verified": { "title": "교정 유효기간 확인됨", "description": "차기교정일까지 {days}일..." }
+   }
+2. useTranslations('equipment') hook 적용, fmtDate/daysBuffer는 ICU 변수로 전달
+3. invalid → t('calibrationValidity.insufficient.description', { nextCalDate, endDate })
+
+검증:
+- grep "교정 유효기간\|차기교정일" CalibrationValidityChecker.tsx → 0건
+- en/ko 동일 키 셋
+- e2e: 장비 폼에서 Alert 노출 시 i18n locale 따라 변경
+```
+
+### 🟡 MEDIUM — Large Component Refactor (3 components · Mode 2)
+
+```
+배경: 1000줄 초과 컴포넌트 3건. 단일 파일에 form/dialog/section 로직 응집 → 가독성·테스트성 저하.
+- apps/frontend/components/equipment/EquipmentForm.tsx (1414 lines)
+- apps/frontend/components/inspections/InspectionFormDialog.tsx (1362 lines)
+- apps/frontend/components/non-conformances/NCDetailClient.tsx (1103 lines)
+
+작업 (각 컴포넌트별 별도 PR로 분할 권장):
+1. EquipmentForm.tsx → 섹션별 sub-component 추출:
+   - BasicInfoSection / CalibrationSection / DepreciationSection / DocumentsSection
+   - 각 section은 독립 props 인터페이스, parent는 form orchestrator
+2. InspectionFormDialog.tsx → dialog/form 분리:
+   - InspectionFormDialog (wrapper) + InspectionForm (실제 form 로직)
+   - SoftFork/Gallery 핸들러는 별도 hook (use-inspection-fork.ts)
+3. NCDetailClient.tsx → 상세 섹션 분리:
+   - NCDocumentsSection / NCApprovalFlowSection / NCActionPanel
+
+검증:
+- pnpm tsc --noEmit exit 0
+- 각 컴포넌트 ≤ 700 lines (목표)
+- 기존 RTL/e2e spec 회귀 0건
+- React.memo 적용 가능 sub-component는 적용
+- 사용자 결정: 3개 동시 vs 1개씩 sprint 분할 (권장: 1개씩)
+
+⚠️ Mode 2 작업. 사용자 우선순위 결정 필요.
+```
+
+### 🟢 LOW — use-inspection-template.ts TODO 코멘트 정리 (Mode 0)
+
+```
+배경: use-inspection-template.ts:75 "Phase 1B-E TODO" 코멘트가 stale.
+1B-D 시점 "호출자 0건" 가정으로 작성됐으나, 현재 InspectionFormDialog.tsx:198·716에서
+실제로 useUpsertTemplate.mutate() 호출 중 (CAS handler까지 구현됨).
+
+위치:
+- apps/frontend/hooks/use-inspection-template.ts:75-79
+
+작업 옵션 (사용자 결정):
+A. TODO 제거 + 현재 구조(호출자가 직접 fetch-before-mutate) 정착으로 코멘트 update
+B. 정말로 useCasGuardedMutation으로 wrap 진행 (memory: useCasGuardedMutation SSOT)
+   → 호출자(InspectionFormDialog)의 latestTemplate.version+1 로직을 hook으로 흡수
+
+권장: 옵션 A — useCasGuardedMutation 패턴이 다른 도메인(checkouts/calibration-plans)에서
+이미 안정화됐고, template 영역은 SoftForkDialog 흐름 통합 후에도 호출자가 명시적 version 결정해야
+하는 도메인 특성 (inline diff 계산 후 mutate). hook wrap의 추가 가치 낮음.
+
+검증:
+- TODO 제거 후 grep "Phase 1B-E TODO" → 0건
+- 코멘트가 실제 코드 흐름과 일치
+```
+
+### ✅ 완료 (2026-05-05) — Backend Query DTO trim/max 정책 신설 (Mode 1 or 2)
+
+> **결과**: 옵션 A (전면 적용) — 13 도메인 sort enum SSOT + optionalTrimmedString helper + verify-zod Step 20 + 12 spec/185 cases. PASS. 상세 메모리: `project_query_dto_validation_ssot_20260505.md`. archive-domain.md 후속 등재 권장.
+
+<details>
+<summary>원본 프롬프트 (이력 보존)</summary>
+
+
+```
+배경 (정책 결정): Backend Query DTO 11건의 search/sort/manufacturer 등 optional string 필드에
+.trim()/.max() 미적용. verify-zod Step 12는 `.min(N)` required 필드만 .trim() 강제.
+c82ae0ef 커밋(zod-trim-max sprint)도 Create/Update DTO만 처리하고 Query DTO 명시적 제외.
+
+위치 (11 DTO):
+- apps/backend/src/modules/test-software/dto/test-software-query.dto.ts:20,21,26 (search, manufacturer, sort)
+- apps/backend/src/modules/calibration/dto/calibration-query.dto.ts:34,35,36,42,47 (statuses, methods, calibrationAgency, search, sort)
+- apps/backend/src/modules/checkouts/dto/checkout-query.dto.ts:33,34-38,39,40 (statuses, destination, checkout/return From/To, search, sort)
+- apps/backend/src/modules/non-conformances/dto/non-conformance-query.dto.ts:40,41 (search, sort)
+- apps/backend/src/modules/notifications/dto/notification-query.dto.ts:42,50,58 (recipientSite, search, sort)
+- apps/backend/src/modules/calibration-factors/dto/calibration-factor-query.dto.ts:35,40 (search, sort)
+- apps/backend/src/modules/teams/dto/team-query.dto.ts:21,24 (search, sort)
+- apps/backend/src/modules/users/dto/user-query.dto.ts:21,22 (search, sort)
+- apps/backend/src/modules/equipment-imports/dto/equipment-import-query.dto.ts:24 (search)
+- apps/backend/src/modules/cables/dto/cable-query.dto.ts:7,11 (search, sort)
+- apps/backend/src/modules/software-validations/dto/validation-query.dto.ts:19 (sort)
+
+리스크:
+- search/manufacturer 자유 텍스트 → DoS 페이로드(50KB+ 단일 query) 가능
+- sort 필드 → injection 표면 (서비스 레이어 enum 검증 안 하면 SQL 오류·정보 노출)
+
+옵션 결정:
+A. 정책 신설: 모든 Query DTO optional 자유 텍스트에 .trim().max(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH) 강제
+   → verify-zod 신규 Step + 11 DTO 수정 + spec 추가 (Mode 2)
+B. sort 필드만 enum 검증 (가장 위험한 표면): 11 DTO sort → z.enum([...]) 또는 별도 sortable-fields SSOT
+   → 도메인별 enum 정의 + 서비스 검증 (Mode 1)
+C. 현 상태 유지 (서비스 레이어에서 sort field whitelist 가정 — 검증 필요)
+
+권장: 옵션 B (sort injection이 더 큰 위험·작업량 작음). 옵션 A는 후속 sprint.
+사용자 결정 후 진행.
+
+⚠️ Mode 1 or 2. 정책 결정 사용자 위임.
+```
+
+</details>
 
 ---
 

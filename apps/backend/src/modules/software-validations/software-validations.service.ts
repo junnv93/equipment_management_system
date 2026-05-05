@@ -8,6 +8,7 @@ import {
 } from '@equipment-management/db/schema';
 import { ValidationStatusValues, ErrorCode } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { resolveSoftwareValidationOrderBy } from './utils/software-validation-sort-mapper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
@@ -198,14 +199,8 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
         const whereClause = and(...conditions);
 
-        const [sortField, sortOrder] = sort.split('.');
-        const sortColumn =
-          sortField === 'testDate'
-            ? softwareValidations.testDate
-            : sortField === 'status'
-              ? softwareValidations.status
-              : softwareValidations.createdAt;
-        const orderBy = sortOrder === 'asc' ? sql`${sortColumn} ASC` : desc(sortColumn);
+        // sort enum + mapper SSOT (utils/software-validation-sort-mapper.ts)
+        const orderBy = resolveSoftwareValidationOrderBy(sort);
 
         const [rows, [{ count }]] = await Promise.all([
           this.db

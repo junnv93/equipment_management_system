@@ -71,3 +71,37 @@ export const isCalibration = (value: unknown): value is Calibration => {
     return false;
   }
 };
+
+// =============================================================================
+// 교정성적서 PDF 추출 (Phase A — HCT 양식만 지원)
+// =============================================================================
+
+/**
+ * 지원 교정기관 — Phase A는 HCT 단일 양식.
+ * 추후 KTL 등 추가 시 enum 확장.
+ */
+export const CalibrationAgencyEnum = z.enum(['HCT']);
+export type CalibrationAgency = z.infer<typeof CalibrationAgencyEnum>;
+
+/**
+ * 교정성적서 PDF 추출 결과 (표지 메타만).
+ * - managementNumber → equipment.management_number 자동 매칭 키
+ * - certificateNumber → calibrations.certificateNumber. 수정본은 `-R{n}` suffix.
+ * - revisionNumber → 1 = 원본, 2+ = 수정본 (documents.revisionNumber 컨벤션과 일치)
+ * - parentCertificateNumber → revision일 때 원본 번호 ('이 성적서는 제 X호의 수정' 문구 추출)
+ * - nextCalibrationDate → 일부 양식(안테나 등 KOLAS-G-008 비대상)에서 누락 가능 → nullable
+ */
+export const extractedCalibrationCertificateSchema = z.object({
+  managementNumber: z.string().min(1),
+  certificateNumber: z.string().min(1),
+  revisionNumber: z.number().int().min(1),
+  parentCertificateNumber: z.string().nullable(),
+  calibrationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  nextCalibrationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+  agencyName: CalibrationAgencyEnum,
+});
+
+export type ExtractedCalibrationCertificate = z.infer<typeof extractedCalibrationCertificateSchema>;

@@ -16,6 +16,7 @@ import {
 } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
+import { resolveEquipmentImportOrderBy } from './utils/equipment-import-sort-mapper';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {
   EquipmentImportStatus,
@@ -206,7 +207,9 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    const isAsc = query.sortOrder === 'asc';
+    // sort enum + mapper SSOT (utils/equipment-import-sort-mapper.ts)
+    // 신규 결합형 `sort` 우선, 미제공 시 legacy sortBy + sortOrder 분리형 fallback.
+    const orderByClause = resolveEquipmentImportOrderBy(query.sort, query.sortBy, query.sortOrder);
 
     // Use relational query with team data
     const items = await this.db.query.equipmentImports.findMany({
@@ -245,21 +248,7 @@ export class EquipmentImportsService extends VersionedBaseService {
           },
         },
       },
-      orderBy: (imports, { asc: ascFn, desc: descFn }) => {
-        const sortBy = query.sortBy;
-
-        if (sortBy === 'usagePeriodStart') {
-          return isAsc ? [ascFn(imports.usagePeriodStart)] : [descFn(imports.usagePeriodStart)];
-        }
-        if (sortBy === 'usagePeriodEnd') {
-          return isAsc ? [ascFn(imports.usagePeriodEnd)] : [descFn(imports.usagePeriodEnd)];
-        }
-        if (sortBy === 'status') {
-          return isAsc ? [ascFn(imports.status)] : [descFn(imports.status)];
-        }
-        // Default: createdAt
-        return isAsc ? [ascFn(imports.createdAt)] : [descFn(imports.createdAt)];
-      },
+      orderBy: [orderByClause],
       limit,
       offset,
     });

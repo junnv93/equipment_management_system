@@ -4,14 +4,20 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
 import {
   CHECKOUT_PURPOSE_VALUES,
+  CHECKOUT_STATUS_VALUES,
   CheckoutDirectionEnum,
+  CheckoutSortEnum,
+  type CheckoutSortValue,
+  type CheckoutStatus,
   SiteEnum,
   type CheckoutDirection,
   type Site,
   VM,
   optionalUuid,
+  optionalTrimmedString,
+  optionalCsvEnum,
 } from '@equipment-management/schemas';
-import { MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { MAX_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -30,14 +36,18 @@ export const checkoutQuerySchema = z.object({
       message: VM.checkout.purpose.invalid,
     })
     .optional(),
-  statuses: z.string().optional(),
-  destination: z.string().optional(),
-  checkoutFrom: z.string().optional(),
-  checkoutTo: z.string().optional(),
-  returnFrom: z.string().optional(),
-  returnTo: z.string().optional(),
-  search: z.string().optional(),
-  sort: z.string().optional(),
+  statuses: optionalCsvEnum(
+    CHECKOUT_STATUS_VALUES,
+    VALIDATION_RULES.LONG_CSV_MAX_LENGTH,
+    '반출 상태 목록'
+  ),
+  destination: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '반출지'),
+  checkoutFrom: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '반출일 시작'),
+  checkoutTo: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '반출일 종료'),
+  returnFrom: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '반입일 시작'),
+  returnTo: optionalTrimmedString(VALIDATION_RULES.SHORT_TEXT_MAX_LENGTH, '반입일 종료'),
+  search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
+  sort: CheckoutSortEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().int().min(1).optional()),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : undefined),
@@ -106,11 +116,12 @@ export class CheckoutQueryDto {
   purpose?: string;
 
   @ApiProperty({
-    description: '반출 상태로 필터링 (콤마로 구분하여 여러 값 지정 가능)',
+    description:
+      '반출 상태로 필터링 (콤마로 구분하여 여러 값 지정 가능, optionalCsvEnum 토큰 검증 후 CheckoutStatus[]로 변환)',
     example: 'pending,approved',
     required: false,
   })
-  statuses?: string;
+  statuses?: CheckoutStatus[];
 
   @ApiProperty({
     description: '반출지로 필터링',
@@ -156,10 +167,11 @@ export class CheckoutQueryDto {
 
   @ApiProperty({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',
+    enum: CheckoutSortEnum.options,
     example: 'checkoutDate.desc',
     required: false,
   })
-  sort?: string;
+  sort?: CheckoutSortValue;
 
   @ApiProperty({
     description: '페이지 번호',

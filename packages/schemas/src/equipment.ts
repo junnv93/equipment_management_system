@@ -13,7 +13,13 @@ import {
 } from './enums';
 import { ApprovalStatusEnum } from './equipment-request';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
-import { uuidString, nullableOptionalUuid, optionalUuid } from './utils/fields';
+import {
+  uuidString,
+  nullableOptionalUuid,
+  optionalUuid,
+  optionalTrimmedString,
+} from './utils/fields';
+import { EquipmentSortEnum } from './sort/equipment-sort';
 
 /**
  * 장비 스키마
@@ -152,11 +158,11 @@ export const equipmentSchema = baseEquipmentSchema.extend({
 // 장비 검색 필터 스키마
 // 쿼리 파라미터는 모두 선택적이며, 페이지네이션도 선택적입니다
 export const equipmentFilterSchema = z.object({
-  search: z.string().optional(),
+  search: optionalTrimmedString(SCHEMA_VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   status: EquipmentStatusEnum.optional(),
   teamId: optionalUuid(), // ✅ URL 쿼리 파라미터 빈 문자열 안전
-  location: z.string().optional(),
-  manufacturer: z.string().optional(),
+  location: optionalTrimmedString(SCHEMA_VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '위치'),
+  manufacturer: optionalTrimmedString(SCHEMA_VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '제조사'),
   site: SiteEnum.optional(),
   classification: ClassificationEnum.optional(), // 분류 필터 (fcc_emc_rf, general_emc 등)
   classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 필터
@@ -170,7 +176,7 @@ export const equipmentFilterSchema = z.object({
       return val;
     }, z.boolean())
     .optional(), // 교정 기한 초과 필터 (true: 기한 초과된 장비만) - status와 독립적으로 작동
-  sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
+  sort: EquipmentSortEnum.optional(), // 정렬 기준 (예: 'name.asc')
   showRetired: z
     .preprocess((val) => {
       if (val === 'true') return true;
