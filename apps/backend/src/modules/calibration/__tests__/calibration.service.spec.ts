@@ -336,6 +336,67 @@ describe('CalibrationService', () => {
         } as never)
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('부적합 교정 승인 시 calibration_failure 부적합을 생성하고 장비를 non_conforming으로 전환한다', async () => {
+      const failedCalibration = {
+        ...MOCK_CALIBRATION_ROW,
+        result: 'fail',
+        approvalStatus: 'pending_approval',
+      };
+      const approvedFailedCalibration = {
+        ...failedCalibration,
+        approvalStatus: 'approved',
+        approvedBy: 'approver-1',
+      };
+
+      chain.limit
+        .mockResolvedValueOnce([{ calibration: failedCalibration, certDocPath: null }])
+        .mockResolvedValueOnce([
+          {
+            name: '오실로스코프',
+            managementNumber: 'SUW-E0001',
+            teamId: 'team-1',
+            site: 'suwon',
+            calibrationCycle: 12,
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ status: 'available', version: 1 }])
+        .mockResolvedValueOnce([{ calibration: approvedFailedCalibration, certDocPath: null }]);
+      chain.returning
+        .mockResolvedValueOnce([approvedFailedCalibration])
+        .mockResolvedValueOnce([{ id: 'eq-uuid-1' }])
+        .mockResolvedValueOnce([{ id: 'nc-fail-1' }])
+        .mockResolvedValueOnce([{ id: 'eq-uuid-1' }]);
+
+      await service.approveCalibration('cal-uuid-1', {
+        approverId: 'approver-1',
+        version: 1,
+      } as never);
+
+      expect(chain.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ncType: 'calibration_failure',
+          calibrationId: 'cal-uuid-1',
+          status: 'open',
+          previousEquipmentStatus: 'available',
+        })
+      );
+      expect(chain.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'non_conforming',
+        })
+      );
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        'nonConformance.created',
+        expect.objectContaining({
+          ncId: 'nc-fail-1',
+          equipmentId: 'eq-uuid-1',
+          ncType: 'calibration_failure',
+        })
+      );
+    });
   });
 
   describe('rejectCalibration() — REJECTION_REASON_MIN_LENGTH fail-close', () => {

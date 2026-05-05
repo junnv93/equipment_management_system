@@ -22,9 +22,11 @@ import { FileUploadService } from '../../common/file-upload/file-upload.service'
 import type { MulterFile } from '../../types/common.types';
 import {
   CalibrationStatusEnum,
+  CalibrationResultEnum,
   type CalibrationStatus,
   type CalibrationApprovalStatus,
   CalibrationApprovalStatusEnum,
+  EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCStatusVal,
   NonConformanceTypeValues as NCTypeVal,
   ResolutionTypeEnum,
@@ -1521,6 +1523,7 @@ export class CalibrationService extends VersionedBaseService {
           calibrationCycle: number | null;
         }
       | undefined;
+    let createdCalibrationFailureNcId: string | undefined;
 
     await this.db.transaction(async (tx) => {
       // ✅ CAS: tx 인자 전달로 calibration update가 outer tx에 참여
@@ -1561,6 +1564,18 @@ export class CalibrationService extends VersionedBaseService {
         approveDto.approverId,
         equip?.calibrationCycle ?? undefined
       );
+
+      if (calibration.result === CalibrationResultEnum.enum.fail) {
+        const ncResult = await this.createCalibrationFailureNonConformanceTx(
+          tx,
+          calibration.equipmentId,
+          id,
+          approveDto.approverId
+        );
+        if (ncResult.created) {
+          createdCalibrationFailureNcId = ncResult.ncId;
+        }
+      }
     });
 
     // tx 커밋 이후: 캐시 무효화 + 이벤트 발행
@@ -1579,6 +1594,20 @@ export class CalibrationService extends VersionedBaseService {
       actorName: '',
       timestamp: new Date(),
     });
+
+    if (createdCalibrationFailureNcId) {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CREATED, {
+        ncId: createdCalibrationFailureNcId,
+        equipmentId: calibration.equipmentId,
+        equipmentName: approvedEquip?.name ?? '',
+        managementNumber: approvedEquip?.managementNumber ?? '',
+        reporterTeamId: approvedEquip?.teamId ?? '',
+        ncType: NCTypeVal.CALIBRATION_FAILURE,
+        actorId: approveDto.approverId,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    }
 
     // 교차 엔티티 캐시 무효화: 승인 시 equipment(교정일) + NC(overdue 조치) + dashboard
     await this.invalidateAfterCalibrationApproval(calibration.equipmentId);
@@ -1724,6 +1753,108 @@ export class CalibrationService extends VersionedBaseService {
     this.logger.log(
       `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) corrected로 변경 (장비 상태 복원은 종결 시 처리)`
     );
+  }
+
+  /**
+   * 교정 결과 부적합 승인 시 calibration_failure 부적합을 자동 생성합니다.
+   *
+   * 등록 단계가 아니라 승인 트랜잭션에서 실행해야 품질 판단이 확정된 건만 NC 워크플로우로
+   * 진입합니다. 동일 장비의 open calibration_failure가 이미 있으면 새 행을 만들지 않고
+   * 해당 NC에 이번 교정 기록을 연결해 unique partial index와 중복 워크플로우를 모두 지킵니다.
+   */
+  private async createCalibrationFailureNonConformanceTx(
+    tx: Parameters<Parameters<AppDatabase['transaction']>[0]>[0],
+    equipmentId: string,
+    calibrationId: string,
+    discoveredBy?: string
+  ): Promise<{ ncId: string; created: boolean }> {
+    const today = new Date();
+    const discoveryDate = today.toISOString().split('T')[0];
+
+    const [existingNc] = await tx
+      .select({ id: nonConformances.id })
+      .from(nonConformances)
+      .where(
+        and(
+          eq(nonConformances.equipmentId, equipmentId),
+          eq(nonConformances.ncType, NCTypeVal.CALIBRATION_FAILURE),
+          eq(nonConformances.status, NCStatusVal.OPEN),
+          isNull(nonConformances.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (existingNc) {
+      await tx
+        .update(nonConformances)
+        .set({
+          calibrationId,
+          updatedAt: today,
+          version: sql`${nonConformances.version} + 1`,
+        })
+        .where(eq(nonConformances.id, existingNc.id));
+      this.logger.log(
+        `장비 ${equipmentId}: 기존 calibration_failure 부적합(${existingNc.id})에 교정 기록 연결`
+      );
+      return { ncId: existingNc.id, created: false };
+    }
+
+    const [currentEquip] = await tx
+      .select({
+        status: schema.equipment.status,
+        version: schema.equipment.version,
+      })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, equipmentId))
+      .limit(1);
+
+    if (!currentEquip) {
+      throw new NotFoundException({
+        code: ErrorCode.EquipmentNotFound,
+        message: `Equipment UUID ${equipmentId} not found`,
+      });
+    }
+
+    const [createdNc] = await tx
+      .insert(nonConformances)
+      .values({
+        equipmentId,
+        discoveryDate,
+        discoveredBy: discoveredBy ?? null,
+        cause: this.i18n.t('system.calibrationFailure.ncCause', DEFAULT_LOCALE),
+        ncType: NCTypeVal.CALIBRATION_FAILURE,
+        calibrationId,
+        actionPlan: this.i18n.t('system.calibrationFailure.defaultActionPlan', DEFAULT_LOCALE),
+        status: NCStatusVal.OPEN,
+        previousEquipmentStatus: currentEquip.status,
+      })
+      .returning({ id: nonConformances.id });
+
+    if (currentEquip.status !== ESVal.NON_CONFORMING) {
+      const [updatedEquip] = await tx
+        .update(schema.equipment)
+        .set({
+          status: ESVal.NON_CONFORMING,
+          version: sql`${schema.equipment.version} + 1`,
+          updatedAt: today,
+        })
+        .where(
+          and(
+            eq(schema.equipment.id, equipmentId),
+            eq(schema.equipment.version, currentEquip.version)
+          )
+        )
+        .returning({ id: schema.equipment.id });
+
+      if (!updatedEquip) {
+        throw createVersionConflictException(currentEquip.version + 1, currentEquip.version);
+      }
+    }
+
+    this.logger.log(
+      `장비 ${equipmentId}: 교정 실패 부적합(${createdNc.id}) 생성 및 non_conforming 전환`
+    );
+    return { ncId: createdNc.id, created: true };
   }
 
   /**
