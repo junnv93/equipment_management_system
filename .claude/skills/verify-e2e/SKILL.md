@@ -353,6 +353,57 @@ grep -L "mode.*serial" apps/frontend/tests/e2e/workflows/*.spec.ts
 
 **PASS:** P0 워크플로우(WF-03/10/11) 모두 spec 존재 + 문서 step 90% 이상 커버 + serial 모드 + role fixture 정합.
 
+### Step 29: Bulk-action spec — mock wiring + 실제 backend integration EXT 분리 (2026-05-06 추가)
+
+`page.route()` mock 응답으로 frontend wiring(toast/AlertDialog/selection clear 등)을 검증한 spec은 **반드시 별도 `EXT` describe 블록에서 실제 backend integration도 검증**한다. mock-only는 backend FSM/scope/CAS 회귀를 놓치는 위험이 있다.
+
+**Canonical reference**: `wf-ap02-approvals-bulk-reject.spec.ts` (mock Steps 8-9 + EXT Steps EXT-1~EXT-3), `tests/e2e/checkouts/outbound-bulk-action.spec.ts` (mock Step 4 + EXT Steps EXT-1~EXT-2).
+
+✅ **Required pattern**:
+```ts
+test.describe('<feature> — mock wiring 검증', () => {
+  test('Step N: mock 응답으로 toast/AlertDialog/selection clear 검증', async ({ page }) => {
+    await page.route('**/api/<bulk-endpoint>', async (route) => {
+      await route.fulfill({ status: 200, body: JSON.stringify({ approved: [...], failed: [] }) });
+    });
+    try { /* ... */ } finally { await page.unroute('**/api/<bulk-endpoint>'); }
+  });
+});
+
+test.describe('<feature> EXT — 실제 backend 통합', () => {
+  test.describe.configure({ mode: 'serial' });
+  // EXT_EQUIPMENT_IDS는 base block의 WF_EQUIPMENT_IDS와 비충돌
+  const EXT_EQUIPMENT_IDS = [/* WF와 다른 ID들 */];
+
+  test('Step EXT-1: 데이터 생성', async ({ testOperatorPage }) => { /* createCheckout */ });
+  test('Step EXT-2: 실제 backend bulk-* → toast → DB 상태 전이 검증', async ({ techManagerPage }) => {
+    // page.route mock 없음 — Promise.allSettled fail-close + scope guard 실제 동작
+  });
+});
+```
+
+❌ 안티패턴:
+- bulk-action spec이 `page.route()` mock만 사용 — backend FSM/CAS 회귀 미검출
+- EXT 블록 ID가 base block과 충돌 — 직렬 실행 시 상호 간섭
+- EXT 블록 `serial` 모드 누락 — 데이터 생성/검증 순서 보장 실패
+- 폴링 대신 `waitForTimeout` 사용 (Step 4 위반) — 본 SKILL Step 4가 우선
+
+**탐지 명령**:
+```bash
+# bulk endpoint mock 사용 spec
+SPECS=$(grep -rln "page.route.*api/.*bulk-" apps/frontend/tests/e2e --include="*.spec.ts" 2>/dev/null)
+
+# 각 spec이 EXT 블록 (실제 backend integration) 을 가지고 있는지
+for f in $SPECS; do
+  if ! grep -q "describe.*EXT\|EXT_EQUIPMENT_IDS\|EXT-1\|EXT-2" "$f"; then
+    echo "MISSING EXT block: $f"
+  fi
+done
+# 기대: MISSING 0건
+```
+
+**PASS**: bulk endpoint mock 사용 spec 모두 EXT block 보유 + EXT_EQUIPMENT_IDS 비충돌 + EXT serial 모드.
+
 ## Output Format
 
 ```markdown

@@ -47,12 +47,14 @@ grep -E 'role="toolbar"' apps/frontend/components/common/BulkActionBar.tsx | wc 
 grep -A 2 'role="toolbar"' apps/frontend/components/common/BulkActionBar.tsx | grep "aria-label"  # ≥1
 ```
 
-### Step 3 — Esc 키로 onClearSelection (단, dialog open 시 dialog가 우선)
+### Step 3 — Esc 키로 onClearSelection (선택적 UX 강화 — 필수 아님)
 
 일괄 작업 중 Esc는 선택 해제 단축키. 다만 AlertDialog 등이 열려 있으면 dialog가 먼저 닫혀야 함 (Radix 기본 동작).
 
-✅ **Required**: 컴포넌트 외부에서 keyboard handler 연결 시 `if (e.target.closest('[role="dialog"]')) return;` 가드.
+✅ **권장 (선택적)**: 컴포넌트 외부에서 keyboard handler 연결 시 `if (e.target.closest('[role="dialog"]')) return;` 가드.
 ❌ window-level keydown listener 추가 금지 — 이중 핸들링 위험.
+
+**정책 (2026-05-06 갱신)**: Esc 단축키 자체는 **필수 아님**. WCAG 2.1 AA "Keyboard accessible" 원칙은 Tab+Enter+Space로 충족되며, ARIA Authoring Practices Guide의 Toolbar 패턴도 Esc를 권장 단축키로만 명시. 본 SKILL은 Esc 구현 시 **window-level 우회 금지**만 강제하고, 미구현은 위반 아님. UX enhancement sprint에서 일괄 도입 권장 (`tech-debt-tracker.md` mutateAsync-ux-consistency 등과 묶음 처리).
 
 ### Step 4 — 0건 시 `return null` 또는 `aria-hidden="true"` + `pointer-events-none`
 
@@ -170,6 +172,106 @@ grep -E "fetch\(|useQuery\(|getServerSession\(" \
 - `__visual__` 안에서 실제 API 호출 — fixture 격리 무력화
 - 시드 fixture를 `lib/`나 `__fixtures__/`에 분산 — page.tsx 단일 파일 검증 원칙 깨짐
 - E2E가 부모 컴포넌트 통합을 통해서만 컴포넌트 검증 — 격리 fixture 우회
+
+### Step 10 — 도메인 wrapper 신설 패턴 (2026-05-06, bulk-selection-tabs-integration sprint)
+
+새 도메인이 일괄 작업 UI를 추가할 때 generic `BulkActionBar`를 직접 사용하지 말고 도메인 wrapper를 신설한다 — `components/<domain>/<Domain>BulkActionBar.tsx`.
+
+✅ **Required wrapper 구조** (canonical reference: `components/approvals/BulkActionBar.tsx`, `components/checkouts/CheckoutBulkActionBar.tsx`):
+
+```tsx
+import { BulkActionBar as GenericBulkActionBar } from '@/components/common/BulkActionBar';
+import { APPROVAL_BULK_BAR_TOKENS, getApprovalActionButtonClasses } from '@/lib/design-tokens';
+
+export function CheckoutBulkActionBar({
+  selectedCount,
+  onBulkApprove,
+  onBulkReject,           // optional — 도메인 권한/상태에 따라 reject 비활성
+  ...
+}: CheckoutBulkActionBarProps) {
+  return (
+    <>
+      {/* SR-only aria-live (DOM 항상 유지) */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {isVisible ? t('bulkBar.selectionCount', { count }) : t('bulkBar.selectionCleared')}
+      </div>
+      {/* fixed-bottom + aria-hidden 토글 */}
+      <div data-testid="bulk-action-bar" aria-hidden={!isVisible}>
+        {isVisible && (
+          <GenericBulkActionBar
+            selectedCount={selectedCount}
+            actions={                        // 도메인 버튼은 actions slot 주입 (하드코딩 금지)
+              <>
+                <Button onClick={() => setIsApproveDialogOpen(true)}>{t('bulk.approve')}</Button>
+                {onBulkReject && (           // optional prop 게이트 — 권한/상태로 분기
+                  <Button onClick={() => setIsRejectModalOpen(true)}>{t('bulk.reject')}</Button>
+                )}
+              </>
+            }
+          />
+        )}
+      </div>
+      {/* approve confirmation: AlertDialog */}
+      <AlertDialog>...</AlertDialog>
+      {/* reject confirmation: RejectModal mode='bulk' (SSOT) */}
+      {onBulkReject && <RejectModal mode="bulk" count={selectedCount} ... />}
+    </>
+  );
+}
+```
+
+❌ 안티패턴:
+- 도메인 컴포넌트가 `<GenericBulkActionBar />`를 직접 렌더 — wrapper 우회
+- `actions` slot 미사용 + variant prop으로 도메인 분기 (`<BulkActionBar variant="checkout">`) — generic 오염
+- `onBulkReject`를 required로 강제 → 권한 없는 사용자에게 disabled 버튼 노출
+- 도메인 wrapper에 RejectModal 직접 만들지 말고 `components/approvals/RejectModal.tsx mode='bulk'` 재사용
+
+```bash
+# generic 직접 사용 + actions slot 누락 탐지 (도메인 컴포넌트 영역)
+grep -rn "from '@/components/common/BulkActionBar'" apps/frontend/components --include="*.tsx" \
+  | grep -v "/common/" | grep -v "BulkActionBar.tsx$"
+# 기대: wrapper 파일 (e.g. CheckoutBulkActionBar.tsx, ApprovalsBulkActionBar.tsx) 만 hit
+# 도메인 페이지/탭이 직접 import 시 위반
+```
+
+### Step 11 — applyGroupToggle SSOT 헬퍼 (그룹 토글 핸들러 인라인 forEach 금지, 2026-05-06)
+
+부모 컴포넌트가 그룹 헤더 토글 핸들러를 인라인으로 작성하면 `useRowSelection.setSelected` API 변경 시 호출처마다 수동 동기화 필요 — `lib/checkouts/group-selection.ts`의 `applyGroupToggle` SSOT 경유 강제.
+
+✅ **Required pattern**:
+```tsx
+import { applyGroupToggle } from '@/lib/checkouts/group-selection';
+
+const handleToggleGroup = useCallback(
+  (rowIds: readonly string[], allCurrentlySelected: boolean) => {
+    applyGroupToggle(selection, items, rowIds, allCurrentlySelected);
+  },
+  [items, selection]
+);
+```
+
+❌ 안티패턴 (회귀):
+```tsx
+// 인라인 forEach — SSOT 우회
+const handleToggleGroup = (rowIds, allSelected) => {
+  rowIds.forEach((id) => {
+    const item = items.find((c) => c.id === id);
+    if (!item) return;
+    selection.setSelected(id, !allSelected, item);
+  });
+};
+```
+
+```bash
+# applyGroupToggle 사용처 (그룹 토글 활용 컴포넌트마다 ≥1 hit 필요)
+grep -rn "applyGroupToggle\|onToggleGroup" apps/frontend --include="*.tsx" 2>/dev/null \
+  | grep -v "__tests__" | grep -v "lib/checkouts/group-selection.ts"
+
+# 인라인 forEach 안티패턴 탐지 (rowIds.forEach + setSelected 조합)
+grep -rB 1 -A 4 "rowIds\.forEach" apps/frontend --include="*.tsx" 2>/dev/null \
+  | grep -A 3 "setSelected" | grep -v "applyGroupToggle"
+# 기대: 0 hit (모두 SSOT 경유)
+```
 
 ## verify 명령 (모두 실행)
 
