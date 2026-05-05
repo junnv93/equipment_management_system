@@ -108,6 +108,8 @@ export default function ReturnCheckoutClient({
       repairChecked: data.repairChecked,
       workingStatusChecked: data.workingStatusChecked,
       inspectionNotes: data.inspectionNotes || undefined,
+      calibrationCertificateExceptionReason:
+        data.calibrationCertificateExceptionReason.trim() || undefined,
     };
 
     returnMutation.mutate(returnData);

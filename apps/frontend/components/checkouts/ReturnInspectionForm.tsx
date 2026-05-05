@@ -76,6 +76,7 @@ export interface InspectionFormData {
   repairChecked: boolean;
   workingStatusChecked: boolean;
   inspectionNotes: string;
+  calibrationCertificateExceptionReason: string;
 }
 
 interface ReturnInspectionFormProps {
@@ -109,6 +110,8 @@ export default function ReturnInspectionForm({
   const [repairChecked, setRepairChecked] = useState(false);
   const [workingStatusChecked, setWorkingStatusChecked] = useState(false);
   const [inspectionNotes, setInspectionNotes] = useState('');
+  const [calibrationCertificateExceptionReason, setCalibrationCertificateExceptionReason] =
+    useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const validate = (): boolean => {
@@ -139,6 +142,7 @@ export default function ReturnInspectionForm({
         ? workingStatusChecked
         : derivedWorkingStatusChecked,
       inspectionNotes,
+      calibrationCertificateExceptionReason,
     });
   };
 
@@ -231,6 +235,24 @@ export default function ReturnInspectionForm({
                   {t('returnInspection.workingStatusDesc')}
                 </p>
               </div>
+            </div>
+          )}
+
+          {purpose === CPVal.CALIBRATION && (
+            <div className="space-y-2 rounded-md border p-3">
+              <Label htmlFor="calibrationCertificateExceptionReason">
+                {t('returnInspection.certificateExceptionLabel')}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {t('returnInspection.certificateExceptionDesc')}
+              </p>
+              <Textarea
+                id="calibrationCertificateExceptionReason"
+                placeholder={t('returnInspection.certificateExceptionPlaceholder')}
+                value={calibrationCertificateExceptionReason}
+                onChange={(e) => setCalibrationCertificateExceptionReason(e.target.value)}
+                rows={3}
+              />
             </div>
           )}
         </div>

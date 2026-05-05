@@ -167,6 +167,7 @@
     "repairCheck": "수리 확인",
     "operationCheck": "작동 여부 확인",
     "inspectionNotes": "검사 비고",
+    "calibrationCertificateExceptionReason": "교정성적서 예외 사유",
     "rejectionReason": "반려 사유",
     "abnormalContent": "이상 내용:",
     "overdueWarning": "반입 예정일이 초과되었습니다. 빠른 반입 처리가 필요합니다.",
@@ -217,6 +218,9 @@
     "validationWorking": "작동 여부 확인은 필수입니다.",
     "validationCalibration": "교정 목적 반출의 경우 교정 확인은 필수입니다.",
     "validationRepair": "수리 목적 반출의 경우 수리 확인은 필수입니다.",
+    "certificateExceptionLabel": "교정성적서 예외 사유",
+    "certificateExceptionDesc": "반출 이후 승인된 교정성적서가 등록되어 있지 않으면 예외 사유가 필요합니다.",
+    "certificateExceptionPlaceholder": "예: 교정기관 성적서 발행 지연으로 접수 즉시 등록 예정",
     "rentalConditionChecksNote": "대여 목적 반입은 4단계 상태 확인 이력(외관·작동 상태)이 검사 기록을 대체합니다. 특이사항이 있으면 아래 비고란에 입력하세요."
   },
   "dialogs": {

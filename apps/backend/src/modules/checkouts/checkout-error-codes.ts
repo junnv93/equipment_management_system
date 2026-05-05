@@ -41,6 +41,8 @@ export const CheckoutErrorCode = {
   WORKING_STATUS_REQUIRED: 'CHECKOUT_WORKING_STATUS_REQUIRED',
   /** 교정 목적: 반출 전 교정 확인 필수 */
   CALIBRATION_CHECK_REQUIRED: 'CHECKOUT_CALIBRATION_CHECK_REQUIRED',
+  /** 교정 목적: 반입 시 교정성적서 또는 예외 사유 필수 */
+  CALIBRATION_CERTIFICATE_REQUIRED: 'CHECKOUT_CALIBRATION_CERTIFICATE_REQUIRED',
   /** 수리 목적: 반출 전 수리 확인 필수 */
   REPAIR_CHECK_REQUIRED: 'CHECKOUT_REPAIR_CHECK_REQUIRED',
   /** 컨디션 체크는 렌탈 목적만 가능 */

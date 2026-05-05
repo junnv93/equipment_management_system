@@ -7,6 +7,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useCallback, useMemo, useState } from 'react';
 import CheckoutGroupCard from '../CheckoutGroupCard';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import type { Checkout } from '@/lib/api/checkout-api';
@@ -26,8 +27,10 @@ jest.mock('next-auth/react', () => ({
   useSession: () => ({ data: { user: { role: 'test_engineer', teamId: 'team1' } } }),
 }));
 
+const mockUseCheckoutGroupDescriptors = jest.fn(() => new Map());
+
 jest.mock('@/hooks/use-checkout-group-descriptors', () => ({
-  useCheckoutGroupDescriptors: () => new Map(),
+  useCheckoutGroupDescriptors: () => mockUseCheckoutGroupDescriptors(),
 }));
 
 jest.mock('@/hooks/use-checkout-card-mutations', () => ({
@@ -219,5 +222,34 @@ describe('CheckoutGroupCard 행 모바일 스택 토큰', () => {
     expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('justify-end');
     expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('sm:col-auto');
     expect(CHECKOUT_ITEM_ROW_TOKENS.zoneAction).toContain('sm:shrink-0');
+  });
+});
+
+describe('CheckoutGroupCard memo boundary', () => {
+  it('부모가 unrelated state만 갱신하면 stable props에서 재렌더하지 않는다', () => {
+    mockUseCheckoutGroupDescriptors.mockClear();
+
+    function Harness() {
+      const [count, setCount] = useState(0);
+      const group = useMemo(() => makeGroup(['c1', 'c2', 'c3']), []);
+      const handleCheckoutClick = useCallback(() => undefined, []);
+
+      return (
+        <>
+          <button type="button" onClick={() => setCount((value) => value + 1)}>
+            parent rerender {count}
+          </button>
+          <CheckoutGroupCard group={group} onCheckoutClick={handleCheckoutClick} />
+        </>
+      );
+    }
+
+    render(<Harness />);
+    expect(mockUseCheckoutGroupDescriptors).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /parent rerender/i }));
+    fireEvent.click(screen.getByRole('button', { name: /parent rerender/i }));
+
+    expect(mockUseCheckoutGroupDescriptors).toHaveBeenCalledTimes(1);
   });
 });

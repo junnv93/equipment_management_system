@@ -31,6 +31,9 @@ import {
   ClassificationEnum,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   ErrorCode,
+  CalibrationApprovalStatusValues as CAStatusVal,
+  DocumentStatusValues,
+  DocumentTypeValues,
   CHECKOUT_STATUS_GROUPS,
   type CheckoutSummary,
   type ConditionCheckStep,
@@ -2617,6 +2620,17 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
+      const calibrationCertificateExceptionReason =
+        returnDto.calibrationCertificateExceptionReason?.trim() || null;
+
+      if (purpose === CPVal.CALIBRATION) {
+        await this.assertCalibrationReturnCertificateOrException(
+          uuid,
+          checkout.checkoutDate ?? checkout.createdAt,
+          calibrationCertificateExceptionReason
+        );
+      }
+
       // 수리 목적: repairChecked 필수
       if (purpose === CPVal.REPAIR && !returnDto.repairChecked) {
         throw new BadRequestException({
@@ -2647,6 +2661,7 @@ export class CheckoutsService extends VersionedBaseService {
             repairChecked: returnDto.repairChecked ?? false,
             workingStatusChecked: resolvedWorkingStatusChecked,
             inspectionNotes: returnDto.inspectionNotes || null,
+            calibrationCertificateExceptionReason,
             // rental: 반입처리가 최종 승인 — 처리자가 곧 승인자
             ...(isRental ? { returnApprovedBy: returnerId, returnApprovedAt: now } : {}),
           },
@@ -2736,6 +2751,63 @@ export class CheckoutsService extends VersionedBaseService {
       );
       throw error;
     }
+  }
+
+  private async assertCalibrationReturnCertificateOrException(
+    checkoutId: string,
+    checkoutDate: Date,
+    exceptionReason: string | null
+  ): Promise<void> {
+    const itemRows = await this.db
+      .select({ equipmentId: checkoutItems.equipmentId })
+      .from(checkoutItems)
+      .where(eq(checkoutItems.checkoutId, checkoutId));
+
+    if (itemRows.length === 0) {
+      throw new BadRequestException({
+        code: CheckoutErrorCode.NO_EQUIPMENT,
+        message: 'No equipment found for this checkout',
+      });
+    }
+
+    const certificateRows = await this.db
+      .select({ equipmentId: checkoutItems.equipmentId })
+      .from(checkoutItems)
+      .innerJoin(
+        schema.calibrations,
+        eq(schema.calibrations.equipmentId, checkoutItems.equipmentId)
+      )
+      .innerJoin(schema.documents, eq(schema.documents.calibrationId, schema.calibrations.id))
+      .where(
+        and(
+          eq(checkoutItems.checkoutId, checkoutId),
+          gte(schema.calibrations.calibrationDate, checkoutDate),
+          eq(schema.calibrations.approvalStatus, CAStatusVal.APPROVED),
+          eq(schema.documents.documentType, DocumentTypeValues.CALIBRATION_CERTIFICATE),
+          eq(schema.documents.status, DocumentStatusValues.ACTIVE),
+          eq(schema.documents.isLatest, true)
+        )
+      )
+      .groupBy(checkoutItems.equipmentId);
+
+    const certifiedEquipmentIds = new Set(certificateRows.map((row) => row.equipmentId));
+    const missingCertificateCount = itemRows.filter(
+      (row) => !certifiedEquipmentIds.has(row.equipmentId)
+    ).length;
+
+    if (missingCertificateCount === 0) {
+      return;
+    }
+
+    if (exceptionReason && exceptionReason.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
+      return;
+    }
+
+    throw new BadRequestException({
+      code: CheckoutErrorCode.CALIBRATION_CERTIFICATE_REQUIRED,
+      message:
+        'Calibration purpose returns require an approved calibration certificate or an exception reason.',
+    });
   }
 
   /**

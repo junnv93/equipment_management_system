@@ -685,6 +685,7 @@ describe('CheckoutsService', () => {
       repairChecked: false,
       workingStatusChecked: true,
       inspectionNotes: '교정 완료 후 반입, 정상 작동 확인',
+      calibrationCertificateExceptionReason: '성적서 발행 지연으로 수령 즉시 등록 예정입니다.',
     };
 
     const mockCheckedOutCheckout = {
@@ -693,6 +694,7 @@ describe('CheckoutsService', () => {
       requesterId: returnerId,
       status: 'checked_out',
       purpose: 'calibration',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     };
 
     it('should process return of checked out equipment', async () => {
@@ -710,6 +712,14 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([
         { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
       ]);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([{ equipmentId: '550e8400-e29b-41d4-a716-446655440001' }])
+        )
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
       mockDrizzle.returning.mockResolvedValue([mockReturnedCheckout]);
       // getAffectedTeamIds: select().from().where().limit(1)
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
@@ -717,8 +727,36 @@ describe('CheckoutsService', () => {
 
       const result = await service.returnCheckout(checkoutId, mockReturnDto, returnerId, mockReq);
 
+      mockChain.then = originalThen;
       expect(result).toBeDefined();
       expect(result.status).toBe('returned');
+    });
+
+    it('교정 목적 반입에서 성적서와 예외 사유가 모두 없으면 차단한다', async () => {
+      const returnDtoWithoutCertificateEvidence = {
+        ...mockReturnDto,
+        calibrationCertificateExceptionReason: undefined,
+      };
+
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
+      mockDrizzle.limit.mockResolvedValueOnce([mockCheckedOutCheckout]); // findOne
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+      const originalThen = mockChain.then;
+      mockChain.then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([{ equipmentId: '550e8400-e29b-41d4-a716-446655440001' }])
+        )
+        .mockImplementationOnce((resolve: (v: unknown) => void) => resolve([]))
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+
+      await expect(
+        service.returnCheckout(checkoutId, returnDtoWithoutCertificateEvidence, returnerId, mockReq)
+      ).rejects.toThrow(BadRequestException);
+
+      mockChain.then = originalThen;
     });
 
     it('should throw BadRequestException when checkout is not in checked_out status', async () => {

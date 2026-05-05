@@ -103,6 +103,7 @@ export interface Checkout {
   repairChecked?: boolean;
   workingStatusChecked?: boolean;
   inspectionNotes?: string;
+  calibrationCertificateExceptionReason?: string | null;
   // 반입 승인 정보
   returnApprovedBy?: string;
   returnApprovedAt?: string;
@@ -290,6 +291,7 @@ export interface ReturnCheckoutDto {
   repairChecked?: boolean; // 수리 확인 (수리 목적 반출 시 필수)
   workingStatusChecked: boolean; // 작동 여부 확인 (모든 유형 필수)
   inspectionNotes?: string; // 검사 비고
+  calibrationCertificateExceptionReason?: string; // 교정 목적 반입 시 성적서 미등록 예외 사유
   itemConditions?: Array<{
     equipmentId: string;
     conditionAfter: string;

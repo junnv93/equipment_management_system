@@ -167,6 +167,7 @@
     "repairCheck": "Repair Check",
     "operationCheck": "Operation Check",
     "inspectionNotes": "Inspection Notes",
+    "calibrationCertificateExceptionReason": "Calibration Certificate Exception",
     "rejectionReason": "Rejection Reason",
     "abnormalContent": "Abnormal Content:",
     "overdueWarning": "The expected return date has passed. Prompt return processing is required.",
@@ -217,6 +218,9 @@
     "validationWorking": "Operation check is required.",
     "validationCalibration": "Calibration check is required for calibration checkouts.",
     "validationRepair": "Repair check is required for repair checkouts.",
+    "certificateExceptionLabel": "Calibration Certificate Exception",
+    "certificateExceptionDesc": "If no approved calibration certificate has been registered after checkout, an exception reason is required.",
+    "certificateExceptionPlaceholder": "Example: Certificate issuance is delayed by the calibration agency and will be registered on receipt",
     "rentalConditionChecksNote": "For rental returns, the 4-stage condition check history (appearance & operation status) serves as the inspection record. Add any special notes in the field below."
   },
   "dialogs": {

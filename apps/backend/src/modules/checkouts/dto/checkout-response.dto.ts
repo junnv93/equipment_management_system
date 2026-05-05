@@ -204,6 +204,9 @@ export class CheckoutResponseDto {
   @ApiProperty({ description: '검사 비고', required: false })
   inspectionNotes?: string | null;
 
+  @ApiProperty({ description: '교정성적서 미등록 예외 사유', required: false })
+  calibrationCertificateExceptionReason?: string | null;
+
   // ============================================================================
   // 반입 승인 정보
   // ============================================================================

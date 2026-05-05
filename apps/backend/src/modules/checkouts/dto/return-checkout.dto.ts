@@ -1,7 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { uuidString, VM } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
@@ -22,6 +22,14 @@ export const returnCheckoutSchema = z.object({
     .max(
       VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
       VM.string.max('검사 비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  calibrationCertificateExceptionReason: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+      VM.string.max('교정성적서 예외 사유', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
     )
     .optional(),
   itemConditions: z
@@ -46,50 +54,4 @@ export const ReturnCheckoutValidationPipe = new ZodValidationPipe(returnCheckout
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class ReturnCheckoutDto extends VersionedDto {
-  // ✅ version 필드는 VersionedDto에서 자동 상속
-
-  @ApiProperty({
-    description: '교정 확인 여부',
-    example: true,
-    required: false,
-  })
-  calibrationChecked?: boolean;
-
-  @ApiProperty({
-    description: '수리 확인 여부',
-    example: false,
-    required: false,
-  })
-  repairChecked?: boolean;
-
-  @ApiProperty({
-    description: '작동 여부 확인',
-    example: true,
-    required: false,
-  })
-  workingStatusChecked?: boolean;
-
-  @ApiProperty({
-    description: '검사 비고',
-    example: '교정 완료, 정상 작동 확인',
-    required: false,
-  })
-  inspectionNotes?: string;
-
-  @ApiProperty({
-    description: '장비별 반입 후 상태 기록',
-    example: [
-      {
-        equipmentId: '550e8400-e29b-41d4-a716-446655440000',
-        conditionAfter: '외관 양호, 정상 작동 확인',
-      },
-    ],
-    required: false,
-    type: 'array',
-  })
-  itemConditions?: Array<{
-    equipmentId: string;
-    conditionAfter: string;
-  }>;
-}
+export class ReturnCheckoutDto extends createZodDto(returnCheckoutSchema) {}

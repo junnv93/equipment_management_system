@@ -72,6 +72,7 @@ export const checkouts = pgTable(
     repairChecked: boolean('repair_checked').default(false), // 수리 확인 여부
     workingStatusChecked: boolean('working_status_checked').default(false), // 작동 여부 확인
     inspectionNotes: text('inspection_notes'), // 검사 비고
+    calibrationCertificateExceptionReason: text('calibration_certificate_exception_reason'), // 교정성적서 미등록 예외 사유
 
     // 반입 승인 정보
     returnApprovedBy: uuid('return_approved_by').references(() => users.id, {

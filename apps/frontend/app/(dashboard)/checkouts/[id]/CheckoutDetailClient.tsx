@@ -536,6 +536,7 @@ export default function CheckoutDetailClient({
           onActionClick={handleNextStepAction}
           isPending={isAnyNextStepMutationPending}
           loadingLabel={tCommon('status.loading')}
+          data-testid="checkout-next-step"
         />
       </ErrorBoundary>
 
@@ -826,6 +827,14 @@ export default function CheckoutDetailClient({
               <div className="mt-4 p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">{t('detail.inspectionNotes')}</p>
                 <p className="mt-1">{checkout.inspectionNotes}</p>
+              </div>
+            )}
+            {checkout.calibrationCertificateExceptionReason && (
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  {t('detail.calibrationCertificateExceptionReason')}
+                </p>
+                <p className="mt-1">{checkout.calibrationCertificateExceptionReason}</p>
               </div>
             )}
           </CardContent>
@@ -1148,7 +1157,7 @@ export default function CheckoutDetailClient({
                 {t(`fsm.action.${nextStepDescriptor.labelKey}`)}
               </button>
             </DrawerTrigger>
-            <DrawerContent data-testid="checkout-mobile-drawer">
+            <DrawerContent aria-modal="true" data-testid="checkout-mobile-drawer">
               <DrawerHeader>
                 <DrawerTitle>{t('fsm.panelTitle')}</DrawerTitle>
               </DrawerHeader>
@@ -1159,6 +1168,7 @@ export default function CheckoutDetailClient({
                   onActionClick={handleNextStepAction}
                   isPending={isAnyNextStepMutationPending}
                   loadingLabel={tCommon('status.loading')}
+                  data-testid="checkout-mobile-next-step"
                 />
               </div>
             </DrawerContent>
