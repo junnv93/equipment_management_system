@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { generateOpaqueId } from '../../../common/identifiers/identifier.service';
 import {
   extractedCalibrationCertificateSchema,
   type ExtractedCalibrationCertificate,
@@ -142,7 +142,7 @@ export class CertificateExtractorService {
   }
 
   private async runPdfToText(pdfBuffer: Buffer): Promise<string> {
-    const tempPath = path.join(os.tmpdir(), `cal-cert-${randomUUID()}.pdf`);
+    const tempPath = path.join(os.tmpdir(), `cal-cert-${generateOpaqueId()}.pdf`);
     try {
       await fs.writeFile(tempPath, pdfBuffer);
       const { stdout } = await execFileAsync('pdftotext', ['-layout', tempPath, '-'], {
