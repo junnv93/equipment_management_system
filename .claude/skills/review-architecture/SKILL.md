@@ -105,4 +105,4 @@ argument-hint: '[선택사항: 특정 도메인명 또는 파일 경로]'
 | `apps/backend/src/common/cache/cache-invalidation.helper.ts` | 캐시 교차 무효화 |
 | `apps/frontend/hooks/use-optimistic-mutation.ts` | 프론트엔드 CAS 처리 |
 | `apps/frontend/lib/api/cache-invalidation.ts` | 프론트엔드 캐시 무효화 |
-| `apps/frontend/lib/errors/equipment-errors.ts` | 에러 코드 매핑 |
+| `apps/frontend/lib/errors/equipment-errors.ts` | 에러 코드 매핑 |c
