@@ -9,6 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
+| `query-dto-validation-ssot` | Backend Query DTO trim/max + sort enum SSOT — 11 DTO + 1 schemas SSOT, optionalTrimmedString helper, per-domain sort enum + mapper | 2026-05-05 |
 ---
 
 ## Backlog (계획됨, 미착수)

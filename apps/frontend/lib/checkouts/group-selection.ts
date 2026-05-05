@@ -56,3 +56,34 @@ export function toCheckboxCheckedProp(state: GroupSelectionState): boolean | 'in
   if (state === 'indeterminate') return 'indeterminate';
   return false;
 }
+
+/**
+ * 그룹 헤더 토글을 부모 selection에 적용 — SSOT 헬퍼
+ * (bulk-selection-tabs-integration sprint, 2026-05-05).
+ *
+ * useRowSelection.setSelected 시그니처에 정확히 맞춘 selection adapter를 받아
+ * 그룹 내 모든 row를 일괄 select/deselect 한다. row 누락(items lookup miss)은 무시 — 페이지가
+ * 변경되어 snapshot에 없는 row는 setSelected가 다시 등록.
+ *
+ * @param selection - useRowSelection이 반환하는 selection API (setSelected만 필요)
+ * @param items - 현재 페이지의 row item 배열 (id 기반 lookup용)
+ * @param rowIds - 그룹 헤더가 토글하는 row id 목록 (CheckoutGroupCard `getGroupRowIds` 결과)
+ * @param allCurrentlySelected - 토글 직전 그룹 전체 선택 상태 (CheckoutGroupCard.onToggleGroup 인자)
+ *
+ * @example
+ *   onToggleGroup={(rowIds, allSelected) =>
+ *     applyGroupToggle(selection, items, rowIds, allSelected)
+ *   }
+ */
+export function applyGroupToggle<T extends { id: string }>(
+  selection: { setSelected: (key: string, checked: boolean, item: T) => void },
+  items: readonly T[],
+  rowIds: readonly string[],
+  allCurrentlySelected: boolean
+): void {
+  for (const id of rowIds) {
+    const item = items.find((c) => c.id === id);
+    if (!item) continue;
+    selection.setSelected(id, !allCurrentlySelected, item);
+  }
+}

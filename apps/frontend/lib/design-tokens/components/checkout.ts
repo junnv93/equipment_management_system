@@ -858,6 +858,16 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   /** Sprint 4.2: 4-zone grid 레이아웃 — container와 함께 적용 */
   grid: 'grid grid-cols-[3px_72px_1fr] gap-3 items-center sm:grid-cols-[3px_72px_1fr_auto]',
 
+  /**
+   * Bulk-selection 5-zone grid (zone 0 체크박스 추가) — bulk-selection-tabs-integration sprint
+   * 부모 탭이 selectedRowIds + onToggleRow를 전달할 때만 적용. 미전달 시 `grid` 그대로 사용.
+   */
+  gridWithCheckbox:
+    'grid grid-cols-[auto_3px_72px_1fr] gap-3 items-center sm:grid-cols-[auto_3px_72px_1fr_auto]',
+
+  /** Zone 0: row 체크박스 셀 (bulk-selection wrapper) */
+  zoneCheckbox: 'flex items-center justify-center self-center',
+
   /** 기한 초과 행 배경 */
   containerOverdue: 'bg-brand-critical/5 hover:bg-brand-critical/8',
 

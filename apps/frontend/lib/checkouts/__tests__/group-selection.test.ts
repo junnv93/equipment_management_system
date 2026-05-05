@@ -9,6 +9,7 @@ import {
   getGroupRowIds,
   deriveGroupSelectionState,
   toCheckboxCheckedProp,
+  applyGroupToggle,
 } from '../group-selection';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import type { Checkout } from '@/lib/api/checkout-api';
@@ -86,5 +87,63 @@ describe('toCheckboxCheckedProp (Radix 매핑)', () => {
 
   it("'none' → false", () => {
     expect(toCheckboxCheckedProp('none')).toBe(false);
+  });
+});
+
+describe('applyGroupToggle (bulk-selection-tabs-integration)', () => {
+  function makeSelectionStub<T>() {
+    const calls: Array<{ key: string; checked: boolean; item: T }> = [];
+    return {
+      calls,
+      setSelected: (key: string, checked: boolean, item: T) => {
+        calls.push({ key, checked, item });
+      },
+    };
+  }
+
+  it('allCurrentlySelected=false → 모든 row를 select(true)로 호출', () => {
+    const items = [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }];
+    const sel = makeSelectionStub<{ id: string }>();
+
+    applyGroupToggle(sel, items, ['c1', 'c2', 'c3'], false);
+
+    expect(sel.calls).toHaveLength(3);
+    expect(sel.calls.every((c) => c.checked === true)).toBe(true);
+    expect(sel.calls.map((c) => c.key)).toEqual(['c1', 'c2', 'c3']);
+  });
+
+  it('allCurrentlySelected=true → 모든 row를 deselect(false)로 호출', () => {
+    const items = [{ id: 'c1' }, { id: 'c2' }];
+    const sel = makeSelectionStub<{ id: string }>();
+
+    applyGroupToggle(sel, items, ['c1', 'c2'], true);
+
+    expect(sel.calls).toHaveLength(2);
+    expect(sel.calls.every((c) => c.checked === false)).toBe(true);
+  });
+
+  it('items에 없는 rowId는 무시 (lookup miss → setSelected 미호출)', () => {
+    const items = [{ id: 'c1' }];
+    const sel = makeSelectionStub<{ id: string }>();
+
+    applyGroupToggle(sel, items, ['c1', 'c-missing', 'c-also-missing'], false);
+
+    expect(sel.calls).toHaveLength(1);
+    expect(sel.calls[0]?.key).toBe('c1');
+  });
+
+  it('빈 rowIds → setSelected 미호출', () => {
+    const sel = makeSelectionStub<{ id: string }>();
+    applyGroupToggle(sel, [{ id: 'c1' }], [], false);
+    expect(sel.calls).toHaveLength(0);
+  });
+
+  it('item 참조를 그대로 setSelected에 전달 (snapshot 정확성)', () => {
+    const items = [{ id: 'c1', name: 'Equip A' }];
+    const sel = makeSelectionStub<(typeof items)[number]>();
+
+    applyGroupToggle(sel, items, ['c1'], false);
+
+    expect(sel.calls[0]?.item).toBe(items[0]);
   });
 });

@@ -124,6 +124,7 @@ function CheckoutGroupCard({
   isOverdueGroup = false,
   selectedRowIds,
   onToggleGroup,
+  onToggleRow,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
   const tCommon = useTranslations('common');
@@ -244,6 +245,8 @@ function CheckoutGroupCard({
 
   // ── 그룹 헤더 selection 3-state (S3, prop 옵셔널이라 외부 미전달 시 hidden) ──
   const showGroupCheckbox = selectedRowIds !== undefined && onToggleGroup !== undefined;
+  // ── Row-level checkbox 활성 조건 (bulk-selection-tabs-integration sprint) ──
+  const showRowCheckbox = selectedRowIds !== undefined && onToggleRow !== undefined;
   const groupRowIds = useMemo(() => getGroupRowIds(group), [group]);
   const groupSelectionState = useMemo(
     () => (selectedRowIds ? deriveGroupSelectionState(groupRowIds, selectedRowIds) : 'none'),
@@ -457,6 +460,12 @@ function CheckoutGroupCard({
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
                   const shouldAnimateRow = shouldUseStaggerFadeIn(rowIndex);
 
+                  // Row 선택 가능 여부 — pending + canApprove 조합
+                  const rowSelectable =
+                    showRowCheckbox && row.status === CSVal.PENDING && row.canApproveItem;
+                  const isRowSelected =
+                    showRowCheckbox && (selectedRowIds?.has(row.checkoutId) ?? false);
+
                   return (
                     <div
                       key={`${row.checkoutId}-${row.equipmentId}`}
@@ -468,15 +477,50 @@ function CheckoutGroupCard({
                         status: t(`status.${row.status}`),
                         dday: daysRemaining !== null ? formatDday(daysRemaining) : '',
                       })}
+                      aria-selected={showRowCheckbox ? isRowSelected : undefined}
                       onClick={handleCheckoutRowClick}
                       onKeyDown={handleCheckoutRowKeyDown}
                       className={cn(
                         rowBaseClass,
-                        CHECKOUT_ITEM_ROW_TOKENS.grid,
+                        showRowCheckbox
+                          ? CHECKOUT_ITEM_ROW_TOKENS.gridWithCheckbox
+                          : CHECKOUT_ITEM_ROW_TOKENS.grid,
                         shouldAnimateRow && ANIMATION_PRESETS.staggerFadeInItem
                       )}
                       style={shouldAnimateRow ? getStaggerFadeInStyle(rowIndex, 'grid') : undefined}
                     >
+                      {/* Zone 0: row 체크박스 — bulk-selection 활성 시에만 노출 */}
+                      {showRowCheckbox && (
+                        <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneCheckbox}>
+                          <Checkbox
+                            data-testid="row-checkbox"
+                            checked={isRowSelected}
+                            disabled={!rowSelectable}
+                            onCheckedChange={() => {
+                              if (rowSelectable) onToggleRow?.(row.checkoutId);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.nativeEvent.isComposing) return;
+                              if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (rowSelectable) onToggleRow?.(row.checkoutId);
+                              }
+                            }}
+                            aria-label={
+                              rowSelectable
+                                ? t('groupCard.selectRowAria', {
+                                    equipment: row.equipmentName,
+                                    status: t(`status.${row.status}`),
+                                  })
+                                : t('groupCard.selectRowDisabled')
+                            }
+                            className="shrink-0"
+                          />
+                        </div>
+                      )}
+
                       {/* Zone 1: purposeBar (3px) */}
                       <span
                         className={cn(

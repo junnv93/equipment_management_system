@@ -135,6 +135,19 @@
     "selectPurpose": "반출 목적을 선택해주세요",
     "selectPurposeDesc": "장비 반출 목적을 선택해주세요."
   },
+  "bulk": {
+    "approve": "선택 일괄 승인",
+    "reject": "선택 일괄 반려",
+    "confirmApproveTitle": "{count}건 일괄 승인",
+    "confirmApproveDescription": "선택한 반출 {count}건을 모두 승인합니다. 부분 실패가 발생할 수 있습니다.",
+    "ariaLabel": "반출 일괄 액션 도구모음",
+    "approveAll": "{count}건 일괄 승인이 완료되었습니다.",
+    "approveResult": "성공 {success}건 / 실패 {failed}건",
+    "approveError": "일괄 승인에 실패했습니다.",
+    "rejectAll": "{count}건 일괄 반려가 완료되었습니다.",
+    "rejectResult": "성공 {success}건 / 실패 {failed}건",
+    "rejectError": "일괄 반려에 실패했습니다."
+  },
   "detail": {
     "title": "반출 상세",
     "equipment": "장비",
@@ -404,7 +417,9 @@
     "selectGroup": "그룹 전체 선택",
     "selectGroupAria": "{destination} 그룹의 반출 {count}건 전체 선택",
     "indeterminateAria": "{destination} 그룹의 반출 {selected}/{total}건 선택됨",
-    "deselectGroupAria": "{destination} 그룹 선택 해제"
+    "deselectGroupAria": "{destination} 그룹 선택 해제",
+    "selectRowAria": "{equipment} 선택 ({status})",
+    "selectRowDisabled": "현재 상태에서는 선택할 수 없습니다"
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",

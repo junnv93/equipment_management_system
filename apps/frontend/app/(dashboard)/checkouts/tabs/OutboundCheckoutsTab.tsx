@@ -13,16 +13,23 @@ import { SparklineMini } from '@/components/checkouts/SparklineMini';
 import { EmptyState } from '@/components/shared/EmptyState';
 import CheckoutEmptyState from '@/components/checkouts/CheckoutEmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
-import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
+import checkoutApi, { type CheckoutQuery, type Checkout } from '@/lib/api/checkout-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import {
   FRONTEND_ROUTES,
   Permission,
   DEFAULT_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
+import { CheckoutBulkActionBar } from '@/components/checkouts/CheckoutBulkActionBar';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
+import { useToast } from '@/components/ui/use-toast';
+import { useRowSelection } from '@/hooks/use-bulk-selection';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { applyGroupToggle } from '@/lib/checkouts/group-selection';
+import { track } from '@/lib/analytics/track';
 import {
   getCheckoutStatsClasses,
   CHECKOUT_MOTION,
@@ -161,6 +168,8 @@ export default function OutboundCheckoutsTab({
   const navigateWithPending = useNavigateWithPending();
   const { can } = useAuth();
   const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
+  const canApproveCheckout = can(Permission.APPROVE_CHECKOUT);
+  const { toast } = useToast();
 
   const statCards = useStatCards(summary);
 
@@ -246,6 +255,123 @@ export default function OutboundCheckoutsTab({
   }, [checkoutsData?.data]);
 
   const allGroups = [...overdueGroups, ...normalGroups];
+
+  // ──────────────────────────────────────────────
+  // Bulk selection + mutations (bulk-selection-tabs-integration sprint)
+  // ──────────────────────────────────────────────
+  const checkouts: readonly Checkout[] = useMemo(
+    () => checkoutsData?.data ?? [],
+    [checkoutsData?.data]
+  );
+  // resetOn deps — filters 변경 또는 페이지 변경 시 selection 자동 초기화
+  const filtersKey = JSON.stringify(filters);
+
+  const selection = useRowSelection<Checkout>(checkouts, (c) => c.id, {
+    isSelectable: (c) =>
+      c.status === CSVal.PENDING && (c.meta?.availableActions?.canApprove ?? false),
+    resetOn: [filtersKey],
+  });
+
+  const bulkApproveMutation = useOptimisticMutation<
+    { approved: { id: string; version: number }[]; failed: { id: string; error: string }[] },
+    { ids: string[] },
+    readonly Checkout[]
+  >({
+    mutationFn: async ({ ids }) => checkoutApi.bulkApproveCheckouts(ids),
+    queryKey: queryKeys.checkouts.view.outbound({
+      direction: 'outbound',
+      ...apiParams,
+      teamId,
+    }),
+    optimisticUpdate: (old) => old ?? [],
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    errorMessage: t('bulk.approveError'),
+    onSuccessCallback: (result) => {
+      const successCount = result.approved.length;
+      const failedCount = result.failed.length;
+      if (failedCount > 0 && successCount === 0) {
+        toast({
+          title: t('bulk.approveError'),
+          description: t('bulk.approveResult', { success: 0, failed: failedCount }),
+          variant: 'destructive',
+        });
+      } else if (failedCount > 0) {
+        toast({
+          title: t('bulk.approveResult', { success: successCount, failed: failedCount }),
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: t('bulk.approveAll', { count: successCount }) });
+      }
+      selection.clear();
+    },
+  });
+
+  const bulkRejectMutation = useOptimisticMutation<
+    { rejected: { id: string; version: number }[]; failed: { id: string; error: string }[] },
+    { ids: string[]; reason: string },
+    readonly Checkout[]
+  >({
+    mutationFn: async ({ ids, reason }) => checkoutApi.bulkRejectCheckouts(ids, reason),
+    queryKey: queryKeys.checkouts.view.outbound({
+      direction: 'outbound',
+      ...apiParams,
+      teamId,
+    }),
+    optimisticUpdate: (old) => old ?? [],
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    errorMessage: t('bulk.rejectError'),
+    onSuccessCallback: (result) => {
+      const successCount = result.rejected.length;
+      const failedCount = result.failed.length;
+      if (failedCount > 0 && successCount === 0) {
+        toast({
+          title: t('bulk.rejectError'),
+          description: t('bulk.rejectResult', { success: 0, failed: failedCount }),
+          variant: 'destructive',
+        });
+      } else if (failedCount > 0) {
+        toast({
+          title: t('bulk.rejectResult', { success: successCount, failed: failedCount }),
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: t('bulk.rejectAll', { count: successCount }) });
+      }
+      selection.clear();
+    },
+  });
+
+  const handleBulkApprove = useCallback(() => {
+    if (selection.count === 0) return;
+    track('checkout.bulk_approve', { count: selection.count });
+    bulkApproveMutation.mutate({ ids: Array.from(selection.selected) });
+  }, [bulkApproveMutation, selection]);
+
+  const handleBulkReject = useCallback(
+    async (reason: string) => {
+      if (selection.count === 0) return;
+      track('checkout.bulk_reject', { count: selection.count });
+      await bulkRejectMutation.mutateAsync({ ids: Array.from(selection.selected), reason });
+    },
+    [bulkRejectMutation, selection]
+  );
+
+  // CheckoutGroupCard prop wiring — SSOT 헬퍼 (lib/checkouts/group-selection.ts)
+  const handleToggleGroup = useCallback(
+    (rowIds: readonly string[], allCurrentlySelected: boolean) => {
+      applyGroupToggle(selection, checkouts, rowIds, allCurrentlySelected);
+    },
+    [checkouts, selection]
+  );
+
+  const handleToggleRow = useCallback(
+    (rowId: string) => {
+      const item = checkouts.find((c) => c.id === rowId);
+      if (item) selection.toggle(rowId, item);
+    },
+    [checkouts, selection]
+  );
 
   // 장비 총 대수 파생 — 반출별 equipment 배열 합산 (백엔드 스키마 변경 없이 클라이언트 계산)
   const currentEquipmentCount = useMemo(
@@ -483,8 +609,23 @@ export default function OutboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // Main render
   // ──────────────────────────────────────────────
+  const isBulkPending = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
+
   return (
     <div className={SECTION_RHYTHM_TOKENS.tight}>
+      {canApproveCheckout && (
+        <CheckoutBulkActionBar
+          selectedCount={selection.count}
+          totalCount={checkouts.length}
+          isAllPageSelected={selection.isAllPageSelected}
+          isIndeterminate={selection.isIndeterminate}
+          onSelectAll={selection.selectAllOnPage}
+          onClearSelection={selection.clear}
+          onBulkApprove={handleBulkApprove}
+          onBulkReject={handleBulkReject}
+          isPending={isBulkPending}
+        />
+      )}
       {renderStats()}
 
       {/* 서브탭 (진행 중 / 완료) — tablist는 tabpanel의 sibling으로 배치 (WCAG 4.1.2) */}
@@ -523,6 +664,9 @@ export default function OutboundCheckoutsTab({
                   group={group}
                   onCheckoutClick={handleCheckoutClick}
                   isOverdueGroup={group.statuses.includes(CSVal.OVERDUE)}
+                  selectedRowIds={canApproveCheckout ? selection.selected : undefined}
+                  onToggleGroup={canApproveCheckout ? handleToggleGroup : undefined}
+                  onToggleRow={canApproveCheckout ? handleToggleRow : undefined}
                 />
               </div>
             ))

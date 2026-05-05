@@ -135,6 +135,19 @@
     "selectPurpose": "Please select a purpose",
     "selectPurposeDesc": "Select the checkout purpose."
   },
+  "bulk": {
+    "approve": "Approve Selected",
+    "reject": "Reject Selected",
+    "confirmApproveTitle": "Bulk Approve {count} Checkouts",
+    "confirmApproveDescription": "Approve all {count} selected checkouts. Partial failures may occur.",
+    "ariaLabel": "Checkout bulk action toolbar",
+    "approveAll": "{count} checkouts approved in bulk.",
+    "approveResult": "{success} succeeded / {failed} failed",
+    "approveError": "Bulk approval failed.",
+    "rejectAll": "{count} checkouts rejected in bulk.",
+    "rejectResult": "{success} succeeded / {failed} failed",
+    "rejectError": "Bulk rejection failed."
+  },
   "detail": {
     "title": "Checkout Detail",
     "equipment": "Equipment",
@@ -404,7 +417,9 @@
     "selectGroup": "Select group",
     "selectGroupAria": "Select all {count} checkouts in {destination}",
     "indeterminateAria": "{selected} of {total} checkouts selected in {destination}",
-    "deselectGroupAria": "Clear selection in {destination}"
+    "deselectGroupAria": "Clear selection in {destination}",
+    "selectRowAria": "Select {equipment} ({status})",
+    "selectRowDisabled": "Cannot be selected in current state"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
