@@ -3,7 +3,7 @@
 #
 # merged compose config에서 모든 서비스가 필수 보안 설정을 갖는지 검증.
 # x-security anchor는 YAML 파일 경계를 넘지 못하므로, 이 스크립트가
-# base.yml / prod.override.yml / lan.override.yml 간 동기화를 보장한다.
+# base.yml / prod.override.yml / lan.override.yml / onprem.override.yml 간 동기화를 보장한다.
 #
 # CI에서 실행: .github/workflows/main.yml quality-gate job
 # 로컬에서 실행: bash infra/scripts/verify-compose-security.sh
@@ -22,9 +22,9 @@ COMPOSE_DIR="${SCRIPT_DIR}/../compose"
 
 errors=0
 
-# x-security anchor 동기화 검증 — 3개 파일의 x-security 블록이 동일한지 확인
+# x-security anchor 동기화 검증 — 환경별 x-security 블록이 동일한지 확인
 check_anchor_sync() {
-  local base_security prod_security lan_security
+  local base_security prod_security lan_security onprem_security
 
   base_security=$(python3 -c "
 import yaml
@@ -50,6 +50,14 @@ xs = d.get('x-security', {})
 print(sorted(xs.items()))
 ")
 
+  onprem_security=$(python3 -c "
+import yaml
+with open('${COMPOSE_DIR}/onprem.override.yml') as f:
+    d = yaml.safe_load(f)
+xs = d.get('x-security', {})
+print(sorted(xs.items()))
+")
+
   if [[ "$base_security" != "$prod_security" ]]; then
     echo "::error::x-security SSOT 위반: base.yml ≠ prod.override.yml"
     echo "  base: $base_security"
@@ -61,6 +69,13 @@ print(sorted(xs.items()))
     echo "::error::x-security SSOT 위반: base.yml ≠ lan.override.yml"
     echo "  base: $base_security"
     echo "  lan:  $lan_security"
+    ((errors++))
+  fi
+
+  if [[ "$base_security" != "$onprem_security" ]]; then
+    echo "::error::x-security SSOT 위반: base.yml ≠ onprem.override.yml"
+    echo "  base:   $base_security"
+    echo "  onprem: $onprem_security"
     ((errors++))
   fi
 

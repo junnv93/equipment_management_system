@@ -1,8 +1,8 @@
 # sops + age Secret 암호화 정책 (ADR-0005)
 #
 # 사용법:
-#   - 암호화 편집:  pnpm secrets:edit ENV=lan
-#   - 복호화 (호스트 tmpfs): pnpm secrets:decrypt lan
+#   - 암호화 편집:  pnpm secrets:edit ENV=onprem
+#   - 복호화 (호스트 tmpfs): pnpm secrets:decrypt onprem
 #   - 키 교체 / 추가: .sops.yaml 의 keys: 수정 후 pnpm secrets:rotate-key
 #
 # Recipients 는 age public key ("age1..." 접두사). 여러 개를 등록해 1개 분실 시
@@ -21,6 +21,10 @@ keys:
   - &pc_primary age1ts2rpha0f7rjlslevf62t604q2gh7s68mt90h6lg70250pr4w59qzzk5tc
 
 creation_rules:
+  - path_regex: ^infra/secrets/onprem\.env\.sops\.yaml$
+    key_groups:
+      - age:
+          - *pc_primary
   - path_regex: ^infra/secrets/lan\.env\.sops\.yaml$
     key_groups:
       - age:

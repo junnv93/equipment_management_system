@@ -6,7 +6,8 @@
 # 경우 $SOPS_DECRYPT_DIR 환경 변수로 대체 경로를 지정하라 (권장: tmpfs mount).
 #
 # Usage:
-#   bash infra/scripts/secrets-decrypt.sh lan        # → /run/secrets/lan.env (mode 0600)
+#   bash infra/scripts/secrets-decrypt.sh onprem     # → /run/secrets/onprem.env (mode 0600)
+#   bash infra/scripts/secrets-decrypt.sh lan        # → /run/secrets/lan.env (legacy)
 #   bash infra/scripts/secrets-decrypt.sh prod
 #   bash infra/scripts/secrets-decrypt.sh lan --dry-run    # 복호화 산출물 stdout
 #
@@ -21,14 +22,14 @@ DRY_RUN=0
 for arg in "$@"; do
   case "${arg}" in
     --dry-run) DRY_RUN=1 ;;
-    lan|prod) ;;
+    onprem|lan|prod) ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) printf '[secrets-decrypt] unknown arg: %s\n' "${arg}" >&2; exit 2 ;;
   esac
 done
 
-if [ -z "${ENV_NAME}" ] || { [ "${ENV_NAME}" != "lan" ] && [ "${ENV_NAME}" != "prod" ]; }; then
-  printf '[secrets-decrypt] usage: %s <lan|prod> [--dry-run]\n' "$0" >&2
+if [ -z "${ENV_NAME}" ] || { [ "${ENV_NAME}" != "onprem" ] && [ "${ENV_NAME}" != "lan" ] && [ "${ENV_NAME}" != "prod" ]; }; then
+  printf '[secrets-decrypt] usage: %s <onprem|lan|prod> [--dry-run]\n' "$0" >&2
   exit 2
 fi
 

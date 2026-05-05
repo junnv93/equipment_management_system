@@ -1,0 +1,20 @@
+# Docker Compose — on-premises production entry point (include shim)
+#
+# 회사 보안정책에 맞춘 온프레미스 서버 배포 (nginx:9000 단일 진입점).
+# 실제 서비스 정의는 `compose/{base,onprem.override}.yml`에 SSOT로 있다.
+#
+# 사용법:
+#   docker compose -f infra/docker-compose.onprem.yml up -d --build --wait
+#   docker compose -f infra/docker-compose.onprem.yml --profile migration run --rm migration
+#
+# 관련 문서:
+#   - compose/base.yml            (SSOT)
+#   - compose/onprem.override.yml (온프레미스 전용: bind-mount, backend/frontend/nginx)
+#   - docs/adr/0004-docker-compose-over-kubernetes.md
+#   - ONPREM_DEPLOYMENT.md
+
+name: equipment-management-system-onprem
+
+include:
+  - compose/base.yml
+  - compose/onprem.override.yml

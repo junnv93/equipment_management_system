@@ -25,6 +25,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 # root package.json 의 `preinstall` 훅이 참조하는 스크립트. 파일이 거의 바뀌지
 # 않아 manifest 레이어 캐시 재사용률은 유지되면서 `MODULE_NOT_FOUND` 를 제거.
 COPY scripts/check-no-stale-lockfiles.mjs ./scripts/check-no-stale-lockfiles.mjs
+COPY scripts/check-dependabot-drift.mjs ./scripts/check-dependabot-drift.mjs
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/shared-constants/package.json ./packages/shared-constants/
@@ -53,7 +54,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    INTERNAL_BACKEND_URL=http://backend:3001
 RUN pnpm --filter schemas build \
  && pnpm --filter shared-constants build \
  && pnpm --filter frontend build

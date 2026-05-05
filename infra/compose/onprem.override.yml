@@ -1,0 +1,205 @@
+# On-premises production override
+#
+# 회사 보안정책에 맞춘 온프레미스 서버 배포 (nginx:9000 단일 진입점). ADR-0004 참조.
+# - postgres/redis/rustfs: bind-mount to /var/lib/equipment-system/* (호스트 백업 용이)
+# - Redis AOF + requirepass (ADR-0005 매트릭스의 prod parity)
+# - backend / frontend / nginx / migration 서비스 추가
+#
+# Secret 주입 (ADR-0005 Accepted, Phase C 완료):
+#   pnpm compose:onprem 사용 → docker compose --env-file=/run/secrets/onprem.env 로 실행
+#   직접 실행 시: pnpm secrets:decrypt onprem && docker compose --env-file=/run/secrets/onprem.env -f base.yml -f onprem.override.yml up -d --build --wait
+#   상세: ../secrets/README.md
+
+# SYNC: base.yml x-security — YAML anchor는 파일 경계 불가, 동일 값 재정의
+# 변경 시 base.yml · prod.override.yml 동시 업데이트 필수 (CI verify-compose-security.sh 검증)
+x-security: &security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-equipment_management}
+    volumes:
+      - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
+      - /var/lib/equipment-system/backups:/backups
+    networks:
+      - data-network
+
+  redis:
+    networks:
+      - data-network
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    volumes:
+      - /var/lib/equipment-system/redis:/data
+
+  rustfs:
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - /var/lib/equipment-system/rustfs:/data
+    networks:
+      - data-network
+
+  backend:
+    <<: *security
+    build:
+      context: ../..
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    restart: unless-stopped
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-equipment_management}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      HANDOVER_TOKEN_SECRET: ${HANDOVER_TOKEN_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      PERMISSIONS_GUARD_MODE: DENY
+      FRONTEND_URL: ${ONPREM_PUBLIC_ORIGIN:?set ONPREM_PUBLIC_ORIGIN in onprem secrets}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-equipment-files}
+    volumes:
+      # read_only 예외: 로그 파일 쓰기 필요 — 호스트 bind mount로 영속화 (호스트 백업 용이)
+      - /var/lib/equipment-system/logs/backend:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    networks:
+      - app-network
+      - data-network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/monitoring/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  frontend:
+    <<: *security
+    build:
+      context: ../..
+      dockerfile: apps/frontend/Dockerfile
+      target: production
+    restart: unless-stopped
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production
+      # Same-Origin Reverse-Proxy 모델 (ADR-0006): 온프레미스 nginx(:9000)가 /api/* 분기 처리.
+      # 클라이언트는 상대 경로로 호출 — 빈 값으로 두어 axios가 호출자 origin을 사용.
+      NEXT_PUBLIC_API_URL: ''
+      NEXTAUTH_URL: ${ONPREM_PUBLIC_ORIGIN:?set ONPREM_PUBLIC_ORIGIN in onprem secrets}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      INTERNAL_BACKEND_URL: http://backend:3001
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  nginx:
+    <<: *security
+    image: nginx:1.27-alpine # SSOT — prod와 통일
+    restart: unless-stopped
+    stop_grace_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
+    ports:
+      - '9000:9000'
+    volumes:
+      - ../nginx/lan.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  migration:
+    <<: *security
+    build:
+      context: ../..
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    read_only: true
+    tmpfs:
+      - /tmp
+    command: ['node', 'apps/backend/dist/database/run-migration.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-equipment_management}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data-network
+    restart: 'no'
+    profiles:
+      - migration
+
+networks:
+  # DB 계층 — postgres/redis/rustfs 격리, 인터넷 접근 차단
+  data-network:
+    internal: true
+  # 앱 계층 — backend/frontend/nginx, Azure AD 외부 호출 허용
+  app-network:

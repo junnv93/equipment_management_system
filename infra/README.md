@@ -6,11 +6,12 @@
 
 ```
 infra/
-├── docker-compose.prod.yml   # 프로덕션 배포 (Nginx + 모니터링 + TLS)
-├── docker-compose.lan.yml    # 내부 LAN 전용 배포 (단일 포트 9000)
+├── docker-compose.onprem.yml # 온프레미스 서버 배포 (단일 진입점 9000)
+├── docker-compose.prod.yml   # 퍼블릭 프로덕션 배포 (Nginx + 모니터링 + TLS)
+├── docker-compose.lan.yml    # legacy LAN 배포 (deprecated)
 ├── nginx/                    # Nginx 설정 (리버스 프록시)
 │   ├── nginx.conf.template   # 프로덕션용 (HTTPS + Certbot)
-│   └── lan.conf              # LAN용 (HTTP 단일 포트)
+│   └── lan.conf              # 온프레미스/legacy LAN용 (HTTP 단일 포트)
 ├── monitoring/               # 모니터링 스택
 │   ├── prometheus/           # Prometheus 설정 + 알림 규칙
 │   ├── grafana/              # Grafana 프로비저닝
@@ -31,14 +32,16 @@ infra/
 docker compose up -d
 ```
 
-### LAN 배포 (사내 네트워크)
+### 온프레미스 서버 배포
 
 ```bash
-docker compose -f infra/docker-compose.lan.yml up -d
+pnpm compose:onprem
 
 # DB 마이그레이션 (최초 또는 스키마 변경 시)
-docker compose -f infra/docker-compose.lan.yml --profile migration run --rm migration
+pnpm compose:onprem:migrate
 ```
+
+상세 절차는 [ONPREM_DEPLOYMENT.md](./ONPREM_DEPLOYMENT.md)를 기준으로 합니다.
 
 ### 프로덕션 배포
 
@@ -51,7 +54,7 @@ docker compose -f infra/docker-compose.prod.yml --profile migration run --rm mig
 
 ## 필수 환경 변수
 
-프로덕션/LAN 배포 시 `.env` 파일에 다음 값이 필요합니다.
+프로덕션/온프레미스 배포 시 sops secret 파일에 다음 값이 필요합니다.
 
 | 변수                   | 설명                       | 예시                            |
 | ---------------------- | -------------------------- | ------------------------------- |
@@ -63,7 +66,7 @@ docker compose -f infra/docker-compose.prod.yml --profile migration run --rm mig
 | `S3_ACCESS_KEY`        | RustFS 접근 키             | —                               |
 | `S3_SECRET_KEY`        | RustFS 비밀 키             | —                               |
 | `FRONTEND_URL`         | 프론트엔드 공개 URL (CORS) | `https://equipment.example.com` |
-| `SERVER_LAN_IP`        | LAN 서버 IP (LAN 전용)     | `192.168.1.100`                 |
+| `ONPREM_PUBLIC_ORIGIN` | 온프레미스 공개 origin     | `http://equipment.local:9000`   |
 
 > 전체 목록은 루트의 `.env.example` 참조
 

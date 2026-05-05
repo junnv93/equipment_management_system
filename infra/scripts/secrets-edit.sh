@@ -2,9 +2,10 @@
 # Secret 편집 — sops 로 infra/secrets/<env>.env.sops.yaml 을 $EDITOR 로 열고 저장 시 자동 재암호화.
 #
 # Usage:
+#   bash infra/scripts/secrets-edit.sh onprem
 #   bash infra/scripts/secrets-edit.sh lan
 #   bash infra/scripts/secrets-edit.sh prod
-#   ENV=lan pnpm secrets:edit
+#   ENV=onprem pnpm secrets:edit
 #
 # Env vars:
 #   EDITOR              기본 nano (sops 기본 동작)
@@ -13,8 +14,11 @@
 set -euo pipefail
 
 ENV_NAME="${1:-${ENV:-}}"
-if [ -z "${ENV_NAME}" ] || { [ "${ENV_NAME}" != "lan" ] && [ "${ENV_NAME}" != "prod" ]; }; then
-  printf '[secrets-edit] usage: %s <lan|prod>\n' "$0" >&2
+case "${ENV_NAME}" in
+  ENV=*) ENV_NAME="${ENV_NAME#ENV=}" ;;
+esac
+if [ -z "${ENV_NAME}" ] || { [ "${ENV_NAME}" != "onprem" ] && [ "${ENV_NAME}" != "lan" ] && [ "${ENV_NAME}" != "prod" ]; }; then
+  printf '[secrets-edit] usage: %s <onprem|lan|prod>\n' "$0" >&2
   exit 2
 fi
 

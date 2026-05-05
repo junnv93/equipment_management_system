@@ -1,6 +1,6 @@
 # API Routing Architecture — Same-Origin Reverse-Proxy
 
-> 본 문서는 ADR-0006의 운영 가이드. 모든 환경(dev/lan/prod)에서 frontend ↔ backend 라우팅이 동일한 패턴을 따르도록 강제한다.
+> 본 문서는 ADR-0006의 운영 가이드. 모든 환경(dev/onprem/prod)에서 frontend ↔ backend 라우팅이 동일한 패턴을 따르도록 강제한다. `lan` compose는 legacy 호환 경로다.
 
 ## 1. 핵심 원칙
 
@@ -9,7 +9,7 @@
                             │     → frontend NextAuth route handler
                             └─ /api/* (그 외)
                                   → next.config.js rewrites (dev)
-                                     또는 nginx (lan/prod)
+                                     또는 nginx (onprem/prod)
                                   → backend(:3001)
 ```
 
@@ -19,16 +19,16 @@
 
 ## 2. 환경변수
 
-| 변수                   | 의미                                     | dev (`.env.local`)                  | lan/prod (compose)                              |
-| ---------------------- | ---------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`  | 클라이언트 axios baseURL. **빈 값 강제** | `` (empty)                          | `` (empty)                                      |
-| `INTERNAL_BACKEND_URL` | server-side backend 직접 호출 URL        | `http://localhost:3001`             | `http://backend:3001`                           |
-| `NEXTAUTH_URL`         | NextAuth가 callback URL 생성 시 사용     | `http://localhost:3000`             | `http://${SERVER_LAN_IP}:9000` 또는 외부 도메인 |
-| `INTERNAL_API_KEY`     | backend internal-only 호출 인증 키       | `.env.local` 값 = backend `.env` 값 | compose secrets                                 |
+| 변수                   | 의미                                     | dev (`.env.local`)                  | onprem/prod (compose)                      |
+| ---------------------- | ---------------------------------------- | ----------------------------------- | ------------------------------------------ |
+| `NEXT_PUBLIC_API_URL`  | 클라이언트 axios baseURL. **빈 값 강제** | `` (empty)                          | `` (empty)                                 |
+| `INTERNAL_BACKEND_URL` | server-side backend 직접 호출 URL        | `http://localhost:3001`             | `http://backend:3001`                      |
+| `NEXTAUTH_URL`         | NextAuth가 callback URL 생성 시 사용     | `http://localhost:3000`             | `${ONPREM_PUBLIC_ORIGIN}` 또는 외부 도메인 |
+| `INTERNAL_API_KEY`     | backend internal-only 호출 인증 키       | `.env.local` 값 = backend `.env` 값 | compose secrets                            |
 
 ⚠️ **`NEXT_PUBLIC_API_URL`에 절대 URL을 지정하면 ADR-0006 위반.** dev에서는 console.error로 즉시 발견되며, production build에서는 `[API Config]` 에러로 hard-fail한다.
 
-⚠️ **`INTERNAL_BACKEND_URL` 미설정 시 production boot fail.** `apps/frontend/lib/config/api-config.ts`의 `resolveServerBaseUrl()`이 `NODE_ENV=production`에서 `INTERNAL_BACKEND_URL`이 없으면 `[API Config] INTERNAL_BACKEND_URL 환경변수가 설정되지 않았습니다 ...` 에러를 throw한다. 이는 의도된 fail-closed 동작으로, Docker 환경에서 backend hostname resolve 불가 상태로 SSR을 시작하는 사고를 차단한다. **운영팀은 모든 production/lan compose 매니페스트에 `INTERNAL_BACKEND_URL=http://backend:3001`을 명시해야 한다** (이미 `infra/compose/{lan,prod}.override.yml`에 반영됨).
+⚠️ **`INTERNAL_BACKEND_URL` 미설정 시 production boot fail.** `apps/frontend/lib/config/api-config.ts`의 `resolveServerBaseUrl()`이 `NODE_ENV=production`에서 `INTERNAL_BACKEND_URL`이 없으면 `[API Config] INTERNAL_BACKEND_URL 환경변수가 설정되지 않았습니다 ...` 에러를 throw한다. 이는 의도된 fail-closed 동작으로, Docker 환경에서 backend hostname resolve 불가 상태로 SSR을 시작하는 사고를 차단한다. **운영팀은 모든 production/onprem compose 매니페스트에 `INTERNAL_BACKEND_URL=http://backend:3001`을 명시해야 한다** (이미 `infra/compose/{onprem,prod}.override.yml`에 반영됨).
 
 ## 3. 코드 진입점 (SSOT)
 
@@ -46,7 +46,7 @@
 | -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | SSOT (TypeScript)    | `packages/shared-constants/src/api-routing.ts`                 | `NEXTAUTH_HANDLER_PATHS` 배열 + 정규식                                                            |
 | Next.js dev rewrites | `apps/frontend/next.config.js`                                 | inline 정규식 `(csrf\|session\|providers\|signin\|signout\|callback\|error\|verify-request)`      |
-| nginx (lan/prod)     | `infra/nginx/lan.conf` **+** `infra/nginx/nginx.conf.template` | `location ~ ^/api/auth/(csrf\|...)(/\|$)` → `proxy_pass http://frontend` (두 파일 모두 동일 분기) |
+| nginx (onprem/prod)  | `infra/nginx/lan.conf` **+** `infra/nginx/nginx.conf.template` | `location ~ ^/api/auth/(csrf\|...)(/\|$)` → `proxy_pass http://frontend` (두 파일 모두 동일 분기) |
 | proxy.ts matcher     | `apps/frontend/proxy.ts`                                       | `/api` 경로는 매처에서 제외(NextAuth 자체가 자기 가드 처리)                                       |
 
 **SSOT 동기화 의무**: 새 NextAuth 핸들러 경로(예: Auth.js v6 추가) 등장 시 위 4곳을 모두 갱신. `verify-routing-origin` (SHOULD skill)이 자동 검증.
@@ -72,23 +72,23 @@ NextAuth.refresh callback (server)
   → http://localhost:3001/api/auth/refresh (backend NestJS auth controller)
 ```
 
-### 5.2 LAN (`pnpm compose:lan up`)
+### 5.2 On-premises (`pnpm compose:onprem`)
 
 nginx(:9000)가 reverse proxy 진입점.
 
 ```
-LAN 사용자 → http://server-ip:9000/api/auth/csrf
+사내 사용자 → ${ONPREM_PUBLIC_ORIGIN}/api/auth/csrf
          → nginx: location ~ ^/api/auth/(csrf|...) → http://frontend:3000
          → frontend NextAuth handler 응답
 
-LAN 사용자 → http://server-ip:9000/api/equipment
+사내 사용자 → ${ONPREM_PUBLIC_ORIGIN}/api/equipment
          → nginx: location /api → http://backend:3001
          → backend Equipment controller 응답
 ```
 
 ### 5.3 Production
 
-LAN과 동일 패턴 + TLS 종료. nginx가 `/api/auth/(NextAuth)` → frontend, 나머지 `/api` → backend.
+On-prem과 동일 패턴 + TLS 종료. nginx가 `/api/auth/(NextAuth)` → frontend, 나머지 `/api` → backend.
 
 ## 6. 트러블슈팅
 
