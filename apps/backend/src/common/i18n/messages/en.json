@@ -75,5 +75,7 @@
   "system.calibrationOverdue.incidentContent": "Auto non-conformance transition due to calibration overdue",
   "system.calibrationOverdue.ncCause": "Calibration overdue (next calibration date: {nextCalibrationDate})",
   "system.calibrationOverdue.defaultActionPlan": "Calibration required",
-  "system.calibrationOverdue.correctionContent": "Auto-corrected due to calibration completion"
+  "system.calibrationOverdue.correctionContent": "Auto-corrected due to calibration completion",
+  "system.calibrationFailure.ncCause": "Approved calibration result failed",
+  "system.calibrationFailure.defaultActionPlan": "Investigate the non-conformance cause and complete follow-up action"
 }

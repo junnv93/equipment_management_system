@@ -15,6 +15,8 @@
  */
 
 import { z } from 'zod';
+import { ApprovalCategoryEnum } from './enums/approval';
+import { UserRoleEnum } from './enums/equipment';
 
 // ─── Locale ───────────────────────────────────────────────────────────────────
 
@@ -80,4 +82,17 @@ export const CALIBRATION_ALERT_DAYS_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as co
 
 export interface CalibrationAlertSettingsResponse {
   alertDays: number[];
+}
+
+// ─── Approval Governance Settings ───────────────────────────────────────────
+
+export const roleApprovalCategoriesSettingsSchema = z.record(
+  UserRoleEnum,
+  z.array(ApprovalCategoryEnum)
+);
+
+export type RoleApprovalCategoriesSettings = z.infer<typeof roleApprovalCategoriesSettingsSchema>;
+
+export interface RoleApprovalCategoriesSettingsResponse {
+  roleCategories: RoleApprovalCategoriesSettings;
 }

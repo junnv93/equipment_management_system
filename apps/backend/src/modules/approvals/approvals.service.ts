@@ -30,6 +30,9 @@ import {
   ApprovalStatusEnum,
   SelfInspectionStatusValues,
   type UserRole,
+  UserRoleValues,
+  ApprovalCategoryEnum,
+  type ApprovalCategory,
   type CheckoutStatus,
   type CalibrationPlanStatus,
   type DisposalReviewStatus,
@@ -39,7 +42,6 @@ import {
 import { buildScopePredicate } from '../../common/scope/scope-sql-builder';
 import {
   APPROVAL_KPI,
-  ROLE_APPROVAL_CATEGORIES,
   NON_CONFORMANCE_DATA_SCOPE,
   CHECKOUT_DATA_SCOPE,
   INTERMEDIATE_CHECK_DATA_SCOPE,
@@ -62,17 +64,10 @@ import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { buildCheckoutScopeForUser } from '../checkouts/checkout-scope.util';
+import { SettingsService } from '../settings/settings.service';
 
 /** 승인 카테고리 축약 (SSOT: @equipment-management/schemas) */
 const AC = ApprovalCategoryValues;
-
-/**
- * 역할별 승인 카테고리 (Set 변환 — O(1) lookup)
- * SSOT: @equipment-management/shared-constants ROLE_APPROVAL_CATEGORIES
- */
-const ROLE_CATEGORIES = Object.fromEntries(
-  Object.entries(ROLE_APPROVAL_CATEGORIES).map(([role, cats]) => [role, new Set(cats)])
-) as unknown as Record<UserRole, ReadonlySet<string>>;
 
 /**
  * 카테고리별 승인 대기 개수
@@ -111,6 +106,39 @@ export interface PendingCountsByCategory {
   software_validation: number;
 }
 
+export interface ApprovalDelegationResponse {
+  id: string;
+  delegatorId: string;
+  delegateeId: string;
+  category: ApprovalCategory;
+  reason: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  revokedAt: Date | null;
+}
+
+export interface CreateApprovalDelegationInput {
+  delegatorId: string;
+  delegateeId: string;
+  category: ApprovalCategory;
+  reason?: string;
+  startsAt: Date;
+  endsAt: Date;
+  createdBy: string;
+}
+
+export interface ApprovalAnalyticsBucket {
+  month: string;
+  processedCount: number;
+  approvalCount: number;
+  rejectionCount: number;
+  averageProcessingDays: number;
+}
+
+export interface ApprovalAnalyticsResponse {
+  buckets: ApprovalAnalyticsBucket[];
+}
+
 /**
  * 승인 관리 통합 서비스
  *
@@ -125,7 +153,8 @@ export class ApprovalsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly settingsService: SettingsService
   ) {}
 
   /**
@@ -141,11 +170,156 @@ export class ApprovalsService {
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const allowedCategories = ROLE_CATEGORIES[userCtx.role] ?? new Set();
+        const allowedCategories = await this.getAllowedCategoriesForRole(userCtx.role);
         return this.getApprovalCountsByScope(userCtx, allowedCategories);
       },
       CACHE_TTL.SHORT
     );
+  }
+
+  async getAllowedCategoriesForRole(role: UserRole): Promise<ReadonlySet<string>> {
+    const { roleCategories } = await this.settingsService.getRoleApprovalCategories();
+    return new Set(roleCategories[role] ?? []);
+  }
+
+  async getRoleApprovalCategories() {
+    return this.settingsService.getRoleApprovalCategories();
+  }
+
+  async createDelegation(
+    input: CreateApprovalDelegationInput
+  ): Promise<ApprovalDelegationResponse> {
+    if (input.delegatorId === input.delegateeId) {
+      throw new Error('delegatorId and delegateeId must be different.');
+    }
+    if (input.startsAt >= input.endsAt) {
+      throw new Error('startsAt must be before endsAt.');
+    }
+
+    const category = ApprovalCategoryEnum.parse(input.category);
+    const inserted = await this.db
+      .insert(schema.approvalDelegations)
+      .values({
+        delegatorId: input.delegatorId,
+        delegateeId: input.delegateeId,
+        category,
+        reason: input.reason ?? null,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        createdBy: input.createdBy,
+      })
+      .returning();
+
+    return this.mapDelegation(inserted[0]);
+  }
+
+  async listDelegations(userId: string): Promise<ApprovalDelegationResponse[]> {
+    const now = new Date();
+    const rows = await this.db
+      .select()
+      .from(schema.approvalDelegations)
+      .where(
+        or(
+          eq(schema.approvalDelegations.delegatorId, userId),
+          eq(schema.approvalDelegations.delegateeId, userId),
+          and(
+            eq(schema.approvalDelegations.delegateeId, userId),
+            isNull(schema.approvalDelegations.revokedAt),
+            lte(schema.approvalDelegations.startsAt, now),
+            gte(schema.approvalDelegations.endsAt, now)
+          )
+        )
+      );
+
+    return rows.map((row) => this.mapDelegation(row));
+  }
+
+  async revokeDelegation(id: string, revokedBy: string): Promise<ApprovalDelegationResponse> {
+    const rows = await this.db
+      .update(schema.approvalDelegations)
+      .set({ revokedAt: new Date(), revokedBy, updatedAt: new Date() })
+      .where(eq(schema.approvalDelegations.id, id))
+      .returning();
+
+    return this.mapDelegation(rows[0]);
+  }
+
+  async getAnalytics(userCtx: UserScopeContext, months = 6): Promise<ApprovalAnalyticsResponse> {
+    const clampedMonths = Math.min(Math.max(months, 1), 24);
+    const from = new Date();
+    from.setMonth(from.getMonth() - clampedMonths + 1);
+    from.setDate(1);
+    from.setHours(0, 0, 0, 0);
+
+    const scopeConditions: SQL[] = [
+      gte(schema.auditLogs.timestamp, from),
+      inArray(schema.auditLogs.action, [...APPROVAL_KPI.PROCESSED_ACTIONS]),
+    ];
+
+    if (userCtx.role === UserRoleValues.TECHNICAL_MANAGER && userCtx.teamId) {
+      scopeConditions.push(eq(schema.auditLogs.userTeamId, userCtx.teamId));
+    } else if (userCtx.role === UserRoleValues.LAB_MANAGER && userCtx.site) {
+      scopeConditions.push(eq(schema.auditLogs.userSite, userCtx.site));
+    }
+
+    const requestedAtSql = sql<Date>`coalesce(
+      (select er.requested_at from equipment_requests er
+       where ${schema.auditLogs.entityType} = 'equipment' and er.id = ${schema.auditLogs.entityId}),
+      (select dr.requested_at from disposal_requests dr
+       where ${schema.auditLogs.entityType} = 'equipment' and dr.equipment_id = ${schema.auditLogs.entityId}),
+      (select c.created_at from checkouts c
+       where ${schema.auditLogs.entityType} = 'checkout' and c.id = ${schema.auditLogs.entityId}),
+      (select cal.created_at from calibrations cal
+       where ${schema.auditLogs.entityType} = 'calibration' and cal.id = ${schema.auditLogs.entityId}),
+      (select ii.submitted_at from intermediate_inspections ii
+       where ${schema.auditLogs.entityType} = 'intermediate_inspection' and ii.id = ${schema.auditLogs.entityId}),
+      (select si.submitted_at from equipment_self_inspections si
+       where ${schema.auditLogs.entityType} = 'self_inspection' and si.id = ${schema.auditLogs.entityId}),
+      (select cp.submitted_at from calibration_plans cp
+       where ${schema.auditLogs.entityType} = 'calibration_plan' and cp.id = ${schema.auditLogs.entityId}),
+      (select nc.created_at from non_conformances nc
+       where ${schema.auditLogs.entityType} = 'non_conformance' and nc.id = ${schema.auditLogs.entityId}),
+      (select ei.created_at from equipment_imports ei
+       where ${schema.auditLogs.entityType} = 'equipment_import' and ei.id = ${schema.auditLogs.entityId}),
+      (select sv.submitted_at from software_validations sv
+       where ${schema.auditLogs.entityType} = 'software_validation' and sv.id = ${schema.auditLogs.entityId})
+    )`;
+
+    const rows = await this.db
+      .select({
+        month: sql<string>`to_char(date_trunc('month', ${schema.auditLogs.timestamp}), 'YYYY-MM')`,
+        processedCount: count(),
+        approvalCount: sql<number>`count(*) filter (where ${schema.auditLogs.action} = 'approve')`,
+        rejectionCount: sql<number>`count(*) filter (where ${schema.auditLogs.action} = 'reject')`,
+        averageProcessingDays: sql<number>`coalesce(round(avg(extract(epoch from (${schema.auditLogs.timestamp} - ${requestedAtSql})) / 86400))::int, 0)`,
+      })
+      .from(schema.auditLogs)
+      .where(and(...scopeConditions))
+      .groupBy(sql`date_trunc('month', ${schema.auditLogs.timestamp})`)
+      .orderBy(sql`date_trunc('month', ${schema.auditLogs.timestamp})`);
+
+    return {
+      buckets: rows.map((row) => ({
+        month: row.month,
+        processedCount: toSafeInt(row.processedCount),
+        approvalCount: toSafeInt(row.approvalCount),
+        rejectionCount: toSafeInt(row.rejectionCount),
+        averageProcessingDays: toSafeInt(row.averageProcessingDays),
+      })),
+    };
+  }
+
+  private mapDelegation(row: schema.ApprovalDelegation): ApprovalDelegationResponse {
+    return {
+      id: row.id,
+      delegatorId: row.delegatorId,
+      delegateeId: row.delegateeId,
+      category: row.category,
+      reason: row.reason,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+      revokedAt: row.revokedAt,
+    };
   }
 
   /**

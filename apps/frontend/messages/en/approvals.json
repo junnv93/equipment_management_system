@@ -1,6 +1,7 @@
 {
   "title": "Approval Management",
   "subtitle": "Manage approval requests",
+  "loading": "Loading approval settings.",
   "tabs": {
     "checkout": "Checkout Approvals",
     "return": "Return Approvals",

@@ -365,6 +365,20 @@
       "when": 1746230400000,
       "tag": "0051_add_self_inspection_items_measurement_criteria",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1746316800000,
+      "tag": "0052_add_checkout_calibration_certificate_exception",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1746403200000,
+      "tag": "0053_add_approval_delegations",
+      "breakpoints": true
     }
   ]
 }

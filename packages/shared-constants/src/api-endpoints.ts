@@ -441,6 +441,10 @@ export const API_ENDPOINTS = {
   APPROVALS: {
     COUNTS: '/api/approvals/counts',
     KPI: '/api/approvals/kpi',
+    CATEGORIES: '/api/approvals/categories',
+    ANALYTICS: '/api/approvals/analytics',
+    DELEGATIONS: '/api/approvals/delegations',
+    REVOKE_DELEGATION: (id: string) => `/api/approvals/delegations/${id}/revoke`,
     STREAM: '/api/approvals/stream',
   },
 

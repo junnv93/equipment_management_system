@@ -80,3 +80,4 @@ export * from './csp-reports';
 
 // 반려 사유 프리셋 (UL-QP-18 반출 반려 workflow)
 export * from './rejection-presets';
+export * from './approval-delegations';

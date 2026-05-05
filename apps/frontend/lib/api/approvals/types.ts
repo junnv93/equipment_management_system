@@ -6,12 +6,9 @@
  */
 
 import { z } from 'zod';
-import { VALIDATION_RULES, ROLE_APPROVAL_CATEGORIES } from '@equipment-management/shared-constants';
-import {
-  type UserRole,
-  type UnifiedApprovalStatus,
-  type ApprovalCategory,
-} from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { type UnifiedApprovalStatus, type ApprovalCategory } from '@equipment-management/schemas';
+import type { RoleApprovalCategoriesSettings } from '@equipment-management/schemas';
 
 // ============================================================================
 // 통합 승인 상태 타입
@@ -22,13 +19,6 @@ export type { UnifiedApprovalStatus };
 // 승인 카테고리 정의
 // ✅ SSOT: ApprovalCategory는 @equipment-management/schemas에서 import
 export type { ApprovalCategory };
-
-/**
- * 역할별 탭 설정
- * SSOT: 백엔드 ApprovalsService의 getPendingCountsByRole과 동기화
- */
-// ✅ SSOT: ROLE_APPROVAL_CATEGORIES는 shared-constants에서 import
-export const ROLE_TABS: Record<UserRole, readonly ApprovalCategory[]> = ROLE_APPROVAL_CATEGORIES;
 
 /**
  * 탭 메타 정보
@@ -255,6 +245,34 @@ export interface ApprovalItem {
   attachments?: Attachment[];
   approvalHistory?: ApprovalHistoryEntry[];
   originalData?: unknown;
+}
+
+export interface ApprovalCategoriesResponse {
+  roleCategories: RoleApprovalCategoriesSettings;
+  availableCategories: ApprovalCategory[];
+}
+
+export interface ApprovalAnalyticsBucket {
+  month: string;
+  processedCount: number;
+  approvalCount: number;
+  rejectionCount: number;
+  averageProcessingDays: number;
+}
+
+export interface ApprovalAnalyticsResponse {
+  buckets: ApprovalAnalyticsBucket[];
+}
+
+export interface ApprovalDelegation {
+  id: string;
+  delegatorId: string;
+  delegateeId: string;
+  category: ApprovalCategory;
+  reason: string | null;
+  startsAt: string;
+  endsAt: string;
+  revokedAt: string | null;
 }
 
 /**

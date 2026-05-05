@@ -3,6 +3,7 @@ import { ApprovalsController } from './approvals.controller';
 import { ApprovalsService } from './approvals.service';
 import { ApprovalSseListener } from './approval-sse.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SettingsModule } from '../settings/settings.module';
 
 /**
  * 승인 관리 모듈
@@ -16,7 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
  * 연결된 프론트엔드 클라이언트에 실시간 브로드캐스트
  */
 @Module({
-  imports: [forwardRef(() => NotificationsModule)],
+  imports: [forwardRef(() => NotificationsModule), SettingsModule],
   controllers: [ApprovalsController],
   providers: [ApprovalsService, ApprovalSseListener],
   exports: [ApprovalsService],

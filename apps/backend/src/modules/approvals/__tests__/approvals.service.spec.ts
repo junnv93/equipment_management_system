@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ApprovalsService } from '../approvals.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
+import { ROLE_APPROVAL_CATEGORIES } from '@equipment-management/shared-constants';
 import * as schema from '@equipment-management/db/schema';
+import { SettingsService } from '../../settings/settings.service';
 
 describe('ApprovalsService', () => {
   let service: ApprovalsService;
@@ -48,12 +50,18 @@ describe('ApprovalsService', () => {
     const mockCacheService = {
       getOrSet: jest.fn().mockImplementation((_key: string, fn: () => Promise<unknown>) => fn()),
     };
+    const mockSettingsService = {
+      getRoleApprovalCategories: jest
+        .fn()
+        .mockResolvedValue({ roleCategories: ROLE_APPROVAL_CATEGORIES }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApprovalsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        { provide: SettingsService, useValue: mockSettingsService },
       ],
     }).compile();
 
@@ -110,15 +118,17 @@ describe('ApprovalsService', () => {
       expect(result.software_validation).toBe(1);
     });
 
-    it('lab_manager 역할은 disposal_final과 plan_final을 조회한다', async () => {
+    it('lab_manager 역할은 disposal_final, plan_final, self_inspection을 조회한다', async () => {
       tableCounts.set(schema.disposalRequests, 3);
       tableCounts.set(schema.calibrationPlans, 1);
+      tableCounts.set(schema.equipmentSelfInspections, 2);
       const userCtx: UserScopeContext = { role: 'lab_manager', site: 'SUW' };
 
       const result = await service.getPendingCountsByRole(userCtx);
 
       expect(result.disposal_final).toBe(3);
       expect(result.plan_final).toBe(1);
+      expect(result.self_inspection).toBe(2);
       // lab_manager는 equipment/calibration 직접 승인 안함
       expect(result.equipment).toBe(0);
       expect(result.calibration).toBe(0);
@@ -134,6 +144,7 @@ describe('ApprovalsService', () => {
         'equipment',
         'calibration',
         'inspection',
+        'self_inspection',
         'nonconformity',
         'disposal_review',
         'disposal_final',

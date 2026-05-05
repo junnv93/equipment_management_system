@@ -5,11 +5,15 @@ import { systemSettings as settingsTable } from '@equipment-management/db/schema
 import type {
   SystemSettings,
   CalibrationAlertSettingsResponse,
+  RoleApprovalCategoriesSettings,
+  RoleApprovalCategoriesSettingsResponse,
 } from '@equipment-management/schemas';
 import {
   DEFAULT_CALIBRATION_ALERT_DAYS,
   DEFAULT_SYSTEM_SETTINGS,
+  roleApprovalCategoriesSettingsSchema,
 } from '@equipment-management/schemas';
+import { ROLE_APPROVAL_CATEGORIES } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -35,6 +39,10 @@ export class SettingsService {
 
   private systemCacheKey(): string {
     return `${CACHE_KEY_PREFIXES.SETTINGS}system`;
+  }
+
+  private roleApprovalCategoriesCacheKey(): string {
+    return `${CACHE_KEY_PREFIXES.SETTINGS}approval:roleCategories`;
   }
 
   // ─── Private: DB Access ───
@@ -179,5 +187,34 @@ export class SettingsService {
     });
     await this.cacheInvalidationHelper.invalidateSettings();
     return this.getSystemSettings();
+  }
+
+  // ─── Approval Governance Settings ───
+
+  async getRoleApprovalCategories(): Promise<RoleApprovalCategoriesSettingsResponse> {
+    const roleCategories = await this.cacheService.getOrSet<RoleApprovalCategoriesSettings>(
+      this.roleApprovalCategoriesCacheKey(),
+      async () => {
+        const value = await this.getSettingValue('approvals', 'roleCategories');
+        const fallback = roleApprovalCategoriesSettingsSchema.parse(ROLE_APPROVAL_CATEGORIES);
+        if (value === null) return fallback;
+
+        const parsed = roleApprovalCategoriesSettingsSchema.safeParse(value);
+        return parsed.success ? parsed.data : fallback;
+      },
+      SETTINGS_CACHE_TTL
+    );
+
+    return { roleCategories };
+  }
+
+  async updateRoleApprovalCategories(
+    roleCategories: RoleApprovalCategoriesSettings,
+    updatedBy: string
+  ): Promise<RoleApprovalCategoriesSettingsResponse> {
+    const parsed = roleApprovalCategoriesSettingsSchema.parse(roleCategories);
+    await this.setSettingValue('approvals', 'roleCategories', parsed, updatedBy);
+    await this.cacheInvalidationHelper.invalidateSettings();
+    return { roleCategories: parsed };
   }
 }

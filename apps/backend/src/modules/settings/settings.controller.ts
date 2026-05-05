@@ -4,6 +4,7 @@ import {
   SiteEnum,
   type SystemSettings,
   type CalibrationAlertSettingsResponse,
+  type RoleApprovalCategoriesSettingsResponse,
 } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
@@ -18,6 +19,10 @@ import {
   UpdateSystemSettingsValidationPipe,
   UpdateSystemSettingsDto,
 } from './dto/system-settings.dto';
+import {
+  UpdateRoleApprovalCategoriesValidationPipe,
+  UpdateRoleApprovalCategoriesDto,
+} from './dto/role-approval-categories.dto';
 
 @ApiTags('설정 관리')
 @ApiBearerAuth()
@@ -86,5 +91,32 @@ export class SettingsController {
     @Request() req: AuthenticatedRequest
   ): Promise<SystemSettings> {
     return this.settingsService.updateSystemSettings(dto, req.user.userId);
+  }
+
+  // ─── Approval Governance Settings ───────────────────────────────────
+
+  @Get('approvals/role-categories')
+  @ApiOperation({
+    summary: '역할별 승인 카테고리 설정 조회',
+    description: 'DB override가 있으면 그 값을, 없으면 shared-constants 기본값을 반환합니다.',
+  })
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+  async getRoleApprovalCategories(): Promise<RoleApprovalCategoriesSettingsResponse> {
+    return this.settingsService.getRoleApprovalCategories();
+  }
+
+  @Patch('approvals/role-categories')
+  @ApiOperation({
+    summary: '역할별 승인 카테고리 설정 변경',
+    description: '운영 중 역할별 승인 카테고리 변경을 DB-backed 설정으로 반영합니다.',
+  })
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @AuditLog({ action: 'update', entityType: 'settings', entityIdPath: 'body' })
+  @UsePipes(UpdateRoleApprovalCategoriesValidationPipe)
+  async updateRoleApprovalCategories(
+    @Body() dto: UpdateRoleApprovalCategoriesDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<RoleApprovalCategoriesSettingsResponse> {
+    return this.settingsService.updateRoleApprovalCategories(dto.roleCategories, req.user.userId);
   }
 }

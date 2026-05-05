@@ -2,7 +2,7 @@
  * 승인 카테고리 및 역할별 매핑 — Backend/Frontend SSOT
  *
  * Backend: ApprovalsService.getPendingCountsByRole에서 카운트 쿼리 스코핑
- * Frontend: 승인 관리 탭 필터링 (approvals-api.ts ROLE_TABS)
+ * Frontend: `/api/approvals/categories` 응답의 fallback seed
  *
  * ⚠️ 이 파일이 유일한 소스이며, 로컬 재정의는 금지됩니다.
  */
@@ -43,7 +43,7 @@ export const ROLE_APPROVAL_CATEGORIES: Record<UserRole, readonly ApprovalCategor
     AC.SOFTWARE_VALIDATION,
   ],
   quality_manager: [AC.PLAN_REVIEW],
-  lab_manager: [AC.DISPOSAL_FINAL, AC.PLAN_FINAL, AC.INCOMING],
+  lab_manager: [AC.DISPOSAL_FINAL, AC.PLAN_FINAL, AC.INCOMING, AC.SELF_INSPECTION],
   system_admin: [],
 };
 

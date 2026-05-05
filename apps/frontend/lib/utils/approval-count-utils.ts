@@ -11,9 +11,7 @@
  *         → 이 유틸리티가 역할별 총합 계산
  */
 
-import type { UserRole } from '@equipment-management/schemas';
 import {
-  ROLE_TABS,
   TAB_META,
   type ApprovalCategory,
   type PendingCountsByCategory,
@@ -28,23 +26,26 @@ import type { ApprovalCategoryPriority } from '@/lib/config/dashboard-config';
 /**
  * 역할별 승인 대기 총합 계산
  *
- * ROLE_TABS에 정의된 해당 역할의 가시 탭 카운트만 합산합니다.
+ * 서버가 반환한 현재 사용자 가시 탭 카운트만 합산합니다.
  * 이렇게 하면 네비 뱃지 = 대시보드 카드 합계 = 승인 페이지 탭 합계 가 보장됩니다.
  */
 export function computeApprovalTotal(
   counts: PendingCountsByCategory | undefined,
-  role: string | undefined
+  categories: readonly ApprovalCategory[] | string | undefined
 ): number {
-  if (!counts || !role) return 0;
+  if (!counts || !categories) return 0;
 
-  const tabs = ROLE_TABS[role as UserRole] || [];
-  return tabs.reduce((sum, tab) => sum + (counts[tab] || 0), 0);
+  if (typeof categories === 'string') {
+    return Object.values(counts).reduce((sum, value) => sum + value, 0);
+  }
+
+  return categories.reduce((sum, tab) => sum + (counts[tab] || 0), 0);
 }
 
 /**
  * 대시보드 카드용 카테고리 메타 정보
  *
- * ROLE_TABS + TAB_META에서 파생되므로 별도 카테고리 목록 정의가 불필요합니다.
+ * 서버 category 설정 + TAB_META에서 파생되므로 별도 카테고리 목록 정의가 불필요합니다.
  */
 export interface DashboardApprovalCategory {
   key: ApprovalCategory;
@@ -91,18 +92,19 @@ const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string
 /**
  * 역할별 대시보드 카드 카테고리 목록 생성
  *
- * ROLE_TABS + TAB_META + CATEGORY_COLORS에서 파생합니다.
+ * 서버 category 설정 + TAB_META + CATEGORY_COLORS에서 파생합니다.
  * 승인 관리 페이지 탭과 1:1 매핑되므로 클릭 시 정확한 탭으로 이동합니다.
  *
+ * @param categories - `/api/approvals/categories`에서 받은 현재 사용자 가시 카테고리
  * @param priorities - config의 approvalCategoryPriorities (미지정 카테고리는 'default')
  */
 export function getDashboardApprovalCategories(
-  role: string,
+  categories: readonly ApprovalCategory[] | undefined,
   approvalsRoute: string,
   t: (key: string) => string,
   priorities?: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>
 ): DashboardApprovalCategory[] {
-  const tabs = ROLE_TABS[role as UserRole] || [];
+  const tabs = categories ?? [];
 
   return tabs.map((tab) => {
     const meta = TAB_META[tab];

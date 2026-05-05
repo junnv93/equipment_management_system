@@ -683,6 +683,9 @@ export const queryKeys = {
     countsAll: ['approval-counts'] as const,
     /** 승인 KPI — 서버 사이드 집계 (카테고리별 urgentCount/avgWaitDays 포함) */
     kpi: (category?: string) => [...queryKeys.approvals.all, 'kpi', category] as const,
+    categories: () => [...queryKeys.approvals.all, 'categories'] as const,
+    analytics: (months?: number) => [...queryKeys.approvals.all, 'analytics', months] as const,
+    delegations: () => [...queryKeys.approvals.all, 'delegations'] as const,
   },
   auditLogs: {
     all: ['audit-logs'] as const,

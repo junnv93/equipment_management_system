@@ -75,6 +75,7 @@ export const APPROVAL_CATEGORY_VALUES = [
   'software_validation',
 ] as const;
 
+export const ApprovalCategoryEnum = z.enum(APPROVAL_CATEGORY_VALUES);
 export type ApprovalCategory = (typeof APPROVAL_CATEGORY_VALUES)[number];
 
 export const ApprovalCategoryValues = {

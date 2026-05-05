@@ -23,7 +23,14 @@ import checkoutApi, { type Checkout } from '../checkout-api';
 import nonConformancesApi, { type NonConformance } from '../non-conformances-api';
 import equipmentImportApi, { type EquipmentImport } from '../equipment-import-api';
 import { transformArrayResponse, transformSingleResponse } from '../utils/response-transformers';
-import type { ApprovalItem, PendingCountsByCategory, ApprovalKpiResponse } from './types';
+import type {
+  ApprovalItem,
+  PendingCountsByCategory,
+  ApprovalKpiResponse,
+  ApprovalCategoriesResponse,
+  ApprovalAnalyticsResponse,
+  ApprovalDelegation,
+} from './types';
 import type {
   CalibrationPlanApprovalRow,
   SoftwareValidationApprovalRow,
@@ -307,6 +314,30 @@ export async function getKpi(category?: string): Promise<ApprovalKpiResponse> {
     console.error('[ApprovalsApi] getKpi failed:', error);
     return { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
   }
+}
+
+export async function getCategories(): Promise<ApprovalCategoriesResponse> {
+  const response = await apiClient.get(API_ENDPOINTS.APPROVALS.CATEGORIES);
+  const transformed = transformSingleResponse<ApprovalCategoriesResponse>(response);
+  if (!transformed) {
+    return {
+      roleCategories: {} as ApprovalCategoriesResponse['roleCategories'],
+      availableCategories: [],
+    };
+  }
+  return transformed;
+}
+
+export async function getAnalytics(months = 6): Promise<ApprovalAnalyticsResponse> {
+  const response = await apiClient.get(
+    `${API_ENDPOINTS.APPROVALS.ANALYTICS}?months=${encodeURIComponent(String(months))}`
+  );
+  return transformSingleResponse<ApprovalAnalyticsResponse>(response) ?? { buckets: [] };
+}
+
+export async function getDelegations(): Promise<ApprovalDelegation[]> {
+  const response = await apiClient.get(API_ENDPOINTS.APPROVALS.DELEGATIONS);
+  return transformArrayResponse<ApprovalDelegation>(response);
 }
 
 export function getEmptyCounts(): PendingCountsByCategory {

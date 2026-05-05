@@ -17,13 +17,16 @@ export type {
   Attachment,
   PendingCountsByCategory,
   ApprovalKpiResponse,
+  ApprovalCategoriesResponse,
+  ApprovalAnalyticsResponse,
+  ApprovalAnalyticsBucket,
+  ApprovalDelegation,
   BulkActionResult,
   TabMeta,
   ApprovalSection,
 } from './approvals/types';
 
 export {
-  ROLE_TABS,
   TAB_META,
   APPROVAL_SECTIONS,
   REJECTION_MIN_LENGTH,
@@ -35,18 +38,38 @@ export {
 // ============================================================================
 // approvalsApi facade — 기존 클래스 인스턴스와 동일한 공개 인터페이스
 // ============================================================================
-import { getPendingItems, getPendingCounts, getKpi, getEmptyCounts } from './approvals/fetchers';
-import { approve, reject, bulkApprove, bulkReject } from './approvals/actions';
+import {
+  getPendingItems,
+  getPendingCounts,
+  getKpi,
+  getCategories,
+  getAnalytics,
+  getDelegations,
+  getEmptyCounts,
+} from './approvals/fetchers';
+import {
+  approve,
+  reject,
+  bulkApprove,
+  bulkReject,
+  createDelegation,
+  revokeDelegation,
+} from './approvals/actions';
 
 export const approvalsApi = {
   getPendingItems,
   getPendingCounts,
   getKpi,
+  getCategories,
+  getAnalytics,
+  getDelegations,
   getEmptyCounts,
   approve,
   reject,
   bulkApprove,
   bulkReject,
+  createDelegation,
+  revokeDelegation,
 };
 
 export default approvalsApi;

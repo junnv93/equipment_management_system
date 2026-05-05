@@ -22,12 +22,7 @@ import { useToast } from '@/components/ui/use-toast';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
-import {
-  type ApprovalCategory,
-  type ApprovalItem,
-  ROLE_TABS,
-  TAB_META,
-} from '@/lib/api/approvals-api';
+import { type ApprovalCategory, type ApprovalItem, TAB_META } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -56,8 +51,17 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   const siteLabels = useSiteLabels();
   const { toast } = useToast();
 
+  const { data: categorySettings, isLoading: isCategoriesLoading } = useQuery({
+    queryKey: queryKeys.approvals.categories(),
+    queryFn: () => approvalsApi.getCategories(),
+    ...QUERY_CONFIG.APPROVAL_COUNTS,
+  });
+
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
-  const availableTabs = useMemo(() => [...(ROLE_TABS[userRole] || [])], [userRole]);
+  const availableTabs = useMemo(
+    () => categorySettings?.availableCategories ?? [],
+    [categorySettings?.availableCategories]
+  );
   const defaultTab = initialTab || availableTabs[0] || 'equipment';
 
   // URL이 SSOT — tab 파라미터에서 직접 도출
@@ -126,6 +130,12 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
 
   // KPI 데이터 — 서버 사이드 집계 (GET /api/approvals/kpi?category=X)
   const kpi = useApprovalKpi(pendingCounts, activeTab, availableTabs);
+
+  const { data: analytics } = useQuery({
+    queryKey: queryKeys.approvals.analytics(6),
+    queryFn: () => approvalsApi.getAnalytics(6),
+    ...QUERY_CONFIG.APPROVAL_COUNTS,
+  });
 
   // AR-4: 승인/반려 후 공통 invalidation 키 — 4× 중복 제거
   const getInvalidationKeys = () => [
@@ -422,6 +432,14 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
   const activeTabMeta = TAB_META[activeTab];
   const commentMeta = approveCommentItem ? TAB_META[approveCommentItem.category] : null;
 
+  if (isCategoriesLoading) {
+    return (
+      <div className="py-12 text-center text-muted-foreground">
+        <p>{t('loading')}</p>
+      </div>
+    );
+  }
+
   if (availableTabs.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -501,6 +519,22 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
             />
           </div>
         </div>
+
+        {analytics && analytics.buckets.length > 0 && (
+          <section className="border border-border rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {analytics.buckets.slice(-4).map((bucket) => (
+                <div key={bucket.month} className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{bucket.month}</p>
+                  <p className="text-xl font-semibold tabular-nums">{bucket.processedCount}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {bucket.approvalCount} / {bucket.rejectionCount}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 상세 보기 모달 */}
         {detailModalItem && (

@@ -1,6 +1,7 @@
 {
   "title": "승인 관리",
   "subtitle": "승인 요청을 관리합니다",
+  "loading": "승인 설정을 불러오는 중입니다.",
   "tabs": {
     "checkout": "반출 승인",
     "return": "반입 승인",

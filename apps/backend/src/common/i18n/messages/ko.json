@@ -75,5 +75,7 @@
   "system.calibrationOverdue.incidentContent": "교정 기한 초과로 인한 자동 부적합 전환",
   "system.calibrationOverdue.ncCause": "교정 기한 초과 (다음 교정일: {nextCalibrationDate})",
   "system.calibrationOverdue.defaultActionPlan": "교정 수행 필요",
-  "system.calibrationOverdue.correctionContent": "교정 완료로 인한 자동 조치 완료"
+  "system.calibrationOverdue.correctionContent": "교정 완료로 인한 자동 조치 완료",
+  "system.calibrationFailure.ncCause": "승인된 교정 결과 부적합",
+  "system.calibrationFailure.defaultActionPlan": "부적합 원인 분석 및 후속 조치 필요"
 }

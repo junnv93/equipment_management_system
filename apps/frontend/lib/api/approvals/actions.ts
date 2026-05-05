@@ -78,6 +78,21 @@ export async function fetchItemsMapIfNeeded(
   return new Map(items.map((item) => [item.id, item]));
 }
 
+export async function createDelegation(input: {
+  delegatorId: string;
+  delegateeId: string;
+  category: ApprovalCategory;
+  startsAt: string;
+  endsAt: string;
+  reason?: string;
+}): Promise<void> {
+  await apiClient.post(API_ENDPOINTS.APPROVALS.DELEGATIONS, input);
+}
+
+export async function revokeDelegation(id: string): Promise<void> {
+  await apiClient.patch(API_ENDPOINTS.APPROVALS.REVOKE_DELEGATION(id));
+}
+
 // ============================================================================
 // 승인 처리
 // ============================================================================

@@ -152,21 +152,27 @@ export function PendingApprovalCard({
     enabled: status === 'authenticated',
     ...QUERY_CONFIG.PENDING_APPROVALS, // SSOT: REFETCH_STRATEGIES.NORMAL
   });
+  const { data: categorySettings } = useQuery({
+    queryKey: queryKeys.approvals.categories(),
+    queryFn: () => approvalsApi.getCategories(),
+    enabled: status === 'authenticated',
+    ...QUERY_CONFIG.PENDING_APPROVALS,
+  });
 
-  // SSOT: ROLE_TABS에서 파생된 카테고리 목록 + priority 주입
+  // SSOT: 서버 roleCategories에서 파생된 카테고리 목록 + priority 주입
   const dashboardCategories = useMemo(
     () =>
       getDashboardApprovalCategories(
-        userRole,
+        categorySettings?.availableCategories,
         FRONTEND_ROUTES.ADMIN.APPROVALS,
         tApprovals,
         priorities
       ),
-    [userRole, tApprovals, priorities]
+    [categorySettings?.availableCategories, tApprovals, priorities]
   );
 
-  // SSOT: ROLE_TABS 기반 총합 계산
-  const totalPending = computeApprovalTotal(counts, userRole);
+  // SSOT: 서버 roleCategories 기반 총합 계산
+  const totalPending = computeApprovalTotal(counts, categorySettings?.availableCategories);
 
   if (isLoading || status === 'loading') {
     return (

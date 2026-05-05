@@ -1,13 +1,33 @@
-import { Controller, Get, Query, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UnauthorizedException,
+  UsePipes,
+} from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole, ErrorCode } from '@equipment-management/schemas';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
+import { Permission } from '@equipment-management/shared-constants';
 import {
   ApprovalsService,
   PendingCountsByCategory,
   ApprovalKpiResponse,
+  ApprovalAnalyticsResponse,
+  ApprovalDelegationResponse,
 } from './approvals.service';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import {
+  CreateApprovalDelegationDto,
+  CreateApprovalDelegationValidationPipe,
+} from './dto/approval-delegation.dto';
 
 /**
  * 승인 관리 컨트롤러
@@ -102,5 +122,77 @@ export class ApprovalsController {
     };
 
     return this.approvalsService.getKpi(userId, userCtx, category);
+  }
+
+  @Get('categories')
+  @SkipPermissions()
+  async getCategories(@Req() req: AuthenticatedRequest) {
+    const userId = req.user?.userId;
+    const userRole = req.user?.roles?.[0] as UserRole;
+
+    if (!userId) {
+      throw new UnauthorizedException({
+        code: ErrorCode.AuthInvalidSession,
+        message: 'Authentication info is invalid. Please log in again.',
+      });
+    }
+
+    const [settings, allowedCategories] = await Promise.all([
+      this.approvalsService.getRoleApprovalCategories(),
+      this.approvalsService.getAllowedCategoriesForRole(userRole),
+    ]);
+
+    return {
+      roleCategories: settings.roleCategories,
+      availableCategories: [...allowedCategories],
+    };
+  }
+
+  @Get('analytics')
+  @RequirePermissions(Permission.VIEW_STATISTICS)
+  async getAnalytics(
+    @Req() req: AuthenticatedRequest,
+    @Query('months') months?: string
+  ): Promise<ApprovalAnalyticsResponse> {
+    const userRole = req.user?.roles?.[0] as UserRole;
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: req.user.site ?? undefined,
+      teamId: req.user.teamId ?? undefined,
+    };
+
+    return this.approvalsService.getAnalytics(userCtx, months ? Number(months) : undefined);
+  }
+
+  @Get('delegations')
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+  async listDelegations(@Req() req: AuthenticatedRequest): Promise<ApprovalDelegationResponse[]> {
+    return this.approvalsService.listDelegations(req.user.userId);
+  }
+
+  @Post('delegations')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @AuditLog({ action: 'create', entityType: 'settings', entityIdPath: 'response.id' })
+  @UsePipes(CreateApprovalDelegationValidationPipe)
+  async createDelegation(
+    @Body() dto: CreateApprovalDelegationDto,
+    @Req() req: AuthenticatedRequest
+  ): Promise<ApprovalDelegationResponse> {
+    return this.approvalsService.createDelegation({
+      ...dto,
+      startsAt: new Date(dto.startsAt),
+      endsAt: new Date(dto.endsAt),
+      createdBy: req.user.userId,
+    });
+  }
+
+  @Patch('delegations/:id/revoke')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @AuditLog({ action: 'update', entityType: 'settings', entityIdPath: 'params.id' })
+  async revokeDelegation(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest
+  ): Promise<ApprovalDelegationResponse> {
+    return this.approvalsService.revokeDelegation(id, req.user.userId);
   }
 }

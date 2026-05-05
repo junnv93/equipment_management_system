@@ -1,12 +1,10 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { z } from 'zod';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { getTranslations } from 'next-intl/server';
 import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
-import { ROLE_TABS, type ApprovalCategory } from '@/lib/api/approvals-api';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPageContainerClasses } from '@/lib/design-tokens';
@@ -125,15 +123,7 @@ async function ApprovalsContentAsync({
     redirect('/dashboard');
   }
 
-  // URL tab Zod 검증 (AR-5) — 유효하지 않은 탭 파라미터 시 기본 탭으로 redirect
-  const availableTabs = [...(ROLE_TABS[userRole] || [])] as ApprovalCategory[];
   const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : null;
-  if (tabParam && availableTabs.length > 0) {
-    const tabSchema = z.enum(availableTabs as [ApprovalCategory, ...ApprovalCategory[]]);
-    if (!tabSchema.safeParse(tabParam).success) {
-      redirect(`/admin/approvals?tab=${availableTabs[0]}`);
-    }
-  }
   const initialTab = tabParam ?? undefined;
 
   return (

@@ -22,6 +22,8 @@ import type {
   ApprovalItem,
   PendingCountsByCategory,
   BulkActionResult,
+  ApprovalCategoriesResponse,
+  ApprovalAnalyticsResponse,
 } from '../approvals-api';
 
 export function useApprovalsApi() {
@@ -128,9 +130,19 @@ export function useApprovalsApi() {
     []
   );
 
+  const getCategories = useCallback(async (): Promise<ApprovalCategoriesResponse> => {
+    return approvalsApi.getCategories();
+  }, []);
+
+  const getAnalytics = useCallback(async (months?: number): Promise<ApprovalAnalyticsResponse> => {
+    return approvalsApi.getAnalytics(months);
+  }, []);
+
   return {
     getPendingCounts,
     getPendingItems,
+    getCategories,
+    getAnalytics,
     approve,
     reject,
     bulkApprove,
