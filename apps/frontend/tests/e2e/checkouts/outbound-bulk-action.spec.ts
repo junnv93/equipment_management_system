@@ -188,3 +188,97 @@ test.describe('Outbound 반출 목록 일괄 승인 (Outbound BulkActionBar)', (
     await expect(masterCheckbox).toHaveAttribute('aria-checked', 'mixed');
   });
 });
+
+/**
+ * Outbound 일괄 승인 EXT — 실제 backend integration (wf-ap02-EXT 패턴 차용)
+ *
+ * Step 4의 mock 응답은 frontend wiring(toast/AlertDialog/selection clear) 검증용.
+ * 본 EXT 블록은 실제 backend `POST /checkouts/bulk-approve` 통합 + DB 상태 전이까지
+ * 검증한다 (Promise.allSettled fail-close + scope guard 실제 동작).
+ */
+test.describe('Outbound 반출 목록 일괄 승인 EXT — 실제 backend 통합', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  // WF_EQUIPMENT_IDS와 겹치지 않는 5개 SUW_E 장비
+  const EXT_EQUIPMENT_IDS = [
+    TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E,
+    TEST_EQUIPMENT_IDS.SIGNAL_GEN_SUW_E,
+    TEST_EQUIPMENT_IDS.NETWORK_ANALYZER_SUW_E,
+    TEST_EQUIPMENT_IDS.EMC_RECEIVER_SUW_E,
+    TEST_EQUIPMENT_IDS.RBAC_SIGNAL_GEN_SUW_E,
+  ];
+
+  test.beforeAll(async () => {
+    for (const id of EXT_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+  });
+
+  test.afterAll(async () => {
+    for (const id of EXT_EQUIPMENT_IDS) {
+      await resetEquipmentForWorkflow(id);
+    }
+    await cleanupSharedPool();
+  });
+
+  test('Step EXT-1: 5건 반출 신청 생성', async ({ testOperatorPage: page }) => {
+    for (const equipmentId of EXT_EQUIPMENT_IDS) {
+      const body = await createCheckout(
+        page,
+        [equipmentId],
+        CPVal.CALIBRATION,
+        'KRISS',
+        'Outbound bulk EXT: 실제 backend 통합 검증'
+      );
+      const id = body?.data?.id ?? body?.id;
+      expect(id).toBeTruthy();
+    }
+    await clearBackendCache();
+  });
+
+  test('Step EXT-2: /checkouts에서 5건 선택 → 실제 backend bulk-approve → toast', async ({
+    techManagerPage: page,
+  }) => {
+    await page.goto('/checkouts');
+    await page.waitForSelector('[data-checkout-id]', { timeout: 15000 });
+
+    const rowCheckboxes = page.locator('[data-testid="row-checkbox"]');
+    const count = await rowCheckboxes.count();
+    expect(count).toBeGreaterThanOrEqual(5);
+
+    // 5건 선택
+    for (let i = 0; i < 5; i++) {
+      await rowCheckboxes.nth(i).click();
+    }
+
+    const bar = page.locator('[data-testid="bulk-action-bar"]');
+    await expect(bar).toHaveAttribute('aria-hidden', 'false');
+    await expect(bar.locator('[role="toolbar"]')).toContainText('5');
+
+    // 실제 backend approve — page.route mock 없음
+    const approveButton = page
+      .locator('[role="toolbar"] button')
+      .filter({ hasText: /일괄 승인|Approve Selected/ });
+    await approveButton.click();
+
+    const dialog = page.locator('[role="alertdialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog
+      .locator('button')
+      .filter({ hasText: /일괄 승인|Approve/ })
+      .last()
+      .click();
+    await clearBackendCache();
+
+    // 전체 성공 toast: "{count}건 일괄 승인이 완료되었습니다." (checkouts.bulk.approveAll)
+    await expectToastVisible(page, /일괄 승인이 완료|approved in bulk/, { timeout: 15000 });
+
+    // selection 자동 clear → bar hidden 복귀
+    await expect(bar).toHaveAttribute('aria-hidden', 'true', { timeout: 5000 });
+
+    // 목록에서 5건 pending 제거 확인 (backend가 approved 상태 전이 + invalidate → refetch)
+    await page.waitForTimeout(1500); // invalidate 후 refetch 안정화
+    const afterCount = await rowCheckboxes.count();
+    expect(afterCount).toBeLessThanOrEqual(count - 5);
+  });
+});
