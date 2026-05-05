@@ -149,14 +149,19 @@ fi
 # ── Step 10: axios baseURL 일관성 ───────────────────────────────────────────
 echo ""
 echo "── Step 10: axios baseURL 일관성 ──"
-AXIOS_COUNT=$({ grep -l "baseURL: API_BASE_URL" \
+CLIENT_AXIOS_COUNT=$({ grep -l "baseURL: API_BASE_URL" \
     apps/frontend/lib/api/api-client.ts \
-    apps/frontend/lib/api/server-api-client.ts \
     apps/frontend/lib/api/authenticated-client-provider.tsx 2>/dev/null || true; } | wc -l | tr -d ' ')
-if [ "$AXIOS_COUNT" -ge 3 ]; then
-  pass "axios 3개 클라이언트 모두 baseURL: API_BASE_URL"
+if [ "$CLIENT_AXIOS_COUNT" -ge 2 ]; then
+  pass "브라우저 axios 2개 클라이언트 모두 baseURL: API_BASE_URL"
 else
-  fail "axios baseURL: API_BASE_URL ${AXIOS_COUNT}/3 (일관성 위반)"
+  fail "브라우저 axios baseURL: API_BASE_URL ${CLIENT_AXIOS_COUNT}/2 (일관성 위반)"
+fi
+
+if grep -q "baseURL: INTERNAL_BACKEND_URL" apps/frontend/lib/api/server-api-client.ts 2>/dev/null; then
+  pass "server-api-client.ts baseURL: INTERNAL_BACKEND_URL (SSR direct-call)"
+else
+  fail "server-api-client.ts INTERNAL_BACKEND_URL 미사용 (server-side는 backend 직접 호출 필요)"
 fi
 
 ABS_URL_COUNT=$({ grep -rE 'baseURL:\s*"https?://' \

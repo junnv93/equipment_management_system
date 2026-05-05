@@ -145,12 +145,14 @@ grep -A 5 "enableCors" apps/backend/src/main.ts | grep -E "frontendUrl|nodeEnv|o
 ### Step 10: 클라이언트 fetch baseURL 일관성
 
 ```bash
-# 3개 axios 클라이언트 모두 baseURL: API_BASE_URL 사용
+# 브라우저 axios 클라이언트는 API_BASE_URL, 서버 전용 클라이언트는 INTERNAL_BACKEND_URL 사용
 grep -c "baseURL: API_BASE_URL" \
   apps/frontend/lib/api/api-client.ts \
-  apps/frontend/lib/api/server-api-client.ts \
   apps/frontend/lib/api/authenticated-client-provider.tsx
 # 기대: 각 1
+
+grep -c "baseURL: INTERNAL_BACKEND_URL" apps/frontend/lib/api/server-api-client.ts
+# 기대: 1
 
 # 절대 URL을 baseURL에 직접 지정 금지
 grep -rE 'baseURL:\s*"https?://' apps/frontend/lib/api/ apps/frontend/components/ 2>&1 | grep -v node_modules
@@ -178,7 +180,7 @@ grep -rnE "http://localhost:300[0-9]" \
 | 7 | nginx가 NextAuth를 backend로 흘림 | NextAuth handler location을 backend auth location보다 위에 두고 `proxy_pass http://frontend` |
 | 8 | SW가 NextAuth GET 응답 stale 캐시 | `/api/*` NetworkOnly 룰을 defaultCache보다 먼저 prepend |
 | 9 | production CORS가 와일드 origin | `origin: frontendUrl || false`로 좁힘 |
-| 10 | axios가 절대 URL 사용 | `baseURL: API_BASE_URL`로 통일 (api-config 자동 분기) |
+| 10 | axios가 절대 URL 사용 | 브라우저 클라이언트는 `API_BASE_URL`, 서버 전용 클라이언트는 `INTERNAL_BACKEND_URL` 진입점 사용 |
 | 11 | 코드 하드코딩 | INTERNAL_BACKEND_URL/API_BASE_URL 진입점 사용 |
 
 ## Related Files
