@@ -38,6 +38,7 @@ import {
   type DisposalReviewStatus,
   type EquipmentImportSource,
   type EquipmentImportStatus,
+  type RoleApprovalCategoriesSettingsResponse,
 } from '@equipment-management/schemas';
 import { buildScopePredicate } from '../../common/scope/scope-sql-builder';
 import {
@@ -182,7 +183,7 @@ export class ApprovalsService {
     return new Set(roleCategories[role] ?? []);
   }
 
-  async getRoleApprovalCategories() {
+  async getRoleApprovalCategories(): Promise<RoleApprovalCategoriesSettingsResponse> {
     return this.settingsService.getRoleApprovalCategories();
   }
 

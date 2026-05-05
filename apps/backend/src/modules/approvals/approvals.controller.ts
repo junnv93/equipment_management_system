@@ -11,7 +11,11 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
-import { UserRole, ErrorCode } from '@equipment-management/schemas';
+import {
+  UserRole,
+  ErrorCode,
+  type RoleApprovalCategoriesSettings,
+} from '@equipment-management/schemas';
 import type { UserScopeContext } from '@equipment-management/shared-constants';
 import { Permission } from '@equipment-management/shared-constants';
 import {
@@ -126,7 +130,10 @@ export class ApprovalsController {
 
   @Get('categories')
   @SkipPermissions()
-  async getCategories(@Req() req: AuthenticatedRequest) {
+  async getCategories(@Req() req: AuthenticatedRequest): Promise<{
+    roleCategories: RoleApprovalCategoriesSettings;
+    availableCategories: string[];
+  }> {
     const userId = req.user?.userId;
     const userRole = req.user?.roles?.[0] as UserRole;
 
