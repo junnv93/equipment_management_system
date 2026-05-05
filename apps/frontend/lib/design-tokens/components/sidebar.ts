@@ -130,6 +130,18 @@ export const SIDEBAR_COLORS = {
 } as const;
 
 /**
+ * 사이드바 브랜드 마크 토큰
+ *
+ * 대시보드 개선안 §3.1: EQ 모노그램, 26px, rounded-md, brand gradient.
+ * 색상은 globals.css의 brand CSS 변수만 참조하여 라이트/다크 테마 SSOT를 유지합니다.
+ */
+export const SIDEBAR_BRAND_MARK_TOKENS = {
+  container:
+    'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,hsl(var(--brand-color-info)),hsl(var(--brand-color-purple)))] shadow-sm ring-1 ring-white/20',
+  text: 'text-[10px] font-bold leading-none tracking-normal text-white',
+} as const;
+
+/**
  * 아이콘 크기 — INTERACTIVE_TOKENS.icon.standard 기반 (반응형)
  */
 const _iconH = toTailwindSize(INTERACTIVE_TOKENS.icon.standard, 'h');

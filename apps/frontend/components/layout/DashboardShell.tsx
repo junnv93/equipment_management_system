@@ -15,7 +15,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Wrench, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { UlLogo } from '@/lib/brand-assets/ul-logo';
 import { ReactNode, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -47,6 +47,7 @@ import {
   SIDEBAR_LAYOUT,
   SIDEBAR_COLORS,
   SIDEBAR_SECTION_TOKENS,
+  SIDEBAR_BRAND_MARK_TOKENS,
   LAYOUT_Z_INDEX,
   SIDEBAR_ELEVATION,
   getSidebarWidthClasses,
@@ -60,6 +61,14 @@ import { useTranslations } from 'next-intl';
 
 interface DashboardShellProps {
   children: ReactNode;
+}
+
+function EqMonogram() {
+  return (
+    <span className={SIDEBAR_BRAND_MARK_TOKENS.container} aria-hidden="true">
+      <span className={SIDEBAR_BRAND_MARK_TOKENS.text}>EQ</span>
+    </span>
+  );
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
@@ -151,12 +160,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <Link
                   href="/"
                   className={cn(
-                    'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                    'flex items-center justify-center rounded-md p-1',
                     FOCUS_TOKENS.classes.onDark
                   )}
                   aria-label={t('layout.goHome')}
                 >
-                  <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+                  <EqMonogram />
                 </Link>
                 <Button
                   variant="ghost"
@@ -188,12 +197,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 >
                   <div
                     className={cn(
-                      'flex shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                      'flex shrink-0 items-center justify-center rounded-md',
                       'group-hover:scale-110',
                       TRANSITION_PRESETS.fastTransform
                     )}
                   >
-                    <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+                    <EqMonogram />
                   </div>
                   <span
                     className={cn(
@@ -295,7 +304,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <MobileNav
                   navSections={filteredSections}
                   brandName={t('layout.systemName')}
-                  brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
+                  brandIcon={<EqMonogram />}
                 />
                 <GlobalSearchTrigger filteredSections={filteredSections} />
               </>
@@ -351,8 +360,8 @@ export function DashboardShellSkeleton() {
           )}
         >
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
-              <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+            <div className="flex items-center justify-center rounded-md p-1">
+              <EqMonogram />
             </div>
             <span className="font-semibold text-white">{t('layout.systemName')}</span>
           </div>

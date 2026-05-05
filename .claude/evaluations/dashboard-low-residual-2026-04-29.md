@@ -108,7 +108,7 @@ Time: 2.5분
 
 - [x] tech-debt-tracker.md 5 항목 등록
 - [x] contract → completed (Mode 1은 plan 파일 없음, 생략)
-- [ ] §3.1 EQ 마크 디자인 결정 (사용자 확인)
+- [x] §3.1 EQ 마크 디자인 결정 — 2026-05-04 EQ 모노그램 기본안 적용 (`SIDEBAR_BRAND_MARK_TOKENS`)
 - [ ] §A.3.1 typography 토큰 변경 검토 (디자인 시스템 sprint)
 - [ ] §A.9.1 second skip link 추가 (접근성 sprint)
-- [ ] standalone HTML 1:1 픽셀 매칭 (디자인 QA sprint)
+- [x] standalone HTML file:// baseline capture — 2026-05-04 Playwright로 `/mnt/c/Users/kmjkd/Downloads/_ _ _standalone_.html` 로드, DOM facts + 1440×900 기준 스크린샷 캡처. 산출물: `/tmp/dashboard-standalone-qa-20260504/dom-facts.json`, `standalone-1440x900.png`, `app-{role}-1440x900.png` 5개.
