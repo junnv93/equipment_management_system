@@ -26,7 +26,7 @@
 - **verify-filters** — URL-driven filter SSOT (filter-utils, hooks, page.tsx server parsing)
 - **verify-handover-qr** — QR + Handover 통합 (2026-05-03 verify-qr-ssot + verify-handover-security 통합). Section A: QR URL/설정/액션 SSOT(qr-url.ts/qr-config.ts/qr-access.ts), Section B: OneTimeToken 보안(시크릿 분리, jti nonce 소비, TTL SSOT, 권한 가드, 토큰 영속화 금지, dev 엔드포인트 이중 가드)
 - **verify-bulk-action-bar** — BulkActionBar 패턴 SSOT (count chip aria-live, role=toolbar, Esc clear, indeterminate Radix, focus management, IME guard). 도메인 무관 generic 컴포넌트(`components/common/BulkActionBar.tsx`)와 도메인 wrapper(`components/approvals/BulkActionBar.tsx`) 분리 검증. 일괄 작업 UI 변경 시 트리거
-- **verify-routing-origin** — Same-Origin Reverse-Proxy(ADR-0006) 정합. 4 레이어 동기화(api-routing.ts SSOT / next.config.js / nginx lan.conf+template / proxy.ts), env 절대 URL 잠입, BACKEND ∩ NEXTAUTH disjoint, SW NetworkOnly /api/\* 룰
+- **verify-routing-origin** — Same-Origin Reverse-Proxy(ADR-0006) 정합. 4 레이어 동기화(api-routing.ts SSOT / next.config.js / nginx lan.conf+template / proxy.ts), env 절대 URL 잠입, BACKEND ∩ NEXTAUTH disjoint, SW NetworkOnly /api/\* 룰. 2026-05-05 추가 Step 12-14: csrf-invariants.json 무결성 + smoke/trace 2-script CLI 계약 일관성 + redaction SSOT (`pnpm compose:onprem:verify` + `pnpm diagnostics:csrf` 진단 인프라 회귀 차단)
 - **verify-implementation** — 통합 실행 (모든 verify-\* 순차 실행 + 결합 리포트)
 
 ## Review Skills (심층 분석)

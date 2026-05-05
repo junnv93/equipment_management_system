@@ -84,11 +84,67 @@
 | Auth.js basePath 변경(v6 등)                                        | 본 ADR 재평가                                         |
 | CSP `connect-src` 완화가 필요한 외부 의존(예: Sentry SaaS) 도입     | endpoint 화이트리스트로 한정 — 모델 자체는 유지       |
 
+## Recurrence Response (재발 시 1차 응답 절차)
+
+본 ADR이 정착한 이후에도 동일한 증상(`Cannot GET /api/auth/csrf` 404, signin 무한 로딩,
+세션 502/503 등)이 재발할 가능성에 대비해, manual 재현 시나리오를 코드로 결빙한 진단 harness를 제공한다.
+
+### 1. 운영 스모크 (배포 직후 게이트)
+
+`pnpm compose:onprem` 또는 어떤 deploy 직후에든 다음 1줄 명령으로 ADR-0006 invariant를 자동 검증한다.
+
+```bash
+pnpm compose:onprem:verify          # 표준
+pnpm compose:onprem:verify -- --json # CI-friendly
+```
+
+검사 항목 (`scripts/diagnostics/csrf-invariants.json` SSOT 기반):
+
+- `/api/auth/csrf`, `/api/auth/session`, `/api/auth/providers` 200 + JSON shape
+- Set-Cookie SameSite/HttpOnly/Secure(https) + cookie domain host-only 정책
+- `/api/auth/login`(backend 전용 경로)이 NextAuth JSON shape를 반환하지 않음 — 분기 disjoint sanity
+
+종료 코드 0=PASS / 1=FAIL / 2=usage error.
+
+### 2. 회귀 진단 harness (재발 시 1차 응답)
+
+위 스모크가 FAIL이거나 운영 중 동일 증상이 재발하면 다음을 즉시 실행한다.
+
+```bash
+pnpm diagnostics:csrf                                   # ONPREM_PUBLIC_ORIGIN 또는 NEXTAUTH_URL 자동 사용
+pnpm diagnostics:csrf -- --origin <url>                 # ad-hoc 검증
+```
+
+진단 항목:
+
+- 환경변수 stack (`NEXT_PUBLIC_API_URL`/`INTERNAL_BACKEND_URL`/`NEXTAUTH_URL`/`ONPREM_PUBLIC_ORIGIN`)
+- 정적 코드 검사 (`apps/frontend/app/sw.ts` NetworkOnly + `apps/frontend/lib/auth.ts` basePath 미override)
+- 외부 proxy 헤더 chain (`X-Forwarded-Proto`/`-Host`/`-For`/`-Real-IP`)
+- cookie domain 정책 (host-only 또는 origin host 일치)
+- ADR-0006 invariant 위배 자동 평가 → `tmp/diagnostics/<ISO>-trace.json` artifact
+
+상세 절차: [scripts/diagnostics/README.md](../../scripts/diagnostics/README.md)
+
+### 3. CI 통합 결정
+
+본 검증을 `.husky/pre-push`에는 통합하지 않는다. 외부 네트워크 의존이 solo trunk-based
+정책(pre-push는 tsc/test만)과 충돌하기 때문이다. 권장 운영 모델:
+
+```bash
+pnpm compose:onprem && pnpm compose:onprem:verify
+```
+
+향후 `infra/scripts/deploy.sh` 표준화 시점에 자동 wiring을 검토한다.
+
 ## References
 
 - 관련 ADR: ADR-0003 (NestJS + Next.js App Router), ADR-0004 (Docker Compose over Kubernetes)
 - exec-plan: `.claude/exec-plans/active/2026-04-28-nextauth-csrf-single-origin.md`
+- exec-plan: `.claude/exec-plans/completed/2026-05-05-nextauth-csrf-verify-harness.md`(본 ADR Recurrence Response 결빙)
 - 운영 가이드: `docs/references/api-routing-architecture.md`
 - SSOT 코드: `packages/shared-constants/src/api-routing.ts`
+- Invariants SSOT: `scripts/diagnostics/csrf-invariants.json`
+- 진단 harness: `scripts/diagnostics/nextauth-csrf-trace.mjs`
+- 운영 스모크: `scripts/onprem-verify.mjs`
 - Auth.js v5 docs: https://authjs.dev/getting-started/migrating-to-v5
 - Next.js rewrites: https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites

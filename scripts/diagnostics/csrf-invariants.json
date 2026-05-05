@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://equipment-management.local/schemas/csrf-invariants.v1.json",
+  "title": "ADR-0006 NextAuth CSRF Same-Origin Invariants",
+  "description": "Machine-readable invariant SSOT shared by scripts/onprem-verify.mjs (smoke) and scripts/diagnostics/nextauth-csrf-trace.mjs (recurrence trace). Source of truth for ADR-0006 (Same-Origin Reverse-Proxy) verification. Update this file when ADR-0006 is amended.",
+  "version": "1.0.0",
+  "adrRef": "docs/adr/0006-frontend-backend-routing-model.md",
+  "ssotCodeRef": "packages/shared-constants/src/api-routing.ts",
+  "nextAuthHandlerPaths": {
+    "comment": "Auth.js v5 catch-all handler paths that MUST resolve to frontend NextAuth route (not backend). Subset of NEXTAUTH_HANDLER_PATHS from api-routing.ts — only GET-safe meta endpoints used by smoke test (signin/signout/callback/error/verify-request require interaction).",
+    "smoke": ["/api/auth/csrf", "/api/auth/session", "/api/auth/providers"],
+    "all": [
+      "/api/auth/csrf",
+      "/api/auth/session",
+      "/api/auth/providers",
+      "/api/auth/signin",
+      "/api/auth/signout",
+      "/api/auth/callback",
+      "/api/auth/error",
+      "/api/auth/verify-request"
+    ]
+  },
+  "backendAuthDisjointSample": {
+    "comment": "Sanity check — these MUST resolve to backend (not NextAuth handler). If GET responds with NextAuth JSON shape it indicates nginx routing regression. Subset of BACKEND_AUTH_PATHS from api-routing.ts.",
+    "path": "/api/auth/login",
+    "expectedNotJsonShape": {
+      "csrfToken": "<must NOT be present>"
+    },
+    "acceptableHttpStatus": [400, 401, 404, 405]
+  },
+  "expectedJsonShape": {
+    "comment": "Minimal JSON shape assertions per endpoint. Type names use JSONSchema-lite vocabulary.",
+    "csrf": {
+      "csrfToken": "string"
+    },
+    "session": {
+      "_or": ["null", "object"]
+    },
+    "providers": {
+      "_type": "object"
+    }
+  },
+  "cookieInvariants": {
+    "comment": "ADR-0006 + NextAuth v5 cookie security defaults. Verified on the /api/auth/csrf response.",
+    "expectedCookies": [
+      "next-auth.csrf-token",
+      "__Host-next-auth.csrf-token",
+      "__Secure-next-auth.csrf-token",
+      "authjs.csrf-token",
+      "__Host-authjs.csrf-token",
+      "__Secure-authjs.csrf-token"
+    ],
+    "httpOnlyRequired": true,
+    "samesite": ["Lax", "Strict"],
+    "secureWhen": "https",
+    "domainPolicy": "host-only",
+    "domainPolicyComment": "Cookie Domain attribute MUST be unset (host-only) OR exactly equal to the Host header. Wildcard or parent-domain Domain values violate the single-origin model."
+  },
+  "responseHeaders": {
+    "comment": "Required response headers and their constraints. proxy chain headers are observation-only (recorded by trace harness, not asserted by smoke).",
+    "cacheControlPolicy": {
+      "matchAny": ["no-store", "private", "no-cache"],
+      "comment": "NextAuth CSRF responses MUST NOT be cached by intermediaries; serwist /api NetworkOnly rule + a no-store/private Cache-Control are defense-in-depth."
+    },
+    "proxyChainHeaders": [
+      "X-Forwarded-Proto",
+      "X-Forwarded-Host",
+      "X-Forwarded-For",
+      "X-Real-IP",
+      "Host",
+      "Server",
+      "Via"
+    ],
+    "forwardedProtoMustMatchOriginScheme": true
+  },
+  "requiredEnvVars": {
+    "smoke": ["ONPREM_PUBLIC_ORIGIN"],
+    "trace": {
+      "_oneOf": ["ONPREM_PUBLIC_ORIGIN", "NEXTAUTH_URL", "--origin <url> CLI flag"],
+      "comment": "Trace harness supports either deployment env vars or an explicit --origin flag for ad-hoc incidents."
+    },
+    "neverHardcodedInScripts": [
+      "ONPREM_PUBLIC_ORIGIN",
+      "NEXTAUTH_URL",
+      "INTERNAL_BACKEND_URL",
+      "NEXT_PUBLIC_API_URL"
+    ]
+  },
+  "redactionPatterns": {
+    "comment": "Token / cookie / secret values redacted in all log/JSON output. Length is preserved as `<redacted len=N>` to allow length-anomaly detection.",
+    "valueKeys": [
+      "csrfToken",
+      "sessionToken",
+      "accessToken",
+      "refreshToken",
+      "idToken",
+      "code",
+      "state"
+    ],
+    "headerKeys": ["set-cookie", "cookie", "authorization"],
+    "cookieNames": [
+      "next-auth.csrf-token",
+      "next-auth.session-token",
+      "next-auth.callback-url",
+      "next-auth.pkce.code_verifier",
+      "next-auth.state",
+      "authjs.csrf-token",
+      "authjs.session-token",
+      "authjs.callback-url",
+      "authjs.pkce.code_verifier",
+      "authjs.state"
+    ],
+    "redactedFormat": "<redacted len=N>"
+  },
+  "serviceWorkerInvariants": {
+    "comment": "ADR-0006 §Mitigations — /api/* routes MUST be NetworkOnly in the service worker, never SWR-cached.",
+    "swEntryPoint": "apps/frontend/app/sw.ts",
+    "requiredPattern": "/api/.* must match a NetworkOnly handler before defaultCache",
+    "matcherKeyword": "url.pathname.startsWith('/api/')",
+    "handlerKeyword": "NetworkOnly"
+  },
+  "nextAuthClientBasePath": {
+    "comment": "Auth.js v5 default basePath is /api/auth. Single-origin model requires no override.",
+    "expectedDefault": "/api/auth",
+    "frontendAuthEntry": "apps/frontend/lib/auth.ts",
+    "violationKeyword": "basePath:"
+  },
+  "nginxRoutingInvariants": {
+    "comment": "lan.conf (shared by lan + onprem) regex location must match NEXTAUTH_HANDLER_PATHS exactly.",
+    "configPath": "infra/nginx/lan.conf",
+    "regexLocation": "^/api/auth/(csrf|session|providers|signin|signout|callback|error|verify-request)(/|$)",
+    "requiredUpstream": "frontend"
+  },
+  "performanceBudget": {
+    "smokeWallTimeMs": 10000,
+    "perCheckTimeoutMs": 5000,
+    "concurrencyModel": "Promise.all"
+  },
+  "verdictModel": {
+    "passWhen": "all smoke checks return PASS or trace returns 0 invariantBreaches",
+    "exitCodes": {
+      "0": "PASS (or DRY_RUN_PASS)",
+      "1": "FAIL — invariant breach detected, see report",
+      "2": "USAGE_ERROR — required env var missing or bad CLI flag"
+    }
+  }
+}

@@ -25,6 +25,8 @@ ADR-0006의 Same-Origin Reverse-Proxy 모델 정합성을 검증한다. 다음 4
 - `infra/nginx/lan.conf`, `nginx.conf.template` 변경 후
 - `packages/shared-constants/src/api-routing.ts` 변경 후
 - Auth.js 버전 업그레이드 후 (NextAuth 핸들러 경로 추가/제거 검증)
+- `scripts/diagnostics/csrf-invariants.json`, `scripts/onprem-verify.mjs`, `scripts/diagnostics/nextauth-csrf-trace.mjs` 변경 후 (Step 12-14)
+- ADR-0006 §Recurrence Response 갱신 후
 
 ## Verification Steps
 
@@ -167,6 +169,94 @@ grep -rnE "http://localhost:300[0-9]" \
   packages/shared-constants/src/ packages/schemas/src/ \
   | grep -v "node_modules\|.next/\|__tests__\|.test.ts\|.spec.ts\|DEV_FALLBACK_INTERNAL_BACKEND_URL\|//\|INTERNAL_BACKEND_URL"
 # 기대: 0건 (DEV_FALLBACK 상수와 주석은 허용)
+```
+
+### Step 12: csrf-invariants.json 무결성 + 양 스크립트 import (2026-05-05 nextauth-csrf-verify-harness 추가)
+
+ADR-0006 §Recurrence Response 진단 인프라가 **단일 머신 판독 SSOT**(`scripts/diagnostics/csrf-invariants.json`)에서 운영되도록 강제한다. 양 스크립트가 invariants를 인라인 복제하면 회귀 위험.
+
+```bash
+# JSON parse 무결성
+node -e "JSON.parse(require('fs').readFileSync('scripts/diagnostics/csrf-invariants.json'))"
+# 기대: exit 0
+
+# JSON Schema 표준 메타 (분리 카운트로 prettier 멀티라인 우회)
+grep -c '"\$schema"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1
+grep -c '"version"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1
+grep -c '"adrRef"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1 (ADR-0006 백링크)
+grep -c '"ssotCodeRef"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1 (api-routing.ts 백링크)
+
+# 4개 핵심 invariant 키 존재 (분리 카운트)
+grep -c '"nextAuthHandlerPaths"' scripts/diagnostics/csrf-invariants.json
+grep -c '"cookieInvariants"' scripts/diagnostics/csrf-invariants.json
+grep -c '"requiredEnvVars"' scripts/diagnostics/csrf-invariants.json
+grep -c '"redactionPatterns"' scripts/diagnostics/csrf-invariants.json
+# 기대: 각 ≥ 1
+
+# 양 스크립트가 동일 SSOT import (분리 카운트)
+grep -c 'csrf-invariants.json' scripts/onprem-verify.mjs
+# 기대: ≥ 1
+grep -c 'csrf-invariants.json' scripts/diagnostics/nextauth-csrf-trace.mjs
+# 기대: ≥ 1
+```
+
+### Step 13: smoke + trace 2-script CLI 계약 일관성 (2026-05-05 nextauth-csrf-verify-harness 추가)
+
+`onprem-verify.mjs`(smoke)와 `nextauth-csrf-trace.mjs`(trace)는 같은 `--dry-run`/`--json`/`--origin`/`--verbose` flag를 노출하며 의미가 동일해야 한다. iter 1 evaluator FAIL 사례: smoke가 dry-run에서도 env 필수였음 (trace는 env-optional). CLI 계약 SSOT 위반.
+
+```bash
+# 양 스크립트 모두 핵심 4 flag 지원 (분리 카운트)
+for f in scripts/onprem-verify.mjs scripts/diagnostics/nextauth-csrf-trace.mjs; do
+  echo "=== $f ===";
+  grep -c '\--dry-run' "$f";    # 기대: ≥ 2 (parsing + 의미 처리)
+  grep -c '\--json' "$f";        # 기대: ≥ 2
+  grep -c '\--origin' "$f";      # 기대: ≥ 2
+  grep -c '\--verbose' "$f";     # 기대: ≥ 2
+done
+
+# CLI 계약 의미론: dry-run env-optional / live env-required 패턴
+# 양 스크립트가 'if (!DRY_RUN && !ORIGIN)' 패턴으로 fail-close
+grep -c '!DRY_RUN && !ORIGIN' scripts/onprem-verify.mjs
+# 기대: ≥ 1
+grep -c '!DRY_RUN && !ORIGIN' scripts/diagnostics/nextauth-csrf-trace.mjs
+# 기대: ≥ 1
+
+# 실제 종료 코드 검증 (런타임)
+unset ONPREM_PUBLIC_ORIGIN; node scripts/onprem-verify.mjs --dry-run --json | head -3 | grep -c '"DRY_RUN_PASS"'
+# 기대: ≥ 1 (dry-run + no env → exit 0)
+unset ONPREM_PUBLIC_ORIGIN; node scripts/onprem-verify.mjs >/dev/null 2>&1; echo $?
+# 기대: 2 (live + no env → exit 2)
+```
+
+### Step 14: redaction SSOT 일관성 (token/cookie 평문 누출 차단, 2026-05-05 nextauth-csrf-verify-harness 추가)
+
+진단 스크립트는 token/cookie/secret 값을 stdout/artifact에 평문 출력하면 안 된다. `redactionPatterns` JSON SSOT 한 곳에서 관리하며, 양 스크립트가 이를 import해 redact 함수에 적용한다.
+
+```bash
+# JSON에 redaction 정책이 SSOT로 정의됨
+grep -c '"redactionPatterns"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1
+
+# 양 스크립트가 redact 헬퍼를 실제 호출 (정의만 X, 호출 O)
+grep -cE 'redactJson|redactSetCookie|redactValue' scripts/onprem-verify.mjs
+# 기대: ≥ 5 (정의 + 다회 호출)
+grep -cE 'redactJson|redactSetCookieList|redactValue|redactEnvValue' scripts/diagnostics/nextauth-csrf-trace.mjs
+# 기대: ≥ 5
+
+# 런타임 검증: dry-run 출력에 raw token 노출 0건
+node scripts/diagnostics/nextauth-csrf-trace.mjs --dry-run --json 2>/dev/null \
+  | grep -cE "csrfToken['\":]\\s*['\"][a-f0-9]{16,}"
+# 기대: 0 (csrfToken 값이 hex 16+자로 평문 노출되지 않음)
+
+# `<redacted len=N>` 포맷 사용 일관성
+grep -c '<redacted len=' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1 (redactedFormat 정의)
+grep -c "redactedFormat" scripts/onprem-verify.mjs scripts/diagnostics/nextauth-csrf-trace.mjs
+# 기대: ≥ 2 (양 스크립트 SSOT 참조)
 ```
 
 ## Failure Recovery

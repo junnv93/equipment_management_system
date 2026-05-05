@@ -75,6 +75,18 @@ docker compose --env-file=/run/secrets/onprem.env \
 
 ## 검증
 
+배포 직후 자동 스모크(권장):
+
+```bash
+pnpm compose:onprem:verify
+```
+
+이 명령은 ADR-0006 invariant(NextAuth handler 분기, Set-Cookie SameSite/HttpOnly/Secure,
+backend disjoint sanity)를 한 번에 검증합니다. 종료 코드 0=PASS, 1=FAIL, 2=ENV 누락.
+JSON 출력은 `pnpm compose:onprem:verify -- --json`. 상세: `scripts/onprem-verify.mjs` 헤더 주석.
+
+수동 fallback (네트워크/도구 제약 시):
+
 ```bash
 curl -i "$ONPREM_PUBLIC_ORIGIN/api/auth/csrf"
 curl -i "$ONPREM_PUBLIC_ORIGIN/api/health"
@@ -83,11 +95,15 @@ curl -i "$ONPREM_PUBLIC_ORIGIN/api/health"
 `/api/auth/csrf`는 200 JSON을 반환해야 합니다. 이 경로는 backend가 아니라 frontend의 NextAuth
 handler가 응답해야 합니다.
 
-라우팅 회귀 검증:
+정적 SSOT 회귀 검증 (배포 전 게이트):
 
 ```bash
 bash scripts/verify-routing-origin.sh
 ```
+
+회귀가 의심되면 1차 진단 harness(`scripts/diagnostics/nextauth-csrf-trace.mjs`)를 실행해
+환경변수 stack/SW/proxy 헤더/cookie domain 종합 진단을 수행합니다. 절차:
+[scripts/diagnostics/README.md](../scripts/diagnostics/README.md).
 
 ## 네트워크 요청 사항
 

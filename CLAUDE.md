@@ -309,5 +309,6 @@ This project has 25+ custom Claude Code skills in `.claude/skills/` organized by
 - **Review skills**: review-architecture, review-design
 - **Orchestrators**: generate-prompts, manage-skills, playwright-e2e, harness
 - **UltraReview 스크립트**: `scripts/ultrareview-advisor.mjs` (Go/No-Go 판정), `scripts/ultrareview-preflight.mjs` (pre-upload secret gate)
+- **운영 진단 스크립트 (ADR-0006)**: `pnpm compose:onprem:verify` (운영 스모크 — `scripts/onprem-verify.mjs`), `pnpm diagnostics:csrf` (영구 진단 harness — `scripts/diagnostics/nextauth-csrf-trace.mjs`). invariant SSOT는 `scripts/diagnostics/csrf-invariants.json`. 회귀 시 `scripts/diagnostics/README.md` 1차 응답 절차 참조
 
 > **각 스킬의 한줄 요약 + 스코프**: [docs/references/skills-index.md](docs/references/skills-index.md) 참조. 상세 사용법은 `.claude/skills/<name>/SKILL.md`.

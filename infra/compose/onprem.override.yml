@@ -161,6 +161,8 @@ services:
     ports:
       - '9000:9000'
     volumes:
+      # 공용 HTTP nginx 설정 — LAN + on-prem 양쪽이 같은 single-VM 토폴로지를 사용한다.
+      # 파일명 `lan.conf`는 git history 보존을 위한 historical naming. 상세 헤더는 lan.conf 본문 참조.
       - ../nginx/lan.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       frontend:
