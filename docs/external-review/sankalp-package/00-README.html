@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Equipment Management System — Briefing Package</title>
+<style>
+  :root {
+    --brand: #003876;
+    --accent: #0073e6;
+    --bg: #ffffff;
+    --bg-alt: #f5f7fa;
+    --border: #d1d9e0;
+    --text: #1a1a1a;
+    --text-muted: #5a6470;
+    --success: #2e7d32;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 36px 40px;
+    background: var(--bg);
+  }
+  header {
+    text-align: center;
+    border-bottom: 3px solid var(--brand);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    color: var(--brand);
+    font-size: 30px;
+    margin: 0 0 8px 0;
+  }
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+  header .meta {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .summary-box {
+    background: #f0f7ff;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .summary-box h2 {
+    margin-top: 0;
+    color: var(--brand);
+    font-size: 18px;
+    border: none;
+    padding: 0;
+  }
+  h2 {
+    color: var(--brand);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 6px;
+    margin-top: 36px;
+    font-size: 20px;
+  }
+  .doc-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    background: #fff;
+    transition: box-shadow 0.2s;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  .doc-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 56, 118, 0.12);
+    border-color: var(--accent);
+  }
+  .doc-card .num {
+    display: inline-block;
+    background: var(--brand);
+    color: #fff;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    line-height: 28px;
+    font-weight: 700;
+    margin-right: 12px;
+    vertical-align: middle;
+    font-size: 13px;
+  }
+  .doc-card h3 {
+    display: inline;
+    margin: 0;
+    color: var(--brand);
+    font-size: 17px;
+    vertical-align: middle;
+  }
+  .doc-card p {
+    margin: 8px 0 0 40px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .ask-box {
+    background: #f0f9f0;
+    border: 2px solid var(--success);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .ask-box h2 {
+    margin-top: 0;
+    color: var(--success);
+    border: none;
+    padding: 0;
+    font-size: 18px;
+  }
+  .ask-box ol {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+  .ask-box li { margin: 6px 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+  }
+  th { background: var(--bg-alt); }
+  code {
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+  }
+  footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Equipment Management System</h1>
+  <div class="subtitle">Briefing Package for Global Technology</div>
+  <div class="meta">
+    <strong>From:</strong> Myeongjun Kwon, Laboratory Engineer Associate, UL Solutions Korea (Suwon)<br>
+    <strong>Date:</strong> 2026-05-06 &nbsp;|&nbsp; <strong>Classification:</strong> UL Solutions Confidential — Internal Use Only
+  </div>
+</header>
+
+<div class="summary-box">
+  <h2>Purpose of this package</h2>
+  <p>This package contains everything needed to evaluate the Equipment Management System project and submit the ServiceNow server request — without requiring a call.</p>
+  <p style="margin-bottom:0;"><strong>If you have 5 minutes:</strong> Read just this page (the README). <br>
+  <strong>If you have 15 minutes:</strong> Open document #1 (Project Overview) for the full context with diagrams. <br>
+  <strong>To submit the ServiceNow form:</strong> Use document #2 (Server Specification) — it's structured to map directly to typical form fields.</p>
+</div>
+
+<h2>Project in 3 sentences</h2>
+<ol>
+  <li><strong>What:</strong> An internal web application that digitalizes UL Solutions Korea's lab equipment management (calibration scheduling, equipment loan/return, multi-stage approvals) per UL Solutions Korea's internal Equipment Management Procedure, used by Suwon / Uiwang / Pyeongtaek labs.</li>
+  <li><strong>Where it stands:</strong> Development is advanced (26 backend modules, full frontend, automated test coverage at unit and end-to-end levels). Cybersecurity Architecture Review with Lance Morrow is in progress; he asked us to move from a desktop PC to a properly managed server before completing the review.</li>
+  <li><strong>What we need:</strong> A properly managed server (on-prem or Azure VM). The ServiceNow link Lance provided returns an authorization error for both myself and Wonsik (local IT) — appears to be a catalog item permission issue.</li>
+</ol>
+
+<h2>Why this project (in 4 bullets)</h2>
+<ol>
+  <li><strong>Unified equipment state tracking</strong> — loan, calibration, repair, non-conformance, and disposal are all tracked in one record per equipment, replacing fragmented spreadsheets and paper logs across the three labs.</li>
+  <li><strong>Automated quality document generation</strong> — calibration plans, equipment transfer records, inspection reports, and disposal forms are generated from system data as PDF exports rather than filled by hand. Commercial LIMS such as Labware do not include UL Solutions Korea's specific procedure forms out of the box, so equivalent functionality on a commercial product would require similar custom development.</li>
+  <li><strong>Azure AD–native team mapping &amp; email approval workflows</strong> — SSO + automatic site/team assignment from Azure AD groups + email notifications at each approval step.</li>
+  <li><strong>Daily calibration digest emails</strong> — automated digest summarizing equipment with calibration approaching expiry (default 30 days), past expiry, and overdue checkouts. Supports ISO/IEC 17025 §6.4 by making calibration status actionable rather than relying on manual spreadsheet checks.</li>
+</ol>
+
+<h2>Documents in this package</h2>
+
+<a class="doc-card" href="01-Project-Overview.html">
+  <span class="num">1</span><h3>Project Overview</h3>
+  <p>Architecture diagrams (system / network / authentication), 26 module map, key workflows, technology stack, and rationale for an in-house build over Labware. <strong>~15 min read.</strong></p>
+</a>
+
+<a class="doc-card" href="02-Server-Specification.html">
+  <span class="num">2</span><h3>Server Specification Sheet</h3>
+  <p>Detailed compute/network/storage/security/operational requirements, formatted to map directly into ServiceNow form fields. <strong>Use this to submit the request.</strong></p>
+</a>
+
+<a class="doc-card" href="03-FAQ.html">
+  <span class="num">3</span><h3>Frequently Asked Questions</h3>
+  <p>Pre-emptive answers covering process &amp; access, technology choices, Labware comparison, security &amp; compliance, operations &amp; support, scale &amp; cost. <strong>~10 min read.</strong></p>
+</a>
+
+<div class="ask-box">
+  <h2>Specific asks (in priority order)</h2>
+  <ol>
+    <li><strong>ServiceNow request submission</strong> — Please submit the server request using the spec sheet (doc #2), or grant me access to the catalog item if you'd prefer I submit it directly. Both Wonsik and I get an authorization error on the link Lance shared.</li>
+    <li><strong>Server option preference</strong> — We're open to either <strong>Azure VM (recommended for speed)</strong> or <strong>on-prem managed server</strong>. Please advise based on UL Solutions Korea's standard provisioning paths.</li>
+    <li><strong>Network / DNS / firewall configuration</strong> — Static internal IP, allow :443 inbound from UL Solutions Korea office subnets, allow outbound to Azure AD endpoints only. Wonsik (local IT) is looped in to assist on the UL-Korea-local pieces.</li>
+  </ol>
+</div>
+
+<h2>Why we'd prefer to avoid a call</h2>
+<p>I appreciate your offer of a meeting, but I've structured this package so that everything you'd ask in a call is already answered in writing — you can review at your own pace, and we don't burn calendar time on details that the spec sheet covers more completely than I'd be able to recite verbally. <strong>Email turnaround on my side: same day.</strong> If we genuinely hit something that needs synchronous discussion, I'll happily set up a call at that point.</p>
+
+<h2>Quick reference: server spec at a glance</h2>
+<table>
+  <tr><th>Spec</th><th>Value</th></tr>
+  <tr><td>CPU / RAM / Disk</td><td>4 vCPU / 16 GB RAM / 200 GB SSD</td></tr>
+  <tr><td>OS</td><td>Ubuntu 22.04 LTS (preferred) or RHEL 9</td></tr>
+  <tr><td>Hosting</td><td>Azure VM (preferred for speed) or on-prem</td></tr>
+  <tr><td>Region</td><td>Korea (for latency to KR labs)</td></tr>
+  <tr><td>Access control</td><td>Azure AD Conditional Access (server is internet-reachable; login is gated by Azure AD policies — see doc #1 §5)</td></tr>
+  <tr><td>Users</td><td>~80–100 registered, ~20–30 concurrent estimated</td></tr>
+  <tr><td>Availability</td><td>Business hours (KST), non-mission-critical</td></tr>
+  <tr><td>Cybersecurity review</td><td>In progress with Lance Morrow (Global Cybersecurity); awaiting server provisioning for final review</td></tr>
+</table>
+
+<h2>Contacts</h2>
+<table>
+  <tr><th style="width:30%">Role</th><th>Person</th></tr>
+  <tr><td>Project lead (this request)</td><td>Myeongjun Kwon — <code>Myeongjun.Kwon@ul.com</code> &nbsp;|&nbsp; +82.10.6291.7738</td></tr>
+  <tr><td>Local IT liaison (UL Solutions Korea)</td><td>Wonsik Kim — <code>Wonsik.Kim@ul.com</code></td></tr>
+  <tr><td>Cybersecurity reviewer</td><td>Lance Morrow, CISSP — <code>Lance.Morrow@ul.com</code></td></tr>
+  <tr><td>Team colleague</td><td>Dexter Yun — <code>Dexter.Yun@ul.com</code></td></tr>
+</table>
+
+<footer>
+  Equipment Management System Briefing Package &nbsp;|&nbsp; UL Solutions Confidential — Internal Use Only<br>
+  2026-05-06
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Equipment Management System — Server Specification Sheet</title>
+<style>
+  :root {
+    --brand: #003876;
+    --accent: #0073e6;
+    --bg: #ffffff;
+    --bg-alt: #f5f7fa;
+    --border: #d1d9e0;
+    --text: #1a1a1a;
+    --text-muted: #5a6470;
+    --success: #2e7d32;
+    --warning: #ed6c02;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    line-height: 1.55;
+    color: var(--text);
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    background: var(--bg);
+  }
+  header {
+    border-bottom: 3px solid var(--brand);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+  }
+  header h1 { color: var(--brand); margin: 0 0 6px 0; font-size: 26px; }
+  header .meta { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+  header .meta strong { color: var(--text); }
+  h2 {
+    color: var(--brand);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 6px;
+    margin-top: 36px;
+    font-size: 20px;
+  }
+  h3 {
+    color: var(--accent);
+    margin-top: 24px;
+    font-size: 16px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: var(--bg-alt); }
+  td.label {
+    background: var(--bg-alt);
+    font-weight: 600;
+    width: 30%;
+  }
+  td.value { font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    margin: 16px 0;
+    background: #f0f7ff;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .callout.warn { border-left-color: var(--warning); background: #fff8e6; }
+  .callout.success { border-left-color: var(--success); background: #f0f9f0; }
+  code {
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .option-box {
+    border: 2px solid var(--border);
+    padding: 16px 20px;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .option-box.recommended {
+    border-color: var(--success);
+    background: #f0f9f0;
+  }
+  .option-box h3 {
+    margin-top: 0;
+    color: var(--brand);
+  }
+  .option-box .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--success);
+    color: #fff;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  ul.tight { margin: 6px 0; padding-left: 20px; }
+  ul.tight li { margin: 3px 0; }
+  footer {
+    margin-top: 50px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+  }
+  @media print {
+    @page {
+      size: A4;
+      margin: 1.2cm 1.2cm;
+    }
+    body {
+      padding: 0;
+      margin: 0;
+      max-width: 100%;
+      font-size: 9.5pt;
+      line-height: 1.4;
+    }
+    header { margin-bottom: 10px; padding-bottom: 8px; }
+    header h1 { font-size: 18pt; margin: 0 0 4px 0; }
+    header .meta { font-size: 9pt; margin-top: 6px; }
+
+    /* Section headings — compact, let Chrome decide page breaks naturally */
+    h2 {
+      page-break-before: auto;
+      page-break-after: avoid;
+      break-after: avoid;
+      font-size: 14pt;
+      margin: 14px 0 8px 0;
+      padding: 0 0 4px 0;
+    }
+    /* First h2 stays with header on page 1 */
+    header + h2 {
+      margin-top: 4px;
+    }
+    /* Sections explicitly marked to start a new page */
+    h2.page-start {
+      page-break-before: always;
+      break-before: page;
+    }
+    h3 {
+      page-break-after: avoid;
+      break-after: avoid;
+      font-size: 11pt;
+      margin: 12px 0 6px 0;
+    }
+
+    p { margin: 6px 0; }
+    ul, ol { margin: 4px 0; padding-left: 18px; }
+    li { margin: 2px 0; }
+
+    /* Tables — denser */
+    table { font-size: 9pt; margin: 8px 0; }
+    th, td { padding: 5px 7px; }
+
+    /* Boxes — denser */
+    .callout { margin: 8px 0; padding: 8px 12px; font-size: 9.5pt; }
+    .option-box { padding: 10px 14px; }
+
+    /* Block elements that must not be split across pages */
+    table,
+    .callout,
+    .option-box {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Avoid orphan headings */
+    h2 + p,
+    h2 + .callout,
+    h3 + p,
+    h3 + table {
+      page-break-before: avoid;
+    }
+
+    footer {
+      page-break-before: avoid;
+      margin-top: 18px;
+      padding-top: 12px;
+      font-size: 8.5pt;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Server Specification Sheet</h1>
+  <div class="meta">
+    <strong>Project:</strong> Equipment Management System (EMS)<br>
+    <strong>For:</strong> Server provisioning request — UL Solutions Korea (Suwon)<br>
+    <strong>Prepared by:</strong> Myeongjun Kwon &nbsp;|&nbsp; <strong>Date:</strong> 2026-05-06
+  </div>
+</header>
+
+<h2>1. Compute Specification</h2>
+
+<table>
+  <tbody>
+    <tr><td class="label">CPU</td><td>4 vCPU (x86_64)</td></tr>
+    <tr><td class="label">Memory (RAM)</td><td>16 GB</td></tr>
+    <tr><td class="label">OS disk</td><td>64 GB SSD</td></tr>
+    <tr><td class="label">Data disk</td><td>200 GB SSD (separate volume, mounted at <code>/var/lib/docker</code> and <code>/var/data</code>)</td></tr>
+    <tr><td class="label">OS</td><td><strong>Ubuntu Server 22.04 LTS</strong> (preferred) or RHEL 9 (acceptable)</td></tr>
+    <tr><td class="label">Architecture</td><td>x86_64 (amd64)</td></tr>
+    <tr><td class="label">Network interface</td><td>1 Gbps wired Ethernet (no Wi-Fi required)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <strong>Why these numbers?</strong> Sized for ~80–100 total users / ~20–30 concurrent estimated. Headroom included for the full Docker stack: PostgreSQL, Redis, object storage, Nginx, frontend, backend, and the Prometheus/Grafana/Loki monitoring stack on the same host. 2 vCPU / 8 GB would technically run the application but leaves no headroom for the monitoring stack and concurrent user spikes — the spec above is recommended for stable operation.
+</div>
+
+<h2>2. Software / Runtime Requirements</h2>
+
+<table>
+  <thead><tr><th style="width:25%">Component</th><th>Version</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Docker Engine</td><td>24.x or later</td><td>Native install via apt — no Docker Desktop (license)</td></tr>
+    <tr><td>Docker Compose</td><td>v2.x (plugin)</td><td>Bundled with modern Docker Engine</td></tr>
+    <tr><td>Node.js</td><td>20 LTS</td><td>Used inside containers; not required on host</td></tr>
+    <tr><td>PostgreSQL</td><td>16</td><td>Inside container, not on host</td></tr>
+    <tr><td>Redis</td><td>7</td><td>Inside container</td></tr>
+    <tr><td>Nginx</td><td>1.25+</td><td>Inside container</td></tr>
+  </tbody>
+</table>
+
+<div class="callout success">
+  <strong>Host-level software is minimal.</strong> The host only needs Docker Engine + Docker Compose + standard Linux utilities. All application services run inside containers. This simplifies OS-level patching and reduces the host's attack surface.
+</div>
+
+<h2 class="page-start">3. Network &amp; Access Control</h2>
+
+<div class="callout">
+  <strong>Access-control model:</strong> Azure AD Conditional Access (consistent with Project Overview §5). The server is reachable from the internet, and Azure AD enforces login restrictions (UL-managed device, MFA, etc.) at the authentication layer. Conditional Access policies are applied at the Azure AD tenant level by Global IT — the application itself only delegates authentication to Azure AD.
+</div>
+
+<h3>Inbound rules</h3>
+<table>
+  <thead><tr><th>Port</th><th>Protocol</th><th>Source</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>443</td><td>TCP (HTTPS)</td><td>Internet (gated at Azure AD by Conditional Access policies)</td><td>Application access</td></tr>
+    <tr><td>80</td><td>TCP (HTTP)</td><td>Same as above</td><td>Redirect to :443 only</td></tr>
+    <tr><td>22</td><td>TCP (SSH)</td><td>Global Technology admin gateway / approved admin IPs</td><td>OS administration (key-based, no password)</td></tr>
+  </tbody>
+</table>
+
+<h3>Outbound rules (allowlist — no general internet)</h3>
+<table>
+  <thead><tr><th>Destination</th><th>Port</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>login.microsoftonline.com</code><br><code>graph.microsoft.com</code></td><td>443</td><td>Azure AD SSO — token validation, group lookup</td></tr>
+    <tr><td>UL internal package mirror</td><td>443</td><td>OS / container image updates</td></tr>
+    <tr><td>UL SMTP relay</td><td>25 / 587</td><td>Daily digest email notifications</td></tr>
+    <tr><td>General internet</td><td>—</td><td>Not required for application function</td></tr>
+  </tbody>
+</table>
+
+<h3>Network identity</h3>
+<table>
+  <tbody>
+    <tr><td class="label">IP allocation</td><td>Public IP if Azure VM; static internal IP if on-prem (per UL Solutions Korea standard)</td></tr>
+    <tr><td class="label">DNS name</td><td>Per UL Solutions Korea naming convention (to be assigned by Global Technology)</td></tr>
+    <tr><td class="label">TLS certificate</td><td>Per UL Solutions Korea standard (internal CA or public CA)</td></tr>
+    <tr><td class="label">Reachability</td><td>Internet-reachable; access gated by Azure AD Conditional Access</td></tr>
+  </tbody>
+</table>
+
+<h2 class="page-start">4. Storage &amp; Backup</h2>
+
+<table>
+  <tbody>
+    <tr><td class="label">Database storage</td><td>~5 GB initial, growing to ~20 GB over 5 years</td></tr>
+    <tr><td class="label">Document/file storage</td><td>~50–100 GB over 5 years (calibration certs, equipment photos, reports)</td></tr>
+    <tr><td class="label">Total disk allocation</td><td>200 GB SSD (with growth headroom)</td></tr>
+    <tr><td class="label">Backup target</td><td>Daily PostgreSQL dump + RustFS bucket snapshot to UL backup target (TBD with GT)</td></tr>
+    <tr><td class="label">Backup retention</td><td>30 days rolling, with monthly archive for 1 year</td></tr>
+    <tr><td class="label">RPO / RTO</td><td>RPO 24h, RTO 4h (business-hours system, non-mission-critical)</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Security &amp; Compliance</h2>
+
+<table>
+  <tbody>
+    <tr><td class="label">Disk encryption</td><td>Required at rest — LUKS (Linux native) or Azure Managed Disk encryption (for Azure VM)</td></tr>
+    <tr><td class="label">TLS</td><td>TLS 1.2 minimum, TLS 1.3 preferred (Nginx-terminated)</td></tr>
+    <tr><td class="label">SSH access</td><td>Key-based only; password authentication disabled</td></tr>
+    <tr><td class="label">OS patching</td><td>Per UL standard schedule (monthly + critical out-of-band)</td></tr>
+    <tr><td class="label">Endpoint protection</td><td>Per UL standard (CrowdStrike or equivalent)</td></tr>
+    <tr><td class="label">Logging</td><td>OS logs to UL central logging (if applicable); application logs in Loki on-host</td></tr>
+    <tr><td class="label">Authentication</td><td>Azure AD SSO (UL tenant) — no local app accounts for end users</td></tr>
+    <tr><td class="label">CAR review</td><td>In progress with Lance Morrow (Global Cybersecurity); awaiting server provisioning to complete the final review</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Operational Ownership</h2>
+
+<p>The lab engineering team will manage the application layer (deployments, application monitoring, user support). Infrastructure-level operations (server provisioning, OS patching, endpoint protection, SSH access management, infrastructure backup) will follow UL Solutions Korea's standard practice for managed servers — the project will adopt whatever model the IT team uses for similar internal applications, rather than proposing a custom split.</p>
+
+<footer>
+  Equipment Management System — Server Specification Sheet &nbsp;|&nbsp; UL Solutions Confidential — Internal Use Only<br>
+  Contact: Myeongjun Kwon (Myeongjun.Kwon@ul.com)
+</footer>
+
+</body>
+</html>

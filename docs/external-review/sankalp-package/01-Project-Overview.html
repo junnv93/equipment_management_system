@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Equipment Management System — Project Overview</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --brand: #003876;
+    --accent: #0073e6;
+    --bg: #ffffff;
+    --bg-alt: #f5f7fa;
+    --border: #d1d9e0;
+    --text: #1a1a1a;
+    --text-muted: #5a6470;
+    --success: #2e7d32;
+    --warning: #ed6c02;
+    --danger: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    background: var(--bg);
+  }
+  header {
+    border-bottom: 3px solid var(--brand);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    color: var(--brand);
+    font-size: 28px;
+    margin: 0 0 8px 0;
+  }
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+  header .meta {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  header .meta strong { color: var(--text); }
+  h2 {
+    color: var(--brand);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+    margin-top: 48px;
+    font-size: 22px;
+  }
+  h3 {
+    color: var(--accent);
+    margin-top: 28px;
+    font-size: 17px;
+  }
+  .summary-card {
+    background: var(--bg-alt);
+    border-left: 4px solid var(--brand);
+    padding: 16px 20px;
+    margin: 16px 0;
+    border-radius: 4px;
+  }
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin: 16px 0;
+    background: #f0f7ff;
+    border-radius: 4px;
+  }
+  .callout.warn { border-left-color: var(--warning); background: #fff8e6; }
+  .callout.success { border-left-color: var(--success); background: #f0f9f0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: var(--bg-alt); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-yes { background: #e6f4ea; color: var(--success); }
+  .badge-no { background: #fce8e6; color: var(--danger); }
+  .badge-partial { background: #fef7e0; color: var(--warning); }
+  .mermaid {
+    background: var(--bg-alt);
+    padding: 20px;
+    border-radius: 6px;
+    margin: 16px 0;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .toc {
+    background: var(--bg-alt);
+    padding: 16px 24px;
+    border-radius: 6px;
+    margin: 24px 0;
+    border: 1px solid var(--border);
+  }
+  .toc h3 { margin-top: 0; color: var(--brand); }
+  .toc ol { margin: 8px 0; padding-left: 24px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .info-box {
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .info-box h4 {
+    margin: 0 0 8px 0;
+    color: var(--brand);
+    font-size: 15px;
+  }
+  .info-box ul { margin: 4px 0; padding-left: 20px; }
+  code {
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+  }
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  @media print {
+    @page {
+      size: A4;
+      margin: 1.2cm 1.2cm;
+    }
+    body {
+      padding: 0;
+      margin: 0;
+      max-width: 100%;
+      font-size: 9.5pt;
+      line-height: 1.4;
+    }
+    header { margin-bottom: 10px; padding-bottom: 8px; }
+    header h1 { font-size: 18pt; margin: 0 0 4px 0; }
+    header .subtitle { font-size: 10pt; }
+    header .meta { font-size: 9pt; margin-top: 6px; }
+
+    .summary-card { margin: 8px 0; padding: 10px 14px; }
+    .toc { margin: 8px 0; padding: 10px 16px; page-break-after: avoid; }
+    .toc h3 { font-size: 11pt; margin: 0 0 4px 0; }
+    .toc ol { margin: 4px 0; padding-left: 18px; }
+
+    /* Section headings — let Chrome flow naturally, but keep h2 with following content */
+    h2 {
+      page-break-before: auto;
+      page-break-after: avoid;
+      break-after: avoid;
+      font-size: 14pt;
+      margin: 16px 0 8px 0;
+      padding: 0 0 4px 0;
+    }
+    h3 {
+      page-break-after: avoid;
+      break-after: avoid;
+      font-size: 11pt;
+      margin: 12px 0 6px 0;
+    }
+    h4 { font-size: 10pt; margin: 0 0 4px 0; }
+
+    p { margin: 6px 0; }
+    ul, ol { margin: 4px 0; padding-left: 18px; }
+    li { margin: 2px 0; }
+
+    /* Tables — denser */
+    table { font-size: 9pt; margin: 8px 0; }
+    th, td { padding: 5px 7px; }
+
+    /* Boxes — denser */
+    .callout { margin: 8px 0; padding: 8px 12px; font-size: 9.5pt; }
+    .grid-2 { gap: 10px; margin: 8px 0; }
+    .info-box { padding: 10px 12px; }
+    .info-box ul { margin: 2px 0; padding-left: 16px; }
+    .qa { margin: 10px 0; padding: 10px 14px; }
+    .doc-card { padding: 10px 14px; margin: 8px 0; }
+    .option-box { padding: 10px 14px; }
+    .ask-box { padding: 12px 16px; margin: 12px 0; }
+
+    /* Block elements that must not be split across pages */
+    .mermaid,
+    table,
+    .callout,
+    .summary-card,
+    .info-box,
+    .qa,
+    .doc-card,
+    .option-box,
+    .ask-box {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Keep diagrams within one page — scale down if needed */
+    .mermaid {
+      max-height: 22cm;
+      overflow: hidden;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    .mermaid svg {
+      max-width: 100% !important;
+      max-height: 20cm !important;
+      height: auto !important;
+    }
+
+    /* Avoid orphan headings at page bottom */
+    h2 + p,
+    h2 + .callout,
+    h3 + p,
+    h3 + .mermaid,
+    h3 + table {
+      page-break-before: avoid;
+    }
+
+    footer {
+      page-break-before: avoid;
+      margin-top: 18px;
+      padding-top: 12px;
+      font-size: 8.5pt;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Equipment Management System</h1>
+  <div class="subtitle">Project Overview &amp; Infrastructure Briefing</div>
+  <div class="meta">
+    <strong>Prepared by:</strong> Myeongjun Kwon, Laboratory Engineer Associate, UL Solutions Korea (Suwon Lab)<br>
+    <strong>Date:</strong> 2026-05-06<br>
+    <strong>Classification:</strong> UL Solutions Confidential — Internal Use Only
+  </div>
+</header>
+
+<div class="summary-card">
+  <strong>Purpose of this document</strong> — This is a self-contained briefing on the Equipment Management System (EMS) project, the infrastructure required to host it, and the rationale for an in-house build over commercial alternatives such as Labware. It provides the technical context the IT team needs to support the upcoming ServiceNow server request and any related provisioning steps.
+</div>
+
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#exec">Executive Summary</a></li>
+    <li><a href="#value">What Makes EMS Uniquely Valuable</a></li>
+    <li><a href="#why">Why an In-House System (vs. Labware)</a></li>
+    <li><a href="#arch">System Architecture</a></li>
+    <li><a href="#network">Network &amp; Deployment Topology</a></li>
+    <li><a href="#auth">Authentication Flow (Azure AD SSO)</a></li>
+    <li><a href="#modules">Functional Module Map (26 modules)</a></li>
+    <li><a href="#workflows">Key Workflows</a></li>
+    <li><a href="#stack">Technology Stack</a></li>
+    <li><a href="#scale">Expected Scale &amp; Usage</a></li>
+    <li><a href="#status">Current Project Status</a></li>
+  </ol>
+</div>
+
+<h2 id="exec">1. Executive Summary</h2>
+
+<div class="grid-2">
+  <div class="info-box">
+    <h4>What is it?</h4>
+    <p>An internal web application that digitalizes laboratory equipment management for UL Solutions Korea labs (Suwon / Uiwang / Pyeongtaek) according to UL Solutions Korea's internal Equipment Management Procedure.</p>
+  </div>
+  <div class="info-box">
+    <h4>Who uses it?</h4>
+    <p>Lab engineers, technical managers, quality managers, and lab managers across <strong>three Korean labs</strong>. UL employees only, authenticated via Azure AD SSO.</p>
+  </div>
+  <div class="info-box">
+    <h4>What does it do?</h4>
+    <ul>
+      <li>Equipment lifecycle &amp; calibration scheduling</li>
+      <li>Equipment loan / return (반출·반납) workflows</li>
+      <li>Multi-stage approval workflows (1- / 2- / 3-step)</li>
+      <li>Non-conformance and intermediate inspection management</li>
+      <li>Test software information management (P-number registry)</li>
+      <li>Document management with retention policy</li>
+    </ul>
+  </div>
+  <div class="info-box">
+    <h4>Where does it run?</h4>
+    <p>Single application server (on-prem or Azure VM). All components are containerized via Docker Compose. Access control is handled via Azure AD Conditional Access — see Section 5.</p>
+  </div>
+</div>
+
+<div class="callout success">
+  <strong>Cybersecurity status:</strong> Currently in review with <strong>Lance Morrow (Global Cybersecurity Architecture)</strong>. The Cybersecurity Architecture Review (CAR) submission is complete; Lance reviewed the architecture and asked us to move from a desktop PC host to a properly managed on-prem or cloud server before the review can be re-completed. <strong>Provisioning that server is the request that this package supports.</strong>
+</div>
+
+<h2 id="value">2. What Makes EMS Uniquely Valuable</h2>
+
+<p>Beyond being a digital replacement for spreadsheets, EMS enables capabilities that are difficult or impossible to achieve with general-purpose tools — and that directly drive measurable productivity gains and compliance assurance for the lab teams.</p>
+
+<div class="grid-2">
+  <div class="info-box">
+    <h4>1. Unified equipment lifecycle — single source of truth</h4>
+    <p>Every state of every piece of equipment is tracked in <strong>one system across SUW / UIW / PYT</strong>:</p>
+    <ul>
+      <li>Loan / return (반입·반출) with multi-site coordination</li>
+      <li>Calibration status — scheduled / in-progress / completed / expiring / expired</li>
+      <li>Repair history and current repair status</li>
+      <li>Non-conformance lifecycle (detection → resolution)</li>
+      <li>End-of-life disposal with multi-step approval</li>
+    </ul>
+    <p style="margin-bottom:0"><strong>Replaces:</strong> Fragmented spreadsheets, paper logs, and ad-hoc tools currently used per state. Today the same piece of equipment has its calibration tracked in one spreadsheet, repairs in another, and loan records on paper — EMS unifies all of these.</p>
+  </div>
+
+  <div class="info-box" style="border-left: 4px solid var(--success);">
+    <h4>2. Automated quality document generation <span style="font-size:11px;background:#e6f4ea;color:var(--success);padding:2px 8px;border-radius:10px;font-weight:700">EMS-only</span></h4>
+    <p>The internal procedure's quality documents are <strong>generated automatically from system data</strong> rather than typed by hand. Templates include:</p>
+    <ul>
+      <li>Calibration plans, certificates, and reports</li>
+      <li>Equipment transfer records (dual-perspective lender / borrower form)</li>
+      <li>Intermediate inspection reports</li>
+      <li>Non-conformance and disposal approval forms</li>
+    </ul>
+    <p style="margin-bottom:0"><strong>Impact:</strong> Reduces duplicate data entry and transcription errors between system records and paperwork. Document preparation that previously required manually filling forms with data already in spreadsheets is replaced by a one-click PDF export. Commercial LIMS such as Labware do not include UL Solutions Korea–specific procedure forms out of the box, so this capability would require equivalent custom development on top of any commercial product.</p>
+  </div>
+
+  <div class="info-box">
+    <h4>3. Azure AD-driven team mapping &amp; email workflows</h4>
+    <ul>
+      <li><strong>SSO via UL Solutions Azure tenant</strong> — no separate user accounts to manage; lifecycle is governed by HR/IT identity systems already in place</li>
+      <li><strong>Azure AD group membership auto-maps to lab teams and per-site scopes</strong> (SUW / UIW / PYT) — when HR moves a person between teams, EMS reflects it on next login automatically</li>
+      <li><strong>Approval workflows trigger email notifications</strong> at each step (engineer → technical manager → quality manager → lab manager) via standard UL email infrastructure — no manual coordination, no chasing approvers down hallways</li>
+    </ul>
+  </div>
+
+  <div class="info-box" style="border-left: 4px solid var(--warning);">
+    <h4>4. Daily digest emails for calibration lifecycle</h4>
+    <ul>
+      <li>A daily digest email (sent at user-configured time, e.g., 09:00 KST) summarizes equipment with calibration due soon (default <strong>30 days</strong>) and equipment past calibration expiry, plus any overdue checkouts.</li>
+      <li>Equipment past calibration expiry is also flagged on the dashboard.</li>
+      <li>Supports compliance with ISO/IEC 17025 §6.4 (equipment) by making calibration status visible and actionable, rather than relying on manual spreadsheet tracking.</li>
+    </ul>
+    <p style="margin-bottom:0;font-size:13px;color:var(--text-muted)"><em>Thresholds (30 days warning / 3 days urgent) are defined in <code>packages/shared-constants/src/business-rules.ts</code> as <code>CALIBRATION_THRESHOLDS</code>.</em></p>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Combined effect:</strong> Unified state tracking + automated document generation + Azure AD–driven workflow automation + daily calibration digests reduce administrative work on engineers and managers — time previously spent on cross-spreadsheet reconciliation, manual document preparation, and routing approval signatures becomes available for lab work.
+</div>
+
+<h2 id="why">3. Why an In-House System (vs. Labware)</h2>
+
+<p>Labware LIMS is widely used in UL Solutions labs for sample tracking and instrument calibration. We evaluated it — and several other commercial LIMS — but the EMS project addresses requirements that fall outside Labware's scope. The two systems are <strong>complementary, not competing</strong>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:36%">Required Capability (per UL Solutions Korea internal procedure)</th>
+      <th style="width:22%">Labware LIMS</th>
+      <th style="width:22%">EMS (in-house)</th>
+      <th style="width:20%">Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Master equipment inventory &amp; calibration expiry tracking</td>
+      <td><span class="badge badge-yes">Covered</span></td>
+      <td><span class="badge badge-yes">Covered</span></td>
+      <td>Overlap — both can do this</td>
+    </tr>
+    <tr>
+      <td><strong>Unified state across loan / calibration / repair / non-conformance / disposal in a single record</strong></td>
+      <td><span class="badge badge-no">Fragmented</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>One source of truth per equipment</td>
+    </tr>
+    <tr>
+      <td><strong>Automated quality document generation from system data (zero manual transcription)</strong></td>
+      <td><span class="badge badge-no">Not covered</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>Internal procedure forms generated as PDF</td>
+    </tr>
+    <tr>
+      <td><strong>Proactive email alerts for calibration approaching/past expiry</strong></td>
+      <td><span class="badge badge-partial">Partial</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>ISO/IEC 17025 §6.4 compliance assurance</td>
+    </tr>
+    <tr>
+      <td><strong>Azure AD group → team / site auto-mapping with email workflow notifications</strong></td>
+      <td><span class="badge badge-no">Not native</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>SSO + zero-touch user lifecycle</td>
+    </tr>
+    <tr>
+      <td>Equipment loan / return workflows (반출·반납) across SUW / UIW / PYT</td>
+      <td><span class="badge badge-no">Not native</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>Equipment transfer form digitalized</td>
+    </tr>
+    <tr>
+      <td>3-stage calibration plan approval (engineer → quality → lab manager)</td>
+      <td><span class="badge badge-no">Not native</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>Procedural duty separation</td>
+    </tr>
+    <tr>
+      <td>Intermediate inspection &amp; non-conformance management with approval chain</td>
+      <td><span class="badge badge-partial">Partial</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>QP-18-specific lifecycle</td>
+    </tr>
+    <tr>
+      <td>Test software information management with P-number registry (ISO 17025 §6.4.13 / §7.11)</td>
+      <td><span class="badge badge-no">Not covered</span></td>
+      <td><span class="badge badge-yes">Covered</span></td>
+      <td>Test software lifecycle</td>
+    </tr>
+    <tr>
+      <td>Equipment disposal multi-step approval with audit trail</td>
+      <td><span class="badge badge-no">Not covered</span></td>
+      <td><span class="badge badge-yes">Covered</span></td>
+      <td>QP-18 disposal procedure</td>
+    </tr>
+    <tr>
+      <td>Korean-language UI &amp; Korea-specific procedure form templates</td>
+      <td><span class="badge badge-partial">Customization</span></td>
+      <td><span class="badge badge-yes">Native</span></td>
+      <td>i18n + KR-specific forms</td>
+    </tr>
+    <tr>
+      <td>Per-site role-based access (SUW / UIW / PYT scope)</td>
+      <td><span class="badge badge-partial">Partial</span></td>
+      <td><span class="badge badge-yes">Core feature</span></td>
+      <td>Azure AD group → site mapping</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Bottom line:</strong> Labware is excellent for <em>what it was designed for</em> — sample/instrument data in a LIMS context. EMS is purpose-built for the <em>procedural workflows</em> defined in UL Solutions Korea's internal Equipment Management Procedure (approvals, loans, inspections, disposals) that are unique to UL Solutions Korea's lab operations. The project is already in advanced development (26 backend modules, full frontend, comprehensive E2E test coverage), and replacing it with Labware would not satisfy the procedural audit requirements.
+</div>
+
+<h2 id="arch">4. System Architecture</h2>
+
+<p>EMS is a classic 3-tier web application, fully containerized. The diagram below shows how the components interact within a single application server.</p>
+
+<div class="mermaid">
+flowchart TB
+    subgraph Browser["End User (Browser)"]
+        U1[Lab Engineer]
+        U2[Technical Manager]
+        U3[Quality Manager]
+        U4[Lab Manager]
+    end
+
+    subgraph CorpNet["UL Solutions Corporate Intranet (LAN, VPN/MPLS between sites)"]
+        subgraph Server["Application Server (Single Host — on-prem or Azure VM)"]
+            subgraph DockerHost["Docker Engine"]
+                NGINX["Nginx Reverse Proxy<br/>:443 HTTPS<br/>TLS 1.2/1.3"]
+                FE["Next.js 16 Frontend<br/>:3000<br/>React 19 / TypeScript"]
+                BE["NestJS 10 Backend API<br/>:3001<br/>Node.js 20 / TypeScript"]
+                PG[("PostgreSQL 16<br/>:5432")]
+                RD[("Redis 7<br/>:6379")]
+                FS[("RustFS Object Storage<br/>S3-compatible<br/>:9000")]
+                MON["Monitoring Stack<br/>Prometheus / Grafana / Loki"]
+            end
+        end
+    end
+
+    subgraph Azure["UL Solutions Azure Tenant"]
+        AAD["Azure AD / Entra ID<br/>SSO Authentication only"]
+    end
+
+    Browser -->|HTTPS :443| NGINX
+    NGINX --> FE
+    NGINX --> BE
+    BE --> PG
+    BE --> RD
+    BE --> FS
+    FE -.->|OAuth redirect| AAD
+    AAD -.->|ID token| FE
+    BE --> MON
+    FE --> MON
+
+    classDef public fill:#fff8e6,stroke:#ed6c02,stroke-width:2px
+    classDef internal fill:#e6f4ea,stroke:#2e7d32,stroke-width:1px
+    classDef external fill:#f0f7ff,stroke:#0073e6,stroke-width:2px
+    class NGINX public
+    class FE,BE,PG,RD,FS,MON internal
+    class AAD external
+</div>
+
+<div class="callout">
+  <strong>Key design points:</strong>
+  <ul style="margin:8px 0;">
+    <li><strong>Single host deployment</strong> — All services run on one server via Docker Compose. No multi-node orchestration (Kubernetes) required at current scale.</li>
+    <li><strong>Only Nginx is exposed</strong> — PostgreSQL, Redis, and the object storage have no published ports; they are reachable only inside the Docker internal network.</li>
+    <li><strong>Restricted outbound egress</strong> — Outbound traffic is limited to a small allowlist: Azure AD endpoints (for SSO), UL internal package mirror (OS / container updates), and UL SMTP relay (for notification emails). No general internet egress is required for the application to function. Final allowlist will be configured per UL Solutions Korea standard.</li>
+    <li><strong>Stateless application tier</strong> — Frontend and backend can be restarted/redeployed without data loss. State lives only in PostgreSQL, Redis, and the object storage.</li>
+  </ul>
+</div>
+
+<h2 id="network">5. Network &amp; Access Control</h2>
+
+<div class="callout">
+  <strong>Decision:</strong> The project will use <strong>Azure AD Conditional Access</strong> as the access-control mechanism. This means the application server itself is reachable from the internet, but Azure AD enforces login restrictions (UL-managed device, MFA, location, etc.) before any user can authenticate. This pattern allows mobile and remote use by lab personnel while keeping access scoped to UL Solutions–managed identities and devices.
+</div>
+
+<h3>How this is enforced</h3>
+<table>
+  <thead>
+    <tr><th style="width:30%">Layer</th><th>Enforcement</th><th style="width:25%">Where configured</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Reachability</td>
+      <td>Server reachable on the public internet (or UL corporate network — both work). No firewall-based geo-restriction is required.</td>
+      <td>Server / network team</td>
+    </tr>
+    <tr>
+      <td>Authentication</td>
+      <td>Azure AD SSO with MFA. Application redirects unauthenticated users to <code>login.microsoftonline.com</code>; only valid UL Solutions identities can complete login.</td>
+      <td>Application code (already implemented — see Section 6)</td>
+    </tr>
+    <tr>
+      <td>Conditional Access policies</td>
+      <td>Azure AD policies (set by Global IT in the UL Solutions tenant) determine <em>which</em> devices, locations, and risk levels are allowed to complete login. Examples: require UL-managed device, block legacy auth, enforce MFA always.</td>
+      <td>Azure AD tenant policy (Global IT)</td>
+    </tr>
+    <tr>
+      <td>Authorization</td>
+      <td>After login, the application enforces role-based access using Azure AD group membership (default-deny for any endpoint without explicit permission).</td>
+      <td>Application code (already implemented)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <strong>Important clarification:</strong> Conditional Access policies are <em>not</em> implemented in the application's code — they are tenant-level Azure AD configuration applied by Global IT. The application's responsibility is to delegate authentication to Azure AD; once Conditional Access blocks a non-compliant login at the Azure AD layer, the application never sees that user.
+</div>
+
+<h3>Network requirements</h3>
+<div class="grid-2">
+  <div class="info-box">
+    <h4>Inbound</h4>
+    <ul>
+      <li>:443 HTTPS — application access (open to internet, gated by Azure AD Conditional Access at login)</li>
+      <li>:22 SSH — admin only, key-based, restricted to Global Technology's admin gateway / approved admin IPs</li>
+    </ul>
+  </div>
+  <div class="info-box">
+    <h4>Outbound (allowlist)</h4>
+    <ul>
+      <li>Azure AD endpoints (<code>login.microsoftonline.com</code>, <code>graph.microsoft.com</code>) — for SSO and group lookup</li>
+      <li>UL internal package mirror — for OS / container image updates</li>
+      <li>UL SMTP relay — for daily digest emails</li>
+      <li>No general internet egress required</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Internal Docker network isolation</h3>
+<ul>
+  <li><code>web-public</code> — only Nginx (:80/:443) is reachable from outside the host</li>
+  <li><code>app-network</code> — <code>internal: true</code>, no host port mapping for backend / DB / Redis / object storage</li>
+  <li><code>monitoring-network</code> — internal, accessed via Nginx reverse proxy with authentication</li>
+</ul>
+
+<h2 id="auth">6. Authentication Flow (Azure AD SSO)</h2>
+
+<div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant Nginx
+    participant NextJS as Next.js Frontend
+    participant NestJS as NestJS Backend
+    participant AAD as Azure AD (Entra ID)
+
+    Browser->>Nginx: GET /login
+    Nginx->>NextJS: forward
+    NextJS-->>Browser: Redirect to Azure AD
+    Browser->>AAD: Login + MFA
+    AAD-->>Browser: OAuth code
+    Browser->>NextJS: /api/auth/callback/azure-ad
+    NextJS->>NestJS: POST /api/users/sync (server-to-server)
+    NestJS-->>NextJS: User record + role mapping
+    NestJS->>NestJS: Generate JWT (access 15min + refresh 7d)
+    NextJS-->>Browser: Set HTTP-only session cookie
+
+    Note over Browser,NestJS: Subsequent API requests
+    Browser->>NestJS: API call with Bearer token
+    NestJS->>NestJS: JwtAuthGuard + PermissionsGuard
+    NestJS-->>Browser: Response
+</div>
+
+<div class="grid-2">
+  <div class="info-box">
+    <h4>Token lifecycle</h4>
+    <ul>
+      <li>Access token: <strong>15 minutes</strong></li>
+      <li>Refresh token: <strong>7 days</strong> (rotation on each refresh)</li>
+      <li>Absolute session: <strong>30 days</strong> (forces re-login)</li>
+      <li>Idle timeout: <strong>30 minutes</strong> (client-side)</li>
+    </ul>
+  </div>
+  <div class="info-box">
+    <h4>Authorization model</h4>
+    <ul>
+      <li>Default-deny RBAC via <code>PermissionsGuard</code></li>
+      <li>Azure AD group → team / site mapping</li>
+      <li>Per-permission decorators on every endpoint</li>
+      <li>Procedural duty separation enforced (e.g., creator ≠ approver)</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="modules">7. Functional Module Map (26 backend modules)</h2>
+
+<div class="mermaid">
+flowchart TB
+    subgraph Core["Core Domain Modules"]
+        EQ["equipment<br/>CRUD + disposal + repair history"]
+        CA["calibration<br/>calibration records"]
+        CO["checkouts<br/>loan / repair / rental"]
+        AP["approvals<br/>1 / 2 / 3-step unified"]
+    end
+
+    subgraph Inspection["Inspection and Quality"]
+        II["intermediate-inspections"]
+        SI["self-inspections"]
+        NC["non-conformances"]
+        CP["calibration-plans<br/>3-stage approval"]
+        CF["calibration-factors"]
+    end
+
+    subgraph Support["Support and Logistics"]
+        CB["cables"]
+        EI["equipment-imports<br/>incoming equipment"]
+        IFT["inspection-form-templates"]
+        SW["software-validations"]
+        TS["test-software<br/>P-number registry"]
+    end
+
+    subgraph Platform["Platform and Admin"]
+        AU["auth<br/>JWT + Azure AD"]
+        US["users"]
+        TM["teams"]
+        SE["settings"]
+        DA["dashboard"]
+        RP["reports<br/>CSV / PDF export"]
+        DM["data-migration"]
+    end
+
+    subgraph Cross["Cross-cutting"]
+        AD["audit<br/>audit log"]
+        DC["documents<br/>SHA-256 + versioning"]
+        NT["notifications"]
+        SC["security"]
+        MO["monitoring"]
+    end
+
+    EQ --> CA
+    EQ --> CO
+    CA --> CP
+    CO --> AP
+    CP --> AP
+    NC --> AP
+    EQ --> II
+    EQ --> SI
+    AP --> NT
+    AU --> US
+    US --> TM
+
+    classDef core fill:#003876,color:#fff,stroke:#001d3d
+    classDef insp fill:#0073e6,color:#fff,stroke:#003876
+    classDef supp fill:#f0f7ff,stroke:#0073e6
+    classDef plat fill:#e6f4ea,stroke:#2e7d32
+    classDef cross fill:#fff8e6,stroke:#ed6c02
+    class EQ,CA,CO,AP core
+    class II,SI,NC,CP,CF insp
+    class CB,EI,IFT,SW,TS supp
+    class AU,US,TM,SE,DA,RP,DM plat
+    class AD,DC,NT,SC,MO cross
+</div>
+
+<h2 id="workflows">8. Key Workflows</h2>
+
+<p style="font-size:14px;color:var(--text-muted)">Workflows below reflect the actual implemented state machines and approval chains in the codebase, simplified for readability. Detailed FSM transitions are tracked in source-of-truth enums (e.g., <code>CheckoutStatusEnum</code> has 13 states for the full lifecycle).</p>
+
+<h3>8.1 Equipment Checkout / Return (simplified)</h3>
+
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> pending: Engineer submits checkout request
+    pending --> approved: Manager approves
+    pending --> rejected: Manager rejects
+    pending --> canceled: Engineer cancels
+    approved --> checked_out: Lender hands over equipment
+    checked_out --> in_use: Borrower receives
+    in_use --> overdue: Past due date
+    in_use --> borrower_returned: Borrower initiates return
+    overdue --> borrower_returned: Borrower initiates return
+    borrower_returned --> lender_received: Lender confirms receipt
+    lender_received --> return_approved: Return inspection passes
+    lender_received --> NC: Defect found - trigger non-conformance
+    return_approved --> [*]
+    rejected --> [*]
+    canceled --> [*]
+    NC --> [*]
+</div>
+
+<h3>8.2 Calibration Plan — 3-stage approval</h3>
+
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> draft: Technical Manager creates plan
+    draft --> pending_review: Submit for Quality Manager review
+    pending_review --> pending_approval: Quality Manager approves review
+    pending_review --> rejected: Quality Manager rejects (with reason)
+    pending_approval --> approved: Lab Manager final approval
+    pending_approval --> rejected: Lab Manager rejects (with reason)
+    rejected --> draft: Author revises and resubmits
+    approved --> [*]
+</div>
+
+<p style="font-size:13px;color:var(--text-muted)"><em>States from <code>CalibrationPlanStatusEnum</code> in <code>packages/schemas/src/enums/calibration-plan.ts</code>. Each transition writes an audit log entry; the requester cannot also be an approver.</em></p>
+
+<h3>8.3 Non-Conformance and Disposal</h3>
+
+<div class="mermaid">
+flowchart LR
+    A[Non-conformance detected<br/>via inspection or return] --> B{Resolution path}
+    B -->|Repair| C[Repair workflow]
+    B -->|Disposal| D[Disposal request]
+    C --> E[Repair completed]
+    E --> F[Re-calibration scheduled]
+    F --> G[Equipment back in service]
+    D --> H[Multi-step disposal approval]
+    H --> I[Equipment status: disposed<br/>Audit log retained]
+</div>
+
+<h2 id="stack">9. Technology Stack</h2>
+
+<table>
+  <thead>
+    <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td rowspan="3">Frontend</td><td>Next.js</td><td>16 (App Router)</td><td>SSR/SSG web framework</td></tr>
+    <tr><td>React</td><td>19</td><td>UI library</td></tr>
+    <tr><td>TypeScript</td><td>5.x</td><td>Type-safe development</td></tr>
+    <tr><td rowspan="3">Backend</td><td>NestJS</td><td>10</td><td>API framework</td></tr>
+    <tr><td>Node.js</td><td>20 LTS</td><td>Runtime</td></tr>
+    <tr><td>Drizzle ORM</td><td>latest</td><td>Type-safe DB access</td></tr>
+    <tr><td rowspan="3">Data</td><td>PostgreSQL</td><td>16</td><td>Primary data store</td></tr>
+    <tr><td>Redis</td><td>7</td><td>Cache, token blacklist</td></tr>
+    <tr><td>RustFS</td><td>latest</td><td>S3-compatible object storage (documents, photos)</td></tr>
+    <tr><td>Auth</td><td>Azure AD + JWT</td><td>Entra ID P2</td><td>SSO with MFA, JWT for API auth</td></tr>
+    <tr><td>Reverse proxy</td><td>Nginx</td><td>1.25+</td><td>TLS termination, rate limiting</td></tr>
+    <tr><td>Containers</td><td>Docker Compose</td><td>Compose v2</td><td>Service orchestration on single host</td></tr>
+    <tr><td>Observability</td><td>Prometheus, Grafana, Loki</td><td>latest stable</td><td>Metrics, dashboards, log aggregation</td></tr>
+  </tbody>
+</table>
+
+<h2 id="scale">10. Expected Scale &amp; Usage</h2>
+
+<div class="callout">
+  <strong>Phased rollout plan:</strong> The system will be deployed gradually rather than to all users at once.
+  <ol style="margin:8px 0;">
+    <li><strong>Phase 1 — Pilot:</strong> Suwon Lab RF team only. Verify usefulness and gather feedback on the actual procedure mapping.</li>
+    <li><strong>Phase 2 — Suwon Lab:</strong> Expand to the remaining teams in Suwon (EMC, SAR, Automotive EMC, etc.) once Phase 1 validates the workflow.</li>
+    <li><strong>Phase 3 — Cross-site:</strong> Roll out to Uiwang and Pyeongtaek labs as the system proves stable across multiple teams.</li>
+  </ol>
+  This means the initial server load is significantly lower than the full-scale numbers below. The recommended server spec includes headroom for full-scale operation, so no resizing is anticipated as adoption grows.
+</div>
+
+<table>
+  <thead><tr><th style="width:35%">Dimension</th><th>Estimate</th></tr></thead>
+  <tbody>
+    <tr><td>Total registered users</td><td>~80–100 (engineers, managers, admins across 3 labs)</td></tr>
+    <tr><td>Concurrent users (peak)</td><td>~20–30 during morning standups / approval rounds (estimate)</td></tr>
+    <tr><td>Equipment records (count of equipment)</td><td>Approximately 100–300 equipment items per team; total system count pending full inventory load during data migration phase</td></tr>
+    <tr><td>Calibration records / year</td><td>Approximately 1 record per equipment per year</td></tr>
+    <tr><td>Checkout transactions / year</td><td>Estimate pending — depends on team sizes and rental volume</td></tr>
+    <tr><td>Document storage</td><td>Initial estimate ~50 GB over 5 years (calibration certs, photos, reports); final size depends on document attach rate</td></tr>
+    <tr><td>Database size</td><td>Initial &lt;5 GB, expected to remain &lt;20 GB over 5 years based on row count estimates</td></tr>
+    <tr><td>Access pattern</td><td>UL employees only, weekday business hours (KST)</td></tr>
+    <tr><td>Availability requirement</td><td>Business-hours availability; non-mission-critical (24×7 not required)</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:13px;color:var(--text-muted)"><em>Equipment count per team varies by team scope (testing equipment vs. supporting equipment). Final figures will be confirmed during the data migration phase when the full inventory is loaded into the system.</em></p>
+
+<h2 id="status">11. Current Project Status</h2>
+
+<div class="grid-2">
+  <div class="info-box">
+    <h4>What's complete</h4>
+    <ul>
+      <li>All 26 backend modules implemented</li>
+      <li>Full frontend (Next.js 16, role-based dashboards)</li>
+      <li>Comprehensive automated test coverage<br>(unit + integration + E2E with Playwright)</li>
+      <li>Cybersecurity Architecture Review submission accepted by Lance Morrow</li>
+      <li>Quality document mapping verified with lab team</li>
+      <li>Containerized deployment (Docker Compose)</li>
+    </ul>
+  </div>
+  <div class="info-box">
+    <h4>What's pending</h4>
+    <ul>
+      <li><strong>Production server provisioning</strong> ← <em>this request</em></li>
+      <li>Final security review re-submission once server is ready</li>
+      <li>User acceptance testing with lab team</li>
+      <li>Production cutover and training</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  Equipment Management System — Project Overview &nbsp;|&nbsp; UL Solutions Confidential — Internal Use Only<br>
+  Contact: Myeongjun Kwon (Myeongjun.Kwon@ul.com) &nbsp;|&nbsp; +82.10.6291.7738
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#003876',
+      primaryTextColor: '#ffffff',
+      primaryBorderColor: '#001d3d',
+      lineColor: '#5a6470',
+      secondaryColor: '#0073e6',
+      tertiaryColor: '#f0f7ff'
+    },
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: true, showSequenceNumbers: true }
+  });
+</script>
+
+</body>
+</html>

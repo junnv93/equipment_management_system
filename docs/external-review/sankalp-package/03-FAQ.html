@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Equipment Management System — Frequently Asked Questions</title>
+<style>
+  :root {
+    --brand: #003876;
+    --accent: #0073e6;
+    --bg: #ffffff;
+    --bg-alt: #f5f7fa;
+    --border: #d1d9e0;
+    --text: #1a1a1a;
+    --text-muted: #5a6470;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    background: var(--bg);
+  }
+  header {
+    border-bottom: 3px solid var(--brand);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+  }
+  header h1 { color: var(--brand); margin: 0 0 6px 0; font-size: 26px; }
+  header .meta { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+  h2 {
+    color: var(--brand);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 6px;
+    margin-top: 36px;
+    font-size: 19px;
+  }
+  .qa {
+    margin: 18px 0;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    background: #fff;
+  }
+  .qa .q {
+    font-weight: 600;
+    color: var(--brand);
+    margin-bottom: 8px;
+    font-size: 15px;
+  }
+  .qa .q::before {
+    content: "Q. ";
+    color: var(--accent);
+  }
+  .qa .a {
+    color: var(--text);
+  }
+  .qa .a::before {
+    content: "A. ";
+    color: var(--accent);
+    font-weight: 600;
+  }
+  code {
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+  }
+  th { background: var(--bg-alt); }
+  .toc {
+    background: var(--bg-alt);
+    padding: 14px 22px;
+    border-radius: 6px;
+    margin: 16px 0 28px 0;
+    border: 1px solid var(--border);
+  }
+  .toc h3 { margin-top: 0; color: var(--brand); font-size: 15px; }
+  .toc ul { columns: 2; column-gap: 24px; margin: 8px 0; padding-left: 18px; }
+  .toc a { color: var(--accent); text-decoration: none; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+  footer {
+    margin-top: 50px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Frequently Asked Questions</h1>
+  <div class="meta">
+    <strong>Project:</strong> Equipment Management System (EMS) &nbsp;|&nbsp; <strong>Date:</strong> 2026-05-06<br>
+    <strong>Purpose:</strong> Pre-emptive answers to questions Global Technology may have, to enable async progress without a call.
+  </div>
+</header>
+
+<div class="toc">
+  <h3>Quick navigation</h3>
+  <ul>
+    <li><a href="#process">Process &amp; Access</a></li>
+    <li><a href="#tech">Technology Choices</a></li>
+    <li><a href="#labware">Labware &amp; Alternatives</a></li>
+    <li><a href="#security">Security &amp; Compliance</a></li>
+    <li><a href="#ops">Operations &amp; Support</a></li>
+    <li><a href="#scale">Scale &amp; Cost</a></li>
+  </ul>
+</div>
+
+<h2 id="process">A. Process &amp; Access</h2>
+
+<div class="qa">
+  <div class="q">The ServiceNow link works for me — why can't you submit it yourself?</div>
+  <div class="a">Both myself and Wonsik Kim (UL Solutions Korea local IT) get the error <em>"You are either not authorized or the cart item is invalid"</em> when clicking the same link. This is a permission scoping difference — the catalog item appears restricted to certain user groups. Lance Morrow (Global Cybersecurity) confirmed local/global IT typically handles this on behalf of submitters. We'd be grateful if Global Technology could submit the request using the spec sheet provided, or grant the necessary catalog access to me directly.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Why not just go through Wonsik (local IT) for this?</div>
+  <div class="a">Wonsik forwarded this to Global Technology because the same access error occurs on his account too. He's looped in on the email thread and will assist with anything UL Solutions Korea–local (network rules, DNS, etc.) once the server is provisioned.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Do we need a meeting to discuss?</div>
+  <div class="a">My preference is to keep this asynchronous and use email. The accompanying documents (Project Overview + Server Specification + this FAQ) should contain everything needed to submit the ServiceNow request. If a specific question can't be resolved by email, I'm happy to set up a call at that point — but I'd rather not put time on your calendar speculatively. Same-day email response guaranteed on my side.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What's the urgency / timeline?</div>
+  <div class="a">Lance Morrow's CAR re-review is blocked on having a properly managed server (he requested we move off the desktop PC). The lab team is ready to begin user acceptance testing as soon as the server is available. Realistic target: production cutover within 4–6 weeks of server provisioning.</div>
+</div>
+
+<h2 id="tech">B. Technology Choices</h2>
+
+<div class="qa">
+  <div class="q">Why Next.js / NestJS / PostgreSQL? Is this a UL-standard stack?</div>
+  <div class="a">These are widely-used, mature, open-source technologies with strong long-term support:
+  <ul>
+    <li><strong>Next.js 16 + React 19</strong> — industry-standard for enterprise web apps; used by Microsoft, Netflix, TikTok</li>
+    <li><strong>NestJS 10</strong> — TypeScript-first Node.js framework with strong architectural conventions</li>
+    <li><strong>PostgreSQL 16</strong> — leading open-source RDBMS; commonly used across UL Solutions</li>
+  </ul>
+  None of these are unusual or experimental choices. They were selected for type safety, productivity, and the ability to ship a complex domain application with a small team. Happy to provide further justification if a specific concern arises.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Does this need a separate development / staging environment?</div>
+  <div class="a">No, not at this stage. Development happens on engineer laptops; we'll cut over directly to production with a phased rollout (read-only first, then write access by user group). Adding a staging environment can be a future enhancement once the system is in steady-state production use.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Why a single server instead of a clustered/HA deployment?</div>
+  <div class="a">Right-sizing for the current scale (~30 concurrent users, business-hours availability, non-mission-critical). HA introduces significant complexity (load balancer, DB replication, distributed cache) that's not justified by the user count or availability requirements. The application is designed to be cluster-ready if needed in the future — stateless app tier, externalized session via Redis — but starting with a single host is the right call.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What about Kubernetes?</div>
+  <div class="a">Docker Compose is sufficient for single-host orchestration. Kubernetes would be overkill at this scale and would significantly raise the operational burden for a small lab engineering team. Migration path to Kubernetes is straightforward later if needed.</div>
+</div>
+
+<h2 id="labware">C. Labware &amp; Alternatives</h2>
+
+<div class="qa">
+  <div class="q">Why not use Labware? It already covers calibration tracking.</div>
+  <div class="a">Labware is excellent for sample/instrument data in a LIMS context. EMS addresses requirements that fall outside Labware's scope:
+  <ul>
+    <strong>Procedural workflows specific to UL Solutions Korea's internal Equipment Management Procedure</strong> — equipment loan/return (반출·반납), 3-stage calibration plan approvals, intermediate inspections, non-conformance handling, equipment disposal. These are not generic LIMS features.
+    <li><strong>Cross-site (SUW / UIW / PYT) coordination</strong> with role-based site scoping</li>
+    <li><strong>Test software information management with P-number registry</strong> (ISO 17025 §6.4.13 / §7.11)</li>
+    <li><strong>Korean-language UI + Korea-specific procedure form templates</strong></li>
+  </ul>
+  Configuring Labware to do all this would essentially require building these workflows on top of Labware, at a cost likely exceeding in-house development. Where Labware overlaps (master inventory, calibration scheduling), we plan to keep the existing Labware usage as a read-only reference if the lab uses it; EMS doesn't replace Labware for labs that already use it.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Could we replace EMS with Labware later?</div>
+  <div class="a">Theoretically, but it would mean re-implementing every internal procedure workflow inside Labware customization. The current EMS development is already advanced (26 backend modules, full frontend, automated test coverage at both unit and end-to-end levels), so a switch would discard significant work. We're open to revisiting this if Labware adds native support for these workflows in the future, but at the current state, EMS is the more direct fit.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What is the most concrete productivity benefit of this project?</div>
+  <div class="a"><strong>Automated quality document generation from system data.</strong> Today, when an equipment is loaned, calibrated, inspected, or disposed of, an engineer fills the corresponding internal procedure form by hand — copying data that already exists in spreadsheets or in the engineer's notes. EMS generates these forms directly from the system records as PDF exports, removing the duplicate transcription step. Commercial LIMS such as Labware do not include UL Solutions Korea–specific forms out of the box, so equivalent functionality on a commercial product would require similar custom development effort.</div>
+</div>
+
+<div class="qa">
+  <div class="q">How does the system surface equipment with expired or expiring calibration?</div>
+  <div class="a">Two mechanisms:
+  <ul>
+    <li><strong>Daily digest email</strong> — at a user-configured time (e.g., 09:00 KST), users receive a digest summarizing equipment with calibration due soon (default 30 days, urgent threshold 3 days) and equipment past calibration expiry, plus any overdue checkouts. Implemented in <code>digest-email-scheduler.ts</code>; thresholds are constants in <code>packages/shared-constants/src/business-rules.ts</code>.</li>
+    <li><strong>Dashboard visibility</strong> — equipment status is displayed on the dashboard with an indicator for upcoming and past-due calibration.</li>
+  </ul>
+  This supports compliance with ISO/IEC 17025 §6.4 (equipment) by making calibration status visible and actionable, rather than relying on manual spreadsheet tracking.</div>
+</div>
+
+<div class="qa">
+  <div class="q">How are users created? Do I need to manage app accounts separately?</div>
+  <div class="a">No — there are no separate app accounts. Users authenticate via UL Solutions Azure AD SSO (existing tenant). On first login, EMS reads the user's Azure AD group memberships and automatically assigns them to the appropriate lab team(s) and per-site scope(s) (SUW / UIW / PYT). When HR moves a person between teams, the change flows through Azure AD groups and is reflected in EMS on next login. <strong>Zero-touch user lifecycle</strong> from the application's perspective.</div>
+</div>
+
+<div class="qa">
+  <div class="q">How do approvers know they have something to approve?</div>
+  <div class="a">Email notifications at each approval step via standard UL email infrastructure:
+  <ul>
+    <li>Approval request → email to next approver in the chain (technical manager → quality manager → lab manager)</li>
+    <li>Approval granted / rejected → email to requester</li>
+    <li>Calibration expiry warnings → email to equipment owner and team manager</li>
+  </ul>
+  This eliminates the historical pattern of engineers physically chasing managers down hallways for signatures, and removes "I didn't know I had to approve that" as a delay reason.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What about other commercial systems (e.g., MasterControl, BlueMountain, IndySoft)?</div>
+  <div class="a">Considered. None natively support the internal procedure's approval chain (lab manager + technical manager + quality manager duty separation), the dual-perspective lender/borrower form, or the multi-site team scoping. All would require customization to bridge the gap, with ongoing license costs. In-house development was determined to be a direct path to procedural compliance.</div>
+</div>
+
+<h2 id="security">D. Security &amp; Compliance</h2>
+
+<div class="qa">
+  <div class="q">Has this been through Cybersecurity review?</div>
+  <div class="a">Yes — Cybersecurity Architecture Review (CAR) submitted to Global Cybersecurity (Lance Morrow, CISSP) on 2026-04-02. Lance reviewed the architecture and indicated that building this system on a desktop PC is not permissible; he asked us to move to a properly managed on-prem or cloud server, after which the review can be re-completed. Securing that server is exactly what triggers this Global Technology request.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What sensitive data does this system store?</div>
+  <div class="a">Bounded scope:
+  <ul>
+    <li>Employee names, emails, and roles (already present in Azure AD; no new collection)</li>
+    <li>Equipment metadata (asset tags, calibration dates, locations, internal management numbers)</li>
+    <li>Calibration certificates and inspection records (uploaded as documents)</li>
+    <li>Audit logs of approval actions</li>
+  </ul>
+  No customer data and no test results from accredited testing services. Data classification: <strong>UL Solutions Confidential — Internal Use Only</strong>.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Is the data encrypted?</div>
+  <div class="a">Yes — at rest (disk encryption), in transit (TLS 1.2+ from browser to Nginx, internal Docker network for service-to-service), and authentication tokens are short-lived JWTs (15 min access, 7 day refresh) with rotation on each refresh.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Who can access the data?</div>
+  <div class="a">Only authenticated UL employees who are members of the appropriate Azure AD groups for their lab role. Default-deny RBAC: every endpoint requires an explicit permission. Procedural duty separation is enforced in code (e.g., the engineer who submits a calibration plan cannot also approve it).</div>
+</div>
+
+<div class="qa">
+  <div class="q">What happens if there's a security incident?</div>
+  <div class="a">Audit log retains all approval/data-changing actions with user identity and timestamp. JWT blacklist allows immediate token revocation. The application server can be isolated by GT (firewall block) without affecting Azure AD or other UL systems. Incident response would follow UL standard procedure with cooperation between lab team (application layer) and GT (infrastructure layer).</div>
+</div>
+
+<div class="qa">
+  <div class="q">If the server uses Azure AD SSO, can someone log in from a personal phone or laptop on the public internet?</div>
+  <div class="a"><strong>Reaching the login page</strong> from a personal device on the internet is possible — the server is internet-reachable in the chosen access-control model. <strong>Completing a login</strong>, however, is gated by Azure AD Conditional Access policies set at the UL Solutions tenant level: only users with valid UL credentials, MFA, and (typically) a UL-managed device can authenticate. Conditional Access is the enforcement layer; the application itself does not implement device or location checks because Azure AD handles those at tenant policy level. This model supports legitimate mobile / remote use by lab personnel while keeping access scoped to UL Solutions identities and managed devices.</div>
+</div>
+
+<h2 id="ops">E. Operations &amp; Support</h2>
+
+<div class="qa">
+  <div class="q">Who maintains this once it's live?</div>
+  <div class="a">Layered ownership:
+  <table>
+    <tr><th>Layer</th><th>Owner</th></tr>
+    <tr><td>VM / OS / network</td><td>Global Technology</td></tr>
+    <tr><td>Container runtime, application code, deployments, monitoring</td><td>Lab engineering team</td></tr>
+    <tr><td>User support</td><td>Lab engineering team</td></tr>
+  </table>
+  GT is not asked to learn or operate the application stack — only standard VM/OS-level operations.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What if the application breaks at 2am?</div>
+  <div class="a">It can wait. This is a business-hours system; nightly downtime is acceptable. Engineering team handles application incidents during business hours. No on-call burden on GT for application-level issues.</div>
+</div>
+
+<div class="qa">
+  <div class="q">How are deployments handled?</div>
+  <div class="a">Pull-based — lab team pushes code to a git repository, then SSH to the server and runs <code>docker compose pull && docker compose up -d</code>. No CI/CD infrastructure required from GT. Future enhancement could include a private container registry but is not required initially.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What monitoring will be in place?</div>
+  <div class="a">Prometheus + Grafana + Loki (all running in Docker on the same host, accessed via Nginx reverse proxy with authentication). The lab team monitors application metrics, error rates, response times, and audit log activity. Host-level monitoring (CPU, memory, disk) can either use UL standard tooling (preferred) or the included Node Exporter.</div>
+</div>
+
+<h2 id="scale">F. Scale &amp; Cost</h2>
+
+<div class="qa">
+  <div class="q">What's the expected user count and load?</div>
+  <div class="a">~80–100 total registered users across SUW / UIW / PYT. Peak concurrent: ~20–30 estimated, during morning standups and approval rounds. Actual load is light — lab managers reviewing approvals, engineers checking equipment status. The 4 vCPU / 16 GB spec has substantial headroom.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Will it scale beyond this?</div>
+  <div class="a">If usage extends to other UL labs globally, yes. Architecture is cluster-ready: stateless app tier, Redis-based session, PostgreSQL with replication path. Going from single-host to 2-3 nodes with a load balancer is straightforward when the time comes.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What's the rough cost estimate?</div>
+  <div class="a">Cost will follow whatever model UL Solutions Korea uses for similar managed servers — the project does not have an independent cost estimate to propose. The hardware footprint is modest (4 vCPU / 16 GB RAM / 200 GB SSD); concrete pricing will depend on UL Solutions Korea's negotiated rates and the chosen hosting option (Azure VM vs. on-prem). The project team will adopt whichever option the IT team recommends.</div>
+</div>
+
+<div class="qa">
+  <div class="q">What if we need to decommission this later?</div>
+  <div class="a">Clean shutdown path: stop containers, archive PostgreSQL dump and object storage bucket, hand the archive to UL Solutions Korea records management per the internal document retention policy, then deprovision the server. No external dependencies to unwind beyond Azure AD app registration.</div>
+</div>
+
+<footer>
+  Equipment Management System — FAQ &nbsp;|&nbsp; UL Solutions Confidential — Internal Use Only<br>
+  Contact: Myeongjun Kwon (Myeongjun.Kwon@ul.com) &nbsp;|&nbsp; +82.10.6291.7738<br>
+  If a question is missing, please email back — same-day response guaranteed.
+</footer>
+
+</body>
+</html>
