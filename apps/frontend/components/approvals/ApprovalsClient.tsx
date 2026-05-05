@@ -334,24 +334,25 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
     },
   });
 
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
     if (selection.count === 0) return;
     const meta = TAB_META[activeTab];
     const selectedIds = Array.from(selection.selected);
     if (meta?.commentRequired) {
+      // comment 입력 dialog는 별도 — 본 콜백은 즉시 resolve (BulkActionBar AlertDialog close)
       setIsBulkApproveCommentOpen(true);
       setBulkApproveComment('');
-    } else {
-      setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
-      bulkApproveMutation.mutate({ ids: selectedIds });
+      return;
     }
+    setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
+    await bulkApproveMutation.mutateAsync({ ids: selectedIds });
   };
 
-  const handleBulkApproveWithComment = () => {
+  const handleBulkApproveWithComment = async () => {
     if (!bulkApproveComment.trim()) return;
     const selectedIds = Array.from(selection.selected);
     setProcessingIds((prev) => new Set([...prev, ...selectedIds]));
-    bulkApproveMutation.mutate({ ids: selectedIds, comment: bulkApproveComment });
+    await bulkApproveMutation.mutateAsync({ ids: selectedIds, comment: bulkApproveComment });
   };
 
   // ✅ 일괄 반려 처리

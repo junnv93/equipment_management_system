@@ -29,7 +29,14 @@ interface BulkActionBarProps {
   /** useRowSelection.selectAllOnPage — 전체 선택 핸들러 */
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onBulkApprove: () => void | Promise<void>;
+  /**
+   * 일괄 승인 콜백 — `Promise<void>` 강제 (mutate fire-and-forget 금지).
+   *
+   * AlertDialog 내부 `handleBulkApprove`가 `await onBulkApprove()` 후 close하므로,
+   * 호출자는 반드시 `mutation.mutateAsync()`를 await/return해야 한다.
+   * `() => void` 콜백을 전달하면 dialog가 API 응답 전 즉시 close + isPending 시각 피드백 유실.
+   */
+  onBulkApprove: () => Promise<void>;
   /** canReject: false 카테고리(inspection 등)에서 undefined — 반려 버튼 + 모달 미표시 (AR-8) */
   onBulkReject?: (reason: string) => Promise<void>;
   actionLabel: string;
@@ -68,6 +75,9 @@ export function BulkActionBar({
     try {
       await onBulkApprove();
       setIsApproveDialogOpen(false);
+    } catch {
+      // mutateAsync reject (네트워크/서버 5xx) — error toast는 useOptimisticMutation onError에서
+      // 표시. dialog는 유지하여 사용자가 cancel/retry 결정 가능. unhandled rejection 차단.
     } finally {
       setIsProcessing(false);
     }

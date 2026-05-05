@@ -273,6 +273,75 @@ grep -rB 1 -A 4 "rowIds\.forEach" apps/frontend --include="*.tsx" 2>/dev/null \
 # 기대: 0 hit (모두 SSOT 경유)
 ```
 
+### Step 12 — onBulkApprove 콜백 시그니처 `Promise<void>` 강제 (mutateAsync UX consistency, 2026-05-06)
+
+`BulkActionBar` / `CheckoutBulkActionBar` 의 `onBulkApprove` 콜백을 `() => void | Promise<void>` 느슨한 union 으로 두면 호출자가 `mutation.mutate()` (fire-and-forget) 를 전달 가능 → AlertDialog `await onBulkApprove()` 즉시 resolve → API 응답 전 dialog close + isPending 시각 피드백 유실. 콜백 시그니처를 `() => Promise<void>` 로 좁혀 컴파일타임 강제.
+
+✅ **Required pattern (호출자)**:
+```tsx
+// 호출자 (ApprovalsClient / OutboundCheckoutsTab)
+const handleBulkApprove = useCallback(async () => {
+  if (selection.count === 0) return;
+  await bulkApproveMutation.mutateAsync({ ids: Array.from(selection.selected) });
+}, [bulkApproveMutation, selection]);
+
+// wrapper 컴포넌트 (BulkActionBar / CheckoutBulkActionBar)
+interface Props {
+  onBulkApprove: () => Promise<void>; // ✅ Promise 강제
+  // ❌ () => void | Promise<void> — fire-and-forget mutate 전달 가능
+}
+
+// internal handleBulkApprove (BulkActionBar 내부) — try/catch/finally 표준
+const handleBulkApprove = async () => {
+  setIsProcessing(true);
+  try {
+    await onBulkApprove();
+    setIsApproveDialogOpen(false); // 성공 시만 close
+  } catch {
+    // mutateAsync reject (네트워크/서버 5xx) — toast는 useOptimisticMutation onError 처리.
+    // dialog 유지하여 사용자가 cancel/retry 결정. unhandled rejection 차단.
+  } finally {
+    setIsProcessing(false);
+  }
+};
+```
+
+❌ 안티패턴 (회귀):
+```tsx
+// 시그니처 union — 호출자가 fire-and-forget 전달 가능
+onBulkApprove: () => void | Promise<void>;
+
+// 호출자 fire-and-forget
+const handleBulkApprove = () => {
+  bulkApproveMutation.mutate({ ids });  // ❌ mutate, await 없음
+};
+```
+
+```bash
+# Step 12-1: BulkActionBar wrapper props 시그니처 — 정확히 `() => Promise<void>`
+grep -E "onBulkApprove: \(\) => Promise<void>" \
+  apps/frontend/components/approvals/BulkActionBar.tsx \
+  apps/frontend/components/checkouts/CheckoutBulkActionBar.tsx
+# 기대: 양쪽 모두 hit (각 1건)
+
+# Step 12-2: 시그니처 union 잔존 탐지
+grep -rE "onBulkApprove.*=>.*void \| Promise" apps/frontend/components --include="*.tsx" 2>/dev/null
+# 기대: 0 hit
+
+# Step 12-3: 호출자 wiring — bulkApproveMutation.mutate (fire-and-forget) 금지
+grep -rE "bulkApproveMutation\.mutate\(" apps/frontend \
+  --include="*.tsx" 2>/dev/null \
+  | grep -v "mutateAsync" | grep -v "__tests__" | grep -v "\.test\."
+# 기대: 0 hit (모두 mutateAsync 사용)
+
+# Step 12-4: internal handleBulkApprove try/catch — unhandled rejection 차단
+grep -B 1 -A 8 "const handleBulkApprove = async" \
+  apps/frontend/components/approvals/BulkActionBar.tsx \
+  apps/frontend/components/checkouts/CheckoutBulkActionBar.tsx \
+  | grep -E "try \{|\} catch"
+# 기대: 양쪽 모두 try + catch hit
+```
+
 ## verify 명령 (모두 실행)
 
 ```bash
@@ -292,6 +361,13 @@ grep -E "checked.*indeterminate|isIndeterminate" apps/frontend/components/common
 grep -rn "nativeEvent.isComposing" \
   apps/frontend/components/common apps/frontend/components/approvals \
   --include="*.tsx" 2>/dev/null
+
+# Step 12: mutateAsync UX consistency
+grep -E "onBulkApprove: \(\) => Promise<void>" \
+  apps/frontend/components/approvals/BulkActionBar.tsx \
+  apps/frontend/components/checkouts/CheckoutBulkActionBar.tsx
+grep -rE "bulkApproveMutation\.mutate\(" apps/frontend --include="*.tsx" 2>/dev/null \
+  | grep -v "mutateAsync" | grep -v "__tests__"
 ```
 
 ## Common Failures

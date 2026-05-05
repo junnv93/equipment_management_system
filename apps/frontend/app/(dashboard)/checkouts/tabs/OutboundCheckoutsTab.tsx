@@ -342,10 +342,10 @@ export default function OutboundCheckoutsTab({
     },
   });
 
-  const handleBulkApprove = useCallback(() => {
+  const handleBulkApprove = useCallback(async () => {
     if (selection.count === 0) return;
     track('checkout.bulk_approve', { count: selection.count });
-    bulkApproveMutation.mutate({ ids: Array.from(selection.selected) });
+    await bulkApproveMutation.mutateAsync({ ids: Array.from(selection.selected) });
   }, [bulkApproveMutation, selection]);
 
   const handleBulkReject = useCallback(
