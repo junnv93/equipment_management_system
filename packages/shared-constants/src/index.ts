@@ -393,3 +393,13 @@ export {
   type CheckoutDdayTier,
   type InlineActionVariantKey,
 } from './checkout-thresholds';
+
+// SystemHealthMetricsDto backend identity SSOT (storage / queue / error 데이터 소스 투명성)
+export {
+  SYSTEM_HEALTH_STORAGE_BACKENDS,
+  SYSTEM_HEALTH_QUEUE_BACKENDS,
+  SYSTEM_HEALTH_ERROR_SOURCES,
+  type SystemHealthStorageBackend,
+  type SystemHealthQueueBackend,
+  type SystemHealthErrorSource,
+} from './system-health-backends';

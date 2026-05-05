@@ -1,4 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  SYSTEM_HEALTH_STORAGE_BACKENDS,
+  SYSTEM_HEALTH_QUEUE_BACKENDS,
+  SYSTEM_HEALTH_ERROR_SOURCES,
+  type SystemHealthStorageBackend,
+  type SystemHealthQueueBackend,
+  type SystemHealthErrorSource,
+} from '@equipment-management/shared-constants';
 
 /**
  * 대시보드 요약 정보 DTO
@@ -257,6 +265,9 @@ export class DashboardCheckoutsScopeDto {
 
 /**
  * §3.9 — 시스템관리자 시스템 상태 응답.
+ *
+ * SystemHealthProvider 컨트랙트(`apps/backend/src/modules/dashboard/health-providers/`)가 데이터 소스 SSOT.
+ * `*Backend` / `errorSource` 필드는 운영자에게 "어떤 데이터 소스로부터 답했는가" 를 노출하는 transparency 신호.
  */
 export class SystemHealthMetricsDto {
   @ApiProperty({ enum: ['healthy', 'degraded', 'down'] as const })
@@ -265,10 +276,35 @@ export class SystemHealthMetricsDto {
   @ApiProperty() activeUsers: number;
   @ApiProperty() maxUsers: number;
   @ApiProperty({ description: 'DB 응답시간 (ms)' }) dbResponseMs: number;
-  @ApiProperty({ description: '스토리지 사용률 (%)' }) storagePct: number;
+  @ApiProperty({
+    description:
+      '스토리지 사용률 (%). storageBackend=pg-database 일 때는 측정 불가로 0 (frontend 는 backend 식별로 분기).',
+  })
+  storagePct: number;
   @ApiProperty({ description: '대기 큐 길이' }) queueSize: number;
   @ApiProperty({ description: '최근 24시간 오류 수' }) errorCount24h: number;
   @ApiProperty({ description: '측정 시각 ISO' }) measuredAt: string;
+
+  @ApiProperty({ description: 'dbSizeBytes — PostgreSQL DB 크기 (bytes), admin 진단용' })
+  dbSizeBytes: number;
+
+  @ApiProperty({
+    description: 'storageBackend — storagePct 의 데이터 소스 식별',
+    enum: [...SYSTEM_HEALTH_STORAGE_BACKENDS],
+  })
+  storageBackend: SystemHealthStorageBackend;
+
+  @ApiProperty({
+    description: 'queueBackend — queueSize 의 데이터 소스 식별',
+    enum: [...SYSTEM_HEALTH_QUEUE_BACKENDS],
+  })
+  queueBackend: SystemHealthQueueBackend;
+
+  @ApiProperty({
+    description: 'errorSource — errorCount24h 의 데이터 소스 식별',
+    enum: [...SYSTEM_HEALTH_ERROR_SOURCES],
+  })
+  errorSource: SystemHealthErrorSource;
 }
 
 /**

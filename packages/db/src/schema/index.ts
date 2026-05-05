@@ -81,3 +81,6 @@ export * from './csp-reports';
 // 반려 사유 프리셋 (UL-QP-18 반출 반려 workflow)
 export * from './rejection-presets';
 export * from './approval-delegations';
+
+// 시스템 에러 이벤트 (5xx / uncaught) — dashboard getSystemHealth SSOT
+export * from './system-error-events';

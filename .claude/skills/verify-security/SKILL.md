@@ -261,7 +261,35 @@ grep -rn "rejects.toThrow(ForbiddenException)" \
 | 13  | GlobalExceptionFilter APP_FILTER DI | PASS/FAIL | main.ts 직접 등록 0건 + app.module.ts APP_FILTER 등록 |
 | 14  | SECURITY_AUDITABLE_CODES SSOT      | PASS/FAIL | 로컬 new Set<ErrorCode> 재정의 0건 |
 | 15  | scope 위반 ErrorCode 403 + 감사 등록 | PASS/FAIL | BadRequestException scope throw 0건 + 403 매핑 + SECURITY_AUDITABLE_CODES 등록 |
+| 17  | system_error_events PII deny-list (2026-05-06 system-health-data-source-ssot) | PASS/FAIL | `maybeRecordSystemErrorEvent` 본체 (주석 제외) `request.body`/`request.headers`/`request.query` 캡처 위치 |
 ```
+
+### Step 17 — system_error_events PII deny-list
+
+**배경**: GlobalExceptionFilter 가 5xx 응답을 `system_error_events` 테이블에 fire-and-forget INSERT.
+요청 payload (body / headers / query) 는 PII 위험으로 캡처 금지 (errorCode / httpMethod / normalizedRoute /
+statusCode / userId / stackHash / stackPreview 만 화이트리스트). 미래 진입자가 디버깅 편의로 body/headers
+캡처 추가하면 PII 노출 회귀.
+
+**검증 명령** (메서드 본체 scope + 주석 라인 제외 — JSDoc 의 deny-list 정책 설명 false-FAIL 회피):
+
+```bash
+# (1) maybeRecordSystemErrorEvent 본체 PII 캡처 0
+awk '/maybeRecordSystemErrorEvent\(/,/^  }$/' apps/backend/src/common/filters/error.filter.ts | grep -vE "^\s*\*|^\s*//" | grep -cE "request\.body|request\.headers|request\.query"
+# 기대값: 0  (getClientIp 의 x-forwarded-for 추출은 audit IP 용 — 별도 메서드, 본 awk scope 외)
+
+# (2) SystemErrorEventInput 타입 정의에 body/headers/query 필드 부재
+grep -cE "\bbody\b|\bheaders\b|\bquery\b" apps/backend/src/common/system-health/contract.ts
+# 기대값: 0
+
+# (3) stack production hash 처리 (PII 방지)
+grep -c "createHash\|sha256" apps/backend/src/common/filters/error.filter.ts
+# 기대값: ≥ 1
+```
+
+**위반 시 수정 지시**: 추가 진단 정보가 필요하면 별도 dev-only 채널 또는 Sentry sink 통해 캡처.
+`system_error_events` 테이블은 영구 저장이므로 PII 화이트리스트 7 필드 (`SystemErrorEventInput`) 외 절대 추가 금지.
+
 
 ## Exceptions
 

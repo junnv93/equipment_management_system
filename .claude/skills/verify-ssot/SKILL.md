@@ -688,7 +688,38 @@ backend controller/service에서 `Math.min(..., 100)` 또는 `pageSize = 20` 같
 | 57  | RolePermissionMatrix derived view 정책 | PASS/FAIL | matrix 직접 데이터 추가 위치 |
 | 58  | EXTENDED_TEXT_MAX_LENGTH SSOT | PASS/FAIL | `.max(200,` 매직넘버 위치 |
 | 59  | pagination default/max SSOT   | PASS/FAIL | `Math.min(…100)` / `pageSize=20` 매직넘버 위치 |
+| 60  | SystemHealthProvider 컨트랙트 우회 검출 (2026-05-06 system-health-data-source-ssot) | PASS/FAIL | `dashboard.service.getSystemHealth` 본체에 인라인 `pg_database_size`/`schema.auditLogs.action.*reject.*cancel` proxy/`queueSize = 0` literal 잔존 위치 |
 ```
+
+### Step 60 — SystemHealthProvider 컨트랙트 우회 검출
+
+**배경**: `getSystemHealth()` 가 6 메트릭을 self-compute 하던 패턴은 데이터 소스 SSOT 결손이 root cause.
+`StorageHealthProvider` / `AsyncWorkBacklogProvider` / `SystemErrorEventProvider` 3 strategy 컨트랙트로
+대체된 후, 미래 진입자가 모르고 인라인 쿼리를 추가하면 회귀.
+
+**검증 명령** (메서드 본체로 scope — `getRecentActivities` 등 인접 메서드의 정당 audit 사용은 false-FAIL 회피):
+
+```bash
+# (1) queueSize = 0 stub 잔존 — 전체 파일 스캔 (정당 사용 없음)
+grep -c "queueSize = 0" apps/backend/src/modules/dashboard/dashboard.service.ts
+# 기대값: 0
+
+# (2) getSystemHealth 본체에서 pg_database_size 직접 호출 (provider 우회)
+awk '/async getSystemHealth/,/^  }$/' apps/backend/src/modules/dashboard/dashboard.service.ts | grep -c "pg_database_size"
+# 기대값: 0  (`storage-health.provider.ts` 만 호출 가능)
+
+# (3) getSystemHealth 본체에서 audit-rejection-proxy 부활
+awk '/async getSystemHealth/,/^  }$/' apps/backend/src/modules/dashboard/dashboard.service.ts | grep -cE "schema\\.auditLogs\\.action|inArray.*'reject'.*'cancel'"
+# 기대값: 0  (`system-error-event.provider.ts` audit-proxy fallback path 만 사용 가능)
+
+# (4) backend identity 리터럴이 production runtime 에서 strategy/types/dashboard.service 외부 사용 0
+grep -rln "'host-disk'\\|'configured-capacity'\\|'pg-database'\\|'pending-work-aggregate'\\|'system-error-events'\\|'audit-rejection-proxy'" apps/backend/src/ --include='*.ts' --exclude='*.spec.ts' --exclude='*.test.ts'
+# 기대 결과: provider impl 3 파일 + types.ts 1 파일 (총 4 파일) — 그 외 production 파일 등장 0
+```
+
+**위반 시 수정 지시**: `SystemHealthProvider` 인터페이스 (`apps/backend/src/common/system-health/contract.ts`) 를 통한 strategy 호출로 전환.
+Symbol DI 토큰 (`STORAGE_HEALTH_PROVIDER` 등) 으로 inject 받아 `await provider.read()` 사용.
+
 
 ## Exceptions
 

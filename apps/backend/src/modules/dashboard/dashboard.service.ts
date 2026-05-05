@@ -29,6 +29,16 @@ import {
   type DashboardScope,
 } from '@equipment-management/shared-constants';
 import {
+  STORAGE_HEALTH_PROVIDER,
+  ASYNC_WORK_BACKLOG_PROVIDER,
+  SYSTEM_ERROR_EVENT_PROVIDER,
+} from './health-providers/tokens';
+import type {
+  StorageHealthProvider,
+  AsyncWorkBacklogProvider,
+  SystemErrorEventProvider,
+} from './health-providers/types';
+import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
   OverdueCalibrationDto,
@@ -65,7 +75,13 @@ export class DashboardService {
     @Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
     private readonly approvalsService: ApprovalsService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(STORAGE_HEALTH_PROVIDER)
+    private readonly storageHealthProvider: StorageHealthProvider,
+    @Inject(ASYNC_WORK_BACKLOG_PROVIDER)
+    private readonly asyncWorkBacklogProvider: AsyncWorkBacklogProvider,
+    @Inject(SYSTEM_ERROR_EVENT_PROVIDER)
+    private readonly systemErrorEventProvider: SystemErrorEventProvider
   ) {}
 
   /**
@@ -731,14 +747,13 @@ export class DashboardService {
   /**
    * §3.9 — 시스템관리자 시스템 상태 조회.
    *
-   * 메트릭별 출처:
-   *  - activeUsers   : 최근 5분 audit 활동 사용자 unique count.
-   *  - maxUsers      : 시스템 활성 사용자(`is_active=true`) 카운트.
-   *  - dbResponseMs  : `SELECT 1` ping 측정.
-   *  - storagePct    : `pg_database_size()` / `DASHBOARD_STORAGE_CAPACITY_BYTES` (env, 기본 100 GiB).
-   *  - errorCount24h : audit_logs `action='reject'` 또는 `'cancel'` 24h 카운트
-   *                    (실제 시스템 에러 로그 테이블 도입 전까지 비즈니스 거절을 proxy로 사용).
-   *  - queueSize     : BullMQ 등 외부 큐 미연결 시 0 — 도입 시 별도 PR로 실측 연결.
+   * 데이터 소스 SSOT 는 `health-providers/` 의 3 strategy:
+   *  - StorageHealthProvider       — host-disk / configured-capacity / pg-database 우선순위
+   *  - AsyncWorkBacklogProvider    — prom-client gauge 합산 (BullMQ 도입 시 strategy 교체)
+   *  - SystemErrorEventProvider    — system_error_events 테이블 (audit-rejection-proxy 는 fallback)
+   *
+   * 본 메서드는 인라인으로 측정 가능한 메트릭 (dbResponseMs / activeUsers / maxUsers) 만 직접 쿼리하고
+   * 나머지는 provider 에 위임 — orchestrator 패턴.
    */
   async getSystemHealth(): Promise<import('./dto/dashboard-response.dto').SystemHealthMetricsDto> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}systemHealth`;
@@ -747,7 +762,6 @@ export class DashboardService {
       async () => {
         const now = new Date();
         const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         // DB 응답시간 측정.
         const dbStart = Date.now();
@@ -769,42 +783,25 @@ export class DashboardService {
           .where(eq(schema.users.isActive, true));
         const maxUsers = maxRow?.count ?? 0;
 
-        // 스토리지 사용률: pg_database_size / ConfigService 경유 capacity.
-        // env.validation.ts에서 z.coerce.number().positive().default(100 GiB) 적용 → ConfigService.get는
-        // 항상 number 반환. 별도 fallback 불필요(SSOT 분산 방지).
-        const storageCapacityBytes = this.configService.get<number>(
-          'DASHBOARD_STORAGE_CAPACITY_BYTES'
-        ) as number;
-        const sizeRow = await this.db.execute<{ size: string }>(
-          sql`SELECT pg_database_size(current_database()) AS size`
-        );
-        const dbSizeBytes = Number(sizeRow.rows?.[0]?.size ?? 0);
-        const storagePct =
-          storageCapacityBytes > 0
-            ? Math.min(Math.round((dbSizeBytes / storageCapacityBytes) * 100), 100)
-            : 0;
+        // Provider 위임 — 3 메트릭 병렬 조회.
+        const [storageSnapshot, backlogSnapshot, errorSnapshot] = await Promise.all([
+          this.storageHealthProvider.read(),
+          this.asyncWorkBacklogProvider.read(),
+          this.systemErrorEventProvider.count24h(),
+        ]);
 
-        // 24h 오류 proxy: 거절/취소 액션 카운트 (audit log에 시스템 에러 컬럼이 없을 때 비즈니스 거절을 대체 지표로).
-        const [errorRow] = await this.db
-          .select({ count: count() })
-          .from(schema.auditLogs)
-          .where(
-            and(
-              gte(schema.auditLogs.createdAt, twentyFourHoursAgo),
-              inArray(schema.auditLogs.action, ['reject', 'cancel'])
-            )
-          );
-        const errorCount24h = errorRow?.count ?? 0;
-
-        // queueSize: BullMQ 미연결 — 0 stub (`tech-debt-tracker`에 추적).
-        const queueSize = 0;
+        // storagePct null 케이스 (storage backend 가 pg-database 폴백 모드) 는 overallStatus 판정에서 storage 조건 skip.
+        // DTO 응답은 number 필수이므로 0 으로 폴백 — frontend 는 storageBackend 식별자로 분기 가능.
+        const storagePctForDto = storageSnapshot.storagePct ?? 0;
+        const storageHealthy =
+          storageSnapshot.storagePct === null ||
+          storageSnapshot.storagePct < SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.storagePct;
 
         // SSOT: SYSTEM_HEALTH_OVERALL_THRESHOLDS — 프론트와 동일 임계값으로 판정 일관성 보장.
         const overallStatus: 'healthy' | 'degraded' | 'down' =
           dbResponseMs >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.down.dbMs
             ? 'down'
-            : dbResponseMs >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.dbMs ||
-                storagePct >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.storagePct
+            : dbResponseMs >= SYSTEM_HEALTH_OVERALL_THRESHOLDS.degraded.dbMs || !storageHealthy
               ? 'degraded'
               : 'healthy';
 
@@ -813,14 +810,17 @@ export class DashboardService {
           activeUsers,
           maxUsers,
           dbResponseMs,
-          storagePct,
-          queueSize,
-          errorCount24h,
+          storagePct: storagePctForDto,
+          queueSize: backlogSnapshot.queueSize,
+          errorCount24h: errorSnapshot.errorCount24h,
           measuredAt: now.toISOString(),
+          dbSizeBytes: storageSnapshot.dbSizeBytes,
+          storageBackend: storageSnapshot.backend,
+          queueBackend: backlogSnapshot.backend,
+          errorSource: errorSnapshot.source,
         };
       },
       // MEDIUM(5min) — frontend MONITORING refetchInterval과 일치하여 매 폴링이 fresh DB hit가 되지 않도록.
-      // SHORT(30s)였을 때 frontend 5min 폴링이 매번 cache miss → pg_database_size + audit COUNT 재실행.
       CACHE_TTL.MEDIUM
     );
   }

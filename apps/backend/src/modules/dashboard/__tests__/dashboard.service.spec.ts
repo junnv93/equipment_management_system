@@ -4,6 +4,16 @@ import { DashboardService } from '../dashboard.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { ApprovalsService } from '../../approvals/approvals.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
+import {
+  STORAGE_HEALTH_PROVIDER,
+  ASYNC_WORK_BACKLOG_PROVIDER,
+  SYSTEM_ERROR_EVENT_PROVIDER,
+} from '../health-providers/tokens';
+import type {
+  StorageHealthSnapshot,
+  AsyncWorkBacklogSnapshot,
+  SystemErrorEventCount,
+} from '../health-providers/types';
 
 /**
  * Drizzle query chain mock
@@ -59,6 +69,12 @@ describe('DashboardService', () => {
   let mockDb: { select: jest.Mock; execute: jest.Mock };
   let mockApprovalsService: { getApprovalCountsByScope: jest.Mock };
   let mockConfigService: { get: jest.Mock };
+  let mockStorageProvider: { read: jest.Mock<Promise<StorageHealthSnapshot>, []> };
+  let mockBacklogProvider: { read: jest.Mock<Promise<AsyncWorkBacklogSnapshot>, []> };
+  let mockErrorProvider: {
+    count24h: jest.Mock<Promise<SystemErrorEventCount>, []>;
+    record: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockCacheService = createMockCacheService();
@@ -76,13 +92,32 @@ describe('DashboardService', () => {
       getApprovalCountsByScope: jest.fn().mockResolvedValue(createMockApprovalCounts()),
     };
 
-    // AP-03: getSystemHealth가 ConfigService.get<number>('DASHBOARD_STORAGE_CAPACITY_BYTES') 호출.
-    // env.validation.ts 기본값(100 GiB)을 mock으로 반환. 테스트 케이스에서 capacity 변경 시 직접 재할당.
     mockConfigService = {
-      get: jest.fn((key: string) => {
-        if (key === 'DASHBOARD_STORAGE_CAPACITY_BYTES') return 100 * 1024 * 1024 * 1024;
-        return undefined;
+      get: jest.fn(() => undefined),
+    };
+
+    // 기본 provider mock — getSystemHealth 외 테스트에서는 호출되지 않음.
+    mockStorageProvider = {
+      read: jest.fn<Promise<StorageHealthSnapshot>, []>().mockResolvedValue({
+        dbSizeBytes: 0,
+        diskUsedBytes: null,
+        diskTotalBytes: null,
+        storagePct: 0,
+        backend: 'configured-capacity',
       }),
+    };
+    mockBacklogProvider = {
+      read: jest.fn<Promise<AsyncWorkBacklogSnapshot>, []>().mockResolvedValue({
+        queueSize: 0,
+        backend: 'pending-work-aggregate',
+      }),
+    };
+    mockErrorProvider = {
+      count24h: jest.fn<Promise<SystemErrorEventCount>, []>().mockResolvedValue({
+        errorCount24h: 0,
+        source: 'system-error-events',
+      }),
+      record: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -92,6 +127,9 @@ describe('DashboardService', () => {
         { provide: SimpleCacheService, useValue: mockCacheService },
         { provide: ApprovalsService, useValue: mockApprovalsService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: STORAGE_HEALTH_PROVIDER, useValue: mockStorageProvider },
+        { provide: ASYNC_WORK_BACKLOG_PROVIDER, useValue: mockBacklogProvider },
+        { provide: SYSTEM_ERROR_EVENT_PROVIDER, useValue: mockErrorProvider },
       ],
     }).compile();
 
@@ -314,50 +352,62 @@ describe('DashboardService', () => {
 
   describe('getSystemHealth()', () => {
     /**
-     * getSystemHealth는 다음 호출 순서로 DB를 사용한다:
+     * Provider 위임 후 dashboard.service 가 직접 쿼리하는 것은:
      *   1. db.execute(SELECT 1)                        — dbResponseMs 측정
      *   2. db.select(activeUsers)        ← chain 1     — auditLogs groupBy
      *   3. db.select(maxUsers)           ← chain 2     — users count
-     *   4. db.execute(SELECT pg_database_size)         — dbSizeBytes
-     *   5. db.select(errorCount24h)      ← chain 3     — auditLogs reject/cancel count
      *
-     * 시간 측정은 Date.now() 두 번 호출(dbStart, dbEnd) — mockReturnValueOnce로 시뮬레이션.
+     * Storage / backlog / errorCount24h 는 provider mock 으로 직접 주입.
      */
     function setupHealthMocks(opts: {
-      dbSizeBytes: number;
-      capacityBytes?: number;
+      storageSnapshot?: Partial<StorageHealthSnapshot>;
+      backlogSnapshot?: Partial<AsyncWorkBacklogSnapshot>;
+      errorSnapshot?: Partial<SystemErrorEventCount>;
       dbResponseMs: number;
       activeUsers?: { userId: string }[];
       maxUsersCount?: number;
-      errorCount24h?: number;
     }) {
       const {
-        dbSizeBytes,
-        capacityBytes = 100 * 1024 * 1024 * 1024,
+        storageSnapshot = {},
+        backlogSnapshot = {},
+        errorSnapshot = {},
         dbResponseMs,
         activeUsers = [{ userId: 'u1' }, { userId: 'u2' }],
         maxUsersCount = 10,
-        errorCount24h = 3,
       } = opts;
 
-      // ConfigService capacity override (default가 100 GiB이므로 변경 시에만 재정의)
-      mockConfigService.get = jest.fn((key: string) =>
-        key === 'DASHBOARD_STORAGE_CAPACITY_BYTES' ? capacityBytes : undefined
-      );
+      const fullStorage: StorageHealthSnapshot = {
+        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        diskUsedBytes: null,
+        diskTotalBytes: null,
+        storagePct: 10,
+        backend: 'configured-capacity',
+        ...storageSnapshot,
+      };
+      const fullBacklog: AsyncWorkBacklogSnapshot = {
+        queueSize: 0,
+        backend: 'pending-work-aggregate',
+        ...backlogSnapshot,
+      };
+      const fullError: SystemErrorEventCount = {
+        errorCount24h: 3,
+        source: 'system-error-events',
+        ...errorSnapshot,
+      };
 
-      // db.execute: SELECT 1 → {}, SELECT pg_database_size → { rows: [{ size }] }
-      mockDb.execute
-        .mockResolvedValueOnce({ rows: [] }) // ping
-        .mockResolvedValueOnce({ rows: [{ size: String(dbSizeBytes) }] });
+      mockStorageProvider.read.mockResolvedValueOnce(fullStorage);
+      mockBacklogProvider.read.mockResolvedValueOnce(fullBacklog);
+      mockErrorProvider.count24h.mockResolvedValueOnce(fullError);
 
-      // db.select: 호출 순서대로 다른 결과 chain 반환
+      // db.execute: SELECT 1 ping 만 호출됨 (pg_database_size 는 provider 로 이동).
+      mockDb.execute.mockResolvedValueOnce({ rows: [] });
+
+      // db.select: activeUsers + maxUsers 두 번만.
       mockDb.select
         .mockReturnValueOnce(createQueryChain(activeUsers))
-        .mockReturnValueOnce(createQueryChain([{ count: maxUsersCount }]))
-        .mockReturnValueOnce(createQueryChain([{ count: errorCount24h }]));
+        .mockReturnValueOnce(createQueryChain([{ count: maxUsersCount }]));
 
       // Date.now: dbStart → dbEnd (차이 = dbResponseMs)
-      // 그 외 호출은 실제 OS time 반환
       const realNow = Date.now;
       jest
         .spyOn(Date, 'now')
@@ -370,85 +420,113 @@ describe('DashboardService', () => {
       (Date.now as unknown as jest.SpyInstance).mockRestore?.();
     });
 
-    it('storagePct는 dbSize/capacity × 100 (10 GiB / 100 GiB → 10%)', async () => {
+    it('storagePct 는 storage provider 결과를 그대로 노출 (10%)', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024,
-        capacityBytes: 100 * 1024 * 1024 * 1024,
+        storageSnapshot: { storagePct: 10 },
         dbResponseMs: 50,
       });
       const result = await service.getSystemHealth();
       expect(result.storagePct).toBe(10);
+      expect(result.storageBackend).toBe('configured-capacity');
     });
 
-    it('storagePct는 100을 초과하지 않는다 (capacity 초과 시 cap)', async () => {
+    it('storagePct 100 cap 은 provider 책임 (provider 가 100 반환)', async () => {
       setupHealthMocks({
-        dbSizeBytes: 200 * 1024 * 1024 * 1024,
-        capacityBytes: 100 * 1024 * 1024 * 1024,
+        storageSnapshot: { storagePct: 100 },
         dbResponseMs: 50,
       });
       const result = await service.getSystemHealth();
       expect(result.storagePct).toBe(100);
     });
 
-    it('capacity가 0이면 storagePct는 0 (방어 코드)', async () => {
+    it('storagePct null (pg-database fallback) 은 DTO 에서 0 으로 폴백', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024,
-        capacityBytes: 0,
+        storageSnapshot: { storagePct: null, backend: 'pg-database', dbSizeBytes: 99 },
         dbResponseMs: 50,
       });
       const result = await service.getSystemHealth();
       expect(result.storagePct).toBe(0);
+      expect(result.storageBackend).toBe('pg-database');
+      expect(result.dbSizeBytes).toBe(99);
     });
 
-    it('overallStatus는 모든 메트릭 정상 시 healthy', async () => {
+    it('overallStatus 는 모든 메트릭 정상 시 healthy', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024, // 10%
-        dbResponseMs: 50, // < 500
+        storageSnapshot: { storagePct: 10 },
+        dbResponseMs: 50,
       });
       const result = await service.getSystemHealth();
       expect(result.overallStatus).toBe('healthy');
     });
 
-    it('overallStatus는 dbResponseMs >= 500 시 degraded', async () => {
+    it('overallStatus 는 dbResponseMs >= 500 시 degraded', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        storageSnapshot: { storagePct: 10 },
         dbResponseMs: 500,
       });
       const result = await service.getSystemHealth();
       expect(result.overallStatus).toBe('degraded');
     });
 
-    it('overallStatus는 storagePct >= 90 시 degraded', async () => {
+    it('overallStatus 는 storagePct >= 90 시 degraded', async () => {
       setupHealthMocks({
-        dbSizeBytes: 95 * 1024 * 1024 * 1024, // 95%
+        storageSnapshot: { storagePct: 95 },
         dbResponseMs: 50,
       });
       const result = await service.getSystemHealth();
       expect(result.overallStatus).toBe('degraded');
     });
 
-    it('overallStatus는 dbResponseMs >= 1500 시 down (degraded 우선순위 위)', async () => {
+    it('overallStatus 는 dbResponseMs >= 1500 시 down (degraded 우선순위 위)', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        storageSnapshot: { storagePct: 10 },
         dbResponseMs: 1500,
       });
       const result = await service.getSystemHealth();
       expect(result.overallStatus).toBe('down');
     });
 
-    it('activeUsers/maxUsers/errorCount24h가 결과에 매핑된다', async () => {
+    it('storagePct null 일 때 storage 조건은 overallStatus 판정에서 skip (healthy)', async () => {
       setupHealthMocks({
-        dbSizeBytes: 10 * 1024 * 1024 * 1024,
+        storageSnapshot: { storagePct: null, backend: 'pg-database' },
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.overallStatus).toBe('healthy');
+    });
+
+    it('queueSize 는 backlog provider 결과를 그대로 노출', async () => {
+      setupHealthMocks({
+        storageSnapshot: { storagePct: 10 },
+        backlogSnapshot: { queueSize: 12, backend: 'pending-work-aggregate' },
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.queueSize).toBe(12);
+      expect(result.queueBackend).toBe('pending-work-aggregate');
+    });
+
+    it('errorCount24h 는 error provider 결과를 그대로 노출 + errorSource 매핑', async () => {
+      setupHealthMocks({
+        storageSnapshot: { storagePct: 10 },
+        errorSnapshot: { errorCount24h: 7, source: 'system-error-events' },
+        dbResponseMs: 50,
+      });
+      const result = await service.getSystemHealth();
+      expect(result.errorCount24h).toBe(7);
+      expect(result.errorSource).toBe('system-error-events');
+    });
+
+    it('activeUsers/maxUsers/measuredAt 인라인 측정 결과 매핑', async () => {
+      setupHealthMocks({
+        storageSnapshot: { storagePct: 10 },
         dbResponseMs: 50,
         activeUsers: [{ userId: 'u1' }, { userId: 'u2' }, { userId: 'u3' }],
         maxUsersCount: 25,
-        errorCount24h: 7,
       });
       const result = await service.getSystemHealth();
       expect(result.activeUsers).toBe(3);
       expect(result.maxUsers).toBe(25);
-      expect(result.errorCount24h).toBe(7);
-      expect(result.queueSize).toBe(0); // BullMQ 미연결 stub
       expect(typeof result.measuredAt).toBe('string');
     });
   });

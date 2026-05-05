@@ -78,13 +78,14 @@ export const envSchema = z
     S3_SECRET_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().default('equipment-files'),
 
-    // 대시보드 시스템 상태 — DB 스토리지 capacity (bytes). 기본 100 GiB.
-    // dashboard.service.ts:getSystemHealth가 pg_database_size / 본 값으로 storagePct 계산.
-    DASHBOARD_STORAGE_CAPACITY_BYTES: z.coerce
-      .number()
-      .positive()
-      .optional()
-      .default(100 * 1024 * 1024 * 1024),
+    // 대시보드 시스템 상태 — DB 스토리지 capacity 명시적 override (bytes).
+    // 미설정 시 monitoring 서비스의 host-disk df 측정값으로 fallback (storage-health.provider).
+    // 명시 설정 시 storageBackend 가 configured-capacity 모드, pg_database_size / 본 값으로 storagePct 계산.
+    DASHBOARD_STORAGE_CAPACITY_BYTES: z.coerce.number().positive().optional(),
+
+    // Sentry DSN (선택). 설정 시 SystemErrorEventProvider 가 system_error_events 테이블 INSERT 와
+    // 동시에 Sentry 로 emit (옵션 sink). `@sentry/node` 는 dynamic import — 의존성 직접 설치 필요.
+    SENTRY_DSN: z.string().url().optional(),
   })
   .refine(
     (data) =>

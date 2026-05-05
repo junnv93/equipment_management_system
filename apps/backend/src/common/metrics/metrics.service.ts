@@ -101,6 +101,22 @@ export class MetricsService {
     this.nonConformingEquipmentGauge.set(count);
   }
 
+  /**
+   * Async-work-backlog provider 가 사용하는 read API.
+   *
+   * 모든 label 값을 합산 — `equipment_pending_approvals_total{type=...}` 라벨 다중 시 (예: checkout/calibration)
+   * 전체 backlog 를 의미. 라벨이 없으면 단일 값. gauge 가 한 번도 set 되지 않았으면 0.
+   */
+  async readPendingApprovalsTotal(): Promise<number> {
+    const snapshot = await this.pendingApprovalsGauge.get();
+    return snapshot.values.reduce((sum, entry) => sum + (entry.value ?? 0), 0);
+  }
+
+  async readActiveCheckoutsTotal(): Promise<number> {
+    const snapshot = await this.activeCheckoutsGauge.get();
+    return snapshot.values.reduce((sum, entry) => sum + (entry.value ?? 0), 0);
+  }
+
   getMetrics(): Promise<string> {
     return this.registry.metrics();
   }

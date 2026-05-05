@@ -6,26 +6,44 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { createHash } from 'crypto';
 import { AppError, ErrorCode, ErrorResponse, handleZodError } from '@equipment-management/schemas';
+import { UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { AuditService } from '../../modules/audit/audit.service';
 import { SECURITY_AUDITABLE_CODES } from '../constants/security-auditable-codes';
 import {
   resolveAuditEntityIdWithSentinel,
   inferEntityTypeFromPath,
 } from '../utils/audit-entity-id.util';
+import {
+  SYSTEM_ERROR_EVENT_PROVIDER,
+  type SystemErrorEventProvider,
+  type SystemErrorEventInput,
+} from '../system-health/contract';
 import type { AuditLogUserRole, CreateAuditLogDto } from '@equipment-management/schemas';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 import type { AuditLogDetails } from '@equipment-management/db/schema';
+
+const UUID_RE_GLOBAL = new RegExp(UUID_PATTERN_SOURCE, 'gi');
+const NUMERIC_ID_RE = /\/\d+(?=\/|$)/g;
+const STACK_PREVIEW_MAX_CHARS = 4096;
 
 @Injectable()
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    @Optional()
+    @Inject(SYSTEM_ERROR_EVENT_PROVIDER)
+    private readonly systemErrorEventProvider?: SystemErrorEventProvider
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): Response {
     const ctx = host.switchToHttp();
@@ -43,6 +61,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof AppError) {
       errorResponse = exception.toResponse();
       this.maybeAuditSecurityEvent(exception, request, errorResponse);
+      this.maybeRecordSystemErrorEvent(exception, request, errorResponse, exception.statusCode);
       return response.status(exception.statusCode).json(errorResponse);
     } else if (exception instanceof ZodError) {
       const appError = handleZodError(exception);
@@ -86,6 +105,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
 
       this.maybeAuditSecurityEvent(exception, request, errorResponse);
+      this.maybeRecordSystemErrorEvent(exception, request, errorResponse, status);
       return response.status(status).json(errorResponse);
     } else {
       // 미처리 예외는 서버 오류로 처리
@@ -107,8 +127,72 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             : undefined,
       };
 
+      this.maybeRecordSystemErrorEvent(
+        exception,
+        request,
+        errorResponse,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
+  }
+
+  /**
+   * 5xx 응답을 system_error_events 테이블에 fire-and-forget INSERT.
+   *
+   * PII deny-list (강제):
+   *  - request.body / request.headers / request.query 어떤 필드도 캡처하지 않는다.
+   *  - userId 만 인증 사용자에 한해 nullable 로 캡처.
+   *  - normalizedRoute 는 UUID/숫자 ID 마스킹.
+   *  - production stack 은 SHA-256 hash, development 만 stackPreview (4096 자 truncate).
+   *
+   * 4xx (BadRequest, Unauthorized, Forbidden, NotFound, Conflict, TooManyRequests, ZodError) 는 캡처하지 않는다 —
+   * 운영 노이즈 + 클라이언트 책임.
+   */
+  private maybeRecordSystemErrorEvent(
+    exception: unknown,
+    request: Request,
+    errorResponse: ErrorResponse,
+    statusCode: number
+  ): void {
+    if (!this.systemErrorEventProvider) return;
+    if (statusCode < 500) return;
+
+    const httpMethod = (request.method ?? 'UNKNOWN').toUpperCase().slice(0, 10);
+    const rawPath =
+      (request as Request & { route?: { path?: string } }).route?.path ??
+      (request.url ?? '').split('?')[0] ??
+      '';
+    const normalizedRoute = this.normalizeRoute(rawPath).slice(0, 255);
+
+    const userId = (request as AuthenticatedRequest).user?.userId ?? null;
+
+    const stack = exception instanceof Error ? exception.stack : null;
+    const stackHash = stack ? createHash('sha256').update(stack).digest('hex') : null;
+    const stackPreview =
+      process.env.NODE_ENV === 'development' && stack
+        ? stack.slice(0, STACK_PREVIEW_MAX_CHARS)
+        : null;
+
+    const event: SystemErrorEventInput = {
+      errorCode: errorResponse.code ?? ErrorCode.InternalServerError,
+      httpMethod,
+      normalizedRoute,
+      statusCode,
+      userId,
+      stackHash,
+      stackPreview,
+    };
+
+    void this.systemErrorEventProvider.record(event).catch((err: unknown) => {
+      this.logger.error(
+        `system_error_events record failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
+  }
+
+  private normalizeRoute(path: string): string {
+    return path.replace(UUID_RE_GLOBAL, ':id').replace(NUMERIC_ID_RE, '/:id');
   }
 
   /**
