@@ -66,6 +66,7 @@ export {
   optionalIsoDateString,
   optionalCursor,
   optionalCsvEnum,
+  optionalCsvUuid,
 } from './utils/fields';
 
 // ============================================================

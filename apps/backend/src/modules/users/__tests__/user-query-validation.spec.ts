@@ -50,18 +50,29 @@ describe('userQuerySchema — Query DTO trim/max + sort enum SSOT', () => {
     });
   });
 
-  describe('teams — optionalTrimmedString (UUID CSV — token UUID 검증은 후속 sprint)', () => {
-    it('LONG_CSV → accept', () => {
-      expect(
-        userQuerySchema.safeParse({ teams: 'a'.repeat(VALIDATION_RULES.LONG_CSV_MAX_LENGTH) })
-          .success
-      ).toBe(true);
+  describe('teams — optionalCsvUuid (UUID CSV 토큰 단위 형식 검증)', () => {
+    const VALID_UUID_1 = '11111111-1111-4111-8111-111111111111';
+    const VALID_UUID_2 = '22222222-2222-4222-8222-222222222222';
+
+    it('valid UUID CSV → string[] transform', () => {
+      const r = userQuerySchema.safeParse({ teams: `${VALID_UUID_1},${VALID_UUID_2}` });
+      expect(r.success).toBe(true);
+      if (r.success) expect(r.data.teams).toEqual([VALID_UUID_1, VALID_UUID_2]);
+    });
+    it('invalid UUID token → reject', () => {
+      const r = userQuerySchema.safeParse({ teams: `${VALID_UUID_1},xyz` });
+      expect(r.success).toBe(false);
+      if (!r.success) expect(r.error.issues[0].message).toContain('팀 목록');
     });
     it('LONG_CSV + 1 → reject', () => {
       expect(
         userQuerySchema.safeParse({ teams: 'a'.repeat(VALIDATION_RULES.LONG_CSV_MAX_LENGTH + 1) })
           .success
       ).toBe(false);
+    });
+    it('whitespace only → undefined', () => {
+      const r = userQuerySchema.safeParse({ teams: '   ' });
+      if (r.success) expect(r.data.teams).toBeUndefined();
     });
   });
 

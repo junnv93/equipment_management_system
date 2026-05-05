@@ -1006,6 +1006,102 @@ export const checkoutQuerySchema = z.object({
 
 **관련 sprint**: `query-dto-validation-ssot` (2026-05-05) — 11 Query DTO + equipmentFilterSchema + 11 sort enum + 11 service mapper + 12 spec (185 케이스).
 
+---
+
+### Step 21: CSV 다중값 토큰 검증 SSOT 강제 — optionalCsvEnum / optionalCsvUuid (2026-05-06 추가)
+
+**배경**: `statuses` / `methods` / `roles` / `teams` / `ids` 등 CSV 다중값 query 필드는 `optionalTrimmedString(LONG_CSV_MAX_LENGTH)` 만으로는 토큰 단위 검증이 부재 — service-layer 화이트리스트 위임에 의존. service에서 `STATUS_VALUES.includes(token)` 강제를 잊으면 unknown 토큰 silent 무시(`?statuses=PENDING,UNKNOWN_X` → service에서 PENDING만 적용, UNKNOWN_X는 silent drop). 또 UUID CSV에서 invalid 토큰이 흘러가면 SQL parameter cast error 또는 silent 0 결과.
+
+본 Step은 `query-dto-r2 갭-4 csv-token-enum-validation` sprint(2026-05-06)에서 도입된 Zod-layer fail-close 강제:
+
+- **enum CSV**: `optionalCsvEnum(<ENUM>_VALUES, LONG_CSV_MAX_LENGTH, '<라벨>')` (`packages/schemas/src/utils/fields.ts`) — split + trim + token 단위 화이트리스트 + 422 reject
+- **UUID CSV**: `optionalCsvUuid(LONG_CSV_MAX_LENGTH, '<라벨>')` — split + trim + lenient UUID 정규식(8-4-4-4-12 hex) 토큰 단위 검증
+- **service 후속**: `query.<field>.split(',')` 인라인 split 금지 — DTO가 이미 array 변환. `query.<field> && query.<field>.length > 0` 가드만 사용
+
+**규칙**:
+- `*-query.dto.ts`의 enum 다중값 필드 → `optionalCsvEnum(<ENUM>_VALUES, ..., '<라벨>')` 경유 필수
+- `*-query.dto.ts`의 UUID 다중값 필드 (teamId 단일은 optionalUuid) → `optionalCsvUuid(...)` 경유 필수
+- service에서 `query.<field>.split(',')` 인라인 split 금지 (DTO에서 array 변환 완료)
+- Swagger `@ApiPropertyOptional` 의 type을 `string[]` 또는 `EnumType[]` 로 정정 (입력은 string CSV이지만 transform 후 array 시그니처)
+
+**검증 명령**:
+
+```bash
+# 1. SSOT helper 신설 확인
+grep -c "export function optionalCsvEnum\|export function optionalCsvUuid" \
+  packages/schemas/src/utils/fields.ts
+# 기대: 2
+
+# 2. SSOT helper export 확인
+grep -c "optionalCsvEnum\|optionalCsvUuid" packages/schemas/src/index.ts
+# 기대: ≥ 2
+
+# 3. CSV 다중값 enum 필드 잔존 탐지 — optionalTrimmedString(LONG_CSV) 의 enum 후보
+#    (현재 알려진 enum CSV 필드: statuses/methods/roles 도메인 — 모두 optionalCsvEnum 적용)
+grep -rE "(statuses|methods|roles):\s*optionalTrimmedString.*LONG_CSV" \
+  apps/backend/src/modules/*/dto/*-query.dto.ts 2>/dev/null
+# 기대: 0건
+
+# 4. CSV 다중값 UUID 필드 잔존 탐지 (ids/teams 등 UUID 다중값)
+grep -rE "(ids|teams):\s*optionalTrimmedString.*LONG_CSV" \
+  apps/backend/src/modules/*/dto/*-query.dto.ts 2>/dev/null
+# 기대: 0건 (UUID CSV는 모두 optionalCsvUuid 경유)
+
+# 5. service 인라인 split(',') 잔존 탐지 — DTO 변환 완료 후 service 보강 후속
+grep -rnE "query\.(statuses|methods|roles|ids|teams)\.split\(','\)" \
+  apps/backend/src/modules/ --include="*.service.ts" 2>/dev/null
+# 기대: 0건
+
+# 6. SSOT helper 자체 spec 존재
+ls packages/schemas/src/__tests__/csv-helpers.test.ts 2>/dev/null
+# 기대: 파일 존재
+```
+
+**PASS 기준**: 명령 1, 2 = ≥ 임계값 + 3, 4, 5 = 0건 + 6 파일 존재.
+
+**FAIL 기준**: 위 임계값 위반 시 즉시 수정.
+
+**올바른 패턴** (`team-query.dto.ts` 2026-05-06):
+
+```typescript
+// ✅ CORRECT — UUID CSV SSOT
+import { optionalCsvUuid } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+
+export const teamQuerySchema = z.object({
+  ids: optionalCsvUuid(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
+});
+
+// service: DTO가 이미 string[]로 변환 — split 금지
+if (query.ids && query.ids.length > 0) {
+  conditions.push(inArray(teamsTable.id, query.ids));
+}
+```
+
+```typescript
+// ✅ CORRECT — enum CSV SSOT
+import { optionalCsvEnum, MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
+
+methods: optionalCsvEnum(
+  MANAGEMENT_METHOD_VALUES,
+  VALIDATION_RULES.LONG_CSV_MAX_LENGTH,
+  '교정 방법 목록'
+),
+```
+
+```typescript
+// ❌ WRONG — token 단위 검증 부재 (silent miss + cast error 위험)
+ids: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
+// service:
+const teamIds = query.ids.split(',');  // ❌ 인라인 split, UUID 형식 검증 부재
+```
+
+**예외**:
+- `report-query.dto.ts` / `audit-log-query.dto.ts` — 별도 도메인. 자체 enum/cursor 정책으로 처리
+- 단일 enum 필드 (statuses CSV가 아닌 단일 status) → `<EnumType>.optional()` 사용
+
+**관련 sprint**: `query-dto-r2 갭-4 csv-token-enum-validation` (2026-05-06) — checkouts.statuses + calibration.statuses + calibration.methods + users.roles + users.teams + teams.ids 6 필드 적용 + `optionalCsvUuid` SSOT 신설 + 18 cases unit spec.
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

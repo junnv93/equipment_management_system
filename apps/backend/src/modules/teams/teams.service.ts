@@ -31,9 +31,9 @@ export class TeamsService {
       conditions.push(eq(teamsTable.classification, query.classification));
     }
 
-    if (query.ids) {
-      const teamIds = query.ids.split(',');
-      conditions.push(inArray(teamsTable.id, teamIds));
+    // ids는 optionalCsvUuid가 토큰 단위 UUID 형식 검증 + 배열 변환 완료
+    if (query.ids && query.ids.length > 0) {
+      conditions.push(inArray(teamsTable.id, query.ids));
     }
 
     if (query.search) {

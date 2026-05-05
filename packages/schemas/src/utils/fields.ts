@@ -224,3 +224,55 @@ export function optionalCsvEnum<const T extends readonly string[]>(
       return tokens as T[number][];
     });
 }
+
+/**
+ * CSV 다중값 UUID 검증 SSOT 헬퍼 — `'<uuid>,<uuid>'` 형식의 토큰 단위 lenient UUID 검증.
+ *
+ * `optionalTrimmedString(LONG_CSV_MAX_LENGTH)` 만 적용한 후 service layer 에서 UUID 형식 검증을
+ * 잊으면 invalid token (예: `?ids=not-a-uuid,abc`) 이 service 까지 흘러가 SQL parameter 에서
+ * cast error 또는 silent 0 결과 반환. 이 helper 는 토큰 단위 UUID 형식을 Zod 에서 강제.
+ *
+ * 동작:
+ * 1. trim + max(maxLen) — DoS 1차 차단 (LONG_CSV_MAX_LENGTH=1000 권장)
+ * 2. split(',') → 토큰 배열
+ * 3. 각 토큰을 lenient UUID 정규식 (8-4-4-4-12 hex) 으로 검증 — 시드 UUID 호환
+ * 4. 빈 문자열 / whitespace only → undefined
+ *
+ * `optionalCsvEnum` 과의 차이: enum 화이트리스트 대신 UUID 형식 정규식 검증.
+ * 권한/존재 검증은 service 책임 — 본 헬퍼는 형식만 보장.
+ *
+ * @param maxLen - 입력 문자열 max (LONG_CSV_MAX_LENGTH=1000 권장)
+ * @param fieldNameForMessage - 검증 실패 시 메시지에 들어갈 필드명 (예: '팀 ID 목록')
+ * @returns Zod 스키마 — 입력: string | undefined → 출력: string[] | undefined
+ *
+ * @example
+ *   import { optionalCsvUuid } from '@equipment-management/schemas';
+ *   import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+ *
+ *   ids: optionalCsvUuid(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
+ *   teams: optionalCsvUuid(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 목록'),
+ */
+export function optionalCsvUuid(maxLen: number, fieldNameForMessage: string) {
+  return z
+    .string()
+    .trim()
+    .max(maxLen, VM.string.max(fieldNameForMessage, maxLen))
+    .transform((val) => (val === '' ? undefined : val))
+    .optional()
+    .transform((val, ctx): string[] | undefined => {
+      if (val === undefined) return undefined;
+      const tokens = val
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      const invalid = tokens.filter((t) => !UUID_LENIENT.test(t));
+      if (invalid.length > 0) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${fieldNameForMessage}에 유효하지 않은 UUID 형식이 포함되었습니다: ${invalid.join(', ')}`,
+        });
+        return z.NEVER;
+      }
+      return tokens;
+    });
+}

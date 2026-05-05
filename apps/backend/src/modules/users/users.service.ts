@@ -72,9 +72,9 @@ export class UsersService {
       conditions.push(inArray(usersTable.role, query.roles));
     }
 
-    if (query.teams) {
-      const teamList = query.teams.split(',');
-      conditions.push(inArray(usersTable.teamId, teamList));
+    // teams는 optionalCsvUuid가 토큰 단위 UUID 형식 검증 + 배열 변환 완료
+    if (query.teams && query.teams.length > 0) {
+      conditions.push(inArray(usersTable.teamId, query.teams));
     }
 
     if (query.teamId) {

@@ -17,6 +17,7 @@ import {
   optionalUuid,
   optionalTrimmedString,
   optionalCsvEnum,
+  optionalCsvUuid,
 } from '@equipment-management/schemas';
 
 /**
@@ -28,7 +29,7 @@ export const userQuerySchema = z.object({
   email: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '이메일'),
   name: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '이름'),
   roles: optionalCsvEnum(USER_ROLE_VALUES, VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '역할 목록'),
-  teams: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 목록'),
+  teams: optionalCsvUuid(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 목록'),
   teamId: optionalUuid(VM.uuid.invalid('팀')), // 단일 팀 필터 (scope 바인딩용)
   site: SiteEnum.optional(),
   department: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '부서'),
@@ -67,10 +68,11 @@ export class UserQueryDto {
   roles?: UserRole[];
 
   @ApiPropertyOptional({
-    description: '팀 필터 (쉼표로 구분된 여러 값 가능)',
-    example: 'rf,sar',
+    description:
+      '팀 필터 (쉼표로 구분된 UUID 여러 값 가능 — optionalCsvUuid 토큰 검증 후 string[] 변환)',
+    example: '11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222',
   })
-  teams?: string;
+  teams?: string[];
 
   @ApiPropertyOptional({
     description: '단일 팀 필터 (scope 바인딩용 UUID)',

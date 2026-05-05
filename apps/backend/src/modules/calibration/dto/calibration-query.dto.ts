@@ -12,12 +12,16 @@ import {
   CALIBRATION_STATUS_VALUES,
   type CalibrationSortValue,
   type CalibrationStatus,
+  ManagementMethodEnum,
+  type ManagementMethod,
   SiteEnum,
   type Site,
   optionalUuid,
   optionalTrimmedString,
   optionalCsvEnum,
 } from '@equipment-management/schemas';
+
+const MANAGEMENT_METHOD_VALUES = ManagementMethodEnum.options;
 
 /**
  * 교정 기한 상태 (날짜 기반 가상 상태)
@@ -46,7 +50,11 @@ export const calibrationQuerySchema = z.object({
     VALIDATION_RULES.LONG_CSV_MAX_LENGTH,
     '교정 상태 목록'
   ),
-  methods: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '교정 방법 목록'),
+  methods: optionalCsvEnum(
+    MANAGEMENT_METHOD_VALUES,
+    VALIDATION_RULES.LONG_CSV_MAX_LENGTH,
+    '교정 방법 목록'
+  ),
   calibrationAgency: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '교정 기관'),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
@@ -91,10 +99,11 @@ export class CalibrationQueryDto {
   statuses?: CalibrationStatus[];
 
   @ApiPropertyOptional({
-    description: '교정 방법 (여러 방법 가능, 쉼표로 구분)',
-    example: 'external_calibration,calibration',
+    description:
+      '교정 방법 (여러 방법 가능, 쉼표로 구분 — optionalCsvEnum 토큰 검증 후 ManagementMethod[] 변환)',
+    example: 'external_calibration,self_inspection,not_applicable',
   })
-  methods?: string;
+  methods?: ManagementMethod[];
 
   @ApiPropertyOptional({
     description: '교정 기관/업체',

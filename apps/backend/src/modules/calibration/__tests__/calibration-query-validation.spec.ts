@@ -54,10 +54,33 @@ describe('calibrationQuerySchema — Query DTO trim/max + sort enum SSOT', () =>
     });
   });
 
-  describe('methods (CSV — token-level validation은 후속 sprint)', () => {
+  describe('methods — optionalCsvEnum (MANAGEMENT_METHOD_VALUES 토큰 단위 검증)', () => {
+    it('valid CSV → array transform (external_calibration,self_inspection,not_applicable)', () => {
+      const r = calibrationQuerySchema.safeParse({
+        methods: 'external_calibration,self_inspection,not_applicable',
+      });
+      expect(r.success).toBe(true);
+      if (r.success)
+        expect(r.data.methods).toEqual([
+          'external_calibration',
+          'self_inspection',
+          'not_applicable',
+        ]);
+    });
+    it('invalid token → reject (silent miss 차단)', () => {
+      const r = calibrationQuerySchema.safeParse({
+        methods: 'external_calibration,unknown_method',
+      });
+      expect(r.success).toBe(false);
+      if (!r.success) expect(r.error.issues[0].message).toContain('교정 방법 목록');
+    });
     it('LONG_CSV_MAX_LENGTH + 1 → reject', () => {
       const methods = 'a'.repeat(VALIDATION_RULES.LONG_CSV_MAX_LENGTH + 1);
       expect(calibrationQuerySchema.safeParse({ methods }).success).toBe(false);
+    });
+    it('whitespace only → undefined', () => {
+      const r = calibrationQuerySchema.safeParse({ methods: '   ' });
+      if (r.success) expect(r.data.methods).toBeUndefined();
     });
   });
 

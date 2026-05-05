@@ -14,6 +14,7 @@ import {
   TeamSortEnum,
   type TeamSortValue,
   optionalTrimmedString,
+  optionalCsvUuid,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -24,7 +25,7 @@ import {
  * ✅ 사이트 필터 추가: 사용자 사이트에 맞는 팀만 조회
  */
 export const teamQuerySchema = z.object({
-  ids: optionalTrimmedString(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
+  ids: optionalCsvUuid(VALIDATION_RULES.LONG_CSV_MAX_LENGTH, '팀 ID 목록'),
   search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
   site: SiteEnum.optional(),
   classification: ClassificationEnum.optional(), // ✅ type → classification (장비 분류와 동일)
@@ -45,10 +46,11 @@ export const TeamQueryValidationPipe = new ZodValidationPipe(teamQuerySchema, {
 
 export class TeamQueryDto {
   @ApiPropertyOptional({
-    description: '팀 ID 필터 (쉼표로 구분된 여러 값 가능)',
-    example: 'rf,sar',
+    description:
+      '팀 ID 필터 (쉼표로 구분된 UUID 여러 값 가능 — optionalCsvUuid 토큰 검증 후 string[] 변환)',
+    example: '11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222',
   })
-  ids?: string;
+  ids?: string[];
 
   @ApiPropertyOptional({
     description: '검색어 (팀 이름, 설명 등)',
