@@ -68,6 +68,9 @@ import {
   BulkRejectDto,
   BulkRejectValidationPipe,
   type BulkRejectResult,
+  BulkCancelDto,
+  BulkCancelValidationPipe,
+  type BulkCancelResult,
   RevokeApprovalDto,
   RevokeApprovalValidationPipe,
 } from './dto';
@@ -902,6 +905,30 @@ export class CheckoutsController {
   ): Promise<BulkRejectResult> {
     const approverId = extractUserId(req);
     return this.checkoutsService.bulkReject(dto.ids, dto.reason, approverId, req);
+  }
+
+  // ============================================================================
+  // M8c: 일괄 취소 (checkout-bulk-extended-actions sprint, 2026-05-06)
+  // ============================================================================
+
+  @Post('bulk-cancel')
+  @RequirePermissions(Permission.CANCEL_CHECKOUT)
+  @UsePipes(BulkCancelValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' })
+  @ApiOperation({
+    summary: '반출 일괄 취소',
+    description:
+      'Promise.allSettled 기반 — 부분 실패 허용. max 50건. 단건 cancel의 fail-close 순서(scope → FSM)를 그대로 활용. cancellerId는 세션에서 추출.',
+  })
+  @ApiBody({ type: BulkCancelDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '일괄 취소 결과 (canceled/failed 목록)' })
+  @HttpCode(HttpStatus.OK)
+  async bulkCancel(
+    @Body() dto: BulkCancelDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<BulkCancelResult> {
+    const cancellerId = extractUserId(req);
+    return this.checkoutsService.bulkCancel(dto.ids, cancellerId, req);
   }
 
   // ============================================================================

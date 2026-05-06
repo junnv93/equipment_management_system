@@ -3564,6 +3564,54 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   // ============================================================================
+  // M8c: 일괄 취소 (POST /checkouts/bulk-cancel) — checkout-bulk-extended-actions sprint
+  // ============================================================================
+
+  /**
+   * 일괄 취소 — Promise.allSettled로 부분 실패 허용.
+   * 단건 cancel()의 fail-close 순서(scope → FSM)를 그대로 활용.
+   * ✅ Rule 2: cancellerId = extractUserId(req) — 컨트롤러에서 주입
+   * ✅ Rule 11 예외: bulk UX상 클라이언트가 per-item version 전달 불가 → DB 최신값 사용.
+   *    CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리.
+   *
+   * 본 sprint는 frontend wiring 없이 backend endpoint만 신규 — 운영 요구사항 발생 시
+   * frontend hook 추가 (`useCheckoutBulkMutations`에 cancelMutation 추가).
+   */
+  async bulkCancel(
+    ids: string[],
+    _cancellerId: string,
+    req: AuthenticatedRequest
+  ): Promise<{
+    canceled: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const results = await Promise.allSettled(
+      ids.map(async (id) => {
+        const checkout = await this.findCheckoutEntity(id);
+        // 단건 cancel 호출 — scope/FSM 검증, audit, cache invalidation 모두 위임
+        return this.cancel(id, checkout.version, req);
+      })
+    );
+
+    const canceled: { id: string; version: number }[] = [];
+    const failed: { id: string; error: string }[] = [];
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        canceled.push({ id: ids[i], version: result.value.version });
+      } else {
+        const err = result.reason as { message?: string; response?: { message?: string } };
+        failed.push({
+          id: ids[i],
+          error: err?.response?.message ?? err?.message ?? 'Unknown error',
+        });
+      }
+    });
+
+    return { canceled, failed };
+  }
+
+  // ============================================================================
   // M9: 반려 사유 프리셋 목록 (GET /checkouts/rejection-presets)
   // ============================================================================
 

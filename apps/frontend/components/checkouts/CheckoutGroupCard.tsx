@@ -2,6 +2,8 @@
 
 import { useState, useMemo, memo, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
+import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,18 +54,6 @@ import {
   getStaggerFadeInStyle,
   shouldUseStaggerFadeIn,
 } from '@/lib/design-tokens';
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function calculateDaysRemaining(expectedReturnDate: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const returnDate = new Date(expectedReturnDate);
-  returnDate.setHours(0, 0, 0, 0);
-  return Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
 
 // ============================================================================
 // Types
@@ -132,7 +122,10 @@ function CheckoutGroupCard({
   const [isOpen, setIsOpen] = useState(isOverdueGroup);
 
   const { data: session } = useSession();
-  const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  // 시뮬레이션 모드 반영 — useEffectiveRole SSOT (verify-ssot Step 37)
+  const { effectiveRole } = useEffectiveRole();
+  const role: UserRole =
+    effectiveRole ?? (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
   const userTeamId = session?.user?.teamId ?? null;
 
   const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role, userTeamId);

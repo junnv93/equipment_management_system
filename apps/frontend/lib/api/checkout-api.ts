@@ -13,6 +13,7 @@ import { recordFsmMetaDrift } from '@/lib/observability/fsm-meta-drift';
 import type {
   CheckoutStatus,
   CheckoutPurpose,
+  CheckoutDirection,
   UserSelectableCheckoutPurpose,
   ConditionCheckStep,
   ConditionStatus,
@@ -226,7 +227,7 @@ export interface CheckoutQuery {
   statuses?: string;
   equipmentId?: string;
   teamId?: string;
-  direction?: 'outbound' | 'inbound';
+  direction?: CheckoutDirection;
   purpose?: CheckoutPurpose;
   endDate?: string;
   checkoutFrom?: string; // ✅ 반출일 시작 (YYYY-MM-DD)
@@ -452,6 +453,25 @@ const checkoutApi = {
     failed: { id: string; error: string }[];
   }> {
     const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.BULK_REJECT, {
+      ids,
+      reason,
+    });
+    return transformSingleResponse(response);
+  },
+
+  /**
+   * 일괄 취소 (checkout-bulk-extended-actions sprint, 2026-05-06) — Promise.allSettled,
+   * max 50건, reason optional. 신청자만 호출 가능 (단건 cancel scope 그대로).
+   * ✅ Rule 2: cancellerId는 서버에서 추출
+   */
+  async bulkCancelCheckouts(
+    ids: string[],
+    reason?: string
+  ): Promise<{
+    canceled: { id: string; version: number }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.BULK_CANCEL, {
       ids,
       reason,
     });

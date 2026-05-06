@@ -145,6 +145,8 @@ export const API_ENDPOINTS = {
     BULK_APPROVE: '/api/checkouts/bulk-approve',
     /** 일괄 반려 (POST) — Promise.allSettled, max 50건, reason required */
     BULK_REJECT: '/api/checkouts/bulk-reject',
+    /** 일괄 취소 (POST) — Promise.allSettled, max 50건, reason optional, 신청자만 */
+    BULK_CANCEL: '/api/checkouts/bulk-cancel',
     /** 반려 사유 프리셋 목록 (GET) — 관리자 등록 고정 템플릿 */
     REJECTION_PRESETS: '/api/checkouts/rejection-presets',
     /** 최근 사용한 반출지 목록 (GET) — userId 스코핑, 캐시 60s */
