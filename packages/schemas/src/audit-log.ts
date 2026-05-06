@@ -80,6 +80,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   read: '조회',
   borrower_approve: '대여 1차 승인',
   borrower_reject: '대여 1차 반려',
+  extract: '메타 추출',
 };
 
 /**
@@ -117,6 +118,7 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   read: 'bg-gray-100 text-gray-800',
   borrower_approve: 'bg-green-100 text-green-800',
   borrower_reject: 'bg-orange-100 text-orange-800',
+  extract: 'bg-cyan-100 text-cyan-800',
 };
 
 // ============================================================================
@@ -160,6 +162,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   inspection_form_template: '점검 양식 템플릿',
   inspection_result_section: '점검 결과 섹션',
   data_migration_session: '데이터 마이그레이션',
+  calibration_certificate: '교정성적서',
 };
 
 // ============================================================================

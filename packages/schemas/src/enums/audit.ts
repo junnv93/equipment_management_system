@@ -59,6 +59,7 @@ export const AUDIT_ACTION_VALUES = [
   'read', // 민감 조회 (QR 모바일 랜딩, 단일 리소스 조회 등 책임 추적 필요 시)
   'borrower_approve', // 대여 1차 승인 (사용 부서 TM)
   'borrower_reject', // 대여 1차 반려 (사용 부서 TM)
+  'extract', // 메타 추출 (PDF → metadata, DB 저장 없는 dry-run — 교정성적서 등)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);
@@ -113,6 +114,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'inspection_result_section', // 점검 결과 섹션
   'inspection_form_template', // 점검 양식 템플릿 (UL-QP-18-03/05 Build-Once Workflow snapshot)
   'data_migration_session', // 데이터 마이그레이션 세션
+  'calibration_certificate', // 교정성적서 PDF (Phase A — extract dry-run)
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

@@ -560,6 +560,14 @@ export enum ErrorCode {
   /** 폐기된 엔드포인트 — 신규 엔드포인트 사용 필요. */
   EndpointDeprecated = 'ENDPOINT_DEPRECATED',
 
+  // 교정성적서 PDF 추출 (Phase A — HCT 양식 자동 메타 추출)
+  /** 지원하지 않는 양식 — HCT 마커 미발견 (`주식회사 에이치시티` / `Certificate of Calibration`). */
+  CalibrationCertificateFormatUnsupported = 'CALIBRATION_CERTIFICATE_FORMAT_UNSUPPORTED',
+  /** pdftotext 실행 실패 — binary 미설치 / timeout(15s) / PDF 손상 / magic byte 불일치. */
+  CalibrationCertificateExtractionFailed = 'CALIBRATION_CERTIFICATE_EXTRACTION_FAILED',
+  /** 표지 텍스트는 추출됐으나 필수 필드 누락 (`details.field`로 어떤 필드인지 식별). */
+  CalibrationCertificateFieldMissing = 'CALIBRATION_CERTIFICATE_FIELD_MISSING',
+
   // ============================================================================
   // 반출(Checkout) 도메인 — 추가 에러
   // ============================================================================
@@ -959,6 +967,12 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.CalibrationPayloadInvalid]: 400,
   [ErrorCode.EndpointDeprecated]: 410,
 
+  // 교정성적서 PDF 추출 (Phase A) — service가 BadRequestException 경로로 throw하므로
+  // NestJS HTTP exception 시맨틱과 일관되게 모두 400. (UnprocessableEntity는 별도 service refactor 필요.)
+  [ErrorCode.CalibrationCertificateFormatUnsupported]: 400,
+  [ErrorCode.CalibrationCertificateExtractionFailed]: 400,
+  [ErrorCode.CalibrationCertificateFieldMissing]: 400,
+
   // 반출(Checkout) 도메인 — 추가 에러
   [ErrorCode.CheckoutMissingId]: 400,
 
@@ -1126,6 +1140,10 @@ export const CALIBRATION_ERROR_CODES = {
   NOT_FOUND: ErrorCode.CalibrationNotFound,
   ENDPOINT_DEPRECATED: ErrorCode.EndpointDeprecated,
   PLAN_ITEM_NOT_EXECUTED: ErrorCode.CalibrationPlanItemNotExecuted,
+  // 교정성적서 PDF 추출 (Phase A) — frontend i18n routing 진입점
+  CERTIFICATE_FORMAT_UNSUPPORTED: ErrorCode.CalibrationCertificateFormatUnsupported,
+  CERTIFICATE_EXTRACTION_FAILED: ErrorCode.CalibrationCertificateExtractionFailed,
+  CERTIFICATE_FIELD_MISSING: ErrorCode.CalibrationCertificateFieldMissing,
 } as const;
 
 export type CalibrationErrorCode =

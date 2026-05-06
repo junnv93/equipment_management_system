@@ -182,6 +182,8 @@ export const API_ENDPOINTS = {
     CERTIFICATE: (id: string) => `/api/calibration/${id}/certificate`,
     /** 교정별 문서 목록 (성적서 + 원시데이터 등) */
     DOCUMENTS: (id: string) => `/api/calibration/${id}/documents`,
+    /** 교정성적서 PDF 메타데이터 추출 (Phase A — HCT 양식 자동 채움, DB 저장 없음) */
+    EXTRACT_CERTIFICATE: '/api/calibration/certificates/extract',
   },
 
   // ============================================================================

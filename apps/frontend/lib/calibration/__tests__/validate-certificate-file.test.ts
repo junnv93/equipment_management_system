@@ -1,4 +1,3 @@
-import { ErrorCode } from '@equipment-management/schemas';
 import { FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { validateCertificateFile } from '../validate-certificate-file';
 
@@ -41,12 +40,11 @@ describe('validateCertificateFile', () => {
     });
   });
 
-  describe('negative cases — ErrorCode SSOT', () => {
-    it('비-PDF mime → CalibrationCertificateFormatUnsupported + i18n 키', () => {
+  describe('negative cases — i18n key routing', () => {
+    it('비-PDF mime → certificateFormatUnsupported i18n 키', () => {
       const result = validateCertificateFile(makeFile(1024, 'image/jpeg'));
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.code).toBe(ErrorCode.CalibrationCertificateFormatUnsupported);
         expect(result.i18nKey).toBe('calibration.errors.certificateFormatUnsupported');
       }
     });
@@ -55,39 +53,38 @@ describe('validateCertificateFile', () => {
       const result = validateCertificateFile(makeFile(1024, ''));
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.code).toBe(ErrorCode.CalibrationCertificateFormatUnsupported);
+        expect(result.i18nKey).toBe('calibration.errors.certificateFormatUnsupported');
       }
     });
 
-    it('size > MAX_FILE_SIZE → CalibrationFileLimitExceeded', () => {
+    it('size > MAX_FILE_SIZE → fileLimitExceeded i18n 키', () => {
       const result = validateCertificateFile(
         makeFile(FILE_UPLOAD_LIMITS.MAX_FILE_SIZE + 1, 'application/pdf')
       );
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.code).toBe(ErrorCode.CalibrationFileLimitExceeded);
         expect(result.i18nKey).toBe('calibration.errors.fileLimitExceeded');
       }
     });
 
-    it('mime + size 양쪽 위반 시 mime이 먼저 차단 (검증 순서)', () => {
+    it('mime + size 양쪽 위반 시 mime이 먼저 차단 (검증 순서 — defense in depth)', () => {
       const result = validateCertificateFile(
         makeFile(FILE_UPLOAD_LIMITS.MAX_FILE_SIZE + 1, 'image/jpeg')
       );
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        // mime 검증이 먼저 실행되어야 함 (defense in depth 순서)
-        expect(result.code).toBe(ErrorCode.CalibrationCertificateFormatUnsupported);
+        // mime 검증이 먼저 실행되어야 함
+        expect(result.i18nKey).toBe('calibration.errors.certificateFormatUnsupported');
       }
     });
   });
 
   describe('discriminated union — type narrowing', () => {
-    it('ok: true 분기에서는 code/i18nKey 접근 불가 (compile-time)', () => {
+    it('ok: true 분기에서는 i18nKey 접근 불가 (compile-time 보장)', () => {
       const result = validateCertificateFile(makeFile(1024, 'application/pdf'));
       if (result.ok) {
-        // @ts-expect-error — ok: true 분기에 code 없음
-        expect(result.code).toBeUndefined();
+        // @ts-expect-error — ok: true 분기에 i18nKey 없음
+        expect(result.i18nKey).toBeUndefined();
       }
     });
   });

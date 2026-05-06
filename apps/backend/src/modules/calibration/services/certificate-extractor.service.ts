@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { generateOpaqueId } from '../../../common/identifiers/identifier.service';
 import {
+  ErrorCode,
   extractedCalibrationCertificateSchema,
   type ExtractedCalibrationCertificate,
 } from '@equipment-management/schemas';
@@ -42,9 +43,10 @@ export class CertificateExtractorService {
    */
   parseHctCoverPage(text: string): ExtractedCalibrationCertificate {
     if (!HCT_FORM_MARKERS.every((marker) => text.includes(marker))) {
-      throw new BadRequestException(
-        '지원하지 않는 교정성적서 양식입니다. 현재 HCT 양식만 처리 가능합니다.'
-      );
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationCertificateFormatUnsupported,
+        message: '지원하지 않는 교정성적서 양식입니다. 현재 HCT 양식만 처리 가능합니다.',
+      });
     }
 
     const certificateNumber = this.matchOrThrow(
@@ -93,9 +95,11 @@ export class CertificateExtractorService {
   private matchOrThrow(text: string, pattern: RegExp, fieldLabel: string): string {
     const match = text.match(pattern);
     if (!match || !match[1]) {
-      throw new BadRequestException(
-        `교정성적서에서 '${fieldLabel}'을(를) 찾을 수 없습니다. PDF 양식을 확인해 주세요.`
-      );
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationCertificateFieldMissing,
+        message: `교정성적서에서 '${fieldLabel}'을(를) 찾을 수 없습니다. PDF 양식을 확인해 주세요.`,
+        details: { field: fieldLabel },
+      });
     }
     return match[1].trim();
   }
@@ -103,9 +107,11 @@ export class CertificateExtractorService {
   private parseKoreanDateOrThrow(text: string, pattern: RegExp, fieldLabel: string): string {
     const result = this.parseKoreanDate(text, pattern);
     if (!result) {
-      throw new BadRequestException(
-        `교정성적서에서 '${fieldLabel}'을(를) 찾을 수 없습니다. PDF 양식을 확인해 주세요.`
-      );
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationCertificateFieldMissing,
+        message: `교정성적서에서 '${fieldLabel}'을(를) 찾을 수 없습니다. PDF 양식을 확인해 주세요.`,
+        details: { field: fieldLabel },
+      });
     }
     return result;
   }
@@ -145,15 +151,21 @@ export class CertificateExtractorService {
     const tempPath = path.join(os.tmpdir(), `cal-cert-${generateOpaqueId()}.pdf`);
     try {
       await fs.writeFile(tempPath, pdfBuffer);
+      // 보안 — maxBuffer: zip-bomb 방어 (10MB), timeout: 악의적 PDF 무한 루프 방어 (15s).
       const { stdout } = await execFileAsync('pdftotext', ['-layout', tempPath, '-'], {
         maxBuffer: 10 * 1024 * 1024,
+        timeout: 15_000,
       });
       return stdout;
     } catch (err) {
-      this.logger.error('pdftotext 실행 실패', err instanceof Error ? err.stack : String(err));
-      throw new BadRequestException(
-        'PDF 텍스트 추출에 실패했습니다. 파일이 손상되었거나 지원하지 않는 형식일 수 있습니다.'
+      this.logger.error(
+        'pdftotext 실행 실패 (timeout/binary missing/PDF corrupted)',
+        err instanceof Error ? err.stack : String(err)
       );
+      throw new BadRequestException({
+        code: ErrorCode.CalibrationCertificateExtractionFailed,
+        message: 'PDF 텍스트 추출에 실패했습니다. 파일이 손상되었거나 처리 시간이 초과되었습니다.',
+      });
     } finally {
       await fs.unlink(tempPath).catch(() => undefined);
     }

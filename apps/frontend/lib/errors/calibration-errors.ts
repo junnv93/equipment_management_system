@@ -33,6 +33,12 @@ export const CALIBRATION_ERROR_I18N_KEY: Record<CalibrationErrorCode, string> = 
   [CALIBRATION_ERROR_CODES.NOT_FOUND]: 'calibration.errors.notFound',
   [CALIBRATION_ERROR_CODES.ENDPOINT_DEPRECATED]: 'calibration.errors.endpointDeprecated',
   [CALIBRATION_ERROR_CODES.PLAN_ITEM_NOT_EXECUTED]: 'calibration.errors.planItemNotExecuted',
+  // 교정성적서 PDF 추출 (Phase A — 5-layer SSOT 진입점)
+  [CALIBRATION_ERROR_CODES.CERTIFICATE_FORMAT_UNSUPPORTED]:
+    'calibration.errors.certificateFormatUnsupported',
+  [CALIBRATION_ERROR_CODES.CERTIFICATE_EXTRACTION_FAILED]:
+    'calibration.errors.certificateExtractionFailed',
+  [CALIBRATION_ERROR_CODES.CERTIFICATE_FIELD_MISSING]: 'calibration.errors.certificateFieldMissing',
 };
 
 /** API 응답 에러 코드를 i18n 키로 변환 */

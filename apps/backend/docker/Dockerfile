@@ -18,6 +18,10 @@
 FROM node:20-bullseye AS base
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
+# poppler-utils: pdftotext binary — 교정성적서 PDF 표지 메타 추출(CertificateExtractorService) 의존.
+# Phase A 범위, dev/test 모두에서 사용. 패키지 크기 ~15MB.
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # ----- deps (lockfile-only 레이어) -------------------------------------------
 FROM base AS deps
@@ -74,7 +78,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # wget for HEALTHCHECK + tini for proper signal forwarding
-RUN apk add --no-cache wget tini
+# poppler-utils: pdftotext binary — 교정성적서 PDF 표지 메타 추출(CertificateExtractorService) 의존.
+RUN apk add --no-cache wget tini poppler-utils
 
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/packages/schemas/dist ./packages/schemas/dist
