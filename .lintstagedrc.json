@@ -1,5 +1,5 @@
 {
-  "apps/backend/src/**/*.ts": [
+  "apps/backend/{src,test}/**/*.ts": [
     "eslint --quiet --fix --config apps/backend/.eslintrc.js",
     "prettier --write"
   ],

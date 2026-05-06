@@ -42,6 +42,9 @@ pnpm tsc --noEmit
 echo "▶ pre-push: backend lint..."
 pnpm --filter backend run lint:ci
 
+echo "▶ pre-push: lint ruleset parity (lintstaged ↔ lint:ci)..."
+pnpm verify:lint-ruleset-parity
+
 echo "▶ pre-push: frontend lint..."
 pnpm --filter frontend run lint
 

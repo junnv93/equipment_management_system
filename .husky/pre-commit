@@ -1,10 +1,20 @@
 #!/usr/bin/env sh
 # Pre-commit gate:
+#   0. multi-session staged guard (인지 강제 + EMS_PRECOMMIT_STRICT=1 시 차단)
 #   1. sops 파일이 암호화된 상태로만 커밋되도록 검증 (Phase C, ADR-0005)
 #   2. gitleaks 로 평문 secret 커밋 차단 (설치되지 않았다면 경고만)
 #   3. lint-staged (포맷 + lint)
+#   4. self-audit (7대 아키텍처 원칙)
+#   5. i18n 키 무결성
+#   6. i18n 호출지 ↔ messages JSON parity
 
 set -e
+
+# 0. multi-session staged guard
+#    - 항상 staged stat 출력 (인지 강제)
+#    - EMS_PRECOMMIT_STRICT=1 활성화 시 의심 패턴 (11+파일 또는 mtime spread 30분+) 차단
+#    - 정책 출처: ADR-0007 multi-session-working-tree-safety
+node scripts/precommit-staged-guard.mjs
 
 # 1. sops 파일 암호화 상태 검증
 STAGED_SOPS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^infra/secrets/.*\.sops\.yaml$' || true)
