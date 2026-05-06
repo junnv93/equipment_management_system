@@ -118,6 +118,8 @@ export const EVENT_TO_NOTIFICATION_TYPE: Readonly<Record<NotificationEventName, 
 const _validTypes = new Set<string>(NOTIFICATION_TYPE_VALUES);
 for (const [event, type] of Object.entries(EVENT_TO_NOTIFICATION_TYPE)) {
   if (!_validTypes.has(type)) {
+    // NOTE: module-load 시점 SSOT 정합성 startup-fail invariant.
+    // HTTP 응답 경로 아님 → ErrorCode 적용 부적합. verify-zod Step 16 명시 예외.
     throw new Error(
       `SSOT 불일치: 이벤트 '${event}' → 타입 '${type}'이 NOTIFICATION_TYPE_VALUES에 없음. ` +
         `packages/schemas/src/enums/notification.ts에 '${type}'을 추가하세요.`

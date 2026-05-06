@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ErrorCode } from '@equipment-management/schemas';
 import { NOTIFICATION_REGISTRY, type NotificationCategory } from '../config/notification-registry';
 
 /**
@@ -39,7 +40,12 @@ export class NotificationTemplateService {
   buildNotification(eventName: string, payload: Record<string, unknown>): BuiltNotification {
     const config = NOTIFICATION_REGISTRY[eventName];
     if (!config) {
-      throw new Error(`Unknown notification event: ${eventName}`);
+      // caller(notification-dispatcher)는 NotificationEventName-typed dispatch지만 상위 dispatch 경로가
+      // string으로 좁혀지지 않음 — defense-in-depth로 InternalServerErrorException 격상 (ErrorCode SSOT 5-layer).
+      throw new InternalServerErrorException({
+        code: ErrorCode.InternalServerError,
+        message: `Unknown notification event: ${eventName}`,
+      });
     }
 
     return {

@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { ErrorCode } from '@equipment-management/schemas';
@@ -38,7 +38,12 @@ export class HandoverTokenService implements OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {
     const secret = configService.get<string>('HANDOVER_TOKEN_SECRET');
     if (!secret || secret.length < 32) {
-      throw new Error('[HandoverTokenService] HANDOVER_TOKEN_SECRET env must be set (>= 32 chars)');
+      // Defense-in-depth: env.validation.ts(`HANDOVER_TOKEN_SECRET min(32)`)가 이미 startup에서 강제.
+      // ConfigModule 우회 또는 mock 환경 대비 InternalServerErrorException 격상 (ErrorCode SSOT 5-layer).
+      throw new InternalServerErrorException({
+        code: ErrorCode.InternalServerError,
+        message: '[HandoverTokenService] HANDOVER_TOKEN_SECRET env must be set (>= 32 chars)',
+      });
     }
 
     const config = resolveRedisConfig(configService);

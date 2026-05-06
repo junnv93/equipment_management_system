@@ -1,4 +1,9 @@
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -59,7 +64,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     const jwtSecret = configService.get<string>('JWT_SECRET');
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required');
+      // Defense-in-depth: env.validation.ts(`JWT_SECRET min(16)`)가 이미 startup에서 강제하지만,
+      // ConfigModule 우회 또는 mock 환경 대비 InternalServerErrorException으로 격상 (ErrorCode SSOT 5-layer).
+      throw new InternalServerErrorException({
+        code: ErrorCode.InternalServerError,
+        message: 'JWT_SECRET environment variable is required',
+      });
     }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

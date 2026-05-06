@@ -179,7 +179,8 @@ export class CalibrationController {
     let documentTypes: DocumentType[];
     try {
       const parsed: unknown = JSON.parse(documentTypesRaw);
-      if (!Array.isArray(parsed)) throw new Error('not array');
+      // local sentinel — catch 분기로 즉시 falls back to CSV split. HTTP 응답 경로 아님.
+      if (!Array.isArray(parsed)) throw new SyntaxError('documentTypes must be JSON array');
       documentTypes = parsed as DocumentType[];
     } catch {
       documentTypes = (documentTypesRaw ?? '').split(',').map((s) => s.trim()) as DocumentType[];

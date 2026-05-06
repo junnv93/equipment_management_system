@@ -240,6 +240,7 @@ export class ExcelParserService {
       case 'checkout':
         return CHECKOUT_ALIAS_INDEX;
       default: {
+        // NOTE: TypeScript exhaustiveness check (`never`) — never reached at runtime.
         const _exhaustive: never = type;
         throw new Error(`Unknown sheet type: ${_exhaustive}`);
       }

@@ -193,7 +193,8 @@ export class AuditService {
             };
             const cursorTimestamp = new Date(decoded.t);
             if (isNaN(cursorTimestamp.getTime()) || typeof decoded.i !== 'string') {
-              throw new Error('malformed cursor fields');
+              // local sentinel — try-catch 분기로 즉시 first-page fallback. HTTP 응답 경로 아님.
+              throw new SyntaxError('malformed cursor fields');
             }
             // (timestamp, id) < (cursor.t, cursor.i) — row value comparison
             conditions.push(

@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   eq,
@@ -60,6 +60,7 @@ import {
   ApprovalCategoryValues,
   getNCTypesRequiring,
   LENDER_APPROVAL_PENDING_STATUSES,
+  ErrorCode,
 } from '@equipment-management/schemas';
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -191,10 +192,16 @@ export class ApprovalsService {
     input: CreateApprovalDelegationInput
   ): Promise<ApprovalDelegationResponse> {
     if (input.delegatorId === input.delegateeId) {
-      throw new Error('delegatorId and delegateeId must be different.');
+      throw new BadRequestException({
+        code: ErrorCode.ApprovalDelegationSelfDelegationForbidden,
+        message: 'delegatorId and delegateeId must be different.',
+      });
     }
     if (input.startsAt >= input.endsAt) {
-      throw new Error('startsAt must be before endsAt.');
+      throw new BadRequestException({
+        code: ErrorCode.ApprovalDelegationInvalidPeriod,
+        message: 'startsAt must be before endsAt.',
+      });
     }
 
     const category = ApprovalCategoryEnum.parse(input.category);

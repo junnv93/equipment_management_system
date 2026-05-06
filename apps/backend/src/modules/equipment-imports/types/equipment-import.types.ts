@@ -66,6 +66,7 @@ export function getReturnDestination(equipmentImport: EquipmentImport): string {
   } else if (isInternalSharedImport(equipmentImport)) {
     return equipmentImport.ownerDepartment;
   }
+  // NOTE: TypeScript exhaustiveness check — never reached at runtime (compile-time guard).
   throw new Error(`Unknown source type: ${equipmentImport.sourceType}`);
 }
 
@@ -78,6 +79,7 @@ export function getOwnerName(equipmentImport: EquipmentImport): string {
   } else if (isInternalSharedImport(equipmentImport)) {
     return equipmentImport.ownerDepartment;
   }
+  // NOTE: TypeScript exhaustiveness check — never reached at runtime (compile-time guard).
   throw new Error(`Unknown source type: ${equipmentImport.sourceType}`);
 }
 
@@ -116,5 +118,6 @@ export function getSharedSource(equipmentImport: EquipmentImport): 'external' | 
   } else if (isInternalSharedImport(equipmentImport)) {
     return 'internal_shared';
   }
+  // NOTE: TypeScript exhaustiveness check — never reached at runtime (compile-time guard).
   throw new Error(`Unknown source type: ${equipmentImport.sourceType}`);
 }
