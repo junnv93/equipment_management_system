@@ -175,6 +175,9 @@ export const FRONTEND_ROUTES = {
     LIST: '/calibration',
     REGISTER: '/calibration/register',
     DETAIL: (id: string) => `/calibration/${id}`,
+    /** 특정 장비의 교정 이력 deep-link (CalibrationListTable row 클릭 진입점) */
+    BY_EQUIPMENT: (equipmentId: string) =>
+      `/calibration?equipmentId=${encodeURIComponent(equipmentId)}`,
   },
 
   // ============================================================================

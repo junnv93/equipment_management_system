@@ -139,7 +139,7 @@ export default function CalibrationListTable({
               >
                 <TableCell className="font-medium">
                   <NavLink
-                    href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.equipmentId)}
+                    href={FRONTEND_ROUTES.CALIBRATION.BY_EQUIPMENT(item.equipmentId)}
                     variant="card"
                     className={CALIBRATION_TABLE.link}
                   >
@@ -147,7 +147,13 @@ export default function CalibrationListTable({
                   </NavLink>
                 </TableCell>
                 <TableCell className={getManagementNumberClasses()}>
-                  {item.managementNumber}
+                  <NavLink
+                    href={FRONTEND_ROUTES.CALIBRATION.BY_EQUIPMENT(item.equipmentId)}
+                    variant="card"
+                    className={`${getManagementNumberClasses()} ${CALIBRATION_TABLE.link}`}
+                  >
+                    {item.managementNumber}
+                  </NavLink>
                 </TableCell>
                 <TableCell>{item.teamName || item.team || '-'}</TableCell>
                 <TableCell className={CALIBRATION_TABLE.numericColumn}>

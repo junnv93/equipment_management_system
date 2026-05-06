@@ -41,6 +41,7 @@ export interface UICalibrationFilters {
   search: string; // 검색어 (장비명, 관리번호)
   site: Site | ''; // 사이트 ('' = 전체)
   teamId: string; // 팀 ID ('' = 전체)
+  equipmentId: string; // 장비 ID ('' = 전체) — 교정관리 row 클릭 시 deep-link 진입점
   approvalStatus: string; // 승인 상태 ('' = 전체)
   result: string; // 교정 결과 ('' = 전체)
   calibrationDueStatus: CalibrationDueStatus | ''; // 교정 기한 상태 ('' = 전체)
@@ -56,6 +57,7 @@ export interface ApiCalibrationFilters {
   search?: string;
   site?: Site;
   teamId?: string;
+  equipmentId?: string;
   approvalStatus?: string;
   result?: string;
   calibrationDueStatus?: CalibrationDueStatus;
@@ -72,6 +74,7 @@ export const DEFAULT_UI_FILTERS: UICalibrationFilters = {
   search: '',
   site: '',
   teamId: '',
+  equipmentId: '',
   approvalStatus: '',
   result: '',
   calibrationDueStatus: '',
@@ -114,6 +117,8 @@ export function parseCalibrationFiltersFromSearchParams(
   const teamIdRaw = get('teamId') || DEFAULT_UI_FILTERS.teamId;
   const teamId = teamIdRaw === '_all' ? '' : teamIdRaw;
 
+  const equipmentId = get('equipmentId') || DEFAULT_UI_FILTERS.equipmentId;
+
   const approvalStatusRaw = get('approvalStatus') || DEFAULT_UI_FILTERS.approvalStatus;
   const approvalStatus = approvalStatusRaw === '_all' ? '' : approvalStatusRaw;
 
@@ -140,6 +145,7 @@ export function parseCalibrationFiltersFromSearchParams(
     search,
     site,
     teamId,
+    equipmentId,
     approvalStatus,
     result,
     calibrationDueStatus,
@@ -160,6 +166,7 @@ export function convertFiltersToApiParams(filters: UICalibrationFilters): ApiCal
     search: filters.search || undefined,
     site: filters.site || undefined,
     teamId: filters.teamId || undefined,
+    equipmentId: filters.equipmentId || undefined,
     approvalStatus: filters.approvalStatus || undefined,
     result: filters.result || undefined,
     calibrationDueStatus: filters.calibrationDueStatus || undefined,
