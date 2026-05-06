@@ -4,42 +4,23 @@ import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useNavigateWithPending } from '@/hooks/use-navigate-with-pending';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardList, Clock, AlertTriangle, PackageCheck, PackageOpen } from 'lucide-react';
 
-import { HeroKPI } from '@/components/checkouts/HeroKPI';
-import { SparklineMini } from '@/components/checkouts/SparklineMini';
 import { EmptyState } from '@/components/shared/EmptyState';
 import CheckoutEmptyState from '@/components/checkouts/CheckoutEmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { type Checkout } from '@/lib/api/checkout-api';
-import {
-  DEFAULT_PAGE_SIZE,
-  FRONTEND_ROUTES,
-  Permission,
-} from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { CheckoutBulkActionBar } from '@/components/checkouts/CheckoutBulkActionBar';
+import { CheckoutListPagination } from '@/components/checkouts/CheckoutListPagination';
+import { OutboundStatsGrid } from '@/components/checkouts/OutboundStatsGrid';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
 import { useRowSelection } from '@/hooks/use-bulk-selection';
 import { useCheckoutsListQuery } from '@/hooks/use-checkouts-list-query';
 import { useCheckoutBulkMutations } from '@/hooks/use-checkout-bulk-mutations';
 import { applyGroupToggle } from '@/lib/checkouts/group-selection';
-import {
-  getCheckoutStatsClasses,
-  CHECKOUT_MOTION,
-  CHECKOUT_STATS_VARIANTS,
-  CHECKOUT_STATS_ALERT_THRESHOLD,
-  CHECKOUT_PAGINATION_TOKENS,
-  getStatsGridClass,
-  MICRO_TYPO,
-  SECTION_RHYTHM_TOKENS,
-  TYPOGRAPHY_TOKENS,
-  CHECKOUT_ICON_MAP,
-  type CheckoutStatsVariant,
-} from '@/lib/design-tokens';
-import { selectHeroVariant } from '@/lib/utils/checkout-hero-selector';
+import { SECTION_RHYTHM_TOKENS, CHECKOUT_ICON_MAP } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
 import {
   convertFiltersToApiParams,
@@ -49,10 +30,7 @@ import {
   type CheckoutSubTab,
 } from '@/lib/utils/checkout-filter-utils';
 import CheckoutListTabs from '@/components/checkouts/CheckoutListTabs';
-import {
-  getCheckoutStatusGroupFilterValue,
-  CheckoutStatusValues as CSVal,
-} from '@equipment-management/schemas';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import type { CheckoutSummary } from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
@@ -61,76 +39,6 @@ interface OutboundCheckoutsTabProps {
   summary: CheckoutSummary;
   onStatCardClick: (status: string) => void;
   onResetFilters: () => void;
-}
-
-function deriveSparklineTrend(values: readonly number[]): 'up' | 'down' | 'flat' {
-  if (values.length <= 1) return 'flat';
-  const firstHalf = values.slice(0, Math.floor(values.length / 2));
-  const secondHalf = values.slice(Math.floor(values.length / 2));
-  const sum = (items: readonly number[]) => items.reduce((total, item) => total + item, 0);
-  const delta = sum(secondHalf) - sum(firstHalf);
-  if (delta > 0) return 'up';
-  if (delta < 0) return 'down';
-  return 'flat';
-}
-
-/** 반출 탭 통계 카드 데이터 정의 — referential stability 보장 (Phase 4 P1-1) */
-function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
-  return useMemo(
-    () => [
-      {
-        variantKey: 'total' as CheckoutStatsVariant,
-        labelKey: 'outbound.totalCheckouts',
-        subKey: 'outbound.totalSub',
-        value: summary.total,
-        trendKey: 'total' as const,
-        icon: ClipboardList,
-        filterStatus: 'all',
-        dotColor: 'bg-brand-info',
-      },
-      {
-        variantKey: 'pending' as CheckoutStatsVariant,
-        labelKey: 'outbound.pendingApproval',
-        subKey: 'outbound.pendingSub',
-        value: summary.pending,
-        trendKey: 'pending' as const,
-        icon: Clock,
-        filterStatus: 'pending',
-        dotColor: 'bg-brand-warning',
-      },
-      {
-        variantKey: 'checkedOut' as CheckoutStatsVariant,
-        labelKey: 'outbound.inProgress',
-        subKey: 'outbound.inProgressSub',
-        value: summary.inProgress,
-        trendKey: 'inProgress' as const,
-        icon: PackageOpen,
-        filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
-        dotColor: 'bg-brand-purple',
-      },
-      {
-        variantKey: 'overdue' as CheckoutStatsVariant,
-        labelKey: 'outbound.overdue',
-        subKey: 'outbound.overdueSub',
-        value: summary.overdue,
-        trendKey: 'overdue' as const,
-        icon: AlertTriangle,
-        filterStatus: CSVal.OVERDUE,
-        dotColor: 'bg-brand-critical',
-      },
-      {
-        variantKey: 'returned' as CheckoutStatsVariant,
-        labelKey: 'outbound.returnToday',
-        subKey: 'outbound.returnedSub',
-        value: summary.returnedToday,
-        trendKey: 'returnedToday' as const,
-        icon: PackageCheck,
-        filterStatus: getCheckoutStatusGroupFilterValue('completed'),
-        dotColor: 'bg-brand-ok',
-      },
-    ],
-    [summary.total, summary.pending, summary.inProgress, summary.overdue, summary.returnedToday]
-  );
 }
 
 /**
@@ -165,8 +73,6 @@ export default function OutboundCheckoutsTab({
   const { can } = useAuth();
   const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
   const canApproveCheckout = can(Permission.APPROVE_CHECKOUT);
-
-  const statCards = useStatCards(summary);
 
   // URL 페이지 변경 핸들러 — useCallback으로 referential stability (Phase 4.5 SHOULD-2 방어적 적용)
   const handlePageChange = useCallback(
@@ -276,12 +182,6 @@ export default function OutboundCheckoutsTab({
   // 활성 필터 판단 — countActiveFilters SSOT (새 필터 추가 시 자동 동기화)
   // ──────────────────────────────────────────────
   const filterActive = countActiveFilters(filters) > 0;
-  const isAllActive = !filterActive;
-  // Hero 선택 SSOT — Phase 4 P1-1 (overdue>0 priority, 향후 priority 확장은 selectHeroVariant)
-  const { heroVariantKey } = useMemo(
-    () => selectHeroVariant({ overdue: summary.overdue, pending: summary.pending }),
-    [summary.overdue, summary.pending]
-  );
 
   // 카드 활성화 핸들러 — useCallback으로 referential stability (memo'd 자식 회귀 차단)
   const handleStatActivate = useCallback(
@@ -293,163 +193,6 @@ export default function OutboundCheckoutsTab({
       }
     },
     [onResetFilters, onStatCardClick]
-  );
-
-  // ──────────────────────────────────────────────
-  // 5개 통계 카드
-  // ──────────────────────────────────────────────
-  const renderStats = () => (
-    <div className={getStatsGridClass(!!heroVariantKey)}>
-      {statCards.map((card) => {
-        const isActive =
-          card.filterStatus === 'all' ? isAllActive : filters.status === card.filterStatus;
-
-        const isAlert =
-          (card.variantKey === 'overdue' && summary.overdue > 0) ||
-          (card.variantKey === 'pending' &&
-            summary.pending > CHECKOUT_STATS_ALERT_THRESHOLD.pending);
-        const isHero = card.variantKey === heroVariantKey;
-
-        const variantTokens = CHECKOUT_STATS_VARIANTS[card.variantKey];
-
-        const onActivate = () => handleStatActivate(card.filterStatus);
-
-        // Hero 카드: HeroKPI atom + alertRing wrapper + a11y 강조 시맨틱 (Phase 4 P1-1)
-        if (isHero) {
-          const heroTokens = CHECKOUT_STATS_VARIANTS.hero;
-          const heroWrapperClass = [
-            heroTokens.containerInGrid,
-            'rounded-lg',
-            isAlert ? heroTokens.alertRing : '',
-          ]
-            .filter(Boolean)
-            .join(' ');
-          // GAP-3: 우상단 우선 배지 — 시각 강조용. SR은 wrapper aria-label에 priority 의미 합성으로 전달.
-          const priorityBadgeNode = isAlert ? (
-            <span className={heroTokens.priorityBadge} aria-hidden="true">
-              {t('outbound.priorityBadge')}
-            </span>
-          ) : null;
-          const metaNode =
-            card.variantKey === 'overdue' && summary.overdue > 0 ? (
-              <span>
-                {t('outbound.overdueMeta', {
-                  average: summary.avgDelayDays,
-                  max: summary.maxOverdueDays,
-                })}
-              </span>
-            ) : undefined;
-          // SR aria-label — isAlert 시 "{label}, 우선 항목" 합성 (시각 배지와 SR 정보 대칭)
-          const heroAriaLabel = isAlert
-            ? t('outbound.priorityHeroAriaLabel', { label: t(card.labelKey) })
-            : t(card.labelKey);
-          return (
-            <div
-              key={card.variantKey}
-              className={heroWrapperClass}
-              role="button"
-              tabIndex={0}
-              aria-pressed={isActive}
-              aria-label={heroAriaLabel}
-              onClick={onActivate}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onActivate();
-                }
-              }}
-            >
-              <HeroKPI
-                label={t(card.labelKey)}
-                value={card.value}
-                variant="critical"
-                badge={priorityBadgeNode}
-                meta={metaNode}
-              />
-            </div>
-          );
-        }
-
-        const finalCardClasses = [
-          getCheckoutStatsClasses(card.variantKey, isActive, isAlert),
-          CHECKOUT_MOTION.statsCard,
-          'elevation' in variantTokens ? variantTokens.elevation : '',
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        const IconComponent = card.icon;
-        const iconColorClass = isActive
-          ? CHECKOUT_STATS_VARIANTS[card.variantKey].iconColor
-          : 'text-muted-foreground';
-        const sparklineValues = summary.trends?.[card.trendKey] ?? [];
-        const sparklineTrend = deriveSparklineTrend(sparklineValues);
-
-        return (
-          <Card
-            key={card.variantKey}
-            className={finalCardClasses}
-            role="button"
-            tabIndex={0}
-            aria-pressed={isActive}
-            aria-label={t(card.labelKey)}
-            onClick={onActivate}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onActivate();
-              }
-            }}
-          >
-            <CardHeader
-              className={
-                'headerPadding' in variantTokens
-                  ? variantTokens.headerPadding
-                  : 'flex flex-row items-center justify-between p-3'
-              }
-            >
-              <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <span
-                  className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${card.dotColor}`}
-                  aria-hidden="true"
-                />
-                {t(card.labelKey)}
-              </CardTitle>
-              <IconComponent
-                className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`}
-                aria-hidden="true"
-              />
-            </CardHeader>
-            <CardContent
-              className={'contentPadding' in variantTokens ? variantTokens.contentPadding : 'p-3'}
-            >
-              <div
-                aria-label={`${t(card.labelKey)} ${t('list.count.unit', { value: card.value })}`}
-                className={[
-                  'valueTypography' in variantTokens
-                    ? variantTokens.valueTypography
-                    : `${TYPOGRAPHY_TOKENS.heading.h2} tabular-nums`,
-                  card.variantKey === 'pending' && card.value > 0 ? 'text-brand-warning' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {card.value}
-              </div>
-              <p className={`${MICRO_TYPO.label} text-muted-foreground mt-0.5`}>{t(card.subKey)}</p>
-              {isActive && (
-                <p className={`${MICRO_TYPO.badge} text-primary font-semibold mt-1`}>
-                  {t('outbound.activeFilter')}
-                </p>
-              )}
-              {sparklineValues.length > 1 && (
-                <SparklineMini values={sparklineValues} trend={sparklineTrend} variant="info" />
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
   );
 
   // 서브탭별 빈 상태 렌더링 함수
@@ -517,7 +260,7 @@ export default function OutboundCheckoutsTab({
           isPending={isBulkPending}
         />
       )}
-      {renderStats()}
+      <OutboundStatsGrid summary={summary} filters={filters} onStatActivate={handleStatActivate} />
 
       {/* 서브탭 (진행 중 / 완료) — tablist는 tabpanel의 sibling으로 배치 (WCAG 4.1.2) */}
       <CheckoutListTabs
@@ -564,116 +307,17 @@ export default function OutboundCheckoutsTab({
           )}
         </div>
 
-        {/* 페이지네이션 */}
-        {checkoutsData &&
-          checkoutsData.meta.pagination.totalPages > 1 &&
-          (() => {
-            const totalPages = checkoutsData.meta.pagination.totalPages;
-            const current = filters.page;
-
-            // 표시할 페이지 번호 배열 계산 (최대 5개, 현재 페이지 중심)
-            const pageNumbers: number[] = [];
-            const delta = 2;
-            const left = Math.max(1, current - delta);
-            const right = Math.min(totalPages, current + delta);
-            for (let i = left; i <= right; i++) pageNumbers.push(i);
-
-            return (
-              <div className={CHECKOUT_PAGINATION_TOKENS.container}>
-                <p className={CHECKOUT_PAGINATION_TOKENS.info}>
-                  {t('outbound.paginationInfo', {
-                    total: checkoutsData.meta.pagination.total,
-                    from:
-                      (current - 1) *
-                        (checkoutsData.meta.pagination.pageSize ?? DEFAULT_PAGE_SIZE) +
-                      1,
-                    to: Math.min(
-                      current * (checkoutsData.meta.pagination.pageSize ?? DEFAULT_PAGE_SIZE),
-                      checkoutsData.meta.pagination.total
-                    ),
-                  })}
-                </p>
-                <div className={CHECKOUT_PAGINATION_TOKENS.buttons}>
-                  {/* 이전 */}
-                  <button
-                    type="button"
-                    className={`${CHECKOUT_PAGINATION_TOKENS.btn.base} ${
-                      current === 1
-                        ? CHECKOUT_PAGINATION_TOKENS.btn.disabled
-                        : CHECKOUT_PAGINATION_TOKENS.btn.default
-                    }`}
-                    onClick={() => current > 1 && handlePageChange(current - 1)}
-                    disabled={current === 1 || checkoutsLoading}
-                    aria-label={t('actions.previous')}
-                  >
-                    ‹
-                  </button>
-
-                  {/* 첫 페이지 + 줄임표 */}
-                  {left > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        className={`${CHECKOUT_PAGINATION_TOKENS.btn.base} ${CHECKOUT_PAGINATION_TOKENS.btn.default}`}
-                        onClick={() => handlePageChange(1)}
-                      >
-                        1
-                      </button>
-                      {left > 2 && <span className={CHECKOUT_PAGINATION_TOKENS.ellipsis}>…</span>}
-                    </>
-                  )}
-
-                  {/* 페이지 번호 */}
-                  {pageNumbers.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className={`${CHECKOUT_PAGINATION_TOKENS.btn.base} ${
-                        p === current
-                          ? CHECKOUT_PAGINATION_TOKENS.btn.active
-                          : CHECKOUT_PAGINATION_TOKENS.btn.default
-                      }`}
-                      onClick={() => p !== current && handlePageChange(p)}
-                      aria-current={p === current ? 'page' : undefined}
-                    >
-                      {p}
-                    </button>
-                  ))}
-
-                  {/* 끝 페이지 + 줄임표 */}
-                  {right < totalPages && (
-                    <>
-                      {right < totalPages - 1 && (
-                        <span className={CHECKOUT_PAGINATION_TOKENS.ellipsis}>…</span>
-                      )}
-                      <button
-                        type="button"
-                        className={`${CHECKOUT_PAGINATION_TOKENS.btn.base} ${CHECKOUT_PAGINATION_TOKENS.btn.default}`}
-                        onClick={() => handlePageChange(totalPages)}
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-
-                  {/* 다음 */}
-                  <button
-                    type="button"
-                    className={`${CHECKOUT_PAGINATION_TOKENS.btn.base} ${
-                      current === totalPages
-                        ? CHECKOUT_PAGINATION_TOKENS.btn.disabled
-                        : CHECKOUT_PAGINATION_TOKENS.btn.default
-                    }`}
-                    onClick={() => current < totalPages && handlePageChange(current + 1)}
-                    disabled={current === totalPages || checkoutsLoading}
-                    aria-label={t('actions.next')}
-                  >
-                    ›
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
+        {/* 페이지네이션 (CheckoutListPagination 추출, presentation SSOT) */}
+        {checkoutsData && checkoutsData.meta.pagination.totalPages > 1 && (
+          <CheckoutListPagination
+            current={filters.page}
+            totalPages={checkoutsData.meta.pagination.totalPages}
+            total={checkoutsData.meta.pagination.total}
+            pageSize={checkoutsData.meta.pagination.pageSize}
+            onPageChange={handlePageChange}
+            isLoading={checkoutsLoading}
+          />
+        )}
       </div>
     </div>
   );
