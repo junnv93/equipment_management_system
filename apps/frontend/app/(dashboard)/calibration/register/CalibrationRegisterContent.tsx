@@ -78,6 +78,9 @@ export function CalibrationRegisterContent() {
         }),
       });
     } else {
+      // 매칭 실패 — toast가 ephemeral해서 놓칠 위험. 검색창에 managementNumber 자동
+      // 채움으로 회복 경로 시각화. 사용자가 검색 결과를 즉시 확인 가능.
+      setSearchTerm(extracted.managementNumber);
       toast({
         variant: 'destructive',
         description: t('certificateUpload.noEquipmentMatch', {

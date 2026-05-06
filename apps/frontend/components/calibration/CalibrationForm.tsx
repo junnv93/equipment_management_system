@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -114,6 +114,17 @@ export function CalibrationForm({
       ...defaultValues,
     },
   });
+
+  // useForm의 defaultValues는 mount 시 1회만 evaluate되므로, defaultValues prop이
+  // *나중에* 변경되는 경우 (PDF 추출 후 폼이 이미 mount된 상태)에도 폼에 반영되도록
+  // form.reset() 호출. 동일 reference 재실행 방지를 위해 직전 ref 비교.
+  // 사용자 입력(result/notes 등) 보존을 위해 현재 values를 유지한 채 추출 필드만 override.
+  const lastDefaultsRef = useRef<typeof defaultValues>(undefined);
+  useEffect(() => {
+    if (!defaultValues || defaultValues === lastDefaultsRef.current) return;
+    lastDefaultsRef.current = defaultValues;
+    form.reset({ ...form.getValues(), ...defaultValues });
+  }, [defaultValues, form]);
 
   const mutation = useMutation({
     mutationFn: (formData: FormData) => calibrationApi.createCalibrationWithFile(formData),
