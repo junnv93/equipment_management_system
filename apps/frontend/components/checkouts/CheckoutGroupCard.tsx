@@ -29,7 +29,6 @@ import {
 } from '@/hooks/use-checkout-card-mutations';
 import {
   CheckoutStatusValues as CSVal,
-  CheckoutPurposeValues as CPVal,
   type CheckoutAction,
   type NextStepDescriptor,
   type UserSelectableCheckoutPurpose,
@@ -124,9 +123,9 @@ function CheckoutGroupCard({
 
   const { data: session } = useSession();
   // 시뮬레이션 모드 반영 — useEffectiveRole SSOT (verify-ssot Step 37)
+  // session.user.role 직접 참조 금지 — fallback도 useEffectiveRole 결과만 사용.
   const { effectiveRole } = useEffectiveRole();
-  const role: UserRole =
-    effectiveRole ?? (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  const role: UserRole = effectiveRole ?? 'test_engineer';
   const userTeamId = session?.user?.teamId ?? null;
 
   const descriptorMap = useCheckoutGroupDescriptors(group.checkouts, role, userTeamId);
