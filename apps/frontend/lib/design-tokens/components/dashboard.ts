@@ -873,6 +873,17 @@ export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
   footer: `mt-3 pt-2.5 border-t border-dashed border-border flex items-center justify-between ${MICRO_TYPO.meta}`,
   footerLabel: 'text-muted-foreground',
   footerValue: 'font-mono tabular-nums font-bold text-foreground',
+
+  /**
+   * Transparency badge — backend 식별자 노출 (storage/queue/error data source).
+   * Tooltip trigger 형태로 호버/포커스 시 의미 설명. 측정 불가 케이스(`pg-database`)는 inline warn 라벨로 강제 노출.
+   */
+  backendInfoTrigger:
+    'inline-flex items-center gap-0.5 cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+  backendInfoIcon: 'h-3 w-3 text-muted-foreground/70',
+  /** 측정 불가 inline 라벨 (storageBackend === 'pg-database'). */
+  backendUnmeasured:
+    'inline-flex items-center text-2xs font-semibold text-brand-warning leading-none',
 } as const;
 
 // ============================================================================

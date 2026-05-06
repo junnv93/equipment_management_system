@@ -27,6 +27,13 @@ jest.mock('next-auth/react', () => ({
   useSession: () => ({ data: { user: { role: 'test_engineer', teamId: 'team1' } } }),
 }));
 
+// next/navigation — useEffectiveRole 도입(checkoutgroupcard-effective-role-ssot 후속)에 따라 mock 필요
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/checkouts',
+}));
+
 const mockUseCheckoutGroupDescriptors = jest.fn(() => new Map());
 
 jest.mock('@/hooks/use-checkout-group-descriptors', () => ({

@@ -473,6 +473,23 @@
     "errorsValue": "{count}",
     "statusHealthy": "Healthy",
     "statusDegraded": "Degraded",
-    "statusDown": "Down"
+    "statusDown": "Down",
+    "backendInfoLabel": "Data source",
+    "unmeasured": "Unmeasured",
+    "backend": {
+      "storage": {
+        "host-disk": "Host disk (df command)",
+        "configured-capacity": "Configured capacity (DASHBOARD_STORAGE_CAPACITY_BYTES)",
+        "pg-database": "DB size only (host-disk read failed — operations attention required)"
+      },
+      "queue": {
+        "pending-work-aggregate": "Pending work aggregate (Prometheus gauge)",
+        "bullmq": "BullMQ (planned)"
+      },
+      "error": {
+        "system-error-events": "system_error_events table (SSOT)",
+        "audit-rejection-proxy": "Audit rejection proxy (legacy fallback)"
+      }
+    }
   }
 }

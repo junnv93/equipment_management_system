@@ -3,6 +3,9 @@ import {
   API_ENDPOINTS,
   DASHBOARD_ACTIVITIES_LIMIT,
   type DashboardScope,
+  type SystemHealthStorageBackend,
+  type SystemHealthQueueBackend,
+  type SystemHealthErrorSource,
 } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
@@ -124,6 +127,17 @@ export interface SystemHealthMetrics {
   errorCount24h: number;
   /** 마지막 측정 시각 (ISO). 클라이언트 stale 판단용. */
   measuredAt?: string;
+  /**
+   * Transparency 식별자 — "어떤 데이터 소스로부터 답했는가" 운영자 노출.
+   *
+   * SSOT: `packages/shared-constants/src/system-health-backends.ts`.
+   * 운영 가이드: `docs/operations/system-health-data-sources.md`.
+   */
+  storageBackend: SystemHealthStorageBackend;
+  queueBackend: SystemHealthQueueBackend;
+  errorSource: SystemHealthErrorSource;
+  /** PostgreSQL DB 크기 (bytes) — admin 진단용. storagePct 가 측정 불가일 때도 dbSize 만 별도 노출. */
+  dbSizeBytes: number;
 }
 
 /** §A.7 — 반출 현황 카드 항목. */

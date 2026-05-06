@@ -1,7 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_SYSTEM_HEALTH_TOKENS as T } from '@/lib/design-tokens';
 import {
@@ -12,6 +14,14 @@ import {
   type SystemHealthTone,
 } from '@/lib/design-tokens/components/dday-tone';
 import type { SystemHealthMetrics } from '@/lib/api/dashboard-api';
+import type {
+  SystemHealthStorageBackend,
+  SystemHealthQueueBackend,
+  SystemHealthErrorSource,
+} from '@equipment-management/shared-constants';
+
+type BackendKey = SystemHealthStorageBackend | SystemHealthQueueBackend | SystemHealthErrorSource;
+type BackendCategory = 'storage' | 'queue' | 'error';
 
 interface SystemHealthCardProps {
   metrics?: SystemHealthMetrics;
@@ -36,6 +46,38 @@ const TONE_PILL_CLASS: Record<SystemHealthTone, string> = {
   danger: T.statusPill.danger,
 };
 
+interface BackendBadgeProps {
+  category: BackendCategory;
+  backend: BackendKey;
+}
+
+/**
+ * Transparency 배지 — 작은 ⓘ 트리거 + Tooltip으로 backend 식별자 의미 노출.
+ * Radix Tooltip이 keyboard accessible + aria-describedby 자동 wiring.
+ */
+function BackendBadge({ category, backend }: BackendBadgeProps) {
+  const t = useTranslations('dashboard.systemHealth');
+  const tooltipText = t(`backend.${category}.${backend}`);
+  const triggerLabel = t('backendInfoLabel');
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={T.backendInfoTrigger}
+          aria-label={`${triggerLabel}: ${tooltipText}`}
+        >
+          <Info className={T.backendInfoIcon} aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={4}>
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 interface HealthRowProps {
   label: string;
   value: string;
@@ -45,6 +87,10 @@ interface HealthRowProps {
   capacity?: number;
   /** dbMs 행은 임계값과 무관하게 info 톤(파랑)으로 표기 (명세서 §3.9). */
   forceInfoValueTone?: boolean;
+  /** Transparency 배지 — backend 식별자 표시 (storage/queue/error). 미지정 시 배지 미렌더. */
+  backendBadge?: { category: BackendCategory; backend: BackendKey };
+  /** pg-database 같은 측정 불가 케이스에 inline "측정 불가" 라벨 표시. */
+  unmeasuredLabel?: string;
 }
 
 function HealthRow({
@@ -55,6 +101,8 @@ function HealthRow({
   rawValue,
   capacity,
   forceInfoValueTone,
+  backendBadge,
+  unmeasuredLabel,
 }: HealthRowProps) {
   const tone = resolveSystemHealthTone(metric, rawValue, capacity);
   const gaugePct = resolveSystemHealthGaugePct(metric, rawValue, capacity);
@@ -62,10 +110,23 @@ function HealthRow({
 
   return (
     <div className={T.statusItem}>
-      <span className={T.statusLabel}>{label}</span>
+      <span className={T.statusLabel}>
+        {label}
+        {backendBadge ? (
+          <>
+            {' '}
+            <BackendBadge category={backendBadge.category} backend={backendBadge.backend} />
+          </>
+        ) : null}
+      </span>
       <span className={cn(T.statusValue, valueClass)}>
         {value}
         {unit ? <span className={T.statusUnit}>{unit}</span> : null}
+        {unmeasuredLabel ? (
+          <span className={T.backendUnmeasured} data-testid="health-row-unmeasured">
+            {unmeasuredLabel}
+          </span>
+        ) : null}
       </span>
       <div
         className={T.gauge.track}
@@ -117,7 +178,12 @@ export function SystemHealthCard({ metrics, loading = false }: SystemHealthCardP
     storagePct: 0,
     queueSize: 0,
     errorCount24h: 0,
+    storageBackend: 'host-disk',
+    queueBackend: 'pending-work-aggregate',
+    errorSource: 'system-error-events',
+    dbSizeBytes: 0,
   };
+  const isStorageUnmeasured = safe.storageBackend === 'pg-database';
 
   const overallTone = resolveSystemHealthOverallTone(safe.overallStatus);
   const overallLabel =
@@ -128,56 +194,64 @@ export function SystemHealthCard({ metrics, loading = false }: SystemHealthCardP
         : t('statusDown');
 
   return (
-    <section className={T.container} role="region" aria-label={t('ariaLabel')}>
-      <header className={T.header}>
-        <div className="flex flex-col gap-0.5">
-          <span className={T.title}>{t('title')}</span>
-          <span className={T.subtitle}>{t('subtitle')}</span>
+    <TooltipProvider delayDuration={150}>
+      <section className={T.container} role="region" aria-label={t('ariaLabel')}>
+        <header className={T.header}>
+          <div className="flex flex-col gap-0.5">
+            <span className={T.title}>{t('title')}</span>
+            <span className={T.subtitle}>{t('subtitle')}</span>
+          </div>
+          <span
+            className={cn(T.statusPill.base, TONE_PILL_CLASS[overallTone])}
+            aria-label={overallLabel}
+          >
+            <span aria-hidden="true">●</span>
+            {overallLabel}
+          </span>
+        </header>
+
+        <div className={T.statusGrid}>
+          <HealthRow
+            label={t('activeUsers')}
+            value={`${safe.activeUsers} / ${safe.maxUsers}`}
+            metric="activeUsers"
+            rawValue={safe.activeUsers}
+            capacity={safe.maxUsers}
+          />
+          <HealthRow
+            label={t('dbResponseMs')}
+            value={`${safe.dbResponseMs}`}
+            unit={t('unitMs')}
+            metric="dbMs"
+            rawValue={safe.dbResponseMs}
+            forceInfoValueTone
+          />
+          <HealthRow
+            label={t('storage')}
+            value={`${safe.storagePct}`}
+            unit={t('unitPct')}
+            metric="storage"
+            rawValue={safe.storagePct}
+            backendBadge={{ category: 'storage', backend: safe.storageBackend }}
+            unmeasuredLabel={isStorageUnmeasured ? t('unmeasured') : undefined}
+          />
+          <HealthRow
+            label={t('queue')}
+            value={`${safe.queueSize}`}
+            metric="queue"
+            rawValue={safe.queueSize}
+            backendBadge={{ category: 'queue', backend: safe.queueBackend }}
+          />
         </div>
-        <span
-          className={cn(T.statusPill.base, TONE_PILL_CLASS[overallTone])}
-          aria-label={overallLabel}
-        >
-          <span aria-hidden="true">●</span>
-          {overallLabel}
-        </span>
-      </header>
 
-      <div className={T.statusGrid}>
-        <HealthRow
-          label={t('activeUsers')}
-          value={`${safe.activeUsers} / ${safe.maxUsers}`}
-          metric="activeUsers"
-          rawValue={safe.activeUsers}
-          capacity={safe.maxUsers}
-        />
-        <HealthRow
-          label={t('dbResponseMs')}
-          value={`${safe.dbResponseMs}`}
-          unit={t('unitMs')}
-          metric="dbMs"
-          rawValue={safe.dbResponseMs}
-          forceInfoValueTone
-        />
-        <HealthRow
-          label={t('storage')}
-          value={`${safe.storagePct}`}
-          unit={t('unitPct')}
-          metric="storage"
-          rawValue={safe.storagePct}
-        />
-        <HealthRow
-          label={t('queue')}
-          value={`${safe.queueSize}`}
-          metric="queue"
-          rawValue={safe.queueSize}
-        />
-      </div>
-
-      <div className={T.footer}>
-        <span className={T.footerLabel}>{t('errorsLast24h')}</span>
-        <span className={T.footerValue}>{t('errorsValue', { count: safe.errorCount24h })}</span>
-      </div>
-    </section>
+        <div className={T.footer}>
+          <span className={T.footerLabel}>
+            {t('errorsLast24h')}{' '}
+            <BackendBadge category="error" backend={safe.errorSource} />
+          </span>
+          <span className={T.footerValue}>{t('errorsValue', { count: safe.errorCount24h })}</span>
+        </div>
+      </section>
+    </TooltipProvider>
   );
 }

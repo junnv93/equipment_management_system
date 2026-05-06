@@ -473,6 +473,23 @@
     "errorsValue": "{count}건",
     "statusHealthy": "정상",
     "statusDegraded": "경고",
-    "statusDown": "점검 중"
+    "statusDown": "점검 중",
+    "backendInfoLabel": "데이터 소스",
+    "unmeasured": "측정 불가",
+    "backend": {
+      "storage": {
+        "host-disk": "호스트 디스크 (df 명령 측정)",
+        "configured-capacity": "설정 용량 기반 (DASHBOARD_STORAGE_CAPACITY_BYTES)",
+        "pg-database": "DB 크기만 측정 (host-disk 측정 실패 — 운영 점검 필요)"
+      },
+      "queue": {
+        "pending-work-aggregate": "대기 작업 집계 (Prometheus gauge)",
+        "bullmq": "BullMQ (계획됨)"
+      },
+      "error": {
+        "system-error-events": "system_error_events 테이블 (SSOT)",
+        "audit-rejection-proxy": "감사 반려 프록시 (legacy fallback)"
+      }
+    }
   }
 }
