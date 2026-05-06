@@ -1,5 +1,22 @@
 # Harness 완료 프롬프트 아카이브 — 도메인 기능 (장비/점검/팀/SW 등)
 
+---
+
+## ~~2026-05-06 — SSOT Recovery 3-Finding (setup-node + Backend bare Error + useEffectiveRole)~~ ✅ 완료 (2026-05-06, Mode 2 harness iter 2 PASS)
+
+> Mode 2 harness 4 phase / 6 commits / 다중 세션 sabotage 대응 학습.
+>
+> **Phase 1**: setup-node v6 SHA-pin 4 workflows (bundle-size + accessibility-audit + performance-audit + copilot-setup-steps) — supply chain attack 방어 + main.yml 일관성. commit `079b0374`.
+> **Phase 2A**: ApprovalDelegation ErrorCode enum 2건 + errorCodeToStatusCode Record completeness. commit `ed5549fe`.
+> **Phase 2B**: backend bare Error → ErrorCode SSOT 5-layer (9 files — InternalServerErrorException × 3 / SyntaxError local sentinel × 2 / NOTE 주석 정당 5+건). commit `600699a6`.
+> **Phase 2C**: frontend approval-errors mapper + ko/en errors namespace parity (3 keys). commit `7511d8fa`.
+> **Phase 3A**: useEffectiveRole 12 client files 마이그레이션 (시뮬레이션 모드 SSOT 회복) + use-auth `// allow:` actualRole-only by design. commit `c9e9e087`.
+> **Phase 3B**: verify-ssot Step 37 + verify-zod Step 16 4b baseline 강화 (multi-line awk). commit `be6d190d`.
+> **iter 2 fix**: M-4/M-9/M-13/M-15/M-16b — 단위 테스트 + 코멘트 false positive 정정 + grep 패턴 격상. commit `c63f5d20` + `17e8248f`.
+>
+> **다중 세션 sabotage 학습**: working tree에 Edit 후 30초 이내 git commit으로 reflog lock-in. 다른 세션 reset/stash drop 발생해도 commit history 보존 + origin/main sync 자동 회복.
+> **상세**: `.claude/exec-plans/completed/2026-05-06-ssot-recovery-3finding.md` + `.claude/contracts/completed/ssot-recovery-3finding.md` + `project_ssot_recovery_3finding_20260506.md`
+
 > 완료 처리된 프롬프트 섹션들. 최신 차수부터 역순 정렬.
 > 전체 인덱스: [archive-index.md](./archive-index.md)
 
