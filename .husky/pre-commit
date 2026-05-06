@@ -7,14 +7,27 @@
 #   4. self-audit (7대 아키텍처 원칙)
 #   5. i18n 키 무결성
 #   6. i18n 호출지 ↔ messages JSON parity
+#
+# Hook 실행 시간 측정 (opt-in):
+#   EMS_HOOK_TIMING=1 git commit ...        → stderr 에 JSON-line 출력
+#   EMS_HOOK_TIMING_LOG=1 ...               → .husky/.timing-log.jsonl append
+# 미설정 시 wrapper 는 단순 spawn — overhead < 5ms/step.
 
 set -e
+
+# ─── timing wrapper helper ─────────────────────────────────────────────
+# `_t <label> <command...>` 형태로 호출. EMS_HOOK_TIMING 미설정 시 실행만 함.
+_t() {
+  label="$1"
+  shift
+  node scripts/hook-timing.mjs --label "$label" -- "$@"
+}
 
 # 0. multi-session staged guard
 #    - 항상 staged stat 출력 (인지 강제)
 #    - EMS_PRECOMMIT_STRICT=1 활성화 시 의심 패턴 (11+파일 또는 mtime spread 30분+) 차단
 #    - 정책 출처: ADR-0007 multi-session-working-tree-safety
-node scripts/precommit-staged-guard.mjs
+_t "staged-guard" node scripts/precommit-staged-guard.mjs
 
 # 1. sops 파일 암호화 상태 검증
 STAGED_SOPS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^infra/secrets/.*\.sops\.yaml$' || true)
@@ -41,13 +54,13 @@ else
 fi
 
 # 3. lint-staged
-pnpm lint-staged
+_t "lint-staged" pnpm lint-staged
 
 # 4. self-audit — 7대 아키텍처 원칙 위반 감지 (staged 파일만)
-node scripts/self-audit.mjs --staged
+_t "self-audit" node scripts/self-audit.mjs --staged
 
 # 5. i18n 키 무결성 검증 — checkouts.json 변경 시 필수 키 누락 차단
-node scripts/check-i18n-keys.mjs --changed
+_t "i18n-keys" node scripts/check-i18n-keys.mjs --changed
 
 # 6. i18n 호출지 ↔ messages JSON parity (호출 키 존재 여부 정적 검증)
-node scripts/check-i18n-call-sites.mjs --changed --quiet
+_t "i18n-call-sites" node scripts/check-i18n-call-sites.mjs --changed --quiet

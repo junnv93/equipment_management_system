@@ -100,6 +100,50 @@ const PARITY_SPEC = Object.freeze({
      */
     criticalRestrictedPaths: ['auth/rbac/roles.enum', 'auth/rbac/permissions.enum'],
   },
+  packages: {
+    /**
+     * packages 도메인은 root `.eslintrc.js` 의 overrides 배열에서 packages glob
+     * override 항목을 SSOT 로 사용 (apps/* 처럼 도메인별 eslint config 파일 분리 X).
+     * lintstaged 도 root config 를 그대로 참조 → eslintConfig = root 파일.
+     */
+    eslintConfig: '.eslintrc.js',
+    lintstagedConfig: '.lintstagedrc.json',
+    lintstagedGlobPrefix: 'packages/',
+    /**
+     * packages 는 lint:ci script 부재 도메인. lint 게이트는 lintstaged + tsc 만으로
+     * 운영 — `packages/<pkg>/package.json` 에 lint script 추가는 build chain 복잡도
+     * 증가 대비 실익 0 (commit-pipeline-safety SHOULD 후속 sprint S-2 결정).
+     *
+     * `lintCiScriptName: null` 시 verifyDomainParity step 3 (script glob 일치) 는 skip,
+     * step 4-5 (critical rule + restricted 패턴) 만 검증.
+     */
+    lintCiPackage: null,
+    lintCiGlob: null,
+    lintCiCwd: null,
+    lintCiScriptName: null,
+    /**
+     * packages lintstaged glob 은 `packages/**\/*.ts` 단일 prefix — 전 영역 커버.
+     * frontend 와 동일 패턴 (segment 검증 불요).
+     */
+    requiredLintstagedGlobSegments: [],
+    /**
+     * root `.eslintrc.js` 의 packages override 가 갖춰야 할 핵심 룰.
+     * - @typescript-eslint/no-explicit-any: any 회귀 차단 (warn → 향후 error 격상)
+     * - @typescript-eslint/no-unused-vars: dead code 회귀 차단
+     * - @typescript-eslint/ban-ts-comment: @ts-ignore 무차별 사용 차단
+     */
+    criticalRulesMustExist: [
+      '@typescript-eslint/no-explicit-any',
+      '@typescript-eslint/no-unused-vars',
+      '@typescript-eslint/ban-ts-comment',
+    ],
+    /**
+     * packages 자체가 SSOT 정의처 — backend/frontend 처럼 SSOT 우회 차단 룰
+     * (no-restricted-imports/syntax) 부재. 빈 배열 = 검증 항목 0.
+     */
+    criticalRestrictedNames: [],
+    criticalRestrictedPaths: [],
+  },
 });
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────
@@ -201,21 +245,32 @@ async function verifyDomainParity(domainLabel, spec) {
   }
 
   // 3. lint script 가 동일 SSOT 적용 영역 — script 존재 + glob 일치
-  const lintCiPkg = JSON.parse(await readFile(join(ROOT, spec.lintCiPackage), 'utf8'));
-  const lintCiScript = lintCiPkg.scripts?.[spec.lintCiScriptName];
-
-  if (!lintCiScript) {
-    fail(`[${domainLabel}] ${spec.lintCiPackage} 에 ${spec.lintCiScriptName} script 없음`, results);
-  } else if (!lintCiScript.includes(spec.lintCiGlob)) {
-    fail(
-      `[${domainLabel}] ${spec.lintCiScriptName} script glob 이 spec(${spec.lintCiGlob})과 불일치. 현재: ${lintCiScript}`,
+  //    packages 처럼 lint script 부재 도메인은 lintCiScriptName=null 로 표시 → step skip.
+  if (spec.lintCiScriptName === null) {
+    pass(
+      `[${domainLabel}] lint script 부재 도메인 — lintstaged + tsc 만으로 게이트 (script glob 검증 skip)`,
       results
     );
   } else {
-    pass(
-      `[${domainLabel}] ${spec.lintCiScriptName} script glob = ${spec.lintCiGlob} (cwd=${spec.lintCiCwd})`,
-      results
-    );
+    const lintCiPkg = JSON.parse(await readFile(join(ROOT, spec.lintCiPackage), 'utf8'));
+    const lintCiScript = lintCiPkg.scripts?.[spec.lintCiScriptName];
+
+    if (!lintCiScript) {
+      fail(
+        `[${domainLabel}] ${spec.lintCiPackage} 에 ${spec.lintCiScriptName} script 없음`,
+        results
+      );
+    } else if (!lintCiScript.includes(spec.lintCiGlob)) {
+      fail(
+        `[${domainLabel}] ${spec.lintCiScriptName} script glob 이 spec(${spec.lintCiGlob})과 불일치. 현재: ${lintCiScript}`,
+        results
+      );
+    } else {
+      pass(
+        `[${domainLabel}] ${spec.lintCiScriptName} script glob = ${spec.lintCiGlob} (cwd=${spec.lintCiCwd})`,
+        results
+      );
+    }
   }
 
   // 4. critical rule 등록 검증
@@ -256,6 +311,7 @@ async function verifyDomainParity(domainLabel, spec) {
 
 const verifyBackendParity = () => verifyDomainParity('backend', PARITY_SPEC.backend);
 const verifyFrontendParity = () => verifyDomainParity('frontend', PARITY_SPEC.frontend);
+const verifyPackagesParity = () => verifyDomainParity('packages', PARITY_SPEC.packages);
 
 // ─── main ──────────────────────────────────────────────────────────────────
 
@@ -264,11 +320,14 @@ async function main() {
   // 도메인 선택 (테스트 fixture 격리용 — 정상 실행 시 모두 검증)
   // 예: EMS_PARITY_DOMAINS=backend → backend만 검증 (frontend mock 불요)
   const domainsEnv = process.env.EMS_PARITY_DOMAINS;
-  const domains = domainsEnv ? domainsEnv.split(',').map((d) => d.trim()) : ['backend', 'frontend'];
+  const domains = domainsEnv
+    ? domainsEnv.split(',').map((d) => d.trim())
+    : ['backend', 'frontend', 'packages'];
 
   const tasks = [];
   if (domains.includes('backend')) tasks.push(verifyBackendParity());
   if (domains.includes('frontend')) tasks.push(verifyFrontendParity());
+  if (domains.includes('packages')) tasks.push(verifyPackagesParity());
 
   const results = await Promise.all(tasks);
   const allPassed = results.flatMap((r) => r.passed);

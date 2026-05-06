@@ -191,3 +191,6 @@ init-postgres.sql
 
 # .claude scheduled tasks lock (런타임)
 .claude/scheduled_tasks.lock
+
+# hook timing log (opt-in 누적 — EMS_HOOK_TIMING_LOG=1)
+.husky/.timing-log.jsonl

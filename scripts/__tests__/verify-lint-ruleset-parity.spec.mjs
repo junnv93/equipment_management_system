@@ -40,15 +40,46 @@ function makeFixture({ lintstaged, eslintConfig, packageJson }) {
   return dir;
 }
 
-function runScript(dir) {
-  // fixture 격리: backend 도메인만 검증 (fixture에 frontend mock 부재)
+function runScript(dir, domain = 'backend') {
+  // fixture 격리: 단일 도메인만 검증 (다른 도메인 mock 부재 — fail 회피)
   const r = spawnSync('node', ['scripts/verify-lint-ruleset-parity.mjs'], {
     cwd: dir,
-    env: { ...process.env, EMS_PARITY_DOMAINS: 'backend' },
+    env: { ...process.env, EMS_PARITY_DOMAINS: domain },
     encoding: 'utf8',
   });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
+
+/**
+ * packages 도메인 fixture — root .eslintrc.js 가 packages override 를 갖춘 상태.
+ *
+ * @param {object} opts
+ * @param {object} opts.lintstaged - .lintstagedrc.json 내용
+ * @param {string} opts.rootEslintConfig - root .eslintrc.js 본문
+ */
+function makePackagesFixture({ lintstaged, rootEslintConfig }) {
+  const dir = mkdtempSync(join(tmpdir(), 'parity-pkg-fixture-'));
+  mkdirSync(join(dir, 'scripts'), { recursive: true });
+  copyFileSync(SCRIPT_PATH, join(dir, 'scripts', 'verify-lint-ruleset-parity.mjs'));
+  writeFileSync(join(dir, '.lintstagedrc.json'), JSON.stringify(lintstaged, null, 2));
+  writeFileSync(join(dir, '.eslintrc.js'), rootEslintConfig);
+  return dir;
+}
+
+const VALID_PACKAGES_ROOT_ESLINT = `
+module.exports = {
+  overrides: [
+    {
+      files: ['packages/**/*.ts'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-unused-vars': 'warn',
+        '@typescript-eslint/ban-ts-comment': 'warn',
+      },
+    },
+  ],
+};
+`;
 
 const VALID_ESLINT_BODY = `
 module.exports = {
@@ -158,6 +189,98 @@ describe('verify-lint-ruleset-parity', () => {
       const r = runScript(dir);
       assert.equal(r.code, 1, 'lint:ci glob 불일치는 FAIL');
       assert.match(r.stderr, /lint:ci script glob/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('verify-lint-ruleset-parity packages 도메인', () => {
+  test('packages 정상 fixture (lintstaged + root override 룰 정합) → PASS', () => {
+    const dir = makePackagesFixture({
+      lintstaged: {
+        'packages/**/*.ts': ['eslint --quiet --fix --config .eslintrc.js'],
+      },
+      rootEslintConfig: VALID_PACKAGES_ROOT_ESLINT,
+    });
+    try {
+      const r = runScript(dir, 'packages');
+      assert.equal(r.code, 0, `PASS 기대. stderr=${r.stderr}`);
+      assert.match(r.stdout, /\[packages\]/);
+      assert.match(r.stdout, /lint script 부재 도메인/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('packages lintstaged glob 항목 누락 → FAIL', () => {
+    const dir = makePackagesFixture({
+      lintstaged: {
+        // packages/ glob 부재 — backend 만
+        'apps/backend/{src,test}/**/*.ts': ['eslint'],
+      },
+      rootEslintConfig: VALID_PACKAGES_ROOT_ESLINT,
+    });
+    try {
+      const r = runScript(dir, 'packages');
+      assert.equal(r.code, 1, 'lintstaged 누락은 FAIL');
+      assert.match(r.stderr, /packages\/ glob 항목이 없음/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('packages eslint config 가 wrong path → FAIL', () => {
+    const dir = makePackagesFixture({
+      lintstaged: {
+        'packages/**/*.ts': ['eslint --quiet --fix --config WRONG/eslint.js'],
+      },
+      rootEslintConfig: VALID_PACKAGES_ROOT_ESLINT,
+    });
+    try {
+      const r = runScript(dir, 'packages');
+      assert.equal(r.code, 1, 'wrong config path 는 FAIL');
+      assert.match(r.stderr, /SSOT config/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('packages root eslint config 가 critical rule 누락 → FAIL', () => {
+    const dir = makePackagesFixture({
+      lintstaged: {
+        'packages/**/*.ts': ['eslint --quiet --fix --config .eslintrc.js'],
+      },
+      // no-explicit-any 누락 — 다른 룰만 정의
+      rootEslintConfig: `
+module.exports = {
+  overrides: [
+    { files: ['packages/**/*.ts'], rules: { 'no-console': 'warn' } },
+  ],
+};
+`,
+    });
+    try {
+      const r = runScript(dir, 'packages');
+      assert.equal(r.code, 1, 'critical rule 누락은 FAIL');
+      assert.match(r.stderr, /@typescript-eslint\/no-explicit-any/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('packages lint script 부재 도메인 — script glob 검증 skip', () => {
+    // packages 는 lintCiScriptName=null. step 3 skip 검증.
+    const dir = makePackagesFixture({
+      lintstaged: {
+        'packages/**/*.ts': ['eslint --quiet --fix --config .eslintrc.js'],
+      },
+      rootEslintConfig: VALID_PACKAGES_ROOT_ESLINT,
+    });
+    try {
+      const r = runScript(dir, 'packages');
+      assert.equal(r.code, 0);
+      assert.match(r.stdout, /script glob 검증 skip/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -10,10 +10,18 @@
 #   2. SOPS sync (SOPS_AGE_KEY env + sops binary 존재 시에만 — 선택적)
 #   3. TypeScript type check (all packages)
 #   4. Backend lint (ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
-#   5. Frontend lint (Next.js ESLint) — main-residual-lint 회귀 차단 (2026-04-28 추가)
-#   6. [경로 기반] ADR-0006 routing 파일 변경 시 verify-routing-origin 자동 실행 (2026-04-29 추가)
-#   7. Backend unit tests
-#   8. Frontend unit tests
+#   5. Lint ruleset parity (lintstaged ↔ lint:ci 3 도메인)
+#   6. Frontend lint (Next.js ESLint)
+#   7. i18n call-sites parity
+#   8. E2E actor alignment
+#   9. [경로 기반] ADR-0006 routing 파일 변경 시 verify-routing-origin
+#  10. Backend unit tests
+#  11. Frontend unit tests
+#
+# Hook 실행 시간 측정 (opt-in):
+#   EMS_HOOK_TIMING=1 git push ...        → 각 step elapsed 를 stderr 에 JSON-line 출력
+#   EMS_HOOK_TIMING_LOG=1 ...             → .husky/.timing-log.jsonl append
+# 미설정 시 wrapper 는 단순 spawn — overhead < 5ms/step.
 #
 # Skipped (still rely on GitHub Actions for these):
 #   - E2E tests (too slow for every push)
@@ -21,8 +29,16 @@
 
 set -e
 
+# ─── timing wrapper helper ─────────────────────────────────────────────
+# `_t <label> <command...>` 형태로 호출. EMS_HOOK_TIMING 미설정 시 실행만 함.
+_t() {
+  label="$1"
+  shift
+  node scripts/hook-timing.mjs --label "$label" -- "$@"
+}
+
 echo "▶ pre-push: env-sync check..."
-pnpm verify:env-sync
+_t "env-sync" pnpm verify:env-sync
 
 # SOPS 검증 — 로컬에 SOPS_AGE_KEY가 설정되어 있고 sops 바이너리가 있을 때만 실행.
 # 없으면 조용히 스킵 (CI 왕복 전에 드리프트 조기 감지).
@@ -37,22 +53,22 @@ if [ -n "${SOPS_AGE_KEY:-}" ] && command -v sops >/dev/null 2>&1; then
 fi
 
 echo "▶ pre-push: TypeScript check..."
-pnpm tsc --noEmit
+_t "tsc" pnpm tsc --noEmit
 
 echo "▶ pre-push: backend lint..."
-pnpm --filter backend run lint:ci
+_t "backend-lint" pnpm --filter backend run lint:ci
 
-echo "▶ pre-push: lint ruleset parity (lintstaged ↔ lint:ci)..."
-pnpm verify:lint-ruleset-parity
+echo "▶ pre-push: lint ruleset parity (lintstaged ↔ lint:ci, 3 도메인)..."
+_t "parity" pnpm verify:lint-ruleset-parity
 
 echo "▶ pre-push: frontend lint..."
-pnpm --filter frontend run lint
+_t "frontend-lint" pnpm --filter frontend run lint
 
 echo "▶ pre-push: i18n call-sites parity..."
-node scripts/check-i18n-call-sites.mjs --all --quiet
+_t "i18n-parity" node scripts/check-i18n-call-sites.mjs --all --quiet
 
 echo "▶ pre-push: e2e actor alignment (Step 23/24/25 invariants)..."
-pnpm --filter backend run verify:e2e-actors
+_t "e2e-actors" pnpm --filter backend run verify:e2e-actors
 
 # ── ADR-0006 경로 기반 게이트 (routing 파일 변경 시에만 실행) ────────────────
 # 대상 파일: infra/nginx/, next.config.js, proxy.ts, api-routing.ts
@@ -63,16 +79,16 @@ _ROUTING_CHANGED=$(git diff --name-only "origin/main..HEAD" 2>/dev/null \
 if [ -n "$_ROUTING_CHANGED" ]; then
   echo "▶ pre-push: ADR-0006 routing 파일 변경 감지 — verify-routing-origin 실행..."
   printf '%s\n' "$_ROUTING_CHANGED" | sed 's/^/    /'
-  pnpm --filter @equipment-management/shared-constants run test --silent --passWithNoTests
-  bash scripts/verify-routing-origin.sh
+  _t "routing-shared-constants-test" pnpm --filter @equipment-management/shared-constants run test --silent --passWithNoTests
+  _t "routing-origin" bash scripts/verify-routing-origin.sh
 fi
 # ──────────────────────────────────────────────────────────────────────────────
 
 echo "▶ pre-push: backend tests..."
-pnpm --filter backend run test --silent --passWithNoTests
+_t "backend-test" pnpm --filter backend run test --silent --passWithNoTests
 
 echo "▶ pre-push: frontend tests..."
-pnpm --filter frontend run test --silent --passWithNoTests
+_t "frontend-test" pnpm --filter frontend run test --silent --passWithNoTests
 
 echo "✔ pre-push: all checks passed"
 
