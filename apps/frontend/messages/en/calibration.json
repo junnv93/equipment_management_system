@@ -294,6 +294,11 @@
       "unitSuffix": "units",
       "viewDetails": "View Details"
     },
+    "filterChip": {
+      "equipmentLabel": "Equipment:",
+      "clear": "Clear filter",
+      "clearAriaLabel": "Clear equipment filter"
+    },
     "search": {
       "placeholder": "Search equipment name, management number...",
       "siteFilter": "Site",

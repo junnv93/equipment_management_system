@@ -116,6 +116,7 @@ export default function CalibrationContent({
     const params: Record<string, string | undefined> = {
       teamId: defaultTeamId,
       site: defaultSite,
+      equipmentId: filters.equipmentId || undefined,
       approvalStatus: filters.approvalStatus || undefined,
       result: filters.result || undefined,
       calibrationDueStatus: filters.calibrationDueStatus || undefined,
@@ -127,6 +128,7 @@ export default function CalibrationContent({
   }, [
     defaultTeamId,
     defaultSite,
+    filters.equipmentId,
     filters.approvalStatus,
     filters.result,
     filters.calibrationDueStatus,
@@ -228,6 +230,34 @@ export default function CalibrationContent({
           router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?calibrationDueFilter=due_soon`)
         }
       />
+
+      {/* equipmentId deep-link 활성 시 chip — 사용자가 어떤 장비로 필터링 중인지 즉시 인지 */}
+      {filters.equipmentId && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 border border-border text-sm">
+          <span className="font-medium">{t('content.filterChip.equipmentLabel')}</span>
+          <span className="text-muted-foreground">
+            {calibrationHistoryData?.data?.[0]?.equipmentName ?? '—'}
+            {calibrationHistoryData?.data?.[0]?.managementNumber
+              ? ` (${calibrationHistoryData.data[0].managementNumber})`
+              : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete('equipmentId');
+              const qs = params.toString();
+              router.replace(
+                qs ? `${FRONTEND_ROUTES.CALIBRATION.LIST}?${qs}` : FRONTEND_ROUTES.CALIBRATION.LIST
+              );
+            }}
+            className="ml-auto text-xs text-primary hover:underline"
+            aria-label={t('content.filterChip.clearAriaLabel')}
+          >
+            {t('content.filterChip.clear')}
+          </button>
+        </div>
+      )}
 
       {/* 통계 카드 */}
       <CalibrationStatsCards stats={stats} />

@@ -294,6 +294,11 @@
       "unitSuffix": "대",
       "viewDetails": "확인하기"
     },
+    "filterChip": {
+      "equipmentLabel": "장비:",
+      "clear": "필터 해제",
+      "clearAriaLabel": "장비 필터 해제"
+    },
     "search": {
       "placeholder": "장비명, 관리번호 검색...",
       "siteFilter": "시험소",

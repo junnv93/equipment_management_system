@@ -143,7 +143,12 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             <Calendar className="h-5 w-5 text-brand-info" />
             {t('calibrationHistoryTab.title')}
           </CardTitle>
-          {canCreate && <CalibrationRegisterDialog equipmentId={equipmentId} />}
+          {canCreate && (
+            <CalibrationRegisterDialog
+              equipmentId={equipmentId}
+              managementNumber={equipment.managementNumber}
+            />
+          )}
         </CardHeader>
         <CardContent>
           {calibrations.length === 0 ? (
