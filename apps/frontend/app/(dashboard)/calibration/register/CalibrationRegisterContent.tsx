@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
+import type { ExtractedCalibrationCertificate } from '@equipment-management/schemas';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
 import { PageHeader } from '@/components/shared/PageHeader';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -20,6 +22,8 @@ import {
   getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { CalibrationForm } from '@/components/calibration/CalibrationForm';
+import { CalibrationCertificatePdfUploader } from '@/components/calibration/CalibrationCertificatePdfUploader';
+import { extractedToFormDefaults } from '@/lib/calibration/extracted-to-form-defaults';
 import type { Calibration } from '@/lib/api/calibration-api';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -28,12 +32,16 @@ export function CalibrationRegisterContent() {
   const searchParams = useSearchParams();
   const { can } = useAuth();
   const t = useTranslations('calibration');
+  const { toast } = useToast();
 
   const equipmentIdFromUrl = searchParams.get('equipmentId');
   const canRegisterCalibration = can(Permission.CREATE_CALIBRATION);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(equipmentIdFromUrl);
+  const [extractedCertificate, setExtractedCertificate] =
+    useState<ExtractedCalibrationCertificate | null>(null);
+  const [extractedFile, setExtractedFile] = useState<File | null>(null);
 
   const {
     data: equipmentData,
@@ -48,6 +56,41 @@ export function CalibrationRegisterContent() {
   const selectedEquipment = selectedEquipmentId
     ? equipmentData?.data?.find((item: Equipment) => item.id === selectedEquipmentId)
     : null;
+
+  /**
+   * 교정성적서 PDF 추출 성공 시:
+   * - extracted.managementNumber로 equipment 자동 매칭 → selectedEquipmentId 설정
+   * - matched 실패 시 toast로 안내, 사용자가 검색창에서 수동 선택 (extracted state는 보존하여
+   *   선택 후 defaults 사전 채움 적용)
+   */
+  const handleExtracted = (extracted: ExtractedCalibrationCertificate, file: File): void => {
+    setExtractedCertificate(extracted);
+    setExtractedFile(file);
+
+    const matched = equipmentData?.data?.find(
+      (eq: Equipment) => eq.managementNumber === extracted.managementNumber
+    );
+    if (matched) {
+      setSelectedEquipmentId(String(matched.id));
+      toast({
+        description: t('certificateUpload.equipmentMatched', {
+          managementNumber: extracted.managementNumber,
+        }),
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        description: t('certificateUpload.noEquipmentMatch', {
+          managementNumber: extracted.managementNumber,
+        }),
+      });
+    }
+  };
+
+  const formDefaults = useMemo(() => {
+    if (!extractedCertificate || !extractedFile) return undefined;
+    return extractedToFormDefaults(extractedCertificate, extractedFile, selectedEquipment?.id);
+  }, [extractedCertificate, extractedFile, selectedEquipment?.id]);
 
   const filteredEquipment =
     equipmentData?.data?.filter(
@@ -69,6 +112,13 @@ export function CalibrationRegisterContent() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{t('register.unauthorized.description')}</AlertDescription>
         </Alert>
+      )}
+
+      {canRegisterCalibration && (
+        <CalibrationCertificatePdfUploader
+          onExtracted={handleExtracted}
+          disabled={!canRegisterCalibration}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -171,6 +221,7 @@ export function CalibrationRegisterContent() {
                   equipmentId={selectedEquipment.id}
                   onSuccess={handleSuccess}
                   disabled={!canRegisterCalibration}
+                  defaultValues={formDefaults}
                 />
               </>
             )}

@@ -57,6 +57,18 @@
     "empty": "No calibration records found.",
     "emptyDescription": "Register the first calibration record."
   },
+  "certificateUpload": {
+    "regionLabel": "Calibration certificate PDF upload area",
+    "dropzoneTitle": "Drag and drop your calibration certificate PDF or click to select",
+    "dropzoneHint": "Cover-page metadata will be auto-extracted from HCT format PDFs to pre-fill the form.",
+    "selectFile": "Select File",
+    "extracting": "Extracting metadata from PDF...",
+    "supportedFormat": "HCT format PDF (max 10MB)",
+    "successTitle": "Extraction complete",
+    "successDesc": "Metadata for certificate {certificateNumber} has been extracted. Please review the form.",
+    "equipmentMatched": "Management number {managementNumber} → equipment auto-selected.",
+    "noEquipmentMatch": "No equipment found for management number {managementNumber}. Please select equipment manually or verify the number."
+  },
   "planStatus": {
     "draft": "Draft",
     "pending_review": "Pending Review",

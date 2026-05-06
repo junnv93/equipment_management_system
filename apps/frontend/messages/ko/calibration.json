@@ -57,6 +57,18 @@
     "empty": "교정 기록이 없습니다.",
     "emptyDescription": "첫 교정 기록을 등록하세요."
   },
+  "certificateUpload": {
+    "regionLabel": "교정성적서 PDF 업로드 영역",
+    "dropzoneTitle": "교정성적서 PDF를 끌어다 놓거나 선택하세요",
+    "dropzoneHint": "HCT 양식 PDF에서 표지 메타를 자동 추출해 폼을 채웁니다.",
+    "selectFile": "파일 선택",
+    "extracting": "PDF에서 메타 추출 중...",
+    "supportedFormat": "HCT 양식 PDF (최대 10MB)",
+    "successTitle": "추출 완료",
+    "successDesc": "성적서 {certificateNumber}의 메타데이터를 추출했습니다. 폼을 확인해 주세요.",
+    "equipmentMatched": "관리번호 {managementNumber} → 장비 자동 선택 완료.",
+    "noEquipmentMatch": "관리번호 {managementNumber}에 해당하는 장비를 찾을 수 없습니다. 장비를 직접 선택하거나 관리번호를 확인해 주세요."
+  },
   "planStatus": {
     "draft": "작성 중",
     "pending_review": "확인 대기",
