@@ -37,6 +37,7 @@ import {
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@equipment-management/schemas';
 import { useCheckoutGroupDescriptors } from '@/hooks/use-checkout-group-descriptors';
+import { useCheckoutGroupAggregates } from '@/hooks/use-checkout-group-aggregates';
 import {
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
@@ -156,37 +157,15 @@ function CheckoutGroupCard({
     [group.checkouts, unknownUserLabel, descriptorMap]
   );
 
-  const pendingCount = useMemo(
-    () => group.checkouts.filter((co) => co.status === CSVal.PENDING).length,
-    [group.checkouts]
-  );
-
-  const yourTurnCount = useMemo(() => {
-    let count = 0;
-    for (const co of group.checkouts) {
-      if (descriptorMap.get(co.id)?.availableToCurrentUser === true) count++;
-    }
-    return count;
-  }, [group.checkouts, descriptorMap]);
-
-  const canApproveBulk = useMemo(
-    () =>
-      group.checkouts
-        .filter((co) => co.status === CSVal.PENDING)
-        .some((co) => co.meta?.availableActions?.canApprove ?? false),
-    [group.checkouts]
-  );
-
-  const isRentalGroup = group.purposes.includes(CPVal.RENTAL as never);
-  const rentalStatus = isRentalGroup
-    ? (group.checkouts.find((co) => co.purpose === CPVal.RENTAL)?.status ?? '')
-    : '';
-
-  const rentalDescriptor = useMemo(() => {
-    const rentalCheckout = group.checkouts.find((co) => co.purpose === CPVal.RENTAL);
-    if (!rentalCheckout) return undefined;
-    return descriptorMap.get(rentalCheckout.id);
-  }, [group.checkouts, descriptorMap]);
+  // 6개 파생 aggregates SSOT (Phase C.2 — useCheckoutGroupAggregates hook)
+  const {
+    pendingCount,
+    yourTurnCount,
+    canApproveBulk,
+    isRentalGroup,
+    rentalStatus,
+    rentalDescriptor,
+  } = useCheckoutGroupAggregates({ group, descriptorMap });
 
   // ── 승인 mutation (use-checkout-card-mutations SSOT) ─────────────────────
   const approveMutation = useApproveCheckoutMutation();

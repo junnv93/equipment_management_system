@@ -61,7 +61,7 @@ const baseSummary: CheckoutSummary = {
   returnedToday: 10,
   avgDelayDays: 0,
   maxOverdueDays: 0,
-  trends: {},
+  trends: { total: [], pending: [], inProgress: [], overdue: [], returnedToday: [] },
 };
 
 const baseFilters = {
