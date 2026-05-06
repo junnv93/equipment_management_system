@@ -125,15 +125,29 @@ grep -n "UnifiedApprovalStatusValues\|UASVal" apps/frontend/lib/api/approvals/ma
 
 **검증 명령**:
 ```bash
-# 클라이언트 컴포넌트/hook에서 session.user.role 직접 참조 탐지 (Server Component는 예외)
+# 클라이언트 컴포넌트/hook/app 에서 session.user.role 직접 참조 탐지
+# Server Component (page.tsx, layout.tsx server) + lib/auth NextAuth callback 정당 — 명시 예외
 grep -rEn "session\??\.user\??\.role" \
-  apps/frontend/components apps/frontend/hooks \
+  apps/frontend/components apps/frontend/hooks apps/frontend/app \
   --include='*.ts' --include='*.tsx' \
   | grep -v "use-effective-role" \
   | grep -v "// allow:" \
+  | grep -v "/lib/auth\.ts:" \
+  | grep -v "/lib/auth/server-session\.ts:" \
+  | grep -v "(dashboard)/page\.tsx:" \
+  | grep -v "(dashboard)/calibration/register/page\.tsx:" \
+  | grep -v "(dashboard)/admin/data-migration/page\.tsx:" \
+  | grep -v "(dashboard)/admin/monitoring/page\.tsx:" \
+  | grep -v "(dashboard)/software/layout\.tsx:" \
+  | grep -v "(dashboard)/admin/approvals/page\.tsx:" \
   | grep -v "node_modules"
-# 기대: 0건 (모든 사용처는 useEffectiveRole 경유 또는 명시적 // allow: 주석)
+# 기대: 0건 (모든 client 사용처는 useEffectiveRole 경유)
 ```
+
+**Baseline (2026-05-06 ssot-recovery-3finding sprint Phase 3A 후)**:
+- client 사용처 0건 — 12 files 마이그레이션 완료 (DashboardClient/RecentActivities/WelcomeHeader/PendingApprovalCard/CalibrationPlansContent/CreateCalibrationPlanContent/AuditLogsContent/SettingsNavigationClient/DashboardShell/CheckoutGroupCard/CheckoutDetailClient/use-checkout-next-step)
+- server 정당 예외 8 files: lib/auth.ts / lib/auth/server-session.ts / 6 server pages·layout
+- React Hooks rule 주의: useEffectiveRole는 early return 전 호출 (조건부 호출 금지)
 
 **PASS**:
 1. `useEffectiveRole` 외 컴포넌트/hook이 `session.user.role`을 읽지 않음
