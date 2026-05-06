@@ -123,7 +123,7 @@ function CheckoutGroupCard({
 
   const { data: session } = useSession();
   // 시뮬레이션 모드 반영 — useEffectiveRole SSOT (verify-ssot Step 37)
-  // session.user.role 직접 참조 금지 — fallback도 useEffectiveRole 결과만 사용.
+  // raw NextAuth role 직접 참조 금지 — fallback도 useEffectiveRole 결과만 사용.
   const { effectiveRole } = useEffectiveRole();
   const role: UserRole = effectiveRole ?? 'test_engineer';
   const userTeamId = session?.user?.teamId ?? null;
