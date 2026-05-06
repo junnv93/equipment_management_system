@@ -132,7 +132,7 @@ describe('useCheckoutGroupAggregates', () => {
       borrower: '갑',
       borrowerId: null,
       checkouts: [
-        makeCheckout({ id: 'c1', purpose: CPVal.RENTAL, status: CSVal.IN_PROGRESS }),
+        makeCheckout({ id: 'c1', purpose: CPVal.RENTAL, status: CSVal.CHECKED_OUT }),
         makeCheckout({ id: 'c2', purpose: CPVal.CALIBRATION }),
       ],
       statuses: [CSVal.IN_PROGRESS],
@@ -145,7 +145,7 @@ describe('useCheckoutGroupAggregates', () => {
 
     const { result } = renderHook(() => useCheckoutGroupAggregates({ group, descriptorMap }));
     expect(result.current.isRentalGroup).toBe(true);
-    expect(result.current.rentalStatus).toBe(CSVal.IN_PROGRESS);
+    expect(result.current.rentalStatus).toBe(CSVal.CHECKED_OUT);
     expect(result.current.rentalDescriptor?.availableToCurrentUser).toBe(true);
   });
 
