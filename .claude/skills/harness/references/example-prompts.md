@@ -1,9 +1,44 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-05 (query-dto-validation-ssot Mode 2 harness PASS — 14/14 MUST + 10/10 SHOULD. Query DTO trim/max + sort enum SSOT 13 도메인 + verify-zod Step 20 + 185 spec cases. archive 이동 완료.)**
+> **마지막 정리일: 2026-05-06 (commit-pipeline-safety Mode 2 16/16 MUST PASS — lintstaged↔lint:ci/lint glob coverage + critical rule SSOT (`PARITY_SPEC.{backend,frontend}`) + multi-session staged guard (`GUARD_CONFIG`, opt-in strict) + ADR-0007 (Trigger Conditions 4건) + 회귀 spec 11/11. iter 1 FAIL → iter 2 PASS → iter 3 사용자 시니어 자기검토 후 S-1 격상으로 frontend 흡수.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
+
+---
+
+## 🟡 다음 세션 — 첫 작업 (push 미완 처리)
+
+> **상태**: 본 세션 14 commit 모두 main에 commit 됐으나 push 가 다른 세션 lint race 로 5회+ 차단. 세션 종료 시점에도 미push. 새 세션 첫 작업으로 권고.
+
+**첫 작업 프롬프트**:
+> `git status -s` + `git log --oneline origin/main..HEAD` 로 미push commit 확인. 본 세션 (2026-05-06) 작업물: 14fc4886/2976508f/087686c7/3cd92408/13572daf/c921a1ad/e3640239/bdfe1183/bf23538d/4e27e522/2d4fdce9/73aba70e/166627a0/57c30b55. `pnpm --filter backend run lint:ci` + `pnpm --filter frontend run lint` working tree 통과 확인 후 즉시 `git push origin main`. race 지속 시 `EMS_PRECOMMIT_STRICT=1` 활성화로 strict mode 진행 (본 sprint 신설 가드 검증).
+
+## 🆕 다음 세션 — commit-pipeline-safety SHOULD 후속 (선택)
+
+> **본 sprint(`commit-pipeline-safety`)에서 systemic closure 완료**. 잔여 SHOULD 4건은 incident 빈도가 낮아 별도 sprint로 분리. 트리거 충족 시 진행.
+
+### S-2 packages-lintstaged-lint-parity (🟡 MEDIUM, Mode 1 권장)
+
+**프롬프트**:
+> `packages/**/*.ts` lintstaged glob과 root `.eslintrc.js`의 packages override 정합성을 `verify-lint-ruleset-parity.mjs` SSOT 에 흡수해줘. `PARITY_SPEC.packages` 추가 + `verifyDomainParity` 호출. backend/frontend 와 동일 5단계 검증 (lintstaged config / glob coverage / lint script / critical rules / restricted names+paths). packages 도메인 critical rule 식별 (root .eslintrc.js 의 packages override 룰 분석). 회귀 spec 추가. 시스템 closure 확장: backend → frontend → packages 3 도메인 모두.
+
+### S-3 commitlint-rule-strengthening (🟢 LOW, Mode 0/1)
+
+**프롬프트**:
+> `commitlint.config.cjs` 또는 동등에 `@commitlint/config-conventional` 기반 룰 강화. type 화이트리스트 (feat/fix/chore/refactor/docs/test/style/perf/ci) + scope 화이트리스트 (도메인 모듈명) + body-max-line-length 100 + footer 검증. 본 세션 commit log 를 `commitlint --from origin/main --to HEAD` 로 검증해 false positive 식별. pre-commit hook 에 commit-msg 추가.
+
+### S-4 git-worktree-per-session-adr-0008 (🟢 LOW, Mode 2)
+
+**트리거**: ADR-0007 Trigger Conditions 충족 시만 (multi-session race ≥3건/월 등 — 본 세션 자체에서 5회+ race 발생, 트리거 임계 근접).
+
+**프롬프트**:
+> ADR-0007 Trigger Conditions 충족 검증 후 ADR-0008 `git-worktree-per-session` 신설. 옵션 (a) 자동 worktree 생성 helper script + harness 스킬 통합 / (b) 권장 가이드 문서만 + 매뉴얼. dependency install 중복 / cwd 가정 코드 분석 / harness/scripts 절대경로 검토 포함. ADR-0007 을 Superseded 로 표기.
+
+### S-5 hook-execution-time-metrics (🟢 LOW, Mode 1)
+
+**프롬프트**:
+> `.husky/pre-commit`/`pre-push` 각 step 실행 시간 추적. `time` 명령 wrap + `/tmp/husky-metrics-<timestamp>.json` 누적. 회귀 모니터링용 — pre-commit/pre-push 누적 길이 ≥5s 시 경고. 본 세션 base: pre-commit guard 30ms, parity 2ms. metrics 분석 스크립트 + 통계 보고.
 
 ---
 

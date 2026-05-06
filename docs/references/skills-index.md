@@ -28,6 +28,8 @@
 - **verify-bulk-action-bar** — BulkActionBar 패턴 SSOT (count chip aria-live, role=toolbar, Esc clear, indeterminate Radix, focus management, IME guard). 도메인 무관 generic 컴포넌트(`components/common/BulkActionBar.tsx`)와 도메인 wrapper(`components/approvals/BulkActionBar.tsx`) 분리 검증. Step 10·11: 도메인 wrapper 신설 + applyGroupToggle SSOT (2026-05-06 bulk-selection-tabs-integration). Step 12: mutateAsync UX consistency — `onBulkApprove: () => Promise<void>` 시그니처 강제 + 호출자 `mutateAsync` 전환 + internal try/catch (unhandled rejection 차단, 2026-05-06)
 - **verify-routing-origin** — Same-Origin Reverse-Proxy(ADR-0006) 정합. 4 레이어 동기화(api-routing.ts SSOT / next.config.js / nginx lan.conf+template / proxy.ts), env 절대 URL 잠입, BACKEND ∩ NEXTAUTH disjoint, SW NetworkOnly /api/\* 룰. 2026-05-05 추가 Step 12-14: csrf-invariants.json 무결성 + smoke/trace 2-script CLI 계약 일관성 + redaction SSOT (`pnpm compose:onprem:verify` + `pnpm diagnostics:csrf` 진단 인프라 회귀 차단)
 - **verify-implementation** — 통합 실행 (모든 verify-\* 순차 실행 + 결합 리포트)
+- **verify-lint-ruleset-parity** (script SSOT, 2026-05-06) — `scripts/verify-lint-ruleset-parity.mjs` lintstaged↔lint(:ci) glob coverage + critical rule 등록 정합. `PARITY_SPEC.{backend,frontend}` SSOT, 신규 critical rule 추가 시 SSOT만 갱신. pre-push 게이트 통합. 18 checks PASS / 회귀 spec 5 cases (commit-pipeline-safety sprint).
+- **precommit-staged-guard** (hook SSOT, 2026-05-06) — `scripts/precommit-staged-guard.mjs` multi-session 인덱스 흡수 race 차단. stat 자동 출력 + `EMS_PRECOMMIT_STRICT=1` opt-in 차단(≥11 staged / mtime spread ≥30분). pre-commit step 0. 30ms / 회귀 spec 6 cases. ADR-0007 정책 기반.
 
 ## Review Skills (심층 분석)
 
