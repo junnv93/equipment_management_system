@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import Link from 'next/link';
 import { NavLink } from '@/components/navigation/nav-link';
 import { Button } from '@/components/ui/button';
@@ -104,8 +105,8 @@ export default function CalibrationPlansContent({
   const tc = useTranslations('common');
   const siteLabels = useSiteLabels();
 
-  // 역할 확인
-  const userRole = session?.user?.role;
+  // 역할 확인 — 시뮬레이션 모드 SSOT (verify-ssot Step 37)
+  const { effectiveRole: userRole } = useEffectiveRole();
   const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as UserRole);
 
   // 사이트 필터 고정 여부: CALIBRATION_PLAN_DATA_SCOPE에서 scope=site인 역할만 고정

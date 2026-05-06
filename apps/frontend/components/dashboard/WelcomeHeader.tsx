@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { useTranslations, useLocale } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,9 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.welcome');
   const locale = useLocale();
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영).
+  // React Hooks rule: 조건부 호출 금지 — early return 위에 위치.
+  const { effectiveRole } = useEffectiveRole();
 
   if (status === 'loading') {
     return (
@@ -62,7 +66,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   }
 
   const userName = session?.user?.name || t('defaultUser');
-  const userRole = session?.user?.role ?? URVal.TEST_ENGINEER;
+  const userRole = effectiveRole ?? URVal.TEST_ENGINEER;
   const role = getRoleInfo(userRole);
   const RoleIcon = role.icon;
 

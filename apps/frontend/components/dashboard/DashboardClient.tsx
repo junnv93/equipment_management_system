@@ -76,12 +76,11 @@ function DashboardClientComponent({
   const t = useTranslations('dashboard');
   const searchParams = useSearchParams();
 
-  // §A.19.3 — 시스템관리자 시뮬레이션 모드: effectiveRole이 시뮬 역할일 때 해당 config로 렌더.
+  // §A.19.3 — 시스템관리자 시뮬레이션 모드 SSOT (verify-ssot Step 37).
   // 권한 가드는 백엔드에서 actualRole 기준으로 별도 처리되므로 UI 전용.
+  // session.user.role 직접 참조 금지 — useEffectiveRole 단방향 SSOT.
   const { effectiveRole } = useEffectiveRole();
-  const sessionRole = session?.user?.role;
-  const renderRole = effectiveRole ?? sessionRole;
-  const { role: userRole, config } = resolveDashboardRoleConfig(renderRole);
+  const { role: userRole, config } = resolveDashboardRoleConfig(effectiveRole);
   const { controlCenter } = config;
 
   const scope = useMemo(

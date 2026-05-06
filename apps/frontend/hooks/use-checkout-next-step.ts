@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from './use-effective-role';
 
 import {
   getNextStep,
@@ -37,8 +37,9 @@ export function useCheckoutNextStep({
   terminatedFromStatus,
   nextStep,
 }: UseCheckoutNextStepInput): NextStepDescriptor {
-  const { data: session } = useSession();
-  const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole } = useEffectiveRole();
+  const role: UserRole = effectiveRole ?? 'test_engineer';
   const permissions = useMemo(() => getPermissions(role) as readonly string[], [role]);
 
   return useMemo(() => {

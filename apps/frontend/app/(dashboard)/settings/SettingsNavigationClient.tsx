@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { User, Bell, Monitor, Calendar, Cog, ChevronRight, Shield } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -81,8 +81,8 @@ function getSettingsNavItems(role?: string): SettingsNavItem[] {
  * Design Token: SETTINGS_NAV_TOKENS + SETTINGS_NAV_MOBILE_TOKENS (settings.ts)
  */
 export function SettingsNavigationClient() {
-  const { data: session } = useSession();
-  const userRole = session?.user?.role;
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole: userRole } = useEffectiveRole();
   const pathname = usePathname();
   const t = useTranslations('settings');
   const navItems = getSettingsNavItems(userRole);

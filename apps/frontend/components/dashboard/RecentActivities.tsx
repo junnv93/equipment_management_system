@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,11 +35,12 @@ export const RecentActivities = memo(function RecentActivities({
   loading = false,
 }: RecentActivitiesProps) {
   const router = useRouter();
-  const { data: session } = useSession();
   const t = useTranslations('dashboard.activities');
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  const userRole = session?.user?.role?.toLowerCase() || URVal.TEST_ENGINEER;
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole } = useEffectiveRole();
+  const userRole = (effectiveRole?.toLowerCase() ?? URVal.TEST_ENGINEER) as string;
 
   // 역할에 따른 표시 가능한 카테고리
   const allowedCategories = ROLE_CATEGORIES[userRole] || ROLE_CATEGORIES[URVal.TEST_ENGINEER];

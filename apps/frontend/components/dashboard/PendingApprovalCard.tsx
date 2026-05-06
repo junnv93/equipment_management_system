@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { useTranslations } from 'next-intl';
 import {
   Package,
@@ -133,10 +134,12 @@ export function PendingApprovalCard({
   priorities = EMPTY_PRIORITIES,
   elevate = false,
 }: PendingApprovalCardProps) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const t = useTranslations('dashboard.pending');
   const tApprovals = useTranslations('approvals');
-  const userRole = session?.user?.role || 'user';
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole } = useEffectiveRole();
+  const userRole = effectiveRole ?? 'user';
 
   // SSOT: ApprovalsService (GET /api/approvals/counts)
   // 네비 뱃지, 대시보드 카드, 승인 페이지가 동일 query key 공유

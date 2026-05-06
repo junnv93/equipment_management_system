@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,8 +77,8 @@ export default function CreateCalibrationPlanContent() {
     }
   }, [session, selectedSite, selectedTeamId]);
 
-  // 역할 확인
-  const userRole = session?.user?.role;
+  // 역할 확인 — 시뮬레이션 모드 SSOT (verify-ssot Step 37)
+  const { effectiveRole: userRole } = useEffectiveRole();
   const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as UserRole);
 
   // 팀 목록 조회 (사이트 선택 시)

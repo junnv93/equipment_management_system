@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,7 +42,6 @@ import { RefreshCw, Download, Info } from 'lucide-react';
 import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import {
-  type UserRole,
   resolveDataScope,
   AUDIT_LOG_SCOPE,
   API_ENDPOINTS,
@@ -76,8 +76,8 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   const cursorParams = convertFiltersToCursorParams(filters);
   const activeFilterCount = countActiveFilters(filters);
 
-  // 역할 기반 스코프
-  const userRole = session?.user?.role as UserRole | undefined;
+  // 역할 기반 스코프 — 시뮬레이션 모드 SSOT (verify-ssot Step 37)
+  const { effectiveRole: userRole } = useEffectiveRole();
   const scope = userRole
     ? resolveDataScope(
         { role: userRole, site: session?.user?.site, teamId: session?.user?.teamId },
