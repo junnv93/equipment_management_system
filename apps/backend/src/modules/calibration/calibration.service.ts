@@ -1009,6 +1009,7 @@ export class CalibrationService extends VersionedBaseService {
       equipmentId,
       calibrationManagerId,
       statuses,
+      methods,
       calibrationAgency,
       fromDate,
       toDate,
@@ -1030,6 +1031,7 @@ export class CalibrationService extends VersionedBaseService {
       equipmentId,
       calibrationManagerId,
       statuses,
+      methods,
       calibrationAgency,
       fromDate,
       toDate,
@@ -1063,6 +1065,7 @@ export class CalibrationService extends VersionedBaseService {
       equipmentId,
       calibrationManagerId,
       statuses,
+      methods,
       calibrationAgency,
       fromDate,
       toDate,
@@ -1095,6 +1098,17 @@ export class CalibrationService extends VersionedBaseService {
       whereConditions.push(
         sql`${schema.calibrations.status} IN (${sql.join(
           statuses.map((s) => sql`${s}`),
+          sql`, `
+        )})`
+      );
+    }
+
+    // 관리 방법 필터링 — methods는 optionalCsvEnum(MANAGEMENT_METHOD_VALUES) 검증 완료
+    // calibrations 테이블에 method 컬럼 없음 → equipment.managementMethod 기준 (JOIN은 findAllInternal에서 적용)
+    if (methods && methods.length > 0) {
+      whereConditions.push(
+        sql`${schema.equipment.managementMethod} IN (${sql.join(
+          methods.map((m) => sql`${m}`),
           sql`, `
         )})`
       );
