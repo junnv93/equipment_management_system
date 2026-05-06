@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -104,8 +104,9 @@ export default function CheckoutDetailClient({
   const { can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
-  const { data: session } = useSession();
-  const role = (session?.user?.role as UserRole | undefined) ?? 'test_engineer';
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole } = useEffectiveRole();
+  const role: UserRole = effectiveRole ?? 'test_engineer';
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
