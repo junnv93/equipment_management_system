@@ -1,4 +1,4 @@
-import { FILE_UPLOAD_LIMITS, PDF_MIME_TYPE } from '@equipment-management/shared-constants';
+import { FILE_UPLOAD_LIMITS, REPORT_EXPORT_MIME } from '@equipment-management/shared-constants';
 import { ErrorCode } from '@equipment-management/schemas';
 
 /**
@@ -19,7 +19,7 @@ export type CertificateFileValidation =
  *
  * 목적:
  *   - 서버 호출 전 mime/size 위반을 차단해 불필요한 네트워크 트래픽 회피.
- *   - 동일 SSOT(PDF_MIME_TYPE / FILE_UPLOAD_LIMITS)를 backend와 공유.
+ *   - 동일 SSOT(REPORT_EXPORT_MIME.pdf / FILE_UPLOAD_LIMITS)를 backend와 공유.
  *   - 검증 결과를 ErrorCode + i18n 키로 표현해 toast routing의 일관성 유지.
  *
  * 분리 이유 (testability):
@@ -29,7 +29,7 @@ export type CertificateFileValidation =
  *   - 컴포넌트는 이 helper를 호출만 하므로 보안 정책 변경 시 단일 진입점 수정.
  */
 export function validateCertificateFile(file: File): CertificateFileValidation {
-  if (file.type !== PDF_MIME_TYPE) {
+  if (file.type !== REPORT_EXPORT_MIME.pdf) {
     return {
       ok: false,
       code: ErrorCode.CalibrationCertificateFormatUnsupported,

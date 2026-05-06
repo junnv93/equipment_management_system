@@ -27,7 +27,7 @@ interface CalibrationCertificatePdfUploaderProps {
  * 교정성적서 PDF 업로드 + 자동 추출 컴포넌트 (Phase A).
  *
  * 시니어급 보안 (defense in depth, client side):
- *   1. mime type whitelist (PDF_MIME_TYPE SSOT)
+ *   1. mime type whitelist (REPORT_EXPORT_MIME.pdf SSOT)
  *   2. file size limit (FILE_UPLOAD_LIMITS.MAX_FILE_SIZE SSOT)
  *   3. 단일 파일만 (multipart 규약 일관)
  *   4. 추출 진행 중 입력 잠금 (race condition 차단)
