@@ -127,6 +127,14 @@ export enum ErrorCode {
   RevocationReasonRequired = 'REVOCATION_REASON_REQUIRED',
 
   // ============================================================================
+  // 승인 위임 (Approval Delegation)
+  // ============================================================================
+  /** 자기 자신에게 승인을 위임할 수 없음 (delegatorId === delegateeId). */
+  ApprovalDelegationSelfDelegationForbidden = 'APPROVAL_DELEGATION_SELF_DELEGATION_FORBIDDEN',
+  /** 위임 시작일이 종료일 이후 또는 같음 (startsAt >= endsAt). */
+  ApprovalDelegationInvalidPeriod = 'APPROVAL_DELEGATION_INVALID_PERIOD',
+
+  // ============================================================================
   // 폐기(Disposal) 도메인 (UL-QP-18-04)
   // ============================================================================
   /** 폐기 요청이 존재하지 않음. */
@@ -749,6 +757,8 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   // 승인 철회
   [ErrorCode.RevocationWindowExpired]: 403,
   [ErrorCode.RevocationReasonRequired]: 400,
+  [ErrorCode.ApprovalDelegationSelfDelegationForbidden]: 400,
+  [ErrorCode.ApprovalDelegationInvalidPeriod]: 400,
 
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,
