@@ -159,4 +159,47 @@ describe('ApprovalsService', () => {
       }
     });
   });
+
+  /**
+   * createDelegation 도메인 검증 throw branch — 2026-05-06 ssot-recovery-3finding sprint Phase 2A/2B.
+   * bare throw new Error() → BadRequestException + ErrorCode.ApprovalDelegation* 격상 검증.
+   */
+  describe('createDelegation — domain validation', () => {
+    const sameUserId = '00000000-0000-0000-0000-000000000001';
+    const otherUserId = '00000000-0000-0000-0000-000000000002';
+
+    it('delegatorId === delegateeId — ApprovalDelegationSelfDelegationForbidden 발행', async () => {
+      await expect(
+        service.createDelegation({
+          delegatorId: sameUserId,
+          delegateeId: sameUserId,
+          category: 'nonconformity',
+          startsAt: new Date('2026-05-06T00:00:00Z'),
+          endsAt: new Date('2026-05-07T00:00:00Z'),
+          createdBy: '00000000-0000-0000-0000-000000000099',
+        })
+      ).rejects.toMatchObject({
+        response: {
+          code: 'APPROVAL_DELEGATION_SELF_DELEGATION_FORBIDDEN',
+        },
+      });
+    });
+
+    it('startsAt >= endsAt — ApprovalDelegationInvalidPeriod 발행', async () => {
+      await expect(
+        service.createDelegation({
+          delegatorId: sameUserId,
+          delegateeId: otherUserId,
+          category: 'nonconformity',
+          startsAt: new Date('2026-05-07T00:00:00Z'),
+          endsAt: new Date('2026-05-06T00:00:00Z'),
+          createdBy: '00000000-0000-0000-0000-000000000099',
+        })
+      ).rejects.toMatchObject({
+        response: {
+          code: 'APPROVAL_DELEGATION_INVALID_PERIOD',
+        },
+      });
+    });
+  });
 });

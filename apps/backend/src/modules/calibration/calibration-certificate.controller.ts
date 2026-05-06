@@ -64,6 +64,8 @@ export class CalibrationCertificateController {
   private static readonly PDF_MAGIC_BYTES: Buffer = (() => {
     const sequences = MIME_TO_MAGIC_BYTES.get(REPORT_EXPORT_MIME.pdf);
     if (!sequences || sequences.length === 0 || sequences[0].length === 0) {
+      // NOTE: module-load 시점 SSOT 정합성 startup-fail invariant.
+      // HTTP 응답 경로 아님 → ErrorCode 적용 부적합. verify-zod Step 16 명시 예외.
       throw new Error(
         `[CalibrationCertificateController] SSOT misconfiguration: MIME_TO_MAGIC_BYTES has no entry for ${REPORT_EXPORT_MIME.pdf}.`
       );

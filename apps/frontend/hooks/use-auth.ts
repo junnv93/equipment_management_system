@@ -26,6 +26,9 @@ export function useAuth() {
 
   // 원시값 추출 — useCallback 의존성을 객체 참조가 아닌 원시값으로 좁혀
   // NextAuth 토큰 자동 갱신(만료 60초 전) 시 불필요한 콜백 재생성 방지
+  // allow: actualRole-only by design — `can()` 권한 가드는 시뮬 모드에 영향받으면 안 됨.
+  // useEffectiveRole 우회 의도 (시뮬레이션 모드에서도 실제 권한은 actualRole 기준).
+  // verify-ssot Step 37 명시 예외.
   const userRole = session?.user?.role;
 
   // Permission 기반 권한 확인 (SSOT: shared-constants/role-permissions.ts)
