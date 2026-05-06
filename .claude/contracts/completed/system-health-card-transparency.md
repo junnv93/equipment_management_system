@@ -1,9 +1,12 @@
 ---
 slug: system-health-card-transparency
 mode: 1
-status: in_progress
+status: completed
 domain: frontend / dashboard / system-health observability
 date: 2026-05-06
+verdict: PASS
+commits:
+  - 90575326 — feat(dashboard): SystemHealthCard transparency badges (mixed commit, see note)
 ---
 
 # Sprint 1 — SystemHealthCard transparency 표시

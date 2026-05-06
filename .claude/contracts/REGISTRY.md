@@ -9,7 +9,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `system-health-card-transparency` | Sprint 1 — SystemHealthCard에 storageBackend/queueBackend/errorSource 배지 + tooltip + i18n + pg-database 측정불가 명시 | 2026-05-06 |
+| `commit-pipeline-safety` | Sprint — lintstaged↔lint:ci glob/ruleset parity + pre-commit staged guard + ADR-0007 multi-session safety + tracker header (4건 closure) | 2026-05-06 |
 ---
 
 ## Backlog (계획됨, 미착수)
