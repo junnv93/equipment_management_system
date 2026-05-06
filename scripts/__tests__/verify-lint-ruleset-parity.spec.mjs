@@ -41,8 +41,10 @@ function makeFixture({ lintstaged, eslintConfig, packageJson }) {
 }
 
 function runScript(dir) {
+  // fixture 격리: backend 도메인만 검증 (fixture에 frontend mock 부재)
   const r = spawnSync('node', ['scripts/verify-lint-ruleset-parity.mjs'], {
     cwd: dir,
+    env: { ...process.env, EMS_PARITY_DOMAINS: 'backend' },
     encoding: 'utf8',
   });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };

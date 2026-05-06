@@ -1,7 +1,7 @@
 ---
 slug: commit-pipeline-safety
 mode: 2
-iteration: 2
+iteration: 3
 verdict: PASS
 date: 2026-05-06
 ---
@@ -15,6 +15,10 @@ date: 2026-05-06
   - M-11 (외부 귀책 — 다른 세션 WIP `certificate-extractor.service.ts`가 HEAD-committed spec와 불일치)
   - M-12 (외부 귀책 — sprint 도중 다른 세션 commit/WIP로 baseline 변동)
 - **iter 2** (Generator self-fix in main context): 14/14 MUST PASS
+- **iter 3** (사용자 시니어 자기검토 후 S-1 격상 — frontend ESLint 9 flat config parity 흡수): 16/16 MUST PASS
+  - `verifyDomainParity` 추출(backend/frontend 공통 로직)
+  - PARITY_SPEC.frontend 추가: `eslint.config.mjs` + lint script `eslint .` + critical rules `STATUS_LITERAL_RULE` / `HEX_COLOR_RULE` / `DDAY_TONE_RULE` + auth/rbac path 차단
+  - 스크립트 18 checks PASS (backend 8 + frontend 10) — 단편 closure → 진정한 시스템 closure
 
 ## MUST Criteria — iter 2
 
@@ -34,12 +38,14 @@ date: 2026-05-06
 | M-12 | Generator가 다른 세션 파일 unchanged | **PASS (재해석)** | 본 sprint Generator는 sprint scope 13파일만 변경. `git diff` 기준 본 sprint 외 파일 손댐 0건. iter 1 baseline 변동은 다른 세션의 독립 commit/WIP 활동(bf812815, 5bc68ebd) — Generator 책임 범위 외. M-12 의도("Generator가 다른 세션 파일 손대지 말 것")는 충족 |
 | M-13 | --no-verify 우회 경로 부재 | PASS | grep 결과 2건 모두 정책 docs 주석 (`pre-push:6` 가이드, `precommit-staged-guard.mjs:22` 정책 안내). 회피 코드 0건. M-13 의도(회피 코드 0)는 충족 |
 | M-14 | pre-push parity step 통합 | PASS | `.husky/pre-push:45-46` `verify:lint-ruleset-parity` 등록 |
+| M-15 | frontend lintstaged↔lint parity (S-1 격상) | PASS | `PARITY_SPEC.frontend` 추가 — `apps/frontend/eslint.config.mjs` SSOT, `lint` script `eslint .` (전 영역), `apps/frontend/**/*.{ts,tsx}` glob prefix |
+| M-16 | frontend critical rule 등록 검증 | PASS | `STATUS_LITERAL_RULE` / `HEX_COLOR_RULE` / `DDAY_TONE_RULE` const + `auth/rbac/roles.enum` / `auth/rbac/permissions.enum` path 차단 등록 검증. 18 checks PASS |
 
 ## SHOULD Criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| S-1 | frontend lintstaged↔lint parity (ESLint 9 flat config) | DEFERRED — tech-debt-tracker 등록 권고 |
+| S-1 | frontend lintstaged↔lint parity (ESLint 9 flat config) | **PROMOTED → MUST M-15/M-16 (iter 3 격상 closure)** |
 | S-2 | packages 영역 parity | DEFERRED — 별도 sprint |
 | S-3 | commitlint 강화 | DEFERRED — 별도 sprint |
 | S-4 | git worktree per-session 가이드 | DEFERRED — ADR-0007 트리거 미달 |
@@ -67,7 +73,7 @@ date: 2026-05-06
 
 ## Verdict
 
-**PASS** — proceed to commit + push.
+**PASS (iter 3, 16/16 MUST)** — frontend parity 흡수 후 진정한 시스템 closure. proceed to commit + push.
 
 ## Post-merge Actions
 

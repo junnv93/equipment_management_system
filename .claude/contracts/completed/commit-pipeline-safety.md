@@ -53,9 +53,13 @@ date: 2026-05-06
 
 - **M-14 pre-push parity step 통합**: `.husky/pre-push`에 `verify:lint-ruleset-parity` step 호출 존재.
 
+- **M-15 frontend lintstaged↔lint parity (iter 3 S-1 격상)**: `verify-lint-ruleset-parity.mjs`가 backend + frontend 두 도메인 검증. `PARITY_SPEC.frontend` SSOT — `apps/frontend/eslint.config.mjs` + `lint` script `eslint .` + `apps/frontend/**/*.{ts,tsx}` glob prefix 정합. 검증: `pnpm verify:lint-ruleset-parity` exit 0 + `[frontend]` 결과 ≥ 8 PASS.
+
+- **M-16 frontend critical rule 등록 검증 (iter 3 S-1 격상)**: frontend `eslint.config.mjs`에 SSOT 강제 룰 — `STATUS_LITERAL_RULE` / `HEX_COLOR_RULE` / `DDAY_TONE_RULE` const + `no-restricted-imports` path `auth/rbac/roles.enum` / `auth/rbac/permissions.enum` 차단. 18 checks PASS (backend 8 + frontend 10).
+
 ## SHOULD
 
-- **S-1 frontend lintstaged↔lint parity**: ESLint 9 flat config 전용 parity 스크립트 별도 sprint.
+- **S-1 frontend lintstaged↔lint parity**: **iter 3 S-1 → MUST 격상 완료 (M-15/M-16)**.
 - **S-2 packages 영역 parity**: `packages/**/*.ts` lintstaged glob과 root `.eslintrc.js`의 packages override 정합 별도.
 - **S-3 commitlint 강화**: 본 sprint 외.
 - **S-4 git worktree per-session 가이드**: ADR-0007 트리거 미달 — incident ≥ 월 3회 시 ADR-0008.
@@ -74,7 +78,7 @@ date: 2026-05-06
 
 ### Evaluator
 
-- M-1 ~ M-14 모두 통과 검증
+- M-1 ~ M-16 모두 통과 검증 (iter 3 S-1 격상 후 16 MUST)
 - SHOULD 미통과 시 tech-debt-tracker 등록
 - 자기검토 라운드 ≥ 2회
 

@@ -42,9 +42,14 @@
    - `EMS_PRECOMMIT_STRICT=1` 활성화 시 의심 패턴 (≥11 staged 파일 또는 mtime spread ≥30분)
      자동 차단
 2. **`scripts/verify-lint-ruleset-parity.mjs`** — pre-push hook 단계.
-   lintstaged glob 이 lint:ci coverage 의 부분집합이 되는 회귀를 정적 비교로 차단.
+   lintstaged glob 이 lint script coverage 의 부분집합이 되는 회귀를 정적 비교로 차단.
+   **backend + frontend 두 도메인 모두 검증** (iter 3 S-1 격상으로 frontend 흡수):
+   `verifyDomainParity` 공통 로직 + `PARITY_SPEC.{backend,frontend}` SSOT.
 3. **lintstaged backend glob 확장** — `apps/backend/src/**/*.ts` →
    `apps/backend/{src,test}/**/*.ts` 로 lint:ci coverage 와 정합.
+   **frontend** 는 lintstaged glob `apps/frontend/**/*.{ts,tsx}` 가 이미 lint script `eslint .`
+   와 동등 — coverage gap 없음. critical rule 등록 회귀(`STATUS_LITERAL_RULE` /
+   `HEX_COLOR_RULE` / `DDAY_TONE_RULE` 누락)를 본 스크립트가 차단.
 4. **memory `feedback_lintstaged_other_session_files.md` 강화** (본 sprint 외 이미 완료):
    `git add` 직후 `git diff --cached --stat` 검증 의무화.
 

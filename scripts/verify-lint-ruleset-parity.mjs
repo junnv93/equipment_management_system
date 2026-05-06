@@ -43,6 +43,7 @@ const PARITY_SPEC = Object.freeze({
      */
     lintCiGlob: '{src,apps,libs,test}/**/*.ts',
     lintCiCwd: 'apps/backend',
+    lintCiScriptName: 'lint:ci',
     /**
      * lintstaged glob 이 lint:ci coverage 의 부분집합이면 fail.
      * 정확히는 lintstaged 가 lint:ci 가 검증하는 영역의 union 을 ⊇ 해야 함.
@@ -59,6 +60,45 @@ const PARITY_SPEC = Object.freeze({
      * critical restricted import path (no-restricted-imports paths 항목).
      */
     criticalRestrictedPaths: ['node:crypto', 'crypto'],
+  },
+  frontend: {
+    eslintConfig: 'apps/frontend/eslint.config.mjs',
+    lintstagedConfig: '.lintstagedrc.json',
+    lintCiPackage: 'apps/frontend/package.json',
+    /**
+     * lintstaged glob entry 의 prefix — frontend domain 식별자.
+     */
+    lintstagedGlobPrefix: 'apps/frontend/',
+    /**
+     * frontend lint script 는 cwd=apps/frontend 에서 `eslint .` (전 영역).
+     * 즉 lint == lint:ci coverage 동등 — backend 와 달리 glob coverage gap 결함은
+     * 구조상 발생 불가 (lintstaged glob 도 frontend 전 영역 prefix).
+     * 본 검증은 critical rule 등록 회귀에 집중.
+     */
+    lintCiGlob: '.',
+    lintCiCwd: 'apps/frontend',
+    /**
+     * frontend 는 별도 lint:ci 가 없고 `lint` script 가 게이트 역할 — pre-push 에서
+     * `pnpm --filter frontend run lint` 로 호출됨.
+     */
+    lintCiScriptName: 'lint',
+    /**
+     * frontend lintstaged glob 은 단일 prefix (apps/frontend 전 영역) —
+     * backend 와 달리 segment 기반 검증 불요 (전 영역 커버).
+     * 본 필드는 정합성 표현 목적 (빈 배열).
+     */
+    requiredLintstagedGlobSegments: [],
+    criticalRulesMustExist: ['no-restricted-imports', 'no-restricted-syntax'],
+    /**
+     * frontend SSOT 강제 룰 식별자 — eslint.config.mjs 본문에 const 로 정의되어
+     * `no-restricted-syntax` rules 배열에 spread 되어야 함.
+     */
+    criticalRestrictedNames: ['STATUS_LITERAL_RULE', 'HEX_COLOR_RULE', 'DDAY_TONE_RULE'],
+    /**
+     * frontend `no-restricted-imports` patterns 의 group 값 — auth/rbac/* 직접 import 차단.
+     * 회귀 검출용 (UserRole / Permission SSOT 우회 차단).
+     */
+    criticalRestrictedPaths: ['auth/rbac/roles.enum', 'auth/rbac/permissions.enum'],
   },
 });
 
@@ -91,90 +131,102 @@ function pass(msg, results) {
 
 // ─── 검증 ──────────────────────────────────────────────────────────────────
 
-async function verifyBackendParity() {
-  const spec = PARITY_SPEC.backend;
+/**
+ * 도메인-agnostic parity 검증. backend/frontend 공통 5단계 검증을 spec 기반으로 실행.
+ * domainLabel 은 결과 메시지 prefix (`backend` / `frontend`).
+ */
+async function verifyDomainParity(domainLabel, spec) {
   const results = { passed: [], failures: [] };
 
-  // 1. lintstaged config 가 backend eslint config 를 SSOT 로 사용하는지
+  // 1. lintstaged config 가 도메인 SSOT eslint config 를 사용하는지
   const lintstagedRaw = await readFile(join(ROOT, spec.lintstagedConfig), 'utf8');
   const lintstaged = JSON.parse(lintstagedRaw);
 
-  const backendEntries = Object.entries(lintstaged).filter(([glob]) =>
+  const domainEntries = Object.entries(lintstaged).filter(([glob]) =>
     glob.startsWith(spec.lintstagedGlobPrefix)
   );
 
-  if (backendEntries.length === 0) {
-    fail(`lintstaged 에 ${spec.lintstagedGlobPrefix} glob 항목이 없음`, results);
+  if (domainEntries.length === 0) {
+    fail(`[${domainLabel}] lintstaged 에 ${spec.lintstagedGlobPrefix} glob 항목이 없음`, results);
     return results;
   }
-  if (backendEntries.length > 1) {
+  if (domainEntries.length > 1) {
     fail(
-      `lintstaged 에 ${spec.lintstagedGlobPrefix} glob 항목이 ${backendEntries.length}개 — 단일 SSOT 위반`,
+      `[${domainLabel}] lintstaged 에 ${spec.lintstagedGlobPrefix} glob 항목이 ${domainEntries.length}개 — 단일 SSOT 위반`,
       results
     );
     return results;
   }
 
-  const [backendGlob, backendCommands] = backendEntries[0];
+  const [domainGlob, domainCommands] = domainEntries[0];
 
-  const eslintCommand = (Array.isArray(backendCommands) ? backendCommands : [backendCommands])
+  const eslintCommand = (Array.isArray(domainCommands) ? domainCommands : [domainCommands])
     .find((cmd) => cmd.includes('eslint'));
 
   if (!eslintCommand) {
-    fail('lintstaged backend 항목에 eslint 명령이 없음', results);
+    fail(`[${domainLabel}] lintstaged 항목에 eslint 명령이 없음`, results);
     return results;
   }
 
   if (!eslintCommand.includes(`--config ${spec.eslintConfig}`)) {
     fail(
-      `lintstaged backend eslint 가 SSOT config(${spec.eslintConfig})를 사용하지 않음. 현재: ${eslintCommand}`,
+      `[${domainLabel}] lintstaged eslint 가 SSOT config(${spec.eslintConfig})를 사용하지 않음. 현재: ${eslintCommand}`,
       results
     );
   } else {
-    pass(`lintstaged backend eslint config = ${spec.eslintConfig}`, results);
+    pass(`[${domainLabel}] lintstaged eslint config = ${spec.eslintConfig}`, results);
   }
 
-  // 2. lintstaged glob coverage ⊇ lint:ci 위반 영역
-  const segments = extractGlobSegments(backendGlob, spec.lintstagedGlobPrefix);
-  const missing = spec.requiredLintstagedGlobSegments.filter((seg) => !segments.includes(seg));
+  // 2. lintstaged glob coverage 검증 — segment 기반 (backend) 또는 prefix-only (frontend)
+  if (spec.requiredLintstagedGlobSegments.length > 0) {
+    const segments = extractGlobSegments(domainGlob, spec.lintstagedGlobPrefix);
+    const missing = spec.requiredLintstagedGlobSegments.filter((seg) => !segments.includes(seg));
 
-  if (missing.length > 0) {
+    if (missing.length > 0) {
+      fail(
+        `[${domainLabel}] lintstaged glob 이 다음 영역을 커버하지 않음: ${missing.join(', ')} (현재 glob: ${domainGlob}, lint script glob: ${spec.lintCiGlob} cwd=${spec.lintCiCwd})`,
+        results
+      );
+    } else {
+      pass(
+        `[${domainLabel}] lintstaged glob coverage ⊇ required segments [${spec.requiredLintstagedGlobSegments.join(', ')}]`,
+        results
+      );
+    }
+  } else {
+    pass(
+      `[${domainLabel}] lintstaged glob = ${domainGlob} (전 영역 prefix — segment 검증 불요)`,
+      results
+    );
+  }
+
+  // 3. lint script 가 동일 SSOT 적용 영역 — script 존재 + glob 일치
+  const lintCiPkg = JSON.parse(await readFile(join(ROOT, spec.lintCiPackage), 'utf8'));
+  const lintCiScript = lintCiPkg.scripts?.[spec.lintCiScriptName];
+
+  if (!lintCiScript) {
+    fail(`[${domainLabel}] ${spec.lintCiPackage} 에 ${spec.lintCiScriptName} script 없음`, results);
+  } else if (!lintCiScript.includes(spec.lintCiGlob)) {
     fail(
-      `lintstaged backend glob 이 다음 영역을 커버하지 않음: ${missing.join(', ')} (현재 glob: ${backendGlob}, lint:ci coverage: ${spec.lintCiGlob} cwd=${spec.lintCiCwd})`,
+      `[${domainLabel}] ${spec.lintCiScriptName} script glob 이 spec(${spec.lintCiGlob})과 불일치. 현재: ${lintCiScript}`,
       results
     );
   } else {
     pass(
-      `lintstaged backend glob coverage ⊇ lint:ci required segments [${spec.requiredLintstagedGlobSegments.join(', ')}]`,
+      `[${domainLabel}] ${spec.lintCiScriptName} script glob = ${spec.lintCiGlob} (cwd=${spec.lintCiCwd})`,
       results
     );
   }
 
-  // 3. lint:ci script 가 동일 SSOT eslint config 사용
-  const lintCiPkg = JSON.parse(await readFile(join(ROOT, spec.lintCiPackage), 'utf8'));
-  const lintCiScript = lintCiPkg.scripts?.['lint:ci'];
-
-  if (!lintCiScript) {
-    fail(`${spec.lintCiPackage} 에 lint:ci script 없음`, results);
-  } else if (!lintCiScript.includes(spec.lintCiGlob)) {
-    fail(
-      `lint:ci script glob 이 spec(${spec.lintCiGlob})과 불일치. 현재: ${lintCiScript}`,
-      results
-    );
-  } else {
-    pass(`lint:ci script glob = ${spec.lintCiGlob} (cwd=${spec.lintCiCwd})`, results);
-  }
-
-  // 4. 신규 critical rule 등록 검증 — eslint config 본문 SSOT 우회 검출
+  // 4. critical rule 등록 검증
   const eslintConfigPath = join(ROOT, spec.eslintConfig);
   const eslintConfigBody = await readFile(eslintConfigPath, 'utf8');
 
   for (const rule of spec.criticalRulesMustExist) {
-    // CommonJS module body 에서 룰 키가 등장해야 함
     if (!eslintConfigBody.includes(`'${rule}'`) && !eslintConfigBody.includes(`"${rule}"`)) {
-      fail(`${spec.eslintConfig} 에 critical rule '${rule}' 정의 없음`, results);
+      fail(`[${domainLabel}] ${spec.eslintConfig} 에 critical rule '${rule}' 정의 없음`, results);
     } else {
-      pass(`${spec.eslintConfig} 에 ${rule} 정의 존재`, results);
+      pass(`[${domainLabel}] ${spec.eslintConfig} 에 ${rule} 정의 존재`, results);
     }
   }
 
@@ -182,44 +234,59 @@ async function verifyBackendParity() {
   for (const name of spec.criticalRestrictedNames) {
     if (!eslintConfigBody.includes(name)) {
       fail(
-        `${spec.eslintConfig} 에 차단 대상 식별자 '${name}' 등록 없음 — randomUUID 같은 SSOT 우회 차단 룰 누락 가능`,
+        `[${domainLabel}] ${spec.eslintConfig} 에 차단 대상 식별자 '${name}' 등록 없음 — SSOT 우회 차단 룰 누락 가능`,
         results
       );
     } else {
-      pass(`${spec.eslintConfig} 에 차단 대상 ${name} 등록 존재`, results);
+      pass(`[${domainLabel}] ${spec.eslintConfig} 에 차단 대상 ${name} 등록 존재`, results);
     }
   }
   for (const path of spec.criticalRestrictedPaths) {
-    if (!eslintConfigBody.includes(`'${path}'`) && !eslintConfigBody.includes(`"${path}"`)) {
-      fail(`${spec.eslintConfig} 에 차단 대상 path '${path}' 등록 없음`, results);
+    // path 는 quoted literal('crypto') 또는 glob-wrapped ('**/auth/rbac/roles.enum')
+    // 둘 다 허용 — substring 검색
+    if (!eslintConfigBody.includes(path)) {
+      fail(`[${domainLabel}] ${spec.eslintConfig} 에 차단 대상 path '${path}' 등록 없음`, results);
     } else {
-      pass(`${spec.eslintConfig} 에 차단 대상 path '${path}' 등록 존재`, results);
+      pass(`[${domainLabel}] ${spec.eslintConfig} 에 차단 대상 path '${path}' 등록 존재`, results);
     }
   }
 
   return results;
 }
 
+const verifyBackendParity = () => verifyDomainParity('backend', PARITY_SPEC.backend);
+const verifyFrontendParity = () => verifyDomainParity('frontend', PARITY_SPEC.frontend);
+
 // ─── main ──────────────────────────────────────────────────────────────────
 
 async function main() {
   const start = Date.now();
-  const backend = await verifyBackendParity();
+  // 도메인 선택 (테스트 fixture 격리용 — 정상 실행 시 모두 검증)
+  // 예: EMS_PARITY_DOMAINS=backend → backend만 검증 (frontend mock 불요)
+  const domainsEnv = process.env.EMS_PARITY_DOMAINS;
+  const domains = domainsEnv ? domainsEnv.split(',').map((d) => d.trim()) : ['backend', 'frontend'];
 
+  const tasks = [];
+  if (domains.includes('backend')) tasks.push(verifyBackendParity());
+  if (domains.includes('frontend')) tasks.push(verifyFrontendParity());
+
+  const results = await Promise.all(tasks);
+  const allPassed = results.flatMap((r) => r.passed);
+  const allFailures = results.flatMap((r) => r.failures);
   const elapsedMs = Date.now() - start;
-  const total = backend.passed.length + backend.failures.length;
+  const total = allPassed.length + allFailures.length;
 
-  if (backend.failures.length > 0) {
+  if (allFailures.length > 0) {
     console.error('❌ verify-lint-ruleset-parity FAIL');
-    for (const f of backend.failures) {
+    for (const f of allFailures) {
       console.error(`  - ${f}`);
     }
-    console.error(`(${total} checks, ${backend.failures.length} failed, ${elapsedMs}ms)`);
+    console.error(`(${total} checks, ${allFailures.length} failed, ${elapsedMs}ms)`);
     process.exit(1);
   }
 
   console.log('✔ ruleset parity OK');
-  for (const p of backend.passed) {
+  for (const p of allPassed) {
     console.log(`  - ${p}`);
   }
   console.log(`(${total} checks PASS, ${elapsedMs}ms)`);
