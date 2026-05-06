@@ -21,7 +21,11 @@ const calibrationCertificateApi = {
   extract: async (file: File): Promise<ExtractedCalibrationCertificate> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post(API_ENDPOINTS.CALIBRATIONS.EXTRACT_CERTIFICATE, formData);
+    const response = await apiClient.post(
+      API_ENDPOINTS.CALIBRATIONS.EXTRACT_CERTIFICATE,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
     return transformSingleResponse<ExtractedCalibrationCertificate>(response);
   },
 };
