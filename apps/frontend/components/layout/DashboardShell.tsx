@@ -19,12 +19,12 @@ import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { UlLogo } from '@/lib/brand-assets/ul-logo';
 import { ReactNode, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffectiveRole } from '@/hooks/use-effective-role';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { useNotificationStream } from '@/hooks/use-notification-stream';
 import { cn } from '@/lib/utils';
-import type { UserRole } from '@equipment-management/schemas';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
@@ -74,8 +74,9 @@ function EqMonogram() {
 export function DashboardShell({ children }: DashboardShellProps) {
   const t = useTranslations('navigation');
   const pathname = usePathname();
-  const { data: session, status } = useSession();
-  const userRole = session?.user?.role as UserRole | undefined;
+  const { status } = useSession();
+  // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
+  const { effectiveRole: userRole } = useEffectiveRole();
   const { isCollapsed, toggle } = useSidebarState();
 
   // SSE 알림 실시간 스트림 (세션 있을 때만 자동 연결)
