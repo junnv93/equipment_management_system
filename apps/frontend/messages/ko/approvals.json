@@ -43,22 +43,52 @@
     "noItems": "승인 항목이 없습니다."
   },
   "tabMeta": {
-    "outgoing": { "label": "반출", "action": "승인" },
-    "incoming": { "label": "반입", "action": "승인" },
-    "equipment": { "label": "장비", "action": "승인" },
-    "calibration": { "label": "교정 기록", "action": "승인" },
-    "inspection": { "label": "중간점검", "action": "승인" },
-    "self_inspection": { "label": "자체점검", "action": "승인" },
-    "nonconformity": { "label": "부적합 재개", "action": "승인" },
+    "outgoing": {
+      "label": "반출",
+      "action": "승인"
+    },
+    "incoming": {
+      "label": "반입",
+      "action": "승인"
+    },
+    "equipment": {
+      "label": "장비",
+      "action": "승인"
+    },
+    "calibration": {
+      "label": "교정 기록",
+      "action": "승인"
+    },
+    "inspection": {
+      "label": "중간점검",
+      "action": "승인"
+    },
+    "self_inspection": {
+      "label": "자체점검",
+      "action": "승인"
+    },
+    "nonconformity": {
+      "label": "부적합 재개",
+      "action": "승인"
+    },
     "disposal_review": {
       "label": "폐기 검토",
       "action": "검토완료",
       "commentDialogTitle": "폐기 검토 의견",
       "commentPlaceholder": "검토 의견을 입력하세요"
     },
-    "disposal_final": { "label": "폐기 승인", "action": "승인" },
-    "plan_review": { "label": "교정계획서 검토", "action": "검토완료" },
-    "plan_final": { "label": "교정계획서 승인", "action": "승인" },
+    "disposal_final": {
+      "label": "폐기 승인",
+      "action": "승인"
+    },
+    "plan_review": {
+      "label": "교정계획서 검토",
+      "action": "검토완료"
+    },
+    "plan_final": {
+      "label": "교정계획서 승인",
+      "action": "승인"
+    },
     "software_validation": {
       "label": "소프트웨어 유효성",
       "action": "검토완료",
@@ -525,5 +555,10 @@
       "rejectError": "반려 실패",
       "rejectErrorFallback": "요청 반려 중 오류가 발생했습니다."
     }
+  },
+  "errors": {
+    "title": "위임 처리에 실패했습니다",
+    "delegationSelfForbidden": "자기 자신에게 승인을 위임할 수 없습니다.",
+    "delegationInvalidPeriod": "위임 시작일은 종료일보다 이전이어야 합니다."
   }
 }
