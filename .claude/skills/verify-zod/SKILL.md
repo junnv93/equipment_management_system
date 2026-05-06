@@ -638,6 +638,21 @@ grep -rn "code: '[A-Z_]\+'" apps/backend/src/modules --include="*.ts" 2>/dev/nul
 # 2026-05-03 backend-errorcode-full-closure 전멸 완료: 0건.
 # 이 수치는 회귀 탐지 metric — 0 유지 필수. 신규 code: 'X' 발견 시 즉시 FAIL.
 
+# 4b. bare `throw new Error()` (HTTP 응답 경로) 회귀 탐지
+# 2026-05-06 ssot-recovery-3finding sprint Phase 2B 후 baseline.
+grep -rn "throw new Error\b" apps/backend/src/modules --include="*.ts" 2>/dev/null \
+  | grep -v ".spec.ts\|__tests__" \
+  | grep -vE "// NOTE: TypeScript exhaustiveness|// NOTE: module-load|// local sentinel" \
+  | wc -l
+# expected: 0 (모든 잔존은 명시 NOTE/local sentinel 주석)
+# 정당 예외 (코드 NOTE 주석 명시):
+#   - notification-events.ts:122 (module-load startup invariant)
+#   - equipment-import.types.ts:69/82/121 (TypeScript exhaustiveness check `never`)
+#   - excel-parser.service.ts:245 (TypeScript exhaustiveness check `_exhaustive: never`)
+#   - audit.service.ts:196 (local sentinel — try-catch fallback, SyntaxError)
+#   - calibration.controller.ts:182 (local sentinel — JSON parse fallback, SyntaxError)
+# 위 5건 외 신규 발견 시 BadRequestException + ErrorCode SSOT 격상 필수 (FAIL).
+
 # 5. Frontend mapper coverage — backend ErrorCode 추가 시 frontend mapper 누락 차단
 # (격상 완료된 도메인: 전 도메인 — backend-errorcode-full-closure 2026-05-03)
 # - `lib/errors/<domain>-errors.ts` 파일 존재 확인 + 매퍼 export 강제
@@ -654,7 +669,9 @@ test -f apps/frontend/lib/errors/test-software-errors.ts && grep -c "mapTestSoft
 test -f apps/frontend/lib/errors/software-validation-errors.ts && grep -c "mapSoftwareValidationErrorToToast" apps/frontend/lib/errors/software-validation-errors.ts
 test -f apps/frontend/lib/errors/self-inspection-errors.ts && grep -c "mapSelfInspectionErrorToToast" apps/frontend/lib/errors/self-inspection-errors.ts
 test -f apps/frontend/lib/errors/intermediate-inspection-errors.ts && grep -c "mapIntermediateInspectionErrorToToast" apps/frontend/lib/errors/intermediate-inspection-errors.ts
+test -f apps/frontend/lib/errors/approval-errors.ts && grep -c "mapApprovalErrorToToast" apps/frontend/lib/errors/approval-errors.ts
 # expected: 각 1+
+# 2026-05-06 ssot-recovery-3finding sprint 추가: approval-errors.ts (ApprovalDelegation*)
 
 # 5b. Dead legacy local ErrorCode enum 탐지 (WARN 등급) — 2026-05-03 추가
 # mapper 파일 내 `export enum *ErrorCode` 로컬 선언은 packages/schemas ErrorCode SSOT 우회.
