@@ -16,14 +16,32 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
 const require = createRequire(import.meta.url);
 
 const config = require(resolve(REPO_ROOT, 'commitlint.config.js'));
+
+/**
+ * apps/backend/src/modules/ 의 디렉토리 이름 목록 — filesystem SSOT.
+ * BACKEND_MODULE_SCOPES 와 1:1 매칭되어야 함 (drift 시 spec FAIL).
+ */
+function readBackendModuleDirs() {
+  const modulesDir = join(REPO_ROOT, 'apps', 'backend', 'src', 'modules');
+  return readdirSync(modulesDir)
+    .filter((name) => {
+      try {
+        return statSync(join(modulesDir, name)).isDirectory();
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+}
 
 /**
  * commitlint CLI 호출 — message 를 stdin 으로 전달.
@@ -100,7 +118,54 @@ describe('commitlint.config.js — SCOPE_LIST SSOT', () => {
     assert.ok(Array.isArray(config.META_SCOPES));
     assert.ok(Object.isFrozen(config.BACKEND_MODULE_SCOPES));
     assert.ok(Object.isFrozen(config.META_SCOPES));
-    assert.equal(config.BACKEND_MODULE_SCOPES.length, 24, '24 backend modules SSOT');
+  });
+
+  /**
+   * filesystem ↔ BACKEND_MODULE_SCOPES 1:1 자동 동기화 검증.
+   *
+   * 의도: 새 backend 모듈 디렉토리 추가 시 SCOPE_LIST 갱신을 잊으면 spec FAIL —
+   * commit-msg hook 이 새 모듈 scope 를 reject 하는 silent 회귀 차단.
+   *
+   * 본 spec 부재 시 발생할 수 있는 사고:
+   * - inspection-form-templates 모듈 추가 → 개발자가 `feat(inspection-form-templates):` commit
+   *   → commitlint scope-enum 으로 reject → 개발자 혼란 / hook bypass 유혹
+   *
+   * memory: 본 spec 추가 자체가 "시니어 자기검토 #2 라운드" 의 가치 입증 사례
+   * (sprint commit-pipeline-safety-should-followups 2026-05-06 발견).
+   */
+  test('BACKEND_MODULE_SCOPES ↔ apps/backend/src/modules/ filesystem 1:1', () => {
+    const filesystemModules = readBackendModuleDirs();
+    const ssotModules = [...config.BACKEND_MODULE_SCOPES].sort();
+
+    const missingFromSsot = filesystemModules.filter((m) => !ssotModules.includes(m));
+    const extraInSsot = ssotModules.filter((m) => !filesystemModules.includes(m));
+
+    assert.equal(
+      missingFromSsot.length,
+      0,
+      `BACKEND_MODULE_SCOPES 에 누락된 backend module: [${missingFromSsot.join(', ')}] — commitlint.config.js 에 추가 필요`
+    );
+    assert.equal(
+      extraInSsot.length,
+      0,
+      `BACKEND_MODULE_SCOPES 에 더 이상 존재하지 않는 module: [${extraInSsot.join(', ')}] — commitlint.config.js 에서 제거 필요`
+    );
+    assert.equal(
+      filesystemModules.length,
+      ssotModules.length,
+      `module count drift (fs=${filesystemModules.length} vs ssot=${ssotModules.length})`
+    );
+  });
+
+  test('META_SCOPES 와 BACKEND_MODULE_SCOPES 중복 없음 (분류 충돌 차단)', () => {
+    const intersection = config.META_SCOPES.filter((m) =>
+      config.BACKEND_MODULE_SCOPES.includes(m)
+    );
+    assert.equal(
+      intersection.length,
+      0,
+      `META 와 BACKEND 동시 등록된 scope: [${intersection.join(', ')}] — backend module 우선 분류`
+    );
   });
 });
 

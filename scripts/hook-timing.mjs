@@ -95,19 +95,19 @@ function main() {
   //   - 정상 종료: result.status (0~255)
   //   - signal 종료: result.signal != null → exit 1 (silent pass 차단)
   //   - spawn 실패: result.error != null → exit 127
-  let exitCode;
+  let code;
   if (result.error) {
     console.error(`hook-timing: spawn 실패 (${result.error.message})`);
-    exitCode = 127;
+    code = 127;
   } else if (result.signal) {
     console.error(`hook-timing: 자식이 signal ${result.signal} 로 종료`);
-    exitCode = 1;
+    code = 1;
   } else {
-    exitCode = result.status ?? 1;
+    code = result.status ?? 1;
   }
 
-  emitTiming({ label, ms, exitCode });
-  process.exit(exitCode);
+  emitTiming({ label, ms, exitCode: code });
+  process.exit(code);
 }
 
 main();

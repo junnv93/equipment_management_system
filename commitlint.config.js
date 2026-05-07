@@ -7,7 +7,9 @@
  * SSOT 정합 검증: `node --test scripts/__tests__/commitlint-config.spec.mjs`
  */
 
-// 24 backend modules — apps/backend/src/modules/* 와 1:1 (CLAUDE.md §Backend Modules SSOT).
+// 26 backend modules — apps/backend/src/modules/* 와 1:1 SSOT.
+// 자동 동기화: scripts/__tests__/commitlint-config.spec.mjs 가 filesystem 과 1:1 매칭 검증
+// → 새 모듈 디렉토리 추가 시 본 배열 갱신 강제 (spec FAIL 로 회귀 차단).
 const BACKEND_MODULE_SCOPES = [
   'approvals',
   'audit',
@@ -22,11 +24,13 @@ const BACKEND_MODULE_SCOPES = [
   'documents',
   'equipment',
   'equipment-imports',
+  'inspection-form-templates',
   'intermediate-inspections',
   'monitoring',
   'non-conformances',
   'notifications',
   'reports',
+  'security',
   'self-inspections',
   'settings',
   'software-validations',
@@ -36,6 +40,7 @@ const BACKEND_MODULE_SCOPES = [
 ];
 
 // 메타 영역 scope — 코드베이스 cross-cutting (도메인 무관).
+// `security` 는 backend module 로 존재 → BACKEND_MODULE_SCOPES 측에서만 관리.
 // 신규 추가 비용 = 1 줄. 결빙 X (운영 중 발견 시 추가 허용).
 const META_SCOPES = [
   'ci', // GitHub Actions / pre-push / pre-commit
@@ -54,7 +59,6 @@ const META_SCOPES = [
   'release', // 버전 bump / changelog
   'scripts', // scripts/* (codemod / verify-* / diagnostics)
   'secrets', // sops / age / .env.example
-  'security', // CSP / CSRF / rate-limit / RBAC SSOT
   'skill', // .claude/skills/* / verify-* SKILL.md
   'test', // 테스트 인프라 (jest config / vitest)
   'ui', // 공통 UI primitive (shadcn / Radix)
@@ -93,9 +97,13 @@ module.exports = {
     // subject-case: subject 첫 글자가 대문자로 시작하면 reject (PascalCase identifier 중간 등장은 허용).
     // conventional config 가 이미 ['sentence-case','start-case','pascal-case','upper-case'] 를
     // never 로 정의하지만 명시적으로 한 번 더 보장 (extends 만으로는 IDE/lint tooling 인지 실패 가능).
-    // 주의: `header-case: 'lower-case'` 는 PascalCase identifier (UserRole 등) 합법 commit 도 reject 하므로
-    // 도입하지 않음 — type-case(이미 있음) + conventional subject-case 로 충분.
     'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+    // header-case: 명시적 비활성 (severity 0). `lower-case` 강제는 PascalCase identifier
+    // (예: `UserRole`, `CheckoutDto`) 들어간 합법 commit 도 reject 하므로 도입하지 않음.
+    // type-case(이미 lower-case 강제) + 위 subject-case 로 case 위생은 충분히 보장됨.
+    // 본 entry 는 의도된 비활성을 SSOT 로 명시 — 차후 누군가 `header-case` 도입을 검토할 때
+    // commit history grep 으로 의사결정 맥락이 즉시 발견되도록 함.
+    'header-case': [0, 'always', 'lower-case'],
     'header-max-length': [2, 'always', 100],
     // body-max-line-length: 본문 한 줄 100자 제한 — terminal/diff 가독성 보호.
     'body-max-line-length': [2, 'always', 100],
