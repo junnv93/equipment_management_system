@@ -107,7 +107,11 @@ export class CalibrationCertificateController {
   })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @Throttle(throttleAllNamed(THROTTLE_PRESETS.UPLOAD))
-  @AuditLog({ action: 'extract', entityType: 'calibration_certificate' })
+  @AuditLog({
+    action: 'extract',
+    entityType: 'calibration_certificate',
+    entityIdPath: 'response.certificateNumber',
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: FILE_UPLOAD_LIMITS.MAX_FILE_SIZE, files: 1 },

@@ -1396,6 +1396,7 @@
     "deleting": "삭제 중..."
   },
   "calibrationHistoryClient": {
+    "title": "교정 이력",
     "backAriaLabel": "장비 상세로 돌아가기"
   },
   "calibrationFactorsClient": {

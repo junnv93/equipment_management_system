@@ -821,6 +821,9 @@ export {
   CAL_FACTORS_EMPTY_STATE_TOKENS,
 } from './components/calibration-factors';
 
+// Filter Chip (deep-link filter 표시 chip — 도메인 중립 SSOT)
+export { FILTER_CHIP_TOKENS, type FilterChipTokens } from './components/filter-chip';
+
 // Form Templates
 export {
   FORM_TEMPLATES_HEADER_TOKENS,

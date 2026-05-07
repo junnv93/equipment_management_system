@@ -1395,6 +1395,10 @@
     "delete": "Delete",
     "deleting": "Deleting..."
   },
+  "calibrationHistoryClient": {
+    "title": "Calibration History",
+    "backAriaLabel": "Back to equipment details"
+  },
   "calibrationFactorsClient": {
     "title": "Calibration Factor Management",
     "loadError": "Failed to load calibration factors.",

@@ -76,6 +76,11 @@ export const FRONTEND_ROUTES = {
     /** 장비별 부적합 관리 페이지 (목록 + 인라인 생성 폼). */
     NON_CONFORMANCES: (id: string) => `/equipment/${id}/non-conformance`,
     /**
+     * 장비별 교정 이력 sub-route — `CalibrationHistoryTab` 재사용 + deep-link 진입점.
+     * 메인 `/calibration?equipmentId=...` 보완 (좁은 컨텍스트로 단일 장비 교정만 노출).
+     */
+    CALIBRATION_HISTORY: (id: string) => `/equipment/${id}/calibration-history`,
+    /**
      * 장비별 부적합 생성 딥링크. `?action=create` 파라미터가 생성 폼을 자동 오픈.
      * 사용: QR 모바일 랜딩, 이메일 알림, 대시보드 quick action 등 모든 진입점 공유.
      */
