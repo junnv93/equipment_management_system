@@ -3,7 +3,7 @@
   "$id": "https://equipment-management.local/schemas/csrf-invariants.v1.json",
   "title": "ADR-0006 NextAuth CSRF Same-Origin Invariants",
   "description": "Machine-readable invariant SSOT shared by scripts/onprem-verify.mjs (smoke) and scripts/diagnostics/nextauth-csrf-trace.mjs (recurrence trace). Source of truth for ADR-0006 (Same-Origin Reverse-Proxy) verification. Update this file when ADR-0006 is amended.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "adrRef": "docs/adr/0006-frontend-backend-routing-model.md",
   "ssotCodeRef": "packages/shared-constants/src/api-routing.ts",
   "nextAuthHandlerPaths": {
@@ -41,11 +41,8 @@
     }
   },
   "cookieInvariants": {
-    "comment": "ADR-0006 + NextAuth v5 cookie security defaults. Verified on the /api/auth/csrf response.",
+    "comment": "Auth.js v5 (next-auth@5.0.0-beta.30) cookie security defaults. Verified on the /api/auth/csrf response. v4 'next-auth.*' prefix deprecated — Auth.js v5 emits 'authjs.*' only. v6 migration 시 prefix 변경 가능성 있으므로 본 항목을 같이 재검토 (verify spec이 packages/shared-constants/__tests__/api-routing.spec.ts에서 자동 cross-check).",
     "expectedCookies": [
-      "next-auth.csrf-token",
-      "__Host-next-auth.csrf-token",
-      "__Secure-next-auth.csrf-token",
       "authjs.csrf-token",
       "__Host-authjs.csrf-token",
       "__Secure-authjs.csrf-token"
@@ -99,11 +96,6 @@
     ],
     "headerKeys": ["set-cookie", "cookie", "authorization"],
     "cookieNames": [
-      "next-auth.csrf-token",
-      "next-auth.session-token",
-      "next-auth.callback-url",
-      "next-auth.pkce.code_verifier",
-      "next-auth.state",
       "authjs.csrf-token",
       "authjs.session-token",
       "authjs.callback-url",
