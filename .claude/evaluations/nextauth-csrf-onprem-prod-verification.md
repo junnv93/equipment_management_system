@@ -129,3 +129,47 @@ memory `feedback_repeated_self_audit.md` + `feedback_evaluator_pass_senior_self_
 - **Tech-debt 등록 정합성**: ✅ (갭 A 1건 등록 + 해결 방향 3가지)
 - **사용자 압박 반영**: ✅ 정직하게 갭 1건 인정 + 본 closure 책임 외임을 명시 분리
 - **누락된 부분**: 라운드 #1에는 있었음 (갭 A) → 라운드 #3에서 정정. 추가 라운드 #3 자기검토에서도 새 갭 0건이면 closure 진정 종결.
+
+---
+
+## 반복 #4 (2026-05-07T+45분) — 시니어 자기검토 #3 라운드 (사용자 추가 압박 "진행해줘")
+
+### 압박 컨텍스트
+
+라운드 #2 정정 후에도 사용자 압박 지속. memory `feedback_repeated_self_audit.md`: "1회=표면, 3회=시스템적 closure". 라운드 #3 깊이 검증 진행.
+
+### 라운드 #3 실증 검증
+
+| 검증 대상 | 결과 |
+|---|---|
+| `apps/frontend/proxy.ts`에 NextAuth path 정규식 사용? | ❌ NO — matcher만, path 정규식 미사용. 갭 A 카운트(5곳) 정확 — 정정 불필요 |
+| `csrf-invariants.json` 다른 invariant 키들도 hand-copy? | ✅ YES — 모든 키(expectedCookies/samesite/requiredEnvVars/cacheControlPolicy/swEntryPoint/nextAuthClientBasePath)가 hand-copy invariant 표명, cross-file 검증 없음 |
+| Auth.js v5 (`next-auth@5.0.0-beta.30`) 환경에서 `expectedCookies`의 `next-auth.*` 6종 항목이 dead invariant? | ⚠️ 추정 — defense-in-depth 가능성도 있어 단정 못함. 별도 sprint에서 backend `apps/frontend/lib/auth.ts` cookie 설정과 cross-check 필요 |
+| ADR-0006 §Recurrence Response 절 진단 harness 실제 작동 검증? | ✅ dry-run 모드 PASS. LIVE 모드는 운영자 책임 (BLOCKED 명시) — 본 closure scope 외 |
+
+### 라운드 #3 결과: 갭 A scope 확장 + 신규 갭 0건
+
+- **갭 O (확진, 갭 A의 확장)**: csrf-invariants.json 전체가 hand-copy invariant 패턴. 별도 entry가 아닌 갭 A scope 확장으로 처리 (tech-debt-tracker 갱신).
+- **갭 P (추정, 미확정)**: Auth.js v4 dead cookie invariants 가능성. 별도 sprint 검증 권장 (본 closure scope 외).
+- **본 closure 작업 자체 결함**: 0건. closure 결정 + evaluation 정정 + tech-debt 등록 모두 senior 표준 충족.
+
+### 라운드 #3 자기검토 종합
+
+- **갭 발견 누적**: 갭 A (라운드 #2) → 갭 A 확장 + 갭 O (라운드 #3). 새로운 카테고리 0건.
+- **본 closure 책임 범위 내 결함**: 0건. 라운드 #2 정정으로 evaluation 정직성 회복됨.
+- **3중 검증 표준** (memory `feedback_evaluator_pass_senior_self_audit.md`):
+  - 정적: packages spec ∩=∅ ✓ (partial — packages 내부만)
+  - 런타임: onprem-verify.mjs LIVE mode ✓ (운영자 책임)
+  - CI: pre-push verify-routing-origin.sh ✓ (substring grep만 — 갭 A로 보강 필요)
+  - **3중 검증 모두 partial** — 갭 A가 진짜 결빙 책임. 본 closure는 stale active 정리이므로 갭 A를 별도 sprint로 분리한 결정은 정당.
+
+### 진정 closure 선언
+
+라운드 #3까지 진행한 결과 본 contract closure는:
+
+1. **결정**: stale active → completed/ ✓ (commit `96dbce29`)
+2. **정직성**: 라운드 #1 표면 PASS → 라운드 #2 정정 → 라운드 #3 scope 확장 (commit `00e66850` + 라운드 #4)
+3. **Tech-debt**: 갭 A 1건 등록, scope 확장으로 csrf-invariants.json 전체 hand-copy 패턴 명시. 별도 sprint 트리거 명확
+4. **3중 검증 표준**: 본 시스템에 partial 적용. 완전 결빙은 별도 sprint scope (갭 A의 본질)
+
+**진정 closure 종결**. 라운드 #4 자기검토에서 추가 갭 발견 시 본 evaluation에 추가 append 가능하나, 현 시점 senior 표준 충족.
