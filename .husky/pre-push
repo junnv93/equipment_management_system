@@ -90,6 +90,16 @@ _t "backend-test" pnpm --filter backend run test --silent --passWithNoTests
 echo "▶ pre-push: frontend tests..."
 _t "frontend-test" pnpm --filter frontend run test --silent --passWithNoTests
 
+# ── root scope spec (scripts/__tests__) — backend/frontend runner 미커버 영역 ──
+# 본 spec 들은 commitlint SCOPE_LIST↔filesystem 1:1 / lint-ruleset parity / staged-guard
+# 회귀 차단 invariant. pre-commit 부담 회피 위해 pre-push 게이트로 통합.
+# `--test-concurrency=4` 로 commitlint CLI spawn 케이스 병렬 실행 → ~4초 (직렬 ~10초 대비 60% 단축).
+echo "▶ pre-push: root scope spec (scripts/__tests__/*.spec.mjs)..."
+_t "root-spec" node --test --test-concurrency=4 \
+  scripts/__tests__/commitlint-config.spec.mjs \
+  scripts/__tests__/precommit-staged-guard.spec.mjs \
+  scripts/__tests__/verify-lint-ruleset-parity.spec.mjs
+
 echo "✔ pre-push: all checks passed"
 
 # ultrareview 권고 (정보성 — 실패해도 push는 허용)

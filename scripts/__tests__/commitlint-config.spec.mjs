@@ -16,7 +16,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
@@ -165,6 +165,78 @@ describe('commitlint.config.js — SCOPE_LIST SSOT', () => {
       intersection.length,
       0,
       `META 와 BACKEND 동시 등록된 scope: [${intersection.join(', ')}] — backend module 우선 분류`
+    );
+  });
+
+  /**
+   * CLAUDE.md `### Backend Modules (N)` docs SSOT ↔ BACKEND_MODULE_SCOPES 자동 동기화 검증.
+   *
+   * 3-way SSOT 체인:
+   *   apps/backend/src/modules/* (fs)
+   *     ⇔ commitlint BACKEND_MODULE_SCOPES (commit gate)
+   *     ⇔ CLAUDE.md `### Backend Modules (N)` (개발자 docs)
+   *
+   * 의도: 신규 backend 모듈 디렉토리 + commitlint 갱신만 하고 CLAUDE.md docs 표 갱신을
+   * 잊는 silent miss 차단. `### Backend Modules` 헤더의 카운트 (N) + 표 row 1:1 비교.
+   *
+   * 파싱 전략 (brittle 회피):
+   *   1. anchor heading `### Backend Modules (\d+)` 정확 매치 → N 추출
+   *   2. heading 다음 줄부터 다음 `### ` 또는 `## ` 헤더 등장 직전까지 슬라이스 (table 영역 격리)
+   *   3. `| \`<scope>\` |` 형식 row 만 매칭 (description column 변경에도 robust)
+   *
+   * memory: sprint `commit-pipeline-safety-should-followups` 2026-05-07 갭 #1 closure.
+   * 시니어 자기검토 #3 라운드 가치 입증 — value-only SSOT 가 아닌 docs SSOT 도 자동 강제.
+   */
+  test('CLAUDE.md ### Backend Modules (N) docs SSOT ↔ BACKEND_MODULE_SCOPES 1:1', () => {
+    const claudeMdPath = resolve(REPO_ROOT, 'CLAUDE.md');
+    const claudeMd = readFileSync(claudeMdPath, 'utf8');
+
+    // 1. heading 카운트 추출
+    const headingMatch = claudeMd.match(/^### Backend Modules \((\d+)\)\s*$/m);
+    assert.ok(
+      headingMatch,
+      "CLAUDE.md 에 `### Backend Modules (N)` 헤더 없음 — docs SSOT 변형 의심"
+    );
+    const declaredCount = Number(headingMatch[1]);
+
+    // 2. heading 다음부터 다음 `### `/`## ` 헤더까지만 추출 (table 영역 격리)
+    const headingIdx = claudeMd.indexOf(headingMatch[0]);
+    const after = claudeMd.slice(headingIdx + headingMatch[0].length);
+    const nextHeadingMatch = after.match(/^#{2,3} /m);
+    const tableArea = nextHeadingMatch
+      ? after.slice(0, after.indexOf(nextHeadingMatch[0]))
+      : after;
+
+    // 3. `| \`<scope>\` |` 형식 row 만 매칭
+    const rowRegex = /^\|\s*`([a-z][a-z0-9-]*)`\s*\|/gm;
+    const docsModules = [];
+    let m;
+    while ((m = rowRegex.exec(tableArea)) !== null) {
+      docsModules.push(m[1]);
+    }
+    docsModules.sort();
+
+    // 검증 1: heading 카운트 = 표 row 수
+    assert.equal(
+      docsModules.length,
+      declaredCount,
+      `CLAUDE.md heading count (${declaredCount}) ≠ 표 row count (${docsModules.length}) — 헤더 또는 표 갱신 누락`
+    );
+
+    // 검증 2: 표 row 와 BACKEND_MODULE_SCOPES 1:1
+    const ssotModules = [...config.BACKEND_MODULE_SCOPES].sort();
+    const missingFromDocs = ssotModules.filter((m) => !docsModules.includes(m));
+    const extraInDocs = docsModules.filter((m) => !ssotModules.includes(m));
+
+    assert.equal(
+      missingFromDocs.length,
+      0,
+      `CLAUDE.md 표에 누락된 backend module: [${missingFromDocs.join(', ')}] — \`### Backend Modules (N)\` 표에 row 추가 필요`
+    );
+    assert.equal(
+      extraInDocs.length,
+      0,
+      `CLAUDE.md 표에 더 이상 존재하지 않는 module: [${extraInDocs.join(', ')}] — 표 row 제거 필요`
     );
   });
 });

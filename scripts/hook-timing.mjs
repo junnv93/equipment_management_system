@@ -19,13 +19,27 @@
  *   정상 종료: child.status (0~255)
  *   signal 종료: 1 (silent pass 차단 — wrapper 가 hook 게이트를 우회 못 하도록)
  *
+ * Log rotation (운영 회귀 차단):
+ *   `.husky/.timing-log.jsonl` 가 TIMING_LOG_MAX_BYTES (5MB) 초과 시 append 직전
+ *   `.1` 로 rolling (단일 백업). 산업 표준 logrotate 패턴의 minimal 구현 — 외부
+ *   의존성 0, atomic rename. rotation 실패는 hook 차단 사유 아님 (warn 만).
+ *
  * macOS / Linux / WSL2 호환 (Node 내장만 사용).
  */
 
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync, renameSync, statSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+
+/**
+ * timing log rotation 임계치 (5MB).
+ *
+ * 근거: pre-commit 6 step + pre-push 11 step ≈ 17 lines/commit. 평균 line 120
+ * bytes 가정 시 5MB ≈ 2,500 commit (~수개월 단일 dev 운영). 초과 시 단일 백업
+ * rolling — 직전 분석 데이터는 보존, 더 오래된 데이터는 폐기.
+ */
+const TIMING_LOG_MAX_BYTES = 5 * 1024 * 1024;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -54,6 +68,44 @@ function parseArgs(argv) {
   return { label, command, args };
 }
 
+/**
+ * timing log rotation — append 직전 size 검사 + .1 rolling.
+ *
+ * 동작:
+ *   1. logPath stat → size > TIMING_LOG_MAX_BYTES 시 rotation 시작
+ *   2. backupPath (.1) 가 이미 존재하면 unlink (단일 백업 정책)
+ *   3. logPath → backupPath atomic rename
+ *   4. 다음 append 가 새 파일 생성 (자동)
+ *
+ * race 안전: pre-commit / pre-push 은 단일 git 트랜잭션 내 직렬 실행 — 동시
+ * write 위험 0. rename 자체가 atomic operation 이라 추가 lock 불필요.
+ *
+ * 실패 처리: rotation 실패 시 warn 후 append 진행 (운영 압력 < hook 차단 비용).
+ */
+function rotateTimingLogIfNeeded(logPath) {
+  let stats;
+  try {
+    stats = statSync(logPath);
+  } catch {
+    // 파일 없음 — rotation 불요
+    return;
+  }
+
+  if (stats.size <= TIMING_LOG_MAX_BYTES) return;
+
+  const backupPath = logPath + '.1';
+  try {
+    try {
+      unlinkSync(backupPath);
+    } catch {
+      // 기존 백업 없음 — 무시
+    }
+    renameSync(logPath, backupPath);
+  } catch (e) {
+    console.error(`hook-timing: log rotation 실패 (${e.message}) — append 계속`);
+  }
+}
+
 function emitTiming({ label, ms, exitCode }) {
   const enabled = process.env.EMS_HOOK_TIMING === '1';
   if (!enabled) return;
@@ -72,6 +124,7 @@ function emitTiming({ label, ms, exitCode }) {
     const logPath = join(REPO_ROOT, '.husky', '.timing-log.jsonl');
     try {
       mkdirSync(dirname(logPath), { recursive: true });
+      rotateTimingLogIfNeeded(logPath);
       appendFileSync(logPath, line + '\n', 'utf8');
     } catch (e) {
       // log append 실패는 hook 차단 사유 아님 — warn 만.
