@@ -56,11 +56,11 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 > **관리 메모**:
 > - `docs/operations/quality-audit-routes.json` (Lighthouse/a11y 감사 대상 라우트 SSOT) — verify-e2e Step 27 + verify-hardcoding Step 34에서 검증
 > - Backend controller/service pagination 기본값·최대 clamp는 `DEFAULT_PAGE_SIZE`/`MAX_PAGE_SIZE` SSOT — verify-ssot Step 59에서 검증
-> - **commit pipeline tooling SSOT** (verify-implementation #23~#26, 2026-05-06 commit-pipeline-safety + commit-pipeline-safety-should-followups sprint):
+> - **commit pipeline tooling SSOT** (verify-implementation #23~#26, 2026-05-06~07 commit-pipeline-safety + commit-pipeline-safety-should-followups sprint + 시니어 #2/#3/#4 라운드):
 >   - `scripts/verify-lint-ruleset-parity.mjs` — lintstaged ↔ lint config 3 도메인 (backend/frontend/packages) parity. `PARITY_SPEC` SSOT, `lintCiScriptName: null` 분기로 packages 우아하게 처리. pre-push `_t "parity"` step.
 >   - `scripts/precommit-staged-guard.mjs` — multi-session 인덱스 흡수 race 차단 (`GUARD_CONFIG` SSOT, ADR-0007).
->   - `commitlint.config.js` `SCOPE_LIST` ↔ `apps/backend/src/modules/*` filesystem 1:1 자동 동기화는 `scripts/__tests__/commitlint-config.spec.mjs` SSOT — pre-push `_t "root-spec"` step (`node --test --test-concurrency=4`) 자동 실행.
->   - `scripts/hook-timing.mjs` — opt-in (`EMS_HOOK_TIMING=1`) hook 실행 시간 추적 wrapper. default no-op. pre-commit/pre-push 모든 step `_t <label> <cmd>` 통합.
+>   - `commitlint.config.js` `SCOPE_LIST` ↔ **3-way SSOT 정합** (filesystem `apps/backend/src/modules/*` + `BACKEND_MODULE_SCOPES` + `CLAUDE.md ### Backend Modules (N)` docs) 자동 동기화. CLAUDE.md docs cross-check는 markdown table parser 기반 (heading 카운트 + `\| \`<scope>\` \|` row 추출). `scripts/__tests__/commitlint-config.spec.mjs` 19 cases SSOT — pre-push `_t "root-spec"` step (`node --test --test-concurrency=4`) 자동 실행.
+>   - `scripts/hook-timing.mjs` — opt-in (`EMS_HOOK_TIMING=1`) hook 실행 시간 추적 wrapper. default no-op. **Log rotation**: `TIMING_LOG_MAX_BYTES = 5MB` 초과 시 `.1` 단일 백업 rolling (atomic rename, race 안전). pre-commit/pre-push 모든 step `_t <label> <cmd>` 통합. 회귀 spec: `scripts/__tests__/hook-timing.spec.mjs` 9 cases (default no-op / exit code 전파 / TIMING JSON / LOG append / rotation 4).
 
 ## 자동화 스크립트 (ts-morph / 정적 분석 승격)
 
