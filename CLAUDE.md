@@ -80,7 +80,9 @@ equipment_management_system/
     └── development/             # Development guides
 ```
 
-### Backend Modules (24)
+### Backend Modules (26)
+
+> SSOT 정합: `commitlint.config.js` `BACKEND_MODULE_SCOPES` 와 1:1 (`scripts/__tests__/commitlint-config.spec.mjs` fs-sync spec 자동 검증).
 
 | Module | Path | Description |
 |---|---|---|
@@ -97,11 +99,13 @@ equipment_management_system/
 | `documents` | `modules/documents/` | 문서 관리 (SHA-256, Presigned URL, 버전 관리) |
 | `equipment` | `modules/equipment/` | 장비 CRUD + 폐기 + 수리이력 |
 | `equipment-imports` | `modules/equipment-imports/` | 장비 반입 (구 rental-imports) |
+| `inspection-form-templates` | `modules/inspection-form-templates/` | 점검 양식 템플릿 (UL-QP-18-02 시험설비이력카드) |
 | `intermediate-inspections` | `modules/intermediate-inspections/` | 중간 점검 관리 |
 | `monitoring` | `modules/monitoring/` | 시스템 모니터링 |
 | `non-conformances` | `modules/non-conformances/` | 부적합 관리 |
 | `notifications` | `modules/notifications/` | 알림 서비스 |
 | `reports` | `modules/reports/` | 리포트 생성 |
+| `security` | `modules/security/` | CSP/CSRF/rate-limit/RBAC SSOT (보안 미들웨어 + 테스트 인프라) |
 | `self-inspections` | `modules/self-inspections/` | 자체 점검 관리 |
 | `settings` | `modules/settings/` | 시스템/교정 설정 관리 |
 | `software-validations` | `modules/software-validations/` | 시험용 소프트웨어 유효성 검증 |
