@@ -136,6 +136,51 @@ pnpm compose:onprem && pnpm compose:onprem:verify
 
 향후 `infra/scripts/deploy.sh` 표준화 시점에 자동 wiring을 검토한다.
 
+## SSOT Cross-File Validation (2026-05-07 csrf-invariants-ssot-closure)
+
+본 ADR이 정착한 후 시니어 자기검토에서 NextAuth handler path 집합이 **5곳에 hand-copy** 상태로 존재함을 발견했다 (cross-file 동기화 검증 부재 → silent drift 위험). sprint `csrf-invariants-ssot-closure` Mode 2 PASS로 5곳 SSOT 결빙 + Auth.js v5 cleanup 완료.
+
+### 5-place SSOT 결빙
+
+| 위치                                                                      | 형태               | 검증                                       |
+| ------------------------------------------------------------------------- | ------------------ | ------------------------------------------ |
+| ① `packages/shared-constants/src/api-routing.ts` `NEXTAUTH_HANDLER_PATHS` | TS array (8 paths) | **Source of truth** — `as const satisfies` |
+| ② `scripts/diagnostics/csrf-invariants.json` `nextAuthHandlerPaths.all`   | JSON array         | M-1 spec: ① ↔ ② Set equality               |
+| ③ `infra/nginx/lan.conf` regex group                                      | nginx regex        | M-2 spec: ① ↔ ③ Set equality               |
+| ④ `infra/nginx/nginx.conf.template` regex group                           | nginx regex        | M-3 spec: ① ↔ ④ Set equality               |
+| ⑤ `apps/frontend/next.config.js` `NEXTAUTH_HANDLER_REGEX_GROUP`           | JS string          | M-4 spec: ① ↔ ⑤ Set equality               |
+
+**검증 메커니즘**: `packages/shared-constants/__tests__/api-routing.spec.ts` Jest spec이 fs로 4 mirror 파일 read + 정규식 group 추출 + Set 비교. drift 시 즉시 FAIL. pre-push hook의 `_t "root-spec"` step이 자동 실행 — 별도 자동화 스크립트 불필요 (Phase 3 manage-skills 패턴 mirror).
+
+### 7 invariants 결빙
+
+`csrf-invariants.json`의 추가 6 invariant 키도 spec test cross-check로 결빙 (M-5~M-11):
+
+- `nginxRoutingInvariants.regexLocation` ↔ 실제 nginx regex 4-way 일관성 (M-5)
+- `cookieInvariants.expectedCookies` Auth.js v5 only (v4 dead entries 제거) (M-6)
+- `nextAuthClientBasePath` ↔ `apps/frontend/lib/auth.ts` cookies/basePath override 부재 (M-7)
+- `serviceWorkerInvariants.swEntryPoint` ↔ `apps/frontend/app/sw.ts` fs 존재 (M-8)
+- `cookieInvariants.samesite` Auth.js v5 기본 정합 (M-9)
+- `requiredEnvVars.smoke` ↔ `scripts/onprem-verify.mjs` SSOT consumer 정합 (M-10)
+- `csrf-invariants.json` schema integrity (`$schema`/`version`/`adrRef`/`ssotCodeRef`) (M-11)
+
+### Auth.js v5 cleanup (Old API 회귀 가드)
+
+본 시스템 `next-auth@5.0.0-beta.30` (Auth.js v5 단일). `apps/frontend/lib/auth.ts`에 cookies override 0건 (Auth.js v5 default 의존이 invariant). 따라서 v4 prefix (`next-auth.*`) cookie names는 dead invariant로 다음 정리 완료:
+
+- `cookieInvariants.expectedCookies`: 6종 (v4 3 + v5 3) → **3종 (v5 only)**
+- `redactionPatterns.cookieNames`: 10종 (v4 5 + v5 5) → **5종 (v5 only)**
+- `csrf-invariants.json` version 1.0.0 → 1.1.0 minor bump
+- v6 migration 시점에 재검토 가이드 주석 명시
+
+### Trigger for Re-evaluation
+
+다음 중 하나 발생 시 본 §SSOT Cross-File Validation 절 재평가:
+
+- Auth.js v6 stable release + migration sprint 진입
+- 새 NextAuth endpoint 추가 (예: webauthn, passkey) — `NEXTAUTH_HANDLER_PATHS` 갱신 시 spec이 5곳 동기화 강제
+- nginx routing 변경 (예: edge proxy 도입) — regex 추출 helper의 fs path 갱신 필요
+
 ## References
 
 - 관련 ADR: ADR-0003 (NestJS + Next.js App Router), ADR-0004 (Docker Compose over Kubernetes)
