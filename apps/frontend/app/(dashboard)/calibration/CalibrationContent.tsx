@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useQuery } from '@tanstack/react-query';
 import calibrationApi, { type CalibrationSummary } from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
@@ -30,6 +31,7 @@ import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
+import { MANAGEMENT_METHOD_VALUES, type ManagementMethod } from '@equipment-management/schemas';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
@@ -59,6 +61,7 @@ export default function CalibrationContent({
     updateApprovalStatus,
     updateResult,
     updateCalibrationDueStatus,
+    updateMethods,
     updateDateRange,
     clearFilters,
   } = useCalibrationFilters(initialFilters);
@@ -113,7 +116,7 @@ export default function CalibrationContent({
   });
 
   const historyQueryParams = useMemo(() => {
-    const params: Record<string, string | undefined> = {
+    const params: Record<string, string | readonly string[] | undefined> = {
       teamId: defaultTeamId,
       site: defaultSite,
       equipmentId: filters.equipmentId || undefined,
@@ -122,6 +125,8 @@ export default function CalibrationContent({
       calibrationDueStatus: filters.calibrationDueStatus || undefined,
       startDate: filters.startDate || undefined,
       endDate: filters.endDate || undefined,
+      // 배열 그대로 전달 — getCalibrationHistory 내부 toCsvParam이 csv 정규화
+      methods: filters.methods.length > 0 ? filters.methods : undefined,
     };
     // undefined 값 제거 (queryKey 안정성)
     return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined));
@@ -134,6 +139,7 @@ export default function CalibrationContent({
     filters.calibrationDueStatus,
     filters.startDate,
     filters.endDate,
+    filters.methods,
   ]);
 
   const { data: calibrationHistoryData, isLoading: isHistoryLoading } = useQuery({
@@ -405,6 +411,28 @@ export default function CalibrationContent({
             ))}
           </SelectContent>
         </Select>
+
+        {/* 관리 방법 다중 선택 (외부교정/자체점검/비대상) — UL-QP-18 분류별 조회 */}
+        <ToggleGroup
+          type="multiple"
+          value={[...filters.methods]}
+          onValueChange={(value) => updateMethods(value as ManagementMethod[])}
+          aria-label={t('content.filters.methodsLabel')}
+          className="flex-wrap"
+          size="sm"
+          variant="outline"
+        >
+          {MANAGEMENT_METHOD_VALUES.map((method) => (
+            <ToggleGroupItem
+              key={method}
+              value={method}
+              aria-label={t(`content.filters.methodOptions.${method}`)}
+              className="h-8 px-2 text-xs"
+            >
+              {t(`content.filters.methodOptions.${method}`)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
 
         {/* 활성 필터 태그 */}
         {countActiveFilters(filters) > 0 && (

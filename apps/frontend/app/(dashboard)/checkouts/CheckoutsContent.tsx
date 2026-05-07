@@ -195,7 +195,7 @@ export default function CheckoutsContent({
         direction: 'inbound',
         teamId,
         pageSize: 1,
-        statuses: SUBTAB_STATUS_GROUPS.inProgress.join(','),
+        statuses: SUBTAB_STATUS_GROUPS.inProgress,
       }),
     ...QUERY_CONFIG.CHECKOUT_SUMMARY,
   });

@@ -5,6 +5,8 @@ import {
   exportUtilizationQuerySchema,
   exportAuditLogsQuerySchema,
   exportEquipmentUsageQuerySchema,
+  exportTeamEquipmentQuerySchema,
+  exportMaintenanceQuerySchema,
   equipmentUsageQuerySchema,
 } from '../dto/report-query.dto';
 
@@ -89,6 +91,99 @@ describe('report query schemas — Query DTO trim/max + enum SSOT', () => {
           startDate: '2026-05-05',
         }).success
       ).toBe(true);
+    });
+  });
+
+  // ── Round 3 closure: 3 export pipe spec coverage 보강 ───────────────────
+  describe('exportEquipmentUsageQuery — format enum + date range SSOT', () => {
+    it('accepts valid format=excel with date range', () => {
+      expect(
+        exportEquipmentUsageQuerySchema.safeParse({
+          format: 'excel',
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+        }).success
+      ).toBe(true);
+    });
+    it('rejects invalid format value', () => {
+      expect(
+        exportEquipmentUsageQuerySchema.safeParse({ format: 'png', startDate: '2026-01-01' })
+          .success
+      ).toBe(false);
+    });
+    it('rejects invalid endDate', () => {
+      expect(
+        exportEquipmentUsageQuerySchema.safeParse({
+          format: 'pdf',
+          endDate: 'not-a-date',
+        }).success
+      ).toBe(false);
+    });
+    it('accepts format=pdf without optional dates', () => {
+      expect(exportEquipmentUsageQuerySchema.safeParse({ format: 'pdf' }).success).toBe(true);
+    });
+  });
+
+  describe('exportTeamEquipmentQuery — format + site + teamId UUID SSOT', () => {
+    it('accepts valid format=excel + site + teamId UUID', () => {
+      expect(
+        exportTeamEquipmentQuerySchema.safeParse({
+          format: 'excel',
+          site: 'suwon',
+          teamId: '550e8400-e29b-41d4-a716-446655440000',
+        }).success
+      ).toBe(true);
+    });
+    it('rejects invalid teamId (non-UUID)', () => {
+      expect(
+        exportTeamEquipmentQuerySchema.safeParse({
+          format: 'excel',
+          teamId: 'not-a-uuid',
+        }).success
+      ).toBe(false);
+    });
+    it('rejects invalid site enum', () => {
+      expect(
+        exportTeamEquipmentQuerySchema.safeParse({
+          format: 'excel',
+          site: 'unknown-site',
+        }).success
+      ).toBe(false);
+    });
+    it('accepts minimal format-only payload', () => {
+      expect(exportTeamEquipmentQuerySchema.safeParse({ format: 'pdf' }).success).toBe(true);
+    });
+  });
+
+  describe('exportMaintenanceQuery — format + date range + equipmentId UUID SSOT', () => {
+    it('accepts valid format=excel + date range + equipmentId', () => {
+      expect(
+        exportMaintenanceQuerySchema.safeParse({
+          format: 'excel',
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+          equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+        }).success
+      ).toBe(true);
+    });
+    it('rejects invalid equipmentId (non-UUID)', () => {
+      expect(
+        exportMaintenanceQuerySchema.safeParse({
+          format: 'excel',
+          equipmentId: 'invalid-uuid',
+        }).success
+      ).toBe(false);
+    });
+    it('rejects invalid startDate format', () => {
+      expect(
+        exportMaintenanceQuerySchema.safeParse({
+          format: 'pdf',
+          startDate: '2026/05/05',
+        }).success
+      ).toBe(false);
+    });
+    it('accepts minimal format-only payload', () => {
+      expect(exportMaintenanceQuerySchema.safeParse({ format: 'excel' }).success).toBe(true);
     });
   });
 });

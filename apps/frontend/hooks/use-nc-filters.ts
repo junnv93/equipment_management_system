@@ -17,7 +17,12 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
-import type { NonConformanceStatus, NonConformanceType, Site } from '@equipment-management/schemas';
+import type {
+  NonConformanceSortValue,
+  NonConformanceStatus,
+  NonConformanceType,
+  Site,
+} from '@equipment-management/schemas';
 import {
   type UINonConformancesFilters,
   parseNCFiltersFromSearchParams,
@@ -119,7 +124,7 @@ export function useNCFilters() {
   const updateSearch = (search: string) => updateFilters({ search });
 
   /** 정렬 업데이트 */
-  const updateSort = (sort: string) => updateFilters({ sort });
+  const updateSort = (sort: NonConformanceSortValue) => updateFilters({ sort });
 
   /** 페이지 업데이트 */
   const updatePage = (page: number) => updateFilters({ page });

@@ -40,15 +40,13 @@ import { EquipmentStatusEnum } from '@equipment-management/schemas';
 import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 /**
- * 테이블 열 정의
+ * 테이블 열 정의 — `EquipmentSortField` SSOT 부분 집합 (현재 헤더로 노출되는 정렬 컬럼만).
+ * 새 정렬 가능 컬럼 추가 시 `EQUIPMENT_SORT_FIELDS` SSOT부터 갱신.
  */
-type SortableColumn =
-  | 'managementNumber'
-  | 'name'
-  | 'status'
-  | 'lastCalibrationDate'
-  | 'nextCalibrationDate'
-  | 'createdAt';
+type SortableColumn = Extract<
+  import('@equipment-management/schemas').EquipmentSortField,
+  'managementNumber' | 'name' | 'status' | 'nextCalibrationDate' | 'createdAt'
+>;
 
 interface ColumnDef {
   key: SortableColumn | 'statusBar' | 'location' | 'actions';

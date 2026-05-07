@@ -100,7 +100,7 @@ async function getPendingOutgoing(_teamId?: string): Promise<ApprovalItem[]> {
   try {
     const [regularCheckouts, vendorReturns] = await Promise.all([
       checkoutApi.getCheckouts({
-        statuses: LENDER_APPROVAL_PENDING_STATUSES.join(','),
+        statuses: LENDER_APPROVAL_PENDING_STATUSES,
         direction: CheckoutDirectionValues.OUTBOUND,
       }),
       checkoutApi.getCheckouts({

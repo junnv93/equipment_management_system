@@ -24,7 +24,8 @@ import {
   countActiveFilters,
   DEFAULT_UI_FILTERS,
 } from '@/lib/utils/calibration-filter-utils';
-import type { Site } from '@equipment-management/schemas';
+import type { ManagementMethod, Site } from '@equipment-management/schemas';
+import { toCsvParam } from '@/lib/api/query-csv';
 import type { CalibrationDueStatus } from '@/lib/utils/calibration-filter-utils';
 
 /**
@@ -118,6 +119,12 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
       params.set('endDate', newFilters.endDate);
     }
 
+    // ✅ methods 다중 선택 — toCsvParam SSOT (lib/api/query-csv.ts) 경유
+    const methodsParam = toCsvParam(newFilters.methods);
+    if (methodsParam !== undefined) {
+      params.set('methods', methodsParam);
+    }
+
     // ✅ tab: 기본값('list')이 아닐 때만 URL에 포함
     if (newFilters.tab && newFilters.tab !== DEFAULT_UI_FILTERS.tab) {
       params.set('tab', newFilters.tab);
@@ -172,6 +179,13 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   };
 
   /**
+   * 관리 방법 다중 선택 필터 헬퍼 (외부교정/자체점검/비대상 토글)
+   */
+  const updateMethods = (methods: readonly ManagementMethod[]) => {
+    updateFilters({ methods });
+  };
+
+  /**
    * 활성 탭 업데이트 헬퍼
    */
   const updateTab = (tab: UICalibrationFilters['tab']) => {
@@ -213,6 +227,8 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
     updateResult,
     /** 교정 기한 상태 필터 업데이트 */
     updateCalibrationDueStatus,
+    /** 관리 방법 다중 선택 필터 업데이트 */
+    updateMethods,
     /** 활성 탭 업데이트 */
     updateTab,
     /** 날짜 범위 필터 업데이트 */

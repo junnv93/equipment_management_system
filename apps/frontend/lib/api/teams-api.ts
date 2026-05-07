@@ -20,6 +20,7 @@ import {
   transformArrayResponse,
 } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
+import { toCsvParam } from './query-csv';
 
 /**
  * 프론트엔드에서 사용하는 Team 타입
@@ -130,9 +131,13 @@ export type { Site };
 
 /**
  * 팀 조회 쿼리 파라미터
+ *
+ * `ids`는 `string` (이미 csv 직렬화) 또는 `string[]` (배열 → toCsvParam 정규화) 양쪽 허용.
+ * 호출자가 자연스럽게 배열을 전달할 수 있도록 union으로 격상하고, 내부 URL builder가
+ * `toCsvParam`으로 통합 변환한다 (SSOT: lib/api/query-csv.ts).
  */
 export interface TeamQuery {
-  ids?: string;
+  ids?: string | readonly string[];
   search?: string;
   site?: Site;
   classification?: Classification; // ✅ type → classification
@@ -176,8 +181,11 @@ const teamsApi = {
    */
   getTeams: async (query: TeamQuery = {}): Promise<PaginatedResponse<Team>> => {
     const params = new URLSearchParams();
+    const { ids, ...rest } = query;
+    const idsParam = toCsvParam(ids);
+    if (idsParam !== undefined) params.append('ids', idsParam);
 
-    Object.entries(query).forEach(([key, value]) => {
+    Object.entries(rest).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, String(value));
       }
@@ -255,12 +263,13 @@ const teamsApi = {
   searchUsers: async (params: {
     search?: string;
     site?: string;
-    teams?: string;
+    teams?: string | readonly string[];
   }): Promise<TeamMember[]> => {
     const qs = new URLSearchParams();
     if (params.search) qs.set('search', params.search);
     if (params.site) qs.set('site', params.site);
-    if (params.teams) qs.set('teams', params.teams);
+    const teamsParam = toCsvParam(params.teams);
+    if (teamsParam !== undefined) qs.set('teams', teamsParam);
     qs.set('pageSize', '20');
     const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?${qs.toString()}`);
     return transformArrayResponse<TeamMember>(response);

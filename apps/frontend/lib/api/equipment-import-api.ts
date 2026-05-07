@@ -5,6 +5,7 @@ import type { PaginatedResponse } from './types';
 import type {
   EquipmentImportSource,
   EquipmentImportStatus,
+  EquipmentImportSortValue,
   Classification,
 } from '@equipment-management/schemas';
 
@@ -163,7 +164,12 @@ export interface ReceiveEquipmentImportDto {
 }
 
 /**
- * Query parameters for list endpoint
+ * Query parameters for list endpoint.
+ *
+ * `sort`는 `field.dir` 결합형 enum (예: `'createdAt.desc'`) — backend `EquipmentImportSortEnum` 1:1 일치.
+ * 분리형 정렬 파라미터는 r3에서 frontend hard-cut으로 제거되었으며 backend는 r2 fallback 보존 중.
+ *
+ * @see packages/schemas/src/sort/equipment-import-sort.ts
  */
 export interface EquipmentImportQuery {
   page?: number;
@@ -173,8 +179,7 @@ export interface EquipmentImportQuery {
   site?: string;
   teamId?: string;
   search?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sort?: EquipmentImportSortValue;
 }
 
 /**
@@ -225,8 +230,7 @@ class EquipmentImportApi {
     if (query?.site) params.append('site', query.site);
     if (query?.teamId) params.append('teamId', query.teamId);
     if (query?.search) params.append('search', query.search);
-    if (query?.sortBy) params.append('sortBy', query.sortBy);
-    if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
+    if (query?.sort) params.append('sort', query.sort);
 
     const queryString = params.toString();
     const url = `${API_ENDPOINTS.EQUIPMENT_IMPORTS.LIST}${queryString ? `?${queryString}` : ''}`;

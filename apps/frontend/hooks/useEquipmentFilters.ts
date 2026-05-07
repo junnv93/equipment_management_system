@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import type {
   Site,
   EquipmentStatus,
+  EquipmentSortField,
   ManagementMethod,
   Classification,
 } from '@equipment-management/schemas';
@@ -26,7 +27,9 @@ export type CalibrationDueFilter = 'all' | 'due_soon' | 'overdue' | 'normal';
 /**
  * 장비 필터 상태 타입
  *
- * ✅ SSOT: UIEquipmentFilters와 동일한 구조 (sortBy 타입만 더 제한적)
+ * ✅ SSOT: `EquipmentSortField`는 `packages/schemas/src/sort/equipment-sort.ts` SSOT.
+ *   기존 인라인 union (lastCalibrationDate 포함)은 backend `EQUIPMENT_SORT_COLUMN_MAP`에
+ *   매핑이 없어 unmapped 컬럼이었음 — Round 3에서 SSOT 좁힘으로 dead 컬럼 제거.
  * @see lib/utils/equipment-filter-utils.ts
  */
 export interface EquipmentFilters {
@@ -38,13 +41,7 @@ export interface EquipmentFilters {
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: CalibrationDueFilter;
   teamId: string;
-  sortBy:
-    | 'name'
-    | 'createdAt'
-    | 'lastCalibrationDate'
-    | 'nextCalibrationDate'
-    | 'status'
-    | 'managementNumber';
+  sortBy: EquipmentSortField;
   sortOrder: 'asc' | 'desc';
   page: number;
   pageSize: number;

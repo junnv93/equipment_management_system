@@ -332,6 +332,13 @@
         "overdue": "교정 기한 초과",
         "upcoming": "교정 예정",
         "normal": "정상"
+      },
+      "methodsLabel": "관리 방법",
+      "methodsHint": "다중 선택 가능",
+      "methodOptions": {
+        "external_calibration": "외부 교정",
+        "self_inspection": "자체 점검",
+        "not_applicable": "비대상"
       }
     },
     "tabs": {

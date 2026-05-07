@@ -1395,6 +1395,9 @@
     "delete": "삭제",
     "deleting": "삭제 중..."
   },
+  "calibrationHistoryClient": {
+    "backAriaLabel": "장비 상세로 돌아가기"
+  },
   "calibrationFactorsClient": {
     "title": "보정계수 관리",
     "loadError": "보정계수 정보를 불러오지 못했습니다.",

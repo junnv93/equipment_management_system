@@ -18,7 +18,23 @@
  * ============================================================================
  */
 
-import type { Site } from '@equipment-management/schemas';
+import type { ManagementMethod, Site } from '@equipment-management/schemas';
+import { MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
+
+/**
+ * `methods` filter SSOT 화이트리스트 — `MANAGEMENT_METHOD_VALUES` 기반.
+ * URL `?methods=external_calibration,self_inspection` 토큰 분해 + 검증.
+ * 잘못된 토큰은 silent ignore (Equipment 도메인 화이트리스트 패턴 미러).
+ */
+const METHOD_VALUE_SET: ReadonlySet<string> = new Set(MANAGEMENT_METHOD_VALUES);
+function parseMethodsCsv(raw: string | null): readonly ManagementMethod[] | undefined {
+  if (!raw) return undefined;
+  const tokens = raw
+    .split(',')
+    .map((token) => token.trim())
+    .filter((token) => METHOD_VALUE_SET.has(token));
+  return tokens.length > 0 ? (tokens as readonly ManagementMethod[]) : undefined;
+}
 
 /**
  * 교정 기한 상태 (날짜 기반 가상 상태)
@@ -47,6 +63,11 @@ export interface UICalibrationFilters {
   calibrationDueStatus: CalibrationDueStatus | ''; // 교정 기한 상태 ('' = 전체)
   startDate: string; // 시작일 ('' = 전체)
   endDate: string; // 종료일 ('' = 전체)
+  /**
+   * UL-QP-18 관리 방법 다중 선택 필터 (외부교정 / 자체점검 / 비대상).
+   * 빈 배열 = 전체. backend `optionalCsvEnum(MANAGEMENT_METHOD_VALUES, ...)` 검증과 1:1.
+   */
+  methods: readonly ManagementMethod[];
   tab: 'list' | 'intermediate' | 'self-inspection'; // 활성 탭 (URL 기반 상태)
 }
 
@@ -63,6 +84,11 @@ export interface ApiCalibrationFilters {
   calibrationDueStatus?: CalibrationDueStatus;
   startDate?: string;
   endDate?: string;
+  /**
+   * UL-QP-18 관리 방법 다중 선택. 단일/배열 모두 허용 — `calibration-api.ts` URL builder가
+   * `toCsvParam`으로 csv 정규화. backend `optionalCsvEnum` 1:1 호환.
+   */
+  methods?: ManagementMethod | readonly ManagementMethod[];
   page?: number;
   pageSize?: number;
 }
@@ -80,6 +106,7 @@ export const DEFAULT_UI_FILTERS: UICalibrationFilters = {
   calibrationDueStatus: '',
   startDate: '',
   endDate: '',
+  methods: [],
   tab: 'list',
 };
 
@@ -134,6 +161,9 @@ export function parseCalibrationFiltersFromSearchParams(
   const startDate = get('startDate') || DEFAULT_UI_FILTERS.startDate;
   const endDate = get('endDate') || DEFAULT_UI_FILTERS.endDate;
 
+  // methods CSV SSOT 화이트리스트 (잘못된 토큰은 silent ignore)
+  const methods = parseMethodsCsv(get('methods')) ?? DEFAULT_UI_FILTERS.methods;
+
   const tabRaw = get('tab') || '';
   const tab = (['list', 'intermediate', 'self-inspection'] as const).includes(
     tabRaw as 'list' | 'intermediate' | 'self-inspection'
@@ -151,6 +181,7 @@ export function parseCalibrationFiltersFromSearchParams(
     calibrationDueStatus,
     startDate,
     endDate,
+    methods,
     tab,
   };
 }
@@ -172,6 +203,7 @@ export function convertFiltersToApiParams(filters: UICalibrationFilters): ApiCal
     calibrationDueStatus: filters.calibrationDueStatus || undefined,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
+    methods: filters.methods.length > 0 ? filters.methods : undefined,
     pageSize: 50, // 교정 기록은 많지 않으므로 한 번에 로드
   };
 }
@@ -192,5 +224,6 @@ export function countActiveFilters(filters: UICalibrationFilters): number {
   if (filters.calibrationDueStatus) count++;
   if (filters.startDate) count++;
   if (filters.endDate) count++;
+  if (filters.methods.length > 0) count++;
   return count;
 }

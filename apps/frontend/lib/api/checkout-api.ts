@@ -7,6 +7,7 @@ import {
 import type { PaginatedResponse } from './types';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { EquipmentImport } from './equipment-import-api';
+import { toCsvParam } from './query-csv';
 import { recordFsmMetaDrift } from '@/lib/observability/fsm-meta-drift';
 
 // ✅ SSOT: 반출 상태/목적 타입 import
@@ -224,7 +225,11 @@ export interface CreateConditionCheckDto {
 export interface CheckoutQuery {
   page?: number;
   pageSize?: number;
-  statuses?: string;
+  /**
+   * 반출 상태 필터 — 단일 상태 또는 다중 상태 배열 양쪽 허용.
+   * 내부 URL builder가 `toCsvParam`으로 정규화 (SSOT: lib/api/query-csv.ts).
+   */
+  statuses?: string | readonly string[];
   equipmentId?: string;
   teamId?: string;
   direction?: CheckoutDirection;
@@ -334,8 +339,11 @@ const checkoutApi = {
     query: CheckoutQuery = {}
   ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     const queryParams = new URLSearchParams();
+    const { statuses, ...rest } = query;
+    const statusesParam = toCsvParam(statuses);
+    if (statusesParam !== undefined) queryParams.append('statuses', statusesParam);
 
-    Object.entries(query).forEach(([key, value]) => {
+    Object.entries(rest).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value));
       }

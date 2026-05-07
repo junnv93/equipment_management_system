@@ -175,19 +175,13 @@ export function parseEquipmentFiltersFromSearchParams(
   // ✅ teamId도 "_all" 변환
   const teamIdRaw = get('teamId') || DEFAULT_UI_FILTERS.teamId;
   const teamId = teamIdRaw === '_all' ? '' : teamIdRaw;
-  // sort SSOT 화이트리스트 검증 — 잘못된 URL 값은 default로 fallback (silent ignore)
+  // sort SSOT 화이트리스트 검증 — `.find` 으로 자동 narrowing (cast 불필요)
   const sortByRaw = get('sortBy') ?? '';
-  const sortBy: EquipmentSortField = (EQUIPMENT_SORT_FIELDS as readonly string[]).includes(
-    sortByRaw
-  )
-    ? (sortByRaw as EquipmentSortField)
-    : DEFAULT_UI_FILTERS.sortBy;
+  const sortBy: EquipmentSortField =
+    EQUIPMENT_SORT_FIELDS.find((field) => field === sortByRaw) ?? DEFAULT_UI_FILTERS.sortBy;
   const sortOrderRaw = get('sortOrder') ?? '';
-  const sortOrder: SortDirection = (SORT_DIRECTION_VALUES as readonly string[]).includes(
-    sortOrderRaw
-  )
-    ? (sortOrderRaw as SortDirection)
-    : DEFAULT_UI_FILTERS.sortOrder;
+  const sortOrder: SortDirection =
+    SORT_DIRECTION_VALUES.find((dir) => dir === sortOrderRaw) ?? DEFAULT_UI_FILTERS.sortOrder;
   const page = parseInt(get('page') || String(DEFAULT_UI_FILTERS.page), 10);
   const pageSize = parseInt(get('pageSize') || String(DEFAULT_UI_FILTERS.pageSize), 10);
 

@@ -15,9 +15,11 @@ import type {
   DocumentJson,
   CreateInspectionResultSectionShape,
   InspectionResultSectionShape,
+  ManagementMethod,
   RichCell as SchemaRichCell,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { toCsvParam } from './query-csv';
 
 export type CalibrationDocumentRecord = DocumentJson;
 
@@ -99,6 +101,12 @@ export interface CalibrationQuery {
   approvalStatus?: string;
   teamId?: string;
   site?: string;
+  /**
+   * UL-QP-18 관리 방법 분류 필터 (외부교정 / 자체점검 / 비대상).
+   * 단일 값(`'external_calibration'`) 또는 배열(`['external_calibration','self_inspection']`) 양쪽 허용.
+   * 내부 URL builder가 `toCsvParam`으로 정규화하여 backend `methods=external_calibration,self_inspection` 형태로 전송.
+   */
+  methods?: ManagementMethod | readonly ManagementMethod[];
 }
 
 export interface CreateCalibrationDto {
@@ -274,9 +282,12 @@ const calibrationApi = {
     query: CalibrationQuery = {}
   ): Promise<PaginatedResponse<CalibrationHistory>> => {
     const params = new URLSearchParams();
+    const { methods, ...rest } = query;
+    const methodsParam = toCsvParam(methods);
+    if (methodsParam !== undefined) params.append('methods', methodsParam);
 
     // 쿼리 파라미터 설정
-    Object.entries(query).forEach(([key, value]) => {
+    Object.entries(rest).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, String(value));
       }

@@ -122,11 +122,10 @@ interface EquipmentListContentProps {
   initialData?: PaginatedResponse<Equipment>;
 }
 
-/** 정렬 표시 i18n 키 맵 (중첩 삼항 대체) */
+/** 정렬 표시 i18n 키 맵 (중첩 삼항 대체) — `EquipmentSortField` SSOT 부분 집합 */
 const SORT_LABEL_KEYS = {
   managementNumber: 'sort.managementNumber',
   name: 'sort.name',
-  lastCalibrationDate: 'sort.lastCalibrationDate',
   nextCalibrationDate: 'sort.nextCalibrationDate',
   status: 'sort.status',
   createdAt: 'sort.createdAt',

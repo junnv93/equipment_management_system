@@ -23,7 +23,26 @@
  * ============================================================================
  */
 
-import type { NonConformanceStatus, NonConformanceType, Site } from '@equipment-management/schemas';
+import type {
+  NonConformanceSortValue,
+  NonConformanceStatus,
+  NonConformanceType,
+  Site,
+} from '@equipment-management/schemas';
+import { NON_CONFORMANCE_SORT_FIELDS } from '@equipment-management/schemas';
+
+/**
+ * 결합형 sort enum 화이트리스트 (Equipment 패턴 미러).
+ *
+ * SSOT `NON_CONFORMANCE_SORT_FIELDS` 기반으로 모든 결합형(`field.asc` / `field.desc`) 토큰 생성.
+ * `.find` 으로 자동 narrowing — `as` cast 불필요 (시스템 전반 SSOT 패턴).
+ */
+const NC_SORT_VALUES = NON_CONFORMANCE_SORT_FIELDS.flatMap(
+  (field) => [`${field}.asc`, `${field}.desc`] as const
+);
+function narrowNCSort(raw: string, fallback: NonConformanceSortValue): NonConformanceSortValue {
+  return NC_SORT_VALUES.find((value) => value === raw) ?? fallback;
+}
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
@@ -38,7 +57,7 @@ export interface UINonConformancesFilters {
   site: Site | ''; // 사이트 ('' = 전체)
   search: string; // 검색어 ('' = 전체)
   equipmentId: string; // 장비 UUID ('' = 전체) — 장비 상세에서 진입 시
-  sort: string; // 정렬 ('' = 기본값 discoveryDate.desc)
+  sort: NonConformanceSortValue; // SSOT 좁힘: 결합형 enum (예: 'discoveryDate.desc')
   page: number; // 현재 페이지 (1-based)
   pageSize: number; // 페이지당 항목 수
 }
@@ -52,7 +71,7 @@ export interface ApiNonConformancesFilters {
   site?: string;
   search?: string;
   equipmentId?: string;
-  sort?: string;
+  sort?: NonConformanceSortValue;
   includeSummary?: boolean;
   page?: number;
   pageSize?: number;
@@ -61,8 +80,8 @@ export interface ApiNonConformancesFilters {
 /** 부적합 관리 기본 페이지 크기 */
 export const NC_DEFAULT_PAGE_SIZE = 20;
 
-/** 기본 정렬 */
-export const NC_DEFAULT_SORT = 'discoveryDate.desc';
+/** 기본 정렬 — backend default (`non-conformance-query.dto.ts`)와 1:1 일치 */
+export const NC_DEFAULT_SORT: NonConformanceSortValue = 'discoveryDate.desc';
 
 /**
  * UI 필터 기본값
@@ -119,7 +138,9 @@ export function parseNCFiltersFromSearchParams(
 
   const equipmentId = get('equipmentId') || defaults.equipmentId;
 
-  const sort = get('sort') || defaults.sort;
+  // sort SSOT 화이트리스트 검증 — 잘못된 URL 값은 default로 fallback (silent ignore)
+  const sortRaw = get('sort');
+  const sort = sortRaw ? narrowNCSort(sortRaw, defaults.sort) : defaults.sort;
 
   const pageRaw = get('page');
   const page = pageRaw ? Math.max(1, parseInt(pageRaw, 10) || 1) : defaults.page;

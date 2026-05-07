@@ -332,6 +332,13 @@
         "overdue": "Calibration Overdue",
         "upcoming": "Calibration Due",
         "normal": "Normal"
+      },
+      "methodsLabel": "Management Method",
+      "methodsHint": "Multi-select",
+      "methodOptions": {
+        "external_calibration": "External Calibration",
+        "self_inspection": "Self Inspection",
+        "not_applicable": "Not Applicable"
       }
     },
     "tabs": {
