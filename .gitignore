@@ -193,4 +193,6 @@ init-postgres.sql
 .claude/scheduled_tasks.lock
 
 # hook timing log (opt-in 누적 — EMS_HOOK_TIMING_LOG=1)
+# .1 = rotation 단일 백업 (size > 5MB 시 자동 rolling, scripts/hook-timing.mjs)
 .husky/.timing-log.jsonl
+.husky/.timing-log.jsonl.1
