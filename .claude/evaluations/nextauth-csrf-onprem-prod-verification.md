@@ -75,3 +75,57 @@ verify-harness MUST 14가 다음을 영구 0건 강제:
 1. ✅ 본 contract `.claude/contracts/nextauth-csrf-onprem-prod-verification.md` → `.claude/contracts/completed/`로 이동
 2. ✅ REGISTRY.md Completed 섹션에 흡수 사실 명시 (Active 행 없음 — 추가 정리 불필요)
 3. ⏭ exec-plan 파일 없음 (Mode 1 평가였음 — Mode 2 plan 미생성, 라이프사이클 무관)
+
+---
+
+## 반복 #3 (2026-05-07T+30분) — 시니어 자기검토 #2 라운드 정정
+
+### 압박 컨텍스트
+
+사용자 명시 압박: *"누락된 부분없이 타협한 부분없이 ... 시스템 전반의 개선 ... SSOT를 준수하면서 ... 개발한거 맞아?"*
+
+memory `feedback_repeated_self_audit.md` + `feedback_evaluator_pass_senior_self_audit.md` 적용: Evaluator/표면 PASS ≠ 시니어 표준. 깊이 검증 라운드 진행.
+
+### 라운드 #2 발견 (정직성 정정)
+
+| 라운드 #1 평가 | 라운드 #2 실측 | 정정 |
+|---|---|---|
+| "MUST 5/5 흡수 완전" | MUST #3, #4의 disjoint 검증은 **표면(존재성)만** | **부분 false** — regex SSOT 동기화 5곳 hand-copy drift 위험 잔존 |
+| "Old API 회귀 0건" | `verify-harness` MUST 14는 `scripts/*` + `scripts/diagnostics/*` 만 grep | scope 좁음 (apps/* 검증은 별도 verify-* skill 의존) |
+| "SSOT 준수" | `csrf-invariants.json` 주석에 "Subset of NEXTAUTH_HANDLER_PATHS"이라 적혀있지만 cross-check 코드 없음 | invariant 주장만, 실측 검증 없음 |
+| "하드코딩 0건" | NextAuth path 집합이 5곳에 하드코딩 (TS array + JSON array + nginx regex × 2 + next.config regex) | **semantic SSOT 위반 인정** — 단, 본 contract는 closure이지 SSOT 강화 sprint가 아님 |
+
+### 실증된 갭
+
+**갭 A (확진)**: NextAuth handler path 집합의 5곳 hand-copy + cross-file 동기화 검증 부재.
+
+**현재 검증 깊이 (실측)**:
+- `verify-routing-origin.sh` Step 7 (line 114-128): `grep -lE "location.*\^/api/auth/\(csrf"` substring 존재성만
+- `nextauth-csrf-verify-harness` MUST 6 (csrf-invariants.json): JSON 키 4개 존재성 grep만
+- `api-routing.spec.ts`: packages 내부 `BACKEND_AUTH_PATHS ∩ NEXTAUTH_HANDLER_PATHS = ∅` invariant만 (외부 4곳 X)
+
+**Drift 시나리오 (concrete)**: Auth.js v6에서 webauthn endpoint 추가 시 packages만 갱신 → nginx/JSON/next.config silent miss → 운영 환경 404.
+
+**정직한 결론**: 라운드 #1의 "흡수 완전"은 표면 PASS 기준. 시니어 깊이 기준에서는 **표면 PASS + 1 SSOT drift 갭** 이 정확.
+
+### 본 closure 책임 분리 판단
+
+| 갭 | 본 closure 책임? | 사유 |
+|---|---|---|
+| 갭 A (5-place SSOT drift) | ❌ NO — 별도 sprint | 본 contract MUST는 nginx 분기 *존재성* 까지만 요구. SSOT 강화는 후속 sprint scope |
+| 라운드 #1 evaluation 표현 ("흡수 완전") | ✅ YES — 본 closure 책임 | 정직성 결함은 본 closure가 정정해야 함 → 본 라운드 #2가 정정 |
+| Old API 회귀 검증 scope | ❌ NO — verify-* skill 책임 | 본 closure는 후속 sprint MUST 14의 grep scope를 신뢰. scope 확장은 별도 sprint |
+
+### 조치
+
+1. ✅ `tech-debt-tracker.md`에 갭 A 1건 등록 (`2026-05-07 csrf-arch 🟡 MEDIUM nextauth-handler-paths-5place-ssot-drift`) — 해결 방향 3가지 명시 (build generation / spec cross-check / TS export)
+2. ✅ 본 evaluation report 라운드 #3 append로 정직성 정정 (라운드 #1 "흡수 완전" 표현을 "표면 PASS + 1 갭"으로 정정)
+3. ❌ 갭 A 즉시 closure는 **거부** — 본 contract scope 외, 별도 sprint 필요. 즉시 처리는 over-scope 침습이며 senior 표준은 "한 sprint = 한 책임"
+
+### 라운드 #2 senior 자기검토 종합 판정
+
+- **Closure 결정 자체**: ✅ 유효 (stale active → completed/, 본 contract MUST는 후속 sprint에 매핑됨)
+- **Evaluation report 정직성**: ⚠️ → ✅ (라운드 #3 정정으로 회복)
+- **Tech-debt 등록 정합성**: ✅ (갭 A 1건 등록 + 해결 방향 3가지)
+- **사용자 압박 반영**: ✅ 정직하게 갭 1건 인정 + 본 closure 책임 외임을 명시 분리
+- **누락된 부분**: 라운드 #1에는 있었음 (갭 A) → 라운드 #3에서 정정. 추가 라운드 #3 자기검토에서도 새 갭 0건이면 closure 진정 종결.
