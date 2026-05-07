@@ -476,6 +476,7 @@
     "statusDown": "점검 중",
     "backendInfoLabel": "데이터 소스",
     "unmeasured": "측정 불가",
+    "dbSizeHint": "DB {size}",
     "backend": {
       "storage": {
         "host-disk": "호스트 디스크 (df 명령 측정)",

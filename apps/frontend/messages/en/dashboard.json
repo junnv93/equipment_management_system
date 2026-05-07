@@ -476,6 +476,7 @@
     "statusDown": "Down",
     "backendInfoLabel": "Data source",
     "unmeasured": "Unmeasured",
+    "dbSizeHint": "DB {size}",
     "backend": {
       "storage": {
         "host-disk": "Host disk (df command)",

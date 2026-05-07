@@ -7,7 +7,9 @@ import type { SystemHealthMetrics } from '@/lib/api/dashboard-api';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
-    if (params && 'count' in params) return `${key}:${params.count}`;
+    if (params && Object.keys(params).length > 0) {
+      return `${key}:${Object.values(params).join(',')}`;
+    }
     return key;
   },
 }));
@@ -74,16 +76,49 @@ describe('SystemHealthCard — transparency badges', () => {
 
   it('storageBackend=pg-database: inline "측정 불가" 라벨 표시 + storage tooltip 변경', () => {
     render(
-      <SystemHealthCard metrics={{ ...baseMetrics, storageBackend: 'pg-database', storagePct: 0 }} />
+      <SystemHealthCard
+        metrics={{ ...baseMetrics, storageBackend: 'pg-database', storagePct: 0 }}
+      />
     );
     expect(screen.getByTestId('health-row-unmeasured')).toBeInTheDocument();
     expect(screen.getByTestId('health-row-unmeasured')).toHaveTextContent('unmeasured');
     expect(screen.getByText('backend.storage.pg-database')).toBeInTheDocument();
   });
 
+  it('storageBackend=pg-database + dbSizeBytes>0: DB 크기 hint 노출 (transparency 보강)', () => {
+    render(
+      <SystemHealthCard
+        metrics={{
+          ...baseMetrics,
+          storageBackend: 'pg-database',
+          storagePct: 0,
+          dbSizeBytes: 1024 * 1024 * 1024 * 5, // 5 GB
+        }}
+      />
+    );
+    expect(screen.getByTestId('health-row-unmeasured-hint')).toBeInTheDocument();
+    expect(screen.getByTestId('health-row-unmeasured-hint')).toHaveTextContent('5.0 GB');
+  });
+
+  it('storageBackend=pg-database + dbSizeBytes=0: hint 미노출 (CLS 방지)', () => {
+    render(
+      <SystemHealthCard
+        metrics={{
+          ...baseMetrics,
+          storageBackend: 'pg-database',
+          storagePct: 0,
+          dbSizeBytes: 0,
+        }}
+      />
+    );
+    expect(screen.getByTestId('health-row-unmeasured')).toBeInTheDocument();
+    expect(screen.queryByTestId('health-row-unmeasured-hint')).not.toBeInTheDocument();
+  });
+
   it('storageBackend=host-disk: 측정 불가 라벨 미노출', () => {
     render(<SystemHealthCard metrics={baseMetrics} />);
     expect(screen.queryByTestId('health-row-unmeasured')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('health-row-unmeasured-hint')).not.toBeInTheDocument();
   });
 
   it('a11y: Tooltip trigger button 은 aria-label 보유 (스크린리더 backend 의미 노출)', () => {
@@ -108,9 +143,7 @@ describe('SystemHealthCard — transparency badges', () => {
   });
 
   it('errorSource=audit-rejection-proxy: footer tooltip text 변경 (legacy fallback 명시)', () => {
-    render(
-      <SystemHealthCard metrics={{ ...baseMetrics, errorSource: 'audit-rejection-proxy' }} />
-    );
+    render(<SystemHealthCard metrics={{ ...baseMetrics, errorSource: 'audit-rejection-proxy' }} />);
     expect(screen.getByText('backend.error.audit-rejection-proxy')).toBeInTheDocument();
   });
 

@@ -884,6 +884,9 @@ export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
   /** 측정 불가 inline 라벨 (storageBackend === 'pg-database'). */
   backendUnmeasured:
     'inline-flex items-center text-2xs font-semibold text-brand-warning leading-none',
+  /** 측정 불가 sibling hint — backend가 부분 측정 가능한 경우(예: pg-database 모드의 DB 크기). */
+  backendUnmeasuredHint:
+    'inline-flex items-center text-2xs font-medium text-muted-foreground leading-none tabular-nums',
 } as const;
 
 // ============================================================================

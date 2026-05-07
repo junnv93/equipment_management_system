@@ -5,6 +5,7 @@ import { Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { formatFileSize } from '@/lib/utils/format';
 import { DASHBOARD_SYSTEM_HEALTH_TOKENS as T } from '@/lib/design-tokens';
 import {
   resolveSystemHealthGaugePct,
@@ -91,6 +92,8 @@ interface HealthRowProps {
   backendBadge?: { category: BackendCategory; backend: BackendKey };
   /** pg-database 같은 측정 불가 케이스에 inline "측정 불가" 라벨 표시. */
   unmeasuredLabel?: string;
+  /** 측정 불가 sibling hint — 부분 측정 가능한 정보 노출 (예: pg-database 모드의 DB 크기). */
+  unmeasuredHint?: string;
 }
 
 function HealthRow({
@@ -103,6 +106,7 @@ function HealthRow({
   forceInfoValueTone,
   backendBadge,
   unmeasuredLabel,
+  unmeasuredHint,
 }: HealthRowProps) {
   const tone = resolveSystemHealthTone(metric, rawValue, capacity);
   const gaugePct = resolveSystemHealthGaugePct(metric, rawValue, capacity);
@@ -125,6 +129,11 @@ function HealthRow({
         {unmeasuredLabel ? (
           <span className={T.backendUnmeasured} data-testid="health-row-unmeasured">
             {unmeasuredLabel}
+          </span>
+        ) : null}
+        {unmeasuredHint ? (
+          <span className={T.backendUnmeasuredHint} data-testid="health-row-unmeasured-hint">
+            {unmeasuredHint}
           </span>
         ) : null}
       </span>
@@ -234,6 +243,11 @@ export function SystemHealthCard({ metrics, loading = false }: SystemHealthCardP
             rawValue={safe.storagePct}
             backendBadge={{ category: 'storage', backend: safe.storageBackend }}
             unmeasuredLabel={isStorageUnmeasured ? t('unmeasured') : undefined}
+            unmeasuredHint={
+              isStorageUnmeasured && safe.dbSizeBytes > 0
+                ? t('dbSizeHint', { size: formatFileSize(safe.dbSizeBytes) })
+                : undefined
+            }
           />
           <HealthRow
             label={t('queue')}
@@ -246,8 +260,7 @@ export function SystemHealthCard({ metrics, loading = false }: SystemHealthCardP
 
         <div className={T.footer}>
           <span className={T.footerLabel}>
-            {t('errorsLast24h')}{' '}
-            <BackendBadge category="error" backend={safe.errorSource} />
+            {t('errorsLast24h')} <BackendBadge category="error" backend={safe.errorSource} />
           </span>
           <span className={T.footerValue}>{t('errorsValue', { count: safe.errorCount24h })}</span>
         </div>

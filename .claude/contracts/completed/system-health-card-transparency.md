@@ -7,6 +7,8 @@ date: 2026-05-06
 verdict: PASS
 commits:
   - 90575326 — feat(dashboard): SystemHealthCard transparency badges (mixed commit, see note)
+  - 1fffbf36 — chore(harness): remove duplicate active system-health-card-transparency contract
+  - <pending> — feat(dashboard): expose dbSizeBytes hint when storage unmeasured (senior follow-up)
 ---
 
 # Sprint 1 — SystemHealthCard transparency 표시
