@@ -259,6 +259,34 @@ grep -c "redactedFormat" scripts/onprem-verify.mjs scripts/diagnostics/nextauth-
 # 기대: ≥ 2 (양 스크립트 SSOT 참조)
 ```
 
+### Step 15: 5-place SSOT cross-file equality (2026-05-07 csrf-invariants-ssot-closure 추가)
+
+NextAuth handler path 집합이 5곳에 hand-copy 상태로 존재한다 (packages SSOT 1곳 + JSON SSOT 1곳 + nginx 2곳 + next.config.js 1곳). 이 5곳이 set equality를 유지해야 ADR-0006 invariant가 성립한다.
+
+**검증 메커니즘**: `packages/shared-constants/__tests__/api-routing.spec.ts`의 `describe '5-place SSOT — NEXTAUTH_HANDLER_PATHS 정합'` (M-1~M-5) + `describe 'csrf-invariants.json — 7 invariants 결빙'` (M-6~M-11)이 fs로 5 파일 read + Set 비교. drift 발생 시 spec FAIL.
+
+```bash
+# spec 자체 PASS 확인 (pre-push에서 root-spec step이 자동 실행)
+pnpm --filter @equipment-management/shared-constants run test -- api-routing
+# 기대: 63/63 PASS (기존 34 + 신규 11 cross-file + 기타)
+
+# Auth.js v5 dead invariant 회귀 가드 (사용자 명시 "옛날 API X" 우려)
+grep -c '"next-auth\.csrf-token"' scripts/diagnostics/csrf-invariants.json
+# 기대: 0 (v4 dead entries 제거됨)
+grep -c '"authjs\.csrf-token"' scripts/diagnostics/csrf-invariants.json
+# 기대: ≥ 1 (v5 entries 보존)
+
+# 5 파일에서 NEXTAUTH SSOT 의무 주석 존재 (drift 시 어디 수정할지 가시화)
+grep -c "NEXTAUTH_HANDLER_PATHS" infra/nginx/lan.conf
+# 기대: ≥ 1
+grep -c "NEXTAUTH_HANDLER_PATHS" infra/nginx/nginx.conf.template
+# 기대: ≥ 1
+grep -c "NEXTAUTH_HANDLER_PATHS" apps/frontend/next.config.js
+# 기대: ≥ 1
+```
+
+**자동화 승격**: 본 Step의 grep 검사는 Jest spec(`api-routing.spec.ts` describe '5-place SSOT' + '7 invariants 결빙')으로 이미 승격됨 — drift 시 spec FAIL이 즉시 발생하므로 별도 ts-morph 스크립트 불필요. Phase 3 manage-skills 패턴 (verify-design-tokens.ts mirror) 정합.
+
 ## Failure Recovery
 
 | Step | FAIL 의미 | 복구 |
