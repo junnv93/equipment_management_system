@@ -207,15 +207,13 @@ test.describe('Bulk action mutateAsync UX (real-backend integration)', () => {
     await rowCheckboxes.nth(1).click();
     await rowCheckboxes.nth(2).click();
 
+    // CheckoutBulkActionBar는 onBulkReject prop을 OutboundCheckoutsTab에서 항상 전달
+    // (handleBulkReject) — canApproveCheckout 권한 통과 시 reject 버튼 항상 노출.
+    // backend `POST /checkouts/bulk-reject` 엔드포인트 + bulkRejectSchema DTO 결빙 보장.
     const rejectButton = page
       .locator('[role="toolbar"] button')
       .filter({ hasText: /일괄 반려|Reject Selected/ });
-
-    // reject 버튼이 toolbar에 노출되어 있는지 확인 — 없으면 스킵 (도메인 옵션)
-    if ((await rejectButton.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await expect(rejectButton).toBeVisible();
 
     await rejectButton.click();
 

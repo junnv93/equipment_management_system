@@ -429,12 +429,7 @@ export default function CalibrationContent({
           variant="outline"
         >
           {MANAGEMENT_METHOD_VALUES.map((method) => (
-            <ToggleGroupItem
-              key={method}
-              value={method}
-              aria-label={t(`content.filters.methodOptions.${method}`)}
-              className="h-8 px-2 text-xs"
-            >
+            <ToggleGroupItem key={method} value={method} className="h-8 px-2 text-xs">
               {t(`content.filters.methodOptions.${method}`)}
             </ToggleGroupItem>
           ))}
