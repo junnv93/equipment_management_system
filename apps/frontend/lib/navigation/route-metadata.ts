@@ -89,6 +89,10 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.equipmentCalibrationFactors',
     parent: '/equipment/[id]',
   },
+  '/equipment/[id]/calibration-history': {
+    labelKey: 'navigation.equipmentCalibrationHistory',
+    parent: '/equipment/[id]',
+  },
   '/equipment/[id]/non-conformance': {
     labelKey: 'navigation.equipmentNonConformance',
     parent: '/equipment/[id]',
