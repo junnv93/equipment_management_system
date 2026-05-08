@@ -81,6 +81,16 @@ export const FRONTEND_ROUTES = {
      */
     CALIBRATION_HISTORY: (id: string) => `/equipment/${id}/calibration-history`,
     /**
+     * 장비별 수리(유지보수) 이력 sub-route — `RepairHistoryClient` full page 진입점.
+     * `MaintenanceHistoryTab` footer "전체 보기" 링크가 본 빌더로 navigate.
+     */
+    REPAIR_HISTORY: (id: string) => `/equipment/${id}/repair-history`,
+    /**
+     * 장비별 보정계수 sub-route — `CalibrationFactorsClient` full page 진입점.
+     * `CalibrationFactorsTab` footer "전체 보기" 링크가 본 빌더로 navigate.
+     */
+    CALIBRATION_FACTORS: (id: string) => `/equipment/${id}/calibration-factors`,
+    /**
      * 장비별 부적합 생성 딥링크. `?action=create` 파라미터가 생성 폼을 자동 오픈.
      * 사용: QR 모바일 랜딩, 이메일 알림, 대시보드 quick action 등 모든 진입점 공유.
      */

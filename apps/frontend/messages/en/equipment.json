@@ -827,7 +827,8 @@
   },
   "calibrationFactorsTab": {
     "title": "Calibration Factors",
-    "empty": "Calibration factors feature is coming soon."
+    "empty": "Calibration factors feature is coming soon.",
+    "viewAllLink": "View full calibration factors for this equipment"
   },
   "calibrationHistoryTab": {
     "viewAllLink": "View full calibration history for this equipment",
@@ -995,7 +996,8 @@
       "repairDateRequired": "Please enter the repair date.",
       "repairDescriptionMin": "Repair description must be at least 10 characters.",
       "nonConformanceRequired": "Please select a non-conformance."
-    }
+    },
+    "viewAllLink": "View full non-conformance records for this equipment"
   },
   "locationHistoryTab": {
     "title": "Location History",
@@ -1082,7 +1084,8 @@
       "performedAtRequired": "Please enter the performed date.",
       "contentRequired": "Please enter the description.",
       "contentMax": "Must be 500 characters or less."
-    }
+    },
+    "viewAllLink": "View full repair history for this equipment"
   },
   "checkoutHistoryTab": {
     "title": "Checkout History",

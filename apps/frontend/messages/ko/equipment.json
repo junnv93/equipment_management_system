@@ -827,7 +827,8 @@
   },
   "calibrationFactorsTab": {
     "title": "보정계수",
-    "empty": "보정계수 기능은 준비 중입니다."
+    "empty": "보정계수 기능은 준비 중입니다.",
+    "viewAllLink": "이 장비의 전체 보정계수 보기"
   },
   "calibrationHistoryTab": {
     "title": "교정 이력",
@@ -995,7 +996,8 @@
       "repairDateRequired": "수리 일자를 입력하세요.",
       "repairDescriptionMin": "수리 내용은 최소 10자 이상 입력해야 합니다.",
       "nonConformanceRequired": "부적합을 선택해주세요."
-    }
+    },
+    "viewAllLink": "이 장비의 전체 부적합 보기"
   },
   "locationHistoryTab": {
     "title": "위치 변동 이력",
@@ -1082,7 +1084,8 @@
       "performedAtRequired": "수행 일시를 입력하세요.",
       "contentRequired": "내용을 입력하세요.",
       "contentMax": "500자 이하로 입력하세요."
-    }
+    },
+    "viewAllLink": "이 장비의 전체 수리 이력 보기"
   },
   "checkoutHistoryTab": {
     "title": "반출 이력",

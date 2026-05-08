@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useEquipmentCalibrations } from '@/hooks/use-equipment-calibrations';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +35,7 @@ import {
   getCalibrationRowClasses,
   TIMELINE_TOKENS,
 } from '@/lib/design-tokens';
-import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
+import { type Calibration } from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -63,16 +64,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
 
   const equipmentId = String(equipment.id);
 
-  const {
-    data: calibrations = [],
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: queryKeys.calibrations.byEquipment(equipmentId),
-    queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
-    enabled: !!equipmentId,
-    ...QUERY_CONFIG.HISTORY,
-  });
+  const { data: calibrations = [], isLoading, isError } = useEquipmentCalibrations(equipmentId);
 
   // 장비의 모든 문서를 단일 API 호출로 조회 → calibrationId로 그룹핑
   // (이전: calibrationIds.map → Promise.all N개 동시 호출, 현재: 1회 호출)

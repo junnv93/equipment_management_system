@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, CalendarDays, CheckCircle2, Clock, Filter, XCircle } from 'lucide-react';
@@ -18,11 +19,10 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { PageHeader } from '@/components/shared/PageHeader';
 import CalibrationListTable from '@/components/calibration/CalibrationListTable';
 import { useAuth } from '@/hooks/use-auth';
+import { useEquipmentCalibrationHistory } from '@/hooks/use-equipment-calibrations';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
-import calibrationApi, {
-  type CalibrationHistory,
-  type CalibrationApprovalStatus,
-} from '@/lib/api/calibration-api';
+import { type CalibrationHistory } from '@/lib/api/calibration-api';
+import type { CalibrationApprovalStatus } from '@equipment-management/schemas';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   CALIBRATION_FILTER_BAR,
@@ -31,7 +31,11 @@ import {
   getSemanticContainerClasses,
   getSemanticContainerTextClasses,
 } from '@/lib/design-tokens';
-import { Permission, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  Permission,
+  SELECTOR_PAGE_SIZE,
+} from '@equipment-management/shared-constants';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 
 interface CalibrationHistoryClientProps {
@@ -88,23 +92,46 @@ export function CalibrationHistoryClient({
     return () => clearDynamicLabel(equipmentId);
   }, [equipmentId, resolvedEquipment, setDynamicLabel, clearDynamicLabel]);
 
-  // 단일 장비 calibration history (`equipmentId` filter — 같은 endpoint, cache key 분리)
-  const historyParams = useMemo(
-    () => ({ equipmentId, pageSize: SELECTOR_PAGE_SIZE }),
-    [equipmentId]
-  );
-  const { data: historyData, isLoading } = useQuery({
-    queryKey: queryKeys.calibrations.historyList(historyParams),
-    queryFn: () => calibrationApi.getCalibrationHistory(historyParams),
-    ...QUERY_CONFIG.CALIBRATION_LIST,
+  // 단일 장비 calibration history — hook SSOT (queryKey/queryFn/QUERY_CONFIG pairing 결빙)
+  const { data: historyData, isLoading } = useEquipmentCalibrationHistory(equipmentId, {
+    pageSize: SELECTOR_PAGE_SIZE,
   });
   const calibrations = useMemo<CalibrationHistory[]>(() => historyData?.data ?? [], [historyData]);
 
-  // 필터 state — useState (URL 동기화는 후속 sprint trigger)
-  const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>('');
-  const [resultFilter, setResultFilter] = useState<ResultFilter>('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  // 필터 SSOT — URL 파라미터 (메인 `/calibration` 키 일관: approvalStatus/result/startDate/endDate)
+  // 빈 값 = URL 미포함 (clean URLs). Select 는 useFilterSelect 'all' sentinel 그대로.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const approvalFilter = (searchParams.get('approvalStatus') ?? '') as ApprovalFilter;
+  const resultFilter = (searchParams.get('result') ?? '') as ResultFilter;
+  const dateFrom = searchParams.get('startDate') ?? '';
+  const dateTo = searchParams.get('endDate') ?? '';
+
+  const updateFilter = useCallback(
+    (key: 'approvalStatus' | 'result' | 'startDate' | 'endDate', value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      const queryString = params.toString();
+      const baseUrl = FRONTEND_ROUTES.EQUIPMENT.CALIBRATION_HISTORY(equipmentId);
+      router.replace(queryString ? `${baseUrl}?${queryString}` : baseUrl, { scroll: false });
+    },
+    [equipmentId, router, searchParams]
+  );
+
+  const setApprovalFilter = useCallback(
+    (v: ApprovalFilter) => updateFilter('approvalStatus', v),
+    [updateFilter]
+  );
+  const setResultFilter = useCallback(
+    (v: ResultFilter) => updateFilter('result', v),
+    [updateFilter]
+  );
+  const setDateFrom = useCallback((v: string) => updateFilter('startDate', v), [updateFilter]);
+  const setDateTo = useCallback((v: string) => updateFilter('endDate', v), [updateFilter]);
 
   const approvalSelect = useFilterSelect<ApprovalFilter>(approvalFilter, setApprovalFilter, 'all');
   const resultSelect = useFilterSelect<ResultFilter>(resultFilter, setResultFilter, 'all');
