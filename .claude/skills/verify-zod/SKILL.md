@@ -1272,8 +1272,9 @@ grep -E "from '(@equipment-management/schemas|.+/schemas/)" apps/frontend/lib/er
 grep -rln "export function extractErrorCode\b\|export function extractValidationIssues\b" apps/frontend/lib/errors/
 # 기대: extract-error.ts 만 (1개 파일)
 
-grep -rl "extractErrorCodeOrIssues\b\|extractValidationIssues\b" apps/frontend/lib/errors/*-errors.ts | wc -l
-# 기대: ≥ 5 (도메인 mapper hub wrapper 통합 진행 중 — Phase 4 closure 후 21곳 목표)
+grep -rl "extractValidationIssues\b" apps/frontend/lib/errors/*-errors.ts | wc -l
+# 기대: ≥ 17 (12 신규 hub 통합 + 5 기존 통합: approval/calibration/calibration-plan/checkout/non-conformance)
+# 신규 도메인 mapper 추가 시 zod-fallback-coverage.spec.ts 자동 회귀 차단 (Step 23)
 ```
 
 **검증 5 — `BackendValidationIssue` Schema 11 코드 enum 결빙**
@@ -1297,9 +1298,30 @@ pnpm --filter @equipment-management/schemas run test -- zod-issue-3way-equality
 - 검증 5 — ZOD_ISSUE_CODES tuple 길이 변경 + spec FAIL
 
 **관련 sprint**:
+
 - `backend-zod-error-i18n-ssot` (2026-05-08, Mode 2 Full harness) — `BackendValidationIssue` SSOT
   + ZodValidationPipe issues array + GlobalExceptionFilter Zod 통일 + frontend zod-issue-mapper
   hub + i18n `validation`/`fields` namespace ko/en parity + ADR-0008. 신규 spec 94+ cases.
+
+### Step 23: 도메인 mapper hub fallback ts-morph 정적 spec (2026-05-08 추가)
+
+**대상**: `apps/frontend/lib/errors/*-errors.ts` (자연 제외 3건: `cable-errors.ts` / `document-errors.ts` / `equipment-errors.ts`)
+
+`mapXxxErrorToToast(error: unknown, t: TranslationFunction)` 시그니처 exported 함수가 본체에서
+`extractValidationIssues` + `mapZodIssuesToToast`를 **모두 호출**하는지 ts-morph CallExpression 탐색으로 검증.
+
+ESLint `no-restricted-syntax`로는 "함수 본체 내에서 X를 호출해야 한다"는 flow 조건 표현 불가. 신규 도메인 mapper 추가 시 hub 호출 누락 자동 탐지.
+
+**실행:**
+
+```bash
+pnpm --filter frontend run test -- --testPathPattern=zod-fallback-coverage
+# 기대: PASS — 17개 도메인 (5 기존 통합 + 12 신규 통합) 모두 hub 호출
+```
+
+**FAIL 기준:** 신규 `*-errors.ts` + hub 호출 누락, 또는 기존 mapper에서 호출 제거.
+**자연 제외 3건 EXCLUSIONS set**: `cable-errors.ts` (re-export shim) / `document-errors.ts` (t 함수 없음) / `equipment-errors.ts` (mapper 없음)
+**관련 sprint**: `zod-i18n-mapper-hub-closure` (2026-05-08, Mode 2 Full harness)
 
 ## Exceptions
 

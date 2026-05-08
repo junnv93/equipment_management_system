@@ -99,6 +99,10 @@ _frontend i18n key 누락에서만_ 발생한다.
 4. **Backend 응답 payload size 가 issues array 로 인해 +30% 초과** — 다중 issue 압축
    (path 단축, common params dedup) 검토. 트리거: 평균 응답 크기 telemetry 도입 후 운영
    기준 초과 발견 시.
+   **[2026-05-08 closure]** `MetricsService.zod_validation_issues_total` Counter +
+   `domain_route` × `issue_count_bucket` (`1`/`2-5`/`6-10`/`11+`) 라벨로 Prometheus sink 완료
+   (`zod-i18n-mapper-hub-closure` sprint). 신규 reconsideration 트리거: `issue_count_bucket="11+"`
+   bucket rate p95 지속 발생 시.
 
 ## Scope
 
