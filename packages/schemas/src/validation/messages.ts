@@ -1,14 +1,24 @@
 /**
- * Validation Message Registry (SSOT)
+ * Validation Message Registry (SSOT — Backend Fallback Layer)
  *
- * 모든 Zod DTO 검증 메시지의 단일 진실의 소스.
- * 각 DTO 파일은 이 레지스트리를 import하여 메시지를 참조합니다.
+ * 본 레지스트리는 backend Zod schema fail 시 *log/audit/swagger documentation* 용
+ * 한국어 fallback 메시지를 제공합니다. **Frontend production 응답 path는 본 message에
+ * 의존하지 않습니다** — frontend는 응답 payload의 `issues: BackendValidationIssue[]` 를
+ * 읽고 `errors.validation.<code>` namespace 로 i18n routing 합니다 (ADR-0008).
+ *
+ * 따라서 VM 함수 본문 한국어 텍스트는 production 사용자 노출 경로가 아닙니다.
+ * (한국어 → 영어 i18n 회귀는 frontend i18n key 누락에서만 발생.)
  *
  * 설계 원칙:
  * 1. 유니버설 메시지: 도메인 무관 검증 (UUID, 날짜, 필수 필드 등)
  * 2. 도메인 메시지: 특정 모듈 전용 검증 (반출 사유, 교정 기관 등)
  * 3. 파라미터화: 동적 값은 함수로 제공 (필드명, 최소/최대값 등)
  * 4. 일관된 어미: 모든 메시지는 마침표 없이 종결
+ *
+ * @see packages/schemas/src/validation/zod-issue.ts — 응답 path SSOT (BackendValidationIssue)
+ * @see apps/frontend/lib/errors/zod-issue-mapper.ts — FE routing SSOT
+ * @see apps/frontend/messages/{ko,en}/errors.json — `validation`/`fields` namespace
+ * @see docs/adr/0008-backend-zod-error-i18n.md — 격하 결정 근거
  *
  * @example
  * import { VM } from '@equipment-management/schemas';

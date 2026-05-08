@@ -14,6 +14,12 @@
  */
 import { ErrorCode } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { extractErrorCode } from './extract-error';
+
+// 호환성 re-export — 21+ 도메인 mapper(`approval-errors`/`calibration-errors` 등)가
+// `import { extractErrorCode } from './disposal-errors'` 형태로 import 중. extract-error.ts SSOT
+// 신설 후에도 호출자 0 변경 보장 (ADR-0008 §Phase 4 hub 통합).
+export { extractErrorCode };
 
 export interface ErrorToast {
   title: string;
@@ -21,26 +27,6 @@ export interface ErrorToast {
 }
 
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
-
-/**
- * Backend 응답에서 ErrorCode 추출 (ApiError / Axios error / plain object 호환)
- */
-export function extractErrorCode(error: unknown): string | null {
-  if (error === null || typeof error !== 'object') return null;
-
-  // ApiError instance — direct property
-  const obj = error as Record<string, unknown>;
-  if (typeof obj.code === 'string') return obj.code;
-
-  // Axios error — error.response.data.code
-  const response = obj.response as Record<string, unknown> | undefined;
-  if (response && typeof response === 'object') {
-    const data = response.data as Record<string, unknown> | undefined;
-    if (data && typeof data.code === 'string') return data.code;
-  }
-
-  return null;
-}
 
 /**
  * Disposal 도메인 ErrorCode → i18n key 매핑 (SSOT)

@@ -102,6 +102,50 @@ Swagger 메타의 nullable/$ref/enum 정합성은 `main.ts` 에서 `cleanupOpenA
 }
 ```
 
+### Zod Error Response Shape (ADR-0008)
+
+Zod 검증 실패 (`ZodValidationPipe` 또는 service 레이어 throw) 응답은 **machine-readable
+issues array** 를 포함한다. frontend 는 응답 텍스트 (`message`) 가 아니라 `issues` 배열을
+i18n key (`errors.validation.<zodIssueCode>`) 로 라우팅한다.
+
+```typescript
+// Zod 검증 실패 응답 (status 400)
+{
+  code: 'VALIDATION_ERROR',
+  message: '입력 데이터 검증 실패',  // backend log/swagger fallback (frontend 무시)
+  issues: [
+    {
+      path: ['name'],
+      code: 'too_small',                            // zod v4 11 ZodIssueCode 중 하나
+      params: { origin: 'string', minimum: 5, inclusive: true }
+    }
+  ],
+  errors: [...],         // legacy 호환 — 기존 e2e/spec 회귀 차단
+  timestamp: string
+}
+```
+
+**SSOT 위치:**
+
+- `packages/schemas/src/validation/zod-issue.ts` — `BackendValidationIssue` 타입 + 11
+  `ZodIssueCode` SSOT + `serializeZodIssue` + `redactIssueReceived` (PII)
+- `apps/frontend/lib/errors/zod-issue-mapper.ts` — `mapZodIssueToI18nKey` + `mapZodIssuesToToast`
+- `apps/frontend/messages/{ko,en}/errors.json` — `validation` + `fields` namespace
+
+**VM SSOT 의 역할 (격하):** `packages/schemas/src/validation/messages.ts` 의 한국어 메시지는
+_backend log/audit/swagger documentation fallback_ 으로만 사용. production 사용자 노출
+응답은 VM 본문에 의존하지 않으므로 ko/en parity 회귀가 _frontend i18n key 누락에서만_ 발생.
+
+**PII 정책:** zod v4 는 issue 객체에 입력 값을 _기본 미노출_. `invalid_format.pattern` (정규식
+정의) 만 production 환경에서 `[REDACTED]` 로 마스킹 (`redactIssueReceived` SSOT).
+
+**회귀 차단:** `verify-zod` Step 22 — backend production code 한국어 string literal 회귀 grep
+
+- ko/en `errors.validation` 11 키 set equality + 단방향 wire (schemas → frontend i18n 의존 0)
+  자동 검증.
+
+상세: ADR-0008 § Decision / `packages/schemas/src/__tests__/zod-issue-3way-equality.test.ts`
+
 ### Response Format: ApiResponse\<T\>
 
 **Interceptor:** `ResponseTransformInterceptor` (`common/interceptors/response-transform.interceptor.ts`)

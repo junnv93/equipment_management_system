@@ -12,7 +12,15 @@ import {
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { createHash } from 'crypto';
-import { AppError, ErrorCode, ErrorResponse, handleZodError } from '@equipment-management/schemas';
+import {
+  AppError,
+  ErrorCode,
+  ErrorResponse,
+  handleZodError,
+  redactIssueReceived,
+  serializeZodIssue,
+  type BackendValidationIssue,
+} from '@equipment-management/schemas';
 import { UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { AuditService } from '../../modules/audit/audit.service';
 import { SECURITY_AUDITABLE_CODES } from '../constants/security-auditable-codes';
@@ -65,7 +73,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return response.status(exception.statusCode).json(errorResponse);
     } else if (exception instanceof ZodError) {
       const appError = handleZodError(exception);
-      errorResponse = appError.toResponse();
+      const isProduction = process.env.NODE_ENV === 'production';
+      const issues: BackendValidationIssue[] = exception.issues.map((issue) =>
+        redactIssueReceived(serializeZodIssue(issue), isProduction)
+      );
+      errorResponse = {
+        ...appError.toResponse(),
+        issues,
+      };
       // ZodError = ValidationError → 운영 노이즈, audit 제외
       return response.status(appError.statusCode).json(errorResponse);
     } else if (exception instanceof HttpException) {

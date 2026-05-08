@@ -6,6 +6,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ZodSchema, ZodError } from 'zod';
+import {
+  ErrorCode,
+  redactIssueReceived,
+  serializeZodIssue,
+  type BackendValidationIssue,
+} from '@equipment-management/schemas';
 import { getErrorMessage } from '../utils/error';
 
 const SENSITIVE_FIELDS = new Set([
@@ -137,8 +143,15 @@ export class ZodValidationPipe implements PipeTransform {
             metadata: metadata.type,
           })
         );
+        const isProduction = process.env.NODE_ENV === 'production';
+        const issues: BackendValidationIssue[] = error.issues.map((issue) =>
+          redactIssueReceived(serializeZodIssue(issue), isProduction)
+        );
         throw new BadRequestException({
+          code: ErrorCode.ValidationError,
           message: '입력 데이터 검증 실패',
+          issues,
+          // Legacy `errors` field 유지 — 기존 e2e/spec 호환. frontend 신 클라이언트는 `issues` 우선.
           errors: error.issues.map((err) => ({
             path: err.path.join('.') || 'root',
             message: err.message,
@@ -147,6 +160,7 @@ export class ZodValidationPipe implements PipeTransform {
         });
       }
       throw new BadRequestException({
+        code: ErrorCode.ValidationError,
         message: '입력 데이터 검증 실패',
         errors: getErrorMessage(error) || '알 수 없는 오류',
       });

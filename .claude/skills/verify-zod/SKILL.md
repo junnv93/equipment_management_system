@@ -1206,6 +1206,101 @@ getTeams: async (query: { ids?: string[] }) => {
 - `query-dto-r2 갭-4 csv-token-enum-validation` (2026-05-06) — backend `optionalCsvEnum` / `optionalCsvUuid` SSOT 신설 + 18 cases backend unit spec.
 - `query-r3-closure` (2026-05-07) — frontend `toCsvParam` SSOT 신설 + 4 호출자 적용(teams.ids / checkout.statuses / calibration.methods / approvals/fetchers.ts) + 11 unit cases. lib/api 인라인 `.join(',')` 0건 결빙.
 
+### Step 22: Backend Zod issues array i18n routing 회귀 차단 (2026-05-08 추가)
+
+**대상**:
+- `apps/backend/src/common/pipes/zod-validation.pipe.ts` — Zod fail 응답 shape
+- `apps/backend/src/common/filters/error.filter.ts` — ZodError 직접 throw 분기 + HttpException issues passthrough
+- `packages/schemas/src/validation/zod-issue.ts` — `BackendValidationIssue` SSOT
+- `apps/frontend/lib/errors/zod-issue-mapper.ts` — Frontend i18n routing
+- `apps/frontend/lib/errors/extract-error.ts` — Hub wrapper (`extractErrorCodeOrIssues`)
+- `apps/frontend/messages/{ko,en}/errors.json` — `validation` + `fields` namespace
+
+**검증 1 — Backend production code 한국어 인라인 회귀 (response path 한정)**
+
+ADR-0008 결정으로 backend 응답 텍스트(`message`)는 frontend 가 무시하지만, 본 sprint 외부에서
+새로운 한국어 string literal 이 추가되어 silent leak 발생하면 i18n parity 깨짐 위험. response
+path 진입점 2개 파일만 좁혀서 grep:
+
+```bash
+# pipe: 'message' 필드 외 한국어 string 0건 (fallback 한국어 1건만 OK)
+grep -nE "을\(를\)|입니다|입력해주세요|선택해주세요" apps/backend/src/common/pipes/zod-validation.pipe.ts
+# 기대: 'message: ...' 라인만 매칭. 신규 한국어 string literal 발견 시 FAIL.
+
+# filter: response path 한국어 0건 (fallback 한국어 1건만 OK)
+grep -nE "을\(를\)|입니다|입력해주세요|선택해주세요" apps/backend/src/common/filters/error.filter.ts
+# 기대: 'A server error occurred' 등 영어 fallback. 한국어 string literal 신규 발견 시 FAIL.
+```
+
+**중요 — 정당한 위치**:
+- `packages/schemas/src/validation/messages.ts` (VM 본문): backend log/audit/swagger
+  fallback role. 본 grep 대상 아님.
+- `apps/backend/src/common/i18n/messages/ko.json`: backend 자체 i18n catalog. 본 grep 대상 아님.
+- audit log 한국어 메시지, dataMigration 도메인 로직 메시지: 별도 layer.
+
+**검증 2 — `errors.validation` ko/en 11 키 set equality**
+
+`pnpm --filter frontend run test -- i18n-errors-validation-parity` PASS 가 매 commit hook 에서
+확인. 단순 grep 카운트:
+
+```bash
+awk '/"validation": \{/,/^  \}/' apps/frontend/messages/ko/errors.json | grep -cE '^\s+"[a-z_]+":'
+# 기대: ≥ 11 (11 ZodIssueCode + title)
+
+awk '/"validation": \{/,/^  \}/' apps/frontend/messages/en/errors.json | grep -cE '^\s+"[a-z_]+":'
+# 기대: ≥ 11
+```
+
+**검증 3 — 단방향 wire (schemas → frontend i18n 의존 0건)**
+
+`packages/schemas` 가 frontend i18n / next-intl / messages 디렉토리에 의존하면 Layer 위반 +
+Mode 2 review-architecture FAIL.
+
+```bash
+grep -rE "(next-intl|messages/ko|messages/en|apps/frontend|frontend/lib)" packages/schemas/src/
+# 기대: 0 hits (단방향 wire)
+
+grep -E "from '(@equipment-management/schemas|.+/schemas/)" apps/frontend/lib/errors/zod-issue-mapper.ts
+# 기대: ≥ 1 (FE → schemas OK)
+```
+
+**검증 4 — Hub 통합 (`extractErrorCodeOrIssues` SSOT 진입점 단일)**
+
+`extractErrorCode` / `extractValidationIssues` 신규 인라인 정의 차단:
+
+```bash
+grep -rln "export function extractErrorCode\b\|export function extractValidationIssues\b" apps/frontend/lib/errors/
+# 기대: extract-error.ts 만 (1개 파일)
+
+grep -rl "extractErrorCodeOrIssues\b\|extractValidationIssues\b" apps/frontend/lib/errors/*-errors.ts | wc -l
+# 기대: ≥ 5 (도메인 mapper hub wrapper 통합 진행 중 — Phase 4 closure 후 21곳 목표)
+```
+
+**검증 5 — `BackendValidationIssue` Schema 11 코드 enum 결빙**
+
+zod major bump 시 신규 ZodIssueCode 도입을 자동 차단:
+
+```bash
+grep -c "'invalid_type'" packages/schemas/src/validation/zod-issue.ts
+# 기대: 1 (ZOD_ISSUE_CODES tuple 정의)
+
+# spec 직접 실행으로 11 코드 + 알 수 없는 코드 normalize 검증
+pnpm --filter @equipment-management/schemas run test -- zod-issue-3way-equality
+# 기대: PASS (4 cases)
+```
+
+**FAIL 기준**:
+- 검증 1 — 한국어 string literal 추가 (response path 2 파일만)
+- 검증 2 — ko/en `errors.validation` 키 11개 미만 또는 set 불일치
+- 검증 3 — schemas → FE 의존 도입
+- 검증 4 — `extractErrorCode` 신규 인라인 정의 등장 (extract-error.ts 외)
+- 검증 5 — ZOD_ISSUE_CODES tuple 길이 변경 + spec FAIL
+
+**관련 sprint**:
+- `backend-zod-error-i18n-ssot` (2026-05-08, Mode 2 Full harness) — `BackendValidationIssue` SSOT
+  + ZodValidationPipe issues array + GlobalExceptionFilter Zod 통일 + frontend zod-issue-mapper
+  hub + i18n `validation`/`fields` namespace ko/en parity + ADR-0008. 신규 spec 94+ cases.
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

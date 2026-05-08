@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  BackendValidationIssueSchema,
+  serializeZodIssue,
+  type BackendValidationIssue,
+} from './validation/zod-issue';
 
 /**
  * 에러 코드 정의
@@ -1035,10 +1040,14 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
 };
 
 // 에러 응답 스키마
+//
+// `issues` 필드는 Zod 검증 실패(ValidationError) 응답에만 포함됨 — frontend i18n routing SSOT.
+// 다른 ErrorCode 응답은 `issues` 미포함 (optional). 자세한 내용은 ADR-0008 참고.
 export const ErrorResponseSchema = z.object({
   code: z.nativeEnum(ErrorCode),
   message: z.string(),
   details: z.unknown().optional(),
+  issues: z.array(BackendValidationIssueSchema).optional(),
   timestamp: z.string().datetime(),
 });
 
@@ -1075,12 +1084,20 @@ export class AppError extends Error {
 
   // 응답 형식으로 변환
   toResponse(): ErrorResponse {
-    return {
+    const response: ErrorResponse = {
       code: this.code,
       message: this.message,
       details: this.details,
       timestamp: new Date().toISOString(),
     };
+    // ValidationError 의 `details.issues` 가 BackendValidationIssue[] 인 경우 top-level 로 추가 노출 — frontend mapper SSOT 정합 (ADR-0008).
+    if (
+      this.code === ErrorCode.ValidationError &&
+      Array.isArray((this.details as { issues?: BackendValidationIssue[] })?.issues)
+    ) {
+      response.issues = (this.details as { issues: BackendValidationIssue[] }).issues;
+    }
+    return response;
   }
 
   // 특정 에러 타입 생성을 위한 팩토리 메서드들
@@ -1117,10 +1134,13 @@ export class AppError extends Error {
 }
 
 // Zod 검증 에러를 AppError로 변환하는 유틸리티 함수
+//
+// `details.issues` 는 BackendValidationIssue[] (machine-readable SSOT) — frontend mapper SSOT 정합.
+// 본 helper 호출자는 AppError.toResponse() 시점에 자동으로 top-level `issues` 필드로 노출됨.
+// (ADR-0008 §B-option 패턴)
 export function handleZodError(error: z.ZodError): AppError {
-  return AppError.validationError('입력 데이터가 유효하지 않습니다', {
-    issues: error.format(),
-  });
+  const issues: BackendValidationIssue[] = error.issues.map((issue) => serializeZodIssue(issue));
+  return AppError.validationError('입력 데이터가 유효하지 않습니다', { issues });
 }
 
 /**
