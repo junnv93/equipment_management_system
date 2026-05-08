@@ -33,6 +33,7 @@ import {
   type SystemErrorEventProvider,
   type SystemErrorEventInput,
 } from '../system-health/contract';
+import { MetricsService } from '../metrics/metrics.service';
 import type { AuditLogUserRole, CreateAuditLogDto } from '@equipment-management/schemas';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 import type { AuditLogDetails } from '@equipment-management/db/schema';
@@ -50,7 +51,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     private readonly auditService: AuditService,
     @Optional()
     @Inject(SYSTEM_ERROR_EVENT_PROVIDER)
-    private readonly systemErrorEventProvider?: SystemErrorEventProvider
+    private readonly systemErrorEventProvider?: SystemErrorEventProvider,
+    @Optional()
+    @Inject(MetricsService)
+    private readonly metricsService?: MetricsService
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost): Response {
@@ -81,6 +85,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ...appError.toResponse(),
         issues,
       };
+      // ADR-0008 §4: Zod issues count telemetry (도메인 라우트별 issue 분포 모니터링)
+      if (this.metricsService && issues.length > 0) {
+        const rawPath =
+          (request.route as { path?: string } | undefined)?.path ?? request.url.split('?')[0] ?? '';
+        this.metricsService.observeZodIssueCount(this.normalizeRoute(rawPath), issues.length);
+      }
       // ZodError = ValidationError → 운영 노이즈, audit 제외
       return response.status(appError.statusCode).json(errorResponse);
     } else if (exception instanceof HttpException) {

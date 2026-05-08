@@ -13,6 +13,7 @@ export class MetricsService {
   private readonly calibrationOverdueGauge: Gauge;
   private readonly nonConformingEquipmentGauge: Gauge;
   private readonly systemErrorEventDropsCounter: Counter;
+  private readonly zodValidationIssuesCounter: Counter;
 
   constructor() {
     this.registry = new Registry();
@@ -69,6 +70,13 @@ export class MetricsService {
       name: 'system_error_events_drops_total',
       help: 'Total system error events dropped by rate-limit/dedupe/truncate/fallback gates.',
       labelNames: ['reason'],
+      registers: [this.registry],
+    });
+
+    this.zodValidationIssuesCounter = new Counter({
+      name: 'zod_validation_issues_total',
+      help: 'Total Zod validation issues emitted per response, bucketed by issue count (ADR-0008 §4).',
+      labelNames: ['domain_route', 'issue_count_bucket'],
       registers: [this.registry],
     });
   }
@@ -128,6 +136,12 @@ export class MetricsService {
 
   incrementSystemErrorEventDrops(reason: SystemErrorEventDropReason): void {
     this.systemErrorEventDropsCounter.inc({ reason });
+  }
+
+  observeZodIssueCount(domainRoute: string, issueCount: number): void {
+    const bucket: '1' | '2-5' | '6-10' | '11+' =
+      issueCount <= 1 ? '1' : issueCount <= 5 ? '2-5' : issueCount <= 10 ? '6-10' : '11+';
+    this.zodValidationIssuesCounter.inc({ domain_route: domainRoute, issue_count_bucket: bucket });
   }
 
   getMetrics(): Promise<string> {
