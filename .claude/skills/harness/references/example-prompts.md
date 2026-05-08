@@ -1,18 +1,41 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-06 (commit-pipeline-safety Mode 2 16/16 MUST PASS — lintstaged↔lint:ci/lint glob coverage + critical rule SSOT (`PARITY_SPEC.{backend,frontend}`) + multi-session staged guard (`GUARD_CONFIG`, opt-in strict) + ADR-0007 (Trigger Conditions 4건) + 회귀 spec 11/11. iter 1 FAIL → iter 2 PASS → iter 3 사용자 시니어 자기검토 후 S-1 격상으로 frontend 흡수.)**
+> **마지막 정리일: 2026-05-08 (calibration-cert-phase-a-architecture-closure 3 라운드 자기검토 PASS + manage-skills Phase 3 승격 후보 등록)** — Mode 2 옵션 C 6갭 closure + 자기검토 #2(route-metadata SSOT) + 자기검토 #3(Tab vs Sub-route 중복 architecture 발견 — Option A~D architectural decision 대기). manage-skills 라운드: verify-i18n Step 8a/8b는 invariant 완전하나 Evaluator 시점 미실행 → automation gate 부재 → Phase 3 승격 후보 등록.
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
 
 ---
 
-## 🟡 다음 세션 — 첫 작업 (push 미완 처리)
+## 🔴 다음 세션 — Architectural Decision 우선 (사용자 Option A~D 결정 필수)
 
-> **상태**: 본 세션 14 commit 모두 main에 commit 됐으나 push 가 다른 세션 lint race 로 5회+ 차단. 세션 종료 시점에도 미push. 새 세션 첫 작업으로 권고.
+> **상태**: 본 세션(2026-05-08) `calibration-cert-phase-a-architecture-closure` 3 라운드 자기검토 PASS + push 완료(`77d900e5`까지 origin/main 동기화). 라운드 #3에서 식별된 *시스템 전반 architectural decision*이 다음 세션 최우선.
 
-**첫 작업 프롬프트**:
-> `git status -s` + `git log --oneline origin/main..HEAD` 로 미push commit 확인. 본 세션 (2026-05-06) 작업물: 14fc4886/2976508f/087686c7/3cd92408/13572daf/c921a1ad/e3640239/bdfe1183/bf23538d/4e27e522/2d4fdce9/73aba70e/166627a0/57c30b55. `pnpm --filter backend run lint:ci` + `pnpm --filter frontend run lint` working tree 통과 확인 후 즉시 `git push origin main`. race 지속 시 `EMS_PRECOMMIT_STRICT=1` 활성화로 strict mode 진행 (본 sprint 신설 가드 검증).
+### 🔴 HIGH (Mode 2 architectural sprint) — `tab-subroute-architectural-decision`
+
+**상태**: `EquipmentTabs` (`?tab=X`)가 모든 sub-route 컨텐츠(`CalibrationHistoryTab` / `CalibrationFactorsTab` / `IncidentHistoryTab` / `MaintenanceHistoryTab`)를 *이미 lazy-load 노출* 중. 본 sprint 신설 4 sub-route(`/equipment/[id]/calibration-history` 외 3개)가 동일 컴포넌트를 별도 URL로 합성 — *content 중복 architecture*. breadcrumb/back navigation/scroll 위치/SEO sharing 비대칭.
+
+**사용자 결정 필요 (Option A~D)**:
+- **A**: sub-route deprecate + redirect (URL 일관성 ↓, deep-link 위해 redirect)
+- **B**: Tab deprecate, sub-route만 유지 (lazy-load architecture 변경 — 큰 작업)
+- **C**: 혼합 패턴 유지 + URL SSOT 명시 (Tab=summary, sub-route=detail — sister entity 정의) — *현실적*
+- **D**: Tab을 router-driven으로 변경 (Tab 클릭 → `/equipment/[id]/<sub>` 이동, query string 사용 X)
+
+**시스템 패턴 인정**: inspection 도메인은 Tab만 (`?tab=inspection`) + sub-route 없음. self-inspections / intermediate-inspections는 별도 도메인 page (`/inspections/<...>`). 도메인별 일관성 결정 포함.
+
+**프롬프트 (사용자 Option 결정 후 paste)**:
+> `/harness mode2` `tab-subroute-architectural-decision` Option [A/B/C/D] 채택해 시스템 전반 적용. EquipmentTabs + 4 sub-route(`calibration-history` / `calibration-factors` / `non-conformance` / `repair-history`) + inspection 도메인 일관성 포함. URL SSOT 명시 (어느 URL이 canonical? deep-link redirect 필요?). breadcrumb/back navigation/scroll position 정합. e2e spec (`sub-route-navigation-e2e-coverage` LOW 항목 통합) 함께 처리. 시니어 자기검토 7대 영역 (state 분산/prop drilling/destructive/SSOT/perf/cross-domain/mock-only) + cross-session 격리(다른 세션 작업 영역 명시 회피).
+
+### 🟡 MEDIUM (Mode 1) — `verify-i18n-step8-automation-promotion`
+
+**상태**: `verify-i18n` Step 8a/8b는 *invariant 완전*하지만 Evaluator(contract grep) 시점 미실행 → 본 sprint 자기검토 #2에서 silent miss 사례 발생 (`route-metadata.ts` + `navigation.json` 누락이 production push 직전까지 catch 안 됨).
+
+**프롬프트 (paste 가능)**:
+> `/harness mode1` `apps/frontend/scripts/verify-route-metadata.mjs` 신설 — verify-i18n Step 8a/8b grep을 Phase 3 승격. (1) filesystem `apps/frontend/app/(dashboard)/**/page.tsx` scan + dynamic route 정규화 (`[id]` 등). (2) `lib/navigation/route-metadata.ts` regex parse → labelKey 추출. (3) `messages/{ko,en}/navigation.json` key set equality 검증. (4) page.tsx → routeMap 역방향 검증 (redirect-only 페이지 제외). pre-push hook(`.husky/pre-push` `_t "route-map"` step) 통합 — < 5초 실행. 회귀 spec `scripts/__tests__/verify-route-metadata.spec.mjs` (5+ cases — 정상 PASS / labelKey 누락 / page.tsx 미등록 / redirect-only 제외 / 동적 라우트 정규화). 기존 Phase 3 패턴 참고: `apps/frontend/scripts/verify-design-tokens.ts` + `apps/backend/scripts/verify-e2e-actor-alignment.ts`.
+
+### 🟢 LOW (Mode 1, 위 sprint 통합 권장) — `sub-route-navigation-e2e-coverage`
+
+**상태**: 본 sprint sub-route(`/equipment/[id]/calibration-history`)에 Playwright e2e spec 0건. RTL spec(jsdom)이 chip/dialog 회귀 보호하지만 *URL deep-link → server prefetch → Client → Tab 통합* 전체 flow 미검증. **architectural decision 결과에 따라 e2e spec 형태 결정** (Option A 시 redirect spec, Option B 시 sub-route 직접 spec, C/D는 양쪽). 위 `tab-subroute-architectural-decision` sprint와 통합 권장.
 
 ## 🆕 다음 세션 — commit-pipeline-safety SHOULD 후속 (선택)
 
