@@ -67,6 +67,9 @@ _t "frontend-lint" pnpm --filter frontend run lint
 echo "▶ pre-push: i18n call-sites parity..."
 _t "i18n-parity" node scripts/check-i18n-call-sites.mjs --all --quiet
 
+echo "▶ pre-push: route-metadata SSOT (Step 8a/8b: routeMap labelKey ↔ navigation.json + page.tsx)..."
+_t "route-map" pnpm verify:route-metadata
+
 echo "▶ pre-push: e2e actor alignment (Step 23/24/25 invariants)..."
 _t "e2e-actors" pnpm --filter backend run verify:e2e-actors
 
@@ -98,7 +101,8 @@ echo "▶ pre-push: root scope spec (scripts/__tests__/*.spec.mjs)..."
 _t "root-spec" node --test --test-concurrency=4 \
   scripts/__tests__/commitlint-config.spec.mjs \
   scripts/__tests__/precommit-staged-guard.spec.mjs \
-  scripts/__tests__/verify-lint-ruleset-parity.spec.mjs
+  scripts/__tests__/verify-lint-ruleset-parity.spec.mjs \
+  scripts/__tests__/verify-route-metadata.spec.mjs
 
 echo "✔ pre-push: all checks passed"
 
