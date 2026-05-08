@@ -3,7 +3,9 @@ import { useCheckoutGroupAggregates } from '../use-checkout-group-aggregates';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type NextStepDescriptor,
 } from '@equipment-management/schemas';
+import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 
 type AnyRecord = Record<string, unknown>;
 function makeCheckout(overrides: AnyRecord): AnyRecord {
@@ -23,7 +25,7 @@ function makeDescriptor(overrides: Record<string, unknown> = {}) {
     nextAction: undefined,
     blockedReason: null,
     ...overrides,
-  } as unknown as Record<string, unknown>;
+  } as unknown as NextStepDescriptor;
 }
 
 describe('useCheckoutGroupAggregates', () => {
@@ -64,7 +66,7 @@ describe('useCheckoutGroupAggregates', () => {
       purposes: [CPVal.CALIBRATION],
     } as unknown as Parameters<typeof useCheckoutGroupAggregates>[0]['group'];
 
-    const descriptorMap = new Map<string, unknown>([
+    const descriptorMap = new Map<string, NextStepDescriptor>([
       ['c1', makeDescriptor({ availableToCurrentUser: true })],
       ['c2', makeDescriptor({ availableToCurrentUser: false })],
       ['c3', makeDescriptor({ availableToCurrentUser: true })],
@@ -135,11 +137,11 @@ describe('useCheckoutGroupAggregates', () => {
         makeCheckout({ id: 'c1', purpose: CPVal.RENTAL, status: CSVal.CHECKED_OUT }),
         makeCheckout({ id: 'c2', purpose: CPVal.CALIBRATION }),
       ],
-      statuses: [CSVal.IN_PROGRESS],
+      statuses: [CSVal.CHECKED_OUT],
       purposes: [CPVal.RENTAL, CPVal.CALIBRATION],
     } as unknown as Parameters<typeof useCheckoutGroupAggregates>[0]['group'];
 
-    const descriptorMap = new Map<string, unknown>([
+    const descriptorMap = new Map<string, NextStepDescriptor>([
       ['c1', makeDescriptor({ availableToCurrentUser: true })],
     ]);
 

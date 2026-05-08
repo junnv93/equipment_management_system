@@ -19,14 +19,12 @@ const MAX = VALIDATION_RULES.LONG_TEXT_MAX_LENGTH;
 /**
  * DisposalService 유닛 테스트 — defense-in-depth boundary matrix
  *
- * 본 spec은 disposal-zod-defense-in-depth + disposal-service-fail-close sprint의
- * defense-in-depth 의미적 완결성을 회귀 차단한다.
- *
  * 검증 layer:
- * 1. Zod schema (DTO) — `.trim() + .min(MIN) + .max(MAX)` 강제
- * 2. Service layer fail-close (approveDisposal reject 분기) — frontend 우회 차단
+ * 1. Zod schema (approveDisposalSchema discriminatedUnion) — reject 경로 comment min/max 강제
+ * 2. Service layer — business logic (transaction, DB 업데이트, audit log)
  *
- * 두 layer가 동일 invariant로 닫혀야 진짜 defense-in-depth.
+ * approveDisposal reject 분기의 comment min 검증은 Zod discriminatedUnion으로 이관
+ * (2026-05-08 reject-modal-ssot-closure). Service는 이미 검증된 데이터 수신.
  */
 describe('DisposalService — defense-in-depth boundary matrix', () => {
   let service: DisposalService;
@@ -271,7 +269,46 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
     });
   });
 
-  describe('approveDisposal reject branch — service layer fail-close', () => {
+  describe('approveDisposalSchema discriminatedUnion — Zod reject 경로 comment 검증', () => {
+    it.each([
+      ['undefined (missing)', undefined],
+      ['empty string', ''],
+      [`whitespace only (${MIN}자, trim 후 0)`, ' '.repeat(MIN)],
+      [`${MIN - 1}자 (boundary below)`, 'a'.repeat(MIN - 1)],
+      [`공백 + ${MIN - 1}자 (trim 후 below min)`, ` ${'a'.repeat(MIN - 1)} `],
+    ])(
+      'reject 경로 — %s → Zod FAIL (decision=reject이면 comment min(%d) 필수)',
+      (_label, comment) => {
+        const result = approveDisposalSchema.safeParse({ version: 1, decision: 'reject', comment });
+        expect(result.success).toBe(false);
+      }
+    );
+
+    it.each([
+      [`${MIN}자 (boundary)`, 'a'.repeat(MIN)],
+      [`${MAX}자 (boundary)`, 'a'.repeat(MAX)],
+      [`공백 + ${MIN}자 (trim 후 ${MIN})`, ` ${'a'.repeat(MIN)} `],
+    ])('reject 경로 — %s → Zod PASS', (_label, comment) => {
+      const result = approveDisposalSchema.safeParse({ version: 1, decision: 'reject', comment });
+      expect(result.success).toBe(true);
+    });
+
+    it('approve 경로 — comment undefined → Zod PASS (optional)', () => {
+      const result = approveDisposalSchema.safeParse({ version: 1, decision: 'approve' });
+      expect(result.success).toBe(true);
+    });
+
+    it('approve 경로 — comment 1자(below min) → Zod PASS (approve는 min 미적용)', () => {
+      const result = approveDisposalSchema.safeParse({
+        version: 1,
+        decision: 'approve',
+        comment: 'x',
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('approveDisposal reject branch — service transaction', () => {
     const equipmentId = 'eq-1234-5678-uuid';
     const approvedBy = 'user-uuid';
 
@@ -295,45 +332,9 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
     });
 
     it.each([
-      ['undefined comment', undefined],
-      ['empty string', ''],
-      [`whitespace only ${MIN} chars`, ' '.repeat(MIN)],
-      [`${MIN - 1} chars`, 'a'.repeat(MIN - 1)],
-      [`whitespace + ${MIN - 1} chars (trim 후 below min)`, ` ${'a'.repeat(MIN - 1)} `],
-    ])(
-      'fail-close %s — throws BadRequestException with code DISPOSAL_REJECT_COMMENT_REQUIRED',
-      async (_label, comment) => {
-        const dto = {
-          version: 1,
-          decision: 'reject' as const,
-          comment,
-        };
-        await expect(service.approveDisposal(equipmentId, dto, approvedBy)).rejects.toThrow(
-          BadRequestException
-        );
-
-        // fail-close가 transaction 진입 전이어야 함 (DB 변경 없음)
-        expect(mockDb.transaction).not.toHaveBeenCalled();
-        expect(updateWithVersionSpy).not.toHaveBeenCalled();
-      }
-    );
-
-    it('fail-close BadRequestException 응답 body에 도메인 error code 포함', async () => {
-      const dto = { version: 1, decision: 'reject' as const, comment: 'a' };
-      try {
-        await service.approveDisposal(equipmentId, dto, approvedBy);
-        fail('expected BadRequestException');
-      } catch (e) {
-        expect(e).toBeInstanceOf(BadRequestException);
-        const response = (e as BadRequestException).getResponse() as { code?: string };
-        expect(response.code).toBe(ErrorCode.DisposalRejectCommentRequired);
-      }
-    });
-
-    it.each([
-      [`${MIN} chars (boundary)`, 'a'.repeat(MIN)],
-      [`${MAX} chars (boundary)`, 'a'.repeat(MAX)],
-      [`${MIN} chars + 양 끝 공백 trim 후 ${MIN}`, ` ${'a'.repeat(MIN)} `],
+      [`${MIN}자 (boundary)`, 'a'.repeat(MIN)],
+      [`${MAX}자 (boundary)`, 'a'.repeat(MAX)],
+      [`공백 + ${MIN}자 (trim 후 ${MIN})`, ` ${'a'.repeat(MIN)} `],
     ])(
       'reject 통과 %s — transaction 진입 + audit log에 trim된 comment 사용',
       async (_label, comment) => {
@@ -341,11 +342,10 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
         await service.approveDisposal(equipmentId, dto, approvedBy);
 
         expect(mockDb.transaction).toHaveBeenCalledTimes(1);
-        // updateWithVersion 호출 시 rejectionReason은 trim된 comment
         const callArgs = updateWithVersionSpy.mock.calls[0];
         const updatePayload = callArgs[3];
         expect(updatePayload.rejectionReason).toBe(comment.trim());
-        // fallback 메시지 사용 안 됨 (regression — '승인 단계에서 반려' 절대 금지)
+        // fallback 메시지 회귀 차단
         expect(updatePayload.rejectionReason).not.toBe('승인 단계에서 반려');
       }
     );

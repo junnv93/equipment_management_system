@@ -64,21 +64,41 @@ export const ReviewDisposalPipe = new ZodValidationPipe(reviewDisposalSchema);
 /**
  * 폐기 승인 DTO 스키마 (lab_manager)
  *
- * 코멘트(comment)는 승인 시 선택, 반려 시 frontend가 `>= REJECTION_REASON_MIN_LENGTH`로 강제.
- * Zod에서는 `.trim().max()` defense-in-depth만 적용하고 반려 시 min은 service layer fail-close에 위임.
+ * discriminatedUnion으로 decision 분기:
+ * - decision='approve': comment 선택 (max만 적용)
+ * - decision='reject':  comment 필수, min(REJECTION_REASON_MIN_LENGTH) + max (Zod defense-in-depth)
+ *
+ * frontend 우회(curl 등) 시에도 의미있는 사유 없이 audit log에 기록되지 않도록 차단.
  */
-export const approveDisposalSchema = z.object({
-  ...versionedSchema,
-  decision: ApprovalActionEnum,
-  comment: z
-    .string()
-    .trim()
-    .max(
-      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
-      VM.string.max('승인 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
-    )
-    .optional(),
-});
+export const approveDisposalSchema = z.discriminatedUnion('decision', [
+  z.object({
+    ...versionedSchema,
+    decision: z.literal('approve'),
+    comment: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('승인 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+  }),
+  z.object({
+    ...versionedSchema,
+    decision: z.literal('reject'),
+    comment: z
+      .string()
+      .trim()
+      .min(
+        VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+        VM.string.min('반려 코멘트', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+      )
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('반려 코멘트', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      ),
+  }),
+]);
 
 export type ApproveDisposalInput = z.infer<typeof approveDisposalSchema>;
 export const ApproveDisposalPipe = new ZodValidationPipe(approveDisposalSchema);
@@ -131,12 +151,10 @@ export class ReviewDisposalDto
 }
 
 /**
- * 폐기 승인 DTO
+ * 폐기 승인 DTO (Swagger 문서화용)
+ * 런타임 검증은 approveDisposalSchema(discriminatedUnion)가 담당.
  */
-export class ApproveDisposalDto
-  extends VersionedDto
-  implements Omit<ApproveDisposalInput, 'version'>
-{
+export class ApproveDisposalDto extends VersionedDto {
   @ApiProperty({
     description: '승인 결과 (승인/반려)',
     enum: APPROVAL_ACTION_VALUES,
@@ -145,7 +163,8 @@ export class ApproveDisposalDto
   decision!: ApprovalAction;
 
   @ApiProperty({
-    description: '승인 코멘트 (선택, 500자 이하). 반려 시 frontend에서 10자 이상 강제',
+    description:
+      '승인 시 선택(max 500자), 반려 시 필수(min 10자, max 500자). discriminatedUnion으로 Zod 검증.',
     example: '폐기 승인합니다.',
     required: false,
     maxLength: VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,

@@ -10,7 +10,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | slug | 설명 | 시작일 |
 |------|------|--------|
 | `calibration-cert-phase-a-closure` | 교정성적서 PDF 추출 Phase A 8 갭 atomic closure (controller + ErrorCode 5-layer + e2e + Dockerfile) | 2026-05-06 |
-| `reject-modal-ssot-closure` | RejectReasonDialog dead code 삭제 + approveDisposalSchema Zod discriminatedUnion + disposal-zod tech-debt 아카이브 | 2026-05-08 |
 | `phase-c-followup-closure` | tech-debt 5건 통합 closure: tab-footer-link 3 도메인 + useEquipmentCalibrations hook 추출 + CalibrationHistoryClient 4 필터 URL sync + sub-route Playwright e2e + UL-QP-18-02 STALE 정합 | 2026-05-08 |
 | `zod-i18n-mapper-hub-closure` | 12 도메인 mapper hub fallback 통합 + ts-morph 정적 spec + Prometheus issues counter (ADR-0008 §4) | 2026-05-08 |
 ---

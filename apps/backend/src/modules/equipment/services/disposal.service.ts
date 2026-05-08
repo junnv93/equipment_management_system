@@ -336,18 +336,8 @@ export class DisposalService extends VersionedBaseService {
     approveDto: ApproveDisposalInput,
     approvedBy: string
   ): Promise<DisposalRequestWithRelations | null> {
-    // 1. Fail-close: reject 분기는 comment ≥ REJECTION_REASON_MIN_LENGTH 강제
-    //    (Zod는 max+optional만 적용 — reject 시 min 강제는 도메인 invariant이라 service layer 책임)
-    //    → frontend 우회(curl/legacy client) 시에도 의미있는 사유 없이 audit log에 기록되지 않도록 차단
-    if (approveDto.decision === 'reject') {
-      const trimmed = approveDto.comment?.trim() ?? '';
-      if (trimmed.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
-        throw new BadRequestException({
-          code: ErrorCode.DisposalRejectCommentRequired,
-          message: `반려 코멘트는 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
-        });
-      }
-    }
+    // 1. reject 경로 comment min 검증은 approveDisposalSchema(discriminatedUnion)가 담당.
+    //    ZodValidationPipe가 controller 레벨에서 차단 — service는 이미 검증된 데이터 수신.
 
     // 2. 현재 요청 조회 (reviewStatus='reviewed'만 승인 가능)
     const request = await this.db.query.disposalRequests.findFirst({
@@ -396,7 +386,7 @@ export class DisposalService extends VersionedBaseService {
           .where(eq(equipment.id, equipmentId));
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
-        // (comment는 위 fail-close에서 ≥REJECTION_REASON_MIN_LENGTH 보장 — fallback 불필요)
+        // (comment는 discriminatedUnion Zod 스키마가 min 보장 — 이미 trim된 string)
         await this.updateWithVersion(
           disposalRequests,
           request.id,
@@ -405,7 +395,7 @@ export class DisposalService extends VersionedBaseService {
             reviewStatus: DRVal.REJECTED,
             rejectedBy: approvedBy,
             rejectedAt: new Date(),
-            rejectionReason: approveDto.comment!.trim(),
+            rejectionReason: approveDto.comment.trim(),
             rejectionStep: 'approval',
           },
           '폐기요청',

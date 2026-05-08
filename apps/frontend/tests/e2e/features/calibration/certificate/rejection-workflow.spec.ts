@@ -96,12 +96,12 @@ test.describe('교정 반려 워크플로우', () => {
     const rejectButton = targetCard.getByRole('button', { name: '반려' });
     await rejectButton.click();
 
-    // 4. 반려 사유 다이얼로그 표시 확인 (RejectReasonDialog with title "교정 반려")
+    // 4. 반려 사유 다이얼로그 표시 확인 (RejectModal mode='domain' with title "교정 반려")
     const dialog = techManagerPage.getByRole('dialog', { name: '교정 반려' });
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
     // 5. 반려 사유 입력 없이 '반려' 버튼 확인 - 비활성화 상태
-    // RejectReasonDialog: disabled={!reason.trim() || isPending}
+    // RejectModal: RejectReasonSchema min(REJECTION_MIN_LENGTH) 미충족 시 disabled
     const confirmButton = dialog.getByRole('button', { name: '반려' });
     await expect(confirmButton).toBeDisabled();
 

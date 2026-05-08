@@ -15,16 +15,20 @@
  *   - 본 Client는 CalibrationHistoryTab 직접 import 0건 — M-6 grep으로 검증
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { CalibrationHistory } from '@/lib/api/calibration-api';
 
 // ----- Mocks -----
 
+// Mutable search params — let closure is OK: factory captures by reference, reads at call time
+let mockSearchParams = new URLSearchParams();
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), refresh: jest.fn() }),
   usePathname: () => '/equipment/eq-1/calibration-history',
+  useSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('next-intl', () => ({
@@ -46,18 +50,18 @@ jest.mock('@/components/calibration/CalibrationListTable', () => ({
     React.createElement('div', { 'data-testid': 'list-table-mock' }, `rows=${data.length}`),
 }));
 
-const equipmentFixture: Equipment = {
+const equipmentFixture = {
   id: 'eq-1',
   name: '오실로스코프',
   managementNumber: 'OSC-001',
   // overdue: nextCalibrationDate 과거 날짜
-  nextCalibrationDate: '2020-01-01',
-} as Equipment;
+  nextCalibrationDate: new Date('2020-01-01'),
+} as unknown as Equipment;
 
-const equipmentNotOverdueFixture: Equipment = {
+const equipmentNotOverdueFixture = {
   ...equipmentFixture,
-  nextCalibrationDate: '2099-01-01',
-};
+  nextCalibrationDate: new Date('2099-01-01'),
+} as unknown as Equipment;
 
 const baseCalibrations: CalibrationHistory[] = [
   {
@@ -130,6 +134,7 @@ async function flush() {
 
 beforeEach(() => {
   getCalibrationHistoryMock.mockResolvedValue({ data: baseCalibrations });
+  mockSearchParams = new URLSearchParams(); // reset URL state between tests
 });
 
 describe('CalibrationHistoryClient — Option C 책임 분리', () => {
@@ -205,7 +210,10 @@ describe('CalibrationHistoryClient — Option C 책임 분리', () => {
     await screen.findByText('rows=3');
   });
 
-  it('dateFrom 필터 적용 시 이전 날짜 row 제외', async () => {
+  it('dateFrom 필터 URL 파라미터 적용 시 이전 날짜 row 제외', async () => {
+    // URL 기반 필터 — startDate=2025-08-01 → c1(2025-01-01), c2(2025-06-01) 제외, c3(2025-09-01)만
+    mockSearchParams = new URLSearchParams('startDate=2025-08-01');
+
     render(
       React.createElement(CalibrationHistoryClient, {
         equipmentId: 'eq-1',
@@ -214,13 +222,7 @@ describe('CalibrationHistoryClient — Option C 책임 분리', () => {
       { wrapper: makeWrapper() }
     );
 
-    // baseline 3 row 표시 대기
-    await screen.findByText('rows=3');
-
-    // dateFrom = '2025-08-01' → c1(2025-01-01), c2(2025-06-01) 제외, c3(2025-09-01)만 남음
-    const dateFromInput = screen.getByLabelText('filters.dateFrom');
-    fireEvent.change(dateFromInput, { target: { value: '2025-08-01' } });
-
+    await screen.findByText('rows=1');
     expect(screen.getByTestId('list-table-mock')).toHaveTextContent('rows=1');
   });
 });
