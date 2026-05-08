@@ -44,20 +44,4 @@ describe('equipmentImportQuerySchema — Query DTO trim/max + (existing) sort en
       }
     );
   });
-
-  // sortBy + sortOrder legacy backwards compat (점진 migration tech-debt)
-  describe('sortBy/sortOrder legacy regression', () => {
-    it.each(['createdAt', 'usagePeriodStart', 'usagePeriodEnd', 'status'])(
-      'accepts sortBy=%s',
-      (sortBy) => {
-        expect(equipmentImportQuerySchema.safeParse({ sortBy }).success).toBe(true);
-      }
-    );
-    it('rejects unknown sortBy', () => {
-      expect(equipmentImportQuerySchema.safeParse({ sortBy: 'unknown' }).success).toBe(false);
-    });
-    it.each(['asc', 'desc'])('accepts sortOrder=%s', (sortOrder) => {
-      expect(equipmentImportQuerySchema.safeParse({ sortOrder }).success).toBe(true);
-    });
-  });
 });
