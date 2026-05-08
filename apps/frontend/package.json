@@ -9,6 +9,7 @@
     "start": "npx next start",
     "lint": "eslint .",
     "verify:design-tokens": "node --experimental-strip-types scripts/verify-design-tokens.ts",
+    "verify:route-metadata": "node scripts/verify-route-metadata.mjs",
     "type-check": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "test": "jest",

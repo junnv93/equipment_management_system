@@ -50,7 +50,6 @@
     "verify:env-sync": "tsx scripts/verify-env-sync.ts",
     "verify:lint-ruleset-parity": "node scripts/verify-lint-ruleset-parity.mjs",
     "verify:i18n-call-sites": "node scripts/check-i18n-call-sites.mjs --all",
-    "verify:route-metadata": "node apps/frontend/scripts/verify-route-metadata.mjs",
     "audit:dependabot": "node ./scripts/audit-dependabot.mjs",
     "measure:bundle": "node scripts/measure-bundle.mjs"
   },

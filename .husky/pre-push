@@ -68,7 +68,7 @@ echo "▶ pre-push: i18n call-sites parity..."
 _t "i18n-parity" node scripts/check-i18n-call-sites.mjs --all --quiet
 
 echo "▶ pre-push: route-metadata SSOT (Step 8a/8b: routeMap labelKey ↔ navigation.json + page.tsx)..."
-_t "route-map" pnpm verify:route-metadata
+_t "route-map" pnpm --filter frontend run verify:route-metadata
 
 echo "▶ pre-push: e2e actor alignment (Step 23/24/25 invariants)..."
 _t "e2e-actors" pnpm --filter backend run verify:e2e-actors
