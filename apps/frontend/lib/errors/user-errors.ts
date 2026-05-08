@@ -7,6 +7,8 @@
  */
 import { ErrorCode } from '@equipment-management/schemas';
 import { extractErrorCode, type ErrorToast } from './disposal-errors';
+import { extractValidationIssues } from './extract-error';
+import { mapZodIssuesToToast } from './zod-issue-mapper';
 
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
@@ -31,6 +33,12 @@ export function mapUserErrorToToast(error: unknown, t: TranslationFunction): Err
       title: t('errors.title'),
       description: t(i18nKey),
     };
+  }
+
+  // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback (변형 패턴: mapBackendErrorCode 헬퍼 경유)
+  if (extractValidationIssues(error)) {
+    const zodToast = mapZodIssuesToToast(error, t);
+    if (zodToast) return zodToast;
   }
 
   return {

@@ -6,6 +6,8 @@
  */
 import { ErrorCode } from '@equipment-management/schemas';
 import { extractErrorCode, type ErrorToast } from './disposal-errors';
+import { extractValidationIssues } from './extract-error';
+import { mapZodIssuesToToast } from './zod-issue-mapper';
 
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
@@ -26,7 +28,22 @@ export function mapFormTemplateErrorCode(code?: string): string {
 }
 
 export function mapFormTemplateErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
-  const key = mapFormTemplateErrorCode(extractErrorCode(error) ?? undefined);
+  const code = extractErrorCode(error) ?? undefined;
+  const key = mapFormTemplateErrorCode(code);
+
+  // ErrorCode가 특정 키로 매핑된 경우 즉시 반환
+  if (key !== FORM_TEMPLATE_FALLBACK_I18N_KEY) {
+    return {
+      title: t('errors.title'),
+      description: t(key),
+    };
+  }
+
+  // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback (변형 패턴: 단일 return 구조)
+  if (extractValidationIssues(error)) {
+    const zodToast = mapZodIssuesToToast(error, t);
+    if (zodToast) return zodToast;
+  }
 
   return {
     title: t('errors.title'),

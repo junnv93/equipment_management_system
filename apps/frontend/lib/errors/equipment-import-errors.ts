@@ -15,6 +15,8 @@
 import { ErrorCode } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { extractErrorCode, type ErrorToast } from './disposal-errors';
+import { extractValidationIssues } from './extract-error';
+import { mapZodIssuesToToast } from './zod-issue-mapper';
 
 type TranslationFunction = (key: string, values?: Record<string, string | number | Date>) => string;
 
@@ -53,6 +55,12 @@ export function mapEquipmentImportErrorToToast(error: unknown, t: TranslationFun
         EQUIPMENT_IMPORT_ERROR_I18N_VARS[errorCode]
       ),
     };
+  }
+
+  // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
+  if (extractValidationIssues(error)) {
+    const zodToast = mapZodIssuesToToast(error, t);
+    if (zodToast) return zodToast;
   }
 
   return {

@@ -14,7 +14,8 @@
  */
 import { ErrorCode } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
-import { extractErrorCode } from './extract-error';
+import { extractErrorCode, extractValidationIssues } from './extract-error';
+import { mapZodIssuesToToast } from './zod-issue-mapper';
 
 // 호환성 re-export — 21+ 도메인 mapper(`approval-errors`/`calibration-errors` 등)가
 // `import { extractErrorCode } from './disposal-errors'` 형태로 import 중. extract-error.ts SSOT
@@ -72,6 +73,12 @@ export function mapDisposalErrorToToast(error: unknown, t: TranslationFunction):
       title: t('errors.title'),
       description: t(DISPOSAL_ERROR_I18N_KEYS[errorCode]!, DISPOSAL_ERROR_I18N_VARS[errorCode]),
     };
+  }
+
+  // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
+  if (extractValidationIssues(error)) {
+    const zodToast = mapZodIssuesToToast(error, t);
+    if (zodToast) return zodToast;
   }
 
   // Fallback: backend message 또는 generic
