@@ -24,9 +24,11 @@ import {
   getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { FilterChip } from '@/components/shared/FilterChip';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
+import { useEquipment } from '@/hooks/use-equipment';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -86,6 +88,10 @@ export default function CalibrationContent({
   const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
 
   // ── Queries ──────────────────────────────────────────────────────────────
+
+  // equipmentId deep-link 활성 시 chip 표시용 별도 fetch — list가 비어있어도
+  // deterministic하게 장비 정보 표시 (Gap 4 closure: list `[0]` 의존 제거).
+  const equipmentDetail = useEquipment(filters.equipmentId || '');
 
   const { data: summaryData } = useQuery({
     queryKey: queryKeys.calibrations.summary(defaultTeamId, defaultSite),
@@ -237,32 +243,32 @@ export default function CalibrationContent({
         }
       />
 
-      {/* equipmentId deep-link 활성 시 chip — 사용자가 어떤 장비로 필터링 중인지 즉시 인지 */}
+      {/* equipmentId deep-link 활성 시 chip — 사용자가 어떤 장비로 필터링 중인지 즉시 인지.
+          SSOT: <FilterChip> 도메인 중립 컴포넌트 + design token 경유.
+          데이터 소스: useEquipment 별도 fetch (list `[0]` 의존 제거 — Gap 4 closure). */}
       {filters.equipmentId && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 border border-border text-sm">
-          <span className="font-medium">{t('content.filterChip.equipmentLabel')}</span>
-          <span className="text-muted-foreground">
-            {calibrationHistoryData?.data?.[0]?.equipmentName ?? '—'}
-            {calibrationHistoryData?.data?.[0]?.managementNumber
-              ? ` (${calibrationHistoryData.data[0].managementNumber})`
-              : ''}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete('equipmentId');
-              const qs = params.toString();
-              router.replace(
-                qs ? `${FRONTEND_ROUTES.CALIBRATION.LIST}?${qs}` : FRONTEND_ROUTES.CALIBRATION.LIST
-              );
-            }}
-            className="ml-auto text-xs text-primary hover:underline"
-            aria-label={t('content.filterChip.clearAriaLabel')}
-          >
-            {t('content.filterChip.clear')}
-          </button>
-        </div>
+        <FilterChip
+          label={t('content.filterChip.equipmentLabel')}
+          value={
+            equipmentDetail.data
+              ? `${equipmentDetail.data.name}${
+                  equipmentDetail.data.managementNumber
+                    ? ` (${equipmentDetail.data.managementNumber})`
+                    : ''
+                }`
+              : '—'
+          }
+          onClear={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('equipmentId');
+            const qs = params.toString();
+            router.replace(
+              qs ? `${FRONTEND_ROUTES.CALIBRATION.LIST}?${qs}` : FRONTEND_ROUTES.CALIBRATION.LIST
+            );
+          }}
+          clearAriaLabel={t('content.filterChip.clearAriaLabel')}
+          clearLabel={t('content.filterChip.clear')}
+        />
       )}
 
       {/* 통계 카드 */}
