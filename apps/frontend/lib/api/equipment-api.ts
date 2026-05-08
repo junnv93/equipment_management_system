@@ -62,9 +62,7 @@ export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'upda
  *
  * 주의: EquipmentFilter의 page, pageSize는 기본값이 있으므로 선택적입니다.
  */
-export type EquipmentQuery = Partial<EquipmentFilter> & {
-  category?: string; // 레거시 호환성
-};
+export type EquipmentQuery = Partial<EquipmentFilter>;
 
 /**
  * 장비 생성 DTO
