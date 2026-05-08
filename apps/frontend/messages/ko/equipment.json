@@ -834,6 +834,7 @@
     "error": "교정 이력을 불러오지 못했습니다.",
     "register": "교정 등록",
     "empty": "등록된 교정 이력이 없습니다.",
+    "viewAllLink": "이 장비의 전체 교정 이력 보기",
     "dialog": {
       "title": "교정 이력 등록",
       "description": "교정 정보를 입력하세요. 등록 후 기술책임자의 승인이 필요합니다.",
@@ -1397,7 +1398,36 @@
   },
   "calibrationHistoryClient": {
     "title": "교정 이력",
-    "backAriaLabel": "장비 상세로 돌아가기"
+    "backAriaLabel": "장비 상세로 돌아가기",
+    "overdueAlert": {
+      "title": "교정 기한 초과",
+      "description": "이 장비의 교정 기한이 지났습니다. 즉시 교정 등록이 필요합니다."
+    },
+    "stats": {
+      "total": "전체",
+      "overdue": "기한 초과",
+      "upcoming": "30일 이내",
+      "passed": "합격",
+      "failed": "불합격"
+    },
+    "filters": {
+      "dateFrom": "시작일",
+      "dateTo": "종료일",
+      "approvalStatusLabel": "승인 상태",
+      "approvalStatusAll": "전체",
+      "approvalOptions": {
+        "pending_approval": "승인 대기",
+        "approved": "승인됨",
+        "rejected": "반려됨"
+      },
+      "resultLabel": "교정 결과",
+      "resultAll": "전체",
+      "resultOptions": {
+        "pass": "합격",
+        "fail": "불합격",
+        "conditional": "조건부 합격"
+      }
+    }
   },
   "calibrationFactorsClient": {
     "title": "보정계수 관리",

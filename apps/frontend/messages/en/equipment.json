@@ -830,6 +830,7 @@
     "empty": "Calibration factors feature is coming soon."
   },
   "calibrationHistoryTab": {
+    "viewAllLink": "View full calibration history for this equipment",
     "title": "Calibration History",
     "error": "Failed to load calibration history.",
     "register": "Register Calibration",
@@ -1397,7 +1398,36 @@
   },
   "calibrationHistoryClient": {
     "title": "Calibration History",
-    "backAriaLabel": "Back to equipment details"
+    "backAriaLabel": "Back to equipment details",
+    "overdueAlert": {
+      "title": "Calibration Overdue",
+      "description": "This equipment's calibration deadline has passed. Immediate registration required."
+    },
+    "stats": {
+      "total": "Total",
+      "overdue": "Overdue",
+      "upcoming": "Within 30 days",
+      "passed": "Passed",
+      "failed": "Failed"
+    },
+    "filters": {
+      "dateFrom": "From",
+      "dateTo": "To",
+      "approvalStatusLabel": "Approval status",
+      "approvalStatusAll": "All",
+      "approvalOptions": {
+        "pending_approval": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "resultLabel": "Result",
+      "resultAll": "All",
+      "resultOptions": {
+        "pass": "Pass",
+        "fail": "Fail",
+        "conditional": "Conditional"
+      }
+    }
   },
   "calibrationFactorsClient": {
     "title": "Calibration Factor Management",
