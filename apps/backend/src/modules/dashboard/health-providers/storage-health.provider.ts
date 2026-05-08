@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { MonitoringService } from '../../monitoring/monitoring.service';
-import type { StorageHealthProvider, StorageHealthSnapshot } from './types';
+import type {
+  StorageHealthProvider,
+  StorageHealthSnapshot,
+} from '../../../common/system-health/contract';
 
 /**
  * Storage 메트릭 우선순위:

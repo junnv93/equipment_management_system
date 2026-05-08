@@ -369,3 +369,47 @@ XLSX 양식도 DOCX와 동일한 3-way 분리를 적용한다. ExcelJS 워크북
 - UL-QP-18-01 시험설비 관리대장: `modules/reports/{layouts,services}/equipment-registry.*.ts`
 
 **SSOT 라벨**: 모든 한국어 라벨은 `packages/schemas/src/enums/labels.ts`에서 import (예: `QP18_CLASSIFICATION_LABELS`, `INSPECTION_JUDGMENT_LABELS`, `SELF_INSPECTION_RESULT_LABELS`, `EQUIPMENT_AVAILABILITY_LABELS`, `INTERMEDIATE_CHECK_YESNO_LABELS`). 인라인 리터럴 금지.
+
+---
+
+### System Health Rate Limiter (Cluster-Aware)
+
+2026-05-08 system-health-cluster-closure. `SystemErrorEventProviderImpl.record()` 의 분당 INSERT 상한 + 중복 이벤트 dedupe 를 Redis-backed 클러스터 안전 구현으로 관리.
+
+**아키텍처**
+
+```
+GlobalExceptionFilter (5xx 캡처)
+  → SystemErrorEventProviderImpl.record()
+      → SystemHealthRedisRateLimiterService.acquireSlot()
+            ├─ [Redis 가용] SET key EX 60 NX (dedupe) + EVAL Lua (rate-limit)
+            └─ [Redis 미가용] in-memory fallback (graceful degradation)
+      → MetricsService.incrementSystemErrorEventDrops(reason) ← drop 시
+      → DB INSERT system_error_events
+      → Sentry sink (optional, fire-and-forget)
+```
+
+**Redis 키 규칙**
+
+| 키 패턴                                    | TTL | 용도                                      |
+| ------------------------------------------ | --- | ----------------------------------------- |
+| `sh:rl:counter:{epochMinute}`              | 65s | 분 윈도우 INSERT 카운터 (Lua atomic INCR) |
+| `sh:dedupe:{errorCode}::{normalizedRoute}` | 60s | 중복 이벤트 차단 (SET NX EX)              |
+
+**Drop reason — Prometheus label SSOT (`contract.ts`)**
+
+| reason                | 의미                                                        |
+| --------------------- | ----------------------------------------------------------- |
+| `rate-limit`          | 분당 INSERT 상한(60건) 초과                                 |
+| `dedupe`              | 동일 (errorCode, route) 1분 이내 중복                       |
+| `errorcode-truncate`  | errorCode varchar(100) 초과 — INSERT는 진행되나 변형 표면화 |
+| `rate-limit-fallback` | Redis 미가용 → in-memory fallback 경로의 drop               |
+
+**Prometheus counter**: `system_error_events_drops_total{reason="<reason>"}` — `GET /api/metrics` 스크래핑.
+Grafana 알람: `rate-limit-fallback` reason 이 분당 1 이상이면 Redis 연결 점검.
+
+**Graceful degradation**: Redis 실패 시 in-memory fallback 자동 전환. `record()` fire-and-forget contract 유지 — 응답 흐름 비차단.
+
+**Cluster mode 주의**: Redis 가용 시 분당 총 60건 보장. Redis 미가용 fallback은 인스턴스별 60건 → `rate-limit-fallback` counter 모니터링 필수.
+
+**SSOT 위치**: `common/system-health/contract.ts` (인터페이스 + 토큰 + drop reason) | `system-health-rate-limiter.lua.ts` (Lua script) | `system-health-redis-rate-limiter.service.ts` (구현)

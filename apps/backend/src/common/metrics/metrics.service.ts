@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Registry, collectDefaultMetrics, Counter, Histogram, Gauge } from 'prom-client';
+import type { SystemErrorEventDropReason } from '../system-health/contract';
 
 @Injectable()
 export class MetricsService {
@@ -11,6 +12,7 @@ export class MetricsService {
   private readonly activeCheckoutsGauge: Gauge;
   private readonly calibrationOverdueGauge: Gauge;
   private readonly nonConformingEquipmentGauge: Gauge;
+  private readonly systemErrorEventDropsCounter: Counter;
 
   constructor() {
     this.registry = new Registry();
@@ -60,6 +62,13 @@ export class MetricsService {
     this.nonConformingEquipmentGauge = new Gauge({
       name: 'equipment_non_conforming_total',
       help: '부적합 상태 장비 수',
+      registers: [this.registry],
+    });
+
+    this.systemErrorEventDropsCounter = new Counter({
+      name: 'system_error_events_drops_total',
+      help: 'Total system error events dropped by rate-limit/dedupe/truncate/fallback gates.',
+      labelNames: ['reason'],
       registers: [this.registry],
     });
   }
@@ -115,6 +124,10 @@ export class MetricsService {
   async readActiveCheckoutsTotal(): Promise<number> {
     const snapshot = await this.activeCheckoutsGauge.get();
     return snapshot.values.reduce((sum, entry) => sum + (entry.value ?? 0), 0);
+  }
+
+  incrementSystemErrorEventDrops(reason: SystemErrorEventDropReason): void {
+    this.systemErrorEventDropsCounter.inc({ reason });
   }
 
   getMetrics(): Promise<string> {

@@ -5,11 +5,12 @@ import { DrizzleModule } from '../../database/drizzle.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
 import { MetricsModule } from '../../common/metrics/metrics.module';
+import { SystemHealthModule } from '../../common/system-health/system-health.module';
 import {
   STORAGE_HEALTH_PROVIDER,
   ASYNC_WORK_BACKLOG_PROVIDER,
   SYSTEM_ERROR_EVENT_PROVIDER,
-} from './health-providers/tokens';
+} from '../../common/system-health/contract';
 import { StorageHealthProviderImpl } from './health-providers/storage-health.provider';
 import { AsyncWorkBacklogProviderImpl } from './health-providers/async-work-backlog.provider';
 import { SystemErrorEventProviderImpl } from './health-providers/system-error-event.provider';
@@ -25,7 +26,7 @@ import { SentryErrorSink } from './health-providers/sentry-error-sink';
  */
 @Global()
 @Module({
-  imports: [DrizzleModule, ApprovalsModule, MonitoringModule, MetricsModule],
+  imports: [DrizzleModule, ApprovalsModule, MonitoringModule, MetricsModule, SystemHealthModule],
   controllers: [DashboardController],
   providers: [
     DashboardService,

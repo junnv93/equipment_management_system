@@ -8,12 +8,12 @@ import {
   STORAGE_HEALTH_PROVIDER,
   ASYNC_WORK_BACKLOG_PROVIDER,
   SYSTEM_ERROR_EVENT_PROVIDER,
-} from '../health-providers/tokens';
+} from '../../../common/system-health/contract';
 import type {
   StorageHealthSnapshot,
   AsyncWorkBacklogSnapshot,
   SystemErrorEventCount,
-} from '../health-providers/types';
+} from '../../../common/system-health/contract';
 
 /**
  * Drizzle query chain mock

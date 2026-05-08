@@ -7,7 +7,7 @@ import type { ArgumentsHost } from '@nestjs/common';
 import { GlobalExceptionFilter } from '../error.filter';
 import { AuditService } from '../../../modules/audit/audit.service';
 import { AppError, ErrorCode } from '@equipment-management/schemas';
-import type { SystemErrorEventProvider } from '../../../modules/dashboard/health-providers/types';
+import type { SystemErrorEventProvider } from '../../system-health/contract';
 
 const VALID_UUID = '11111111-1111-4111-8111-111111111111';
 const SYSTEM_USER_UUID = '00000000-0000-0000-0000-000000000000';

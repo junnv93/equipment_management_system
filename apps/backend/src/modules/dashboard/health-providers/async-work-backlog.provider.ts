@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MetricsService } from '../../../common/metrics/metrics.service';
-import type { AsyncWorkBacklogProvider, AsyncWorkBacklogSnapshot } from './types';
+import type {
+  AsyncWorkBacklogProvider,
+  AsyncWorkBacklogSnapshot,
+} from '../../../common/system-health/contract';
 
 /**
  * `pending-work-aggregate` strategy — 외부 큐(BullMQ 등) 미도입 환경 기본.

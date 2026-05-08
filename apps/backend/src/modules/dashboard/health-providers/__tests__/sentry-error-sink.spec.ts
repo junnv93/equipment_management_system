@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SentryErrorSink } from '../sentry-error-sink';
-import type { SystemErrorEventInput } from '../types';
+import type { SystemErrorEventInput } from '../../../../common/system-health/contract';
 
 describe('SentryErrorSink', () => {
   function buildInput(): SystemErrorEventInput {

@@ -81,6 +81,13 @@ module.exports = {
             group: ['**/auth/rbac/permissions.enum'],
             message: 'Import Permission from @equipment-management/shared-constants instead.',
           },
+          {
+            // system-health-cluster-closure (2026-05-08): shim 삭제 후 재도입 방지.
+            // SSOT 위치: apps/backend/src/common/system-health/contract.ts
+            group: ['**/health-providers/tokens', '**/health-providers/types'],
+            message:
+              "Import from 'common/system-health/contract' (SSOT) instead of the deleted re-export shim. See system-health-cluster-closure exec plan.",
+          },
         ],
       },
     ],

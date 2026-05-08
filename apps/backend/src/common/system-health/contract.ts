@@ -4,9 +4,10 @@
  * Layer 정합성:
  *  - GlobalExceptionFilter (common) 는 5xx 캡처를 위해 SystemErrorEventProvider 가 필요.
  *  - 하지만 common → modules 의존은 clean architecture 위반.
- *  - 해결: 인터페이스 + DI 토큰을 common 에 정의 → dashboard 모듈이 implements + provider 등록.
+ *  - Solution: define interfaces + DI tokens here (common) → dashboard module implements + registers.
  *
- * dashboard 모듈의 `health-providers/types.ts` 와 `tokens.ts` 는 본 파일을 re-export.
+ * Re-export shims removed 2026-05-08 (system-health-cluster-closure).
+ * Import directly from this file.
  */
 
 import type {
@@ -24,6 +25,7 @@ import type {
 export const STORAGE_HEALTH_PROVIDER = Symbol('STORAGE_HEALTH_PROVIDER');
 export const ASYNC_WORK_BACKLOG_PROVIDER = Symbol('ASYNC_WORK_BACKLOG_PROVIDER');
 export const SYSTEM_ERROR_EVENT_PROVIDER = Symbol('SYSTEM_ERROR_EVENT_PROVIDER');
+export const SYSTEM_HEALTH_RATE_LIMITER = Symbol('SYSTEM_HEALTH_RATE_LIMITER');
 
 // ============================================================================
 // Storage 메트릭
@@ -52,6 +54,35 @@ export interface AsyncWorkBacklogSnapshot {
 
 export interface AsyncWorkBacklogProvider {
   read(): Promise<AsyncWorkBacklogSnapshot>;
+}
+
+// ============================================================================
+// System error event rate limiter
+// ============================================================================
+//
+// 5xx 이벤트 캡처 시 분당 INSERT 상한 + 동일 (errorCode, route) dedupe 를 담당.
+//
+// 클러스터 안전 구현: Redis Lua atomic counter + SET NX EX dedupe.
+// Graceful degradation: Redis 미가용 시 in-memory fallback — record() 의 fire-and-forget
+// contract (어떤 예외도 throw 하지 않음) 불변.
+
+/** rate limiter drop 사유 — Prometheus counter label SSOT */
+export type SystemErrorEventDropReason =
+  | 'rate-limit' // 분당 INSERT 상한 초과
+  | 'dedupe' // 동일 (errorCode, route) 분당 중복
+  | 'errorcode-truncate' // errorCode varchar 한계 초과 — INSERT 는 진행되나 변형 표면화
+  | 'rate-limit-fallback'; // Redis 미가용 → in-memory fallback 경로의 rate-limit drop
+
+export interface SystemHealthRateLimiter {
+  /**
+   * 이벤트 캡처 허용 여부를 결정.
+   * - allowed: true → INSERT 진행
+   * - allowed: false → INSERT 생략, reason 으로 Prometheus counter 증가
+   * Redis 장애 시 in-memory fallback 자동 전환 — throw 하지 않는다.
+   */
+  acquireSlot(
+    event: Pick<SystemErrorEventInput, 'errorCode' | 'normalizedRoute'>
+  ): Promise<{ allowed: boolean; reason: SystemErrorEventDropReason | null }>;
 }
 
 // ============================================================================
@@ -86,7 +117,7 @@ export interface SystemErrorEventProvider {
 
   /**
    * fire-and-forget INSERT — 호출자가 await 해도 어떤 예외도 throw 하지 않는다.
-   * DB 자체 장애 시에도 응답 흐름을 차단하지 않는다.
+   * Does not block the response flow even when the DB itself fails.
    */
   record(event: SystemErrorEventInput): Promise<void>;
 }

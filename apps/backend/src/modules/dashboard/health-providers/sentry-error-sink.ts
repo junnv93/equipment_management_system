@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { SystemErrorEventInput } from './types';
+import type { SystemErrorEventInput } from '../../../common/system-health/contract';
 
 /**
  * 옵션 Sentry sink. SENTRY_DSN 미설정 또는 `@sentry/node` 의존성 미설치 시 no-op.

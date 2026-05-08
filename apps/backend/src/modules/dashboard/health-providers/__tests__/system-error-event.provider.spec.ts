@@ -2,7 +2,12 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SystemErrorEventProviderImpl } from '../system-error-event.provider';
 import { SentryErrorSink } from '../sentry-error-sink';
-import type { SystemErrorEventInput } from '../types';
+import { MetricsService } from '../../../../common/metrics/metrics.service';
+import type {
+  SystemErrorEventInput,
+  SystemHealthRateLimiter,
+} from '../../../../common/system-health/contract';
+import { SYSTEM_HEALTH_RATE_LIMITER } from '../../../../common/system-health/contract';
 
 describe('SystemErrorEventProviderImpl', () => {
   let provider: SystemErrorEventProviderImpl;
@@ -12,6 +17,8 @@ describe('SystemErrorEventProviderImpl', () => {
   };
   let mockSentry: { emit: jest.Mock; isEnabled: jest.Mock };
   let mockConfig: { get: jest.Mock };
+  let mockRateLimiter: jest.Mocked<SystemHealthRateLimiter>;
+  let mockMetrics: { incrementSystemErrorEventDrops: jest.Mock };
 
   function makeQueryChain(result: { count: number }[]) {
     const chain: Record<string, jest.Mock> = {};
@@ -39,6 +46,7 @@ describe('SystemErrorEventProviderImpl', () => {
       isEnabled: jest.fn().mockReturnValue(false),
     };
     mockConfig = { get: jest.fn(() => undefined) };
+    mockMetrics = { incrementSystemErrorEventDrops: jest.fn() };
 
     mockDb = {
       select: jest.fn(),
@@ -47,11 +55,18 @@ describe('SystemErrorEventProviderImpl', () => {
       }),
     };
 
+    // 기본값: 허용 (allowed=true)
+    mockRateLimiter = {
+      acquireSlot: jest.fn().mockResolvedValue({ allowed: true, reason: null }),
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         SystemErrorEventProviderImpl,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: SYSTEM_HEALTH_RATE_LIMITER, useValue: mockRateLimiter },
+        { provide: MetricsService, useValue: mockMetrics },
         { provide: SentryErrorSink, useValue: mockSentry },
       ],
     }).compile();
@@ -104,6 +119,8 @@ describe('SystemErrorEventProviderImpl', () => {
           SystemErrorEventProviderImpl,
           { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
           { provide: ConfigService, useValue: mockConfig },
+          { provide: SYSTEM_HEALTH_RATE_LIMITER, useValue: mockRateLimiter },
+          { provide: MetricsService, useValue: mockMetrics },
           { provide: SentryErrorSink, useValue: mockSentry },
         ],
       }).compile();
@@ -115,12 +132,13 @@ describe('SystemErrorEventProviderImpl', () => {
     });
   });
 
-  describe('record()', () => {
-    it('정상 경로 — db.insert 호출 + Sentry emit 호출 (no-op 가능)', async () => {
+  describe('record() — 정상 경로', () => {
+    it('acquireSlot allowed=true → db.insert 호출 + Sentry emit 호출', async () => {
       await provider.record(buildInput());
 
       expect(mockDb.insert).toHaveBeenCalledTimes(1);
       expect(mockSentry.emit).toHaveBeenCalledTimes(1);
+      expect(mockMetrics.incrementSystemErrorEventDrops).not.toHaveBeenCalled();
     });
 
     it('db.insert 실패해도 throw 안 함 (fire-and-forget)', async () => {
@@ -138,71 +156,48 @@ describe('SystemErrorEventProviderImpl', () => {
     });
   });
 
-  describe('record() — rate limiting + dedupe', () => {
-    it('동일 (errorCode, normalizedRoute) 1분 이내 재호출 시 dedupe drop (insert 1회만)', async () => {
-      const input = buildInput();
-      await provider.record(input);
-      await provider.record(input);
-      await provider.record(input);
+  describe('record() — rate limiter drop 분기', () => {
+    it('acquireSlot allowed=false reason=rate-limit → INSERT 생략 + counter 증가', async () => {
+      mockRateLimiter.acquireSlot.mockResolvedValueOnce({ allowed: false, reason: 'rate-limit' });
 
-      expect(mockDb.insert).toHaveBeenCalledTimes(1);
+      await provider.record(buildInput());
+
+      expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockMetrics.incrementSystemErrorEventDrops).toHaveBeenCalledWith('rate-limit');
     });
 
-    it('서로 다른 errorCode 는 dedupe 영향 받지 않음', async () => {
-      await provider.record({ ...buildInput(), errorCode: 'A' });
-      await provider.record({ ...buildInput(), errorCode: 'B' });
-      await provider.record({ ...buildInput(), errorCode: 'C' });
+    it('acquireSlot allowed=false reason=dedupe → INSERT 생략 + counter 증가', async () => {
+      mockRateLimiter.acquireSlot.mockResolvedValueOnce({ allowed: false, reason: 'dedupe' });
 
-      expect(mockDb.insert).toHaveBeenCalledTimes(3);
+      await provider.record(buildInput());
+
+      expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockMetrics.incrementSystemErrorEventDrops).toHaveBeenCalledWith('dedupe');
     });
 
-    it('분당 INSERT 상한(60) 초과 시 sampling drop', async () => {
-      const events = Array.from({ length: 70 }, (_, i) => ({
-        ...buildInput(),
-        errorCode: `E${i}`, // dedupe 회피를 위해 매번 다른 코드.
-      }));
+    it('acquireSlot allowed=false reason=rate-limit-fallback → INSERT 생략 + counter 증가', async () => {
+      mockRateLimiter.acquireSlot.mockResolvedValueOnce({
+        allowed: false,
+        reason: 'rate-limit-fallback',
+      });
 
-      for (const ev of events) await provider.record(ev);
+      await provider.record(buildInput());
 
-      // 60건만 INSERT, 나머지 10건은 drop.
-      expect(mockDb.insert).toHaveBeenCalledTimes(60);
+      expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockMetrics.incrementSystemErrorEventDrops).toHaveBeenCalledWith(
+        'rate-limit-fallback'
+      );
     });
 
-    it('window 회전 — 1분 경과 후 카운터 리셋되어 다시 60건 캡처 가능', async () => {
-      const realNow = Date.now;
-      const baseTime = realNow();
-      const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseTime);
-
-      try {
-        // 1분 윈도우 내 60건 채움.
-        for (let i = 0; i < 60; i++) {
-          await provider.record({ ...buildInput(), errorCode: `A${i}` });
-        }
-        expect(mockDb.insert).toHaveBeenCalledTimes(60);
-
-        // 추가 호출 → drop.
-        await provider.record({ ...buildInput(), errorCode: 'A60' });
-        expect(mockDb.insert).toHaveBeenCalledTimes(60);
-
-        // 1분 + 1ms 경과 → 다음 호출에서 window 회전 + 카운터 리셋.
-        dateNowSpy.mockReturnValue(baseTime + 60_001);
-        for (let i = 0; i < 60; i++) {
-          await provider.record({ ...buildInput(), errorCode: `B${i}` });
-        }
-        // 누적 INSERT = 60 (이전 분) + 60 (새 분) = 120.
-        expect(mockDb.insert).toHaveBeenCalledTimes(120);
-      } finally {
-        dateNowSpy.mockRestore();
-      }
-    });
-
-    it('errorCode 100자 초과 시 silent truncate + warn (DB INSERT 보호)', async () => {
+    it('errorCode 100자 초과 시 truncate + errorcode-truncate counter 증가 (INSERT는 진행)', async () => {
       const longCode = 'A'.repeat(150);
       await provider.record({ ...buildInput(), errorCode: longCode });
 
       const insertedValues = mockDb.insert.mock.results[0].value.values.mock.calls[0][0];
       expect(insertedValues.errorCode).toHaveLength(100);
-      expect(insertedValues.errorCode).toBe('A'.repeat(100));
+      expect(mockMetrics.incrementSystemErrorEventDrops).toHaveBeenCalledWith('errorcode-truncate');
+      // INSERT는 여전히 진행됨
+      expect(mockDb.insert).toHaveBeenCalledTimes(1);
     });
   });
 });
