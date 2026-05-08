@@ -4,7 +4,7 @@
  * 실행: `node --test scripts/__tests__/verify-route-metadata.spec.mjs`
  *
  * fixture 격리: mkdtemp 에 미니 프론트엔드 트리를 만들고 --root 플래그로 스크립트 실행.
- * 실제 코드베이스 수정 없이 Step 8a/8b FAIL 케이스 검증.
+ * 실제 코드베이스 수정 없이 Step 8a/8b/8c FAIL 케이스 검증.
  */
 
 import { test, describe } from 'node:test';
@@ -195,6 +195,46 @@ describe('Step 8b — page.tsx → routeMap', () => {
       const r = run(dir);
       assert.equal(r.code, 0, `PASS 기대. stderr=${r.stderr}`);
       assert.match(r.stdout, /PASS/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── Step 8c: orphan keys in navigation.json ──────────────────────────────────
+
+describe('Step 8c — orphan navigation.json keys', () => {
+  test('routeMap에 없는 navigation.json 키 → FAIL', () => {
+    const dir = makeFixture({
+      routes: {
+        '/': { labelKey: 'navigation.dashboard' },
+      },
+      koNavigation: { dashboard: '대시보드', deadKey: '죽은 키' }, // deadKey 는 routeMap에 없음
+      enNavigation: { dashboard: 'Dashboard', deadKey: 'Dead key' },
+    });
+    try {
+      const r = run(dir);
+      assert.equal(r.code, 1, 'FAIL 기대');
+      assert.match(r.stderr, /step-8c/);
+      assert.match(r.stderr, /deadKey/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('한쪽 locale에만 orphan 키 존재 → FAIL', () => {
+    const dir = makeFixture({
+      routes: {
+        '/': { labelKey: 'navigation.dashboard' },
+      },
+      koNavigation: { dashboard: '대시보드', koOnly: 'ko 전용 죽은 키' }, // koOnly 는 routeMap에 없음
+      enNavigation: { dashboard: 'Dashboard' }, // en에는 없음
+    });
+    try {
+      const r = run(dir);
+      assert.equal(r.code, 1, 'FAIL 기대');
+      assert.match(r.stderr, /step-8c:ko/);
+      assert.match(r.stderr, /koOnly/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -202,24 +202,28 @@ for (const pageFile of pageFiles) {
   }
 }
 
-// ── Report ────────────────────────────────────────────────────────────────────
-if (findings.length > 0) {
-  console.error('[verify-route-metadata] FAIL');
-  for (const f of findings) console.error(`  ${f}`);
-  process.exit(1);
-}
-
-// Informational: orphan keys in navigation.json not referenced by routeMap
+// ── Step 8c: orphan keys in navigation.json not referenced by routeMap ───────
+// Dead i18n code — remove keys no longer registered in routeMap.
 const routeMapNavKeys = new Set([...labelKeys]);
 const koOrphans = [...koKeys].filter((k) => !routeMapNavKeys.has(k)).sort();
 const enOrphans = [...enKeys].filter((k) => !routeMapNavKeys.has(k)).sort();
 
 const allOrphans = new Set([...koOrphans, ...enOrphans]);
-if (allOrphans.size > 0) {
-  console.log(
-    `[verify-route-metadata] INFO: ${allOrphans.size} orphan navigation key(s) not in routeMap ` +
-      `(dead i18n keys — cleanup optional): ${[...allOrphans].join(', ')}`
+for (const k of allOrphans) {
+  const inKo = koOrphans.includes(k);
+  const inEn = enOrphans.includes(k);
+  const locales = [inKo && 'ko', inEn && 'en'].filter(Boolean).join('+');
+  findings.push(
+    `[step-8c:${locales}] "navigation.${k}" in navigation.json has no routeMap entry` +
+      ` — remove dead key from messages/{${locales}}/navigation.json`
   );
+}
+
+// ── Report ────────────────────────────────────────────────────────────────────
+if (findings.length > 0) {
+  console.error('[verify-route-metadata] FAIL');
+  for (const f of findings) console.error(`  ${f}`);
+  process.exit(1);
 }
 
 console.log(
