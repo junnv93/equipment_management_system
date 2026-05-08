@@ -28,6 +28,7 @@ import { FormValues } from './BasicInfoSection';
 import usersApi, { type UserOption } from '@/lib/api/users-api';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { toCsvParam } from '@/lib/api/query-csv';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -77,7 +78,7 @@ export function StatusLocationSection({
   // undefined를 queryKey에 포함하면 캐시 키 불일치 → 정규화된 params 객체를 메모이제이션
   const managerQueryParams = useMemo<Record<string, string>>(() => {
     const params: Record<string, string> = {
-      roles: EQUIPMENT_MANAGER_ELIGIBLE_ROLES.join(','),
+      roles: toCsvParam(EQUIPMENT_MANAGER_ELIGIBLE_ROLES)!, // 상수 배열 — 항상 비어있지 않음
     };
     if (currentSite) params.site = currentSite;
     if (currentTeamId) params.teams = String(currentTeamId);

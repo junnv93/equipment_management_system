@@ -38,6 +38,7 @@ import {
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { toCsvParam } from '@/lib/api/query-csv';
 
 /**
  * 서브탭 상태 그룹 (UI-only SSOT)
@@ -264,7 +265,7 @@ function periodToDateRange(period: CheckoutPeriod): { checkoutFrom?: string; che
 export function convertFiltersToApiParams(filters: UICheckoutFilters): ApiCheckoutParams {
   // status 명시 시 해당 값 우선, 없으면 subTab 상태 목록 전체 전달
   const statuses =
-    filters.status !== 'all' ? filters.status : SUBTAB_STATUS_GROUPS[filters.subTab].join(',');
+    filters.status !== 'all' ? filters.status : toCsvParam(SUBTAB_STATUS_GROUPS[filters.subTab]);
 
   return {
     page: filters.page,
@@ -282,7 +283,7 @@ export function buildInboundOverviewQuery(
   limitPerSection: number = DEFAULT_PAGE_SIZE
 ): InboundOverviewQueryParams {
   const statusFilter =
-    filters.status !== 'all' ? filters.status : SUBTAB_STATUS_GROUPS[filters.subTab].join(',');
+    filters.status !== 'all' ? filters.status : toCsvParam(SUBTAB_STATUS_GROUPS[filters.subTab]);
 
   return {
     statusFilter,
