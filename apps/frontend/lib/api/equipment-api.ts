@@ -64,8 +64,6 @@ export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'upda
  */
 export type EquipmentQuery = Partial<EquipmentFilter> & {
   category?: string; // 레거시 호환성
-  sortBy?: string; // 레거시 호환성
-  sortOrder?: 'asc' | 'desc'; // 레거시 호환성
 };
 
 /**

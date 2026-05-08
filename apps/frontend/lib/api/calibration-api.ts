@@ -8,6 +8,7 @@ import {
 import type {
   CalibrationApprovalStatus,
   CalibrationRegisteredByRole,
+  CalibrationSortValue,
   InspectionApprovalStatus,
   InspectionResult,
   InspectionJudgment,
@@ -94,8 +95,8 @@ export interface CalibrationQuery {
   endDate?: string;
   result?: string;
   calibrationDueStatus?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  /** 결합형 정렬 (`'calibrationDate.desc'` 등). 미제공 시 backend 기본값 `calibrationDate.desc` 사용. */
+  sort?: CalibrationSortValue;
   page?: number;
   pageSize?: number;
   approvalStatus?: string;

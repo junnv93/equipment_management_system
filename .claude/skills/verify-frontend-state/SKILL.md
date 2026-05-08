@@ -389,6 +389,34 @@ grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoS
 
 3단계 승인 워크플로우는 `useCasGuardedMutation` fetch-before-mutate 패턴을 사용하고, 2-step 확인 다이얼로그는 confirm 진입 직전 최신 버전을 재조회한다. 상세: [references/step-details.md](references/step-details.md#step-40-usecasguardedmutation--2-step-dialog-ap-4--confirm-진입-전-version-재조회)
 
+### Step 41: toCsvParam SSOT — lib/api 레이어 CSV 직렬화 단일 진입점 (2026-05-08 추가)
+
+`apps/frontend/lib/api/query-csv.ts` 의 `toCsvParam` 함수가 frontend lib/api 레이어의 CSV 직렬화 SSOT. 배열 → comma-separated string 변환을 인라인 `.join(',')` 로 수행하면 빈 값 처리·trim 정규화가 누락되고 SSOT가 분산된다.
+
+**검증 grep:**
+
+```bash
+# CSV 직렬화 인라인 차단 — lib/api 레이어에서 .join(',') 0건이어야 함
+grep -rn "\.join\(['\"][,]['\"]" apps/frontend/lib/api/ \
+  --include="*.ts" \
+  | grep -v "__tests__\|\.spec\.\|query-csv\.ts"
+# 기대: 0건
+
+# toCsvParam import 경로 SSOT — lib/api 하위 파일은 './query-csv' 경유
+grep -rn "toCsvParam" apps/frontend/lib/api/ \
+  --include="*.ts" \
+  | grep -v "__tests__\|\.spec\.\|query-csv\.ts"
+# 기대: import 모두 './query-csv' 상대경로 또는 'lib/api/query-csv' 절대경로 — 다른 경로 0건
+
+# SSOT 진입점 단일 보장 — toCsvParam 함수가 query-csv.ts 에만 export
+grep -rn "export function toCsvParam\|export const toCsvParam" apps/frontend/ \
+  --include="*.ts" \
+  | grep -v "__tests__\|\.spec\."
+# 기대: query-csv.ts 1건
+```
+
+**FAIL 조건:** `apps/frontend/lib/api/` 내 `.join(',')` 1건 이상 (query-csv.ts 제외) / toCsvParam 진입점 2건 이상.
+
 ## Output Format
 
 ```markdown
@@ -434,6 +462,7 @@ grep -rn "pastRef\|futureRef\|recomputeUndoRedo\|pushHistory.*useCallback\|undoS
 | 38  | useUndoableState SSOT      | PASS/FAIL | 인라인 pastRef/futureRef 위치 |
 | 39  | mutation version 전달      | PASS/FAIL | version 파라미터 누락 API 함수 |
 | 40  | useCasGuardedMutation + 2-step | PASS/FAIL | confirm 전 version 재조회 누락 위치 |
+| 41  | toCsvParam SSOT               | PASS/FAIL | lib/api 내 `.join(',')` 인라인 위치 |
 ```
 
 ## Exceptions

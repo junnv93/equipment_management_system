@@ -207,9 +207,8 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    // sort enum + mapper SSOT (utils/equipment-import-sort-mapper.ts)
-    // 신규 결합형 `sort` 우선, 미제공 시 legacy sortBy + sortOrder 분리형 fallback.
-    const orderByClause = resolveEquipmentImportOrderBy(query.sort, query.sortBy, query.sortOrder);
+    // 결합형 sort enum → mapper SSOT (utils/equipment-import-sort-mapper.ts)
+    const orderByClause = resolveEquipmentImportOrderBy(query.sort);
 
     // Use relational query with team data
     const items = await this.db.query.equipmentImports.findMany({

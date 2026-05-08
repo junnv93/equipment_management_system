@@ -6,13 +6,10 @@ import {
   EQUIPMENT_IMPORT_SOURCE_VALUES,
   EquipmentImportSortEnum,
   type EquipmentImportSortValue,
-  type EquipmentImportSortField,
   SiteEnum,
-  SortOrderEnum,
   type EquipmentImportStatus,
   type EquipmentImportSource,
   type Site,
-  type SortOrder,
   optionalUuid,
   optionalTrimmedString,
 } from '@equipment-management/schemas';
@@ -26,19 +23,8 @@ export const equipmentImportQuerySchema = z.object({
   site: SiteEnum.optional(),
   teamId: optionalUuid(),
   search: optionalTrimmedString(VALIDATION_RULES.EXTENDED_TEXT_MAX_LENGTH, '검색어'),
-  /**
-   * 신규 결합형 sort enum (`'createdAt.desc'` 등) — 시스템 일관성 SSOT.
-   * 미제공 시 legacy sortBy + sortOrder 분리형으로 fallback.
-   * 자세한 내용은 `equipment-import-sort-mapper.ts`.
-   */
+  /** 결합형 sort enum (`'createdAt.desc'` 등) — `equipment-import-sort-mapper.ts` SSOT. */
   sort: EquipmentImportSortEnum.optional(),
-  /** @deprecated 결합형 `sort` 권장. frontend migration 완료 시 제거 (tech-debt 등록). */
-  sortBy: z
-    .enum(['createdAt', 'usagePeriodStart', 'usagePeriodEnd', 'status'])
-    .optional()
-    .default('createdAt'),
-  /** @deprecated 결합형 `sort` 권장. frontend migration 완료 시 제거 (tech-debt 등록). */
-  sortOrder: SortOrderEnum.optional().default('desc'),
 });
 
 export type EquipmentImportQueryInput = z.infer<typeof equipmentImportQuerySchema>;
@@ -92,31 +78,12 @@ export class EquipmentImportQueryDto {
   search?: string;
 
   @ApiProperty({
-    description:
-      '신규 결합형 정렬 기준 (`field.dir`, 예: `createdAt.desc`) — 시스템 일관성 SSOT. 미제공 시 legacy sortBy + sortOrder 사용',
+    description: '결합형 정렬 기준 (`field.dir`, 예: `createdAt.desc`)',
     enum: EquipmentImportSortEnum.options,
     example: 'createdAt.desc',
     required: false,
   })
   sort?: EquipmentImportSortValue;
-
-  /** @deprecated 결합형 `sort` 권장. */
-  @ApiProperty({
-    description: '@deprecated 정렬 기준 (legacy 분리형 — 결합형 `sort` 사용 권장)',
-    enum: ['createdAt', 'usagePeriodStart', 'usagePeriodEnd', 'status'],
-    default: 'createdAt',
-    required: false,
-  })
-  sortBy?: EquipmentImportSortField;
-
-  /** @deprecated 결합형 `sort` 권장. */
-  @ApiProperty({
-    description: '@deprecated 정렬 순서 (legacy 분리형 — 결합형 `sort` 사용 권장)',
-    enum: SortOrderEnum.options,
-    default: 'desc',
-    required: false,
-  })
-  sortOrder?: SortOrder;
 }
 
 // ============================================================================

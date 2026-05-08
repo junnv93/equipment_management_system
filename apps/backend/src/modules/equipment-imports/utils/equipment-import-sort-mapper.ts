@@ -24,18 +24,10 @@ export const EQUIPMENT_IMPORT_SORT_DEFAULT: {
 };
 
 /**
- * sort 결합형 우선, fallback to legacy sortBy + sortOrder 분리형.
- *
- * `sort`(`'createdAt.desc'` 등)가 제공되면 그것 사용 — 신 클라이언트.
- * 미제공 시 legacy `sortBy` + `sortOrder` 분리형 사용 — 구 클라이언트 backwards compat.
- *
- * 둘 다 미제공 시 `EQUIPMENT_IMPORT_SORT_DEFAULT` 사용.
+ * 결합형 `sort`(`'createdAt.desc'` 등) 파싱.
+ * 미제공 시 `EQUIPMENT_IMPORT_SORT_DEFAULT` 사용.
  */
-export function resolveEquipmentImportOrderBy(
-  sort: EquipmentImportSortValue | undefined,
-  legacySortBy: EquipmentImportSortField | undefined,
-  legacySortOrder: SortDirection | undefined
-): SQL {
+export function resolveEquipmentImportOrderBy(sort: EquipmentImportSortValue | undefined): SQL {
   let field: EquipmentImportSortField;
   let direction: SortDirection;
 
@@ -43,9 +35,6 @@ export function resolveEquipmentImportOrderBy(
     const parsed = parseSortValue(sort);
     field = parsed.field as EquipmentImportSortField;
     direction = parsed.direction;
-  } else if (legacySortBy) {
-    field = legacySortBy;
-    direction = legacySortOrder ?? 'desc';
   } else {
     field = EQUIPMENT_IMPORT_SORT_DEFAULT.field;
     direction = EQUIPMENT_IMPORT_SORT_DEFAULT.direction;
