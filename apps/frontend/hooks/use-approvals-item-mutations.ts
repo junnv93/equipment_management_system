@@ -24,7 +24,7 @@ interface UseApprovalsItemMutationsOptions {
 
 export function useApprovalsItemMutations({
   activeTab,
-  userRole,
+  userRole: _userRole,
   approvalsApi,
   onStartProcessing,
   onCompleteTransition,
@@ -39,13 +39,13 @@ export function useApprovalsItemMutations({
 
   const getInvalidationKeys = useCallback(
     () => [
-      queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.countsAll,
       queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    [activeTab, userRole]
+    [activeTab]
   );
 
   const approveMutation = useOptimisticMutation<

@@ -114,7 +114,18 @@ export function ApprovalCommentDialog(props: ApprovalCommentDialogProps) {
               value={comment}
               onChange={(e) => onCommentChange(e.target.value)}
               className="min-h-[100px]"
+              aria-required="true"
+              aria-invalid={!comment.trim()}
+              aria-describedby={`${labelHtmlFor}-hint`}
             />
+            <p
+              id={`${labelHtmlFor}-hint`}
+              role="alert"
+              className="text-xs text-destructive"
+              aria-live="polite"
+            >
+              {!comment.trim() ? t('commentDialog.requiredHint') : null}
+            </p>
           </div>
         </div>
         <DialogFooter>

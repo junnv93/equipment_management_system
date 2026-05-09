@@ -29,7 +29,7 @@ interface UseApprovalsBulkMutationsOptions {
 
 export function useApprovalsBulkMutations({
   activeTab,
-  userRole,
+  userRole: _userRole,
   approvalsApi,
   selection,
   onStartProcessingMany,
@@ -44,13 +44,13 @@ export function useApprovalsBulkMutations({
 
   const getInvalidationKeys = useCallback(
     () => [
-      queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.countsAll,
       queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    [activeTab, userRole]
+    [activeTab]
   );
 
   const bulkApproveMutation = useOptimisticMutation<

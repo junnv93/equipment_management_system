@@ -179,7 +179,8 @@
   "commentDialog": {
     "titleFallback": "승인 코멘트",
     "label": "검토 코멘트",
-    "placeholderFallback": "검토 내용을 입력하세요"
+    "placeholderFallback": "검토 내용을 입력하세요",
+    "requiredHint": "검토 코멘트를 입력해주세요"
   },
   "bulkCommentDialog": {
     "titleFallback": "일괄 승인 코멘트",

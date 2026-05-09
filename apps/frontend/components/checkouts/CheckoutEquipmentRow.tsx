@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
-import type { OverflowAction } from '@/lib/types/checkout-ui';
+import type { OverflowAction, EquipmentRowData } from '@/lib/types/checkout-ui';
+export type { EquipmentRowData };
 import {
   CHECKOUT_ITEM_ROW_TOKENS,
   ANIMATION_PRESETS,
@@ -23,31 +24,12 @@ import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import {
   CheckoutStatusValues as CSVal,
   type CheckoutAction,
-  type CheckoutPurpose,
-  type CheckoutStatus,
-  type NextStepDescriptor,
   type UserRole,
-  type UserSelectableCheckoutPurpose,
 } from '@equipment-management/schemas';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export interface EquipmentRowData {
-  equipmentId: string;
-  equipmentName: string;
-  managementNumber: string;
-  purpose: CheckoutPurpose;
-  status: CheckoutStatus;
-  checkoutType: UserSelectableCheckoutPurpose;
-  userName: string;
-  checkoutId: string;
-  expectedReturnDate: string | undefined;
-  destination: string | undefined;
-  canApproveItem: boolean;
-  canBorrowerApproveItem: boolean;
-  canReturnItem: boolean;
-  descriptor: NextStepDescriptor | undefined;
-}
+// EquipmentRowData is defined in @/lib/types/checkout-ui and re-exported above.
 
 interface CheckoutEquipmentRowProps {
   row: EquipmentRowData;

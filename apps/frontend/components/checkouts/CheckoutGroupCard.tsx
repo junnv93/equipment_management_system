@@ -25,6 +25,7 @@ import {
 } from '@/hooks/use-checkout-card-mutations';
 import {
   CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
   type CheckoutAction,
   type UserSelectableCheckoutPurpose,
 } from '@equipment-management/schemas';
@@ -116,7 +117,7 @@ function CheckoutGroupCard({
           managementNumber: equip.managementNumber,
           purpose: checkout.purpose,
           status: checkout.status,
-          checkoutType: (checkout.purpose ?? 'calibration') as UserSelectableCheckoutPurpose,
+          checkoutType: (checkout.purpose ?? CPVal.CALIBRATION) as UserSelectableCheckoutPurpose,
           userName: checkout.user?.name || unknownUserLabel,
           checkoutId: checkout.id,
           expectedReturnDate: checkout.expectedReturnDate,

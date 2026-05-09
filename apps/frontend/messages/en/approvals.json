@@ -179,7 +179,8 @@
   "commentDialog": {
     "titleFallback": "Approval Comment",
     "label": "Review Comment",
-    "placeholderFallback": "Enter review comment"
+    "placeholderFallback": "Enter review comment",
+    "requiredHint": "Please enter a review comment"
   },
   "bulkCommentDialog": {
     "titleFallback": "Bulk Approval Comment",
