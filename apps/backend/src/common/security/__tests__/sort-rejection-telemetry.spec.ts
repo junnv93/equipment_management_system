@@ -1,6 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { SortRejectionTelemetryService } from '../sort-rejection-telemetry.service';
-import type { SortRejectionEvent } from '../contract';
+import { SortRejectionEvent } from '../contract';
+
+/** spec-only — service private state 접근용 (sweep 분기 검증). */
+interface ServicePrivate {
+  recentRejections: Map<string, number>;
+  currentMinuteCount: number;
+  currentMinuteWindow: number;
+}
 
 /**
  * SortRejectionTelemetryService 단위 spec.
@@ -135,20 +142,60 @@ describe('SortRejectionTelemetryService', () => {
   });
 
   describe('Map size sweep — 메모리 누수 방지', () => {
-    it('1000개 초과 시 stale 항목 정리 (1분 경과)', () => {
-      // 1000개 unique key 등록
-      for (let i = 0; i < 1000; i++) {
-        service.recordSortRejection({ ...baseEvent, invalidValue: `key-${i}` });
-      }
-      // 분당 rate limit (60) 초과로 일부 drop 됐을 것이지만 dedupe 트래커에는 처음 60개만 들어감.
-      // 실제로는 rate limit 으로 인해 60개만 등록됨 — sweep 트리거 안 됨.
+    /**
+     * sweep 분기는 1000개 unique key 시점에서 발동되므로 rate limit (60/분) 하에서는
+     * 일반 호출만으로 17분+ advanceTimers 가 필요. spec 효율을 위해 service private state 에
+     * 직접 stale 항목을 주입한 뒤 sweep 분기 진입을 검증한다.
+     */
+    it('1000개 도달 시 stale 항목 (1분 경과) 정리', () => {
+      const privateState = service as unknown as ServicePrivate;
+      const oldTimestamp = Date.now() - 120_000; // 2분 전 (stale)
 
-      // 다음 분으로 이동 (rate limit 리셋)
-      jest.advanceTimersByTime(60_000);
-      // 1001번째 unique key → 이전 1000개가 stale 이므로 sweep 트리거
-      // (rate limit 60건 으로 인해 실제 등록은 60건씩이지만 sweep 동작 자체 검증)
-      service.recordSortRejection({ ...baseEvent, invalidValue: 'after-sweep' });
-      expect(warnSpy).toHaveBeenCalled();
+      // 1000개 stale entry 직접 주입
+      for (let i = 0; i < 1000; i++) {
+        privateState.recentRejections.set(`stale-key-${i}`, oldTimestamp);
+      }
+      expect(privateState.recentRejections.size).toBe(1000);
+
+      // 신규 호출 트리거 → sweep 분기 진입 (size >= 1000) → stale 1000개 제거 후 신규 1개 add
+      service.recordSortRejection({ ...baseEvent, invalidValue: 'fresh-after-sweep' });
+
+      // 정리 완료 — stale 키 0건 + 신규 키 1건만 잔존
+      expect(privateState.recentRejections.size).toBe(1);
+      expect(privateState.recentRejections.has('/equipment|fresh-after-sweep')).toBe(true);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('1000개 미달 시 sweep 미발동 — 정상 add 진행', () => {
+      const privateState = service as unknown as ServicePrivate;
+      const recentTimestamp = Date.now() - 1_000; // 1초 전 (still fresh)
+
+      // 999개 fresh entry 주입 (sweep threshold 1000 미달)
+      for (let i = 0; i < 999; i++) {
+        privateState.recentRejections.set(`fresh-key-${i}`, recentTimestamp);
+      }
+
+      service.recordSortRejection({ ...baseEvent, invalidValue: 'add-without-sweep' });
+
+      // sweep 미발동 — 999 + 1 = 1000 (정상 add)
+      expect(privateState.recentRejections.size).toBe(1000);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('1000개 도달 + 모두 fresh 인 경우 sweep 호출되어도 항목 유지', () => {
+      const privateState = service as unknown as ServicePrivate;
+      const recentTimestamp = Date.now() - 1_000; // 1초 전 — dedupeWindow 60s 미만
+
+      // 1000개 fresh entry 주입
+      for (let i = 0; i < 1000; i++) {
+        privateState.recentRejections.set(`fresh-key-${i}`, recentTimestamp);
+      }
+
+      service.recordSortRejection({ ...baseEvent, invalidValue: 'fresh-add' });
+
+      // sweep 진입했지만 모두 fresh → 삭제 0건 + 신규 1건 add → 1001개
+      expect(privateState.recentRejections.size).toBe(1001);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
     });
   });
 });
