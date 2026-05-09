@@ -10,13 +10,15 @@
 | [archive-infra.md](./archive-infra.md) | E2E 인프라 / 테스트 / Legacy | 4개 차수 + Legacy 섹션들 |
 | [archive-export.md](./archive-export.md) | 양식 Export / DOCX | 4개 차수 |
 | [archive-design.md](./archive-design.md) | UI/UX 디자인 리뷰 | 3개 차수 |
-| [archive-domain.md](./archive-domain.md) | 도메인 기능 (장비/점검/팀/SW) | 12개 차수 |
+| [archive-domain.md](./archive-domain.md) | 도메인 기능 (장비/점검/팀/SW) | 14개 차수 |
 
 ## 섹션 인덱스
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| 2026-05-10 — approval-row-memo-i18n-ci-cache | [archive-domain.md](./archive-domain.md) | ApprovalRow memo + ApprovalRowItem + ApprovalsClient stable callback (4-layer 완성) + dep-audit pnpm cache + HeroKPI i18n. M-12/12 |
 | 2026-05-10 — verify-i18n-step8-automation-promotion | [archive-infra.md](./archive-infra.md) | verify-route-metadata.mjs Phase3 + pre-push gate. i18n-checks.md Step 8 구 node-e 인라인 → 스크립트 참조. Step 8c orphan 탐지 공식 문서화. M-1~M-6 6/6 |
+| 2026-04-29 — Checkouts V3 Sprint 1(1.2~1.5) + Sprint 3 · Perf&Cache (7종) | [archive-domain.md](./archive-domain.md) | Sprint 1: descriptor-phase-fields/meta-fail-closed/legacy-block-removal/fsm-satisfies. Sprint 3: inbound-bff/query-keys-view/memo-boundary |
 | NC 상세 가이던스 Phase 1~4 (4건, 2026-04-22) | [archive-design.md](./archive-design.md) | SECTION_RHYTHM/CALLOUT_TOKENS, NC_WORKFLOW_GUIDANCE_TOKENS 11 state×role, URGENT_BADGE 승격, GuidanceCallout + deriveGuidance + NCDetailClient 2-섹션 구조화 |
 | 78차 — 반출입 관리 페이지 디자인/IA 개선 (7건, 2026-04-21) | [archive-design.md](./archive-design.md) | primitives 2xs·MICRO_TYPO, EmptyState 3-variant, MiniProgress·RentalFlow 칩, 반입탭 독립페이지네이션, alertRing elevation, PageHeader onboardingHint, STAGGER_PRESETS |
 | NC 디자인 리뷰 후속 (9건, 2026-04-21) | [archive-design.md](./archive-design.md) | terminal 색상버그, 스태거SSOT, i18n management.* 제거, aria 3건(aria-pressed/hidden/label), NC_DOCUMENTS 토큰, NC_ELEVATION 3단계, 온보딩 강화, 모바일 카드, NC_SPACING_TOKENS |

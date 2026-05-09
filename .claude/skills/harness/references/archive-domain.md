@@ -2,6 +2,13 @@
 
 ---
 
+## ~~2026-05-10 — approval-row-memo-i18n-ci-cache~~ ✅ 완료 (2026-05-10)
+
+> ApprovalRow `memo()` wrap + ApprovalList `ApprovalRowItem` useCallback 안정화 + ApprovalsClient `handleRejectForList/handleViewDetail` stable callback (4-layer memo 체인 완성) + dep-audit pnpm cache CI 최적화 (node_modules dead cache 제거) + HeroKPI sr-only 한국어 하드코딩 i18n化 (`checkouts.heroKpi.trendUp/Down/Flat`).
+> 검증: M-12/12 PASS, S-2/2 PASS (iter 1)
+
+---
+
 ## ~~2026-05-09 — calibration-cert-phase-a-architecture-closure (전 갭 완료)~~ ✅
 
 > 6 갭 모두 closure (sprint `calibration-cert-phase-a-architecture-closure` + `phase-a-arch-followup` + `phase-c-followup-closure`).
@@ -23,6 +30,22 @@
 > checkout-i18n-tab-badge-tokens: CHECKOUT_TAB_BADGE_TOKENS.alert + overdueClear i18n.
 > checkout-rhythm-focus-inbound-tokens: FOCUS_TOKENS.ringCurrent + CHECKOUT_INBOUND_SECTION_TOKENS.
 > checkout-deprecated-token-removal: @typescript-eslint/no-deprecated eslint guard 적용.
+
+---
+
+## ~~2026-04-29 — Checkouts V3 Sprint 1 · Authority 수술 (1.2~1.5) + Sprint 3 · Perf & Cache~~ ✅ 전체 완료
+
+> **Sprint 1 (Authority 수술 4종)**: `checkout-descriptor-phase-fields` (1.2) + `checkout-meta-fail-closed` (1.3) + `legacy-actions-block-removal` (1.4) + `checkout-fsm-exhaustive-satisfies` (1.5).
+> - 1.2: RentalPhase + nextStepIndex 등 4 필드 스키마 추가, rental-phase.ts SSOT 완성.
+> - 1.3: `meta.availableActions` fail-closed — `?? false` 전환 + E2E 12 시나리오 PASS.
+> - 1.4: `LegacyActionsBlock` 완전 삭제 + `isNextStepPanelEnabled` default ON + C-1 권한 판정 불일치 해소.
+> - 1.5: `satisfies Record<CheckoutStatus, ...>` 전수 전환 — 신규 status 추가 시 컴파일 타임 검출.
+>
+> **Sprint 3 (Perf & Cache 3종)**: `checkout-inbound-bff-overview` (3.1) + `checkout-query-keys-view-resource-refactor` (3.2) + `checkout-memo-boundary-optimization` (3.3~3.5).
+> - 3.1: `GET /checkouts/inbound-overview` BFF 집계 엔드포인트 신설 (3섹션 메타+sparkline 단일 응답).
+> - 3.2: `queryKeys.checkouts.view.*` / `.resource.*` 계층 재편 (3.1과 같은 PR 병합).
+> - 3.3~3.5: `useMemo` deps 정리 + `memo()` boundary 보강 + stagger 12-row 상한.
+> **상세**: `.claude/contracts/completed/checkout-{descriptor-phase-fields,meta-fail-closed,legacy-actions-block-removal,fsm-exhaustive-satisfies,inbound-bff-overview,query-keys-view-resource-refactor,memo-boundary-optimization}.md`
 
 ---
 
