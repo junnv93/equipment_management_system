@@ -302,6 +302,7 @@ export interface ReturnCheckoutDto {
     equipmentId: string;
     conditionAfter: string;
   }>; // 장비별 반입 후 상태 기록
+  attachmentIds?: string[]; // 반입 검사 사진 document UUID 목록 (pre-upload 패턴)
 }
 
 export interface ApproveReturnDto {

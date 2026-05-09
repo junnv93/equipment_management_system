@@ -383,9 +383,11 @@ grep -c "attachmentIds" \
 **FAIL:** `dangerouslySetInnerHTML` 잔존.
 
 ```bash
+# JSX 코드(비주석)에서 dangerouslySetInnerHTML 실사용 0건 확인 (주석 제외)
 grep -n "dangerouslySetInnerHTML" \
-  apps/frontend/components/checkouts/HandoverQRDisplay.tsx 2>/dev/null
-# PASS: 0건
+  apps/frontend/components/checkouts/HandoverQRDisplay.tsx 2>/dev/null \
+  | grep -v "^\s*//\|^\s*\*\|{/\*"
+# PASS: 0건 (주석만 남으면 정상)
 grep -n "qrDataUrl\|toDataURL" \
   apps/frontend/components/checkouts/HandoverQRDisplay.tsx 2>/dev/null
 # PASS: 1건 이상
