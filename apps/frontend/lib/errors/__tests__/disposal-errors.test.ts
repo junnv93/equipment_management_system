@@ -33,12 +33,12 @@ describe('disposal error mapper', () => {
     );
   });
 
-  it('falls back to the Error message for unmapped errors', () => {
+  it('falls back to errors.genericError i18n key for unmapped errors (ADR-0008)', () => {
     const t = jest.fn((key: string) => key);
 
     expect(mapDisposalErrorToToast(new Error('backend message'), t)).toEqual({
       title: 'errors.title',
-      description: 'backend message',
+      description: 'errors.genericError',
     });
   });
 });
