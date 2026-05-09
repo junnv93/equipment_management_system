@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DisposalService } from '../services/disposal.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
@@ -10,7 +9,6 @@ import {
   approveDisposalSchema,
 } from '../dto/disposal.dto';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
-import { ErrorCode } from '@equipment-management/schemas';
 
 const DRIZZLE_INSTANCE = 'DRIZZLE_INSTANCE';
 const MIN = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
@@ -128,7 +126,8 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
   });
 
   describe('Zod schema boundary — reviewDisposalSchema.opinion', () => {
-    const baseValid = { version: 1, decision: 'approve' as const };
+    // min constraint는 reject 분기에만 적용 (discriminatedUnion — approve는 optional)
+    const baseValid = { version: 1, decision: 'reject' as const };
 
     it.each([
       ['empty', ''],
@@ -177,10 +176,11 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
   });
 
   // ============================================================================
-  // Layer 2: Service layer fail-close (approveDisposal reject 분기)
+  // Layer 2: reviewDisposal 비즈니스 로직 — opinion trim + 이벤트 전파
+  // opinion min-check는 reviewDisposalSchema discriminatedUnion(ZodValidationPipe)이 담당
   // ============================================================================
 
-  describe('reviewDisposal reject branch — service layer fail-close', () => {
+  describe('reviewDisposal reject branch — business logic', () => {
     const equipmentId = 'eq-1234-5678-uuid';
     const reviewedBy = 'reviewer-uuid';
 
@@ -205,37 +205,6 @@ describe('DisposalService — defense-in-depth boundary matrix', () => {
         teamId: 'team-1',
       });
     });
-
-    it.each([
-      ['undefined opinion', undefined],
-      ['empty string', ''],
-      [`whitespace only ${MIN} chars`, ' '.repeat(MIN)],
-      [`${MIN - 1} chars`, 'a'.repeat(MIN - 1)],
-      [`whitespace + ${MIN - 1} chars (trim 후 below min)`, ` ${'a'.repeat(MIN - 1)} `],
-    ])(
-      'fail-close %s — throws BadRequestException with code DISPOSAL_REJECT_COMMENT_REQUIRED',
-      async (_label, opinion) => {
-        const dto = {
-          version: 1,
-          decision: 'reject' as const,
-          opinion,
-        };
-
-        try {
-          await service.reviewDisposal(equipmentId, dto as never, reviewedBy);
-          fail('expected BadRequestException');
-        } catch (e) {
-          expect(e).toBeInstanceOf(BadRequestException);
-          expect(e).toMatchObject({
-            response: { code: ErrorCode.DisposalRejectCommentRequired },
-          });
-        }
-
-        expect(mockDb.query.disposalRequests.findFirst).not.toHaveBeenCalled();
-        expect(mockDb.transaction).not.toHaveBeenCalled();
-        expect(updateWithVersionSpy).not.toHaveBeenCalled();
-      }
-    );
 
     it('reject 통과 — rejectionReason 및 이벤트 reason에 trim된 opinion 사용', async () => {
       const opinion = ` ${'a'.repeat(MIN)} `;
