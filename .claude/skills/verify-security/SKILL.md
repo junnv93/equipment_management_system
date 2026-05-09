@@ -336,6 +336,41 @@ grep -B 1 "@Inject(SORT_REJECTION_TELEMETRY\|@Inject(SYSTEM_ERROR_EVENT_PROVIDER
 **관련 sprint**: `three-low-tech-debt-closure` (2026-05-09) — sort-rejection-telemetry 본체.
 **자동화 승격 후보 (Step 8 Phase 3)**: ts-morph 로 service class export + @Injectable 데코레이터 + 모든 throw 위치 추적 가능.
 
+### Step 19 — SentryErrorSink captureException 강제 (2026-05-09 추가)
+
+**배경**: `SentryErrorSink.emit()`이 `captureMessage(..., {level:'error'})` 를 사용하면 Sentry가
+해당 이벤트를 "Message" 타입으로 분류 — errorCode 기반 fingerprint 그루핑 불가.
+`captureException(new Error(...))` + `err.name = errorCode` 패턴이 Exception 타입으로 올바르게
+분류되어 errorCode별 이슈 그루핑이 동작한다 (2026-05-09 시니어 자기검토 #1 수정).
+
+**검증 명령**:
+
+```bash
+# sentry-error-sink.ts 에 captureMessage 0건 강제 (주석 라인 제외)
+grep "captureMessage" \
+  apps/backend/src/modules/dashboard/health-providers/sentry-error-sink.ts | \
+  grep -vE "^\s*//" | wc -l
+# 기대값: 0
+
+# captureException 1건 이상 존재
+grep -c "captureException" \
+  apps/backend/src/modules/dashboard/health-providers/sentry-error-sink.ts
+# 기대값: ≥ 1
+
+# emit() 본체에서 err.name 설정 확인 (errorCode 기반 그루핑 SSOT)
+awk '/async emit/,/^  \}$/' \
+  apps/backend/src/modules/dashboard/health-providers/sentry-error-sink.ts | \
+  grep "err\.name"
+# 기대값: 1줄 출력 (err.name = event.errorCode 또는 유사 패턴)
+```
+
+**위반 시 수정 지시**:
+- `captureMessage` 발견: `captureException(err, {tags:{errorCode,...}})` 로 교체.
+  `const err = new Error(...); err.name = event.errorCode;` 패턴 선행 필수.
+- `err.name` 미설정: Sentry가 `Error` 기본 이름으로 그루핑 → errorCode 분산 이슈 생성.
+
+**관련 sprint**: `system-health-should-4items-closure` (2026-05-09) + 시니어 자기검토.
+
 
 ## Exceptions
 
