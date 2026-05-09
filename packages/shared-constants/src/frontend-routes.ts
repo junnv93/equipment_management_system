@@ -142,6 +142,14 @@ export const FRONTEND_ROUTES = {
     MANAGE: '/checkouts/manage',
     DETAIL: (id: string) => `/checkouts/${id}`,
     CHECK: (id: string) => `/checkouts/${id}/check`,
+    /**
+     * QR 핸드오버 스캔 후 condition-check 페이지 + step 자동 prefill 딥링크.
+     * `/handover?token=...` verify 성공 후 redirect 시 사용.
+     *
+     * @param step HandoverTokenPurpose — 'borrower_receive' | 'borrower_return' | 'lender_receive'
+     */
+    CHECK_WITH_STEP: (id: string, step: string) =>
+      `/checkouts/${id}/check?step=${encodeURIComponent(step)}`,
     RETURN: (id: string) => `/checkouts/${id}/return`,
     PENDING_CHECKS: '/checkouts/pending-checks',
     /**

@@ -57,6 +57,8 @@ export const CheckoutErrorCode = {
   BORROWER_APPROVE_RENTAL_ONLY: 'CHECKOUT_BORROWER_APPROVE_RENTAL_ONLY',
   /** 사용 부서 기술책임자만 1차 승인/반려 가능 */
   BORROWER_TEAM_ONLY: 'CHECKOUT_BORROWER_TEAM_ONLY',
+  /** 첨부 문서 소유권/타입/중복 링크 위반 (attachmentIds 검증 실패) */
+  INVALID_ATTACHMENT: 'CHECKOUT_INVALID_ATTACHMENT',
 } as const;
 
 export type CheckoutErrorCode = (typeof CheckoutErrorCode)[keyof typeof CheckoutErrorCode];

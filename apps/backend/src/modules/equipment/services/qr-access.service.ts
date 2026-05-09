@@ -12,6 +12,13 @@ import {
 import { EquipmentStatusEnum, CheckoutStatusEnum } from '@equipment-management/schemas';
 import type { JwtUser } from '../../../types/auth';
 
+/** resolveAllowedActions 반환 타입 — actions + confirm_handover_* 에 필요한 checkoutId */
+export interface QRAccessResult {
+  actions: QRAllowedAction[];
+  /** confirm_handover_receive / confirm_handover_return 액션 존재 시 해당 checkoutId */
+  handoverCheckoutId?: string;
+}
+
 /**
  * QR 모바일 랜딩에서 현재 사용자가 장비에 대해 수행 가능한 액션 목록을 계산.
  *
@@ -35,9 +42,10 @@ export class QRAccessService {
   async resolveAllowedActions(
     equipment: Pick<Equipment, 'id' | 'site' | 'status'>,
     user: JwtUser
-  ): Promise<QRAllowedAction[]> {
+  ): Promise<QRAccessResult> {
     const actions = new Set<QRAllowedAction>();
     const roles = user.roles ?? [];
+    let handoverCheckoutId: string | undefined;
 
     // 1. 기본 뷰 액션 — VIEW_EQUIPMENT 권한자 (cross-site 허용)
     if (userHasPermission(roles, Permission.VIEW_EQUIPMENT)) {
@@ -65,8 +73,18 @@ export class QRAccessService {
       actions.add('report_nc');
     }
 
+    // 5. 인수인계 확인 — rental 4-step handover 단계 (cross-site 허용)
+    const handoverInfo = await this.resolveHandoverActions(equipment.id, user.userId);
+    if (handoverInfo) {
+      actions.add(handoverInfo.action);
+      handoverCheckoutId = handoverInfo.checkoutId;
+    }
+
     // QR_ACTION_VALUES 순서대로 정렬 (프론트 표시 우선순위는 QR_ACTION_PRIORITY로 별도 처리)
-    return QR_ACTION_VALUES.filter((a) => actions.has(a));
+    return {
+      actions: QR_ACTION_VALUES.filter((a) => actions.has(a)),
+      handoverCheckoutId,
+    };
   }
 
   /**
@@ -98,6 +116,59 @@ export class QRAccessService {
         `active checkout 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${error instanceof Error ? error.message : String(error)}`
       );
       return false;
+    }
+  }
+
+  /**
+   * rental 4-step 인수인계 단계에서 수행 가능한 handover action을 도출.
+   *
+   * - `confirm_handover_receive`: 본인이 requester(borrower) + status `lender_checked`
+   *   → borrower가 장비를 실제 수령하고 상태를 확인하는 단계
+   * - `confirm_handover_return`: 본인이 approver(lender, 현재 sprint scope) + status `borrower_returned`
+   *   → lender가 반환된 장비를 최종 수령하고 상태를 확인하는 단계
+   *
+   * 주의: lenderTeamId 다중 멤버 발급은 후속 sprint (현재 approverId만 확인).
+   */
+  private async resolveHandoverActions(
+    equipmentId: string,
+    userId: string
+  ): Promise<{ action: QRAllowedAction; checkoutId: string } | null> {
+    try {
+      const rows = await this.db
+        .select({
+          id: checkouts.id,
+          status: checkouts.status,
+          requesterId: checkouts.requesterId,
+          approverId: checkouts.approverId,
+        })
+        .from(checkouts)
+        .innerJoin(checkoutItems, eq(checkoutItems.checkoutId, checkouts.id))
+        .where(
+          and(
+            eq(checkoutItems.equipmentId, equipmentId),
+            inArray(checkouts.status, [
+              CheckoutStatusEnum.enum.lender_checked,
+              CheckoutStatusEnum.enum.borrower_returned,
+            ])
+          )
+        )
+        .limit(1);
+
+      if (rows.length === 0) return null;
+      const row = rows[0];
+
+      if (row.status === CheckoutStatusEnum.enum.lender_checked && row.requesterId === userId) {
+        return { action: 'confirm_handover_receive', checkoutId: row.id };
+      }
+      if (row.status === CheckoutStatusEnum.enum.borrower_returned && row.approverId === userId) {
+        return { action: 'confirm_handover_return', checkoutId: row.id };
+      }
+      return null;
+    } catch (error) {
+      this.logger.warn(
+        `handover action 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
     }
   }
 }

@@ -20,8 +20,6 @@ interface HandoverQRDisplayProps {
   checkoutId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 선택 — 체크아웃 상태로부터 자동 도출되지만 UI 라벨 선택에 사용. */
-  purpose?: HandoverTokenPurpose;
 }
 
 /**
@@ -35,14 +33,10 @@ interface HandoverQRDisplayProps {
  *
  * **condition-check 로직 렌더 0건** — QR은 경로만 전달.
  */
-export function HandoverQRDisplay({
-  checkoutId,
-  open,
-  onOpenChange,
-  purpose,
-}: HandoverQRDisplayProps) {
+export function HandoverQRDisplay({ checkoutId, open, onOpenChange }: HandoverQRDisplayProps) {
   const t = useTranslations('qr.handover');
-  const [svgMarkup, setSvgMarkup] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [issuedPurpose, setIssuedPurpose] = useState<HandoverTokenPurpose | null>(null);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'expired' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [remainingSec, setRemainingSec] = useState(0);
@@ -60,28 +54,32 @@ export function HandoverQRDisplay({
     setPhase('loading');
     setErrorMessage(null);
     try {
-      const issued = await checkoutApi.issueHandoverToken(checkoutId, purpose);
+      // purpose는 백엔드가 checkout 상태에서 자동 도출 — 프론트 mirror 금지 (SSOT)
+      const issued = await checkoutApi.issueHandoverToken(checkoutId);
       expiresAtRef.current = new Date(issued.expiresAt).getTime();
+      setIssuedPurpose(issued.purpose);
 
       const url = buildHandoverQRUrl(issued.token, appUrl);
-      const svg = await QRCode.toString(url, {
-        type: 'svg',
+      // toDataURL → base64 PNG: img src에 그대로 사용 가능 (dangerouslySetInnerHTML 불필요)
+      const dataUrl = await QRCode.toDataURL(url, {
         errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
         margin: QR_CONFIG.margin,
+        width: 240,
       });
-      setSvgMarkup(svg);
+      setQrDataUrl(dataUrl);
       setPhase('ready');
     } catch (error) {
       setPhase('error');
       setErrorMessage(error instanceof Error ? error.message : String(error));
     }
-  }, [checkoutId, purpose, appUrl]);
+  }, [checkoutId, appUrl]);
 
   // 다이얼로그 오픈 시 토큰 발급, 닫기 시 상태 초기화.
   useEffect(() => {
     if (!open) {
       setPhase('idle');
-      setSvgMarkup(null);
+      setQrDataUrl(null);
+      setIssuedPurpose(null);
       expiresAtRef.current = null;
       return;
     }
@@ -108,7 +106,9 @@ export function HandoverQRDisplay({
         <DialogHeader>
           <DialogTitle>{t('dialogTitle')}</DialogTitle>
           <DialogDescription>
-            {purpose ? t(`purpose.${purpose}` as Parameters<typeof t>[0]) : t('dialogDescription')}
+            {issuedPurpose
+              ? t(`purpose.${issuedPurpose}` as Parameters<typeof t>[0])
+              : t('dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -131,18 +131,19 @@ export function HandoverQRDisplay({
             </div>
           )}
 
-          {phase === 'ready' && svgMarkup && (
+          {phase === 'ready' && qrDataUrl && (
             <>
               <div
                 className="rounded-md border border-border bg-background p-3"
                 style={{ width: 240 + 24, height: 240 + 24 }}
-                role="img"
-                aria-label={t('qrAltText')}
               >
-                <div
-                  className="[&_svg]:h-full [&_svg]:w-full"
-                  style={{ width: 240, height: 240 }}
-                  dangerouslySetInnerHTML={{ __html: svgMarkup }}
+                {/* img src에 data URL 사용 — dangerouslySetInnerHTML 없이 XSS 위험 0 */}
+                <img
+                  src={qrDataUrl}
+                  alt={t('qrAltText')}
+                  width={240}
+                  height={240}
+                  className="block"
                 />
               </div>
               <p className="text-sm font-medium text-foreground tabular-nums" aria-live="polite">

@@ -19,6 +19,7 @@ import { softwareValidations } from './software-validations';
 import { intermediateInspections } from './intermediate-inspections';
 import { equipmentSelfInspections } from './equipment-self-inspections';
 import { nonConformances } from './non-conformances';
+import { conditionChecks } from './condition-checks';
 import { users } from './users';
 
 /**
@@ -53,6 +54,10 @@ export const documents = pgTable(
     }),
     // 부적합(NC) 첨부 — QR 현장 사진, 원인 분석 보고서 등. NC 삭제 시 cascade(첨부도 함께 소프트 삭제는 서비스 레이어 책임).
     nonConformanceId: uuid('non_conformance_id').references(() => nonConformances.id, {
+      onDelete: 'cascade',
+    }),
+    // 상태 확인 첨부 — 반출/반입 4단계 QR 사진 (UL-QP-18-06, 5년 보존). conditionCheck 삭제 시 cascade.
+    conditionCheckId: uuid('condition_check_id').references(() => conditionChecks.id, {
       onDelete: 'cascade',
     }),
 
@@ -121,6 +126,11 @@ export const documents = pgTable(
       table.nonConformanceId,
       table.documentType
     ),
+    conditionCheckIdIdx: index('documents_condition_check_id_idx').on(table.conditionCheckId),
+    conditionCheckTypeIdx: index('documents_condition_check_type_idx').on(
+      table.conditionCheckId,
+      table.documentType
+    ),
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
@@ -162,6 +172,10 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   nonConformance: one(nonConformances, {
     fields: [documents.nonConformanceId],
     references: [nonConformances.id],
+  }),
+  conditionCheck: one(conditionChecks, {
+    fields: [documents.conditionCheckId],
+    references: [conditionChecks.id],
   }),
   uploadedByUser: one(users, {
     fields: [documents.uploadedBy],

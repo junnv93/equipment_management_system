@@ -13,10 +13,14 @@ import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
 
 /**
- * 서버 응답 shape: Equipment + 서버 계산 allowedActions.
+ * 서버 응답 shape: Equipment + 서버 계산 allowedActions + handover context.
  * 프론트는 이 배열을 소비하여 CTA 렌더링.
  */
-export type EquipmentQRLanding = Equipment & { allowedActions: QRAllowedAction[] };
+export type EquipmentQRLanding = Equipment & {
+  allowedActions: QRAllowedAction[];
+  /** confirm_handover_receive / confirm_handover_return 액션 존재 시 백엔드가 반환하는 checkoutId */
+  handoverCheckoutId?: string;
+};
 
 /**
  * `useEquipmentByManagementNumber('SUW-E0001', initialData?)`.

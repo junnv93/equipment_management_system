@@ -77,6 +77,7 @@ export function EquipmentLandingClient({ initialData }: EquipmentLandingClientPr
         managementNumber={data.managementNumber}
         teamName={data.teamName}
         allowedActions={data.allowedActions}
+        handoverCheckoutId={data.handoverCheckoutId}
       />
     </div>
   );

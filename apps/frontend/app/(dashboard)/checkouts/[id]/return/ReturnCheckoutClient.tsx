@@ -110,6 +110,8 @@ export default function ReturnCheckoutClient({
       inspectionNotes: data.inspectionNotes || undefined,
       calibrationCertificateExceptionReason:
         data.calibrationCertificateExceptionReason.trim() || undefined,
+      ...(data.attachmentIds &&
+        data.attachmentIds.length > 0 && { attachmentIds: data.attachmentIds }),
     };
 
     returnMutation.mutate(returnData);

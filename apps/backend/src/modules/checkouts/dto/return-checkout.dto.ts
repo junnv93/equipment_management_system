@@ -3,7 +3,7 @@ import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { uuidString, VM } from '@equipment-management/schemas';
-import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { VALIDATION_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -45,6 +45,14 @@ export const returnCheckoutSchema = z.object({
             VM.string.max('상태 기록', VALIDATION_RULES.TEXT_FIELD_MAX_LENGTH)
           ),
       })
+    )
+    .optional(),
+  /** 반입 전 상태 확인 사진 document UUID 목록 (optional) */
+  attachmentIds: z
+    .array(z.string().uuid('attachmentIds 각 항목은 UUID 형식이어야 합니다'))
+    .max(
+      FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK,
+      `사진은 최대 ${FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}장까지 첨부할 수 있습니다`
     )
     .optional(),
 });

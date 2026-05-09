@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Loader2, QrCode } from 'lucide-react';
 import { FRONTEND_ROUTES, HANDOVER_QR_TOKEN_PARAM } from '@equipment-management/shared-constants';
+import type { HandoverTokenPurpose } from '@/lib/api/checkout-api';
 import { ErrorCode } from '@equipment-management/schemas';
 import { Button } from '@/components/ui/button';
 import checkoutApi from '@/lib/api/checkout-api';
@@ -54,10 +55,15 @@ export default function HandoverRedirectPage() {
     let mounted = true;
     (async () => {
       try {
-        const { checkoutId } = await checkoutApi.verifyHandoverToken(token);
+        const { checkoutId, purpose } = await checkoutApi.verifyHandoverToken(token);
         if (!mounted) return;
         setState({ phase: 'redirecting' });
-        router.replace(FRONTEND_ROUTES.CHECKOUTS.CHECK(checkoutId));
+        // purpose → condition-check step 변환: lender_receive는 lender_return step으로 매핑
+        const step = purposeToConditionCheckStep(purpose);
+        const url = step
+          ? FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(checkoutId, step)
+          : FRONTEND_ROUTES.CHECKOUTS.CHECK(checkoutId);
+        router.replace(url);
       } catch (error) {
         if (!mounted) return;
         const code = resolveErrorCode(error);
@@ -114,6 +120,19 @@ export default function HandoverRedirectPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * 인수인계 purpose → condition-check step 변환.
+ * lender_receive는 백엔드 step 명칭 lender_return과 다르므로 명시적 매핑.
+ */
+function purposeToConditionCheckStep(purpose: HandoverTokenPurpose): string | null {
+  const map: Record<HandoverTokenPurpose, string | null> = {
+    borrower_receive: 'borrower_receive',
+    borrower_return: 'borrower_return',
+    lender_receive: 'lender_return',
+  };
+  return map[purpose] ?? null;
 }
 
 /**

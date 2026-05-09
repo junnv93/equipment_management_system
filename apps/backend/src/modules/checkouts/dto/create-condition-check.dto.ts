@@ -8,7 +8,7 @@ import {
   type ConditionCheckStep,
   VM,
 } from '@equipment-management/schemas';
-import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { VALIDATION_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
@@ -51,6 +51,14 @@ export const createConditionCheckSchema = z.object({
     .max(
       VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
       VM.string.max('비고', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+    )
+    .optional(),
+  /** 상태 확인 사진 document UUID 목록 (optional, 최대 MAX_ATTACHMENTS_PER_CONDITION_CHECK) */
+  attachmentIds: z
+    .array(z.string().uuid('attachmentIds 각 항목은 UUID 형식이어야 합니다'))
+    .max(
+      FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK,
+      `사진은 최대 ${FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}장까지 첨부할 수 있습니다`
     )
     .optional(),
 });
@@ -112,4 +120,12 @@ export class CreateConditionCheckDto extends VersionedDto {
     required: false,
   })
   notes?: string;
+
+  @ApiProperty({
+    description: `상태 확인 사진 document UUID 목록 (최대 ${FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}장, optional)`,
+    type: [String],
+    format: 'uuid',
+    required: false,
+  })
+  attachmentIds?: string[];
 }

@@ -36,6 +36,8 @@ export type EquipmentDetailResult = Omit<Equipment, never> & {
  */
 export type EquipmentQRLandingResult = EquipmentDetailResult & {
   allowedActions: QRAllowedAction[];
+  /** confirm_handover_receive / confirm_handover_return action 존재 시 해당 checkoutId */
+  handoverCheckoutId?: string;
 };
 
 /** findRequestByUuid() — 요청 상세 + Relations */

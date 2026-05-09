@@ -1,21 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Eye, Cog, Package2 } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, Eye, Cog, Package2 } from 'lucide-react';
 import {
   ConditionCheckStep,
   ConditionStatus,
   AccessoriesStatus,
+  DocumentTypeValues,
 } from '@equipment-management/schemas';
+import { DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import type { CreateConditionCheckDto } from '@/lib/api/checkout-api';
+import { documentApi } from '@/lib/api/document-api';
 import { CHECKOUT_FORM_TOKENS } from '@/lib/design-tokens';
+import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 
 interface EquipmentConditionFormProps {
   /** 상태 확인 단계 */
@@ -66,6 +71,62 @@ export default function EquipmentConditionForm({
   const [notes, setNotes] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // 사진 첨부 상태 — pre-upload 패턴: 선택 즉시 업로드 → documentId 수집
+  const [attachmentFiles, setAttachmentFiles] = useState<UploadedFile[]>([]);
+  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) =>
+      documentApi.uploadDocument(file, DocumentTypeValues.CONDITION_CHECK_PHOTO),
+    onError: (error, _file, _context) => {
+      // 업로드 실패는 개별 파일 status='error'로 반영 — 폼 제출 차단 안 함
+      console.error('Photo upload failed:', error);
+    },
+  });
+
+  // 파일 선택 핸들러 — 새로 추가된 파일만 즉시 업로드
+  const handleAttachmentsChange = useCallback(
+    async (updatedFiles: UploadedFile[]) => {
+      // uuid 없음 = 아직 서버 업로드 전 신규 파일
+      const newFiles = updatedFiles.filter(
+        (f) => !f.uuid && !attachmentFiles.some((a) => a.file === f.file)
+      );
+
+      // optimistic update — status를 uploading으로 즉시 반영
+      const withUploading = updatedFiles.map((f) =>
+        newFiles.includes(f) ? { ...f, status: 'uploading' as const, progress: 50 } : f
+      );
+      setAttachmentFiles(withUploading);
+
+      // 신규 파일 순서대로 업로드
+      for (const uf of newFiles) {
+        const fileIndex = withUploading.indexOf(uf);
+        try {
+          const doc = await uploadMutation.mutateAsync(uf.file);
+          setUploadedDocumentIds((prev) => [...prev, doc.id]);
+          setAttachmentFiles((prev) =>
+            prev.map((f, i) =>
+              i === fileIndex
+                ? { ...f, status: 'success' as const, uuid: doc.id, progress: 100 }
+                : f
+            )
+          );
+        } catch {
+          setAttachmentFiles((prev) =>
+            prev.map((f, i) =>
+              i === fileIndex ? { ...f, status: 'error' as const, error: '업로드 실패' } : f
+            )
+          );
+        }
+      }
+
+      // 삭제된 파일의 documentId 제거
+      const remainingUuids = new Set(updatedFiles.map((f) => f.uuid).filter(Boolean));
+      setUploadedDocumentIds((prev) => prev.filter((id) => remainingUuids.has(id)));
+    },
+    [attachmentFiles, uploadMutation]
+  );
+
   // 이상 여부 확인
   const hasAbnormal =
     appearanceStatus === 'abnormal' ||
@@ -109,6 +170,10 @@ export default function EquipmentConditionForm({
   const handleSubmit = () => {
     if (!validate()) return;
 
+    const successDocIds = uploadedDocumentIds.filter((id) =>
+      attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
+    );
+
     const data: Omit<CreateConditionCheckDto, 'version'> = {
       step,
       appearanceStatus,
@@ -119,6 +184,7 @@ export default function EquipmentConditionForm({
         comparisonWithPrevious: comparisonWithPrevious.trim(),
       }),
       ...(notes.trim() && { notes: notes.trim() }),
+      ...(successDocIds.length > 0 && { attachmentIds: successDocIds }),
     };
 
     onSubmit(data);
@@ -276,6 +342,9 @@ export default function EquipmentConditionForm({
             placeholder={t('condition.abnormalDetailsPlaceholder')}
             value={abnormalDetails}
             onChange={(e) => setAbnormalDetails(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+            }}
             rows={3}
             className={`border-brand-critical/40 ${CHECKOUT_FORM_TOKENS.abnormalTextarea}`}
           />
@@ -305,9 +374,48 @@ export default function EquipmentConditionForm({
           placeholder={t('condition.additionalNotesPlaceholder')}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+          }}
           rows={2}
         />
       </div>
+
+      {/* 현장 사진 첨부 */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Camera className="h-4 w-4" />
+            {t('condition.attachmentsLabel')}
+          </CardTitle>
+          <CardDescription>{t('condition.attachmentsHint')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* 이상 상태인데 사진 없을 때 권유 (비차단) */}
+          {hasAbnormal && attachmentFiles.filter((f) => f.status === 'success').length === 0 && (
+            <Alert
+              role="status"
+              aria-live="polite"
+              className="mb-3 border-brand-warning/40 bg-brand-warning/5"
+            >
+              <AlertCircle className="h-4 w-4 text-brand-warning" aria-hidden="true" />
+              <AlertDescription className="text-brand-warning">
+                {t('condition.abnormalPhotoSuggested')}
+              </AlertDescription>
+            </Alert>
+          )}
+          <FileUpload
+            files={attachmentFiles}
+            onChange={handleAttachmentsChange}
+            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+            capture="environment"
+            label=""
+            description=""
+            disabled={isLoading}
+          />
+        </CardContent>
+      </Card>
 
       {/* 상태 요약 */}
       <div className="p-4 bg-muted rounded-lg">

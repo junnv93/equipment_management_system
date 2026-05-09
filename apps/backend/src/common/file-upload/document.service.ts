@@ -70,6 +70,43 @@ export class DocumentService {
   ) {}
 
   /**
+   * 이미지 파일 전처리 — EXIF GPS strip + HEIC→JPEG 변환.
+   *
+   * - HEIC/HEIF: JPEG(quality 85)로 변환 후 모든 EXIF 제거 (시험소 위치 유출 방지).
+   * - 그 외 이미지: auto-rotate(EXIF orientation 적용) + 전체 EXIF 제거.
+   * - sharp 처리 실패 시 경고 후 원본 반환 — 업로드 차단 안 함 (soft-fail).
+   */
+  private async preprocessImageFile(file: MulterFile): Promise<MulterFile> {
+    if (!file.mimetype.startsWith('image/')) return file;
+
+    const isHEIC = file.mimetype === 'image/heic' || file.mimetype === 'image/heif';
+    try {
+      if (isHEIC) {
+        // HEIC → JPEG 변환 + EXIF 제거 (sharp에서 withMetadata 미호출 시 기본 제거)
+        const processedBuffer = await sharp(file.buffer)
+          .rotate()
+          .toFormat('jpeg', { quality: 85 })
+          .toBuffer();
+        return {
+          ...file,
+          buffer: processedBuffer,
+          size: processedBuffer.length,
+          mimetype: 'image/jpeg',
+          originalname: file.originalname.replace(/\.(heic|heif)$/i, '.jpg'),
+        };
+      }
+      // JPEG/PNG/WebP 등 — auto-rotate + 전체 EXIF 제거 (withMetadata 미호출)
+      const processedBuffer = await sharp(file.buffer).rotate().toBuffer();
+      return { ...file, buffer: processedBuffer, size: processedBuffer.length };
+    } catch (error) {
+      this.logger.warn(
+        `Image preprocessing failed for ${file.originalname}: ${error instanceof Error ? error.message : String(error)}. Storing original.`
+      );
+      return file;
+    }
+  }
+
+  /**
    * 문서 생성 (파일 업로드 + DB 메타데이터)
    */
   async createDocument(file: MulterFile, options: CreateDocumentOptions): Promise<DocumentRecord> {
@@ -96,7 +133,8 @@ export class DocumentService {
     }
 
     const subdirectory = options.subdirectory ?? this.resolveSubdirectory(options);
-    const savedFile = await this.fileUploadService.saveFile(file, subdirectory);
+    const processedFile = await this.preprocessImageFile(file);
+    const savedFile = await this.fileUploadService.saveFile(processedFile, subdirectory);
 
     const [document] = await this.db
       .insert(documents)

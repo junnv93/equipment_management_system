@@ -18,6 +18,8 @@ export const DOCUMENT_TYPE_VALUES = [
   'inspection_photo', // 점검 사진 (중간점검/자체점검 항목별 사진)
   'inspection_graph', // 점검 그래프 (측정 그래프 이미지)
   'measurement_data', // 측정 데이터 (CSV 등 측정 원시 파일)
+  'condition_check_photo', // 반출/반입 상태 확인 사진 (UL-QP-18-06, 보존 5년)
+  'checkout_handover_photo', // 인수인계 현장 사진 (UL-QP-18-06, 보존 5년)
 ] as const;
 
 export const DocumentTypeEnum = z.enum(DOCUMENT_TYPE_VALUES);
@@ -37,6 +39,8 @@ export const DocumentTypeValues = {
   INSPECTION_PHOTO: 'inspection_photo',
   INSPECTION_GRAPH: 'inspection_graph',
   MEASUREMENT_DATA: 'measurement_data',
+  CONDITION_CHECK_PHOTO: 'condition_check_photo',
+  CHECKOUT_HANDOVER_PHOTO: 'checkout_handover_photo',
 } as const satisfies Record<string, DocumentType>;
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
@@ -52,6 +56,8 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   inspection_photo: '점검 사진',
   inspection_graph: '점검 그래프',
   measurement_data: '측정 데이터',
+  condition_check_photo: '상태 확인 사진',
+  checkout_handover_photo: '인수인계 사진',
 };
 
 // ============================================================

@@ -22,6 +22,14 @@
       "reportNc": {
         "label": "Report non-conformance",
         "description": "Report a defect or malfunction found in the field"
+      },
+      "confirmHandoverReceive": {
+        "label": "Confirm receipt",
+        "description": "Physically receive the equipment and verify its condition"
+      },
+      "confirmHandoverReturn": {
+        "label": "Confirm return receipt",
+        "description": "Receive the returned equipment and verify its final condition"
       }
     },
     "noActions": "No actions available",

@@ -31,6 +31,9 @@ export class FileUploadService implements OnModuleInit {
     'image/jpeg',
     'image/png',
     'image/gif',
+    // iOS 카메라 기본 포맷 — MAGIC_BYTES 없으므로 mime 검증만 (HEIC offset 0 = box size, ftyp은 offset 4)
+    'image/heic',
+    'image/heif',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',

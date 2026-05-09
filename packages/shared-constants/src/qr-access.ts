@@ -15,10 +15,9 @@
  */
 
 /**
- * Phase 1에서 지원하는 QR 액션 목록.
+ * 지원하는 QR 액션 목록.
  *
- * Phase 2 추가 예정: `report_nc_mobile`(원탭 NCR 제출), `scan_continuous`(연속 스캔)
- * Phase 3 추가 예정: `confirm_handover_receive` / `confirm_handover_return`
+ * Phase 3 후보: `scan_continuous`(연속 스캔 — 재고 실사용)
  */
 export const QR_ACTION_VALUES = [
   /**
@@ -33,7 +32,7 @@ export const QR_ACTION_VALUES = [
 
   /**
    * 반출 신청 페이지로 이동 (CREATE_CHECKOUT 권한 + 장비 `available` + 사용자 사이트 === 장비 사이트).
-   * Cross-site 반출은 Phase 3의 lender/borrower 핸드오버 플로우에서 별도 처리.
+   * Cross-site 반출은 lender/borrower 핸드오버 플로우에서 별도 처리.
    */
   'request_checkout',
 
@@ -48,6 +47,20 @@ export const QR_ACTION_VALUES = [
    * 현장 결함 발견 시 즉시 등록.
    */
   'report_nc',
+
+  /**
+   * 인수인계 — 빌리는 쪽(borrower) 수령 확인 (checkout status `lender_checked`).
+   * 본인이 해당 checkout의 requester일 때만 서버가 도출.
+   * 클릭 시 condition-check 페이지 + step=borrower_receive 자동 prefill.
+   */
+  'confirm_handover_receive',
+
+  /**
+   * 인수인계 — 반환(borrower → lender) 확인 (checkout status `borrower_returned`).
+   * 본인이 해당 checkout의 approverId(lender 측)일 때만 서버가 도출.
+   * 클릭 시 condition-check 페이지 + step=lender_return 자동 prefill.
+   */
+  'confirm_handover_return',
 ] as const;
 
 export type QRAllowedAction = (typeof QR_ACTION_VALUES)[number];
@@ -63,6 +76,8 @@ export const QR_ACTION_I18N_KEYS: Record<QRAllowedAction, string> = {
   request_checkout: 'requestCheckout',
   mark_checkout_returned: 'markCheckoutReturned',
   report_nc: 'reportNc',
+  confirm_handover_receive: 'confirmHandoverReceive',
+  confirm_handover_return: 'confirmHandoverReturn',
 };
 
 /**
@@ -70,7 +85,9 @@ export const QR_ACTION_I18N_KEYS: Record<QRAllowedAction, string> = {
  * 프론트엔드 정렬 시 SSOT. 하드코딩된 정렬 순서 금지.
  */
 export const QR_ACTION_PRIORITY: Record<QRAllowedAction, number> = {
-  mark_checkout_returned: 100, // 가장 급한 액션(반납 누락 방지)
+  confirm_handover_receive: 115, // 10분 TTL token 페어링 진행 중 — 가장 시급
+  confirm_handover_return: 110, // 동일 이유
+  mark_checkout_returned: 100, // 반납 누락 방지
   request_checkout: 80,
   report_nc: 60,
   view_detail: 40,

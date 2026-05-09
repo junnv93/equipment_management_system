@@ -376,7 +376,11 @@
     "accessoriesStatusLabels": {
       "complete": "Complete",
       "incomplete": "Incomplete"
-    }
+    },
+    "attachmentsLabel": "Field photos",
+    "attachmentsHint": "Attaching photos of any abnormalities aids UL-QP-18-06 record keeping.",
+    "attachmentsTooMany": "You can attach up to {max} photos.",
+    "abnormalPhotoSuggested": "Abnormalities detected. Attaching evidence photos helps non-conformance tracking."
   },
   "returnCondition": {
     "good": "Good",

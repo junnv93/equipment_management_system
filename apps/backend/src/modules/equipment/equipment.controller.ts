@@ -346,7 +346,7 @@ export class EquipmentController {
       true
     );
 
-    const allowedActions = await this.qrAccessService.resolveAllowedActions(
+    const qrResult = await this.qrAccessService.resolveAllowedActions(
       {
         id: equipmentWithTeam.id,
         site: equipmentWithTeam.site,
@@ -359,7 +359,8 @@ export class EquipmentController {
     return {
       ...equipmentData,
       teamName: team?.name || null,
-      allowedActions,
+      allowedActions: qrResult.actions,
+      ...(qrResult.handoverCheckoutId && { handoverCheckoutId: qrResult.handoverCheckoutId }),
     };
   }
 

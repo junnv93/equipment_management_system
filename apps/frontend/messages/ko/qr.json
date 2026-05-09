@@ -22,6 +22,14 @@
       "reportNc": {
         "label": "부적합 신고",
         "description": "현장 결함/고장 등록"
+      },
+      "confirmHandoverReceive": {
+        "label": "수령 확인",
+        "description": "장비를 직접 수령하고 상태를 확인합니다"
+      },
+      "confirmHandoverReturn": {
+        "label": "반환 수령 확인",
+        "description": "반환된 장비를 수령하고 최종 상태를 확인합니다"
       }
     },
     "noActions": "수행 가능한 작업이 없습니다",

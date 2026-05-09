@@ -25,6 +25,11 @@ interface EquipmentActionSheetProps {
    * 권한/관계 판정을 중복하지 않는다 (SSOT: QRAccessService).
    */
   allowedActions: QRAllowedAction[];
+  /**
+   * confirm_handover_receive / confirm_handover_return 액션 존재 시
+   * 백엔드가 함께 반환하는 checkoutId — 라우팅에만 사용.
+   */
+  handoverCheckoutId?: string;
 }
 
 /** 액션 → 아이콘 매핑 (하드코딩 금지 — 이 한 곳에만 정의). */
@@ -34,7 +39,13 @@ const ACTION_ICONS: Record<QRAllowedAction, React.ComponentType<{ className?: st
   request_checkout: PackageOpen,
   mark_checkout_returned: PackageCheck,
   report_nc: AlertTriangle,
+  confirm_handover_receive: PackageOpen,
+  confirm_handover_return: PackageCheck,
 };
+
+function assertNever(x: never): never {
+  throw new Error(`Unhandled QRAllowedAction: ${String(x)}`);
+}
 
 /**
  * 모바일 액션 시트 — QR 스캔 후 사용자가 장비에 수행 가능한 액션 CTA.
@@ -52,6 +63,7 @@ export function EquipmentActionSheet({
   managementNumber,
   teamName,
   allowedActions,
+  handoverCheckoutId,
 }: EquipmentActionSheetProps) {
   const t = useTranslations('qr.mobileActionSheet');
   const tQr = useTranslations('qr.qrDisplay');
@@ -87,9 +99,27 @@ export function EquipmentActionSheet({
           // 원칙: QR은 경로. 기존 서비스/UI/폼은 재정의하지 않고 재사용만.
           router.push(FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES_CREATE(equipmentId));
           return;
+        case 'confirm_handover_receive':
+          // borrower 수령 확인 — 서버가 반환한 handoverCheckoutId 경유
+          if (handoverCheckoutId) {
+            router.push(
+              FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(handoverCheckoutId, 'borrower_receive')
+            );
+          }
+          return;
+        case 'confirm_handover_return':
+          // lender 반환 수령 확인 — 서버가 반환한 handoverCheckoutId 경유
+          if (handoverCheckoutId) {
+            router.push(
+              FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(handoverCheckoutId, 'lender_return')
+            );
+          }
+          return;
+        default:
+          assertNever(action);
       }
     },
-    [equipmentId, router]
+    [equipmentId, handoverCheckoutId, router]
   );
 
   if (sortedActions.length === 0) {

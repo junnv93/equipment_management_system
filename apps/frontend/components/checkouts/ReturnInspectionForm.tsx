@@ -1,17 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { useMutation } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, Info } from 'lucide-react';
 import {
   CheckoutPurposeValues as CPVal,
   type CheckoutPurpose,
+  DocumentTypeValues,
 } from '@equipment-management/schemas';
+import { DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
+import { documentApi } from '@/lib/api/document-api';
+import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 
 // ============================================================================
 // Purpose-specific inspection config — SSOT
@@ -77,6 +82,7 @@ export interface InspectionFormData {
   workingStatusChecked: boolean;
   inspectionNotes: string;
   calibrationCertificateExceptionReason: string;
+  attachmentIds?: string[];
 }
 
 interface ReturnInspectionFormProps {
@@ -114,6 +120,57 @@ export default function ReturnInspectionForm({
     useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // 사진 첨부 — pre-upload 패턴
+  const [attachmentFiles, setAttachmentFiles] = useState<UploadedFile[]>([]);
+  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) =>
+      documentApi.uploadDocument(file, DocumentTypeValues.CONDITION_CHECK_PHOTO),
+    onError: (error) => {
+      console.error('Photo upload failed:', error);
+    },
+  });
+
+  const handleAttachmentsChange = useCallback(
+    async (updatedFiles: UploadedFile[]) => {
+      // uuid 없음 = 아직 서버 업로드 전 신규 파일
+      const newFiles = updatedFiles.filter(
+        (f) => !f.uuid && !attachmentFiles.some((a) => a.file === f.file)
+      );
+
+      const withUploading = updatedFiles.map((f) =>
+        newFiles.includes(f) ? { ...f, status: 'uploading' as const, progress: 50 } : f
+      );
+      setAttachmentFiles(withUploading);
+
+      for (const uf of newFiles) {
+        const fileIndex = withUploading.indexOf(uf);
+        try {
+          const doc = await uploadMutation.mutateAsync(uf.file);
+          setUploadedDocumentIds((prev) => [...prev, doc.id]);
+          setAttachmentFiles((prev) =>
+            prev.map((f, i) =>
+              i === fileIndex
+                ? { ...f, status: 'success' as const, uuid: doc.id, progress: 100 }
+                : f
+            )
+          );
+        } catch {
+          setAttachmentFiles((prev) =>
+            prev.map((f, i) =>
+              i === fileIndex ? { ...f, status: 'error' as const, error: '업로드 실패' } : f
+            )
+          );
+        }
+      }
+
+      const remainingUuids = new Set(updatedFiles.map((f) => f.uuid).filter(Boolean));
+      setUploadedDocumentIds((prev) => prev.filter((id) => remainingUuids.has(id)));
+    },
+    [attachmentFiles, uploadMutation]
+  );
+
   const validate = (): boolean => {
     if (config.workingRequired && config.workingUserProvided && !workingStatusChecked) {
       setValidationError(t('returnInspection.validationWorking'));
@@ -134,6 +191,10 @@ export default function ReturnInspectionForm({
   const handleSubmit = () => {
     if (!validate()) return;
 
+    const successDocIds = uploadedDocumentIds.filter((id) =>
+      attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
+    );
+
     onSubmit({
       calibrationChecked,
       repairChecked,
@@ -143,6 +204,7 @@ export default function ReturnInspectionForm({
         : derivedWorkingStatusChecked,
       inspectionNotes,
       calibrationCertificateExceptionReason,
+      ...(successDocIds.length > 0 && { attachmentIds: successDocIds }),
     });
   };
 
@@ -258,6 +320,25 @@ export default function ReturnInspectionForm({
         </div>
       )}
 
+      {/* 현장 사진 첨부 */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Camera className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Label>{t('condition.attachmentsLabel')}</Label>
+        </div>
+        <p className="text-sm text-muted-foreground">{t('condition.attachmentsHint')}</p>
+        <FileUpload
+          files={attachmentFiles}
+          onChange={handleAttachmentsChange}
+          accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+          maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+          capture="environment"
+          label=""
+          description=""
+          disabled={isLoading}
+        />
+      </div>
+
       {/* 검사 비고 */}
       <div className="space-y-2">
         <Label htmlFor="inspectionNotes">{t('returnInspection.notesLabel')}</Label>
@@ -266,6 +347,9 @@ export default function ReturnInspectionForm({
           placeholder={t('returnInspection.notesPlaceholder')}
           value={inspectionNotes}
           onChange={(e) => setInspectionNotes(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+          }}
           rows={4}
         />
       </div>

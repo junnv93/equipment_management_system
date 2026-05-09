@@ -73,8 +73,11 @@ export const conditionChecks = pgTable(
   })
 );
 
+// 순환 참조 방지를 위해 파일 하단 배치 (documents → condition_checks 역방향 의존성)
+import { documents } from './documents';
+
 // 관계 정의
-export const conditionChecksRelations = relations(conditionChecks, ({ one }) => ({
+export const conditionChecksRelations = relations(conditionChecks, ({ one, many }) => ({
   checkout: one(checkouts, {
     fields: [conditionChecks.checkoutId],
     references: [checkouts.id],
@@ -84,4 +87,5 @@ export const conditionChecksRelations = relations(conditionChecks, ({ one }) => 
     references: [users.id],
     relationName: 'condition_check_checker',
   }),
+  attachments: many(documents),
 }));

@@ -51,6 +51,14 @@ export const FILE_TYPES = [
     magicBytes: [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
   },
   { mime: 'text/csv', extensions: ['.csv'], magicBytes: [] }, // 텍스트 파일 — 매직바이트 없음
+  /**
+   * HEIC/HEIF — iOS 카메라 기본 포맷.
+   * magic bytes 검증 skip: HEIC는 offset 0에 box size(가변), offset 4에 'ftyp'가 위치해
+   * offset 0 매칭 불가. MIME 타입 검증만 적용 (text/csv 패턴 동일).
+   * backend에서 sharp가 HEIC를 처리하므로 유효성 보장.
+   */
+  { mime: 'image/heic', extensions: ['.heic'], magicBytes: [] },
+  { mime: 'image/heif', extensions: ['.heif'], magicBytes: [] },
 ] as const satisfies readonly FileTypeEntry[];
 
 // ============================================================
@@ -140,6 +148,8 @@ export const DOCUMENT_FILE_RULES: Readonly<Record<DocumentType, DocumentFileRule
   inspection_photo: IMAGE_RULE,
   inspection_graph: IMAGE_RULE,
   measurement_data: ALL_DOCUMENTS_RULE,
+  condition_check_photo: IMAGE_RULE,
+  checkout_handover_photo: IMAGE_RULE,
 };
 
 /** 파일 업로드 제한 */
@@ -154,6 +164,10 @@ export const FILE_UPLOAD_LIMITS = {
   CSV_MAX_FILE_SIZE: 1 * 1024 * 1024,
   /** 최대 파일 개수 */
   MAX_FILE_COUNT: 10,
+  /** condition-check 1회당 첨부 사진 최대 개수 */
+  MAX_ATTACHMENTS_PER_CONDITION_CHECK: 5,
+  /** NC 보고서 1건당 첨부 사진 최대 개수 */
+  MAX_ATTACHMENTS_PER_NC: 10,
 } as const;
 
 // ============================================================
