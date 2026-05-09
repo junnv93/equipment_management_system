@@ -2,6 +2,37 @@
 
 ---
 
+## ~~2026-05-09 — calibration-cert-phase-a-architecture-closure (전 갭 완료)~~ ✅
+
+> 6 갭 모두 closure (sprint `calibration-cert-phase-a-architecture-closure` + `phase-a-arch-followup` + `phase-c-followup-closure`).
+> Gap 1: `/equipment/[id]/calibration-history` sub-route 신설. Gap 2: `FilterChip.tsx` SSOT 추출 + CalibrationContent 마이그레이션. Gap 3: design token `filter-chip.ts`. Gap 4: useEquipment 별도 fetch. Gap 5: AuditLog entityIdPath. Gap 6a/6b: RTL spec (Dialog + Content).
+> 후속 자기검토 #2 (route-metadata SSOT) + #3 (sentinel `_all` 통일 + EquipmentTabFooterLink + BasicInfoTab hook) 완료.
+> Tab vs Sub-route 중복 architecture → **ADR-0009 Option C** 채택 (`tab-subroute-architecture-decision-closure`, 2026-05-09).
+
+---
+
+## ~~2026-05-09 — tab-subroute-architectural-decision (ADR-0009 Option C)~~ ✅
+
+> EquipmentTabs (`?tab=X`) + sub-route 혼합 패턴 공식 채택. Tab=요약/빠른 접근, sub-route=상세/deep-link/SEO canonical. CalibrationHistorySection SSOT fix + 5 tab JSDoc 보강. ADR-0009 신설.
+
+---
+
+## ~~2026-04-27 — Checkouts V3 Sprint 2 · Tokens 봉합~~ ✅ 전체 완료 (2026-04-27)
+
+> checkout-row-token-consolidation: purposeBar SSOT + satisfies + getPurposeBarClass export.
+> checkout-i18n-tab-badge-tokens: CHECKOUT_TAB_BADGE_TOKENS.alert + overdueClear i18n.
+> checkout-rhythm-focus-inbound-tokens: FOCUS_TOKENS.ringCurrent + CHECKOUT_INBOUND_SECTION_TOKENS.
+> checkout-deprecated-token-removal: @typescript-eslint/no-deprecated eslint guard 적용.
+
+---
+
+## ~~Checkouts V3 Sprint 1 item 1 — checkout-fsm-resolve-action~~ ✅ 완료 (96차)
+
+> findCheckoutEntity 분리, findOne always-meta, FSM drift safeParse, descriptor-table 동적 fixture.
+> `.claude/contracts/checkout-fsm-resolve-action.md` 완료.
+
+---
+
 ## ~~2026-05-06 — SSOT Recovery 3-Finding (setup-node + Backend bare Error + useEffectiveRole)~~ ✅ 완료 (2026-05-06, Mode 2 harness iter 2 PASS)
 
 > Mode 2 harness 4 phase / 6 commits / 다중 세션 sabotage 대응 학습.

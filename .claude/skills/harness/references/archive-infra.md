@@ -5,6 +5,15 @@
 
 ---
 
+## ~~2026-05-06 — commit-pipeline-safety SHOULD 후속 (S-2/S-3/S-4/S-5)~~ ✅ 완료 (2026-05-06~07)
+
+> **S-2 packages-lintstaged-lint-parity**: `verify-lint-ruleset-parity.mjs` SSOT에 packages 도메인 흡수 — `PARITY_SPEC.packages` + 5단계 검증 (lintstaged/glob/lint script/critical rules/restricted names+paths). 회귀 spec 추가.
+> **S-3 commitlint-rule-strengthening**: `commitlint.config.js` SCOPE_LIST SSOT 26 backend + 19 meta = 45 scope. `@commitlint/config-conventional` 기반 + type/scope/body 화이트리스트. `scripts/__tests__/commitlint-config.spec.mjs` fs ↔ SCOPE_LIST 1:1 자동 검증 spec.
+> **S-5 hook-execution-time-metrics**: `scripts/hook-timing.mjs` (opt-in + `rotateTimingLogIfNeeded`) + `.husky/pre-commit`/`pre-push` timing wrapper 통합.
+> **S-4 git-worktree-per-session-adr-0008**: [SKIP-trigger-not-met] — ADR-0007 §Trigger Conditions 0/4 충족. 재검토 트리거: race ≥3건/월 등.
+
+---
+
 ## ~~반출입 관리 PR-11: Self-Audit 게이트 강화 + 번들 크기 측정~~ ✅ 완료 (2026-04-24, 81차)
 
 > 체크 ⑧ FSM 리터럴 감지 + 체크 ⑨ hex 색상 감지 추가. measure-bundle.mjs 스크립트 완료.

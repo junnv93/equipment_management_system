@@ -40,4 +40,4 @@ NestJS 생태계에서 TypeORM이 사실상 표준이지만, 프로젝트 요구
 
 - `packages/db/`에 스키마 정의, `apps/backend/drizzle/`에 마이그레이션 SQL 관리
 - NestJS에서 `DrizzleModule` 커스텀 Provider로 DI 통합
-- 마이그레이션 워크플로우: `db:generate` → SQL 리뷰 → `db:migrate`
+- 마이그레이션 워크플로우 (운영 정책 보완 — 2026-05-09): 본 레포는 [ADR-0010 (Drizzle Manual SQL Policy)](./0010-drizzle-manual-sql-policy.md) 에 따라 `drizzle-kit generate` 가 아닌 **manual SQL 작성 + `_journal.json` append + DB 직접 apply + `__drizzle_migrations` tracking sync** 4 단계 절차를 채택한다. 자세한 절차와 결정 근거는 ADR-0010 + [`docs/development/DRIZZLE_MIGRATIONS.md`](../development/DRIZZLE_MIGRATIONS.md) §1 참조. ADR-0010 은 본 ADR-0002 의 ORM 선택 결정을 _대체_ 하지 않고 _보완_ 한다 (Drizzle ORM 채택은 유효, 운영 패턴만 업계 표준에서 의도적으로 이탈).

@@ -76,19 +76,29 @@ Priority: 🔴 CRITICAL (security) → 🟠 HIGH (perf/gaps) → 🟡 MEDIUM (qu
 
 ### 5. Archive completed items
 
-Move to `<details>` archive section:
-- ~~Strikethrough~~ items
-- Items with merged PRs (check `git log`)
-- Items confirmed as already implemented
+**항상 수행** (scan 없이 review/정리만 할 때도 포함):
 
-False positives → separate `<details>` section with lessons learned.
+example-prompts.md에서 제거 대상:
+- ~~Strikethrough~~ + ✅ 항목 (merged PR 또는 완료 확인)
+- tech-debt-tracker.md `closure` 언급 항목 (grep으로 교차 확인)
+- 섹션 헤더의 모든 하위 항목이 완료된 섹션
+- 활성 프롬프트 0건인 background-only 섹션 헤더
+
+아카이브 대상 파일 (도메인별):
+- `archive-domain.md` — 장비/검출/교정/반출/팀/SW 도메인 기능
+- `archive-design.md` — UI/UX 디자인 개선 (반출입 페이지, 컴포넌트 redesign)
+- `archive-infra.md` — CI/CD, 테스트 인프라, E2E 설정
+- `archive-export.md` — 양식 export, DOCX 생성
+
+False positives → `archive-domain.md` 하단 False Positive 섹션에 이유와 함께 기록.
 
 ### 6. Update example-prompts.md
 
 Write final prompts to `.claude/skills/harness/references/example-prompts.md`:
-- Update header date
-- Add new items under priority sections
-- Move completed/false-positive to archive
+- 헤더 날짜(`마지막 정리일`) 업데이트
+- 신규 항목을 우선순위 섹션에 추가
+- 완료/false-positive → 해당 archive-*.md 로 이동
+- 완료된 모든 strikethrough 제거 (빈 sprint 헤더 포함)
 
 ### 7. User review
 

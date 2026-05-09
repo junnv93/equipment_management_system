@@ -2,33 +2,27 @@
 
 이 문서는 이 레포의 Drizzle 마이그레이션 작업 규칙과 히스토리 정비 사유를 기록합니다.
 
-## 상태 (2026-04-07 baseline squash / 2026-04-18 업데이트)
+## 상태 (2026-04-07 baseline squash / 2026-05-09 업데이트 — ADR-0010)
 
 - `apps/backend/drizzle/0000_baseline.sql` 한 파일이 **baseline 시점의 전체 스키마**를 나타냅니다.
-- 이후 2026-04-18 현재까지 0001~0031 까지 **증분 migration + `meta/_journal.json` entry** 가 누적되어 있습니다.
-- `drizzle/meta/NNNN_snapshot.json` 은 **0024까지만 존재**합니다(0025~0031 snapshot 누락).
-  - 원인: baseline squash 이후 일부 migration이 drizzle-kit generate의 TTY 요구사항으로 인해 **수동 SQL 파일 + journal entry** 로 추가되었습니다. snapshot 생성은 TTY 환경에서 `db:generate`를 재실행해야 가능합니다.
-  - 영향: **현재 `drizzle-kit check` 는 "Everything's fine" 통과** (journal + SQL 정합성만 검증). 다만 향후 `db:generate` 실행 시 diff가 last available snapshot(0024)부터 계산되어 **이미 적용된 0025~0031 변경이 "변경사항 없음"으로 누락될 위험**이 있습니다.
-- `__drizzle_migrations` 테이블에는 baseline(0000) + 0001~0031 row가 정상 기록되어 있습니다.
-- `drizzle/manual/`은 drizzle-kit이 자동으로 읽지 않는 수동 SQL 파일 저장소이며 이번 정비와 무관합니다.
+- 이후 2026-05-09 현재까지 0001~0057 까지 **증분 migration + `meta/_journal.json` entry** 가 누적되어 있습니다 (journal 58 entries / SQL 62 파일 / snapshot 26 파일).
+- `drizzle/meta/NNNN_snapshot.json` 은 **0025까지만 존재**합니다(0026~0057 snapshot 누락 — desync intentional, [ADR-0010](../adr/0010-drizzle-manual-sql-policy.md) 참조).
+  - 원인: baseline squash 이후 모든 migration 이 `drizzle-kit generate` 의 TTY interactive prompt 요구사항을 회피하기 위해 **manual SQL 파일 + journal entry append** 패턴으로 작성되었습니다. 본 레포는 이 패턴을 공식 운영 정책으로 채택했습니다 (ADR-0010 결정).
+  - 영향: **현재 `drizzle-kit check` 는 "Everything's fine" 통과** (journal + SQL 정합성만 검증). `drizzle-kit generate` 는 본 레포에서 **금지** — last available snapshot(0025) 부터 diff 재계산하므로 0026~0057 의 manual 변경이 "변경사항 없음" 으로 누락되거나 column rename prompt 에 잘못 응답하여 schema 가 깨질 위험이 있습니다.
+- `__drizzle_migrations` 테이블에는 baseline(0000) + 0001~0057 row가 정상 기록되어 있습니다.
+- `drizzle/manual/`은 drizzle-kit이 자동으로 읽지 않는 수동 SQL 파일 저장소이며 이번 정비와 무관합니다 (운영 first-apply 사전 가드 등 §6 참조).
 
-### 재정비(snapshot 복원) 절차 — TTY 환경 필수
+### snapshot 재생성 — 금지 (ADR-0010)
 
-**실행 조건**: 로컬 WSL2/Terminal (interactive TTY). Claude Code bash 세션 등 non-interactive 환경에서는 불가.
+**`drizzle-kit generate` 호출은 본 레포에서 금지됩니다.** snapshot 재생성을 시도하면 누적된 manual SQL diff 가 last snapshot(0025) 부터 재계산되어 **이미 적용된 0026~0057 변경 ~30 건이 손실되거나 잘못 인식될 위험** 이 있습니다 (ADR-0010 §Consequences 참조).
 
-```bash
-# 1) 현재 스키마로 스냅샷 재구성 (drizzle-kit이 existing migrations를 인식해 diff 재계산)
-cd apps/backend
-pnpm db:generate    # TTY 환경에서 실행 — "rename? [y/n]" 프롬프트 대응
+회피 시도 3건 (모두 거부, ADR-0010 §References 참조):
 
-# 2) 생성된 결과가 "No changes"여야 함 (정상).
-#    새 migration이 생성됐다면 schema 변경이 있다는 뜻 — 검토 후 commit.
+- ❌ `printf '\n\n\n' | drizzle-kit generate` — drizzle-kit 이 TTY 직접 검사라 stdin pipe 무효
+- ❌ `drizzle-kit generate --force` / `--yes` — 해당 flag 미존재
+- ❌ 전체 snapshot 재생성 — 누적된 manual SQL diff 손실
 
-# 3) 누락된 snapshot 파일들이 drizzle/meta/에 채워졌는지 확인
-ls apps/backend/drizzle/meta/*.json | tail -5
-```
-
-현재 운영 중인 코드에는 영향 없음 (journal-based 실행 경로로 migration 적용). 다만 **snapshot 복원은 다음 schema 변경 전 수행 권장** — 변경 diff 정확도 확보.
+현재 운영 중인 코드에는 desync 영향 없음 (journal-based 실행 경로로 migration 적용 — `pnpm --filter backend run db:migrate`).
 
 ## 왜 baseline squash를 했나
 
@@ -48,18 +42,58 @@ ls apps/backend/drizzle/meta/*.json | tail -5
 
 ## 앞으로의 규칙 (반드시 준수)
 
-### 1. 스키마 변경은 반드시 `drizzle-kit generate`
+### 1. 스키마 변경은 manual SQL + journal append (ADR-0010)
 
-```bash
-pnpm --filter backend run db:generate   # 스키마 수정 후
-pnpm --filter backend run db:migrate    # 로컬 DB에 적용
+**결정 근거 + 회피 시도 3건은 [ADR-0010](../adr/0010-drizzle-manual-sql-policy.md) 참조.**
+
+`drizzle-kit generate` 는 본 레포에서 **금지**합니다. 새 마이그레이션은 다음 4 단계로 작성합니다:
+
+#### 1단계 — SQL 파일 작성
+
+`apps/backend/drizzle/{NNNN}_{tag}.sql` (다음 idx 번호, snake_case + 동작 동사). 기존 파일 패턴 (`CREATE TABLE` / `ALTER ADD CONSTRAINT` / `CREATE INDEX with --> statement-breakpoint`) 참고.
+
+예: `0058_add_inspection_form_templates.sql`
+
+#### 2단계 — journal entry append
+
+`apps/backend/drizzle/meta/_journal.json` 의 `entries[]` 끝에 다음 형식으로 entry 추가:
+
+```json
+{
+  "idx": <next>,
+  "version": "7",
+  "when": <Date.now() ms>,
+  "tag": "<tag_name>",
+  "breakpoints": true
+}
 ```
 
-PR에는 다음 3가지가 **모두** 커밋되어야 합니다:
+#### 3단계 — DB 직접 apply
 
-- `drizzle/NNNN_<name>.sql`
-- `drizzle/meta/NNNN_snapshot.json`
-- `drizzle/meta/_journal.json`의 새 entry
+```bash
+docker compose exec -T postgres psql -U postgres -d equipment_management \
+  -f - < apps/backend/drizzle/{file}.sql
+```
+
+#### 4단계 — `__drizzle_migrations` tracking row sync
+
+`db:reset` 시 충돌 방지를 위해 SHA-256 hash 를 INSERT 합니다:
+
+```bash
+HASH=$(sha256sum apps/backend/drizzle/{file}.sql | awk '{print $1}')
+docker compose exec -T postgres psql -U postgres -d equipment_management \
+  -c "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) \
+      VALUES ('$HASH', <when>) ON CONFLICT DO NOTHING;"
+```
+
+#### PR 체크리스트
+
+PR 에는 다음 2가지 **만** 커밋되어야 합니다:
+
+- [ ] `drizzle/NNNN_<name>.sql` 추가 ✓
+- [ ] `drizzle/meta/_journal.json` 에 entry 1건 append ✓
+- [ ] **snapshot 파일 변경 0건** ✓ (`git diff drizzle/meta/*_snapshot.json` 결과 비어있음 — snapshot 재생성 시도 시 실패해야 함, ADR-0010)
+- [ ] `pnpm --filter backend run db:reset` 후 새 마이그레이션이 정상 적용되는지 검증 ✓
 
 ### 2. `db:push`는 로컬 개인 프로토타이핑에만
 
@@ -68,31 +102,44 @@ PR에는 다음 3가지가 **모두** 커밋되어야 합니다:
 **허용**: 개인 로컬 실험, 삭제할 feature branch  
 **금지**: main/develop 병합 전 최종 스키마, 공유 DB
 
-### 3. 수동 SQL이 필요할 때
+### 3. 백필 UPDATE 등 복잡 SQL 인라인 작성
 
-데이터 백필, 특수 constraint 등은 drizzle-kit이 생성한 SQL 파일을 **직접 편집**합니다. snapshot(`meta/NNNN_snapshot.json`)은 절대 손으로 수정하지 않습니다 — drizzle-kit이 관리하는 스키마 그래프가 깨집니다.
+본 레포는 모든 마이그레이션이 manual SQL (§1) 이므로, 데이터 백필 / 특수 constraint / 멀티 stage column rename 등을 1단계의 SQL 파일에 **직접 작성**합니다. snapshot(`meta/NNNN_snapshot.json`)은 절대 손으로 수정하지 않습니다 — schema 그래프 깨짐 (ADR-0010 §Consequences).
 
-예시: drizzle-kit이 생성한 `0001_add_form_name.sql`에 백필 UPDATE 추가:
+예시: `0058_add_form_name.sql` 에 NOT NULL 백필 패턴:
 
 ```sql
 ALTER TABLE "form_templates" ADD COLUMN "form_name" varchar(200);
 --> statement-breakpoint
-UPDATE "form_templates" SET "form_name" = ... ;  -- 수동 추가 OK
+UPDATE "form_templates" SET "form_name" = ... ;  -- 백필
 --> statement-breakpoint
 ALTER TABLE "form_templates" ALTER COLUMN "form_name" SET NOT NULL;
 ```
 
-### 4. CI 체크 (추가 권장)
+운영 first-apply 시 text→uuid 캐스트 등 추가 가드가 필요하면 §6 (uuid-cast 가드) 절차 참조.
 
-`drizzle-kit generate` 결과가 **"No schema changes"**여야 PR 통과로 gate. 누군가 `schema.ts`만 수정하고 마이그레이션 생성을 깜빡했다면 CI가 잡아냅니다.
+### 4. CI 체크 (`drizzle-kit generate` 호출 차단)
 
-```yaml
-# 예시 (.github/workflows/ci.yml)
-- run: pnpm --filter backend exec drizzle-kit generate
-- run: git diff --exit-code drizzle/ # 변경 있으면 실패
+본 레포는 ADR-0010 에 따라 `drizzle-kit generate` 호출이 금지됩니다. 회귀 차단을 위해 CI 에서 다음 검증을 수행하는 것이 권장됩니다 (현재 미구현 — ADR-0010 §Mitigations 후속 sprint, 트리거: 회귀 1건 발생 시):
+
+```bash
+# 1) PR diff 에 snapshot 파일 변경이 있으면 fail (ADR-0010 위반)
+git diff origin/main -- 'apps/backend/drizzle/meta/*_snapshot.json' \
+  | grep -q . && { echo "❌ snapshot 파일 변경 금지 (ADR-0010)"; exit 1; }
+
+# 2) PR diff 에 drizzle-kit generate / db:generate 호출 commit 메시지가 있으면 fail
+git log origin/main..HEAD --grep="drizzle-kit generate\|db:generate" \
+  | grep -q . && { echo "❌ drizzle-kit generate 호출 금지 (ADR-0010)"; exit 1; }
+
+# 3) journal entry 와 SQL 파일 정합 (drizzle-kit check 는 schema-level invariant 별도 검증 X)
+pnpm --filter backend exec drizzle-kit check
 ```
 
+ESLint custom rule 로 `drizzle-kit generate` 호출 자동 차단은 ADR-0010 §Mitigations 의 SHOULD 항목으로 등록되어 있습니다 (회귀 1건 발생 시 별도 sprint).
+
 ### 5. 고장났을 때 다시 squash하는 법
+
+> **현재 정책: ADR-0010 manual SQL** — squash 는 단일 환경 한정 fallback 으로 보존합니다 (다환경 배포 시작 시 ADR-0010 Trigger Conditions 에 따라 재검토).
 
 **단일 환경 & 5~10개 미만 마이그레이션**: squash가 빠르고 안전.  
 **다환경(staging/prod) 배포 중**: squash 금지. 수동 패치(드리즐 공식 doc 참조 — `__drizzle_migrations`에 누락된 hash row INSERT + snapshot 복원).
@@ -192,12 +239,12 @@ fi
 
 ## 업계 표준 참고 (ORM별 대응 명령)
 
-| 도구        | 추적 테이블            | "이미 적용됨" 표시                          | Baseline 절차                               |
-| ----------- | ---------------------- | ------------------------------------------- | ------------------------------------------- |
-| Rails       | `schema_migrations`    | `rails db:migrate:up VERSION=`              | `db:schema:load` + timestamp INSERT         |
-| Django      | `django_migrations`    | `migrate --fake <app> <name>`               | `makemigrations` + `migrate --fake-initial` |
-| Prisma      | `_prisma_migrations`   | `prisma migrate resolve --applied "<name>"` | `prisma migrate diff` + baseline init       |
-| TypeORM     | `migrations`           | 수동 INSERT                                 | 수동                                        |
-| **Drizzle** | `__drizzle_migrations` | **공식 명령 없음** → 수동 hash INSERT       | **본 문서의 squash 절차**                   |
+| 도구        | 추적 테이블            | "이미 적용됨" 표시                          | Baseline 절차                                       |
+| ----------- | ---------------------- | ------------------------------------------- | --------------------------------------------------- |
+| Rails       | `schema_migrations`    | `rails db:migrate:up VERSION=`              | `db:schema:load` + timestamp INSERT                 |
+| Django      | `django_migrations`    | `migrate --fake <app> <name>`               | `makemigrations` + `migrate --fake-initial`         |
+| Prisma      | `_prisma_migrations`   | `prisma migrate resolve --applied "<name>"` | `prisma migrate diff` + baseline init               |
+| TypeORM     | `migrations`           | 수동 INSERT                                 | 수동                                                |
+| **Drizzle** | `__drizzle_migrations` | **공식 명령 없음** → 수동 hash INSERT       | **본 문서의 squash 절차** + **ADR-0010 manual SQL** |
 
-Drizzle은 상대적으로 젊은 도구라 "마이그레이션 복구" 공식 워크플로가 부족합니다. 그래서 이 문서가 존재합니다.
+Drizzle은 상대적으로 젊은 도구라 "마이그레이션 복구" 공식 워크플로가 부족하고, `drizzle-kit generate` 의 TTY interactive prompt 가 누적 schema diff 환경에서 비결정적이라 본 레포는 ADR-0010 에 따라 manual SQL + journal append 패턴을 운영 정책으로 채택합니다. 그래서 이 문서가 존재합니다.

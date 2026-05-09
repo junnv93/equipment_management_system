@@ -15,16 +15,27 @@ description: Analyzes git changes to generate conventional commit messages and a
 
 ## 워크플로우
 
-### Step 0: tech-debt-tracker.md 완료 항목 정리
+### Step 0: 완료 항목 정리 (커밋 전 선행)
 
-커밋 전 선행 정리. `[x]` 항목이 있으면 삭제한다 — 아카이브 이동 불필요, git 이력이 기록.
+**0-A. tech-debt-tracker.md `[x]` 항목 삭제** (아카이브 이동 불필요, git 이력이 기록):
 
 ```bash
 grep -c "^- \[x\]" .claude/exec-plans/tech-debt-tracker.md 2>/dev/null | grep -v "^0$" && \
   sed -i '/^- \[x\]/d' .claude/exec-plans/tech-debt-tracker.md || true
 ```
 
-`[x]` 항목이 없으면 스킵.
+**0-B. example-prompts.md 완료 항목 정리** — 다음 중 해당 항목 발견 시 제거 후 archive-*.md로 이동:
+- ~~strikethrough~~ + ✅ 마크 항목
+- tech-debt-tracker.md에 `closure` 언급된 항목 (교차 확인)
+- 모든 하위 항목이 완료된 섹션 헤더 (빈 sprint 헤더)
+- 활성 프롬프트 0건인 background-only 섹션 (발견 배경 노트만 있는 헤더)
+
+완료 항목 아카이브 대상:
+- 도메인 기능 → `archive-domain.md`
+- UI/디자인 → `archive-design.md`
+- CI/인프라/테스트 → `archive-infra.md`
+
+이번 세션에서 example-prompts.md를 수정하지 않았더라도, 다른 세션에서 완료된 항목이 있으면 정리.
 
 ### Step 1: 세션 변경 파일 파악 (필수 선행 단계)
 

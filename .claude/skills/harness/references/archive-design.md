@@ -5,6 +5,14 @@
 
 ---
 
+## ~~반출입 관리 페이지 아키텍처 개선 — Phase 1~8 전체~~ ✅ 완료 (PR-1~PR-23 전부, 2026-04-21~05-08)
+
+> `/review-design 68/100` 기반 AP-01~10 전 항목 개선. FSM SSOT (`packages/schemas/src/fsm/`) + NextStepPanel + design token 3-layer 신설.
+> **완료된 PR**: PR-1 (FSM schemas) / PR-2 (backend) / PR-3 (tokens) / PR-4 (NextStepPanel) / PR-5 (통합+flag) / PR-6 (Stepper/MiniProgress) / PR-7 (HeroKPI/Stat) / PR-8 (i18n 8NS) / PR-9 (E2E 11) / PR-12 (목록 IA+서브탭) / PR-13 (YourTurnBadge) / PR-14 (WorkflowTimeline) / PR-15 (모션 7종) / PR-16 (접근성) / PR-17 (최종 리뷰+번들) / PR-18 (Toast/Mobile) / PR-19 (Loading Skeleton+Error) / PR-20 (Backend 보안/SSOT) / PR-23 (플래그 상시화 마무리) / PR-24 (FSM 리터럴 7건).
+> 잔여 미완: PR-10 (NC elevation), PR-11 (Audit gate), PR-21 (WCAG+QUERY_CONFIG+URL SSOT), PR-22 (API 정리+Zod) — 독립 진행 가능 항목으로 별도 sprint 필요 시 재등록.
+
+---
+
 ## ~~반출입 관리 PR-17: 최종 통합 검증 + Feature Flag 3-Phase rollout + tech-debt 등록~~ ✅ 완료 (2026-04-24, 94차)
 
 > tsc(backend+frontend) PASS, lint PASS, self-audit(1850파일) 위반 0, i18n(107키) PASS, build PASS.

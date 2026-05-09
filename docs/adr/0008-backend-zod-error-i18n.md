@@ -115,6 +115,38 @@ _frontend i18n key 누락에서만_ 발생한다.
      트러블슈팅) + `promtool check rules` 정적 검증 SUCCESS 13 rules. critical alert 발생 시
      본 §4 의 3 옵션 (다중 issue 압축 / Accept-Language 부분 도입 / frontend 사전 검증 강화) 검토.
 
+### Alert Threshold Rationale (> 0.1 req/s warning / > 1 req/s critical)
+
+`ZodValidationIssuesHighCount` / `ZodValidationIssuesPersistentSpike` alert 임계값 도출 근거.
+**운영 baseline 미수집 초기 추정값** — 1-2주 운영 후 `docs/operations/prometheus-alert-rules.md#baseline-measurement` 절차에 따라 보정.
+
+**Warning 0.1 req/s (6건/분)**
+
+- 정상 사용 패턴: 의도적 잘못된 입력 사용자 < 10명/일 → 분당 `11+` bucket 도달 거의 0건
+- 0.1 req/s 지속 = 특정 폼의 클라이언트 사전 검증 회귀 또는 bot 폭격 가능성 → 즉시 조사 필요
+- `for: 10m` — 일시적 스파이크(배포 직후 cache warm-up 등) 필터링
+
+**Critical 1 req/s (60건/분)**
+
+- ADR-0008 §4 Trigger Condition 4 "+30% payload" 도달 추정점:
+  `1 req/s × 11 issues/req × ~200 bytes/issue = 2.2 KB/s` 추가 overhead
+  → p95 응답 크기 측정 시 임계 가시화 구간
+- Warning 10배 — 경보→대응 간격이 5분 이상 유효하도록 설계
+
+**임계값 조정 절차**
+
+운영 baseline 수집 후 false-positive 3회/주 이상 발생 시 아래 기준으로 재조정:
+
+```promql
+-- 정상 운영 중 11+ bucket peak rate (1주 기준)
+max_over_time(
+  sum(rate(zod_validation_issues_total{issue_count_bucket="11+"}[5m]))[7d:1m]
+)
+```
+
+결과 × 3 를 warning 임계값 후보로 설정. critical = warning × 10 유지.
+상세 baseline 측정 절차: `docs/operations/prometheus-alert-rules.md#baseline-measurement`
+
 ## Scope
 
 - **IN**:
