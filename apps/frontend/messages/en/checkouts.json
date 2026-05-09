@@ -698,7 +698,7 @@
       "cta": "Reset Filters"
     },
     "overdueClear": {
-      "title": "No Overdue Checkouts",
+      "title": "No overdue items",
       "description": "All checkouts are within their return dates"
     },
     "noneYet": {

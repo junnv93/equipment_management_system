@@ -135,9 +135,10 @@ export const CHECKOUT_PURPOSE_TOKENS = {
     badge: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
     colorBar: getSemanticLeftBorderClasses('purple'),
   },
+  // temporary(cyan): 업체에서 임시 대여한 장비를 반납하는 흐름 — "temporary loan ending"
   return_to_vendor: {
-    badge: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
-    colorBar: getSemanticLeftBorderClasses('neutral'),
+    badge: 'bg-brand-temporary/10 text-brand-temporary border-brand-temporary/20',
+    colorBar: getSemanticLeftBorderClasses('temporary'),
   },
 } as const;
 
@@ -159,7 +160,7 @@ export const CHECKOUT_ROW_TOKENS = {
     calibration: getSemanticLeftBorderClasses('info'),
     repair: getSemanticLeftBorderClasses('repair'),
     rental: getSemanticLeftBorderClasses('purple'),
-    return_to_vendor: getSemanticLeftBorderClasses('neutral'),
+    return_to_vendor: getSemanticLeftBorderClasses('temporary'),
   },
   overdue: {
     background: 'bg-brand-critical/8',
@@ -877,7 +878,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
     calibration: 'bg-brand-info',
     repair: 'bg-brand-repair',
     rental: 'bg-brand-purple',
-    return_to_vendor: 'bg-brand-neutral',
+    return_to_vendor: 'bg-brand-temporary',
     default: 'bg-brand-neutral/50',
   } satisfies { base: string; default: string } & Record<CheckoutPurpose, string>,
 
