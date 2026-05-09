@@ -1,17 +1,15 @@
 /**
  * Toast assertion helper for shadcn/Radix Toast.
  *
- * Radix `<Toast.Root>` 는 의도적으로 메시지를 두 번 노출한다:
- *  1) 시각 토스트 — viewport 안의 `<li role="status">` (사용자가 보는 카드)
+ * Radix `<Toast.Root>` 의 실제 DOM 구조:
+ *  1) 시각 토스트 — `<ol data-radix-toast-viewport>` 안에 포털된 `<li data-state="open">`
+ *     (사용자가 보는 카드, `role` attribute 없음)
  *  2) Visually-hidden status mirror — `<span role="status" aria-live="assertive">` 로
- *     스크린리더에게 즉시 announce ("Notification {text}" 접두 포함 가능)
+ *     스크린리더에게 즉시 announce (시각 카드의 형제 노드, li 外부)
  *
- * 이는 Radix 의 a11y 의도된 동작이며 Toaster 컴포넌트를 건드려 SR mirror 를 제거하면
- * 스크린리더 사용자에게 회귀가 발생한다. 따라서 e2e 는 시각 토스트(`li[role="status"]`)
- * 만 매칭하도록 helper 로 일원화한다.
- *
- * `.first()` 우회를 spec 에 직접 박지 않는 이유: 매칭 대상이 늘어나면 잘못된 토스트를
- * 잡아낼 수 있고, 의도(시각 발화 검증)가 코드에 드러나지 않는다.
+ * `[data-radix-toast-viewport] li` 셀렉터로 시각 토스트만 매칭.
+ * `toBeVisible()` 이 `data-state` 에 따른 CSS visibility 를 검증하므로
+ * 셀렉터에 `[data-state="open"]` 추가 불필요.
  *
  * @example
  * await expectToastVisible(page, '자체점검 기록이 생성되었습니다.');
@@ -52,5 +50,5 @@ export async function expectToastVisible(
  * await expect(success.or(error)).toBeVisible({ timeout: 10_000 });
  */
 export function toastLocator(page: Page, text: string | RegExp) {
-  return page.locator('li[role="status"]').filter({ hasText: text });
+  return page.locator('[data-radix-toast-viewport] li').filter({ hasText: text });
 }

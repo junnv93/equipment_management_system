@@ -48,15 +48,6 @@ export function extractValidationIssues(error: unknown): BackendValidationIssue[
   if (error === null || typeof error !== 'object') return null;
 
   const obj = error as Record<string, unknown>;
-  // DEBUG: ADR-0008 issues extraction trace
-  console.log(
-    '[ADR-0008-DEBUG] extractValidationIssues called, obj.code:',
-    obj.code,
-    'obj.issues:',
-    obj.issues,
-    'obj.details:',
-    obj.details
-  );
 
   const direct = pickIssues(obj.issues);
   if (direct) return direct;
@@ -72,10 +63,8 @@ export function extractValidationIssues(error: unknown): BackendValidationIssue[
 
   // ADR-0008: ApiError.details.issues — createApiError 가 top-level issues 를 보존한 경로
   const details = obj.details as Record<string, unknown> | undefined;
-  console.log('[ADR-0008-DEBUG] details:', details, 'typeof details:', typeof details);
   if (details && typeof details === 'object') {
     const fromDetails = pickIssues(details.issues);
-    console.log('[ADR-0008-DEBUG] fromDetails:', fromDetails);
     if (fromDetails) return fromDetails;
   }
 

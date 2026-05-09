@@ -68,12 +68,6 @@ async function triggerRejectWithMockedFailure(
   issues: ReadonlyArray<{ code: string; path: ReadonlyArray<string | number>; params?: object }>,
   locale: 'ko' | 'en' = 'ko'
 ): Promise<void> {
-  // DEBUG: capture browser console for ADR-0008 debugging
-  page.on('console', (msg) => {
-    if (msg.text().includes('ADR-0008-DEBUG')) {
-      console.log('[BROWSER]', msg.text());
-    }
-  });
   // PATCH 만 mock — GET 등 다른 메서드는 실 backend 로 위임 (테스트 격리)
   await page.route(REJECT_PATH, async (route) => {
     if (route.request().method() !== 'PATCH') return route.continue();
