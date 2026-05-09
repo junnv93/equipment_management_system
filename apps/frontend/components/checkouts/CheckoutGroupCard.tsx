@@ -1,19 +1,15 @@
 'use client';
 
 import { useState, useMemo, memo, useCallback } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useEffectiveRole } from '@/hooks/use-effective-role';
-import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import { AlertTriangle, CalendarDays, Building, ChevronDown, CheckCheck } from 'lucide-react';
-import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import { CheckoutPhaseIndicator } from '@/components/checkouts/CheckoutPhaseIndicator';
 import { NextStepPanel } from '@/components/checkouts/NextStepPanel';
 import type { OverflowAction } from '@/lib/types/checkout-ui';
@@ -30,7 +26,6 @@ import {
 import {
   CheckoutStatusValues as CSVal,
   type CheckoutAction,
-  type NextStepDescriptor,
   type UserSelectableCheckoutPurpose,
 } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
@@ -44,16 +39,13 @@ import {
   CHECKOUT_ITEM_ROW_TOKENS,
   CHECKOUT_INTERACTION_TOKENS,
   CHECKOUT_YOUR_TURN_BADGE_TOKENS,
-  getPurposeBarClass,
-  getCheckoutDday4TierClasses,
-  formatDday,
   FONT,
-  getManagementNumberClasses,
   MICRO_TYPO,
-  ANIMATION_PRESETS,
-  getStaggerFadeInStyle,
-  shouldUseStaggerFadeIn,
 } from '@/lib/design-tokens';
+import {
+  CheckoutEquipmentRow,
+  type EquipmentRowData,
+} from '@/components/checkouts/CheckoutEquipmentRow';
 
 // ============================================================================
 // Types
@@ -87,23 +79,6 @@ interface CheckoutGroupCardProps {
   onToggleRow?: (rowId: string) => void;
 }
 
-interface EquipmentRow {
-  equipmentId: string;
-  equipmentName: string;
-  managementNumber: string;
-  purpose: string;
-  status: string;
-  checkoutType: 'calibration' | 'repair' | 'rental';
-  userName: string;
-  checkoutId: string;
-  expectedReturnDate: string | undefined;
-  destination: string | undefined;
-  canApproveItem: boolean;
-  canBorrowerApproveItem: boolean;
-  canReturnItem: boolean;
-  descriptor: NextStepDescriptor | undefined;
-}
-
 // ============================================================================
 // CheckoutGroupCard
 // ============================================================================
@@ -118,7 +93,6 @@ function CheckoutGroupCard({
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
   const tCommon = useTranslations('common');
-  const locale = useLocale();
   const [isOpen, setIsOpen] = useState(isOverdueGroup);
 
   const { data: session } = useSession();
@@ -192,7 +166,7 @@ function CheckoutGroupCard({
   const rejectActionLabel = useMemo(() => t('actions.reject'), [t]);
 
   const buildRowOverflowActions = useCallback(
-    (row: EquipmentRow): OverflowAction[] => {
+    (row: EquipmentRowData): OverflowAction[] => {
       const actions: OverflowAction[] = [];
       if (row.canApproveItem && row.status === CSVal.PENDING) {
         actions.push({
@@ -422,147 +396,27 @@ function CheckoutGroupCard({
                 className="border-t border-border/50"
               >
                 {equipmentRows.map((row, rowIndex) => {
-                  const daysRemaining = row.expectedReturnDate
-                    ? calculateDaysRemaining(row.expectedReturnDate)
-                    : null;
-                  const isRowOverdue = row.status === CSVal.OVERDUE;
-                  const rowBaseClass = isRowOverdue
-                    ? `${CHECKOUT_ITEM_ROW_TOKENS.container} ${CHECKOUT_ITEM_ROW_TOKENS.containerOverdue}`
-                    : CHECKOUT_ITEM_ROW_TOKENS.container;
-                  const shouldAnimateRow = shouldUseStaggerFadeIn(rowIndex);
-
-                  // Row 선택 가능 여부 — pending + canApprove 조합
                   const rowSelectable =
                     showRowCheckbox && row.status === CSVal.PENDING && row.canApproveItem;
                   const isRowSelected =
                     showRowCheckbox && (selectedRowIds?.has(row.checkoutId) ?? false);
 
                   return (
-                    <div
+                    <CheckoutEquipmentRow
                       key={`${row.checkoutId}-${row.equipmentId}`}
-                      role="row"
-                      tabIndex={0}
-                      data-checkout-id={row.checkoutId}
-                      aria-label={t('groupCard.rowAria', {
-                        equipment: row.equipmentName,
-                        status: t(`status.${row.status}`),
-                        dday: daysRemaining !== null ? formatDday(daysRemaining) : '',
-                      })}
-                      aria-selected={showRowCheckbox ? isRowSelected : undefined}
-                      onClick={handleCheckoutRowClick}
-                      onKeyDown={handleCheckoutRowKeyDown}
-                      className={cn(
-                        rowBaseClass,
-                        showRowCheckbox
-                          ? CHECKOUT_ITEM_ROW_TOKENS.gridWithCheckbox
-                          : CHECKOUT_ITEM_ROW_TOKENS.grid,
-                        shouldAnimateRow && ANIMATION_PRESETS.staggerFadeInItem
-                      )}
-                      style={shouldAnimateRow ? getStaggerFadeInStyle(rowIndex, 'grid') : undefined}
-                    >
-                      {/* Zone 0: row 체크박스 — bulk-selection 활성 시에만 노출 */}
-                      {showRowCheckbox && (
-                        <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneCheckbox}>
-                          <Checkbox
-                            data-testid="row-checkbox"
-                            checked={isRowSelected}
-                            disabled={!rowSelectable}
-                            onCheckedChange={() => {
-                              if (rowSelectable) onToggleRow?.(row.checkoutId);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => {
-                              if (e.nativeEvent.isComposing) return;
-                              if (e.key === ' ' || e.key === 'Enter') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (rowSelectable) onToggleRow?.(row.checkoutId);
-                              }
-                            }}
-                            aria-label={
-                              rowSelectable
-                                ? t('groupCard.selectRowAria', {
-                                    equipment: row.equipmentName,
-                                    status: t(`status.${row.status}`),
-                                  })
-                                : t('groupCard.selectRowDisabled')
-                            }
-                            className="shrink-0"
-                          />
-                        </div>
-                      )}
-
-                      {/* Zone 1: purposeBar (3px) */}
-                      <span
-                        className={cn(
-                          CHECKOUT_ITEM_ROW_TOKENS.purposeBar.base,
-                          getPurposeBarClass(row.purpose)
-                        )}
-                        aria-hidden="true"
-                      />
-
-                      {/* Zone 2: status + D-day 세로 스택 (72px) */}
-                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneStatus}>
-                        <CheckoutStatusBadge
-                          status={row.status}
-                          className={`${MICRO_TYPO.badge} py-0 max-w-[68px] truncate`}
-                        />
-                        {daysRemaining !== null && (
-                          <span
-                            className={`${CHECKOUT_ITEM_ROW_TOKENS.dday} ${getCheckoutDday4TierClasses(daysRemaining)}`}
-                          >
-                            {formatDday(daysRemaining)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Zone 3: identity — 장비명 + meta (1fr) */}
-                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneIdentity}>
-                        <div className={CHECKOUT_ITEM_ROW_TOKENS.nameRow}>
-                          <span className={CHECKOUT_ITEM_ROW_TOKENS.name}>{row.equipmentName}</span>
-                          <code
-                            className={`${CHECKOUT_ITEM_ROW_TOKENS.mgmt} ${getManagementNumberClasses()}`}
-                          >
-                            {row.managementNumber}
-                          </code>
-                        </div>
-                        <p className={CHECKOUT_ITEM_ROW_TOKENS.meta}>
-                          {row.destination && <>{row.destination} · </>}
-                          {row.expectedReturnDate && (
-                            <>
-                              {t('groupCard.expectedReturn')}{' '}
-                              {new Date(row.expectedReturnDate).toLocaleDateString(locale, {
-                                month: 'long',
-                                day: 'numeric',
-                              })}{' '}
-                              ·{' '}
-                            </>
-                          )}
-                          {row.userName}
-                        </p>
-                      </div>
-
-                      {/* Zone 4: NextStepPanel compact + MiniProgress tooltip (auto) */}
-                      <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneAction}>
-                        {row.descriptor && (
-                          <NextStepPanel
-                            variant="compact"
-                            descriptor={row.descriptor}
-                            currentUserRole={role}
-                            onActionClick={handleRowAction(row.checkoutId, row.equipmentName)}
-                            isPending={approveMutation.isPending}
-                            overflowActions={buildRowOverflowActions(row)}
-                            loadingLabel={tCommon('status.loading')}
-                          />
-                        )}
-                        <CheckoutMiniProgress
-                          variant="tooltipButton"
-                          currentStatus={row.status}
-                          checkoutType={row.checkoutType}
-                          descriptor={row.descriptor}
-                        />
-                      </div>
-                    </div>
+                      row={row}
+                      rowIndex={rowIndex}
+                      showRowCheckbox={showRowCheckbox}
+                      isRowSelected={isRowSelected}
+                      rowSelectable={rowSelectable}
+                      onToggleRow={onToggleRow}
+                      onRowClick={handleCheckoutRowClick}
+                      onRowKeyDown={handleCheckoutRowKeyDown}
+                      onAction={handleRowAction(row.checkoutId, row.equipmentName)}
+                      overflowActions={buildRowOverflowActions(row)}
+                      userRole={role}
+                      isApprovePending={approveMutation.isPending}
+                    />
                   );
                 })}
               </div>
