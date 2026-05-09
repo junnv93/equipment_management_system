@@ -109,6 +109,60 @@ groups:
           summary: 'API 응답 시간 p95 > 3초'
           description: '최근 5분 p95 응답 시간: {{ $value | printf "%.2f" }}초'
 
+  # Security Telemetry Alerts
+  # sort_rejection_total{route, reason} — 정상 운영 시 0이어야 하는 보안 metric.
+  # sort_rejection_drops_total{reason} — rate-limit drop = 분당 60건 초과 (자동화 공격 확정).
+  # reason 값: invalid_value(SQL injection 의심) / too_big(DoS 의심) / invalid_type
+  # 운영 절차: docs/operations/prometheus-alert-rules.md
+  - name: security_telemetry
+    interval: 30s
+    rules:
+      - alert: SortRejectionRateHigh
+        expr: |
+          sum(rate(sort_rejection_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'sort 필드 거부 빈발 — 자동화 탐색 의심'
+          description: |
+            5분 평균 0.05건/초 (= 3건/분) 초과. 정상 사용자는 sort 필드를 잘못 보내지 않음.
+            SQL injection 시도 또는 자동화 스캔 가능성.
+            value={{ $value | printf "%.4f" }} req/s
+          runbook: |
+            1. Grafana 패널 또는 PromQL 로 공격 route 식별:
+               sum by (route, reason) (rate(sort_rejection_total[15m]))
+            2. backend 로그 조회:
+               docker compose logs --tail=200 backend | grep "Sort field rejection"
+            3. reason=invalid_value → SQL injection 패턴 확인 (invalidValue 필드)
+               reason=too_big → DoS 시도 (payload size 확인)
+            4. 공격 IP 특정 가능 시 rate-limit 또는 nginx deny 적용
+            5. 10분 내 하강 미관측 시 → SortRejectionSustainedAttack 도달 가능
+          runbook_url: 'docs/operations/prometheus-alert-rules.md#sortrejectionratehigh'
+
+      - alert: SortRejectionSustainedAttack
+        expr: |
+          sum(rate(sort_rejection_drops_total{reason="rate-limit"}[5m])) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'sort 필드 rate-limit drop 발생 — 자동화 공격 확정'
+          description: |
+            분당 60건 초과로 rate-limiter가 DROP 처리 중. 자동화 스캔 또는 공격 확정.
+            동시에 SortRejectionRateHigh alert 미발생 시 rate-limit 기준이 너무 낮은 것.
+            drop rate={{ $value | printf "%.4f" }} req/s
+          runbook: |
+            1. 즉시 영향 평가 — HTTP 에러율 동시 상승 여부:
+               sum(rate(http_requests_total{status=~"4.."}[5m])) by (route)
+            2. 공격 route 집중 식별:
+               topk(5, sum by (route) (rate(sort_rejection_drops_total[5m])))
+            3. 단기 완화: nginx access log에서 IP 차단 검토
+               docker compose logs nginx | grep "422" | awk '{print $1}' | sort | uniq -c | sort -rn
+            4. 지속 2분 이상 시 oncall 에스컬레이션
+            5. rate-limit-fallback drop 동반 → Redis 장애 동시 발생 여부 점검
+          runbook_url: 'docs/operations/prometheus-alert-rules.md#sortrejectionsustainedattack'
+
   # Validation Telemetry Alerts (ADR-0008 §4 Trigger Conditions for Reconsideration)
   # zod_validation_issues_total Counter — domain_route × issue_count_bucket (1/2-5/6-10/11+)
   # 11+ bucket 폭주 → 응답 payload size +30% 위험 (다중 issue 압축 / Accept-Language 부분 도입 등 검토)

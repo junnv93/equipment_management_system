@@ -195,6 +195,63 @@ docker compose exec alertmanager amtool config routes test \
 
 application 메트릭 기반. **즉시 행동**: backend 로그 + `/api/health` 엔드포인트 응답 점검.
 
+### SortRejectionRateHigh
+
+**Severity**: warning · **for**: 5m · **임계**: `> 0.05 req/s` (5m rate, = 3건/분)
+
+`sort_rejection_total` 5분 평균 0.05건/초 초과. 정상 사용자는 sort 필드를 잘못 보내지 않음.
+
+**Root cause 가능성**:
+
+- SQL injection 시도 (`reason=invalid_value`, `invalidValue` 필드에 SQL 패턴 포함)
+- 자동화 스캔 또는 fuzzer (`reason=too_big`, DoS 의심)
+- 클라이언트 라이브러리 버그 (`reason=invalid_type`, 타입 오류 반복)
+
+**즉시 행동**:
+
+1. **공격 route 식별** — Grafana 패널 또는 직접 query:
+   ```promql
+   topk(5, sum by (route, reason) (rate(sort_rejection_total[15m])))
+   ```
+2. **backend 로그 조회** (invalidValue 포함):
+   ```bash
+   docker compose logs --tail=200 backend | grep "Sort field rejection"
+   ```
+3. **reason=invalid_value** → SQL injection 패턴 확인 (`invalidValue` 필드 내용 점검)
+   **reason=too_big** → DoS 시도 (payload size 확인)
+4. **공격 IP 특정 가능 시** → nginx rate-limit 또는 deny 적용
+   ```bash
+   docker compose logs nginx | grep "422" | awk '{print $1}' | sort | uniq -c | sort -rn
+   ```
+5. **10분 내 하강 미관측 시** → `SortRejectionSustainedAttack` critical 도달 가능
+
+### SortRejectionSustainedAttack
+
+**Severity**: critical · **for**: 2m · **임계**: `drops{reason="rate-limit"} > 0.01 req/s` (5m rate)
+
+분당 60건 초과로 rate-limiter가 DROP 처리 중. 자동화 스캔 또는 공격 확정.
+
+**즉시 행동**:
+
+1. **영향 평가** — HTTP 에러율 동시 상승 여부:
+   ```promql
+   sum(rate(http_requests_total{status=~"4.."}[5m])) by (route)
+   ```
+2. **공격 route 집중 식별**:
+   ```promql
+   topk(5, sum by (route) (rate(sort_rejection_drops_total[5m])))
+   ```
+3. **단기 완화** — nginx access log에서 IP 차단 검토:
+   ```bash
+   docker compose logs nginx | grep "422" | awk '{print $1}' | sort | uniq -c | sort -rn
+   ```
+4. **지속 2분 이상 시** → oncall 에스컬레이션
+5. **rate-limit-fallback drop 동반** → Redis 장애 동시 발생 여부 점검:
+   ```promql
+   sum(rate(sort_rejection_drops_total{reason="rate-limit-fallback"}[5m]))
+   ```
+   Redis 장애 시 `docker compose ps redis` + `docker compose logs redis --tail=50`
+
 ## 트러블슈팅
 
 ### promtool check rules 실패
@@ -216,6 +273,49 @@ application 메트릭 기반. **즉시 행동**: backend 로그 + `/api/health` 
 1. `curl -s http://alertmanager:9093/api/v2/alerts` — alert 가 alertmanager 까지 도달했는지 확인
 2. `${SLACK_WEBHOOK}` env 주입 확인 (`docker compose exec alertmanager env | grep SLACK`)
 3. 라우팅 시뮬레이션 (위 §Workflow.5 참조)
+
+## Baseline Measurement — Zod Validation Alert 임계값 보정 절차
+
+`ZodValidationIssuesHighCount` / `ZodValidationIssuesPersistentSpike` 임계값은
+**초기 추정값** (warning `> 0.1 req/s` / critical `> 1 req/s`) 으로 배포됨.
+1-2주 정상 운영 후 아래 절차로 baseline 측정 + 임계값 보정.
+
+### 1. 정상 운영 baseline 측정
+
+```promql
+-- 1주 운영 중 11+ bucket 최대 순간 rate (분 단위 샘플)
+max_over_time(
+  sum(rate(zod_validation_issues_total{issue_count_bucket="11+"}[5m]))[7d:1m]
+)
+
+-- p95 rate (이상값 배제)
+histogram_quantile(0.95,
+  sum(rate(zod_validation_issues_total_bucket[7d])) by (le)
+)
+```
+
+### 2. 임계값 조정 기준
+
+| 상황                                                | 조치                                                 |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| False-positive 3회/주 이상 (정상 운영 중 경보 발생) | warning = max_over_time × 3; critical = warning × 10 |
+| 임계 도달 없이 1개월 경과                           | 임계값 유지 (추정값이 충분히 보수적)                 |
+| Critical alert 첫 발생 후 ADR-0008 §4 검토 필요     | ADR-0008 §4 Trigger Condition 4 절차 참조            |
+
+### 3. 임계값 변경 절차
+
+1. `infra/monitoring/prometheus/alert.rules.yml` `validation` 그룹 `expr` 수정
+2. `promtool check rules` 정적 검증 (§Workflow.3)
+3. Prometheus reload (§Workflow.4)
+4. 본 섹션 "보정 이력" 업데이트
+
+### 보정 이력
+
+| 날짜       | warning     | critical  | 근거                                                   |
+| ---------- | ----------- | --------- | ------------------------------------------------------ |
+| 2026-05-09 | > 0.1 req/s | > 1 req/s | 초기 추정값 — ADR-0008 §Alert Threshold Rationale 참조 |
+
+---
 
 ## 참조
 
