@@ -3,6 +3,7 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { isAfter, differenceInDays } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { toDate } from '@/lib/utils/date';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 
@@ -30,13 +31,13 @@ export function CalibrationValidityChecker({
   nextCalibrationDate,
   usagePeriodEnd,
 }: CalibrationValidityCheckerProps) {
+  const t = useTranslations('equipment.calibrationValidity');
   const { fmtDate } = useDateFormatter();
-  // 빈 값 체크
+
   if (!nextCalibrationDate || !usagePeriodEnd) {
     return null;
   }
 
-  // 차기교정일이 사용 종료일 이후인지 자동 검증
   const nextCalDate = toDate(nextCalibrationDate);
   const endDate = toDate(usagePeriodEnd);
   if (!nextCalDate || !endDate) return null;
@@ -48,10 +49,12 @@ export function CalibrationValidityChecker({
     return (
       <Alert variant="destructive" role="alert">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>교정 유효기간 부족</AlertTitle>
+        <AlertTitle>{t('insufficient.title')}</AlertTitle>
         <AlertDescription>
-          차기교정일({fmtDate(nextCalDate)})이 사용 종료일(
-          {fmtDate(endDate)}) 이후여야 합니다. 교정성적서를 확인하거나 사용 기간을 조정해주세요.
+          {t('insufficient.description', {
+            nextCalDate: fmtDate(nextCalDate),
+            endDate: fmtDate(endDate),
+          })}
         </AlertDescription>
       </Alert>
     );
@@ -60,10 +63,8 @@ export function CalibrationValidityChecker({
   return (
     <Alert className="border-brand-ok bg-brand-ok/10 text-brand-ok">
       <CheckCircle2 className="h-4 w-4" />
-      <AlertTitle>교정 유효기간 확인됨</AlertTitle>
-      <AlertDescription>
-        차기교정일까지 {daysBuffer}일 여유가 있습니다. 사용 기간 동안 교정이 유효합니다.
-      </AlertDescription>
+      <AlertTitle>{t('verified.title')}</AlertTitle>
+      <AlertDescription>{t('verified.description', { days: daysBuffer })}</AlertDescription>
     </Alert>
   );
 }

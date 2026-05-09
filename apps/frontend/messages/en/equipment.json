@@ -1649,6 +1649,16 @@
     "loading": "Loading data...",
     "emptySearch": "No search results"
   },
+  "calibrationValidity": {
+    "insufficient": {
+      "title": "Calibration Validity Insufficient",
+      "description": "The next calibration date ({nextCalDate}) must be after the usage end date ({endDate}). Please verify the calibration certificate or adjust the usage period."
+    },
+    "verified": {
+      "title": "Calibration Validity Confirmed",
+      "description": "There are {days} days of buffer until the next calibration. The calibration is valid throughout the usage period."
+    }
+  },
   "errors": {
     "title": "Action Failed",
     "genericError": "An error occurred. Please try again.",

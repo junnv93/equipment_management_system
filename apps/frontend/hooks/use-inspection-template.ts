@@ -72,13 +72,7 @@ export function useLatestTemplate(
  * - body.version은 latest.version + 1 (불일치 시 400 INSPECTION_TEMPLATE_INVALID_VERSION)
  * - 동시 수정 시 unique constraint 위반 → 409 INSPECTION_TEMPLATE_VERSION_CONFLICT
  *
- * ⚠️ Phase 1B-E TODO — useCasGuardedMutation 패턴 wrap:
- *   현재는 단순 useMutation — 호출자가 *직접* useLatestTemplate으로 fresh supersededBy/version 확보 후
- *   호출하는 구조. SoftForkDialog 통합 시 fetchCasVersion=getLatestTemplate(...).then(t => t.id)로
- *   fetch-before-mutate 패턴 적용 권장 (memory: useCasGuardedMutation SSOT).
- *   1B-D 시점에는 hook 정의만 — 호출자 0건.
- *
- * 호출자(SoftForkDialog 1B-E) 책임:
+ * 호출자 책임 (InspectionFormDialog.tsx 참고):
  * - 409 시 useToast + 사용자 안내 ("다른 사용자가 먼저 수정") — 계약 M-3.2
  * - onSuccess에서 inspection submit 진행
  *

@@ -1649,6 +1649,16 @@
     "loading": "데이터를 로딩 중입니다...",
     "emptySearch": "검색 결과가 없습니다"
   },
+  "calibrationValidity": {
+    "insufficient": {
+      "title": "교정 유효기간 부족",
+      "description": "차기교정일({nextCalDate})이 사용 종료일({endDate}) 이후여야 합니다. 교정성적서를 확인하거나 사용 기간을 조정해주세요."
+    },
+    "verified": {
+      "title": "교정 유효기간 확인됨",
+      "description": "차기교정일까지 {days}일 여유가 있습니다. 사용 기간 동안 교정이 유효합니다."
+    }
+  },
   "errors": {
     "title": "처리 실패",
     "genericError": "처리 중 오류가 발생했습니다. 다시 시도하세요.",
