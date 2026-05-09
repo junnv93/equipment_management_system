@@ -160,6 +160,9 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
 
   const activeTabMeta = TAB_META[activeTab];
 
+  const handleRejectForList = useCallback((item: ApprovalItem) => setRejectModalItem(item), []);
+  const handleViewDetail = useCallback((item: ApprovalItem) => setDetailModalItem(item), []);
+
   if (isCategoriesLoading) {
     return (
       <div className="py-12 text-center text-muted-foreground">
@@ -229,10 +232,8 @@ export function ApprovalsClient({ userRole, userTeamId, initialTab }: ApprovalsC
               exitingIds={exitingIds}
               onToggleSelect={selection.toggle}
               onApprove={handleApprove}
-              onReject={
-                activeTabMeta.canReject !== false ? (item) => setRejectModalItem(item) : undefined
-              }
-              onViewDetail={(item) => setDetailModalItem(item)}
+              onReject={activeTabMeta.canReject !== false ? handleRejectForList : undefined}
+              onViewDetail={handleViewDetail}
               actionLabel={t(activeTabMeta.actionKey as Parameters<typeof t>[0])}
               todayProcessed={kpi.todayProcessed}
             />
