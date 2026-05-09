@@ -14,6 +14,7 @@ import {
   updateEquipmentSchema,
   UserRoleValues as URVal,
   CalibrationApprovalStatusValues,
+  CalibrationResultEnum,
 } from '@equipment-management/schemas';
 import {
   EQUIPMENT_OWNER_OPTIONS,
@@ -302,15 +303,18 @@ export function EquipmentForm({
     queryFn: async () => {
       const calibrations = await calibrationApi.getEquipmentCalibrations(initialData!.uuid!);
       // CalibrationHistoryItem → CalibrationRecord 변환
-      return calibrations.map((item) => ({
-        id: item.id,
-        calibrationDate: item.calibrationDate,
-        nextCalibrationDate: item.nextCalibrationDate,
-        calibrationAgency: item.calibrationAgency,
-        result: item.result,
-        approvalStatus: item.approvalStatus,
-        status: 'completed' as const, // API 응답에서는 완료된 이력만 반환
-      }));
+      return calibrations.map((item) => {
+        const parsedResult = CalibrationResultEnum.safeParse(item.result);
+        return {
+          id: item.id,
+          calibrationDate: item.calibrationDate,
+          nextCalibrationDate: item.nextCalibrationDate,
+          calibrationAgency: item.calibrationAgency,
+          result: parsedResult.success ? parsedResult.data : undefined,
+          approvalStatus: item.approvalStatus,
+          status: 'completed' as const,
+        };
+      });
     },
     enabled: isEdit && !!initialData?.uuid,
     ...QUERY_CONFIG.HISTORY,

@@ -63,12 +63,12 @@ interface DerivedStats {
 }
 
 /**
- * 장비별 교정 이력 — `/equipment/[id]/calibration-history` sub-route Client.
+ * 장비별 교정 이력 — `/equipment/[id]/calibration-history` sub-route Client (ADR-0009 Option C).
  *
- * **역할 분리 (Option C — Tab vs Sub 중복 architecture closure)**:
- * - Tab(`?tab=calibration`)이 ``CalibrationHistoryTab`` 요약 노출 — equipment 컨텍스트 빠른 훑기.
- * - 본 Client는 *집중적 calibration 이력 관리* — 통계 + 필터 + full table 노출.
- * - ``CalibrationHistoryTab`` 직접 재사용 0건 — Tab과 다른 책임 명확.
+ * **역할 분리 (Tab vs Sub-route)**:
+ * - Tab(`CalibrationHistoryTab`): 요약 + 빠른 컨텍스트 확인 전용.
+ * - 본 Client: 집중적 교정 이력 관리 — 통계 카드 5종 + 날짜/승인상태/결과 필터 + 전체 목록.
+ * - `CalibrationHistoryTab` 직접 재사용 0건 — Tab과 다른 책임 명확.
  *
  * 데이터 SSOT 공유 패턴:
  * - 같은 backend endpoint(`getCalibrationHistory({ equipmentId })`)로 단일 장비 필터 결과 fetch.

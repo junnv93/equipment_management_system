@@ -118,7 +118,10 @@ interface IncidentHistoryTabProps {
 // INCIDENT_TYPE_LABELS are now provided via useTranslations('equipment').incidentHistoryTab.types
 
 /**
- * 사고 이력 탭 - 타임라인 UI
+ * 사고 이력 탭 — 장비 상세 내 요약 UI (ADR-0009 Option C).
+ *
+ * **역할**: 최근 사고/부적합 이력 요약 + 타임라인 표시. 집중 관리는 `NonConformanceManagementClient`(`/equipment/[id]/non-conformances`).
+ * 탭→서브라우트 진입점은 `EquipmentTabFooterLink` SSOT 단일 사용 — 직접 Link 금지.
  */
 export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const { can } = useAuth();

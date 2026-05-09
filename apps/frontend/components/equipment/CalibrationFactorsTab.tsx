@@ -12,6 +12,12 @@ interface CalibrationFactorsTabProps {
   equipment: Equipment;
 }
 
+/**
+ * 교정 인자 탭 — 장비 상세 내 요약 UI (ADR-0009 Option C).
+ *
+ * **역할**: 현재 교정 인자 목록 요약 표시. 집중 관리는 `CalibrationFactorsClient`(`/equipment/[id]/calibration-factors`).
+ * 탭→서브라우트 진입점은 `EquipmentTabFooterLink` SSOT 단일 사용 — 직접 Link 금지.
+ */
 export function CalibrationFactorsTab({ equipment }: CalibrationFactorsTabProps) {
   const t = useTranslations('equipment');
   const equipmentId = String(equipment.id);

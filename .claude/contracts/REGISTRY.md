@@ -10,6 +10,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | slug | 설명 | 시작일 |
 |------|------|--------|
 | `calibration-cert-phase-a-closure` | 교정성적서 PDF 추출 Phase A 8 갭 atomic closure (controller + ErrorCode 5-layer + e2e + Dockerfile) | 2026-05-06 |
+| `system-health-should-4items-closure` | system-health SHOULD 4건: stale comment + retention scheduler + BullMQ provider + Sentry formal add | 2026-05-09 |
 ---
 
 ## Backlog (계획됨, 미착수)

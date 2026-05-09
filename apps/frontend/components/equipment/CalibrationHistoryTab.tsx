@@ -43,7 +43,11 @@ interface CalibrationHistoryTabProps {
 }
 
 /**
- * 교정 이력 탭 - 테이블 UI
+ * 교정 이력 탭 — 장비 상세 내 요약 UI (ADR-0009 Option C).
+ *
+ * **역할**: 최근 교정 이력 요약 + 차기 교정 D-day 표시. 빠른 컨텍스트 확인 전용.
+ * 집중 관리(통계 카드/필터/전체 목록)는 `CalibrationHistoryClient`(`/equipment/[id]/calibration-history`).
+ * 탭→서브라우트 진입점은 `EquipmentTabFooterLink` SSOT 단일 사용 — 직접 Link 금지.
  *
  * - 교정 등록: 시험실무자만 가능 (UL-QP-18 직무분리)
  * - 승인/반려: 기술책임자/시험소장만 가능

@@ -38,7 +38,12 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import { type SemanticColorKey, getSemanticStatusClasses } from '@/lib/design-tokens';
-import type { CalibrationStatus, CalibrationApprovalStatus } from '@equipment-management/schemas';
+import type {
+  CalibrationStatus,
+  CalibrationApprovalStatus,
+  CalibrationResult,
+} from '@equipment-management/schemas';
+import { CalibrationResultEnum, CALIBRATION_RESULT_VALUES } from '@equipment-management/schemas';
 
 export interface CalibrationRecord {
   id: string;
@@ -46,7 +51,7 @@ export interface CalibrationRecord {
   nextCalibrationDate?: string | Date;
   calibrationAgency?: string;
   certificateNumber?: string;
-  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  result?: CalibrationResult;
   status: CalibrationStatus;
   approvalStatus?: CalibrationApprovalStatus;
 }
@@ -57,7 +62,7 @@ export interface CreateCalibrationHistoryInput {
   nextCalibrationDate: string;
   calibrationAgency: string;
   calibrationCycle: number;
-  result: 'pass' | 'fail' | 'conditional';
+  result: CalibrationResult;
   notes?: string;
 }
 
@@ -103,11 +108,11 @@ const APPROVAL_LABEL_KEYS: Record<CalibrationApprovalStatus, string> = {
   rejected: 'approvalRejected',
 };
 
-const RESULT_LABEL_KEYS: Record<string, string> = {
+const RESULT_LABEL_KEYS = {
   pass: 'resultPass',
   fail: 'resultFail',
   conditional: 'resultConditional',
-};
+} as const satisfies Record<CalibrationResult, string>;
 
 export function CalibrationHistorySection({
   equipmentUuid,
@@ -324,14 +329,7 @@ export function CalibrationHistorySection({
                             : 'bg-muted text-muted-foreground'
                         }
                       >
-                        {RESULT_LABEL_KEYS[resultKey]
-                          ? t(
-                              RESULT_LABEL_KEYS[resultKey] as
-                                | 'resultPass'
-                                | 'resultFail'
-                                | 'resultConditional'
-                            )
-                          : '-'}
+                        {item.result ? t(RESULT_LABEL_KEYS[item.result]) : '-'}
                       </Badge>
                     </TableCell>
                     <TableCell>{fmtDate(item.nextCalibrationDate)}</TableCell>
@@ -464,21 +462,23 @@ export function CalibrationHistorySection({
               <Label htmlFor="result">{t('formResult')}</Label>
               <Select
                 value={formData.result}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    result: value as 'pass' | 'fail' | 'conditional',
-                  }))
-                }
+                onValueChange={(value) => {
+                  const parsed = CalibrationResultEnum.safeParse(value);
+                  if (parsed.success) {
+                    setFormData((prev) => ({ ...prev, result: parsed.data }));
+                  }
+                }}
                 disabled={isSaving}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={t('formResultPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pass">{t('resultPass')}</SelectItem>
-                  <SelectItem value="fail">{t('resultFail')}</SelectItem>
-                  <SelectItem value="conditional">{t('resultConditional')}</SelectItem>
+                  {CALIBRATION_RESULT_VALUES.map((result) => (
+                    <SelectItem key={result} value={result}>
+                      {t(RESULT_LABEL_KEYS[result])}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

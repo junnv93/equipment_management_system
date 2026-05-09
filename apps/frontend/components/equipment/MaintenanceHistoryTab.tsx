@@ -63,7 +63,10 @@ interface MaintenanceHistoryTabProps {
 }
 
 /**
- * 유지보수 이력 탭 - 타임라인 UI
+ * 유지보수 이력 탭 — 장비 상세 내 요약 UI (ADR-0009 Option C).
+ *
+ * **역할**: 최근 수리 이력 요약 + 타임라인 표시. 집중 관리는 `RepairHistoryClient`(`/equipment/[id]/repair-history`).
+ * 탭→서브라우트 진입점은 `EquipmentTabFooterLink` SSOT 단일 사용 — 직접 Link 금지.
  */
 export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps) {
   const { can } = useAuth();
