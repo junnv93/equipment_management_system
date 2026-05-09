@@ -568,6 +568,46 @@ if (allPass) console.log('PASS: 모든 active mapper namespace에 errors.title/e
 
 **발생 이력 (2026-05-03 신설)**: `notfound-direct-throw-closure` Phase C — `non-conformances.json`과 `software.json`에서 mapper가 이미 `t('errors.title')` + `t('errors.genericError')`를 호출하고 있었으나 키 미존재 상태였던 pre-existing gap 발견. 해당 세션에서 수정하면서 이 검증 step 등록.
 
+### Step 21: ADR-0008 tErrors 3-param 주입 — mapper 호출처 2-인자 패턴 탐지 (2026-05-09 추가)
+
+**배경**: `mapZodIssuesToToast(error, t, tErrors?)` 선택적 3번째 파라미터(`tErrors`)를 통해 `useTranslations('errors')` namespace를 분리 주입하는 패턴이 ADR-0008에서 확립됐다 (2026-05-09). 컴포넌트가 `map*ErrorToToast(error, t)` 2-param으로 호출하면 backward-compat 경로(`prefix='errors.'` + 도메인 t)가 활성화되어, 도메인 t가 `errors.*` 키를 가지지 않는 경우 toast description에 raw key(`errors.validation.too_small` 등)가 노출된다. 신규 컴포넌트 추가 시 이 패턴 누락을 자동 탐지한다.
+
+**검증 명령**:
+```bash
+# 1) 2-param map*ErrorToToast 호출 탐지 (3번째 tErrors 인자 없는 패턴)
+grep -rEn "map[A-Z][a-zA-Z]+ErrorToToast\(error,\s+[a-zA-Z]+\b\)" \
+  apps/frontend/components apps/frontend/app --include="*.tsx"
+# 기대: 0건 — 발견 시 tErrors 주입 필요
+
+# 2) tErrors 주입 컴포넌트 수 확인 (≥ 11건)
+grep -rln "useTranslations\('errors'\)" \
+  apps/frontend/components apps/frontend/app --include="*.tsx" | wc -l
+# 기대: ≥ 11건 (ADR-0008 패턴 유지 확인)
+
+# 3) mapper 파일 tErrors? 파라미터 존재 확인 (17개 도메인 mapper 전체)
+grep -rn "tErrors\?: TranslationFunction" \
+  apps/frontend/lib/errors --include="*-errors.ts" | grep -v "cable-errors\|document-errors\|equipment-errors"
+# 기대: ≥ 17건 (17개 도메인 mapper 모두 tErrors? 파라미터 포함)
+```
+
+**PASS**: 2-param 호출 0건 + `useTranslations('errors')` 선언 컴포넌트 ≥ 11건 + 도메인 mapper tErrors? ≥ 17건.
+**FAIL**: 2-param 호출 발견 → 해당 컴포넌트에 `const tErrors = useTranslations('errors')` 주입 후 mapper 호출에 3번째 인자 추가.
+
+**주의사항**:
+- `cable-errors.ts` — re-export shim(정당 제외), `document-errors.ts` — download path로 t 없음(정당 제외), `equipment-errors.ts` — mapper 함수 없음(정당 제외)
+- `CalibrationFactorsClient.tsx`는 `t` 대신 `tCal`을 도메인 t로 사용: `mapCalibrationFactorErrorToToast(error, tCal, tErrors)` — 인자명이 달라도 3-param 패턴이면 PASS
+
+**keyPrefix 동작 원리**:
+- `tErrors` 있을 때: `prefix = ''` → key `'validation.too_small'` → `tErrors('validation.too_small')` → `errors.json` 정상 접근
+- `tErrors` 없을 때: `prefix = 'errors.'` → key `'errors.validation.too_small'` → 도메인 t 경유 → 도메인 JSON에 `errors.*` 없으면 raw key 노출
+
+**관련 파일**:
+- `apps/frontend/lib/errors/zod-issue-mapper.ts` — `mapZodIssuesToToast(error, t, tErrors?)` hub SSOT
+- `apps/frontend/lib/errors/__tests__/zod-fallback-coverage.test.ts` — ts-morph AST spec (≥ 2 param 조건)
+- `apps/frontend/lib/errors/*-errors.ts` — 17개 도메인 mapper (EXCLUSIONS 3건 제외)
+
+**발생 이력 (2026-05-09 신설)**: ADR-0008 tErrors chain 완성 — 도메인 t namespace scope trap (e.g. `useTranslations('teams')`가 `errors.json` 접근 불가) 해소. `mapZodIssuesToToast` 선택적 3번째 파라미터 추가 + 17개 도메인 mapper 전파 + 11개 컴포넌트 `useTranslations('errors')` 주입.
+
 ## Output Format
 
 ```markdown
@@ -593,6 +633,7 @@ if (allPass) console.log('PASS: 모든 active mapper namespace에 errors.title/e
 | 18  | components/shared/ 도메인 namespace 결합 차단 — SHARED_COMPONENT_DOMAIN_NS_RULE ESLint 게이트 | PASS/FAIL | 상수 없음, shared glob 미적용, negative lookahead 누락 namespace 목록 |
 | 19  | ESLint typed linting 블록 inner ignores — `**/*.stories.{ts,tsx}` 포함 확인 | PASS/FAIL/INFO | stories 패턴 누락 시 파싱 오류 경로, typed linting block 없으면 INFO |
 | 20  | 도메인 mapper `errors.title/errors.genericError` baseline 키 존재 확인 | PASS/FAIL/WARN | 누락 locale/namespace/key 목록, mapper 파일 미존재 시 자동 스킵 |
+| 21  | ADR-0008 tErrors 3-param 주입 — mapper 호출처 2-인자 패턴 탐지 | PASS/FAIL | 2-param 호출 파일:라인, tErrors 주입 컴포넌트 수, 도메인 mapper tErrors? 파라미터 수 |
 ```
 
 ## Exceptions
