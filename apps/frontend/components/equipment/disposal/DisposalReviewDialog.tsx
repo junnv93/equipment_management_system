@@ -24,6 +24,8 @@ import { CharsCounter } from '@/components/common/CharsCounter';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/errors/equipment-errors';
+import { mapDisposalErrorToToast } from '@/lib/errors/disposal-errors';
+import RejectModal from '@/components/approvals/RejectModal';
 import {
   DISPOSAL_BUTTON_TOKENS,
   DISPOSAL_INFO_CARD_TOKENS,
@@ -48,39 +50,40 @@ export function DisposalReviewDialog({
   disposalRequest,
 }: DisposalReviewDialogProps) {
   const [opinion, setOpinion] = useState('');
-  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('disposal');
+  const tErrors = useTranslations('errors');
   const { fmtDateTime } = useDateFormatter();
   const tReason = useTranslations('disposal.reason');
 
   const mutation = useMutation({
-    mutationFn: (decision: 'approve' | 'reject') =>
-      reviewDisposal(equipmentId, { version: disposalRequest.version, decision, opinion }),
-    onSuccess: async (_, decision) => {
+    mutationFn: (args: { decision: 'approve' | 'reject'; opinion: string }) =>
+      reviewDisposal(equipmentId, {
+        version: disposalRequest.version,
+        decision: args.decision,
+        opinion: args.opinion,
+      }),
+    onSuccess: async (_, args) => {
       toast({
         title:
-          decision === 'approve'
+          args.decision === 'approve'
             ? t('reviewDialog.toasts.approveTitle')
             : t('reviewDialog.toasts.rejectTitle'),
         description:
-          decision === 'approve'
+          args.decision === 'approve'
             ? t('reviewDialog.toasts.approveDesc')
             : t('reviewDialog.toasts.rejectDesc'),
       });
-      // ✅ 중앙화된 캐시 무효화 헬퍼 사용
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       handleClose();
     },
     onError: async (error: Error) => {
-      const errorMessage = error.message;
       toast({
-        title: t('common.error'),
-        description: errorMessage,
+        ...mapDisposalErrorToToast(error, t, tErrors),
         variant: 'destructive',
       });
-      // ✅ 409 Conflict 시 자동 새로고침
       if (isConflictError(error)) {
         await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       }
@@ -89,142 +92,144 @@ export function DisposalReviewDialog({
 
   const handleClose = () => {
     setOpinion('');
-    setShowRejectInput(false);
+    setRejectModalOpen(false);
     onOpenChange(false);
   };
 
-  const handleReject = () => {
-    if (!showRejectInput) {
-      setShowRejectInput(true);
-    } else if (opinion.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
-      mutation.mutate('reject');
+  const handleRejectConfirm = async (reason: string): Promise<void> => {
+    try {
+      await mutation.mutateAsync({ decision: 'reject', opinion: reason });
+      setRejectModalOpen(false);
+    } catch {
+      // onError handles the error toast; RejectModal stays open for retry
     }
   };
 
   const isValid = opinion.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-      >
-        <DialogHeader>
-          <DialogTitle>{t('reviewDialog.title')}</DialogTitle>
-          <DialogDescription>{t('reviewDialog.description')}</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <DialogHeader>
+            <DialogTitle>{t('reviewDialog.title')}</DialogTitle>
+            <DialogDescription>{t('reviewDialog.description')}</DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <Card className={DISPOSAL_INFO_CARD_TOKENS.container}>
-            <CardHeader className="pb-3">
-              <CardTitle className={DISPOSAL_INFO_CARD_TOKENS.title}>
-                {t('reviewDialog.infoTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-foreground">{t('common.equipmentName')}</span>{' '}
-                {equipment.name}
-              </div>
-              <div>
-                <span className="font-medium text-foreground">{t('common.requester')}</span>{' '}
-                {disposalRequest.requestedByName} | {fmtDateTime(disposalRequest.requestedAt)}
-              </div>
-              <div>
-                <span className="font-medium text-foreground">{t('common.disposalReason')}</span>{' '}
-                {tReason(disposalRequest.reason)}
-              </div>
-              <div>
-                <span className="font-medium text-foreground">{t('common.reasonDetail')}</span>
-                <p className="mt-1 text-muted-foreground whitespace-pre-wrap">
-                  {disposalRequest.reasonDetail}
-                </p>
-              </div>
-              {disposalRequest.attachments && disposalRequest.attachments.length > 0 && (
+          <div className="space-y-4 py-4">
+            <Card className={DISPOSAL_INFO_CARD_TOKENS.container}>
+              <CardHeader className="pb-3">
+                <CardTitle className={DISPOSAL_INFO_CARD_TOKENS.title}>
+                  {t('reviewDialog.infoTitle')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-foreground">{t('common.attachments')}</span>
-                  <div className="mt-1 space-y-1">
-                    {disposalRequest.attachments.map((file) => (
-                      <a
-                        key={file.id}
-                        href={file.url}
-                        download={file.filename}
-                        className={DISPOSAL_FILE_LINK_TOKENS.base}
-                        aria-label={t('common.downloadAriaLabel', { name: file.filename })}
-                      >
-                        <Download className="h-4 w-4" />
-                        {file.filename}
-                      </a>
-                    ))}
-                  </div>
+                  <span className="font-medium text-foreground">{t('common.equipmentName')}</span>{' '}
+                  {equipment.name}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div>
+                  <span className="font-medium text-foreground">{t('common.requester')}</span>{' '}
+                  {disposalRequest.requestedByName} | {fmtDateTime(disposalRequest.requestedAt)}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">{t('common.disposalReason')}</span>{' '}
+                  {tReason(disposalRequest.reason)}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">{t('common.reasonDetail')}</span>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">
+                    {disposalRequest.reasonDetail}
+                  </p>
+                </div>
+                {disposalRequest.attachments && disposalRequest.attachments.length > 0 && (
+                  <div>
+                    <span className="font-medium text-foreground">{t('common.attachments')}</span>
+                    <div className="mt-1 space-y-1">
+                      {disposalRequest.attachments.map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.url}
+                          download={file.filename}
+                          className={DISPOSAL_FILE_LINK_TOKENS.base}
+                          aria-label={t('common.downloadAriaLabel', { name: file.filename })}
+                        >
+                          <Download className="h-4 w-4" />
+                          {file.filename}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          <EquipmentHistorySummary equipment={equipment} />
+            <EquipmentHistorySummary equipment={equipment} />
 
-          <div className="space-y-2">
-            <Label htmlFor="opinion">
-              {t('reviewDialog.opinionLabel')} <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="opinion"
-              value={opinion}
-              onChange={(e) => setOpinion(e.target.value)}
-              placeholder={
-                showRejectInput
-                  ? t('reviewDialog.rejectPlaceholder')
-                  : t('reviewDialog.opinionPlaceholder')
-              }
-              rows={4}
-              className="resize-none"
-              aria-describedby="opinion-hint"
-            />
-            <CharsCounter
-              mode="min"
-              id="opinion-hint"
-              count={opinion.length}
-              min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="opinion">
+                {t('reviewDialog.opinionLabel')} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="opinion"
+                value={opinion}
+                onChange={(e) => setOpinion(e.target.value)}
+                placeholder={t('reviewDialog.opinionPlaceholder')}
+                rows={4}
+                className="resize-none"
+                aria-describedby="opinion-hint"
+              />
+              <CharsCounter
+                mode="min"
+                id="opinion-hint"
+                count={opinion.length}
+                min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
+              />
+            </div>
           </div>
 
-          {showRejectInput && (
-            <div className={DISPOSAL_INFO_CARD_TOKENS.rejectNotice}>
-              <p className={DISPOSAL_INFO_CARD_TOKENS.rejectText}>{t('common.rejectNotice')}</p>
-            </div>
-          )}
-        </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={mutation.isPending}
+              loading={mutation.isPending}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setRejectModalOpen(true)}
+              disabled={mutation.isPending}
+              loading={mutation.isPending}
+              className={DISPOSAL_BUTTON_TOKENS.reject}
+            >
+              {t('common.reject')}
+            </Button>
+            <Button
+              onClick={() => mutation.mutate({ decision: 'approve', opinion })}
+              disabled={!isValid || mutation.isPending}
+              loading={mutation.isPending}
+              className={DISPOSAL_BUTTON_TOKENS.review}
+            >
+              {t('reviewDialog.reviewComplete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={mutation.isPending}
-            loading={mutation.isPending}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleReject}
-            disabled={mutation.isPending || (showRejectInput && !isValid)}
-            loading={mutation.isPending}
-            className={DISPOSAL_BUTTON_TOKENS.reject}
-          >
-            {t('common.reject')}
-          </Button>
-          <Button
-            onClick={() => mutation.mutate('approve')}
-            disabled={!isValid || mutation.isPending || showRejectInput}
-            loading={mutation.isPending}
-            className={DISPOSAL_BUTTON_TOKENS.review}
-          >
-            {t('reviewDialog.reviewComplete')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <RejectModal
+        mode="domain"
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onConfirm={handleRejectConfirm}
+        title={t('reviewDialog.toasts.rejectTitle')}
+        description={t('reviewDialog.rejectModalDescription')}
+      />
+    </>
   );
 }

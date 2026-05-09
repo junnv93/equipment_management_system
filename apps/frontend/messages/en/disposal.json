@@ -97,6 +97,7 @@
     "confirmTitle": "Confirm Final Approval",
     "confirmDescription": "Are you sure you want to approve disposal of {name}?",
     "confirmWarning": "This action cannot be undone.",
+    "rejectModalDescription": "Please enter a rejection reason. The requester will be notified of the rejection.",
     "toasts": {
       "approveTitle": "Approval Complete",
       "approveDesc": "Equipment disposal has been approved.",
@@ -112,6 +113,7 @@
     "rejectPlaceholder": "Enter a rejection reason of at least 10 characters",
     "opinionPlaceholder": "Enter your review opinion (at least 10 characters)",
     "reviewComplete": "Complete Review",
+    "rejectModalDescription": "Please enter a rejection reason. The requester will be notified of the rejection.",
     "toasts": {
       "approveTitle": "Review Complete",
       "approveDesc": "Disposal review complete. Awaiting final approval from lab manager.",

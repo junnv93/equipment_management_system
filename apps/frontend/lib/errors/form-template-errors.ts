@@ -27,7 +27,11 @@ export function mapFormTemplateErrorCode(code?: string): string {
   return FORM_TEMPLATE_ERROR_I18N_KEYS[code.toUpperCase()] ?? FORM_TEMPLATE_FALLBACK_I18N_KEY;
 }
 
-export function mapFormTemplateErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+export function mapFormTemplateErrorToToast(
+  error: unknown,
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
+): ErrorToast {
   const code = extractErrorCode(error) ?? undefined;
   const key = mapFormTemplateErrorCode(code);
 
@@ -41,7 +45,7 @@ export function mapFormTemplateErrorToToast(error: unknown, t: TranslationFuncti
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback (변형 패턴: 단일 return 구조)
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

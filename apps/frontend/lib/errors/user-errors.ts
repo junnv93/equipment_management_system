@@ -24,7 +24,11 @@ const USER_ERROR_I18N_KEYS: Readonly<Partial<Record<ErrorCode, string>>> = {
   [ErrorCode.UserSiteScopeOnly]: 'errors.siteScopeOnly',
 };
 
-export function mapUserErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+export function mapUserErrorToToast(
+  error: unknown,
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
+): ErrorToast {
   const code = extractErrorCode(error);
   const i18nKey = mapBackendErrorCode(code ?? undefined);
 
@@ -37,7 +41,7 @@ export function mapUserErrorToToast(error: unknown, t: TranslationFunction): Err
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback (변형 패턴: mapBackendErrorCode 헬퍼 경유)
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

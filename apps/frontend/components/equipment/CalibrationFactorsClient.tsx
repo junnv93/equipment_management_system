@@ -86,6 +86,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const { can } = useAuth();
   const t = useTranslations('equipment.calibrationFactorsClient');
   const tCal = useTranslations('calibration');
+  const tErrors = useTranslations('errors');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const canApprove = can(Permission.APPROVE_CALIBRATION_FACTOR);
@@ -167,7 +168,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
     invalidateKeys: [...CalibrationFactorCacheInvalidation.REJECT_KEYS],
     successMessage: t('rejectSuccess'),
     onErrorCallback: (error: unknown) => {
-      const { title, description } = mapCalibrationFactorErrorToToast(error, tCal);
+      const { title, description } = mapCalibrationFactorErrorToToast(error, tCal, tErrors);
       toast({ title, description, variant: 'destructive' });
     },
   });

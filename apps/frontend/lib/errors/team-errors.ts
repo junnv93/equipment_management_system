@@ -18,7 +18,11 @@ const TEAM_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.TeamLeaderSiteMismatch]: 'errors.leaderSiteMismatch',
 };
 
-export function mapTeamErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+export function mapTeamErrorToToast(
+  error: unknown,
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
+): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
 
@@ -31,7 +35,7 @@ export function mapTeamErrorToToast(error: unknown, t: TranslationFunction): Err
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

@@ -172,7 +172,7 @@ export async function approve(
       await reviewDisposal(equipmentId, {
         version: disposalReview.version,
         decision: 'approve',
-        opinion: comment || 'Approved',
+        opinion: comment ?? '',
       });
       break;
     }
@@ -183,7 +183,7 @@ export async function approve(
       await approveDisposal(equipmentId, {
         version: disposalFinal.version,
         decision: 'approve',
-        comment: comment || 'Approved',
+        comment: comment || undefined,
       });
       break;
     }
@@ -289,7 +289,7 @@ export async function reject(
       await reviewDisposal(equipmentId, {
         version: disposalReview.version,
         decision: 'reject',
-        opinion: reason || 'Rejected',
+        opinion: reason,
       });
       break;
     }
@@ -300,7 +300,7 @@ export async function reject(
       await approveDisposal(equipmentId, {
         version: disposalFinal.version,
         decision: 'reject',
-        comment: reason || 'Rejected',
+        comment: reason,
       });
       break;
     }

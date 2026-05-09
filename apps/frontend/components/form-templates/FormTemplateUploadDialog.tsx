@@ -49,6 +49,7 @@ export default function FormTemplateUploadDialog({
   onOpenChange,
 }: FormTemplateUploadDialogProps) {
   const t = useTranslations('form-templates');
+  const tErrors = useTranslations('errors');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +92,7 @@ export default function FormTemplateUploadDialog({
 
   const onError = (error: unknown) => {
     toast({
-      ...mapFormTemplateErrorToToast(error, t),
+      ...mapFormTemplateErrorToToast(error, t, tErrors),
       variant: 'destructive',
     });
   };

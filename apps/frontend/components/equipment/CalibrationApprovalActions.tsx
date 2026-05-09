@@ -32,6 +32,7 @@ export function CalibrationApprovalActions({
   equipmentId,
 }: CalibrationApprovalActionsProps) {
   const t = useTranslations('equipment');
+  const tErrors = useTranslations('errors');
   const { can } = useAuth();
   const { toast } = useToast();
   const canApprove = can(Permission.APPROVE_CALIBRATION);
@@ -64,7 +65,7 @@ export function CalibrationApprovalActions({
     invalidateKeys: [...CalibrationCacheInvalidation.REJECT_KEYS],
     successMessage: t('calibrationHistoryTab.approval.rejectSuccess'),
     onErrorCallback: (error: unknown) => {
-      const { title, description } = mapCalibrationErrorToToast(error, t);
+      const { title, description } = mapCalibrationErrorToToast(error, t, tErrors);
       toast({ title, description, variant: 'destructive' });
     },
   });

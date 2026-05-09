@@ -98,6 +98,7 @@ type SelfInspectionCache = { data: SelfInspection[]; total: number };
 
 export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const t = useTranslations('equipment');
+  const tErrors = useTranslations('errors');
   const { fmtDate } = useDateFormatter();
   const { can, user } = useAuth();
   const equipmentId = String(equipment.id);
@@ -149,7 +150,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('submitted'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.submitSuccess'),
-    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const withdrawMutation = useOptimisticMutation<
@@ -162,7 +163,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.withdrawSuccess'),
-    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const approveMutation = useOptimisticMutation<
@@ -175,7 +176,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('approved'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.approveSuccess'),
-    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const rejectMutation = useOptimisticMutation<
@@ -195,7 +196,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     }),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.rejectSuccess'),
-    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t, tErrors).description,
     onSuccessCallback: () => {
       setRejectTarget(null);
     },
@@ -214,7 +215,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: tSI('toast.resubmitSuccess'),
-    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapSelfInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const deleteMutation = useOptimisticMutation<void, { id: string }, SelfInspectionCache>({

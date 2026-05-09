@@ -125,6 +125,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
+  const tErrors = useTranslations('errors');
 
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -242,7 +243,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       );
     },
     onError: (error: unknown) => {
-      const { title, description } = mapNonConformanceErrorToToast(error, t);
+      const { title, description } = mapNonConformanceErrorToToast(error, t, tErrors);
       toast({ title, description, variant: 'destructive' });
     },
   });

@@ -46,7 +46,8 @@ const INTERMEDIATE_INSPECTION_ERROR_I18N_VARS: Partial<
 
 export function mapIntermediateInspectionErrorToToast(
   error: unknown,
-  t: TranslationFunction
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
 ): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
@@ -63,7 +64,7 @@ export function mapIntermediateInspectionErrorToToast(
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

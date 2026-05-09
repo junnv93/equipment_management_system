@@ -92,6 +92,7 @@ interface IntermediateInspectionListProps {
 export function IntermediateInspectionList({ equipment }: IntermediateInspectionListProps) {
   const t = useTranslations('calibration');
   const tEquip = useTranslations('equipment');
+  const tErrors = useTranslations('errors');
   const equipmentId = String(equipment.id);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -141,7 +142,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('submitted'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.submitSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const reviewMutation = useOptimisticMutation<
@@ -154,7 +155,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('reviewed'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.reviewSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const approveMutation = useOptimisticMutation<
@@ -167,7 +168,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('approved'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.approveSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const rejectMutation = useOptimisticMutation<
@@ -184,7 +185,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
       ),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.rejectSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
     onSuccessCallback: () => {
       setRejectingTarget(null);
     },
@@ -200,7 +201,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.withdrawSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const resubmitMutation = useOptimisticMutation<
@@ -213,7 +214,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     optimisticUpdate: makeStatusUpdate('draft'),
     invalidateKeys: crossInvalidateKeys,
     successMessage: t('intermediateInspection.toasts.resubmitSuccess'),
-    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t).description,
+    errorMessage: (error) => mapIntermediateInspectionErrorToToast(error, t, tErrors).description,
   });
 
   const deleteMutation = useOptimisticMutation<

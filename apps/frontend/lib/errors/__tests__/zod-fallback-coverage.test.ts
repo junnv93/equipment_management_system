@@ -45,13 +45,14 @@ describe('도메인 mapper hub fallback 정적 검증 (ADR-0008 Layer 4)', () =>
     (_filename, filepath) => {
       const sf = project.getSourceFileOrThrow(filepath);
 
-      // mapXxxErrorToToast 시그니처 함수 탐색: exported + 파라미터 2개 (error: unknown, t: TranslationFunction)
+      // mapXxxErrorToToast 시그니처 함수 탐색: exported + 파라미터 2개 이상
+      // (error: unknown, t: TranslationFunction[, tErrors?: TranslationFunction])
       const targetFns = sf
         .getFunctions()
         .filter(
           (fn) => /^map[A-Z][A-Za-z]*ErrorToToast$/.test(fn.getName() ?? '') && fn.isExported()
         )
-        .filter((fn) => fn.getParameters().length === 2);
+        .filter((fn) => fn.getParameters().length >= 2);
 
       expect(targetFns.length).toBeGreaterThanOrEqual(1);
 

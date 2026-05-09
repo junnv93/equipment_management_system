@@ -16,7 +16,11 @@ const NOTIFICATION_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.NotificationNotFound]: 'errors.notFound',
 };
 
-export function mapNotificationErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+export function mapNotificationErrorToToast(
+  error: unknown,
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
+): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
 
@@ -29,7 +33,7 @@ export function mapNotificationErrorToToast(error: unknown, t: TranslationFuncti
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

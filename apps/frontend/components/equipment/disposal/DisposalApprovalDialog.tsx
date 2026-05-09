@@ -31,14 +31,13 @@ import { type DisposalRequest } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
-import { CharsCounter } from '@/components/common/CharsCounter';
+import RejectModal from '@/components/approvals/RejectModal';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/errors/equipment-errors';
 import { mapDisposalErrorToToast } from '@/lib/errors/disposal-errors';
 import { DISPOSAL_BUTTON_TOKENS, DISPOSAL_INFO_CARD_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
-import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 interface DisposalApprovalDialogProps {
   open: boolean;
@@ -56,43 +55,41 @@ export function DisposalApprovalDialog({
   disposalRequest,
 }: DisposalApprovalDialogProps) {
   const [comment, setComment] = useState('');
-  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('disposal');
+  const tErrors = useTranslations('errors');
   const { fmtDateTime } = useDateFormatter();
   const tReason = useTranslations('disposal.reason');
 
   const mutation = useMutation({
-    mutationFn: (decision: 'approve' | 'reject') =>
+    mutationFn: (args: { decision: 'approve' | 'reject'; comment?: string }) =>
       approveDisposal(equipmentId, {
         version: disposalRequest.version,
-        decision,
-        comment: comment || undefined,
+        decision: args.decision,
+        comment: args.comment,
       }),
-    onSuccess: async (_, decision) => {
+    onSuccess: async (_, args) => {
       toast({
         title:
-          decision === 'approve'
+          args.decision === 'approve'
             ? t('approvalDialog.toasts.approveTitle')
             : t('approvalDialog.toasts.rejectTitle'),
         description:
-          decision === 'approve'
+          args.decision === 'approve'
             ? t('approvalDialog.toasts.approveDesc')
             : t('approvalDialog.toasts.rejectDesc'),
       });
-      // ✅ 중앙화된 캐시 무효화 헬퍼 사용
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       handleClose();
     },
     onError: async (error: Error) => {
-      // SSOT: backend ErrorCode → i18n 매핑 (한국어 백엔드 메시지 우회)
       toast({
-        ...mapDisposalErrorToToast(error, t),
+        ...mapDisposalErrorToToast(error, t, tErrors),
         variant: 'destructive',
       });
-      // ✅ 409 Conflict 시 자동 새로고침
       if (isConflictError(error)) {
         await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       }
@@ -101,7 +98,7 @@ export function DisposalApprovalDialog({
 
   const handleClose = () => {
     setComment('');
-    setShowRejectInput(false);
+    setRejectModalOpen(false);
     setShowConfirmation(false);
     onOpenChange(false);
   };
@@ -112,14 +109,15 @@ export function DisposalApprovalDialog({
 
   const confirmApproval = () => {
     setShowConfirmation(false);
-    mutation.mutate('approve');
+    mutation.mutate({ decision: 'approve', comment: comment || undefined });
   };
 
-  const handleReject = () => {
-    if (!showRejectInput) {
-      setShowRejectInput(true);
-    } else if (comment.length >= VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH) {
-      mutation.mutate('reject');
+  const handleRejectConfirm = async (reason: string): Promise<void> => {
+    try {
+      await mutation.mutateAsync({ decision: 'reject', comment: reason });
+      setRejectModalOpen(false);
+    } catch {
+      // onError handles the error toast; RejectModal stays open for retry
     }
   };
 
@@ -193,31 +191,11 @@ export function DisposalApprovalDialog({
                 id="comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  showRejectInput
-                    ? t('approvalDialog.rejectPlaceholder')
-                    : t('approvalDialog.approvePlaceholder')
-                }
+                placeholder={t('approvalDialog.approvePlaceholder')}
                 rows={3}
                 className="resize-none"
-                aria-describedby={showRejectInput ? 'comment-hint' : undefined}
               />
-              {showRejectInput && (
-                <CharsCounter
-                  mode="min"
-                  id="comment-hint"
-                  count={comment.length}
-                  min={VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}
-                  className={DISPOSAL_INFO_CARD_TOKENS.rejectCount}
-                />
-              )}
             </div>
-
-            {showRejectInput && (
-              <div className={DISPOSAL_INFO_CARD_TOKENS.rejectNotice}>
-                <p className={DISPOSAL_INFO_CARD_TOKENS.rejectText}>{t('common.rejectNotice')}</p>
-              </div>
-            )}
           </div>
 
           <DialogFooter>
@@ -231,11 +209,8 @@ export function DisposalApprovalDialog({
             </Button>
             <Button
               variant="outline"
-              onClick={handleReject}
-              disabled={
-                mutation.isPending ||
-                (showRejectInput && comment.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
-              }
+              onClick={() => setRejectModalOpen(true)}
+              disabled={mutation.isPending}
               loading={mutation.isPending}
               className={DISPOSAL_BUTTON_TOKENS.reject}
             >
@@ -243,7 +218,7 @@ export function DisposalApprovalDialog({
             </Button>
             <Button
               onClick={handleApprove}
-              disabled={mutation.isPending || showRejectInput}
+              disabled={mutation.isPending}
               loading={mutation.isPending}
               className={DISPOSAL_BUTTON_TOKENS.approve}
             >
@@ -277,6 +252,15 @@ export function DisposalApprovalDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RejectModal
+        mode="domain"
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onConfirm={handleRejectConfirm}
+        title={t('approvalDialog.toasts.rejectTitle')}
+        description={t('approvalDialog.rejectModalDescription')}
+      />
     </>
   );
 }

@@ -97,6 +97,7 @@
     "confirmTitle": "최종 승인 확인",
     "confirmDescription": "{name} 장비의 폐기를 최종 승인하시겠습니까?",
     "confirmWarning": "이 작업은 되돌릴 수 없습니다.",
+    "rejectModalDescription": "최종 반려 사유를 입력해주세요. 반려된 폐기 신청은 요청자에게 사유가 전달됩니다.",
     "toasts": {
       "approveTitle": "최종 승인 완료",
       "approveDesc": "장비 폐기가 최종 승인되었습니다.",
@@ -112,6 +113,7 @@
     "rejectPlaceholder": "반려 사유를 10자 이상 상세히 입력해주세요",
     "opinionPlaceholder": "검토 의견을 10자 이상 입력해주세요",
     "reviewComplete": "검토 완료",
+    "rejectModalDescription": "검토 반려 사유를 입력해주세요. 반려된 폐기 신청은 요청자에게 사유가 전달됩니다.",
     "toasts": {
       "approveTitle": "검토 완료",
       "approveDesc": "폐기 검토가 완료되었습니다. 시험소장의 최종 승인을 기다립니다.",

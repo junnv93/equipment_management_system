@@ -86,6 +86,7 @@ const EMPTY_FORM: CreateFormState = {
 
 export default function SoftwareValidationContent({ softwareId }: SoftwareValidationContentProps) {
   const t = useTranslations('software');
+  const tErrors = useTranslations('errors');
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const router = useRouter();
@@ -213,7 +214,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     successMessage: t('toast.validationRejectSuccess'),
     onSuccessCallback: () => setActiveDialog(null),
     onErrorCallback: (error: unknown) => {
-      const { title, description } = mapSoftwareValidationErrorToToast(error, t);
+      const { title, description } = mapSoftwareValidationErrorToToast(error, t, tErrors);
       toast({ title, description, variant: 'destructive' });
     },
   });

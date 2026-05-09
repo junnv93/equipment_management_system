@@ -31,7 +31,8 @@ const CALIBRATION_FACTOR_ERROR_I18N_VARS: Partial<
 
 export function mapCalibrationFactorErrorToToast(
   error: unknown,
-  t: TranslationFunction
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
 ): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
@@ -48,7 +49,7 @@ export function mapCalibrationFactorErrorToToast(
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 

@@ -63,6 +63,7 @@ export default function EquipmentImportDetail({ id }: Props) {
   const { user, can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('equipment');
+  const tErrors = useTranslations('errors');
 
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -124,7 +125,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       EquipmentImportCacheInvalidation.invalidateAfterApprovalAction(queryClient, id);
     },
     onErrorCallback: (error: unknown) => {
-      const { title, description } = mapEquipmentImportErrorToToast(error, t);
+      const { title, description } = mapEquipmentImportErrorToToast(error, t, tErrors);
       toast({ title, description, variant: 'destructive' });
     },
   });

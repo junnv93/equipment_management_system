@@ -95,6 +95,7 @@ export function CalibrationPlanDetailClient({
   const t = useTranslations('calibration');
   const tEquip = useTranslations('equipment');
   const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const headerRef = useRef<HTMLDivElement>(null);
@@ -227,7 +228,7 @@ export function CalibrationPlanDetailClient({
     onError: (error) => {
       // SSOT: backend ErrorCode → i18n 매핑 (한국어 백엔드 메시지 우회)
       toast({
-        ...mapCalibrationPlanErrorToToast(error, t),
+        ...mapCalibrationPlanErrorToToast(error, t, tErrors),
         variant: 'destructive',
       });
       invalidateAfterChange();

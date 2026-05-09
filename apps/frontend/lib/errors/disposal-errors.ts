@@ -64,7 +64,11 @@ const DISPOSAL_ERROR_I18N_VARS: Partial<Record<ErrorCode, Record<string, string 
  * @param t - next-intl translation function (`useTranslations('disposal')` 결과)
  * @returns toast title + description
  */
-export function mapDisposalErrorToToast(error: unknown, t: TranslationFunction): ErrorToast {
+export function mapDisposalErrorToToast(
+  error: unknown,
+  t: TranslationFunction,
+  tErrors?: TranslationFunction
+): ErrorToast {
   const code = extractErrorCode(error);
   const errorCode = code as ErrorCode | null;
 
@@ -77,7 +81,7 @@ export function mapDisposalErrorToToast(error: unknown, t: TranslationFunction):
 
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
-    const zodToast = mapZodIssuesToToast(error, t);
+    const zodToast = mapZodIssuesToToast(error, t, tErrors);
     if (zodToast) return zodToast;
   }
 
