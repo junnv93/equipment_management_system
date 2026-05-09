@@ -185,6 +185,7 @@
   },
   "errors": {
     "title": "Error",
+    "genericError": "An error occurred while processing the request.",
     "notFound": "Notification not found."
   }
 }

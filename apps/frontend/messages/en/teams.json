@@ -238,6 +238,7 @@
   },
   "errors": {
     "title": "Error",
+    "genericError": "An error occurred while processing the request.",
     "notFound": "Team not found.",
     "nameAlreadyExists": "This team name is already in use.",
     "leaderSiteMismatch": "The team leader's site does not match the team's site."

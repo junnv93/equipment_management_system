@@ -172,6 +172,7 @@
   },
   "errors": {
     "title": "Action Failed",
+    "genericError": "An error occurred. Please try again.",
     "rejectCommentRequired": "Rejection comment must be at least {min} characters.",
     "reviewedNotFound": "No reviewed disposal request found. Please reload the page.",
     "pendingNotFound": "No pending disposal request found.",

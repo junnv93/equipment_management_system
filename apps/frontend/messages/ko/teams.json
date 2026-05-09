@@ -238,6 +238,7 @@
   },
   "errors": {
     "title": "오류",
+    "genericError": "요청을 처리하는 중 오류가 발생했습니다.",
     "notFound": "팀을 찾을 수 없습니다.",
     "nameAlreadyExists": "이미 사용 중인 팀 이름입니다.",
     "leaderSiteMismatch": "팀 리더의 소속 사이트가 팀 사이트와 다릅니다."

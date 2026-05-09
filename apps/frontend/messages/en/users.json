@@ -1,6 +1,7 @@
 {
   "errors": {
     "title": "Error",
+    "genericError": "An error occurred while processing the request.",
     "notFound": "User not found.",
     "emailAlreadyExists": "This email address is already in use.",
     "noRoleChangePermission": "You do not have permission to change roles.",

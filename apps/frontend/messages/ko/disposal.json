@@ -172,6 +172,7 @@
   },
   "errors": {
     "title": "처리 실패",
+    "genericError": "처리 중 오류가 발생했습니다. 다시 시도하세요.",
     "rejectCommentRequired": "반려 코멘트는 {min}자 이상 입력해주세요.",
     "reviewedNotFound": "검토 완료된 폐기 요청을 찾을 수 없습니다. 요청을 다시 조회해주세요.",
     "pendingNotFound": "검토 대기 중인 폐기 요청을 찾을 수 없습니다.",
