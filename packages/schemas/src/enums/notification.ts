@@ -62,6 +62,8 @@ export const NOTIFICATION_TYPE_VALUES = [
   'equipment_import_approved', // 반입 승인됨
   'equipment_import_rejected', // 반입 반려됨
   'equipment_import_orphan_detected', // 반입 orphan 감지 (콜백 실패 복구)
+  'equipment_import_return_completed', // 반입 장비 반납 완료
+  'equipment_import_return_canceled', // 반입 장비 반납 취소
 
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───
   'software_validation_submitted', // 유효성 확인 제출

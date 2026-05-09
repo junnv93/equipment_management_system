@@ -464,7 +464,7 @@ describe('EquipmentController', () => {
         .mockResolvedValue(equipmentWithTeam as any);
       jest
         .spyOn(qrAccessService, 'resolveAllowedActions')
-        .mockResolvedValue(['view_detail', 'view_qr', 'request_checkout']);
+        .mockResolvedValue({ actions: ['view_detail', 'view_qr', 'request_checkout'] });
 
       const result = await controller.findByManagementNumber(mgmt, sameSiteReq);
 
@@ -500,7 +500,7 @@ describe('EquipmentController', () => {
       // QRAccessService가 cross-site를 인지하고 request_checkout 제외
       jest
         .spyOn(qrAccessService, 'resolveAllowedActions')
-        .mockResolvedValue(['view_detail', 'view_qr']);
+        .mockResolvedValue({ actions: ['view_detail', 'view_qr'] });
 
       const result = await controller.findByManagementNumber(mgmt, crossSiteReq);
 
