@@ -331,6 +331,54 @@ grep -n "NODE_ENV\|isProduction\|registerIf" \
   apps/backend/src/modules/auth/test-auth.controller.ts
 ```
 
+### Step 19: HandoverQRDisplay caller wired
+
+**PASS:** `HandoverQRDisplay`가 `CheckoutDetailClient`에 마운트되고, `HandoverActionButton`을 통해 진입점이 연결됨.
+**FAIL:** caller 0건 — 진입점 missing.
+
+```bash
+grep -rn "HandoverQRDisplay\|HandoverActionButton" \
+  apps/frontend/app/(dashboard)/checkouts/ \
+  apps/frontend/components/checkouts/CheckoutDetailClient.tsx 2>/dev/null | grep -v "HandoverQRDisplay.tsx\|HandoverActionButton.tsx"
+# PASS: import + JSX 사용 각 1건 이상
+```
+
+### Step 20: PURPOSE_BY_STATUS 프론트 mirror 금지
+
+**PASS:** `PURPOSE_BY_STATUS`가 프론트엔드에 0건 — 백엔드 응답 `purpose` 필드만 사용.
+**FAIL:** 프론트엔드 코드에 `PURPOSE_BY_STATUS` mirror 정의 존재.
+
+```bash
+grep -rn "PURPOSE_BY_STATUS\|purposeByStatus\|lender_checked.*borrower_receive\|borrower_returned.*lender_receive" \
+  apps/frontend/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v ".spec.ts"
+# PASS: 0건
+```
+
+### Step 21: condition_check 사진 attachmentIds fail-close 3-layer
+
+**PASS:** `submitConditionCheck` 서비스에서 documentId owner 검증 + documentType 화이트리스트 + 중복링크 방지 3중 fail-close.
+**FAIL:** `UPDATE documents WHERE id IN (...)` 에 owner/type/중복 조건 없음.
+
+```bash
+grep -A 20 "attachmentIds && dto.attachmentIds.length" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts 2>/dev/null
+# PASS: uploadedBy, inArray(documentType, ALLOWED_PHOTO_TYPES), isNull(conditionCheckId) 3가지 모두 존재
+```
+
+### Step 22: dangerouslySetInnerHTML 제거 확인
+
+**PASS:** `HandoverQRDisplay.tsx`에 `dangerouslySetInnerHTML` 0건, `<img src={qrDataUrl}` 패턴 사용.
+**FAIL:** `dangerouslySetInnerHTML` 잔존.
+
+```bash
+grep -n "dangerouslySetInnerHTML" \
+  apps/frontend/components/checkouts/HandoverQRDisplay.tsx 2>/dev/null
+# PASS: 0건
+grep -n "qrDataUrl\|toDataURL" \
+  apps/frontend/components/checkouts/HandoverQRDisplay.tsx 2>/dev/null
+# PASS: 1건 이상
+```
+
 ---
 
 ## Output Format
@@ -363,6 +411,15 @@ grep -n "NODE_ENV\|isProduction\|registerIf" \
 | 16  | 토큰 발급 권한 가드               | PASS/FAIL | 소유자 검증 코드 존재 여부                   |
 | 17  | 토큰 프론트엔드 영속화 금지       | PASS/FAIL | localStorage/sessionStorage 사용 여부        |
 | 18  | dev-only 테스트 엔드포인트 가드   | PASS/FAIL | NODE_ENV + TestAuthController 이중 가드      |
+
+## Handover 발급 진입점 + SSOT (Section C, 2026-05-09 추가)
+
+| #   | 검사                                      | 상태      | 상세                                          |
+| --- | ----------------------------------------- | --------- | --------------------------------------------- |
+| 19  | HandoverActionButton caller wired         | PASS/FAIL | CheckoutDetailClient 마운트 + import 각 1건 이상 |
+| 20  | PURPOSE_BY_STATUS 프론트 mirror 금지      | PASS/FAIL | 프론트에 mirror 0건                           |
+| 21  | condition_check 사진 attachmentIds 3-layer| PASS/FAIL | owner+type+중복링크 fail-close 3건 존재       |
+| 22  | dangerouslySetInnerHTML 제거              | PASS/FAIL | HandoverQRDisplay.tsx 0건 + toDataURL 사용    |
 ```
 
 ## Exceptions
