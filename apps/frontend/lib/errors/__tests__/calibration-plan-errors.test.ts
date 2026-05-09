@@ -34,12 +34,12 @@ describe('calibration plan error mapper', () => {
     );
   });
 
-  it('falls back to the Error message for unmapped errors', () => {
+  it('falls back to planErrors.genericError for unmapped errors', () => {
     const t = jest.fn((key: string) => key);
 
     expect(mapCalibrationPlanErrorToToast(new Error('backend message'), t)).toEqual({
       title: 'planErrors.title',
-      description: 'backend message',
+      description: 'planErrors.genericError',
     });
   });
 });
