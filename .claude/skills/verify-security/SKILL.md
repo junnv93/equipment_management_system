@@ -371,6 +371,105 @@ awk '/async emit/,/^  \}$/' \
 
 **관련 sprint**: `system-health-should-4items-closure` (2026-05-09) + 시니어 자기검토.
 
+### Step 20 — CSP wire E2E spec 회귀 차단 (2026-05-09 추가)
+
+**근거**: ADR-0010 / `drizzle-policy-csp-spec-closure` sprint 결과로 `apps/frontend/tests/e2e/security/csp-violation.spec.ts` 신설. 본 spec 은 **proxy.ts 가 emit 하는 CSP 헤더 + Report-To URL + backend `/api/security/csp-report` ingest 의 wire** 를 결빙한다. controller unit test 는 dispatch 로직만 커버하고, proxy.ts header emit + report-uri SSOT 회귀는 본 spec 만 차단한다. 삭제/우회를 자동 감지.
+
+**검증 명령**:
+
+```bash
+# (1) spec 파일 존재
+test -f apps/frontend/tests/e2e/security/csp-violation.spec.ts
+
+# (2) SSOT 사용 (API_ENDPOINTS.SECURITY.CSP_REPORT)
+grep -c "API_ENDPOINTS\.SECURITY\.CSP_REPORT" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # ≥ 1
+
+# (3) BASE_URLS 사용 (하드코딩 0건)
+grep -c "BASE_URLS" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # ≥ 1
+
+# (4) 핵심 directive 검증 keyword
+grep -ciE "Content-Security-Policy|csp.*header" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # ≥ 1
+grep -ciE "Report-To|report-uri" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # ≥ 1
+
+# (5) 양 payload shape 검증
+grep -ciE "csp-report.*body|csp-violation|legacy.*reporting|reporting.*api" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # ≥ 1
+
+# (6) deprecated API 회귀 차단
+grep -cE "page\.route\(|middleware\.ts|next-auth/middleware|getServerSideProps|useFormState\b" apps/frontend/tests/e2e/security/csp-violation.spec.ts  # 0
+```
+
+**PASS:** 6 검증 모두 통과 (1~5 ≥ 1, 6 == 0).
+**FAIL:** spec 삭제 / SSOT 미사용 / 하드코딩 / deprecated API 회귀 / payload shape 검증 누락.
+
+**위반 시 수정 지시**:
+- spec 삭제 발견: 회귀 — sprint `drizzle-policy-csp-spec-closure` 결정 위반. 복원 + ADR-0010 정책 점검.
+- SSOT 미사용: `API_ENDPOINTS.SECURITY.CSP_REPORT` + `BASE_URLS` 사용으로 교체.
+- deprecated API: Playwright 최신 (`request` fixture, `expect.poll`, `page.evaluate`) 으로 교체.
+
+**관련 sprint**: `drizzle-policy-csp-spec-closure` (2026-05-09).
+
+### Step 21 — MetricsService 보안 Counter ↔ alert.rules.yml 3종 세트 정합성 (2026-05-09 추가)
+
+**근거**: `sort-rejection-cluster-prometheus` sprint 시니어 자기검토에서 발견된 갭 — `sort_rejection_total` Counter를 MetricsService에 추가했지만 `alert.rules.yml`에 alert rule이 없는 상태로 Evaluator PASS 통과. 보안 도메인 Counter는 counter 정의 + alert rule + runbook + baseline measurement 보정 절차 **4종이 반드시 동시에 존재**해야 observability가 완결됨.
+
+**검증 대상 Counter 목록** (보안 텔레메트리 — 정상 운영 시 0이어야 하는 메트릭):
+- `sort_rejection_total` / `sort_rejection_drops_total`
+- `zod_validation_issues_total` (ADR-0008 §4 검토 트리거)
+
+**검증 명령**:
+
+```bash
+# (1) MetricsService 보안 Counter 등록 확인
+grep -cE "sort_rejection_total|sort_rejection_drops_total" apps/backend/src/common/metrics/metrics.service.ts  # ≥ 2
+grep -c "zod_validation_issues_total" apps/backend/src/common/metrics/metrics.service.ts  # ≥ 1
+
+# (2) alert.rules.yml — security_telemetry 그룹 sort_rejection alert 존재
+grep -c "SortRejectionRateHigh" infra/monitoring/prometheus/alert.rules.yml  # ≥ 1
+grep -c "SortRejectionSustainedAttack" infra/monitoring/prometheus/alert.rules.yml  # ≥ 1
+grep -c "ZodValidationIssuesHighCount" infra/monitoring/prometheus/alert.rules.yml  # ≥ 1
+
+# (3) alert.rules.yml — runbook_url 포함 (Slack 자동 노출 보장)
+grep -c "runbook_url.*SortRejection" infra/monitoring/prometheus/alert.rules.yml  # ≥ 2
+grep -c "runbook_url.*ZodValidation" infra/monitoring/prometheus/alert.rules.yml  # ≥ 2
+
+# (4) prometheus-alert-rules.md — SortRejection runbook 섹션 존재
+grep -c "SortRejectionRateHigh" docs/operations/prometheus-alert-rules.md  # ≥ 1
+grep -c "SortRejectionSustainedAttack" docs/operations/prometheus-alert-rules.md  # ≥ 1
+
+# (5) prometheus-alert-rules.md — SortRejection baseline measurement 보정 이력 테이블 존재 (Zod 패리티)
+grep -c "SortRejection.*임계값 보정\|Baseline Measurement.*SortRejection" docs/operations/prometheus-alert-rules.md  # ≥ 1
+
+# (6) promtool — alert.rules.yml 정적 검증 (문법 오류 0)
+docker run --rm --entrypoint promtool \
+  -v "$(pwd)/infra/monitoring/prometheus:/etc/prometheus" \
+  prom/prometheus:latest \
+  check rules /etc/prometheus/alert.rules.yml 2>&1 | grep -c "SUCCESS"  # ≥ 1
+```
+
+**PASS 기준:**
+- (1) MetricsService counter 2+1건 존재
+- (2) alert.rules.yml 5개 alert name 존재
+- (3) runbook_url 4건 존재
+- (4) runbook 섹션 2건 존재
+- (5) baseline measurement 보정 이력 1건 이상 존재
+- (6) promtool SUCCESS
+
+**FAIL 시 수정 지시**:
+- (1) FAIL: MetricsService counter 정의 누락 — `sort_rejection_total` / `zod_validation_issues_total` 재확인
+- (2) FAIL: alert.rules.yml alert rule 누락 — 신규 counter 추가 시 `security_telemetry` / `validation` 그룹에 warning + critical 쌍 추가
+- (3) FAIL: runbook_url 누락 — Slack alertmanager 템플릿이 runbook_url 없으면 노출 안 함
+- (4) FAIL: runbook 섹션 누락 — `docs/operations/prometheus-alert-rules.md` `## Runbook` 섹션에 즉시 행동 절차 추가
+- (5) FAIL: baseline measurement 섹션 누락 — ZodValidation `## Baseline Measurement` 패턴으로 추가 (임계값 보정 이력 테이블 필수)
+- (6) FAIL: promtool syntax 오류 — Workflow §3 정적 검증 절차 참조
+
+**새 보안 Counter 추가 시 체크리스트 (4종 세트)**:
+1. `apps/backend/src/common/metrics/metrics.service.ts` — Counter 등록 + cardinality 분석 help 명시 (`N routes × M reasons ≤ 200`)
+2. `infra/monitoring/prometheus/alert.rules.yml` — warning + critical alert 쌍 (runbook + runbook_url 포함)
+3. `docs/operations/prometheus-alert-rules.md` — `## Runbook` 즉시 행동 절차 섹션
+4. `docs/operations/prometheus-alert-rules.md` — `## Baseline Measurement` 임계값 보정 절차 + 보정 이력 테이블
+
+**관련 sprint**: `sort-rejection-cluster-prometheus` (2026-05-09 시니어 자기검토 갭 closure).
+
 
 ## Exceptions
 
