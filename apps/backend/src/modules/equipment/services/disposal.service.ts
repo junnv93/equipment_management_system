@@ -5,7 +5,6 @@ import {
   Logger,
   ConflictException,
   ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
@@ -30,7 +29,7 @@ import {
   UserRoleValues as URVal,
   ErrorCode,
 } from '@equipment-management/schemas';
-import { DASHBOARD_ITEM_LIMIT, VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
 import type { DisposalRequestWithRelations } from './disposal.types';
 
 /**
@@ -173,16 +172,8 @@ export class DisposalService extends VersionedBaseService {
     reviewDto: ReviewDisposalInput,
     reviewedBy: string
   ): Promise<DisposalRequestWithRelations | null> {
-    const trimmedOpinion = reviewDto.opinion?.trim() ?? '';
-    if (
-      reviewDto.decision === 'reject' &&
-      trimmedOpinion.length < VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH
-    ) {
-      throw new BadRequestException({
-        code: ErrorCode.DisposalRejectCommentRequired,
-        message: `반려 검토 의견은 ${VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH}자 이상 입력해주세요.`,
-      });
-    }
+    // reject 분기 opinion min-check는 reviewDisposalSchema(discriminatedUnion)가 ZodValidationPipe에서 차단
+    const trimmedOpinion = reviewDto.opinion?.trim() || null;
 
     // 1. 현재 요청 조회
     const request = await this.db.query.disposalRequests.findFirst({
