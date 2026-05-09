@@ -580,13 +580,13 @@ grep -rEn "map[A-Z][a-zA-Z]+ErrorToToast\(error,\s+[a-zA-Z]+\b\)" \
 # 기대: 0건 — 발견 시 tErrors 주입 필요
 
 # 2) tErrors 주입 컴포넌트 수 확인 (≥ 11건)
-grep -rln "useTranslations\('errors'\)" \
-  apps/frontend/components apps/frontend/app --include="*.tsx" | wc -l
+# 주의: 따옴표 쉘 이스케이프 문제로 xargs 파이프 사용
+grep -rln "tErrors" apps/frontend/components apps/frontend/app --include="*.tsx" | wc -l
 # 기대: ≥ 11건 (ADR-0008 패턴 유지 확인)
 
-# 3) mapper 파일 tErrors? 파라미터 존재 확인 (17개 도메인 mapper 전체)
-grep -rn "tErrors\?: TranslationFunction" \
-  apps/frontend/lib/errors --include="*-errors.ts" | grep -v "cable-errors\|document-errors\|equipment-errors"
+# 3) mapper 파일 tErrors 파라미터 존재 확인 (17개 도메인 mapper 전체)
+grep -rn "tErrors" apps/frontend/lib/errors --include="*-errors.ts" | \
+  grep "TranslationFunction" | grep -v "cable-errors\|document-errors\|equipment-errors" | wc -l
 # 기대: ≥ 17건 (17개 도메인 mapper 모두 tErrors? 파라미터 포함)
 ```
 
