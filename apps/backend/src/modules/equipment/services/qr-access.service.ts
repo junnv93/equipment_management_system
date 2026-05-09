@@ -35,7 +35,7 @@ export interface QRAccessResult {
  * - `mark_checkout_returned`: 사용자가 현재 이 장비를 반출 중(`checked_out`)인 경우 (cross-site 허용)
  * - `report_nc`: CREATE_NON_CONFORMANCE 권한자 (cross-site 허용)
  *
- * Phase 2/3 확장 대상: `report_nc_mobile`, `confirm_handover_receive` 등.
+ * Phase 3 확장 후보: `scan_continuous` (연속 스캔 — 재고 실사용).
  */
 @Injectable()
 export class QRAccessService {

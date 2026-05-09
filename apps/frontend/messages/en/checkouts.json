@@ -878,15 +878,6 @@
       "lender_return": "Check the condition of the returned equipment. Record any changes compared to the pre-checkout condition."
     }
   },
-  "handoverQR": {
-    "purposeTitle": "Handover QR Usage Guide",
-    "purposeDescription": "Rental handover must be conducted in-person. When the borrower scans this QR code, they will be automatically directed to the receipt confirmation screen.",
-    "ttlNotice": "This QR code can only be used once within {minutes} minutes.",
-    "scanInstruction": "The borrower must be logged into the system before scanning the QR code.",
-    "expired": "QR code has expired. Please generate a new one.",
-    "expiresIn": "Expires in {seconds}s",
-    "regenerate": "Regenerate QR"
-  },
   "borrowerApproval": {
     "sectionTitle": "1st Approval (Borrower Team)",
     "approver": "1st Approver",

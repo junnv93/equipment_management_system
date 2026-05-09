@@ -85,8 +85,8 @@ export const QR_ACTION_I18N_KEYS: Record<QRAllowedAction, string> = {
  * 프론트엔드 정렬 시 SSOT. 하드코딩된 정렬 순서 금지.
  */
 export const QR_ACTION_PRIORITY: Record<QRAllowedAction, number> = {
-  confirm_handover_receive: 115, // 10분 TTL token 페어링 진행 중 — 가장 시급
-  confirm_handover_return: 110, // 동일 이유
+  confirm_handover_receive: 115, // rental FSM lender_checked 단계 — 현장 대면 수령 확인 가장 시급
+  confirm_handover_return: 110, // rental FSM borrower_returned 단계 — 반환 확인 시급
   mark_checkout_returned: 100, // 반납 누락 방지
   request_checkout: 80,
   report_nc: 60,

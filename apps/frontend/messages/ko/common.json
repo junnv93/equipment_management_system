@@ -62,8 +62,6 @@
     "networkError": "네트워크 오류가 발생했습니다.",
     "scanErrorTitle": "QR 스캔 페이지 오류",
     "scanErrorDescription": "스캔 기능을 불러오는 중 문제가 발생했습니다. 카메라 권한과 네트워크 상태를 확인한 뒤 다시 시도해주세요.",
-    "handoverErrorTitle": "인수인계 페이지 오류",
-    "handoverErrorDescription": "인수인계 확인 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
     "downloadFailed": "파일 다운로드에 실패했습니다.",
     "versionConflict": "다른 사용자가 동시에 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.",
     "tryAgain": "다시 시도",
