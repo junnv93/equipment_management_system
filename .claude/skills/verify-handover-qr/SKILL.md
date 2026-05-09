@@ -354,15 +354,27 @@ grep -rn "PURPOSE_BY_STATUS\|purposeByStatus\|lender_checked.*borrower_receive\|
 # PASS: 0건
 ```
 
-### Step 21: condition_check 사진 attachmentIds fail-close 3-layer
+### Step 21: attachment fail-close 3-layer — submitConditionCheck + returnCheckout 양 경로
 
-**PASS:** `submitConditionCheck` 서비스에서 documentId owner 검증 + documentType 화이트리스트 + 중복링크 방지 3중 fail-close.
-**FAIL:** `UPDATE documents WHERE id IN (...)` 에 owner/type/중복 조건 없음.
+**PASS:**
+- `submitConditionCheck`: `isNull(conditionCheckId)` + `uploadedBy` + `documentType` 화이트리스트 3중.
+- `returnCheckout`: `isNull(checkoutId)` + `uploadedBy` + `documentType` 화이트리스트 3중.
+- `startCheckout` DTO에 `attachmentIds` 필드 **없음** (entity 링크 불가 — dead field 금지).
+
+**FAIL:** 어느 한 경로라도 3-layer 중 하나 누락, 또는 `startCheckout` DTO에 attachmentIds 잔존.
 
 ```bash
-grep -A 20 "attachmentIds && dto.attachmentIds.length" \
-  apps/backend/src/modules/checkouts/checkouts.service.ts 2>/dev/null
-# PASS: uploadedBy, inArray(documentType, ALLOWED_PHOTO_TYPES), isNull(conditionCheckId) 3가지 모두 존재
+SFILE=apps/backend/src/modules/checkouts/checkouts.service.ts
+# submitConditionCheck — isNull(conditionCheckId) + uploadedBy(checkerId) + ALLOWED_PHOTO_TYPES
+grep -c "isNull(schema.documents.conditionCheckId)" "$SFILE"   # PASS: ≥1
+grep -c "eq(schema.documents.uploadedBy, checkerId)" "$SFILE"  # PASS: ≥1
+# returnCheckout — isNull(checkoutId) + uploadedBy(returnerId) + ALLOWED_PHOTO_TYPES
+grep -c "isNull(schema.documents.checkoutId)" "$SFILE"         # PASS: ≥1
+grep -c "eq(schema.documents.uploadedBy, returnerId)" "$SFILE" # PASS: ≥1
+# startCheckout DTO에 attachmentIds 없음 (dead field 금지)
+grep -c "attachmentIds" \
+  apps/backend/src/modules/checkouts/dto/start-checkout.dto.ts 2>/dev/null || echo 0
+# PASS: 0
 ```
 
 ### Step 22: dangerouslySetInnerHTML 제거 확인

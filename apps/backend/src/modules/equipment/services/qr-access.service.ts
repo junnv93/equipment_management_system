@@ -9,7 +9,11 @@ import {
   QR_ACTION_VALUES,
   type QRAllowedAction,
 } from '@equipment-management/shared-constants';
-import { EquipmentStatusEnum, CheckoutStatusEnum } from '@equipment-management/schemas';
+import {
+  EquipmentStatusEnum,
+  CheckoutStatusEnum,
+  CheckoutPurposeEnum,
+} from '@equipment-management/schemas';
 import type { JwtUser } from '../../../types/auth';
 
 /** resolveAllowedActions 반환 타입 — actions + confirm_handover_* 에 필요한 checkoutId */
@@ -146,6 +150,7 @@ export class QRAccessService {
         .where(
           and(
             eq(checkoutItems.equipmentId, equipmentId),
+            eq(checkouts.purpose, CheckoutPurposeEnum.enum.rental),
             inArray(checkouts.status, [
               CheckoutStatusEnum.enum.lender_checked,
               CheckoutStatusEnum.enum.borrower_returned,

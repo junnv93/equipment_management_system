@@ -20,6 +20,7 @@ import { intermediateInspections } from './intermediate-inspections';
 import { equipmentSelfInspections } from './equipment-self-inspections';
 import { nonConformances } from './non-conformances';
 import { conditionChecks } from './condition-checks';
+import { checkouts } from './checkouts';
 import { users } from './users';
 
 /**
@@ -58,6 +59,10 @@ export const documents = pgTable(
     }),
     // 상태 확인 첨부 — 반출/반입 4단계 QR 사진 (UL-QP-18-06, 5년 보존). conditionCheck 삭제 시 cascade.
     conditionCheckId: uuid('condition_check_id').references(() => conditionChecks.id, {
+      onDelete: 'cascade',
+    }),
+    // 반입 검사 첨부 — 교정/수리 반입 시 검사 사진 (UL-QP-18-06, 5년 보존). checkout 삭제 시 cascade.
+    checkoutId: uuid('checkout_id').references(() => checkouts.id, {
       onDelete: 'cascade',
     }),
 
@@ -131,6 +136,7 @@ export const documents = pgTable(
       table.conditionCheckId,
       table.documentType
     ),
+    checkoutIdIdx: index('documents_checkout_id_idx').on(table.checkoutId),
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
@@ -176,6 +182,10 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   conditionCheck: one(conditionChecks, {
     fields: [documents.conditionCheckId],
     references: [conditionChecks.id],
+  }),
+  checkout: one(checkouts, {
+    fields: [documents.checkoutId],
+    references: [checkouts.id],
   }),
   uploadedByUser: one(users, {
     fields: [documents.uploadedBy],

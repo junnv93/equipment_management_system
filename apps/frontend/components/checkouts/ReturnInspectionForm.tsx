@@ -145,21 +145,21 @@ export default function ReturnInspectionForm({
       setAttachmentFiles(withUploading);
 
       for (const uf of newFiles) {
-        const fileIndex = withUploading.indexOf(uf);
+        const targetFile = uf.file;
         try {
           const doc = await uploadMutation.mutateAsync(uf.file);
           setUploadedDocumentIds((prev) => [...prev, doc.id]);
           setAttachmentFiles((prev) =>
-            prev.map((f, i) =>
-              i === fileIndex
+            prev.map((f) =>
+              f.file === targetFile
                 ? { ...f, status: 'success' as const, uuid: doc.id, progress: 100 }
                 : f
             )
           );
         } catch {
           setAttachmentFiles((prev) =>
-            prev.map((f, i) =>
-              i === fileIndex ? { ...f, status: 'error' as const, error: '업로드 실패' } : f
+            prev.map((f) =>
+              f.file === targetFile ? { ...f, status: 'error' as const, error: '업로드 실패' } : f
             )
           );
         }

@@ -2487,6 +2487,33 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
             );
         }
 
+        // 3. 반입 검사 사진 링크 — fail-close: 소유권 + 문서 타입 + 중복 링크 3-layer
+        if (returnDto.attachmentIds && returnDto.attachmentIds.length > 0) {
+          const ALLOWED_PHOTO_TYPES = [
+            DocumentTypeValues.CONDITION_CHECK_PHOTO,
+            DocumentTypeValues.CHECKOUT_HANDOVER_PHOTO,
+          ];
+          const linked = await tx
+            .update(schema.documents)
+            .set({ checkoutId: uuid })
+            .where(
+              and(
+                inArray(schema.documents.id, returnDto.attachmentIds),
+                eq(schema.documents.uploadedBy, returnerId),
+                inArray(schema.documents.documentType, ALLOWED_PHOTO_TYPES as DocumentType[]),
+                isNull(schema.documents.checkoutId)
+              )
+            )
+            .returning({ id: schema.documents.id });
+          if (linked.length !== returnDto.attachmentIds.length) {
+            throw new BadRequestException({
+              code: CheckoutErrorCode.INVALID_ATTACHMENT,
+              message:
+                '첨부 문서 검증 실패: 소유권 불일치, 허용되지 않은 문서 타입, 또는 이미 다른 반출에 링크된 문서가 포함되어 있습니다.',
+            });
+          }
+        }
+
         return result;
       });
 
