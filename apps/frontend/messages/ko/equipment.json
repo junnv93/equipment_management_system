@@ -1402,6 +1402,10 @@
   "calibrationHistoryClient": {
     "title": "교정 이력",
     "backAriaLabel": "장비 상세로 돌아가기",
+    "errorAlert": {
+      "title": "교정 이력을 불러오지 못했습니다",
+      "description": "잠시 후 다시 시도하거나 페이지를 새로고침해 주세요."
+    },
     "overdueAlert": {
       "title": "교정 기한 초과",
       "description": "이 장비의 교정 기한이 지났습니다. 즉시 교정 등록이 필요합니다."

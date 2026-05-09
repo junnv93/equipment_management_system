@@ -1402,6 +1402,10 @@
   "calibrationHistoryClient": {
     "title": "Calibration History",
     "backAriaLabel": "Back to equipment details",
+    "errorAlert": {
+      "title": "Failed to load calibration history",
+      "description": "Please try again shortly or refresh the page."
+    },
     "overdueAlert": {
       "title": "Calibration Overdue",
       "description": "This equipment's calibration deadline has passed. Immediate registration required."

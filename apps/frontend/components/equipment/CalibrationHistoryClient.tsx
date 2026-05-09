@@ -93,7 +93,11 @@ export function CalibrationHistoryClient({
   }, [equipmentId, resolvedEquipment, setDynamicLabel, clearDynamicLabel]);
 
   // 단일 장비 calibration history — hook SSOT (queryKey/queryFn/QUERY_CONFIG pairing 결빙)
-  const { data: historyData, isLoading } = useEquipmentCalibrationHistory(equipmentId, {
+  const {
+    data: historyData,
+    isLoading,
+    isError,
+  } = useEquipmentCalibrationHistory(equipmentId, {
     pageSize: SELECTOR_PAGE_SIZE,
   });
   const calibrations = useMemo<CalibrationHistory[]>(() => historyData?.data ?? [], [historyData]);
@@ -186,6 +190,14 @@ export function CalibrationHistoryClient({
         backUrl={`/equipment/${equipmentId}`}
         backLabel={t('backAriaLabel')}
       />
+
+      {isError && (
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{t('errorAlert.title')}</AlertTitle>
+          <AlertDescription>{t('errorAlert.description')}</AlertDescription>
+        </Alert>
+      )}
 
       {isOverdue && (
         <Alert variant="destructive">
