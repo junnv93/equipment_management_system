@@ -33,6 +33,11 @@ import {
   type SystemErrorEventProvider,
   type SystemErrorEventInput,
 } from '../system-health/contract';
+import {
+  SORT_REJECTION_TELEMETRY,
+  type SortRejectionTelemetry,
+  type SortRejectionReason,
+} from '../security/contract';
 import { MetricsService } from '../metrics/metrics.service';
 import type { AuditLogUserRole, CreateAuditLogDto } from '@equipment-management/schemas';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
@@ -54,7 +59,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     private readonly systemErrorEventProvider?: SystemErrorEventProvider,
     @Optional()
     @Inject(MetricsService)
-    private readonly metricsService?: MetricsService
+    private readonly metricsService?: MetricsService,
+    @Optional()
+    @Inject(SORT_REJECTION_TELEMETRY)
+    private readonly sortRejectionTelemetry?: SortRejectionTelemetry
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost): Response {
@@ -86,11 +94,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         issues,
       };
       // ADR-0008 §4: Zod issues count telemetry (도메인 라우트별 issue 분포 모니터링)
+      const rawPathForTelemetry =
+        (request.route as { path?: string } | undefined)?.path ?? request.url.split('?')[0] ?? '';
       if (this.metricsService && issues.length > 0) {
-        const rawPath =
-          (request.route as { path?: string } | undefined)?.path ?? request.url.split('?')[0] ?? '';
-        this.metricsService.observeZodIssueCount(this.normalizeRoute(rawPath), issues.length);
+        this.metricsService.observeZodIssueCount(
+          this.normalizeRoute(rawPathForTelemetry),
+          issues.length
+        );
       }
+      // sort-rejection-telemetry — sort 필드 reject 이벤트 보안 logging.
+      // SQL injection / DoS 시도 가능성 — SIEM ingest 가능 형식으로 Logger.warn 출력.
+      this.maybeRecordSortRejection(exception, request, rawPathForTelemetry);
       // ZodError = ValidationError → 운영 노이즈, audit 제외
       return response.status(appError.statusCode).json(errorResponse);
     } else if (exception instanceof HttpException) {
@@ -218,6 +232,61 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private normalizeRoute(path: string): string {
     return path.replace(UUID_RE_GLOBAL, ':id').replace(NUMERIC_ID_RE, '/:id');
+  }
+
+  /**
+   * ZodError 의 sort 필드 reject 이벤트를 보안 telemetry 로 기록.
+   *
+   * 감지 조건 (path 기반 — query DTO 의 sort 필드만 매치):
+   *  - issue.path 의 마지막 segment === 'sort' (top-level 또는 nested)
+   *  - issue.code in {'invalid_value', 'too_big', 'invalid_type'}
+   *
+   * PII deny-list:
+   *  - sort 값 (CSV 토큰 / sort enum 값) 은 query 파라미터 — PII 아님 (사용자 입력 경로).
+   *  - 200자 truncate 로 logging 폭주 방지.
+   *  - 다른 query 필드 / body / headers 절대 캡처하지 않음.
+   *
+   * fire-and-forget — telemetry 자체 실패가 응답 흐름 차단 금지.
+   */
+  private maybeRecordSortRejection(exception: ZodError, request: Request, rawPath: string): void {
+    if (!this.sortRejectionTelemetry) return;
+
+    const sortIssue = exception.issues.find((issue) => {
+      // path 마지막 segment 가 'sort' 인 issue 만 추출
+      const lastSegment = issue.path[issue.path.length - 1];
+      if (lastSegment !== 'sort') return false;
+      return (
+        issue.code === 'invalid_value' || issue.code === 'too_big' || issue.code === 'invalid_type'
+      );
+    });
+
+    if (!sortIssue) return;
+
+    // zod v4 issue 는 input 값을 직접 노출 안 함 (`received` 없음).
+    // 단, request.query.sort 값은 검증된 query 파라미터 — PII 아님.
+    const querySort = (request.query as Record<string, unknown> | undefined)?.sort;
+    const invalidValueRaw = typeof querySort === 'string' ? querySort : '<non-string>';
+    const invalidValue = invalidValueRaw.slice(0, 200); // truncate cap
+
+    const reason: SortRejectionReason = sortIssue.code as SortRejectionReason;
+    const normalizedRoute = this.normalizeRoute(rawPath).slice(0, 255);
+    const httpMethod = (request.method ?? 'UNKNOWN').toUpperCase().slice(0, 10);
+    const userId = (request as AuthenticatedRequest).user?.userId ?? null;
+
+    try {
+      this.sortRejectionTelemetry.recordSortRejection({
+        invalidValue,
+        reason,
+        normalizedRoute,
+        httpMethod,
+        userId,
+      });
+    } catch (err: unknown) {
+      // service 가 throw 하지 않도록 설계됐으나 방어적 catch
+      this.logger.error(
+        `sort-rejection telemetry record failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   /**
