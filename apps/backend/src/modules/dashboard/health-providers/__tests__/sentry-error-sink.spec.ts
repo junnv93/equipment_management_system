@@ -4,11 +4,11 @@ import { SentryErrorSink } from '../sentry-error-sink';
 import type { SystemErrorEventInput } from '../../../../common/system-health/contract';
 
 const mockSentryInit = jest.fn();
-const mockSentryCaptureMessage = jest.fn();
+const mockSentryCaptureException = jest.fn();
 
 jest.mock('@sentry/node', () => ({
   init: (...args: unknown[]) => mockSentryInit(...args),
-  captureMessage: (...args: unknown[]) => mockSentryCaptureMessage(...args),
+  captureException: (...args: unknown[]) => mockSentryCaptureException(...args),
 }));
 
 describe('SentryErrorSink', () => {
@@ -50,7 +50,7 @@ describe('SentryErrorSink', () => {
     expect(mockSentryInit).not.toHaveBeenCalled();
     expect(sink.isEnabled()).toBe(false);
     await expect(sink.emit(buildInput())).resolves.toBeUndefined();
-    expect(mockSentryCaptureMessage).not.toHaveBeenCalled();
+    expect(mockSentryCaptureException).not.toHaveBeenCalled();
   });
 
   it('SENTRY_DSN 빈 문자열 → enabled=false (falsy DSN 처리)', async () => {
@@ -69,24 +69,37 @@ describe('SentryErrorSink', () => {
     expect(sink.isEnabled()).toBe(true);
   });
 
-  it('SENTRY_DSN 설정 + emit(input) → Sentry.captureMessage 가 올바른 형태로 호출됨', async () => {
+  it('SENTRY_DSN 설정 + emit(input) → Sentry.captureException 이 Error + 올바른 hint 로 호출됨', async () => {
     const sink = await buildSink({ SENTRY_DSN: 'https://test@sentry.io/1' });
     const input = buildInput();
     await sink.emit(input);
 
-    expect(mockSentryCaptureMessage).toHaveBeenCalledWith(
-      `SystemErrorEvent: ${input.errorCode}`,
+    expect(mockSentryCaptureException).toHaveBeenCalledTimes(1);
+    const [errorArg, hintArg] = mockSentryCaptureException.mock.calls[0] as [
+      Error,
+      { tags: Record<string, string>; extra: Record<string, unknown> },
+    ];
+
+    // Error 객체: name=errorCode, message=httpMethod+route
+    expect(errorArg).toBeInstanceOf(Error);
+    expect(errorArg.name).toBe(input.errorCode);
+    expect(errorArg.message).toContain(input.httpMethod);
+    expect(errorArg.message).toContain(input.normalizedRoute);
+
+    // hint tags: errorCode 포함 + httpMethod/route/statusCode
+    expect(hintArg.tags).toEqual(
       expect.objectContaining({
-        level: 'error',
-        tags: expect.objectContaining({
-          httpMethod: input.httpMethod,
-          normalizedRoute: input.normalizedRoute,
-          statusCode: String(input.statusCode),
-        }),
-        extra: expect.objectContaining({
-          stackHash: input.stackHash,
-          stackPreview: input.stackPreview,
-        }),
+        errorCode: input.errorCode,
+        httpMethod: input.httpMethod,
+        normalizedRoute: input.normalizedRoute,
+        statusCode: String(input.statusCode),
+      })
+    );
+    // extra: stackHash/stackPreview
+    expect(hintArg.extra).toEqual(
+      expect.objectContaining({
+        stackHash: input.stackHash,
+        stackPreview: input.stackPreview,
       })
     );
   });

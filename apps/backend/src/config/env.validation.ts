@@ -93,6 +93,9 @@ export const envSchema = z
     // bullmq 전환 시 ASYNC_WORK_QUEUE_NAMES 도 함께 설정 (콤마 구분 큐 이름 목록).
     QUEUE_STRATEGY: z.enum(['pending-work-aggregate', 'bullmq']).optional(),
     ASYNC_WORK_QUEUE_NAMES: z.string().optional(),
+
+    // system_error_events 보존 기간 (일). 기본 90일. 코드 변경 없이 운영 조정 가능.
+    SYSTEM_ERROR_EVENTS_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).optional(),
   })
   .refine(
     (data) =>

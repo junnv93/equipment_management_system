@@ -47,9 +47,12 @@ export class SentryErrorSink {
   async emit(event: SystemErrorEventInput): Promise<void> {
     if (!this.enabled) return;
     try {
-      Sentry.captureMessage(`SystemErrorEvent: ${event.errorCode}`, {
-        level: 'error',
+      // captureException: errorCode 기반 fingerprint 그루핑 (captureMessage는 메시지 문자열 기반으로 그루핑 불정확)
+      const err = new Error(`${event.httpMethod} ${event.normalizedRoute}`);
+      err.name = event.errorCode;
+      Sentry.captureException(err, {
         tags: {
+          errorCode: event.errorCode,
           httpMethod: event.httpMethod,
           normalizedRoute: event.normalizedRoute,
           statusCode: String(event.statusCode),
