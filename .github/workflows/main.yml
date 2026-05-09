@@ -389,16 +389,7 @@ jobs:
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-          fail-on-cache-miss: true
+          cache: pnpm
 
       # --prod: 프로덕션 의존성만 검사 (devDependency 제외)
       # --audit-level=critical: CVSS 9+ (Critical)만 빌드 실패 처리

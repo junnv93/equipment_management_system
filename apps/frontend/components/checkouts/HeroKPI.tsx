@@ -2,6 +2,7 @@
 
 import React, { type ReactNode } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   CHECKOUT_STATS_VARIANTS,
   getSemanticContainerTextClasses,
@@ -30,6 +31,7 @@ export const HeroKPI = React.memo(function HeroKPI({
   badge,
   meta,
 }: HeroKPIProps) {
+  const t = useTranslations('checkouts.heroKpi');
   const tokens = CHECKOUT_STATS_VARIANTS.hero;
   const valueColorClass = variant ? getSemanticContainerTextClasses(variant) : '';
   const surfaceClass = (variant && tokens.surfaceVariant[variant]) || tokens.surface;
@@ -48,19 +50,19 @@ export const HeroKPI = React.memo(function HeroKPI({
           {trend === 'up' && (
             <>
               <TrendingUp className="h-3 w-3" aria-hidden="true" />
-              <span className="sr-only">증가 추세</span>
+              <span className="sr-only">{t('trendUp')}</span>
             </>
           )}
           {trend === 'down' && (
             <>
               <TrendingDown className="h-3 w-3" aria-hidden="true" />
-              <span className="sr-only">감소 추세</span>
+              <span className="sr-only">{t('trendDown')}</span>
             </>
           )}
           {trend === 'flat' && (
             <>
               <Minus className="h-3 w-3" aria-hidden="true" />
-              <span className="sr-only">변동 없음</span>
+              <span className="sr-only">{t('trendFlat')}</span>
             </>
           )}
         </div>

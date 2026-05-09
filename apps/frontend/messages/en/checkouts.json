@@ -559,6 +559,11 @@
     "internalShared": "Loading internal shared equipment list",
     "internalSharedSr": "Loading internal shared equipment list."
   },
+  "heroKpi": {
+    "trendUp": "Trending Up",
+    "trendDown": "Trending Down",
+    "trendFlat": "No Change"
+  },
   "error": {
     "heroKpi": "Failed to load statistics",
     "nextStepPanel": "Failed to determine next step",

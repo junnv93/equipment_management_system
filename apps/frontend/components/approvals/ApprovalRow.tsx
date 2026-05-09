@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -49,8 +50,9 @@ interface ApprovalRowProps {
  * 정렬 보장: native <tr>/<td>로 컬럼 폭 자동 동기화
  * Urgency: 행 좌측 보더 색상으로 표현 (별도 컬럼 불필요)
  * 액션: DropdownMenu overflow 패턴 (업계 표준)
+ * memo: ApprovalList의 ApprovalRowItem wrapper가 안정적 콜백을 공급 — 부모 재렌더 시 스킵
  */
-export function ApprovalRow({
+export const ApprovalRow = memo(function ApprovalRow({
   item,
   isSelected,
   isMutating = false,
@@ -203,4 +205,4 @@ export function ApprovalRow({
       </TableCell>
     </TableRow>
   );
-}
+});

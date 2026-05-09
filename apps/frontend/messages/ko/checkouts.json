@@ -559,6 +559,11 @@
     "internalShared": "내부 공용장비 목록 로딩 중",
     "internalSharedSr": "내부 공용 장비 목록을 불러오는 중입니다."
   },
+  "heroKpi": {
+    "trendUp": "증가 추세",
+    "trendDown": "감소 추세",
+    "trendFlat": "변동 없음"
+  },
   "error": {
     "heroKpi": "통계를 불러오지 못했습니다",
     "nextStepPanel": "다음 단계를 계산하지 못했습니다",

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +25,56 @@ interface ApprovalListProps {
   /** 오늘 처리 건수 (Empty state 표시용) */
   todayProcessed?: number | null;
 }
+
+interface ApprovalRowItemProps {
+  item: ApprovalItem;
+  isSelected: boolean;
+  isMutating: boolean;
+  isExiting: 'success' | 'reject' | false;
+  onToggleSelectItem: (id: string, item: ApprovalItem) => void;
+  onApproveItem: (item: ApprovalItem) => void;
+  onRejectItem?: (item: ApprovalItem) => void;
+  onViewDetailItem: (item: ApprovalItem) => void;
+  actionLabel: string;
+}
+
+/**
+ * 파일-로컬 wrapper — item별 콜백을 useCallback으로 안정화하여
+ * ApprovalRow(memo)의 불필요한 재렌더를 방지.
+ */
+const ApprovalRowItem = memo(function ApprovalRowItem({
+  item,
+  isSelected,
+  isMutating,
+  isExiting,
+  onToggleSelectItem,
+  onApproveItem,
+  onRejectItem,
+  onViewDetailItem,
+  actionLabel,
+}: ApprovalRowItemProps) {
+  const handleToggleSelect = useCallback(
+    () => onToggleSelectItem(item.id, item),
+    [item, onToggleSelectItem]
+  );
+  const handleApprove = useCallback(() => onApproveItem(item), [item, onApproveItem]);
+  const handleReject = useCallback(() => onRejectItem?.(item), [item, onRejectItem]);
+  const handleViewDetail = useCallback(() => onViewDetailItem(item), [item, onViewDetailItem]);
+
+  return (
+    <ApprovalRow
+      item={item}
+      isSelected={isSelected}
+      isMutating={isMutating}
+      isExiting={isExiting}
+      onToggleSelect={handleToggleSelect}
+      onApprove={handleApprove}
+      onReject={onRejectItem ? handleReject : undefined}
+      onViewDetail={handleViewDetail}
+      actionLabel={actionLabel}
+    />
+  );
+});
 
 export function ApprovalList({
   items,
@@ -97,16 +148,16 @@ export function ApprovalList({
         </TableHeader>
         <TableBody>
           {items.map((item) => (
-            <ApprovalRow
+            <ApprovalRowItem
               key={item.id}
               item={item}
               isSelected={selectedItems.includes(item.id)}
               isMutating={processingIds.has(item.id)}
-              isExiting={exitingIds.get(item.id) || false}
-              onToggleSelect={() => onToggleSelect(item.id, item)}
-              onApprove={() => onApprove(item)}
-              onReject={onReject ? () => onReject(item) : undefined}
-              onViewDetail={() => onViewDetail(item)}
+              isExiting={exitingIds.get(item.id) ?? false}
+              onToggleSelectItem={onToggleSelect}
+              onApproveItem={onApprove}
+              onRejectItem={onReject}
+              onViewDetailItem={onViewDetail}
               actionLabel={actionLabel}
             />
           ))}
