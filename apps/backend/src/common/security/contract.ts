@@ -20,6 +20,7 @@
 // ============================================================================
 
 export const SORT_REJECTION_TELEMETRY = Symbol('SORT_REJECTION_TELEMETRY');
+export const SORT_REJECTION_RATE_LIMITER = Symbol('SORT_REJECTION_RATE_LIMITER');
 
 // ============================================================================
 // 타입
@@ -42,6 +43,28 @@ export interface SortRejectionEvent {
   httpMethod: string;
   /** 인증 사용자 ID — 미인증 시 null */
   userId: string | null;
+}
+
+// ============================================================================
+// Rate limiter
+// ============================================================================
+
+/** rate limiter drop 사유 — Prometheus counter label SSOT */
+export type SortRejectionDropReason =
+  | 'rate-limit' // 분당 logging 상한 초과
+  | 'dedupe' // 동일 (normalizedRoute, invalidValue) 분당 중복
+  | 'rate-limit-fallback'; // Redis 미가용 → in-memory fallback 경로의 drop
+
+export interface SortRejectionRateLimiter {
+  /**
+   * sort rejection 이벤트 logging 허용 여부 결정.
+   * - allowed: true  → Logger.warn 진행
+   * - allowed: false → silent drop, reason으로 Prometheus counter 증가
+   * Redis 장애 시 in-memory fallback 자동 전환 — throw 하지 않는다.
+   */
+  acquireSlot(
+    event: Pick<SortRejectionEvent, 'invalidValue' | 'normalizedRoute'>
+  ): Promise<{ allowed: boolean; reason: SortRejectionDropReason | null }>;
 }
 
 export interface SortRejectionTelemetry {

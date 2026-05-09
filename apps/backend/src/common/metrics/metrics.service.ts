@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Registry, collectDefaultMetrics, Counter, Histogram, Gauge } from 'prom-client';
 import type { SystemErrorEventDropReason } from '../system-health/contract';
+import type { SortRejectionReason, SortRejectionDropReason } from '../security/contract';
 
 @Injectable()
 export class MetricsService {
@@ -14,6 +15,8 @@ export class MetricsService {
   private readonly nonConformingEquipmentGauge: Gauge;
   private readonly systemErrorEventDropsCounter: Counter;
   private readonly zodValidationIssuesCounter: Counter;
+  private readonly sortRejectionCounter: Counter;
+  private readonly sortRejectionDropsCounter: Counter;
 
   constructor() {
     this.registry = new Registry();
@@ -79,6 +82,20 @@ export class MetricsService {
       labelNames: ['domain_route', 'issue_count_bucket'],
       registers: [this.registry],
     });
+
+    this.sortRejectionCounter = new Counter({
+      name: 'sort_rejection_total',
+      help: 'Total sort field rejections logged (rate-limiter allowed). Labels: route (normalizedRoute), reason (SortRejectionReason).',
+      labelNames: ['route', 'reason'],
+      registers: [this.registry],
+    });
+
+    this.sortRejectionDropsCounter = new Counter({
+      name: 'sort_rejection_drops_total',
+      help: 'Total sort field rejections silently dropped by rate-limit/dedupe/fallback gates.',
+      labelNames: ['reason'],
+      registers: [this.registry],
+    });
   }
 
   incrementHttpRequestTotal(method: string, route: string, status: string): void {
@@ -136,6 +153,14 @@ export class MetricsService {
 
   incrementSystemErrorEventDrops(reason: SystemErrorEventDropReason): void {
     this.systemErrorEventDropsCounter.inc({ reason });
+  }
+
+  observeSortRejection(route: string, reason: SortRejectionReason): void {
+    this.sortRejectionCounter.inc({ route, reason });
+  }
+
+  incrementSortRejectionDrops(reason: SortRejectionDropReason): void {
+    this.sortRejectionDropsCounter.inc({ reason });
   }
 
   observeZodIssueCount(domainRoute: string, issueCount: number): void {
