@@ -74,15 +74,15 @@ export default function CalibrationContent({
   const searchParams = useSearchParams();
   const highlightId = searchParams.get('highlight') ?? undefined;
 
-  // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
+  // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect — default sentinel `_all`)
+  // 5 필터 모두 `_all` 통일 — `useCalibrationFilters` URL parser 도 `_all → ''` 정규화로 일관 (calibration-filter-utils.ts L140-158).
   const siteSelect = useFilterSelect(filters.site, updateSite);
-  const teamSelect = useFilterSelect(filters.teamId, updateTeamId, 'all');
-  const approvalSelect = useFilterSelect(filters.approvalStatus, updateApprovalStatus, 'all');
-  const resultSelect = useFilterSelect(filters.result, updateResult, 'all');
+  const teamSelect = useFilterSelect(filters.teamId, updateTeamId);
+  const approvalSelect = useFilterSelect(filters.approvalStatus, updateApprovalStatus);
+  const resultSelect = useFilterSelect(filters.result, updateResult);
   const calibrationDueStatusSelect = useFilterSelect(
     filters.calibrationDueStatus,
-    updateCalibrationDueStatus,
-    'all'
+    updateCalibrationDueStatus
   );
   const { can } = useAuth();
   const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
@@ -339,7 +339,7 @@ export default function CalibrationContent({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('content.search.allTeams')}</SelectItem>
+            <SelectItem value="_all">{t('content.search.allTeams')}</SelectItem>
             {teamsData?.items?.map((team: { id: string; name: string }) => (
               <SelectItem key={team.id} value={team.id}>
                 {team.name}
@@ -360,7 +360,7 @@ export default function CalibrationContent({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('content.filters.approvalStatusAll')}</SelectItem>
+            <SelectItem value="_all">{t('content.filters.approvalStatusAll')}</SelectItem>
             <SelectItem value="pending_approval">
               {t('content.filters.approvalOptions.pending_approval')}
             </SelectItem>
@@ -388,7 +388,7 @@ export default function CalibrationContent({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('content.filters.resultAll')}</SelectItem>
+            <SelectItem value="_all">{t('content.filters.resultAll')}</SelectItem>
             <SelectItem value="pass">{t('content.filters.resultOptions.pass')}</SelectItem>
             <SelectItem value="fail">{t('content.filters.resultOptions.fail')}</SelectItem>
             <SelectItem value="conditional">
@@ -409,7 +409,7 @@ export default function CalibrationContent({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('content.filters.calibrationDueStatusAll')}</SelectItem>
+            <SelectItem value="_all">{t('content.filters.calibrationDueStatusAll')}</SelectItem>
             {CALIBRATION_DUE_STATUS_VALUES.map((status) => (
               <SelectItem key={status} value={status}>
                 {t(`content.filters.calibrationDueStatusOptions.${status}`)}

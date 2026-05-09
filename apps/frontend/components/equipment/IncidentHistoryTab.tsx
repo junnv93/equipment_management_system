@@ -42,13 +42,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, AlertTriangle, ArrowRight, Calendar, User, Info } from 'lucide-react';
+import { Plus, AlertTriangle, Calendar, User, Info } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, {
   type CreateIncidentHistoryInput,
   type IncidentType,
 } from '@/lib/api/equipment-api';
 import Link from 'next/link';
+import { EquipmentTabFooterLink } from './EquipmentTabFooterLink';
 import { useTranslations } from 'next-intl';
 import { isBefore, startOfDay } from 'date-fns';
 import { toDate } from '@/lib/utils/date';
@@ -817,15 +818,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
             <p className={TIMELINE_TOKENS.empty.text}>{t('incidentHistoryTab.empty')}</p>
           </div>
           {/* Sub-route 진입점 — NonConformanceManagementClient full page (인라인 NC 생성 + 검토 워크플로) */}
-          <div className="flex justify-end pt-3 border-t mt-3">
-            <Link
-              href={FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES(equipmentId)}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-            >
-              {t('incidentHistoryTab.viewAllLink')}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </div>
+          <EquipmentTabFooterLink
+            href={FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES(equipmentId)}
+            label={t('incidentHistoryTab.viewAllLink')}
+          />
         </CardContent>
       </Card>
     );
@@ -925,15 +921,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
             ))}
           </div>
           {/* Sub-route 진입점 — NonConformanceManagementClient full page (인라인 NC 생성 + 검토 워크플로) */}
-          <div className="flex justify-end pt-3 border-t mt-3">
-            <Link
-              href={FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES(equipmentId)}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-            >
-              {t('incidentHistoryTab.viewAllLink')}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </div>
+          <EquipmentTabFooterLink
+            href={FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES(equipmentId)}
+            label={t('incidentHistoryTab.viewAllLink')}
+          />
         </CardContent>
       </Card>
     </>

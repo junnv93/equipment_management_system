@@ -16,15 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  AlertTriangle,
-  ArrowRight,
-  Calendar,
-  FileText,
-  FileSpreadsheet,
-  Download,
-} from 'lucide-react';
-import Link from 'next/link';
+import { AlertTriangle, Calendar, FileText, FileSpreadsheet, Download } from 'lucide-react';
+import { EquipmentTabFooterLink } from './EquipmentTabFooterLink';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -225,15 +218,10 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             </div>
           )}
           {/* Sub-route 진입점 분리 — Tab은 컨텍스트 요약, full page는 통계+필터+검토 워크플로 */}
-          <div className="flex justify-end pt-3 border-t mt-3">
-            <Link
-              href={FRONTEND_ROUTES.EQUIPMENT.CALIBRATION_HISTORY(equipmentId)}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-            >
-              {t('calibrationHistoryTab.viewAllLink')}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </div>
+          <EquipmentTabFooterLink
+            href={FRONTEND_ROUTES.EQUIPMENT.CALIBRATION_HISTORY(equipmentId)}
+            label={t('calibrationHistoryTab.viewAllLink')}
+          />
         </CardContent>
       </Card>
     </div>

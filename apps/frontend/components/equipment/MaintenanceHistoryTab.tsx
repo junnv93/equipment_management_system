@@ -29,8 +29,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Plus, Wrench, Calendar, User, AlertTriangle, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Wrench, Calendar, User, AlertTriangle } from 'lucide-react';
+import { EquipmentTabFooterLink } from './EquipmentTabFooterLink';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
@@ -297,15 +297,10 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
             <p className={TIMELINE_TOKENS.empty.text}>{t('maintenanceHistoryTab.empty')}</p>
           </div>
           {/* Sub-route 진입점 — RepairHistoryClient full page (필터/검토 워크플로) */}
-          <div className="flex justify-end pt-3 border-t mt-3">
-            <Link
-              href={FRONTEND_ROUTES.EQUIPMENT.REPAIR_HISTORY(equipmentId)}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-            >
-              {t('maintenanceHistoryTab.viewAllLink')}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </div>
+          <EquipmentTabFooterLink
+            href={FRONTEND_ROUTES.EQUIPMENT.REPAIR_HISTORY(equipmentId)}
+            label={t('maintenanceHistoryTab.viewAllLink')}
+          />
         </CardContent>
       </Card>
     );
@@ -384,15 +379,10 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
           ))}
         </div>
         {/* Sub-route 진입점 — RepairHistoryClient full page (필터/검토 워크플로) */}
-        <div className="flex justify-end pt-3 border-t mt-3">
-          <Link
-            href={FRONTEND_ROUTES.EQUIPMENT.REPAIR_HISTORY(equipmentId)}
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-          >
-            {t('maintenanceHistoryTab.viewAllLink')}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </div>
+        <EquipmentTabFooterLink
+          href={FRONTEND_ROUTES.EQUIPMENT.REPAIR_HISTORY(equipmentId)}
+          label={t('maintenanceHistoryTab.viewAllLink')}
+        />
       </CardContent>
     </Card>
   );
