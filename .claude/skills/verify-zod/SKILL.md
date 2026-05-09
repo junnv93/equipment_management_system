@@ -1375,6 +1375,52 @@ grep -rn "JSON.stringify.*queryChunks" apps/backend/src/modules apps/backend/src
 **자동화 승격 후보 (Step 8 Phase 3)**: ts-morph 로 `*-sort-mapper.ts` exported `resolveXxxOrderBy` 함수 + `XXX_SORT_DEFAULT` 상수 자동 발견 → DOMAINS 배열 자동 생성/검증 가능.
 
 
+### Step 25: `z.discriminatedUnion` spec 정렬 — `baseValid` discriminant 일치 확인 (2026-05-09 추가)
+
+**배경**: `z.discriminatedUnion('decision', [approveSchema, rejectSchema])`처럼 분기별 검증 규칙이 다른 스키마를 테스트할 때, `baseValid` 객체의 discriminant 필드(`decision` 등)가 테스트 중인 분기와 **불일치**하면 해당 분기의 제약이 적용되지 않아 모든 input이 false-positive PASS가 된다.
+
+**실패 시나리오** (2026-05-09 disposal.service.spec.ts 8건 실패 교훈):
+```typescript
+// ❌ WRONG — approve 분기는 comment optional이라 min 제약이 적용 안 됨
+const baseValid = { version: 1, decision: 'approve' as const };
+it('rejects comment below min', () => {
+  // safeParse가 approve 분기를 선택 → comment 없어도 PASS → 이 expect는 false-negative
+  expect(approveDisposalSchema.safeParse({ ...baseValid, comment: 'x' }).success).toBe(false);
+  // 실제로는 PASS여서 테스트 자체가 PASS = false-positive
+});
+
+// ✅ CORRECT — reject 분기는 comment min(10) 강제
+const baseValid = { version: 1, decision: 'reject' as const };
+it('rejects comment below min', () => {
+  expect(approveDisposalSchema.safeParse({ ...baseValid, comment: 'x' }).success).toBe(false);
+  // reject 분기가 선택되므로 min 제약 적용 → 정확하게 FAIL 반환
+});
+```
+
+**discriminatedUnion 마이그레이션 후 추가 주의사항**: `z.object()` 기반 스키마를 `z.discriminatedUnion`으로 교체하면, 이전에 service layer에서 `BadRequestException`을 throw하던 validation 로직이 Zod layer로 이전된다. service spec에서 `rejects.toThrow(BadRequestException)` 케이스가 dead code가 되므로 **즉시 제거**해야 한다.
+
+**검증 명령**:
+```bash
+# (1) discriminatedUnion 스키마를 테스트하는 spec에서 service BadRequestException throw 테스트 잔존 탐지
+# discriminatedUnion으로 검증을 이관한 서비스 spec에서 BadRequestException throw 테스트 잔존 시 SHOULD 제거
+grep -rn "rejects.*toThrow.*BadRequestException\|throw.*BadRequestException" \
+  apps/backend/src/modules --include="*.spec.ts" | head -10
+# 결과가 있으면: 해당 스키마가 discriminatedUnion으로 이관됐는지 확인.
+# 이관된 경우 service layer는 이미 검증된 데이터를 받으므로 BadRequest throw test는 dead code
+
+# (2) spec 파일 내 baseValid 객체에 discriminant 필드 누락 탐지 (SHOULD — 확인 권고)
+grep -rn "const baseValid\s*=" apps/backend/src --include="*.spec.ts" \
+  | grep -v "decision\|status\|type\|kind\|action"
+# 결과: discriminant 필드 없는 baseValid → 해당 discriminant 값 확인 후 올바른 분기로 정렬
+```
+
+**수정 지시**:
+- `baseValid.decision: 'approve'`로 reject-only 제약 테스트 시: `baseValid.decision: 'reject'`로 수정
+- service BadRequestException throw test (discriminatedUnion으로 이관된 검증): 해당 describe 블록 제거 + 미사용 imports(`BadRequestException`, `ErrorCode`) 제거
+- discriminatedUnion 분기별 spec describe 분리: `describe('approve 분기', ...)` / `describe('reject 분기', ...)` 패턴 사용
+
+**관련 sprint**: `approvals-ssot-closure` (2026-05-09) — disposal.service.spec.ts 8건 false-positive test 수습.
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
