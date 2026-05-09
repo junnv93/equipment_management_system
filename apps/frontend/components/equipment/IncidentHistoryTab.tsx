@@ -664,7 +664,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                             {!isPastIncident &&
                               t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}{' '}
                             <Link
-                              href={`/equipment/${equipmentId}/repair-history`}
+                              href={FRONTEND_ROUTES.EQUIPMENT.REPAIR_HISTORY(equipmentId)}
                               className="underline text-brand-info hover:text-brand-info/80"
                             >
                               {t('incidentHistoryTab.nonConformance.repairHistoryLink')}

@@ -22,10 +22,15 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEquipmentCalibrationHistory } from '@/hooks/use-equipment-calibrations';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { type CalibrationHistory } from '@/lib/api/calibration-api';
-import type { CalibrationApprovalStatus } from '@equipment-management/schemas';
+import {
+  CALIBRATION_APPROVAL_STATUS_VALUES,
+  CALIBRATION_RESULT_VALUES,
+  type CalibrationApprovalStatus,
+} from '@equipment-management/schemas';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   CALIBRATION_FILTER_BAR,
+  CALIBRATION_THRESHOLDS,
   CONTENT_TOKENS,
   getPageContainerClasses,
   getSemanticContainerClasses,
@@ -37,10 +42,12 @@ import {
   SELECTOR_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
+import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 
 interface CalibrationHistoryClientProps {
   equipmentId: string;
   initialEquipment: Equipment;
+  initialFilters?: UICalibrationFilters;
 }
 
 type ApprovalFilter = '' | CalibrationApprovalStatus;
@@ -53,8 +60,6 @@ interface DerivedStats {
   passed: number;
   failed: number;
 }
-
-const UPCOMING_DAYS = 30;
 
 /**
  * 장비별 교정 이력 — `/equipment/[id]/calibration-history` sub-route Client.
@@ -71,6 +76,7 @@ const UPCOMING_DAYS = 30;
 export function CalibrationHistoryClient({
   equipmentId,
   initialEquipment,
+  initialFilters,
 }: CalibrationHistoryClientProps) {
   const t = useTranslations('equipment.calibrationHistoryClient');
   const { can } = useAuth();
@@ -107,13 +113,13 @@ export function CalibrationHistoryClient({
   // 메인 URL 호환: 사용자가 `?approvalStatus=_all` deep-link 진입 시 `_all` 을 빈 값 처리해 silent miss 차단.
   const router = useRouter();
   const searchParams = useSearchParams();
-  const approvalRaw = searchParams.get('approvalStatus') ?? '';
+  const approvalRaw = searchParams.get('approvalStatus') ?? initialFilters?.approvalStatus ?? '';
   const approvalFilter: ApprovalFilter =
     approvalRaw === '_all' ? '' : (approvalRaw as ApprovalFilter);
-  const resultRaw = searchParams.get('result') ?? '';
+  const resultRaw = searchParams.get('result') ?? initialFilters?.result ?? '';
   const resultFilter: ResultFilter = resultRaw === '_all' ? '' : (resultRaw as ResultFilter);
-  const dateFrom = searchParams.get('startDate') ?? '';
-  const dateTo = searchParams.get('endDate') ?? '';
+  const dateFrom = searchParams.get('startDate') ?? initialFilters?.startDate ?? '';
+  const dateTo = searchParams.get('endDate') ?? initialFilters?.endDate ?? '';
 
   const updateFilter = useCallback(
     (key: 'approvalStatus' | 'result' | 'startDate' | 'endDate', value: string) => {
@@ -161,7 +167,9 @@ export function CalibrationHistoryClient({
   // Derived stats — 단일 장비 컨텍스트 read-only 표시
   const stats: DerivedStats = useMemo(() => {
     const now = new Date();
-    const upcomingThreshold = new Date(now.getTime() + UPCOMING_DAYS * 86_400_000);
+    const upcomingThreshold = new Date(
+      now.getTime() + CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS * 86_400_000
+    );
     let overdue = 0;
     let upcoming = 0;
     let passed = 0;
@@ -183,11 +191,11 @@ export function CalibrationHistoryClient({
     new Date(resolvedEquipment.nextCalibrationDate) < new Date();
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('list')}>
       <PageHeader
         title={t('title')}
         subtitle={`${resolvedEquipment.name} (${resolvedEquipment.managementNumber})`}
-        backUrl={`/equipment/${equipmentId}`}
+        backUrl={FRONTEND_ROUTES.EQUIPMENT.DETAIL(equipmentId)}
         backLabel={t('backAriaLabel')}
       />
 
@@ -273,11 +281,11 @@ export function CalibrationHistoryClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('filters.approvalStatusAll')}</SelectItem>
-            <SelectItem value="pending_approval">
-              {t('filters.approvalOptions.pending_approval')}
-            </SelectItem>
-            <SelectItem value="approved">{t('filters.approvalOptions.approved')}</SelectItem>
-            <SelectItem value="rejected">{t('filters.approvalOptions.rejected')}</SelectItem>
+            {CALIBRATION_APPROVAL_STATUS_VALUES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {t(`filters.approvalOptions.${status}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -290,9 +298,11 @@ export function CalibrationHistoryClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('filters.resultAll')}</SelectItem>
-            <SelectItem value="pass">{t('filters.resultOptions.pass')}</SelectItem>
-            <SelectItem value="fail">{t('filters.resultOptions.fail')}</SelectItem>
-            <SelectItem value="conditional">{t('filters.resultOptions.conditional')}</SelectItem>
+            {CALIBRATION_RESULT_VALUES.map((result) => (
+              <SelectItem key={result} value={result}>
+                {t(`filters.resultOptions.${result}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

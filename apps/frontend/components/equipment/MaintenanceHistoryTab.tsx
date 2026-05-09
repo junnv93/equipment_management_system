@@ -43,6 +43,7 @@ import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
+  getTimelineNodeClasses,
   TIMELINE_SKELETON_TOKENS,
 } from '@/lib/design-tokens';
 
@@ -322,9 +323,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
           {history.map((item, index) => (
             <div key={item.id} className="relative flex gap-4">
               <div className="relative flex-shrink-0">
-                <div
-                  className={`${TIMELINE_TOKENS.node.container} bg-brand-ok text-white shadow-lg`}
-                >
+                <div className={`${getTimelineNodeClasses('bg-brand-ok')} shadow-lg`}>
                   <Wrench className={TIMELINE_TOKENS.node.icon} />
                 </div>
                 {index === 0 && (

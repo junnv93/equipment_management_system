@@ -33,7 +33,12 @@ import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
-import { MANAGEMENT_METHOD_VALUES, type ManagementMethod } from '@equipment-management/schemas';
+import {
+  MANAGEMENT_METHOD_VALUES,
+  CALIBRATION_APPROVAL_STATUS_VALUES,
+  CALIBRATION_RESULT_VALUES,
+  type ManagementMethod,
+} from '@equipment-management/schemas';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
@@ -216,14 +221,14 @@ export default function CalibrationContent({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className={getPageContainerClasses()}>
+    <div className={getPageContainerClasses('list')}>
       {/* 헤더 */}
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle')}
         actions={
           canCreateCalibration ? (
-            <Button onClick={() => router.push('/calibration/register')}>
+            <Button onClick={() => router.push(FRONTEND_ROUTES.CALIBRATION.REGISTER)}>
               <Plus className="w-4 h-4 mr-2" />
               {t('content.registerButton')}
             </Button>
@@ -361,15 +366,11 @@ export default function CalibrationContent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('content.filters.approvalStatusAll')}</SelectItem>
-            <SelectItem value="pending_approval">
-              {t('content.filters.approvalOptions.pending_approval')}
-            </SelectItem>
-            <SelectItem value="approved">
-              {t('content.filters.approvalOptions.approved')}
-            </SelectItem>
-            <SelectItem value="rejected">
-              {t('content.filters.approvalOptions.rejected')}
-            </SelectItem>
+            {CALIBRATION_APPROVAL_STATUS_VALUES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {t(`content.filters.approvalOptions.${status}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -389,11 +390,11 @@ export default function CalibrationContent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('content.filters.resultAll')}</SelectItem>
-            <SelectItem value="pass">{t('content.filters.resultOptions.pass')}</SelectItem>
-            <SelectItem value="fail">{t('content.filters.resultOptions.fail')}</SelectItem>
-            <SelectItem value="conditional">
-              {t('content.filters.resultOptions.conditional')}
-            </SelectItem>
+            {CALIBRATION_RESULT_VALUES.map((result) => (
+              <SelectItem key={result} value={result}>
+                {t(`content.filters.resultOptions.${result}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

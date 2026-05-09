@@ -10,6 +10,9 @@ import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   MANAGEMENT_METHOD_LABELS,
   CALIBRATION_RESULT_LABELS,
+  CALIBRATION_REQUIRED_VALUES,
+  SPEC_MATCH_VALUES,
+  SITE_VALUES,
   DocumentTypeValues,
   type ManagementMethod,
   type CalibrationResult,
@@ -139,9 +142,9 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
             <dl className={tokens.dlGrid}>
               <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationRequired')}</dt>
               <dd className={tokens.ddValue}>
-                {equipment.calibrationRequired === 'required'
+                {equipment.calibrationRequired === CALIBRATION_REQUIRED_VALUES[0]
                   ? t('basicInfoTab.calibrationRequiredYes')
-                  : equipment.calibrationRequired === 'not_required'
+                  : equipment.calibrationRequired === CALIBRATION_REQUIRED_VALUES[1]
                     ? t('basicInfoTab.calibrationRequiredNo')
                     : '-'}
               </dd>
@@ -186,11 +189,11 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
             <dl className={tokens.dlGrid}>
               <dt className={tokens.dtLabel}>{t('fields.site')}</dt>
               <dd className={tokens.ddValue}>
-                {equipment.site === 'suwon'
+                {equipment.site === SITE_VALUES[0]
                   ? t('basicInfoTab.site.suwon')
-                  : equipment.site === 'uiwang'
+                  : equipment.site === SITE_VALUES[1]
                     ? t('basicInfoTab.site.uiwang')
-                    : equipment.site === 'pyeongtaek'
+                    : equipment.site === SITE_VALUES[2]
                       ? t('basicInfoTab.site.pyeongtaek')
                       : '-'}
               </dd>
@@ -225,9 +228,9 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
               <dt className={tokens.dtLabel}>{t('fields.specMatch')}</dt>
               <dd className={tokens.ddValue}>
-                {equipment.specMatch === 'match'
+                {equipment.specMatch === SPEC_MATCH_VALUES[0]
                   ? t('basicInfoTab.specMatchMatch')
-                  : equipment.specMatch === 'mismatch'
+                  : equipment.specMatch === SPEC_MATCH_VALUES[1]
                     ? t('basicInfoTab.specMatchMismatch')
                     : '-'}
               </dd>

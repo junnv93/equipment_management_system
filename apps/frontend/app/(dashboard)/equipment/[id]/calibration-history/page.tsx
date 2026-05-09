@@ -7,9 +7,14 @@ import { CalibrationHistoryClient } from '@/components/equipment/CalibrationHist
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import { isNotFoundError } from '@/lib/api/error';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import {
+  parseCalibrationFiltersFromSearchParams,
+  type UICalibrationFilters,
+} from '@/lib/utils/calibration-filter-utils';
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 const getEquipmentCached = cache(async (id: string) => {
@@ -20,7 +25,10 @@ export default function CalibrationHistoryPage(props: PageProps) {
   return (
     <div className={getPageContainerClasses('detail')}>
       <Suspense fallback={<CalibrationHistorySkeleton />}>
-        <CalibrationHistoryAsync paramsPromise={props.params} />
+        <CalibrationHistoryAsync
+          paramsPromise={props.params}
+          searchParamsPromise={props.searchParams}
+        />
       </Suspense>
     </div>
   );
@@ -28,10 +36,14 @@ export default function CalibrationHistoryPage(props: PageProps) {
 
 async function CalibrationHistoryAsync({
   paramsPromise,
+  searchParamsPromise,
 }: {
   paramsPromise: Promise<{ id: string }>;
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { id } = await paramsPromise;
+  const [{ id }, searchParams] = await Promise.all([paramsPromise, searchParamsPromise]);
+  const initialFilters: UICalibrationFilters =
+    parseCalibrationFiltersFromSearchParams(searchParams);
 
   let equipment;
   try {
@@ -43,7 +55,13 @@ async function CalibrationHistoryAsync({
     throw error;
   }
 
-  return <CalibrationHistoryClient equipmentId={id} initialEquipment={equipment} />;
+  return (
+    <CalibrationHistoryClient
+      equipmentId={id}
+      initialEquipment={equipment}
+      initialFilters={initialFilters}
+    />
+  );
 }
 
 function CalibrationHistorySkeleton() {
