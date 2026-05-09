@@ -24,7 +24,7 @@ import {
   countActiveFilters,
   DEFAULT_UI_FILTERS,
 } from '@/lib/utils/calibration-filter-utils';
-import type { ManagementMethod, Site } from '@equipment-management/schemas';
+import type { ManagementMethod, Site, CalibrationResult } from '@equipment-management/schemas';
 import { toCsvParam } from '@/lib/api/query-csv';
 import type { CalibrationDueStatus } from '@/lib/utils/calibration-filter-utils';
 
@@ -167,7 +167,7 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   /**
    * 교정 결과 필터 업데이트 헬퍼
    */
-  const updateResult = (result: string) => {
+  const updateResult = (result: CalibrationResult | '') => {
     updateFilters({ result });
   };
 

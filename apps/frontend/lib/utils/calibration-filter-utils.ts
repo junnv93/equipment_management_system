@@ -18,8 +18,8 @@
  * ============================================================================
  */
 
-import type { ManagementMethod, Site } from '@equipment-management/schemas';
-import { MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
+import type { ManagementMethod, Site, CalibrationResult } from '@equipment-management/schemas';
+import { MANAGEMENT_METHOD_VALUES, CalibrationResultEnum } from '@equipment-management/schemas';
 
 /**
  * `methods` filter SSOT 화이트리스트 — `MANAGEMENT_METHOD_VALUES` 기반.
@@ -59,7 +59,7 @@ export interface UICalibrationFilters {
   teamId: string; // 팀 ID ('' = 전체)
   equipmentId: string; // 장비 ID ('' = 전체) — 교정관리 row 클릭 시 deep-link 진입점
   approvalStatus: string; // 승인 상태 ('' = 전체)
-  result: string; // 교정 결과 ('' = 전체)
+  result: CalibrationResult | ''; // 교정 결과 ('' = 전체)
   calibrationDueStatus: CalibrationDueStatus | ''; // 교정 기한 상태 ('' = 전체)
   startDate: string; // 시작일 ('' = 전체)
   endDate: string; // 종료일 ('' = 전체)
@@ -80,7 +80,7 @@ export interface ApiCalibrationFilters {
   teamId?: string;
   equipmentId?: string;
   approvalStatus?: string;
-  result?: string;
+  result?: CalibrationResult;
   calibrationDueStatus?: CalibrationDueStatus;
   startDate?: string;
   endDate?: string;
@@ -149,8 +149,10 @@ export function parseCalibrationFiltersFromSearchParams(
   const approvalStatusRaw = get('approvalStatus') || DEFAULT_UI_FILTERS.approvalStatus;
   const approvalStatus = approvalStatusRaw === '_all' ? '' : approvalStatusRaw;
 
-  const resultRaw = get('result') || DEFAULT_UI_FILTERS.result;
-  const result = resultRaw === '_all' ? '' : resultRaw;
+  const resultRaw = get('result') || '';
+  const resultNormalized = resultRaw === '_all' ? '' : resultRaw;
+  const resultParsed = resultNormalized ? CalibrationResultEnum.safeParse(resultNormalized) : null;
+  const result: CalibrationResult | '' = resultParsed?.success ? resultParsed.data : '';
 
   const calibrationDueStatusRaw =
     get('calibrationDueStatus') || DEFAULT_UI_FILTERS.calibrationDueStatus;

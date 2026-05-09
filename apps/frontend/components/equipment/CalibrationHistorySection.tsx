@@ -89,11 +89,11 @@ const APPROVAL_STATUS_SEMANTIC: Record<CalibrationApprovalStatus, SemanticColorK
   rejected: 'critical',
 };
 
-const RESULT_SEMANTIC: Record<string, SemanticColorKey> = {
+const RESULT_SEMANTIC = {
   pass: 'ok',
   fail: 'critical',
   conditional: 'warning',
-};
+} as const satisfies Record<CalibrationResult, SemanticColorKey>;
 
 const STATUS_LABEL_KEYS: Partial<Record<CalibrationStatus, string>> = {
   scheduled: 'statusScheduled',
@@ -315,7 +315,6 @@ export function CalibrationHistorySection({
             </TableHeader>
             <TableBody>
               {history.map((item) => {
-                const resultKey = item.result || '';
                 const isTempItem = item.id.startsWith('temp-');
                 return (
                   <TableRow key={item.id}>
@@ -324,8 +323,8 @@ export function CalibrationHistorySection({
                       <Badge
                         variant="outline"
                         className={
-                          RESULT_SEMANTIC[resultKey]
-                            ? getSemanticStatusClasses(RESULT_SEMANTIC[resultKey])
+                          item.result
+                            ? getSemanticStatusClasses(RESULT_SEMANTIC[item.result])
                             : 'bg-muted text-muted-foreground'
                         }
                       >

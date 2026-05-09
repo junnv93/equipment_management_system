@@ -8,6 +8,7 @@ import {
 import type {
   CalibrationApprovalStatus,
   CalibrationRegisteredByRole,
+  CalibrationResult,
   CalibrationSortValue,
   InspectionApprovalStatus,
   InspectionResult,
@@ -39,7 +40,7 @@ export interface Calibration {
   calibrationAgency: string;
   certificateNumber?: string;
   certificatePath?: string;
-  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  result?: CalibrationResult;
   notes?: string;
   // 승인 프로세스 필드
   approvalStatus?: CalibrationApprovalStatus;
@@ -79,7 +80,7 @@ export interface CalibrationHistory {
   nextCalibrationDate: string;
   calibrationAgency: string;
   certificateNumber?: string;
-  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  result?: CalibrationResult;
   notes?: string;
   team?: string;
   teamId?: string;
@@ -93,7 +94,7 @@ export interface CalibrationQuery {
   equipmentId?: string;
   startDate?: string;
   endDate?: string;
-  result?: string;
+  result?: CalibrationResult;
   calibrationDueStatus?: string;
   /** 결합형 정렬 (`'calibrationDate.desc'` 등). 미제공 시 backend 기본값 `calibrationDate.desc` 사용. */
   sort?: CalibrationSortValue;
@@ -116,7 +117,7 @@ export interface CreateCalibrationDto {
   nextCalibrationDate?: string;
   calibrationAgency: string;
   certificateNumber?: string;
-  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  result?: CalibrationResult;
   notes?: string;
   calibrationManagerId?: string;
   // 승인 프로세스 필드
@@ -131,7 +132,7 @@ export interface CreateHistoricalCalibrationDto {
   nextCalibrationDate?: string;
   calibrationAgency: string;
   certificateNumber?: string;
-  result?: 'pass' | 'fail' | 'conditional';
+  result?: CalibrationResult;
   notes?: string;
 }
 
