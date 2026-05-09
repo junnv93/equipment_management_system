@@ -63,7 +63,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       # Turbo + node_modules 캐시
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: turbo-cache
         with:
           path: .turbo
@@ -72,7 +72,7 @@ jobs:
             ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: node-modules-cache
         with:
           path: |
@@ -276,7 +276,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: turbo-cache
         with:
           path: .turbo
@@ -285,7 +285,7 @@ jobs:
             ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: node-modules-cache
         with:
           path: |
@@ -346,7 +346,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: turbo-cache
         with:
           path: .turbo
@@ -355,7 +355,7 @@ jobs:
             ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         id: node-modules-cache
         with:
           path: |
