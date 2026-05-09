@@ -66,29 +66,30 @@ export function ApprovalCommentDialog(props: ApprovalCommentDialogProps) {
   if (props.mode === 'single') {
     const { item } = props;
     tabMeta = TAB_META[item.category];
+    // commentDialogTitleKey는 실제 i18n 경로를 저장 — 값 자체를 직접 사용 (패턴 재구성 금지)
     title = tabMeta?.commentDialogTitleKey
-      ? t(`tabMeta.${item.category}.commentDialogTitle`)
+      ? t(tabMeta.commentDialogTitleKey as Parameters<typeof t>[0])
       : t('commentDialog.titleFallback');
     description = getLocalizedSummary(item, t, siteLabels);
     labelHtmlFor = 'approve-comment';
     placeholder = tabMeta?.commentPlaceholderKey
-      ? t(`tabMeta.${item.category}.commentPlaceholder`)
+      ? t(tabMeta.commentPlaceholderKey as Parameters<typeof t>[0])
       : t('commentDialog.placeholderFallback');
-    confirmLabel = t(`tabMeta.${item.category}.action`);
+    confirmLabel = t(`tabMeta.${item.category}.action` as Parameters<typeof t>[0]);
   } else {
     const { activeTab, bulkCount } = props;
     tabMeta = TAB_META[activeTab];
     title = tabMeta?.commentDialogTitleKey
-      ? t(`tabMeta.${activeTab}.commentDialogTitle`)
+      ? t(tabMeta.commentDialogTitleKey as Parameters<typeof t>[0])
       : t('bulkCommentDialog.titleFallback');
     description = t('bulkCommentDialog.description', { count: bulkCount });
     labelHtmlFor = 'bulk-approve-comment';
     placeholder = tabMeta?.commentPlaceholderKey
-      ? t(`tabMeta.${activeTab}.commentPlaceholder`)
+      ? t(tabMeta.commentPlaceholderKey as Parameters<typeof t>[0])
       : t('commentDialog.placeholderFallback');
     confirmLabel = t('bulkCommentDialog.buttonLabel', {
       count: bulkCount,
-      action: t(`tabMeta.${activeTab}.action`),
+      action: t(`tabMeta.${activeTab}.action` as Parameters<typeof t>[0]),
     });
   }
 
