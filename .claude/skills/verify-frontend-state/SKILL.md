@@ -427,6 +427,53 @@ grep -rn "export function toCsvParam\|export const toCsvParam" apps/frontend/ \
 
 **FAIL 조건:** `lib/api/` 또는 `lib/utils/` 내 API 파라미터 조립 목적의 `.join(',')` 1건 이상 (query-csv.ts 제외) / toCsvParam 진입점 2건 이상.
 
+### Step 42: RejectModal `mode='domain'` 위임 패턴 — 인라인 반려 UI 금지 (2026-05-09 추가)
+
+도메인 반려(reject) UI는 `<RejectModal mode='domain'>` SSOT 컴포넌트로 위임 필수.
+컴포넌트 내 인라인 `showRejectInput` 토글 state + textarea 패턴은 UX 일관성 파괴 및 유효성 로직 분산.
+
+**올바른 패턴**:
+```tsx
+const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
+const handleRejectConfirm = async (reason: string): Promise<void> => {
+  try {
+    await mutation.mutateAsync({ decision: 'reject', comment: reason });
+    setRejectModalOpen(false); // 성공 시만 닫음 — 실패 시 모달 유지로 retry 지원
+  } catch {} // onError가 toast 처리
+};
+
+<RejectModal
+  mode="domain"
+  isOpen={rejectModalOpen}
+  onClose={() => setRejectModalOpen(false)}
+  onConfirm={handleRejectConfirm}
+  title={t('rejectDialog.title')}
+  description={t('rejectDialog.description')}
+/>
+```
+
+**금지 패턴**:
+- 컴포넌트 내 `showRejectInput`, `isRejectInputVisible` 등 인라인 토글 state
+- `<textarea>` 반려 사유 입력을 Dialog 본체에 직접 임베드
+
+**검증 grep:**
+
+```bash
+# 인라인 반려 토글 state 탐지 — 0건이어야 함
+grep -rn "showRejectInput\|isRejectInputVisible\|rejectInputOpen\|rejectTextareaVisible" \
+  apps/frontend/components --include="*.tsx"
+# 기대: 0건
+
+# RejectModal mode='domain' 사용처 확인 — ≥8건 (disposal 2 + approval 1 + 5 도메인)
+grep -rn 'mode="domain"' apps/frontend/components --include="*.tsx" | grep -v "RejectModal.tsx"
+# 기대: ≥ 8건 (신규 도메인 추가 시 증가)
+```
+
+**FAIL 기준:** `showRejectInput` 등 인라인 반려 토글 state 발견. `mode="domain"` 0건이면 RejectModal SSOT 회귀.
+
+**관련 sprint**: `reject-modal-ssot-closure` (2026-05-09) — DisposalApprovalDialog/DisposalReviewDialog 인라인 reject UI → RejectModal SSOT 통합
+
 ## Output Format
 
 ```markdown

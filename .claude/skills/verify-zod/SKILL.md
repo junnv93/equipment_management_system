@@ -1307,8 +1307,13 @@ pnpm --filter @equipment-management/schemas run test -- zod-issue-3way-equality
 
 **대상**: `apps/frontend/lib/errors/*-errors.ts` (자연 제외 3건: `cable-errors.ts` / `document-errors.ts` / `equipment-errors.ts`)
 
-`mapXxxErrorToToast(error: unknown, t: TranslationFunction)` 시그니처 exported 함수가 본체에서
+`mapXxxErrorToToast(error: unknown, t: TranslationFunction[, tErrors?: TranslationFunction])` 시그니처
+exported 함수(`fn.getParameters().length >= 2`)가 본체에서
 `extractValidationIssues` + `mapZodIssuesToToast`를 **모두 호출**하는지 ts-morph CallExpression 탐색으로 검증.
+
+**필터 조건**: `fn.getParameters().length >= 2` — `tErrors?: TranslationFunction` 선택적 3번째 파라미터를
+가진 mapper(ADR-0008 tErrors 체인, 2026-05-09)도 포함. 정확히 2개 조건으로 강화하면 3파라미터
+mapper를 놓치므로 `>= 2` 유지 필수.
 
 ESLint `no-restricted-syntax`로는 "함수 본체 내에서 X를 호출해야 한다"는 flow 조건 표현 불가. 신규 도메인 mapper 추가 시 hub 호출 누락 자동 탐지.
 
@@ -1321,7 +1326,7 @@ pnpm --filter frontend run test -- --testPathPattern=zod-fallback-coverage
 
 **FAIL 기준:** 신규 `*-errors.ts` + hub 호출 누락, 또는 기존 mapper에서 호출 제거.
 **자연 제외 3건 EXCLUSIONS set**: `cable-errors.ts` (re-export shim) / `document-errors.ts` (t 함수 없음) / `equipment-errors.ts` (mapper 없음)
-**관련 sprint**: `zod-i18n-mapper-hub-closure` (2026-05-08, Mode 2 Full harness)
+**관련 sprint**: `zod-i18n-mapper-hub-closure` (2026-05-08) / `reject-modal-ssot-closure` (2026-05-09, tErrors? 3rd param)
 
 ## Exceptions
 
