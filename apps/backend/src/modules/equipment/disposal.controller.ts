@@ -26,6 +26,7 @@ import {
   RequestDisposalDto,
   ReviewDisposalDto,
   ApproveDisposalDto,
+  type ReviewDisposalInput,
   type ApproveDisposalInput,
   requestDisposalSchema,
   reviewDisposalSchema,
@@ -119,7 +120,12 @@ export class DisposalController {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
     enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
-    return this.disposalService.reviewDisposal(equipmentId, reviewDto, userId);
+    // Zod가 discriminatedUnion으로 이미 검증 완료 — ReviewDisposalInput(union)으로 안전 캐스트
+    return this.disposalService.reviewDisposal(
+      equipmentId,
+      reviewDto as ReviewDisposalInput,
+      userId
+    );
   }
 
   @Post('approve')
