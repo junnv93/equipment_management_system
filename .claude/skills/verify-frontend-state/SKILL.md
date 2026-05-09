@@ -514,6 +514,48 @@ grep -rn "calibrationApi.getCalibrationHistory" apps/frontend/components apps/fr
 
 **관련 sprint**: `phase-c-followup-closure (+ r2/r3)` (2026-05-08~09) — Tab/Sub fetch hook 추출 + BasicInfoTab cache config compete 회귀 차단
 
+### Step 44: `useSafeTimeout` SSOT — setState 포함 setTimeout 수동 cleanup 패턴 회귀 차단 (2026-05-09 추가)
+
+**배경** (srp-decomposition-final-closure 시니어 자기검토):
+`apps/frontend/hooks/use-safe-timeout.ts` 의 `useSafeTimeout()` 가 SSOT 이나 실제 사용처 0건.
+신규 코드(`use-approval-row-transitions.ts`)가 `useRef<ReturnType<typeof setTimeout>[]>` + `useEffect` cleanup 패턴을 수동 재구현 → SSOT 드리프트.
+
+**금지 패턴 — 수동 타이머 배열 관리**:
+```typescript
+// ❌ 수동 패턴 — use-approval-row-transitions.ts (기존 tech-debt S-3)
+const pendingTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+useEffect(() => {
+  const timers = pendingTimers.current;
+  return () => { timers.forEach(clearTimeout); };
+}, []);
+// ... setTimeout(...); pendingTimers.current.push(timerId);
+```
+
+**올바른 패턴 — `useSafeTimeout` 위임**:
+```typescript
+// ✅ hooks/use-safe-timeout.ts SSOT 사용
+import { useSafeTimeout } from '@/hooks/use-safe-timeout';
+const setSafeTimeout = useSafeTimeout();
+// mutation onSuccessCallback 내부
+setSafeTimeout(() => { setExitingIds((prev) => ...); }, APPROVAL_MOTION.exitDurationMs);
+```
+
+**검증 grep (신규 코드 회귀 탐지)**:
+```bash
+# hooks/ 내 타이머 배열 수동 관리 패턴 탐지 (use-safe-timeout.ts 본체 제외)
+grep -rn "useRef<ReturnType<typeof setTimeout>\[\]>" \
+  apps/frontend/hooks/ apps/frontend/components/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "use-safe-timeout.ts"
+# 기대값: 0 — 신규 코드는 useSafeTimeout() 사용
+```
+
+**예외 (pre-existing tech-debt, SHOULD 마이그레이션 대상)**:
+- `use-approval-row-transitions.ts` — 수동 패턴 현재 1건 (S-3, tech-debt-tracker 등록)
+- `window.setTimeout` 패턴 (Step 13 커버) 및 단일 ref 패턴(`use-management-number-check.ts`)은 별도 분류
+
+**관련 파일**: `apps/frontend/hooks/use-safe-timeout.ts` (SSOT)
+
 ## Output Format
 
 ```markdown
@@ -562,6 +604,7 @@ grep -rn "calibrationApi.getCalibrationHistory" apps/frontend/components apps/fr
 | 41  | toCsvParam SSOT               | PASS/FAIL | lib/api·lib/utils 내 `.join(',')` 인라인 위치 |
 | 42  | RejectModal mode='domain' 위임 | PASS/FAIL | 인라인 showRejectInput 토글 또는 mode='domain' 누락 위치 |
 | 43  | useEquipmentCalibrations dual-variant hook | PASS/FAIL | calibrationApi.getEquipmentCalibrations/getCalibrationHistory 직접 호출 위치 |
+| 44  | useSafeTimeout SSOT                        | PASS/FAIL | 신규 hooks/components 내 수동 타이머 배열 관리(useRef<setTimeout[]>) 위치 |
 ```
 
 ## Exceptions
