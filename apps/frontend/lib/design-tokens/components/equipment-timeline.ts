@@ -9,6 +9,7 @@
  */
 
 import { TRANSITION_PRESETS } from '../motion';
+import { getSemanticSolidBgClasses } from '../brand';
 import { IncidentTypeValues as ITVal, type IncidentType } from '@equipment-management/schemas';
 
 /**
@@ -61,7 +62,7 @@ export const TIMELINE_TOKENS = {
  * - errorIcon: 에러 상태 경고 아이콘 색상 (warning 시맨틱)
  */
 export const MAINTENANCE_TIMELINE_TOKENS = {
-  node: `${TIMELINE_TOKENS.node.container} bg-brand-ok text-white shadow-lg`,
+  node: `${TIMELINE_TOKENS.node.container} ${getSemanticSolidBgClasses('ok')} shadow-lg`,
   headerIcon: 'h-5 w-5 text-brand-info',
   errorIcon: 'h-8 w-8 text-brand-warning',
 } as const;

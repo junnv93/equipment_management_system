@@ -141,13 +141,11 @@ export default function OutboundCheckoutsTab({
     () => checkoutsData?.data ?? [],
     [checkoutsData?.data]
   );
-  // resetOn deps — filters 변경 또는 페이지 변경 시 selection 자동 초기화 (useMemo로 stable 참조)
-  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
-
+  // resetOn: filters 직접 전달 — useRowSelection 내부가 JSON.stringify(resetOn) 처리하므로 외부 직렬화 불필요
   const selection = useRowSelection<Checkout>(checkouts, (c) => c.id, {
     isSelectable: (c) =>
       c.status === CSVal.PENDING && (c.meta?.availableActions?.canApprove ?? false),
-    resetOn: [filtersKey],
+    resetOn: [filters],
   });
 
   const {
