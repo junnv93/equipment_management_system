@@ -112,6 +112,7 @@ groups:
   # Validation Telemetry Alerts (ADR-0008 §4 Trigger Conditions for Reconsideration)
   # zod_validation_issues_total Counter — domain_route × issue_count_bucket (1/2-5/6-10/11+)
   # 11+ bucket 폭주 → 응답 payload size +30% 위험 (다중 issue 압축 / Accept-Language 부분 도입 등 검토)
+  # 운영 절차: docs/operations/prometheus-alert-rules.md
   - name: validation
     interval: 30s
     rules:
@@ -122,11 +123,20 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 'Zod 검증 11+ issue 응답 빈발'
+          summary: 'Zod 검증 11+ issue 응답 빈발 (warning)'
           description: |
             5분 평균 0.1건/초 (= 6건/분) 초과. 단일 폼 광범위 검증 누락(클라이언트 사전 검증 회귀)
-            또는 backend DTO schema 드리프트 가능성. ADR-0008 §4 reconsideration 트리거.
+            또는 backend DTO schema 드리프트 가능성.
             value={{ $value | printf "%.3f" }} req/s
+          runbook: |
+            1. Grafana `Zod Validation Issues` 패널에서 `domain_route` 라벨로 핫스팟 식별
+               (sum by (domain_route) (rate(zod_validation_issues_total{issue_count_bucket="11+"}[15m])))
+            2. 해당 라우트의 backend 로그 조회 — `kubectl logs` 또는 `docker compose logs backend |
+               grep "ZodValidation"`
+            3. frontend 사전 검증 회귀(react-hook-form Zod resolver 누락) 우선 점검
+            4. backend DTO schema 변경 PR 추적 (`git log packages/schemas/`)
+            5. 30분 내 하강 미관측 시 critical 임계 도달 가능성 — ADR-0008 §4 검토 시작
+          runbook_url: 'docs/operations/prometheus-alert-rules.md#zodvalidationissueshighcount'
 
       - alert: ZodValidationIssuesPersistentSpike
         expr: |
@@ -135,8 +145,18 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: 'Zod 검증 11+ bucket 지속 폭주 (긴급)'
+          summary: 'Zod 검증 11+ bucket 지속 폭주 (critical)'
           description: |
             5분 평균 1건/초 초과 — backend payload size +30% 위험 임계 도달.
-            ADR-0008 §4 즉시 재검토 (다중 issue 압축 / Accept-Language 부분 도입 등).
             value={{ $value | printf "%.3f" }} req/s
+          runbook: |
+            1. 즉시 영향 평가 — `sum(rate(http_request_duration_seconds_sum[5m]))
+               / sum(rate(http_request_duration_seconds_count[5m]))` p95 동시 상승 여부 확인
+            2. ADR-0008 §4 reconsideration 트리거 충족 — issue 즉시 생성 + 다음 옵션 검토:
+               (a) 다중 issue 압축 (path 단축, common params dedup)
+               (b) Accept-Language 헤더 부분 도입 (Option A 부분)
+               (c) frontend 사전 검증 강화로 backend 도달 issue 감소
+            3. 단기 완화: backend 응답에서 issues array 길이 cap (예: 10개) — schemas/zod-issue.ts
+               serializeZodIssue 측 truncate 로직 추가
+            4. 30분 내 root cause 미식별 시 oncall 에스컬레이션
+          runbook_url: 'docs/operations/prometheus-alert-rules.md#zodvalidationissuespersistentspike'
