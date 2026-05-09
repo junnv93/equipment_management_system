@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  ApprovalActionEnum,
   APPROVAL_ACTION_VALUES,
   DisposalReasonEnum,
   type ApprovalAction,
@@ -39,24 +38,41 @@ export const RequestDisposalPipe = new ZodValidationPipe(requestDisposalSchema);
 /**
  * 폐기 검토 DTO 스키마 (technical_manager, 같은 팀)
  *
- * 검토 의견(opinion)은 frontend `DisposalReviewDialog`가 `>= REJECTION_REASON_MIN_LENGTH`로
- * 강제하므로 Zod도 동일 기준으로 defense-in-depth 적용 (frontend 우회 차단).
+ * discriminatedUnion으로 decision 분기:
+ * - decision='approve': opinion 선택 (max만 적용)
+ * - decision='reject':  opinion 필수, min(REJECTION_REASON_MIN_LENGTH) + max (Zod defense-in-depth)
+ *
+ * frontend 우회(curl 등) 시에도 의미 없는 반려 사유가 audit log에 기록되지 않도록 차단.
  */
-export const reviewDisposalSchema = z.object({
-  ...versionedSchema,
-  decision: ApprovalActionEnum,
-  opinion: z
-    .string()
-    .trim()
-    .min(
-      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
-      VM.string.min('검토 의견', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
-    )
-    .max(
-      VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
-      VM.string.max('검토 의견', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
-    ),
-});
+export const reviewDisposalSchema = z.discriminatedUnion('decision', [
+  z.object({
+    ...versionedSchema,
+    decision: z.literal('approve'),
+    opinion: z
+      .string()
+      .trim()
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('검토 의견', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      )
+      .optional(),
+  }),
+  z.object({
+    ...versionedSchema,
+    decision: z.literal('reject'),
+    opinion: z
+      .string()
+      .trim()
+      .min(
+        VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+        VM.string.min('검토 의견', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+      )
+      .max(
+        VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
+        VM.string.max('검토 의견', VALIDATION_RULES.LONG_TEXT_MAX_LENGTH)
+      ),
+  }),
+]);
 
 export type ReviewDisposalInput = z.infer<typeof reviewDisposalSchema>;
 export const ReviewDisposalPipe = new ZodValidationPipe(reviewDisposalSchema);
@@ -128,12 +144,12 @@ export class RequestDisposalDto implements RequestDisposalInput {
 }
 
 /**
- * 폐기 검토 DTO
+ * 폐기 검토 DTO (Swagger 문서화용)
+ * 런타임 검증은 reviewDisposalSchema(discriminatedUnion)가 담당.
+ * - decision='approve': opinion 선택 (max 500자)
+ * - decision='reject':  opinion 필수 (min 10자, max 500자)
  */
-export class ReviewDisposalDto
-  extends VersionedDto
-  implements Omit<ReviewDisposalInput, 'version'>
-{
+export class ReviewDisposalDto extends VersionedDto {
   @ApiProperty({
     description: '검토 결과 (승인/반려)',
     enum: APPROVAL_ACTION_VALUES,
@@ -142,12 +158,13 @@ export class ReviewDisposalDto
   decision!: ApprovalAction;
 
   @ApiProperty({
-    description: '검토 의견 (10자 이상, 500자 이하)',
+    description:
+      '검토 의견. 승인 시 선택(max 500자), 반려 시 필수(min 10자, max 500자). discriminatedUnion으로 Zod 검증.',
     example: '폐기 사유가 타당하여 승인 요청합니다.',
-    minLength: VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+    required: false,
     maxLength: VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
   })
-  opinion!: string;
+  opinion?: string;
 }
 
 /**

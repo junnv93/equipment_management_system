@@ -42,6 +42,7 @@ import { getErrorMessage } from '@/lib/api/error';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   TIMELINE_TOKENS,
+  MAINTENANCE_TIMELINE_TOKENS,
   getTimelineCardClasses,
   TIMELINE_SKELETON_TOKENS,
 } from '@/lib/design-tokens';
@@ -275,7 +276,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
         </CardHeader>
         <CardContent>
           <div className={TIMELINE_TOKENS.empty.container}>
-            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <AlertTriangle className={MAINTENANCE_TIMELINE_TOKENS.errorIcon} />
             <p className={TIMELINE_TOKENS.empty.text}>{t('maintenanceHistoryTab.error')}</p>
           </div>
         </CardContent>
@@ -289,7 +290,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-brand-info" />
+            <Wrench className={MAINTENANCE_TIMELINE_TOKENS.headerIcon} />
             {t('maintenanceHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
@@ -313,7 +314,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-brand-info" />
+          <Wrench className={MAINTENANCE_TIMELINE_TOKENS.headerIcon} />
           {t('maintenanceHistoryTab.title')}
         </CardTitle>
         {canCreate && RegisterDialog}
@@ -325,9 +326,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
           {history.map((item, index) => (
             <div key={item.id} className="relative flex gap-4">
               <div className="relative flex-shrink-0">
-                <div
-                  className={`${TIMELINE_TOKENS.node.container} bg-brand-ok text-white shadow-lg`}
-                >
+                <div className={MAINTENANCE_TIMELINE_TOKENS.node}>
                   <Wrench className={TIMELINE_TOKENS.node.icon} />
                 </div>
                 {index === 0 && (

@@ -54,6 +54,19 @@ export const TIMELINE_TOKENS = {
 } as const;
 
 /**
+ * MaintenanceHistoryTab 전용 색상 토큰 (SSOT — JSX 인라인 리터럴 금지)
+ *
+ * - node: 수리 완료 노드 (bg-brand-ok + text-white shadow-lg)
+ * - headerIcon: 제목/헤더 렌치 아이콘 색상 (info 시맨틱)
+ * - errorIcon: 에러 상태 경고 아이콘 색상 (warning 시맨틱)
+ */
+export const MAINTENANCE_TIMELINE_TOKENS = {
+  node: `${TIMELINE_TOKENS.node.container} bg-brand-ok text-white shadow-lg`,
+  headerIcon: 'h-5 w-5 text-brand-info',
+  errorIcon: 'h-8 w-8 text-brand-warning',
+} as const;
+
+/**
  * Utility: 타임라인 노드 클래스 생성
  *
  * @param iconBgColor - 아이콘 배경 색상 (예: 'bg-ul-midnight', 'bg-ul-green')

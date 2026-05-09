@@ -300,6 +300,7 @@ export {
 // Equipment Timeline
 export {
   TIMELINE_TOKENS,
+  MAINTENANCE_TIMELINE_TOKENS,
   getTimelineNodeClasses,
   getTimelineCardClasses,
   TIMELINE_SKELETON_TOKENS,
