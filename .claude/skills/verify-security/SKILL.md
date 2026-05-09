@@ -291,6 +291,52 @@ grep -c "createHash\|sha256" apps/backend/src/common/filters/error.filter.ts
 `system_error_events` 테이블은 영구 저장이므로 PII 화이트리스트 7 필드 (`SystemErrorEventInput`) 외 절대 추가 금지.
 
 
+### Step 18 — common/security/* 레이어 PII deny-list + fire-and-forget 일반화 (2026-05-09 추가)
+
+**배경**: `apps/backend/src/common/security/` 디렉토리는 보안 telemetry 인프라 SSOT 레이어
+(2026-05-09 `three-low-tech-debt-closure` sprint에서 `SortRejectionTelemetryService` 추가).
+system-health 패턴 미러 — common 레이어가 도메인 모듈 의존 금지(clean architecture). 신규
+보안 telemetry 모듈 추가 시 silent miss 발생 가능 영역:
+- (a) PII deny-list 위반 — 진단 편의로 `request.body`/`request.headers`/non-sort `request.query` 캡처
+- (b) fire-and-forget contract 위반 — telemetry 실패가 응답 흐름 차단
+- (c) Symbol DI 토큰 누락 — interface inject 실패 (NestJS DI는 interface reflect 못함)
+
+본 Step은 common/security/ 신규 service/contract 추가 시 위 invariant 자동 회귀 차단.
+
+**검증 명령**:
+
+```bash
+# (1) common/security/* service 본체 — request.body / request.headers / non-sort query 캡처 0건
+# (단, contract.ts/service.ts JSDoc 의 deny-list 정책 설명 false-FAIL 회피 — 주석 라인 제외)
+grep -rnE "request\.body|request\.headers|req\.body|req\.headers" apps/backend/src/common/security/*.ts 2>/dev/null \
+  | grep -vE "^[^:]+:[0-9]+:\s*\*|^[^:]+:[0-9]+:\s*//"
+# 기대값: 0 출력
+
+# (2) common/security/* service throw 0건 (fire-and-forget)
+grep -rnE "^\s*throw new" apps/backend/src/common/security/*.service.ts 2>/dev/null
+# 기대값: 0 출력
+
+# (3) Symbol DI 토큰 등록 강제 — 신규 contract.ts 추가 시 Symbol() 호출 1건 이상
+test -f apps/backend/src/common/security/contract.ts && \
+  grep -c "= Symbol(" apps/backend/src/common/security/contract.ts
+# 기대값: ≥ 1
+
+# (4) GlobalExceptionFilter inject 패턴 일관성 — @Optional() + @Inject(SYMBOL_TOKEN) 사용
+grep -B 1 "@Inject(SORT_REJECTION_TELEMETRY\|@Inject(SYSTEM_ERROR_EVENT_PROVIDER" \
+  apps/backend/src/common/filters/error.filter.ts | grep -c "@Optional"
+# 기대값: ≥ 2 (system-health + sort-rejection)
+```
+
+**위반 시 수정 지시**:
+- (1) PII 캡처 위치 발견: 진단 정보가 필요하면 `Logger.debug` (dev-only) 또는 별도 Sentry sink. common/security/* 레이어 service 는 영구 저장 가정 — PII 화이트리스트 외 캡처 금지.
+- (2) throw 발견: try/catch 로 감싸고 `Logger.error` fallback. fire-and-forget contract 는 응답 흐름 차단 절대 금지.
+- (3) contract.ts 누락: `export const XXX_TOKEN = Symbol('XXX_TOKEN')` 패턴 추가 (system-health/contract.ts 참조).
+- (4) @Optional 누락: `@Optional() @Inject(TOKEN) private readonly service?: Interface` 패턴 강제. NestJS DI 가 모듈 미등록 시 graceful degrade.
+
+**관련 sprint**: `three-low-tech-debt-closure` (2026-05-09) — sort-rejection-telemetry 본체.
+**자동화 승격 후보 (Step 8 Phase 3)**: ts-morph 로 service class export + @Injectable 데코레이터 + 모든 throw 위치 추적 가능.
+
+
 ## Exceptions
 
 1. **AuthController의 login/test-login/refresh** — `@Public()` + `@Post` 허용 (인증 전/갱신)

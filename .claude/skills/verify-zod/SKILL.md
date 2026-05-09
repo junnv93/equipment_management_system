@@ -1328,6 +1328,53 @@ pnpm --filter frontend run test -- --testPathPattern=zod-fallback-coverage
 **자연 제외 3건 EXCLUSIONS set**: `cable-errors.ts` (re-export shim) / `document-errors.ts` (t 함수 없음) / `equipment-errors.ts` (mapper 없음)
 **관련 sprint**: `zod-i18n-mapper-hub-closure` (2026-05-08) / `reject-modal-ssot-closure` (2026-05-09, tErrors? 3rd param)
 
+
+### Step 24: Sort-mapper default 회귀 spec 자동 등록 (2026-05-09 추가)
+
+**배경**: query DTO sort enum SSOT (Step 20) + sort-mapper 단방향 wire (`*-sort-mapper.ts` per domain) 적용 후, **default sort 의도** (sort 미지정 시 fallback 분기) 가 spec으로 잠겨있지 않으면 silent 회귀 가능. `XXX_SORT_DEFAULT.field` 변경 또는 `resolveXxxOrderBy` fallback 분기 제거 시 list endpoint 정렬이 silently 뒤바뀜 + cursor pagination 무효화.
+
+2026-05-09 `three-low-tech-debt-closure` r2 sprint에서 13개 sort-mapper 시스템 전반 invariant 결빙:
+- **통합 spec** (11개 도메인 `describe.each` 단일 테이블): `apps/backend/src/common/__tests__/sort-mapper-defaults.spec.ts`
+  - checkouts / calibration / calibration-factors / equipment / equipment-imports / repair-history / non-conformances / cables / software-validations / test-software / users
+- **별도 spec** (2개 도메인, 더 상세 검증 — priority/classification 다중 컬럼):
+  - `apps/backend/src/modules/notifications/__tests__/notification-sort-mapper.spec.ts`
+  - `apps/backend/src/modules/teams/__tests__/team-sort-mapper.spec.ts`
+
+신규 sort-mapper 추가 시 본 spec 등록 누락 = silent miss → 회귀 차단 grep 필요.
+
+**검증 명령**:
+
+```bash
+# (1) 모든 sort-mapper count = 통합 spec DOMAINS + 별도 spec 도메인 합산
+TOTAL_MAPPERS=$(find apps/backend/src/modules -name "*-sort-mapper.ts" 2>/dev/null | wc -l)
+INTEGRATED=$(grep -c "^    name: '" apps/backend/src/common/__tests__/sort-mapper-defaults.spec.ts)
+SEPARATE=$(find apps/backend/src/modules -name "*-sort-mapper.spec.ts" 2>/dev/null | wc -l)
+echo "mappers=$TOTAL_MAPPERS integrated=$INTEGRATED separate=$SEPARATE total_covered=$((INTEGRATED + SEPARATE))"
+# 기대: $((INTEGRATED + SEPARATE)) == $TOTAL_MAPPERS
+
+# (2) 통합 spec invariant 보호 — DOMAINS 길이 명시 검증 존재
+grep -c "expect(DOMAINS).toHaveLength" apps/backend/src/common/__tests__/sort-mapper-defaults.spec.ts
+# 기대값: ≥ 1
+
+# (3) PgDialect.sqlToQuery 사용 강제 — drizzle PgTable circular reference 회피
+grep -c "PgDialect\|sqlToQuery" apps/backend/src/common/__tests__/sort-mapper-defaults.spec.ts
+# 기대값: ≥ 2
+
+# (4) JSON.stringify(queryChunks) 안티패턴 0건 — circular ref 로 fail
+grep -rn "JSON.stringify.*queryChunks" apps/backend/src/modules apps/backend/src/common 2>/dev/null | head -5
+# 기대값: 0
+```
+
+**위반 시 수정 지시**:
+- (1) 미커버 sort-mapper 발견: 해당 도메인을 **통합 spec `DOMAINS` 배열에 1줄 추가** 또는 도메인-특수 검증이 필요하면 별도 `*-sort-mapper.spec.ts` 신설 (notifications/teams 패턴 참조).
+- (2) DOMAINS 길이 검증 누락: `it('11개 도메인 모두 등록 — 신규 sort-mapper 추가 시 본 테이블 갱신 필수', () => { expect(DOMAINS).toHaveLength(11); });` 명시 필요.
+- (3) PgDialect 미사용: `const dialect = new PgDialect(); const { sql } = dialect.sqlToQuery(result);` 패턴으로 SQL 문자열 추출. drizzle 의 PgTable 은 circular reference 라 JSON.stringify 불가.
+- (4) JSON.stringify(queryChunks) 발견: PgDialect.sqlToQuery 로 교체.
+
+**관련 sprint**: `three-low-tech-debt-closure` (2026-05-09 Mode 1 r2) — 11개 도메인 통합 invariant 23 cases.
+**자동화 승격 후보 (Step 8 Phase 3)**: ts-morph 로 `*-sort-mapper.ts` exported `resolveXxxOrderBy` 함수 + `XXX_SORT_DEFAULT` 상수 자동 발견 → DOMAINS 배열 자동 생성/검증 가능.
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
