@@ -242,13 +242,42 @@ comm -23 /tmp/methods.txt /tmp/helper_methods.txt
 
 **기대 결과**: 빈 출력. 출력이 있으면 registry 오타 또는 helper 미구현.
 
+### Step 6: BFF 집계 캐시 무효화 체인 불변성 (Warning)
+
+BFF 서비스가 여러 도메인 데이터를 집계할 때, 그 도메인의 캐시를 무효화하는 helper 메서드는 **BFF 캐시도 함께 무효화**해야 한다. 누락 시 BFF가 stale 데이터를 반환한다.
+
+현재 등록된 BFF 집계 불변성:
+| helper 메서드 | 포함해야 할 BFF 프리픽스 | 근거 |
+|---|---|---|
+| `invalidateEquipmentImportsWithEquipment()` | `CACHE_KEY_PREFIXES.INBOUND_OVERVIEW` | InboundOverviewService가 equipment-imports 집계 포함 |
+
+```bash
+# invalidateEquipmentImportsWithEquipment()가 inbound-overview:* 포함하는지 확인
+awk '/invalidateEquipmentImportsWithEquipment\(\)/,/^  }$/' \
+  apps/backend/src/common/cache/cache-invalidation.helper.ts \
+  | grep -q "INBOUND_OVERVIEW" \
+  && echo "PASS: BFF cache included" \
+  || echo "FAIL: INBOUND_OVERVIEW missing from invalidateEquipmentImportsWithEquipment()"
+```
+
+**기대 결과**: `PASS: BFF cache included`.
+
+**신규 BFF 서비스 추가 시 체크리스트**:
+1. BFF가 집계하는 도메인 식별 (예: equipment-imports, checkouts)
+2. 해당 도메인의 `CacheInvalidationHelper` 메서드에 BFF prefix 삭제 추가
+3. 이 테이블에 행 추가
+
 ## Exceptions (리포트하지 않음)
 
 1. **스케줄러의 `emit` 유지** — `schedulers/` 하위 파일은 사용자 응답 경로가 아니므로 의도적.
 2. **NotificationDispatcher 리스너** — 순수 알림 발송, 캐시 무효화 대상 아님. 레지스트리 등록 불필요.
 3. **테스트 spec의 `eventEmitter.emit()` 호출** — 테스트 내부에서 실제 리스너 트리거 용도. 검증 대상 아님.
 4. **`NOTIFICATION_EVENTS` 상수 중 미발행 이벤트** — 단순 dead code, 본 스킬 범위 외 (verify-ssot에서 커버 가능).
-5. **도메인 리스너의 직접 `deleteByPrefix` 호출** — 이벤트가 `CACHE_INVALIDATION_REGISTRY`에 등록되어 있더라도, DB 업데이트와 캐시 무효화를 같은 트랜잭션에 묶어야 하는 도메인 리스너(`@OnEvent` + `@Injectable()`)는 `cacheService.deleteByPrefix()`를 직접 호출할 수 있다. 예: `SoftwareValidationListener` — `latestValidationId` DB 갱신 + `TEST_SOFTWARE` 캐시 직접 삭제. 레지스트리 에 이미 등록된 이벤트에 추가 캐시 무효화를 하는 것이므로 Step 1 위반이 아님.
+5. **SKIP_CACHE_REGISTRY 서비스/리스너의 직접 helper 호출** — 일부 `@OnEvent` 핸들러는 도메인 이벤트(checkout.return.completed 등)를 처리하며, 이 이벤트는 `CACHE_INVALIDATION_REGISTRY`에 등록하지 않는다. 대신 핸들러 본체에서 `cacheInvalidationHelper.invalidateXxx()` 를 직접 호출하고, JSDoc에 `SKIP_CACHE_REGISTRY: ...` 주석으로 의도를 명시한다.
+   - 위치: 서비스 파일(`*.service.ts`) 또는 리스너 파일(`modules/*/listeners/*.listener.ts`) 모두 허용
+   - 예: `equipment-imports.service.ts` `onReturnCompleted` / `onReturnCanceled` — `invalidateEquipmentImportsWithEquipment()` 직접 호출
+   - **요구사항**: SKIP_CACHE_REGISTRY 핸들러는 반드시 CacheInvalidationHelper 메서드를 호출해야 함. `cacheService.deleteByPattern()` 인라인 호출 금지 (SSOT 우회)
+   - Step 1 위반 아님 (Step 1은 `emitAsync` 발행자 검사, @OnEvent 핸들러 검사 아님)
 6. **도메인 리스너의 `@OnEvent({ async: true })` best-effort 동기화** — `CalibrationPlanSyncListener`처럼 `@OnEvent(EVENT, { async: true })` + `async handle(): Promise<void>` 패턴은 EventEmitter2가 내부적으로 await을 처리. 이 리스너는 캐시 무효화가 아닌 **교차 도메인 DB 동기화**(calibration 생성 → calibration_plan_items.actualCalibrationDate 갱신) 목적이며, best-effort(실패해도 원본 트랜잭션에 영향 없음)으로 설계됨. `CACHE_INVALIDATION_REGISTRY` 등록 불필요, Step 1 검사 제외. 파일: `modules/*/listeners/*.listener.ts`.
 
 ## Severity
@@ -261,6 +290,7 @@ comm -23 /tmp/methods.txt /tmp/helper_methods.txt
 | Step 4 emit vs emitAsync | **Info** | 개별 케이스 판단, 주석 필요 |
 | Step 5b composite ↔ payload 일관성 | **Warning** | payload 필드 누락 시 알림 silent drop |
 | Step 5 method 불일치 | **Info** | 런타임 에러 (타입 체크로 사전 방어됨) |
+| Step 6 BFF 집계 체인 누락 | **Warning** | BFF stale read — equipment-imports 변경 후 inbound-overview 갱신 안 됨 |
 
 ## Learning Reference
 
