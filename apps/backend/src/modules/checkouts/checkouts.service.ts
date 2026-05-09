@@ -5,7 +5,6 @@ import {
   Logger,
   BadRequestException,
   ConflictException,
-  forwardRef,
 } from '@nestjs/common';
 import { CheckoutErrorCode } from './checkout-error-codes';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
@@ -29,16 +28,15 @@ import {
   ConditionCheckStepValues as CCSVal,
   CONDITION_STEP_ACTOR_SIDE,
   ClassificationEnum,
-  EQUIPMENT_IMPORT_STATUS_VALUES,
   ErrorCode,
   CalibrationApprovalStatusValues as CAStatusVal,
   DocumentStatusValues,
   DocumentTypeValues,
+  type DocumentType,
   CHECKOUT_STATUS_GROUPS,
   type CheckoutSummary,
   type ConditionCheckStep,
   type CheckoutPurpose,
-  type InboundOverviewQueryInput,
   canPerformAction,
   getNextStep,
   getTransitionsFor,
@@ -78,7 +76,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { EquipmentService } from '../equipment/equipment.service';
 import { TeamsService } from '../teams/teams.service';
-import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
+import type { ICheckoutCreator } from '../../common/contracts/checkout-creator.contract';
 import { ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditService } from '../audit/audit.service';
@@ -209,7 +207,7 @@ export interface CheckoutListResponse {
 }
 
 @Injectable()
-export class CheckoutsService extends VersionedBaseService {
+export class CheckoutsService extends VersionedBaseService implements ICheckoutCreator {
   private readonly logger = new Logger(CheckoutsService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CHECKOUTS;
 
@@ -219,8 +217,6 @@ export class CheckoutsService extends VersionedBaseService {
     private readonly cacheService: SimpleCacheService,
     private readonly equipmentService: EquipmentService,
     private readonly teamsService: TeamsService,
-    @Inject(forwardRef(() => EquipmentImportsService))
-    private readonly rentalImportsService: EquipmentImportsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly auditService: AuditService
   ) {
@@ -1000,156 +996,6 @@ export class CheckoutsService extends VersionedBaseService {
         currentPage: Number(page),
       },
     };
-  }
-
-  /**
-   * 반입 현황 집계 BFF (Sprint 3.1)
-   * 표준 반입 + 외부 렌탈 + 내부 공용 3섹션을 단일 요청으로 집계.
-   * Promise.all로 6개 쿼리(3섹션 + sparkline 3개) 병렬 실행.
-   */
-  async getInboundOverview(
-    query: InboundOverviewQueryInput,
-    teamId: string | null
-  ): Promise<{
-    standard: CheckoutListResponse;
-    rental: Awaited<ReturnType<EquipmentImportsService['findAll']>>;
-    internalShared: Awaited<ReturnType<EquipmentImportsService['findAll']>>;
-    sparkline: { standard: number[]; rental: number[]; internalShared: number[] };
-    generatedAt: string;
-  }> {
-    const limitPerSection = query.limitPerSection ?? 10;
-    const search = query.searchTerm || undefined;
-    const statusFilter =
-      query.statusFilter && query.statusFilter !== 'all' ? query.statusFilter : undefined;
-
-    // 30초 team별 캐시 — 동일 필터 반복 요청 시 6개 병렬 DB 쿼리 절감
-    const cacheKey = `inbound-overview:t:${teamId ?? 'all'}:s:${statusFilter ?? ''}:q:${search ?? ''}:l:${limitPerSection}`;
-    return this.cacheService.getOrSet(
-      cacheKey,
-      async () => {
-        const isValidImportStatus = statusFilter
-          ? (EQUIPMENT_IMPORT_STATUS_VALUES as readonly string[]).includes(statusFilter)
-          : false;
-
-        const [
-          standard,
-          rental,
-          internalShared,
-          sparklineStandard,
-          sparklineRental,
-          sparklineInternal,
-        ] = await Promise.all([
-          // 타팀 장비 대여 건 (direction=inbound)
-          this.findAll(
-            {
-              teamId: teamId ?? undefined,
-              direction: 'inbound',
-              search,
-              // statuses는 optionalCsvEnum이 CheckoutStatus[]로 변환 — 단일 statusFilter도 배열로 wrap
-              statuses: statusFilter ? [statusFilter as CheckoutStatus] : undefined,
-              page: 1,
-              pageSize: limitPerSection,
-            } as CheckoutQueryDto,
-            false
-          ),
-          // 외부 업체 렌탈
-          this.rentalImportsService.findAll({
-            sourceType: 'rental',
-            search,
-            status: isValidImportStatus
-              ? (statusFilter as (typeof EQUIPMENT_IMPORT_STATUS_VALUES)[number])
-              : undefined,
-            page: 1,
-            limit: limitPerSection,
-          }),
-          // 내부 공용장비
-          this.rentalImportsService.findAll({
-            sourceType: 'internal_shared',
-            search,
-            status: isValidImportStatus
-              ? (statusFilter as (typeof EQUIPMENT_IMPORT_STATUS_VALUES)[number])
-              : undefined,
-            page: 1,
-            limit: limitPerSection,
-          }),
-          // Sparkline: 최근 14일 일별 표준 반입 카운트
-          this.buildCheckoutSparkline(teamId),
-          // Sparkline: 최근 14일 일별 렌탈 반입 카운트
-          this.buildImportSparkline('rental'),
-          // Sparkline: 최근 14일 일별 내부 공용 반입 카운트
-          this.buildImportSparkline('internal_shared'),
-        ]);
-
-        return {
-          standard,
-          rental,
-          internalShared,
-          sparkline: {
-            standard: sparklineStandard,
-            rental: sparklineRental,
-            internalShared: sparklineInternal,
-          },
-          generatedAt: new Date().toISOString(),
-        };
-      },
-      30
-    );
-  }
-
-  private async buildCheckoutSparkline(teamId: string | null): Promise<number[]> {
-    const DAYS = 14;
-    const since = new Date();
-    since.setDate(since.getDate() - DAYS + 1);
-    since.setHours(0, 0, 0, 0);
-
-    const conditions: SQL<unknown>[] = [
-      gte(checkouts.createdAt, since),
-      eq(checkouts.purpose, CPVal.RENTAL),
-    ];
-
-    if (teamId) {
-      const requesterIdsByTeam = this.db
-        .select({ id: schema.users.id })
-        .from(schema.users)
-        .where(eq(schema.users.teamId, teamId));
-      conditions.push(inArray(checkouts.requesterId, requesterIdsByTeam));
-    }
-
-    const rows = await this.db
-      .select({
-        day: sql<string>`DATE(${checkouts.createdAt})`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(checkouts)
-      .where(and(...conditions))
-      .groupBy(sql`DATE(${checkouts.createdAt})`)
-      .orderBy(sql`DATE(${checkouts.createdAt})`);
-
-    return this.fillDailyArray(rows, DAYS, since);
-  }
-
-  private async buildImportSparkline(sourceType: 'rental' | 'internal_shared'): Promise<number[]> {
-    const DAYS = 14;
-    const since = new Date();
-    since.setDate(since.getDate() - DAYS + 1);
-    since.setHours(0, 0, 0, 0);
-
-    const rows = await this.db
-      .select({
-        day: sql<string>`DATE(${schema.equipmentImports.createdAt})`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(schema.equipmentImports)
-      .where(
-        and(
-          gte(schema.equipmentImports.createdAt, since),
-          eq(schema.equipmentImports.sourceType, sourceType)
-        )
-      )
-      .groupBy(sql`DATE(${schema.equipmentImports.createdAt})`)
-      .orderBy(sql`DATE(${schema.equipmentImports.createdAt})`);
-
-    return this.fillDailyArray(rows, DAYS, since);
   }
 
   private getTrendWindow(days = 14): { days: number; since: Date } {
@@ -2842,13 +2688,16 @@ export class CheckoutsService extends VersionedBaseService {
         return result;
       });
 
-      // 렌탈 반납 목적 checkout일 경우 rental import 완료 콜백
+      // 렌탈 반납 목적 checkout — EquipmentImportsService 직접 호출 대신 이벤트 발행
+      // (CheckoutsModule ↔ EquipmentImportsModule 순환 의존 제거, NOTIFICATION_EVENTS SSOT)
       if (checkout.purpose === CPVal.RETURN_TO_VENDOR) {
         try {
-          await this.rentalImportsService.onReturnCompleted(uuid);
+          await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_RETURN_COMPLETED, {
+            checkoutId: uuid,
+          });
         } catch (callbackError) {
           this.logger.error(
-            `렌탈 반입 완료 콜백 실패 — checkoutId: ${uuid}, purpose: ${checkout.purpose}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
+            `렌탈 반입 완료 이벤트 처리 실패 — checkoutId: ${uuid}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
             callbackError instanceof Error ? callbackError.stack : undefined
           );
         }
@@ -3155,6 +3004,33 @@ export class CheckoutsService extends VersionedBaseService {
           })
           .returning();
 
+        // 1a. 첨부 사진 링크 — fail-close: 소유권 + 문서 타입 + 중복 링크 3-layer
+        if (dto.attachmentIds && dto.attachmentIds.length > 0) {
+          const ALLOWED_PHOTO_TYPES = [
+            DocumentTypeValues.CONDITION_CHECK_PHOTO,
+            DocumentTypeValues.CHECKOUT_HANDOVER_PHOTO,
+          ];
+          const linked = await tx
+            .update(schema.documents)
+            .set({ conditionCheckId: check.id })
+            .where(
+              and(
+                inArray(schema.documents.id, dto.attachmentIds),
+                eq(schema.documents.uploadedBy, checkerId),
+                inArray(schema.documents.documentType, ALLOWED_PHOTO_TYPES as DocumentType[]),
+                isNull(schema.documents.conditionCheckId)
+              )
+            )
+            .returning({ id: schema.documents.id });
+          if (linked.length !== dto.attachmentIds.length) {
+            throw new BadRequestException({
+              code: CheckoutErrorCode.INVALID_ATTACHMENT,
+              message:
+                '첨부 문서 검증 실패: 소유권 불일치, 허용되지 않은 문서 타입, 또는 이미 다른 상태 확인에 링크된 문서가 포함되어 있습니다.',
+            });
+          }
+        }
+
         // 2. 반출 상태 자동 전이
         const checkoutUpdateData: Partial<Checkout> = {
           status: transition.nextStatus as CheckoutStatus,
@@ -3271,13 +3147,16 @@ export class CheckoutsService extends VersionedBaseService {
         { terminatedFromStatus: checkout.status }
       );
 
-      // 렌탈 반납 목적 checkout 취소 시 import 상태 롤백 콜백
+      // 렌탈 반납 목적 checkout 취소 — EquipmentImportsService 직접 호출 대신 이벤트 발행
+      // (CheckoutsModule ↔ EquipmentImportsModule 순환 의존 제거, NOTIFICATION_EVENTS SSOT)
       if (checkout.purpose === CPVal.RETURN_TO_VENDOR) {
         try {
-          await this.rentalImportsService.onReturnCanceled(uuid);
+          await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_RETURN_CANCELED, {
+            checkoutId: uuid,
+          });
         } catch (callbackError) {
           this.logger.error(
-            `렌탈 반입 취소 롤백 콜백 실패 — checkoutId: ${uuid}, purpose: ${checkout.purpose}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
+            `렌탈 반입 취소 이벤트 처리 실패 — checkoutId: ${uuid}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
             callbackError instanceof Error ? callbackError.stack : undefined
           );
         }

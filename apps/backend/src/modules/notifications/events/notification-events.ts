@@ -59,6 +59,10 @@ export const NOTIFICATION_EVENTS = {
   IMPORT_APPROVED: 'equipmentImport.approved',
   IMPORT_REJECTED: 'equipmentImport.rejected',
   IMPORT_ORPHAN_DETECTED: 'equipmentImport.orphanDetected',
+  // return_to_vendor checkout 완료/취소 시 CheckoutsService → EquipmentImportsService 방향 콜백 이벤트.
+  // forwardRef 없이 단방향 의존을 유지하기 위해 직접 호출 대신 이벤트 사용.
+  IMPORT_RETURN_COMPLETED: 'equipmentImport.returnCompleted',
+  IMPORT_RETURN_CANCELED: 'equipmentImport.returnCanceled',
 
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───
   SOFTWARE_VALIDATION_SUBMITTED: 'softwareValidation.submitted',

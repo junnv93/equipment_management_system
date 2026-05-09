@@ -4,7 +4,6 @@ import type { Checkout } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
-import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
@@ -30,7 +29,6 @@ describe('CheckoutsService', () => {
   let mockCacheService: Record<string, jest.Mock>;
   let mockEquipmentService: Record<string, jest.Mock>;
   let mockTeamsService: Record<string, jest.Mock>;
-  let mockImportsService: Record<string, jest.Mock>;
   let mockEventEmitter: { emit: jest.Mock; emitAsync: jest.Mock; on: jest.Mock };
 
   beforeEach(async () => {
@@ -127,17 +125,6 @@ describe('CheckoutsService', () => {
         {
           provide: TeamsService,
           useValue: mockTeamsService,
-        },
-        {
-          provide: EquipmentImportsService,
-          useValue: (mockImportsService = {
-            findOne: jest.fn(),
-            findAll: jest.fn(),
-            create: jest.fn(),
-            updateStatus: jest.fn(),
-            onReturnCompleted: jest.fn().mockResolvedValue(undefined),
-            onReturnCanceled: jest.fn().mockResolvedValue(undefined),
-          }),
         },
         {
           provide: EventEmitter2,
@@ -1266,15 +1253,18 @@ describe('CheckoutsService', () => {
       ]);
       // updateWithVersion (returning)
       mockDrizzle.returning.mockResolvedValueOnce([canceledCheckout]);
-      // callback fails
-      mockImportsService.onReturnCanceled.mockRejectedValueOnce(new Error('CAS 실패'));
+      // emitAsync 실패 — checkout 상태는 유지되어야 함
+      mockEventEmitter.emitAsync.mockRejectedValueOnce(new Error('CAS 실패'));
       // getAffectedTeamIds
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
 
       const result = await service.cancel(checkoutId, 1, mockReq);
 
       expect(result.status).toBe('canceled');
-      expect(mockImportsService.onReturnCanceled).toHaveBeenCalledWith(checkoutId);
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        'equipmentImport.returnCanceled',
+        expect.objectContaining({ checkoutId })
+      );
     });
 
     it('approveReturn: 콜백 실패해도 checkout 상태는 return_approved로 유지된다', async () => {
@@ -1320,8 +1310,8 @@ describe('CheckoutsService', () => {
       // transaction → updateWithVersion + updateStatusBatch
       mockDrizzle.returning.mockResolvedValueOnce([approvedReturn]);
       mockEquipmentService.updateStatusBatch.mockResolvedValue([]);
-      // callback fails
-      mockImportsService.onReturnCompleted.mockRejectedValueOnce(new Error('콜백 실패'));
+      // emitAsync 실패 — checkout 상태는 유지되어야 함
+      mockEventEmitter.emitAsync.mockRejectedValueOnce(new Error('콜백 실패'));
       // getAffectedTeamIds
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
 
@@ -1332,7 +1322,10 @@ describe('CheckoutsService', () => {
       );
 
       expect(result.status).toBe('return_approved');
-      expect(mockImportsService.onReturnCompleted).toHaveBeenCalledWith(checkoutId);
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        'equipmentImport.returnCompleted',
+        expect.objectContaining({ checkoutId })
+      );
     });
   });
 
@@ -1375,71 +1368,6 @@ describe('CheckoutsService', () => {
 
       await expect(service.create(invalidDto, 'invalid-requester-id')).rejects.toThrow(
         BadRequestException
-      );
-    });
-  });
-
-  describe('getInboundOverview', () => {
-    const mockImportList = {
-      data: [],
-      meta: { pagination: { total: 0, pageSize: 10, currentPage: 1, totalPages: 0 } },
-    };
-
-    beforeEach(() => {
-      // 렌탈 imports findAll mock
-      mockImportsService.findAll.mockResolvedValue(mockImportList);
-      // sparkline 쿼리는 .groupBy().orderBy() 체인을 사용 — 기본 체인에 없으므로 추가
-      const chain = mockChain as Record<string, jest.Mock>;
-      chain.groupBy = jest.fn().mockReturnValue(chain);
-      chain.having = jest.fn().mockReturnValue(chain);
-    });
-
-    it('should return combined overview with standard/rental/internalShared/sparkline', async () => {
-      const query = { limitPerSection: 10 };
-      const result = await service.getInboundOverview(query, null);
-
-      expect(result).toHaveProperty('standard');
-      expect(result).toHaveProperty('rental');
-      expect(result).toHaveProperty('internalShared');
-      expect(result).toHaveProperty('sparkline');
-      expect(result).toHaveProperty('generatedAt');
-      expect(result.sparkline).toHaveProperty('standard');
-      expect(result.sparkline).toHaveProperty('rental');
-      expect(result.sparkline).toHaveProperty('internalShared');
-      // sparkline은 14일치 배열
-      expect(result.sparkline.standard).toHaveLength(14);
-      expect(result.sparkline.rental).toHaveLength(14);
-      expect(result.sparkline.internalShared).toHaveLength(14);
-    });
-
-    it('should call rentalImportsService.findAll twice (rental + internalShared)', async () => {
-      await service.getInboundOverview({ limitPerSection: 10 }, null);
-
-      expect(mockImportsService.findAll).toHaveBeenCalledTimes(2);
-      expect(mockImportsService.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceType: 'rental' })
-      );
-      expect(mockImportsService.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceType: 'internal_shared' })
-      );
-    });
-
-    it('should pass statusFilter only when it is a valid import status', async () => {
-      await service.getInboundOverview({ limitPerSection: 10, statusFilter: 'pending' }, null);
-      // 'pending'은 유효한 import status
-      expect(mockImportsService.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'pending' })
-      );
-    });
-
-    it('should not pass statusFilter to imports when it is a checkout-only status', async () => {
-      // 'lender_checked'는 checkout 전용 status — EQUIPMENT_IMPORT_STATUS_VALUES에 없음
-      await service.getInboundOverview(
-        { limitPerSection: 10, statusFilter: 'lender_checked' },
-        null
-      );
-      expect(mockImportsService.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ status: undefined })
       );
     });
   });

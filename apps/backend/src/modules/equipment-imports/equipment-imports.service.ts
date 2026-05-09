@@ -5,9 +5,9 @@ import {
   ForbiddenException,
   Inject,
   Logger,
-  forwardRef,
   ConflictException,
 } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, SQL, or } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
@@ -39,7 +39,10 @@ import { ReceiveEquipmentImportDto } from './dto/receive-equipment-import.dto';
 import { EquipmentImportQueryDto } from './dto/equipment-import-query.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EquipmentService } from '../equipment/equipment.service';
-import { CheckoutsService } from '../checkouts/checkouts.service';
+import {
+  CHECKOUT_CREATOR,
+  type ICheckoutCreator,
+} from '../../common/contracts/checkout-creator.contract';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { calculateNextCalibrationDate } from '../../common/utils';
 import {
@@ -67,8 +70,8 @@ export class EquipmentImportsService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly equipmentService: EquipmentService,
-    @Inject(forwardRef(() => CheckoutsService))
-    private readonly checkoutsService: CheckoutsService,
+    @Inject(CHECKOUT_CREATOR)
+    private readonly checkoutCreator: ICheckoutCreator,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly documentService: DocumentService
@@ -657,10 +660,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       throw error;
     }
 
-    let newCheckout: Awaited<ReturnType<typeof this.checkoutsService.create>>;
+    let newCheckout: Awaited<ReturnType<typeof this.checkoutCreator.create>>;
     // CAS 보상 (2/2): checkout 생성 실패 시 장비 상태 + import 상태 모두 롤백
     try {
-      newCheckout = await this.checkoutsService.create(
+      newCheckout = await this.checkoutCreator.create(
         {
           equipmentIds: [equipmentImport.equipmentId],
           purpose: CheckoutPurposeValues.RETURN_TO_VENDOR,
@@ -669,7 +672,7 @@ export class EquipmentImportsService extends VersionedBaseService {
           expectedReturnDate: new Date(
             Date.now() + VALIDATION_RULES.DEFAULT_RETURN_DAYS * 24 * 60 * 60 * 1000
           ).toISOString(),
-        } as Parameters<typeof this.checkoutsService.create>[0],
+        },
         requesterId,
         userTeamId
       );
@@ -768,11 +771,12 @@ export class EquipmentImportsService extends VersionedBaseService {
   }
 
   /**
-   * checkout 반납 완료 콜백
-   * return_requested → returned
-   * 장비 status → 'inactive'
+   * return_to_vendor checkout 반납 완료 이벤트 핸들러.
+   * CheckoutsService가 직접 호출하지 않고 NOTIFICATION_EVENTS.IMPORT_RETURN_COMPLETED 이벤트로 발행.
+   * import status: return_requested → returned, 장비 status → inactive.
    */
-  async onReturnCompleted(checkoutId: string): Promise<void> {
+  @OnEvent(NOTIFICATION_EVENTS.IMPORT_RETURN_COMPLETED, { async: true })
+  async onReturnCompleted({ checkoutId }: { checkoutId: string }): Promise<void> {
     const result = await this.db
       .select()
       .from(equipmentImports)
@@ -862,12 +866,12 @@ export class EquipmentImportsService extends VersionedBaseService {
   }
 
   /**
-   * checkout 취소 콜백 (onReturnCompleted 의 대칭)
-   * return_requested → received
-   * 장비 status → 'available' (initiateReturn 에서 available 로 변경했으므로 원복 불필요,
-   * 단 returnCheckoutId 를 null 로 초기화하여 다음 반납 시도 가능하게 함)
+   * return_to_vendor checkout 취소 이벤트 핸들러 (onReturnCompleted 의 대칭).
+   * CheckoutsService가 직접 호출하지 않고 NOTIFICATION_EVENTS.IMPORT_RETURN_CANCELED 이벤트로 발행.
+   * import status: return_requested → received, returnCheckoutId null 초기화.
    */
-  async onReturnCanceled(checkoutId: string): Promise<void> {
+  @OnEvent(NOTIFICATION_EVENTS.IMPORT_RETURN_CANCELED, { async: true })
+  async onReturnCanceled({ checkoutId }: { checkoutId: string }): Promise<void> {
     const MAX_RETRIES = 1;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

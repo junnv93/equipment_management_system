@@ -4,7 +4,7 @@ import { ErrorCode } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { EquipmentImportsService } from '../equipment-imports.service';
 import { EquipmentService } from '../../equipment/equipment.service';
-import { CheckoutsService } from '../../checkouts/checkouts.service';
+import { CHECKOUT_CREATOR } from '../../../common/contracts/checkout-creator.contract';
 import { createMockEventEmitter } from '../../../common/testing/mock-providers';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
@@ -112,11 +112,8 @@ describe('EquipmentImportsService', () => {
           },
         },
         {
-          provide: CheckoutsService,
-          useValue: {
-            findOne: jest.fn(),
-            create: jest.fn(),
-          },
+          provide: CHECKOUT_CREATOR,
+          useValue: { create: jest.fn() },
         },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         {
@@ -281,7 +278,7 @@ describe('EquipmentImportsService', () => {
       const txUpdateChain = createUpdateChain([{ id: MOCK_RETURN_IMPORT.id }]);
       mockDb.update.mockReturnValue(txUpdateChain);
 
-      await service.onReturnCanceled('checkout-uuid-1');
+      await service.onReturnCanceled({ checkoutId: 'checkout-uuid-1' });
 
       expect(mockDb.select).toHaveBeenCalled();
       expect(mockDb.transaction).toHaveBeenCalled();
@@ -312,7 +309,7 @@ describe('EquipmentImportsService', () => {
         return fn(successTx);
       });
 
-      await service.onReturnCanceled('checkout-uuid-1');
+      await service.onReturnCanceled({ checkoutId: 'checkout-uuid-1' });
 
       expect(txCallCount).toBe(2);
     });
@@ -329,13 +326,15 @@ describe('EquipmentImportsService', () => {
         return fn(failTx);
       });
 
-      await expect(service.onReturnCanceled('checkout-uuid-1')).rejects.toThrow(ConflictException);
+      await expect(service.onReturnCanceled({ checkoutId: 'checkout-uuid-1' })).rejects.toThrow(
+        ConflictException
+      );
     });
 
     it('연결된 반입이 없으면 조용히 반환한다', async () => {
       mockDb.select.mockReturnValue(createSelectChain([]));
 
-      await service.onReturnCanceled('non-existent-checkout');
+      await service.onReturnCanceled({ checkoutId: 'non-existent-checkout' });
 
       expect(mockDb.transaction).not.toHaveBeenCalled();
     });
@@ -363,7 +362,7 @@ describe('EquipmentImportsService', () => {
         return fn(tx);
       });
 
-      await service.onReturnCompleted('checkout-uuid-1');
+      await service.onReturnCompleted({ checkoutId: 'checkout-uuid-1' });
 
       expect(mockDb.transaction).toHaveBeenCalled();
     });
@@ -371,7 +370,7 @@ describe('EquipmentImportsService', () => {
     it('연결된 반입이 없으면 조용히 반환한다', async () => {
       mockDb.select.mockReturnValue(createSelectChain([]));
 
-      await service.onReturnCompleted('non-existent-checkout');
+      await service.onReturnCompleted({ checkoutId: 'non-existent-checkout' });
 
       expect(mockDb.transaction).not.toHaveBeenCalled();
     });

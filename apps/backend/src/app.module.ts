@@ -51,6 +51,7 @@ import { InspectionFormTemplatesModule } from './modules/inspection-form-templat
 import { FormTemplateModule } from './modules/reports/form-template.module';
 import { SecurityModule } from './modules/security/security.module';
 import { SecurityTelemetryModule } from './common/security/security-telemetry.module';
+import { InboundOverviewModule } from './modules/inbound-overview/inbound-overview.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { SecurityTelemetryModule } from './common/security/security-telemetry.mo
     MonitoringModule,
     DashboardModule,
     EquipmentImportsModule, // Unified rental + internal shared imports
+    InboundOverviewModule, // BFF 집계 — checkouts + equipment-imports forwardRef 완전 제거
     ApprovalsModule, // Unified approval counts API
     SettingsModule, // System + calibration settings
     SecurityModule, // CSP violation report 등 브라우저 보안 리포팅 엔드포인트
