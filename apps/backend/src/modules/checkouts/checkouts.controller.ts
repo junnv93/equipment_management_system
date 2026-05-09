@@ -12,7 +12,6 @@ import {
   UsePipes,
   UseInterceptors,
   ParseUUIDPipe,
-  BadRequestException,
   Request,
 } from '@nestjs/common';
 import {
@@ -23,7 +22,6 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { ZodResponse, ZodSerializerInterceptor } from 'nestjs-zod';
 import {
   CheckoutsService,
   CheckoutWithMeta,
@@ -80,18 +78,6 @@ import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-co
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
-import { HandoverTokenService } from './services/handover-token.service';
-import {
-  IssueHandoverTokenDto,
-  IssueHandoverTokenValidationPipe,
-  IssueHandoverTokenResponse,
-  VerifyHandoverTokenDto,
-  VerifyHandoverTokenValidationPipe,
-  VerifyHandoverTokenResponse,
-  HandoverTokenPurpose,
-} from './dto/handover-token.dto';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { ErrorCode, type CheckoutStatus } from '@equipment-management/schemas';
 import { FsmMetaGuardInterceptor } from '../../common/interceptors/fsm-meta-guard.interceptor';
 
 @ApiTags('반출입 관리')
@@ -99,129 +85,7 @@ import { FsmMetaGuardInterceptor } from '../../common/interceptors/fsm-meta-guar
 @Controller('checkouts')
 @UseInterceptors(FsmMetaGuardInterceptor)
 export class CheckoutsController {
-  constructor(
-    private readonly checkoutsService: CheckoutsService,
-    private readonly handoverTokenService: HandoverTokenService
-  ) {}
-
-  /** 체크아웃 상태 → handover 토큰 purpose 매핑. Record로 완전 열거 — 새 상태 추가 시 컴파일 에러. */
-  private static readonly PURPOSE_BY_STATUS: Record<CheckoutStatus, HandoverTokenPurpose | null> = {
-    lender_checked: 'borrower_receive',
-    checked_out: 'borrower_return',
-    borrower_returned: 'lender_receive',
-    pending: null,
-    approved: null,
-    rejected: null,
-    borrower_approved: null,
-    in_use: null,
-    lender_received: null,
-    returned: null,
-    return_approved: null,
-    overdue: null,
-    canceled: null,
-  };
-
-  private derivePurposeFromStatus(status: CheckoutStatus): HandoverTokenPurpose | null {
-    return CheckoutsController.PURPOSE_BY_STATUS[status];
-  }
-
-  @Post(':uuid/handover-token')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS)
-  @UsePipes(IssueHandoverTokenValidationPipe)
-  // ZodResponse 파일럿: 메서드 단위 interceptor 로 활성화 강제 (clase-wide 시 실수 유입 위험).
-  // 승격 조건: docs/references/backend-patterns.md "ZodResponse 적용 조건".
-  @UseInterceptors(ZodSerializerInterceptor)
-  @AuditLog({ action: 'create', entityType: 'checkout', entityIdPath: 'params.uuid' })
-  @ApiOperation({
-    summary: 'QR 인수인계 토큰 발급',
-    description:
-      '대면 인수인계 순간 모바일 스캔용 1회성 서명 토큰을 발급합니다. 10분 TTL, jti 기반 재사용 차단. ' +
-      '발급 권한은 해당 체크아웃의 신청자(requester) 또는 승인자(approver) + 관리자 역할.',
-  })
-  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
-  @ApiBody({ type: IssueHandoverTokenDto, required: false })
-  @ZodResponse({
-    status: HttpStatus.CREATED,
-    description: '토큰 발급 성공',
-    type: IssueHandoverTokenResponse,
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: '체크아웃 관계자가 아님 또는 전이 불가능한 상태',
-  })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async issueHandoverToken(
-    @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() dto: IssueHandoverTokenDto,
-    @Request() req: AuthenticatedRequest
-  ): Promise<IssueHandoverTokenResponse> {
-    const userId = extractUserId(req);
-    const checkout = await this.checkoutsService.findOne(uuid, req.user?.permissions ?? []);
-    if (!checkout) {
-      throw new NotFoundException({
-        code: ErrorCode.NotFound,
-        message: `Checkout ${uuid} not found.`,
-      });
-    }
-
-    // 권한: 신청자 또는 승인자 (양측 인수인계 당사자).
-    // 추가 role 기반 권한은 @RequirePermissions(VIEW_CHECKOUTS)로 이미 체크됨 — 여기선 관계 검증만.
-    const isParticipant = checkout.requesterId === userId || checkout.approverId === userId;
-    if (!isParticipant) {
-      throw new ForbiddenException({
-        code: ErrorCode.PermissionDenied,
-        message: 'Only checkout participants (requester or approver) can issue a handover token',
-      });
-    }
-
-    // 상태로부터 purpose 도출 — DTO가 명시한 purpose가 있으면 일치 여부 검증.
-    const derivedPurpose = this.derivePurposeFromStatus(checkout.status as CheckoutStatus);
-    if (!derivedPurpose) {
-      throw new BadRequestException({
-        code: ErrorCode.BadRequest,
-        message: `Handover token cannot be issued in status "${checkout.status}"`,
-      });
-    }
-    if (dto.purpose && dto.purpose !== derivedPurpose) {
-      throw new BadRequestException({
-        code: ErrorCode.BadRequest,
-        message: `Requested purpose "${dto.purpose}" mismatches checkout state "${checkout.status}"`,
-      });
-    }
-
-    return this.handoverTokenService.issue(uuid, userId, derivedPurpose);
-  }
-
-  @Post('handover/verify')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS)
-  @UsePipes(VerifyHandoverTokenValidationPipe)
-  @HttpCode(HttpStatus.OK)
-  @AuditLog({
-    action: 'read',
-    entityType: 'checkout',
-    entityIdPath: 'response.checkoutId',
-  })
-  @ApiOperation({
-    summary: 'QR 인수인계 토큰 검증 + 소비',
-    description:
-      '스캔으로 수신한 서명 토큰을 검증하고 jti를 1회 소비합니다. 성공 시 checkoutId와 purpose를 ' +
-      '반환하며, 프론트엔드는 이 정보로 기존 condition-check 페이지로 redirect합니다.',
-  })
-  @ApiBody({ type: VerifyHandoverTokenDto })
-  @UseInterceptors(ZodSerializerInterceptor)
-  @ZodResponse({
-    status: HttpStatus.OK,
-    description: '검증 성공 + jti 소비',
-    type: VerifyHandoverTokenResponse,
-  })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '무효 토큰' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '만료 토큰' })
-  @ApiResponse({ status: HttpStatus.CONFLICT, description: '이미 소비된 토큰' })
-  async verifyHandoverToken(
-    @Body() dto: VerifyHandoverTokenDto
-  ): Promise<VerifyHandoverTokenResponse> {
-    return this.handoverTokenService.verify(dto.token);
-  }
+  constructor(private readonly checkoutsService: CheckoutsService) {}
 
   @Post()
   @RequirePermissions(Permission.CREATE_CHECKOUT)

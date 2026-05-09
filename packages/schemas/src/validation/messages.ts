@@ -200,11 +200,6 @@ const audit = {
   action: { invalid: '유효하지 않은 액션입니다' },
 } as const;
 
-/** 인수인계(Handover) 검증 메시지 */
-const handover = {
-  token: { required: '토큰을 입력해주세요' },
-} as const;
-
 // ============================================================================
 // Export: VM (Validation Messages) — 단축 alias
 // ============================================================================
@@ -253,7 +248,6 @@ export const VM = {
   disposal,
   approval,
   audit,
-  handover,
 } as const;
 
 /** VM 타입 (테스트/확장용) */

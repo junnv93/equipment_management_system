@@ -383,12 +383,6 @@ export const routeMap: Record<string, RouteMetadata> = {
     icon: QrCode,
     hidden: true,
   },
-  '/handover': {
-    labelKey: 'navigation.handover',
-    parent: '/',
-    hidden: true,
-  },
-
   // ========================================
   // 인증 페이지 (브레드크럼 제외)
   // ========================================

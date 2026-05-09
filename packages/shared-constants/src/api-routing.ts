@@ -36,7 +36,7 @@ export const NEXTAUTH_PATH_PREFIX = '/api/auth' as const;
  *
  * 출처:
  *  - `apps/backend/src/modules/auth/auth.controller.ts` (login, refresh, profile, logout, azure-login)
- *  - `apps/backend/src/modules/auth/test-auth.controller.ts` (test, test-login, test-cache-clear, forge-handover-token)
+ *  - `apps/backend/src/modules/auth/test-auth.controller.ts` (test, test-login, test-cache-clear)
  *
  * 이 경로들은 frontend NextAuth가 server-side에서 직접 호출하거나(Credentials authorize),
  * 별도 백엔드 인증 흐름에서 사용된다.
@@ -50,7 +50,6 @@ export const BACKEND_AUTH_PATHS = [
   '/api/auth/test',
   '/api/auth/test-login',
   '/api/auth/test-cache-clear',
-  '/api/auth/forge-handover-token',
 ] as const;
 
 export type BackendAuthPath = (typeof BACKEND_AUTH_PATHS)[number];
@@ -97,7 +96,7 @@ export const NEXTAUTH_HANDLER_PATH_REGEX =
  * `(/.*)?` 접미사로 정확히 매칭한다.
  */
 export const BACKEND_AUTH_PATH_REGEX =
-  /^\/api\/auth\/(login|refresh|logout|profile|azure-login|test|test-login|test-cache-clear|forge-handover-token)(\/.*)?$/;
+  /^\/api\/auth\/(login|refresh|logout|profile|azure-login|test|test-login|test-cache-clear)(\/.*)?$/;
 
 /**
  * 경로가 NextAuth 핸들러로 라우팅되어야 하는지 판정.

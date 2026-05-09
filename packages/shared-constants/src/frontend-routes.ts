@@ -122,13 +122,6 @@ export const FRONTEND_ROUTES = {
    */
   SCAN: '/scan',
 
-  /**
-   * 인수인계 QR 확인 페이지 (Phase 3, 서명 토큰 기반).
-   * 토큰은 URL param이 아닌 query string(`?token=...`)으로 전달.
-   */
-  HANDOVER: (token?: string) =>
-    token ? `/handover?token=${encodeURIComponent(token)}` : '/handover',
-
   // ============================================================================
   // 반출 관리 (교정/수리/대여)
   // ============================================================================
@@ -143,10 +136,10 @@ export const FRONTEND_ROUTES = {
     DETAIL: (id: string) => `/checkouts/${id}`,
     CHECK: (id: string) => `/checkouts/${id}/check`,
     /**
-     * QR 핸드오버 스캔 후 condition-check 페이지 + step 자동 prefill 딥링크.
-     * `/handover?token=...` verify 성공 후 redirect 시 사용.
+     * condition-check 페이지 + step 자동 prefill 딥링크.
+     * 장비 QR 직접 스캔 후 `confirm_handover_receive` / `confirm_handover_return` 액션 진입 시 사용.
      *
-     * @param step HandoverTokenPurpose — 'borrower_receive' | 'borrower_return' | 'lender_receive'
+     * @param step 'borrower_receive' | 'borrower_return' | 'lender_receive'
      */
     CHECK_WITH_STEP: (id: string, step: string) =>
       `/checkouts/${id}/check?step=${encodeURIComponent(step)}`,

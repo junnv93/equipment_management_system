@@ -149,10 +149,6 @@ describe('BACKEND_AUTH_PATH_REGEX — dash-separated segment 정확히 매칭', 
     expect(BACKEND_AUTH_PATH_REGEX.test('/api/auth/test-cache-clear')).toBe(true);
   });
 
-  it('forge-handover-token 매칭', () => {
-    expect(BACKEND_AUTH_PATH_REGEX.test('/api/auth/forge-handover-token')).toBe(true);
-  });
-
   it('azure-login 매칭', () => {
     expect(BACKEND_AUTH_PATH_REGEX.test('/api/auth/azure-login')).toBe(true);
   });

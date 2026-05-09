@@ -36,9 +36,6 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   // ─── 인증 / 토큰 이상 (401) ───────────────────────────────────────────
   ErrorCode.InvalidCredentials,
   ErrorCode.SessionExpired,
-  ErrorCode.HandoverTokenInvalid,
-  ErrorCode.HandoverTokenExpired,
-  ErrorCode.HandoverTokenConsumed,
 
   // ─── 폐기(Disposal) fail-close — defense-in-depth bypass 차단 ────────
   ErrorCode.DisposalTeamScopeOnly,

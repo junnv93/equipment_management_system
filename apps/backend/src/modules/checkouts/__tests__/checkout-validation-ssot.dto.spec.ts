@@ -5,7 +5,6 @@ import { borrowerApproveCheckoutSchema } from '../dto/borrower-approve-checkout.
 import { bulkApproveSchema } from '../dto/bulk-approve.dto';
 import { createCheckoutSchema } from '../dto/create-checkout.dto';
 import { checkoutQuerySchema } from '../dto/checkout-query.dto';
-import { VerifyHandoverTokenSchema } from '../dto/handover-token.dto';
 import { startCheckoutSchema } from '../dto/start-checkout.dto';
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
@@ -23,33 +22,6 @@ describe('checkout DTO validation SSOT', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe(VM.checkout.duplicateEquipment);
-    }
-  });
-
-  it('handover token required 메시지는 VM.handover.token.required를 사용한다', () => {
-    const result = VerifyHandoverTokenSchema.safeParse({ token: '' });
-
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toBe(VM.handover.token.required);
-    }
-  });
-
-  it('handover token은 trim 후 빈 문자열이면 실패한다', () => {
-    const result = VerifyHandoverTokenSchema.safeParse({ token: '   ' });
-
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toBe(VM.handover.token.required);
-    }
-  });
-
-  it('handover token은 trim 후 값이 있으면 trimmed value를 반환한다', () => {
-    const result = VerifyHandoverTokenSchema.safeParse({ token: '  signed-token  ' });
-
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.token).toBe('signed-token');
     }
   });
 

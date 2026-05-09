@@ -14,8 +14,7 @@ import { randomUUID } from 'node:crypto';
  *    `data-migration.service`, `file-upload.service`, `form-template.service` 등.
  *
  * 2. **모듈 함수** (`generateAttachmentId`, `generateJti` 등) — `@Injectable()` 없는
- *    plain class / util / decorator에서 import. `OneTimeTokenService`처럼 DI를 우회하는
- *    경우(코어 라이브러리 패턴) 전용. SSOT 동일성 보장 — 둘 다 같은 `randomUUID()` 호출.
+ *    plain class / util / decorator에서 import. SSOT 동일성 보장 — 둘 다 같은 `randomUUID()` 호출.
  *
  * 도메인 의도 함수를 분리한 이유는 vendor 캡슐화: 향후 알고리즘
  * 전환(ulid, nanoid, KSUID 등)이 필요할 때 호출처를 추적할 필요 없이
