@@ -3,7 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { SentryErrorSink } from '../sentry-error-sink';
 import type { SystemErrorEventInput } from '../../../../common/system-health/contract';
 
+const mockSentryInit = jest.fn();
+const mockSentryCaptureMessage = jest.fn();
+
+jest.mock('@sentry/node', () => ({
+  init: (...args: unknown[]) => mockSentryInit(...args),
+  captureMessage: (...args: unknown[]) => mockSentryCaptureMessage(...args),
+}));
+
 describe('SentryErrorSink', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   function buildInput(): SystemErrorEventInput {
     return {
       errorCode: 'InternalServerError',
@@ -11,40 +23,88 @@ describe('SentryErrorSink', () => {
       normalizedRoute: '/api/equipment/:id',
       statusCode: 500,
       userId: null,
-      stackHash: 'hashx',
+      stackHash: 'abc123hash',
       stackPreview: null,
     };
   }
 
-  async function buildSink(dsn?: string): Promise<SentryErrorSink> {
-    const mockConfig = {
-      get: jest.fn((key: string) => (key === 'SENTRY_DSN' ? dsn : undefined)),
+  async function buildSink(
+    envOverrides: Record<string, string | undefined> = {}
+  ): Promise<SentryErrorSink> {
+    const env: Record<string, string | undefined> = {
+      SENTRY_DSN: undefined,
+      SENTRY_ENVIRONMENT: undefined,
+      SENTRY_RELEASE: undefined,
+      ...envOverrides,
     };
+    const mockConfig = { get: jest.fn((key: string) => env[key]) };
     const module = await Test.createTestingModule({
       providers: [SentryErrorSink, { provide: ConfigService, useValue: mockConfig }],
     }).compile();
     return module.get(SentryErrorSink);
   }
 
-  it('SENTRY_DSN 미설정 시 enabled=false + emit no-op', async () => {
-    const sink = await buildSink(undefined);
+  it('SENTRY_DSN 미설정 → Sentry.init 미호출 + isEnabled()===false + emit() no-op', async () => {
+    const sink = await buildSink({ SENTRY_DSN: undefined });
+
+    expect(mockSentryInit).not.toHaveBeenCalled();
     expect(sink.isEnabled()).toBe(false);
     await expect(sink.emit(buildInput())).resolves.toBeUndefined();
+    expect(mockSentryCaptureMessage).not.toHaveBeenCalled();
   });
 
-  it('SENTRY_DSN 빈 문자열 시 enabled=false', async () => {
-    const sink = await buildSink('');
+  it('SENTRY_DSN 빈 문자열 → enabled=false (falsy DSN 처리)', async () => {
+    const sink = await buildSink({ SENTRY_DSN: '' });
+
     expect(sink.isEnabled()).toBe(false);
+    expect(mockSentryInit).not.toHaveBeenCalled();
   });
 
-  it('SENTRY_DSN 설정 + @sentry/node 미설치 시 영구 비활성화 (1 회 warn 후 emit no-op)', async () => {
-    // dynamic import 가 실패하는 환경 — 의존성이 실제로 없으므로 내부 catch 블록 진입.
-    const sink = await buildSink('https://test@sentry.io/1');
+  it('SENTRY_DSN 설정 → Sentry.init 가 dsn 포함 객체로 호출됨 + isEnabled()===true', async () => {
+    const sink = await buildSink({ SENTRY_DSN: 'https://test@sentry.io/1' });
 
-    // 비동기 lazy load 가 끝날 때까지 기다린다.
-    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockSentryInit).toHaveBeenCalledWith(
+      expect.objectContaining({ dsn: 'https://test@sentry.io/1' })
+    );
+    expect(sink.isEnabled()).toBe(true);
+  });
 
-    // 의존성이 없으므로 emit 호출은 throw 없이 no-op.
-    await expect(sink.emit(buildInput())).resolves.toBeUndefined();
+  it('SENTRY_DSN 설정 + emit(input) → Sentry.captureMessage 가 올바른 형태로 호출됨', async () => {
+    const sink = await buildSink({ SENTRY_DSN: 'https://test@sentry.io/1' });
+    const input = buildInput();
+    await sink.emit(input);
+
+    expect(mockSentryCaptureMessage).toHaveBeenCalledWith(
+      `SystemErrorEvent: ${input.errorCode}`,
+      expect.objectContaining({
+        level: 'error',
+        tags: expect.objectContaining({
+          httpMethod: input.httpMethod,
+          normalizedRoute: input.normalizedRoute,
+          statusCode: String(input.statusCode),
+        }),
+        extra: expect.objectContaining({
+          stackHash: input.stackHash,
+          stackPreview: input.stackPreview,
+        }),
+      })
+    );
+  });
+
+  it('SENTRY_ENVIRONMENT + SENTRY_RELEASE 설정 시 Sentry.init 옵션에 포함됨 (S-1)', async () => {
+    const sink = await buildSink({
+      SENTRY_DSN: 'https://test@sentry.io/1',
+      SENTRY_ENVIRONMENT: 'production',
+      SENTRY_RELEASE: 'v1.2.3',
+    });
+
+    expect(sink.isEnabled()).toBe(true);
+    expect(mockSentryInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dsn: 'https://test@sentry.io/1',
+        environment: 'production',
+        release: 'v1.2.3',
+      })
+    );
   });
 });

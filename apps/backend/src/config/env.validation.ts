@@ -83,9 +83,16 @@ export const envSchema = z
     // 명시 설정 시 storageBackend 가 configured-capacity 모드, pg_database_size / 본 값으로 storagePct 계산.
     DASHBOARD_STORAGE_CAPACITY_BYTES: z.coerce.number().positive().optional(),
 
-    // Sentry DSN (선택). 설정 시 SystemErrorEventProvider 가 system_error_events 테이블 INSERT 와
-    // 동시에 Sentry 로 emit (옵션 sink). `@sentry/node` 는 dynamic import — 의존성 직접 설치 필요.
+    // Sentry (선택). 설정 시 SystemErrorEventProvider 가 system_error_events 테이블 INSERT 와
+    // 동시에 Sentry 로 emit (옵션 sink). `@sentry/node` 는 정식 의존성으로 등록됨.
     SENTRY_DSN: z.string().url().optional(),
+    SENTRY_ENVIRONMENT: z.string().optional(),
+    SENTRY_RELEASE: z.string().optional(),
+
+    // 비동기 작업 backlog 전략. 기본값: pending-work-aggregate (prom-client gauge 합산).
+    // bullmq 전환 시 ASYNC_WORK_QUEUE_NAMES 도 함께 설정 (콤마 구분 큐 이름 목록).
+    QUEUE_STRATEGY: z.enum(['pending-work-aggregate', 'bullmq']).optional(),
+    ASYNC_WORK_QUEUE_NAMES: z.string().optional(),
   })
   .refine(
     (data) =>

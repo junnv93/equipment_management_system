@@ -1,4 +1,5 @@
 import { Module, Global } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { DrizzleModule } from '../../database/drizzle.module';
@@ -10,11 +11,14 @@ import {
   STORAGE_HEALTH_PROVIDER,
   ASYNC_WORK_BACKLOG_PROVIDER,
   SYSTEM_ERROR_EVENT_PROVIDER,
+  type AsyncWorkBacklogProvider,
 } from '../../common/system-health/contract';
 import { StorageHealthProviderImpl } from './health-providers/storage-health.provider';
 import { AsyncWorkBacklogProviderImpl } from './health-providers/async-work-backlog.provider';
+import { BullmqBacklogProviderImpl } from './health-providers/bullmq-backlog.provider';
 import { SystemErrorEventProviderImpl } from './health-providers/system-error-event.provider';
 import { SentryErrorSink } from './health-providers/sentry-error-sink';
+import { SystemErrorEventsRetentionScheduler } from './health-providers/system-error-events-retention.scheduler';
 
 /**
  * 대시보드 모듈
@@ -33,9 +37,20 @@ import { SentryErrorSink } from './health-providers/sentry-error-sink';
     SentryErrorSink,
     StorageHealthProviderImpl,
     AsyncWorkBacklogProviderImpl,
+    BullmqBacklogProviderImpl,
     SystemErrorEventProviderImpl,
+    SystemErrorEventsRetentionScheduler,
     { provide: STORAGE_HEALTH_PROVIDER, useExisting: StorageHealthProviderImpl },
-    { provide: ASYNC_WORK_BACKLOG_PROVIDER, useExisting: AsyncWorkBacklogProviderImpl },
+    {
+      provide: ASYNC_WORK_BACKLOG_PROVIDER,
+      inject: [ConfigService, AsyncWorkBacklogProviderImpl, BullmqBacklogProviderImpl],
+      useFactory: (
+        configService: ConfigService,
+        defaultProvider: AsyncWorkBacklogProvider,
+        bullmqProvider: AsyncWorkBacklogProvider
+      ): AsyncWorkBacklogProvider =>
+        configService.get<string>('QUEUE_STRATEGY') === 'bullmq' ? bullmqProvider : defaultProvider,
+    },
     { provide: SYSTEM_ERROR_EVENT_PROVIDER, useExisting: SystemErrorEventProviderImpl },
   ],
   exports: [

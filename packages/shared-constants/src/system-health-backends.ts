@@ -2,7 +2,7 @@
  * SystemHealthMetricsDto 의 backend identity SSOT.
  *
  * 각 메트릭이 "어떤 데이터 소스로부터 답했는가" 를 운영자/관리자에게 투명하게 노출.
- * frontend `SystemHealthCard` 표시는 후속 sprint 에서 도입 (현재는 transparency 필드만 응답).
+ * frontend `SystemHealthCard` 의 `BackendBadge` 컴포넌트가 storage/queue/error 식별자를 Tooltip 으로 노출 (운영자 transparency 가시화).
  *
  * 분기 전략:
  *  - storage: host-disk(monitoring df 측정) → configured-capacity(env override) → pg-database(fallback, dbSize 만)
