@@ -5,6 +5,18 @@
 
 ---
 
+## ~~2026-05-10 — verify-i18n-step8-automation-promotion~~ ✅ 완료 (2026-05-10)
+
+> **핵심**: `verify-i18n` Step 8a/8b가 invariant 완전하지만 Evaluator contract grep 시점 미실행 → silent miss 방지 목적. `apps/frontend/scripts/verify-route-metadata.mjs` Phase 3 승격 + pre-push `_t "route-map"` gate 통합.
+>
+> **실제 결과**: 구현은 이미 90커밋 전 완료 상태 — 이번 sprint에서 잔여 작업 (i18n-checks.md Step 8 구 `node -e` 인라인 → 자동화 스크립트 참조 교체, SKILL.md Phase 3 명시) 처리.
+> Step 8c(orphan 키 탐지)도 함께 공식 문서화.
+>
+> **검증**: M-1~M-6 6/6 PASS (61 routes, 61 labelKeys, 72 pages / spec 9/9)
+> **커밋**: `7170cf5b docs(skill): verify-i18n Step 8 Phase 3 문서 현행화 + 클로저`
+
+---
+
 ## ~~2026-05-06 — commit-pipeline-safety SHOULD 후속 (S-2/S-3/S-4/S-5)~~ ✅ 완료 (2026-05-06~07)
 
 > **S-2 packages-lintstaged-lint-parity**: `verify-lint-ruleset-parity.mjs` SSOT에 packages 도메인 흡수 — `PARITY_SPEC.packages` + 5단계 검증 (lintstaged/glob/lint script/critical rules/restricted names+paths). 회귀 spec 추가.

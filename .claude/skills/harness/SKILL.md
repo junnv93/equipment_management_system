@@ -199,6 +199,31 @@ grep -c "^- \[x\]" .claude/exec-plans/tech-debt-tracker.md 2>/dev/null | grep -v
 
 Mode 1은 plan 파일 없으므로 생략. contract 이동은 Mode 1/2 모두 적용.
 
+#### example-prompts 아카이브 이동
+
+`example-prompts.md`에 해당 sprint 항목이 있으면 완료 후 반드시 아카이브로 이동한다.
+
+```
+1. example-prompts.md 에서 해당 sprint 블록(### 섹션 전체) 삭제
+2. 도메인에 맞는 archive-*.md 파일 상단(---  바로 아래)에 완료 형식으로 추가:
+   ## ~~{날짜} — {sprint-slug}~~ ✅ 완료 ({날짜})
+   > 핵심 내용 요약 (무엇을, 왜, 결과)
+   > 검증: M-N/N PASS
+   > 커밋: {hash} {message}
+3. archive-index.md 섹션 인덱스 표에 한 줄 추가 (최신 차수 맨 위)
+4. example-prompts.md 상단 "마지막 정리일" 날짜 갱신
+```
+
+**도메인 매핑:**
+
+| 내용 | 파일 |
+|------|------|
+| 스크립트/툴링/pre-push gate/E2E 인프라/CI | `archive-infra.md` |
+| 장비·점검·팀·SW 등 도메인 기능 | `archive-domain.md` |
+| 데이터 마이그레이션 | `archive-migration.md` |
+| DOCX export / 양식 | `archive-export.md` |
+| UI/UX 디자인 리뷰 | `archive-design.md` |
+
 ### 7b: PR 라이프사이클 (PASS 시)
 
 ```
