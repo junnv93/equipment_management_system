@@ -315,6 +315,52 @@ histogram_quantile(0.95,
 | ---------- | ----------- | --------- | ------------------------------------------------------ |
 | 2026-05-09 | > 0.1 req/s | > 1 req/s | 초기 추정값 — ADR-0008 §Alert Threshold Rationale 참조 |
 
+## Baseline Measurement — SortRejection Alert 임계값 보정 절차
+
+`SortRejectionRateHigh` / `SortRejectionSustainedAttack` 임계값은
+**초기 추정값** (warning `> 0.05 req/s` / critical drops `> 0.01 req/s`) 으로 배포됨.
+정상 운영 1-2주 후 아래 절차로 baseline 측정 + 임계값 보정.
+
+### 1. 정상 운영 baseline 측정
+
+```promql
+-- 1주 운영 중 sort_rejection_total 최대 순간 rate (분 단위 샘플)
+max_over_time(
+  sum(rate(sort_rejection_total[5m]))[7d:1m]
+)
+
+-- p95 rate (이상값 배제)
+quantile_over_time(0.95,
+  sum(rate(sort_rejection_total[5m]))[7d:1m]
+)
+
+-- drop rate baseline (rate-limit 발동 빈도)
+max_over_time(
+  sum(rate(sort_rejection_drops_total{reason="rate-limit"}[5m]))[7d:1m]
+)
+```
+
+### 2. 임계값 조정 기준
+
+| 상황                                                                 | 조치                                                      |
+| -------------------------------------------------------------------- | --------------------------------------------------------- |
+| False-positive 3회/주 이상 (정상 운영 중 SortRejectionRateHigh 경보) | warning = max_over_time × 5 (보안 alert는 보수적 유지)    |
+| Critical (SortRejectionSustainedAttack) 첫 발생                      | 공격 여부 확인 후 임계값 조정 — 정상 트래픽 패턴이면 상향 |
+| 임계 도달 없이 3개월 경과                                            | 임계값 유지 (보안 alert는 보수적 유지가 원칙)             |
+
+### 3. 임계값 변경 절차
+
+1. `infra/monitoring/prometheus/alert.rules.yml` `security_telemetry` 그룹 `expr` 수정
+2. `promtool check rules` 정적 검증 (§Workflow.3)
+3. Prometheus reload (§Workflow.4)
+4. 본 섹션 "보정 이력" 업데이트
+
+### 보정 이력
+
+| 날짜       | SortRejectionRateHigh | SortRejectionSustainedAttack        | 근거                                             |
+| ---------- | --------------------- | ----------------------------------- | ------------------------------------------------ |
+| 2026-05-09 | > 0.05 req/s (5m)     | drops{rate-limit} > 0.01 req/s (5m) | 초기 추정값 — 정상 사용자는 sort 오류 0건이 기준 |
+
 ---
 
 ## 참조
@@ -322,3 +368,4 @@ histogram_quantile(0.95,
 - ADR-0008 Backend Zod Error i18n SSOT — `docs/adr/0008-backend-zod-error-i18n.md`
 - MetricsService SSOT — `apps/backend/src/common/metrics/metrics.service.ts`
 - 본 sprint closure — `.claude/contracts/completed/zod-hub-should-s4-followups.md`
+- sort-rejection-cluster-prometheus sprint — `.claude/contracts/completed/sort-rejection-cluster-prometheus.md`

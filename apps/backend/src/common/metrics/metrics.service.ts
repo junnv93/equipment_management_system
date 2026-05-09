@@ -85,14 +85,14 @@ export class MetricsService {
 
     this.sortRejectionCounter = new Counter({
       name: 'sort_rejection_total',
-      help: 'Total sort field rejections logged (rate-limiter allowed). Labels: route (normalizedRoute), reason (SortRejectionReason).',
+      help: 'Total sort field rejections logged (rate-limiter allowed). Labels: route (normalizedRoute UUID-masked), reason (3 values). Cardinality: ~50 routes × 3 reasons = 150 ≤ 200 limit.',
       labelNames: ['route', 'reason'],
       registers: [this.registry],
     });
 
     this.sortRejectionDropsCounter = new Counter({
       name: 'sort_rejection_drops_total',
-      help: 'Total sort field rejections silently dropped by rate-limit/dedupe/fallback gates.',
+      help: 'Total sort field rejections silently dropped by rate-limit/dedupe/fallback gates. Labels: reason (3 values). Cardinality: 3.',
       labelNames: ['reason'],
       registers: [this.registry],
     });
