@@ -556,6 +556,32 @@ grep -rn "useRef<ReturnType<typeof setTimeout>\[\]>" \
 
 **관련 파일**: `apps/frontend/hooks/use-safe-timeout.ts` (SSOT)
 
+### Step 45: ApprovalList 파일 로컬 `ApprovalRowItem` memo 래퍼 4-layer 체인 회귀 차단 (2026-05-10 추가)
+
+**배경**: `ApprovalsClient → ApprovalList → ApprovalRowItem → ApprovalRow` 4-layer 체인.
+`ApprovalsClient`에서 `onReject`/`onViewDetail`에 인라인 람다를 전달하면 `ApprovalList` 전체가 재렌더되어 모든 행의 memo가 무효화된다.
+`ApprovalRowItem = memo(...)` 파일 로컬 래퍼가 per-item `useCallback`으로 `item` 바인딩을 흡수하는 구조.
+
+```bash
+# 1. ApprovalRow가 memo로 감싸졌는지 확인
+grep -n "^export const ApprovalRow = memo" \
+  apps/frontend/components/approvals/ApprovalRow.tsx
+# 기대값: ≥1 hit
+
+# 2. ApprovalList에 파일 로컬 ApprovalRowItem memo 래퍼 존재 확인
+grep -n "const ApprovalRowItem = memo" \
+  apps/frontend/components/approvals/ApprovalList.tsx
+# 기대값: ≥1 hit
+
+# 3. ApprovalsClient → ApprovalList 인라인 람다 0건 확인
+# onReject/onViewDetail에 인라인 화살표 전달 시 4-layer 체인 붕괴
+grep -n "onReject={(item)\|onViewDetail={(item)\|onReject={() =>\|onViewDetail={() =>" \
+  apps/frontend/components/approvals/ApprovalsClient.tsx
+# 기대값: 0 — stable useCallback 변수 참조만 허용
+```
+
+**관련 파일**: `apps/frontend/components/approvals/ApprovalRow.tsx`, `ApprovalList.tsx`, `ApprovalsClient.tsx`
+
 ## Output Format
 
 ```markdown
@@ -605,6 +631,7 @@ grep -rn "useRef<ReturnType<typeof setTimeout>\[\]>" \
 | 42  | RejectModal mode='domain' 위임 | PASS/FAIL | 인라인 showRejectInput 토글 또는 mode='domain' 누락 위치 |
 | 43  | useEquipmentCalibrations dual-variant hook | PASS/FAIL | calibrationApi.getEquipmentCalibrations/getCalibrationHistory 직접 호출 위치 |
 | 44  | useSafeTimeout SSOT                        | PASS/FAIL | 신규 hooks/components 내 수동 타이머 배열 관리(useRef<setTimeout[]>) 위치 |
+| 45  | ApprovalList 4-layer memo 체인             | PASS/FAIL | ApprovalRow memo 0건 / ApprovalRowItem 래퍼 0건 / ApprovalsClient 인라인 람다 위치 |
 ```
 
 ## Exceptions
