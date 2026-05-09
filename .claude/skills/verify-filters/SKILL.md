@@ -402,6 +402,66 @@ grep -n "pageSize=999999\\|PAGE_SIZE_OPTIONS에 없는 pageSize" \
 **PASS:** URL `pageSize`는 shared `PAGE_SIZE_OPTIONS` 값만 통과하고, oversized/unknown 값은 기본값으로 폴백.
 **FAIL:** 임의 양수 pageSize가 `queryFilters`/API params로 그대로 흐름.
 
+### Step 13: 교정 result 필터 타입 SSOT — API 인터페이스 → filter-utils → hook 전체 체인 (2026-05-09 추가)
+
+**배경**: `calibration-api.ts` 인터페이스 5곳(`Calibration`, `CalibrationHistory`, `CalibrationQuery`, `CreateCalibrationDto`, `CreateHistoricalCalibrationDto`)에서 `result?: string`을 사용하면, `UICalibrationFilters.result: CalibrationResult | ''`로 타입 강화해도 API 경계에서 `string` 위닝이 잔존한다. Root-cause는 API 소스 타입이지, consumer(filter-utils)가 아니다. 이 Step은 소스 → filter-utils → hook 3계층 전체 체인을 검증한다.
+
+**규칙**: `CalibrationResult` 타입은 반드시 `@equipment-management/schemas`에서 import해야 하며, URL 파싱 경계에서는 `CalibrationResultEnum.safeParse`를 사용해야 한다. `result?: string` 또는 `result: 'pass' | 'fail' | 'conditional'` 인라인 union은 SSOT 위반이다.
+
+**탐지 (1) — calibration-api.ts `result?: string` 잔존:**
+```bash
+# calibration-api.ts 내 enum 필드 string 위닝 탐지
+grep -n "result.*: string\|result\?.*: string" \
+  apps/frontend/lib/api/calibration-api.ts
+# 기대: 0건 (result 필드는 CalibrationResult 또는 CalibrationResult | '' 타입)
+```
+
+**탐지 (2) — filter-utils에서 CalibrationResult 타입 강화 확인:**
+```bash
+# UICalibrationFilters.result 타입 확인
+grep -n "result.*CalibrationResult\|result.*: CalibrationResult" \
+  apps/frontend/lib/utils/calibration-filter-utils.ts
+# 기대: ≥ 2건 (UICalibrationFilters.result + ApiCalibrationFilters.result)
+
+# filter-utils에서 CalibrationResultEnum.safeParse 사용 확인
+grep -n "CalibrationResultEnum.safeParse\|safeParse" \
+  apps/frontend/lib/utils/calibration-filter-utils.ts
+# 기대: ≥ 1건 (URL 파싱 경계에서 safeParse 사용)
+```
+
+**탐지 (3) — hook에서 CalibrationResult 타입 확인:**
+```bash
+# use-calibration-filters.ts updateResult 파라미터 타입 확인
+grep -n "updateResult\|result.*CalibrationResult" \
+  apps/frontend/hooks/use-calibration-filters.ts
+# 기대: updateResult = (result: CalibrationResult | '') 형태
+
+# hook에서 result: string 잔존 탐지
+grep -n "result.*: string\b" \
+  apps/frontend/hooks/use-calibration-filters.ts
+# 기대: 0건
+```
+
+**탐지 (4) — CalibrationHistorySection.tsx RESULT_LABEL_KEYS + RESULT_SEMANTIC `as const satisfies Record<CalibrationResult, V>` 확인:**
+```bash
+# RESULT_LABEL_KEYS, RESULT_SEMANTIC이 string key를 사용하지 않는지 확인
+grep -n "Record<string" apps/frontend/components/equipment/CalibrationHistorySection.tsx
+# 기대: 0건 (Record<CalibrationResult, ...> satisfies 패턴 사용)
+
+grep -n "satisfies Record<CalibrationResult" apps/frontend/components/equipment/CalibrationHistorySection.tsx
+# 기대: ≥ 2건 (RESULT_LABEL_KEYS + RESULT_SEMANTIC)
+```
+
+**PASS 기준:**
+- `calibration-api.ts`의 모든 `result` 필드가 `CalibrationResult` 타입 사용 (0건 `result?: string`)
+- `UICalibrationFilters.result: CalibrationResult | ''`, `ApiCalibrationFilters.result?: CalibrationResult`
+- URL 파싱 경계에서 `CalibrationResultEnum.safeParse` 사용
+- `RESULT_LABEL_KEYS`, `RESULT_SEMANTIC`이 `as const satisfies Record<CalibrationResult, V>`
+
+**FAIL 기준:**
+- `result?: string` 잔존 → `calibration-api.ts` 5개 인터페이스 전체 수정 필요 (consumer만 수정하면 root-cause 미해결)
+- `value as 'pass' | 'fail' | 'conditional'` 인라인 union cast → `CalibrationResultEnum.safeParse` 블록 구문으로 교체
+
 ## Output Format
 
 ```markdown
@@ -419,6 +479,7 @@ grep -n "pageSize=999999\\|PAGE_SIZE_OPTIONS에 없는 pageSize" \
 | 10  | checkout purpose 필터 타입 SSOT | PASS/FAIL | purpose: string 잔존 또는 enum 검증 누락 위치 |
 | 11  | IMPORT_SUBTAB_STATUS_GROUPS SSOT 위치 + 인라인 배열 금지 | PASS/FAIL | checkout-filter-utils.ts 외 재정의 또는 InboundTab 인라인 EIV 배열 위치 |
 | 12  | Equipment URL pageSize 허용값 SSOT | PASS/FAIL | PAGE_SIZE_OPTIONS 미경유 또는 oversized pageSize 테스트 누락 |
+| 13  | 교정 result 필터 타입 SSOT chain | PASS/FAIL | calibration-api.ts `result?: string` 잔존 또는 safeParse 미사용 |
 ```
 
 ## Exceptions
