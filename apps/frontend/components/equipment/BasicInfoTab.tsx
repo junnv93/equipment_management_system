@@ -23,7 +23,7 @@ import {
 } from '@/lib/design-tokens';
 import { Badge } from '@/components/ui/badge';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import calibrationApi from '@/lib/api/calibration-api';
+import { useEquipmentCalibrations } from '@/hooks/use-equipment-calibrations';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import type { Equipment } from '@/lib/api/equipment-api';
 
@@ -49,13 +49,9 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   const equipmentId = String(equipment.id);
 
-  // 최근 교정이력 — CalibrationHistoryTab과 동일 queryKey로 캐시 공유
-  const { data: calibrations = [] } = useQuery({
-    queryKey: queryKeys.calibrations.byEquipment(equipmentId),
-    queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
-    enabled: !!equipmentId,
-    ...QUERY_CONFIG.CALIBRATION_LIST,
-  });
+  // 최근 교정이력 — CalibrationHistoryTab 과 동일 hook 으로 cache config(QUERY_CONFIG.HISTORY) 일관 공유
+  // (이전: 직접 useQuery + CALIBRATION_LIST config 호출 — 동일 queryKey 의 config compete 위험 차단)
+  const { data: calibrations = [] } = useEquipmentCalibrations(equipmentId);
 
   // 장비 문서 (사진, 매뉴얼)
   const { data: equipmentDocs = [] } = useQuery({

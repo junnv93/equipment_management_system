@@ -99,18 +99,23 @@ export function CalibrationHistoryClient({
   const calibrations = useMemo<CalibrationHistory[]>(() => historyData?.data ?? [], [historyData]);
 
   // 필터 SSOT — URL 파라미터 (메인 `/calibration` 키 일관: approvalStatus/result/startDate/endDate)
-  // 빈 값 = URL 미포함 (clean URLs). Select 는 useFilterSelect 'all' sentinel 그대로.
+  // 빈 값 + sentinel `_all` 모두 URL 미포함 (clean URLs). useFilterSelect 기본 sentinel `_all` 사용.
+  // 메인 URL 호환: 사용자가 `?approvalStatus=_all` deep-link 진입 시 `_all` 을 빈 값 처리해 silent miss 차단.
   const router = useRouter();
   const searchParams = useSearchParams();
-  const approvalFilter = (searchParams.get('approvalStatus') ?? '') as ApprovalFilter;
-  const resultFilter = (searchParams.get('result') ?? '') as ResultFilter;
+  const approvalRaw = searchParams.get('approvalStatus') ?? '';
+  const approvalFilter: ApprovalFilter =
+    approvalRaw === '_all' ? '' : (approvalRaw as ApprovalFilter);
+  const resultRaw = searchParams.get('result') ?? '';
+  const resultFilter: ResultFilter = resultRaw === '_all' ? '' : (resultRaw as ResultFilter);
   const dateFrom = searchParams.get('startDate') ?? '';
   const dateTo = searchParams.get('endDate') ?? '';
 
   const updateFilter = useCallback(
     (key: 'approvalStatus' | 'result' | 'startDate' | 'endDate', value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value) {
+      // sentinel `_all` + 빈 값 모두 URL 에서 제거 (clean URLs + 메인 일관 sentinel 호환)
+      if (value && value !== '_all') {
         params.set(key, value);
       } else {
         params.delete(key);
@@ -133,8 +138,10 @@ export function CalibrationHistoryClient({
   const setDateFrom = useCallback((v: string) => updateFilter('startDate', v), [updateFilter]);
   const setDateTo = useCallback((v: string) => updateFilter('endDate', v), [updateFilter]);
 
-  const approvalSelect = useFilterSelect<ApprovalFilter>(approvalFilter, setApprovalFilter, 'all');
-  const resultSelect = useFilterSelect<ResultFilter>(resultFilter, setResultFilter, 'all');
+  // sentinel `_all` — 메인 `/calibration` 일관 (`useFilterSelect` 기본값). 사용자가 메인 URL 의
+  // `?approvalStatus=_all` 을 sub-route 에 paste 시 호환 (sentinel 불일치로 인한 silent filter miss 차단).
+  const approvalSelect = useFilterSelect<ApprovalFilter>(approvalFilter, setApprovalFilter);
+  const resultSelect = useFilterSelect<ResultFilter>(resultFilter, setResultFilter);
 
   // Frontend filter
   const filtered = useMemo(() => {
@@ -253,7 +260,7 @@ export function CalibrationHistoryClient({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('filters.approvalStatusAll')}</SelectItem>
+            <SelectItem value="_all">{t('filters.approvalStatusAll')}</SelectItem>
             <SelectItem value="pending_approval">
               {t('filters.approvalOptions.pending_approval')}
             </SelectItem>
@@ -270,7 +277,7 @@ export function CalibrationHistoryClient({
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('filters.resultAll')}</SelectItem>
+            <SelectItem value="_all">{t('filters.resultAll')}</SelectItem>
             <SelectItem value="pass">{t('filters.resultOptions.pass')}</SelectItem>
             <SelectItem value="fail">{t('filters.resultOptions.fail')}</SelectItem>
             <SelectItem value="conditional">{t('filters.resultOptions.conditional')}</SelectItem>
