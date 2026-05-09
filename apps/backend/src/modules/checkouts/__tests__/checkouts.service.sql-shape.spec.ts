@@ -21,7 +21,6 @@ import { CheckoutsService } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
-import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
 import {
   createMockDrizzle,
   renderSQL,
@@ -30,7 +29,6 @@ import {
 import {
   createMockCacheService,
   createMockEventEmitter,
-  createMockEquipmentImportsService,
 } from '../../../common/testing/mock-providers';
 import type { CheckoutQueryDto } from '../dto/checkout-query.dto';
 import { AuditService } from '../../audit/audit.service';
@@ -57,7 +55,6 @@ describe('CheckoutsService — SQL shape regression', () => {
           },
         },
         { provide: TeamsService, useValue: { findOne: jest.fn() } },
-        { provide: EquipmentImportsService, useValue: createMockEquipmentImportsService() },
         { provide: EventEmitter2, useValue: createMockEventEmitter() },
         {
           provide: AuditService,
