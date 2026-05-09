@@ -25,8 +25,8 @@
 
 import { test, expect, type Page } from '../../shared/fixtures/auth.fixture';
 import { expectToastVisible } from '../../shared/helpers/toast-helpers';
-import { BASE_URLS, TEST_NC_IDS, TEST_USER_IDS } from '../../shared/constants/shared-test-data';
-import { Pool } from 'pg';
+import { TEST_NC_IDS } from '../../shared/constants/shared-test-data';
+import { resetNcsToCorrected } from '../../shared/helpers/nc-seed-helpers';
 
 const TEST_NC_ID = TEST_NC_IDS.NC_006_WITH_REPAIR;
 const REJECT_PATH = `**/api/non-conformances/${TEST_NC_ID}/reject-correction`;
@@ -34,37 +34,31 @@ const VALID_REJECT_REASON =
   '백엔드 Zod 검증 실패 응답 후 토스트 i18n 라우팅 검증을 위한 mock 사유 (≥10자)';
 
 /**
- * 시드 NC_006 을 corrected 상태로 reset — `nc-rejection-flow.spec.ts` 패턴 차용.
- *
- * 멱등성 보장: 본 spec 의 PATCH 는 page.route() 인터셉트로 mock 응답이라 DB 미변경이지만,
- * 다른 spec 의 reject 결과(`status='open'`) 가 잔존하면 reject 버튼이 사라져 spec 실패.
+ * NEXT_LOCALE 쿠키 설정 — `language-switching.spec.ts` 패턴 차용.
+ * en locale 분기 검증용 (ADR-0008 ko/en parity).
  */
-async function resetNcToCorrected(): Promise<void> {
-  const pool = new Pool({ connectionString: BASE_URLS.DATABASE, max: 2 });
-  try {
-    await pool.query(
-      `UPDATE non_conformances
-       SET status = 'corrected', version = 1,
-           rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
-           closed_by = NULL, closed_at = NULL, closure_notes = NULL,
-           corrected_by = $2, correction_date = NOW() - INTERVAL '3 days',
-           correction_content = '내부 연결부 교체 완료',
-           updated_at = NOW()
-       WHERE id = $1`,
-      [TEST_NC_ID, TEST_USER_IDS.TECHNICAL_MANAGER_SUWON]
-    );
-    await fetch(`${BASE_URLS.BACKEND}/api/auth/test-cache-clear`, { method: 'POST' });
-  } finally {
-    await pool.end();
-  }
+async function setLocale(page: Page, locale: 'ko' | 'en'): Promise<void> {
+  await page.context().addCookies([
+    {
+      name: 'NEXT_LOCALE',
+      value: locale,
+      domain: 'localhost',
+      path: '/',
+      expires: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
+      sameSite: 'Lax',
+    },
+  ]);
 }
 
 /**
  * 반려 다이얼로그 열기 → 사유 입력 → 제출 (page.route mock 가 응답을 가로챔).
+ *
+ * locale 별 라벨 매칭: ko='반려'/'조치 반려', en='Reject'/'Reject Corrective Action'.
  */
 async function triggerRejectWithMockedFailure(
   page: Page,
-  issues: ReadonlyArray<{ code: string; path: ReadonlyArray<string | number>; params?: object }>
+  issues: ReadonlyArray<{ code: string; path: ReadonlyArray<string | number>; params?: object }>,
+  locale: 'ko' | 'en' = 'ko'
 ): Promise<void> {
   // PATCH 만 mock — GET 등 다른 메서드는 실 backend 로 위임 (테스트 격리)
   await page.route(REJECT_PATH, async (route) => {
@@ -83,25 +77,28 @@ async function triggerRejectWithMockedFailure(
   await page.goto(`/non-conformances/${TEST_NC_ID}`);
 
   // 액션바의 반려 버튼 (RejectModal 내부 submit 버튼과 구분 — 다이얼로그 열리기 전 단계)
-  const rejectBtn = page.getByRole('button', { name: /^반려$/ });
+  const rejectBtnNameRe = locale === 'ko' ? /^반려$/ : /^Reject$/;
+  const rejectDialogNameRe = locale === 'ko' ? /조치 반려/ : /Reject Corrective Action/;
+
+  const rejectBtn = page.getByRole('button', { name: rejectBtnNameRe });
   await expect(rejectBtn).toBeVisible({ timeout: 15_000 });
   await rejectBtn.click();
 
-  const dialog = page.getByRole('dialog', { name: /조치 반려/ });
+  const dialog = page.getByRole('dialog', { name: rejectDialogNameRe });
   await expect(dialog).toBeVisible({ timeout: 10_000 });
 
   // RejectModal 내부 textarea — RejectReasonSchema (≥10자) 통과용 mock 사유
   await dialog.getByRole('textbox').fill(VALID_REJECT_REASON);
 
-  // 다이얼로그 내부 제출 버튼 — submitLabel='반려', mode='domain' (액션바 버튼과 dialog scope 로 구분)
-  await dialog.getByRole('button', { name: /^반려$/ }).click();
+  // 다이얼로그 내부 제출 버튼 — submitLabel='반려'/'Reject', mode='domain' (액션바 버튼과 dialog scope 로 구분)
+  await dialog.getByRole('button', { name: rejectBtnNameRe }).click();
 }
 
 test.describe('ADR-0008 — Backend Zod fail → Frontend toast i18n routing (browser)', () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeAll(async () => {
-    await resetNcToCorrected();
+    await resetNcsToCorrected([TEST_NC_ID]);
   });
 
   test.beforeEach(async ({}, testInfo) => {
@@ -142,5 +139,22 @@ test.describe('ADR-0008 — Backend Zod fail → Frontend toast i18n routing (br
     // 다중 issue 는 mapZodIssuesToToast 가 ", " 로 join — 한 토스트에 두 메시지 모두 노출
     await expectToastVisible(techManagerPage, /반려 사유.*너무 작습니다/);
     await expectToastVisible(techManagerPage, /버전.*형식이 올바르지 않습니다.*필요 형식: number/);
+  });
+
+  test('en locale → too_small Zod issue → 영문 토스트 ("Rejection reason" + "is too small (minimum ...)")', async ({
+    techManagerPage,
+  }) => {
+    // ADR-0008 ko/en parity 런타임 검증 — i18n key 라우팅이 locale 분기에서도 정확히 동작하는지 결빙
+    await setLocale(techManagerPage, 'en');
+
+    await triggerRejectWithMockedFailure(
+      techManagerPage,
+      [{ code: 'too_small', path: ['rejectionReason'], params: { minimum: 5 } }],
+      'en'
+    );
+
+    // 기대: errors.validation.too_small (en) "{field} is too small (minimum {minimum})"
+    //      + errors.fields.rejectionReason (en) "Rejection reason"
+    await expectToastVisible(techManagerPage, /Rejection reason is too small.*minimum 5/);
   });
 });

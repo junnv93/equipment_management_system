@@ -109,6 +109,11 @@ _frontend i18n key 누락에서만_ 발생한다.
      런타임 토스트 i18n 라우팅 e2e 검증 spec
      (`apps/frontend/tests/e2e/features/i18n/zod-fail-toast.spec.ts`) 도 동시 등록 — ts-morph 정적 +
      backend unit + 브라우저 런타임 3-layer defense-in-depth 완성 (`zod-hub-should-s4-followups` sprint).
+     **[2026-05-09 라운드 #2 확장]** 운영 maturity 보강 — `runbook` + `runbook_url` annotation
+     필드 신설 (운영자 즉시 행동 절차 / 단기 완화 옵션 inline) + `docs/operations/prometheus-alert-rules.md`
+     신설 (rule 추가/reload/`promtool` 검증/AlertManager 라우팅 Workflow + alert 별 Runbook 4건 +
+     트러블슈팅) + `promtool check rules` 정적 검증 SUCCESS 13 rules. critical alert 발생 시
+     본 §4 의 3 옵션 (다중 issue 압축 / Accept-Language 부분 도입 / frontend 사전 검증 강화) 검토.
 
 ## Scope
 

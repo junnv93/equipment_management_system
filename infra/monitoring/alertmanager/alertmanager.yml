@@ -28,6 +28,11 @@ route:
       repeat_interval: 4h
 
 receivers:
+  # 텍스트 템플릿 메모:
+  #   - description / summary: 모든 alert 가 보유 (필수)
+  #   - runbook (multi-line): 운영자 즉시 행동 절차 — 보유 alert 만 노출 (`{{ if }}` 가드)
+  #   - runbook_url: 상세 절차 링크 (`docs/operations/prometheus-alert-rules.md` anchor)
+  #   신규 alert 추가 시 runbook + runbook_url 권고 — `docs/operations/prometheus-alert-rules.md` §Workflow 참조
   - name: 'slack-critical'
     slack_configs:
       - api_url: '${SLACK_WEBHOOK}'
@@ -40,6 +45,9 @@ receivers:
           *Details:*
           {{ range .Alerts }}
             - *{{ .Labels.instance }}*: {{ .Annotations.summary }}
+            {{ if .Annotations.runbook }}*Runbook:*
+          ```{{ .Annotations.runbook }}```{{ end }}
+            {{ if .Annotations.runbook_url }}*Details:* <{{ .Annotations.runbook_url }}|운영 절차 문서>{{ end }}
           {{ end }}
         color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
 
@@ -55,6 +63,9 @@ receivers:
           *Details:*
           {{ range .Alerts }}
             - *{{ .Labels.instance }}*: {{ .Annotations.summary }}
+            {{ if .Annotations.runbook }}*Runbook:*
+          ```{{ .Annotations.runbook }}```{{ end }}
+            {{ if .Annotations.runbook_url }}*Details:* <{{ .Annotations.runbook_url }}|운영 절차 문서>{{ end }}
           {{ end }}
         color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
 
