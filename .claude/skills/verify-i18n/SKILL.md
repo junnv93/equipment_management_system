@@ -514,17 +514,21 @@ const fs = require('fs');
 // mapper 파일 → 사용 namespace 매핑 (useTranslations 네임스페이스 기준)
 const MAPPER_NS = [
   ['apps/frontend/lib/errors/disposal-errors.ts',                  'disposal'],
-  ['apps/frontend/lib/errors/calibration-plan-errors.ts',          'calibration-plans'],
   ['apps/frontend/lib/errors/non-conformance-errors.ts',           'non-conformances'],
   ['apps/frontend/lib/errors/cables-errors.ts',                    'cables'],
   ['apps/frontend/lib/errors/test-software-errors.ts',             'software'],
   ['apps/frontend/lib/errors/software-validation-errors.ts',       'software'],
   ['apps/frontend/lib/errors/self-inspection-errors.ts',           'equipment'],
   ['apps/frontend/lib/errors/intermediate-inspection-errors.ts',   'calibration'],
+  ['apps/frontend/lib/errors/calibration-errors.ts',               'calibration'],
+  ['apps/frontend/lib/errors/calibration-factor-errors.ts',        'calibration'],
   ['apps/frontend/lib/errors/checkout-errors.ts',                  'checkouts'],
   ['apps/frontend/lib/errors/notification-errors.ts',              'notifications'],
   ['apps/frontend/lib/errors/team-errors.ts',                      'teams'],
   ['apps/frontend/lib/errors/user-errors.ts',                      'users'],
+  ['apps/frontend/lib/errors/approval-errors.ts',                  'approvals'],
+  ['apps/frontend/lib/errors/equipment-import-errors.ts',          'equipment'],
+  // calibration-plan-errors.ts 는 planErrors.* 서브네임스페이스 사용 (예외 — 아래 예외 항목 참조)
 ];
 const BASELINE_KEYS = ['errors.title', 'errors.genericError'];
 const locales = ['ko', 'en'];
@@ -563,10 +567,12 @@ if (allPass) console.log('PASS: 모든 active mapper namespace에 errors.title/e
 - mapper의 `useTranslations` 호출 namespace를 컴포넌트 호출처 grep으로 확인 후 등재.
 
 **예외**:
-- mapper 파일이 `t('errors.title')` 대신 fallback을 `error.message`로만 처리하면 baseline 키 불필요 — 스킵.
-- `checkout-errors.ts`, `team-errors.ts`, `user-errors.ts`, `notification-errors.ts`는 tech-debt 파일로 파일 미존재 시 자동 스킵.
+- `calibration-plan-errors.ts` — `t('errors.title')` 대신 `t('planErrors.title')` + `t('planErrors.genericError')` 사용 (calibration.json planErrors 서브네임스페이스). `errors.title` 호출 없으므로 스크립트가 자동 스킵. planErrors 키는 `calibration.json`에 위치.
+- `checkout-errors.ts`, `team-errors.ts`, `user-errors.ts`, `notification-errors.ts`는 파일 미존재 시 자동 스킵 (`fs.existsSync` 가드).
 
-**발생 이력 (2026-05-03 신설)**: `notfound-direct-throw-closure` Phase C — `non-conformances.json`과 `software.json`에서 mapper가 이미 `t('errors.title')` + `t('errors.genericError')`를 호출하고 있었으나 키 미존재 상태였던 pre-existing gap 발견. 해당 세션에서 수정하면서 이 검증 step 등록.
+**발생 이력**:
+- **(2026-05-03 신설)**: `notfound-direct-throw-closure` Phase C — `non-conformances.json`과 `software.json`에서 mapper가 이미 `t('errors.title')` + `t('errors.genericError')`를 호출하고 있었으나 키 미존재 상태였던 pre-existing gap 발견. 해당 세션에서 수정하면서 이 검증 step 등록.
+- **(2026-05-09 업데이트)**: 14개 도메인 mapper의 generic fallback을 `error.message` → `t('errors.genericError')`로 통일. MAPPER_NS에 4개 추가(`approval-errors`, `calibration-errors`, `calibration-factor-errors`, `equipment-import-errors`). `calibration-plan-errors.ts`의 planErrors.* 특수케이스 예외 문서화.
 
 ### Step 21: ADR-0008 tErrors 3-param 주입 — mapper 호출처 2-인자 패턴 탐지 (2026-05-09 추가)
 
