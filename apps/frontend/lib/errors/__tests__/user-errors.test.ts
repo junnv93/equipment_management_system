@@ -29,7 +29,7 @@ describe('user error routing', () => {
 
   it('falls back to errors.genericError i18n key for unmapped errors (ADR-0008)', () => {
     expect(mapUserErrorToToast(new Error('custom backend message'), t).description).toBe(
-      'errors.genericError'
+      't:errors.genericError'
     );
   });
 });
