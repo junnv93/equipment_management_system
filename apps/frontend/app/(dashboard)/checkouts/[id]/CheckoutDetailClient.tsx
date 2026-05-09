@@ -77,7 +77,6 @@ import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineEr
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
-import { HandoverActionButton } from '@/components/checkouts/HandoverActionButton';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -102,7 +101,7 @@ export default function CheckoutDetailClient({
   const tCommon = useTranslations('common');
   const { fmtDate, fmtDateTime } = useDateFormatter();
   const router = useRouter();
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
@@ -506,15 +505,6 @@ export default function CheckoutDetailClient({
           <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>
         <div className="flex gap-2">
-          {user?.id && (
-            <HandoverActionButton
-              checkoutId={checkout.id}
-              status={checkout.status as CheckoutStatus}
-              currentUserId={user.id}
-              requesterId={checkout.requesterId ?? ''}
-              approverId={checkout.approverId}
-            />
-          )}
           {isCheckoutExportable(checkout.status) && (
             <ExportFormButton
               formNumber="UL-QP-18-06"
