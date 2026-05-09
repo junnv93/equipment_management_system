@@ -51,9 +51,21 @@ Use explicit mode if user specifies (`mode0`, `mode1`, `mode2`). Otherwise, anal
 
 | Mode | Condition | Execution |
 |------|-----------|-----------|
-| **0** (Direct) | ≤3 files, no logic change (i18n, config, typo, docs) | Bypass harness |
+| **0** (Direct) | ≤3 files, no logic change (i18n, config, typo, docs, SKILL.md Step 추가) | Bypass harness |
 | **1** (Lightweight) | 4~15 files, single domain, existing patterns | Generator → Evaluator loop |
-| **2** (Full) | 15+ files, DB change, new module, multi-domain | Planner → Generator → Evaluator |
+| **2** (Full) | 15+ files **AND** (DB schema change OR new module OR multi-domain) | Planner → Generator → Evaluator |
+
+**Mode 2 진입 게이트 (AND 조건):** 파일 수가 많더라도 단일 도메인 + 기존 패턴 확장이면 Mode 1 선택. Mode 2는 Planner(opus) Agent 비용이 크므로 AND 조건 둘 다 충족할 때만 사용.
+
+**Mode 1 우선 원칙:** Mode 1과 Mode 2 사이에서 판단이 어려울 경우 Mode 1을 선택한다. Planner가 없어도 Generator가 CLAUDE.md + exec-plan 없이 직접 구현 가능하면 Mode 1로 충분하다.
+
+### 세션 컨텍스트 점검 (컨텍스트 비대 방지)
+
+harness 시작 전 현재 세션이 무거운지 확인한다:
+- 이번 세션에서 이미 harness를 1회 이상 완료했거나
+- "continue" / "계속" 으로 긴 대화를 이어가고 있다면
+
+→ **`/clear` 후 새 컨텍스트에서 harness 시작 권장.** 5분 이상 공백이 생긴 경우에도 동일. 캐시 TTL(5분)이 지나면 전체 컨텍스트가 cold hit으로 재계산되어 캐시 브레이크가 발생한다.
 
 Report determination to user in one line and confirm before proceeding. Mode 0 exits this skill immediately.
 
@@ -218,6 +230,8 @@ PR 생성 후 에이전트 리뷰가 가능한 경우(review-architecture, revie
 - SHOULD 실패 항목 → tech-debt-tracker.md 확인
 - FAIL → evaluations/{slug}.md 검토 후 수동 수정
 - 엔트로피 점검 권장: `/harness entropy` (3회 이상 반복된 경우)
+- **manage-skills 통합**: 이번 harness에서 새 패턴/규칙이 도입됐다면 Step 7 마지막에 `/manage-skills` 실행 (별도 세션 대신 현재 컨텍스트에서 흡수)
+- **다음 sprint 준비**: 바로 다음 harness 진행 예정이라면 → `/clear` 후 신선한 컨텍스트에서 시작 권장 (캐시 TTL 5분 — 공백이 생기면 cold hit 발생)
 ```
 
 ---

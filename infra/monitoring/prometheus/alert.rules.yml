@@ -108,3 +108,35 @@ groups:
         annotations:
           summary: 'API 응답 시간 p95 > 3초'
           description: '최근 5분 p95 응답 시간: {{ $value | printf "%.2f" }}초'
+
+  # Validation Telemetry Alerts (ADR-0008 §4 Trigger Conditions for Reconsideration)
+  # zod_validation_issues_total Counter — domain_route × issue_count_bucket (1/2-5/6-10/11+)
+  # 11+ bucket 폭주 → 응답 payload size +30% 위험 (다중 issue 압축 / Accept-Language 부분 도입 등 검토)
+  - name: validation
+    interval: 30s
+    rules:
+      - alert: ZodValidationIssuesHighCount
+        expr: |
+          sum(rate(zod_validation_issues_total{issue_count_bucket="11+"}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Zod 검증 11+ issue 응답 빈발'
+          description: |
+            5분 평균 0.1건/초 (= 6건/분) 초과. 단일 폼 광범위 검증 누락(클라이언트 사전 검증 회귀)
+            또는 backend DTO schema 드리프트 가능성. ADR-0008 §4 reconsideration 트리거.
+            value={{ $value | printf "%.3f" }} req/s
+
+      - alert: ZodValidationIssuesPersistentSpike
+        expr: |
+          sum(rate(zod_validation_issues_total{issue_count_bucket="11+"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Zod 검증 11+ bucket 지속 폭주 (긴급)'
+          description: |
+            5분 평균 1건/초 초과 — backend payload size +30% 위험 임계 도달.
+            ADR-0008 §4 즉시 재검토 (다중 issue 압축 / Accept-Language 부분 도입 등).
+            value={{ $value | printf "%.3f" }} req/s

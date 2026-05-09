@@ -103,6 +103,12 @@ _frontend i18n key 누락에서만_ 발생한다.
    `domain_route` × `issue_count_bucket` (`1`/`2-5`/`6-10`/`11+`) 라벨로 Prometheus sink 완료
    (`zod-i18n-mapper-hub-closure` sprint). 신규 reconsideration 트리거: `issue_count_bucket="11+"`
    bucket rate p95 지속 발생 시.
+   **[2026-05-09 closure]** Prometheus AlertManager rule (`infra/monitoring/prometheus/alert.rules.yml`
+   `validation` 그룹) 등록 완료 — `ZodValidationIssuesHighCount` (warning, 10m, > 0.1 req/s)
+   - `ZodValidationIssuesPersistentSpike` (critical, 5m, > 1 req/s) 2-tier escalation.
+     런타임 토스트 i18n 라우팅 e2e 검증 spec
+     (`apps/frontend/tests/e2e/features/i18n/zod-fail-toast.spec.ts`) 도 동시 등록 — ts-morph 정적 +
+     backend unit + 브라우저 런타임 3-layer defense-in-depth 완성 (`zod-hub-should-s4-followups` sprint).
 
 ## Scope
 

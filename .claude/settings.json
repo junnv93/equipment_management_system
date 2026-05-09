@@ -27,6 +27,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "calls=$(ls ~/.claude/projects/ 2>/dev/null | wc -l); stash=$(git stash list 2>/dev/null | wc -l); dirty=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' '); echo \"[session-end] dirty=$dirty stash=$stash\"; if [ \"$dirty\" -gt 0 ]; then echo \"[session-end] WARNING: uncommitted changes — run /git-commit before closing\"; fi; echo \"[cache-tip] 다음 harness sprint 시작 전 /clear 권장 — 캐시 TTL 5분 초과 시 cold hit 발생\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
