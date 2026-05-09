@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { getApprovalsInvalidationKeys } from '@/lib/api/approvals-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { type ApprovalCategory, type ApprovalItem, TAB_META } from '@/lib/api/approvals-api';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
@@ -42,17 +42,6 @@ export function useApprovalsBulkMutations({
   const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
   const [bulkApproveComment, setBulkApproveComment] = useState('');
 
-  const getInvalidationKeys = useCallback(
-    () => [
-      queryKeys.approvals.countsAll,
-      queryKeys.approvals.kpi(activeTab),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
-    [activeTab]
-  );
-
   const bulkApproveMutation = useOptimisticMutation<
     { success: string[]; failed: string[] },
     { ids: string[]; comment?: string },
@@ -61,7 +50,10 @@ export function useApprovalsBulkMutations({
     mutationFn: async ({ ids, comment }) => approvalsApi.bulkApprove(activeTab, ids, comment),
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [...getInvalidationKeys(), queryKeys.calibrations.intermediateChecks()],
+    invalidateKeys: [
+      ...getApprovalsInvalidationKeys(activeTab),
+      queryKeys.calibrations.intermediateChecks(),
+    ],
     errorMessage: t('toasts.bulkApproveError'),
     onSuccessCallback: (result, { ids }) => {
       if (result.failed.length > 0 && result.success.length === 0) {
@@ -99,7 +91,7 @@ export function useApprovalsBulkMutations({
     mutationFn: async ({ ids, reason }) => approvalsApi.bulkReject(activeTab, ids, reason),
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: getInvalidationKeys(),
+    invalidateKeys: getApprovalsInvalidationKeys(activeTab),
     errorMessage: t('toasts.bulkRejectError'),
     onSuccessCallback: (result, { ids }) => {
       if (result.failed.length > 0 && result.success.length === 0) {

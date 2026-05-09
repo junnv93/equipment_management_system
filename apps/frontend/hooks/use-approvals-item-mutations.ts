@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { getApprovalsInvalidationKeys } from '@/lib/api/approvals-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { type ApprovalCategory, type ApprovalItem, TAB_META } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
@@ -37,17 +37,6 @@ export function useApprovalsItemMutations({
   const [approveCommentItem, setApproveCommentItem] = useState<ApprovalItem | null>(null);
   const [approveComment, setApproveComment] = useState('');
 
-  const getInvalidationKeys = useCallback(
-    () => [
-      queryKeys.approvals.countsAll,
-      queryKeys.approvals.kpi(activeTab),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-      queryKeys.equipment.all,
-      queryKeys.nonConformances.all,
-    ],
-    [activeTab]
-  );
-
   const approveMutation = useOptimisticMutation<
     void,
     { item: ApprovalItem; comment?: string },
@@ -65,7 +54,10 @@ export function useApprovalsItemMutations({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [...getInvalidationKeys(), queryKeys.calibrations.intermediateChecks()],
+    invalidateKeys: [
+      ...getApprovalsInvalidationKeys(activeTab),
+      queryKeys.calibrations.intermediateChecks(),
+    ],
     successMessage: (_, { item }) =>
       t('toasts.approveDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.approveError'),
@@ -91,7 +83,7 @@ export function useApprovalsItemMutations({
     },
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: getInvalidationKeys(),
+    invalidateKeys: getApprovalsInvalidationKeys(activeTab),
     successMessage: (_, { item }) =>
       t('toasts.rejectDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.rejectError'),

@@ -1,25 +1,18 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { APPROVAL_MOTION } from '@/lib/design-tokens';
+import { useSafeTimeout } from '@/hooks/use-safe-timeout';
 
 /**
  * 승인/반려 행 전환 애니메이션 상태 머신
  *
  * processingIds: 처리 중(스피너), exitingIds: exit 애니메이션 중.
- * setTimeout cleanup이 이 훅 내부에서만 발생 — 4개 mutation에 흩어진 중복 제거.
- * unmount 시 pendingTimers를 전부 clearTimeout — 메모리 누수 방지.
+ * 타이머 정리는 useSafeTimeout SSOT에 위임 — unmount 시 자동 clearTimeout.
  */
 export function useApprovalRowTransitions() {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [exitingIds, setExitingIds] = useState<Map<string, 'success' | 'reject'>>(new Map());
 
-  const pendingTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => {
-    // ref 배열 참조를 effect 내부에 캡처 — 동일 배열 객체를 가리킴 (exhaustive-deps 준수)
-    const timers = pendingTimers.current;
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, []);
+  const setSafeTimeout = useSafeTimeout();
 
   const startProcessing = useCallback((id: string) => {
     setProcessingIds((prev) => new Set(prev).add(id));
@@ -29,43 +22,47 @@ export function useApprovalRowTransitions() {
     setProcessingIds((prev) => new Set([...prev, ...ids]));
   }, []);
 
-  const completeTransition = useCallback((id: string, outcome: 'success' | 'reject') => {
-    setProcessingIds((prev) => {
-      const s = new Set(prev);
-      s.delete(id);
-      return s;
-    });
-    setExitingIds((prev) => new Map(prev).set(id, outcome));
-    const timerId = setTimeout(() => {
-      setExitingIds((prev) => {
-        const m = new Map(prev);
-        m.delete(id);
-        return m;
+  const completeTransition = useCallback(
+    (id: string, outcome: 'success' | 'reject') => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
       });
-    }, APPROVAL_MOTION.exitDurationMs);
-    pendingTimers.current.push(timerId);
-  }, []);
+      setExitingIds((prev) => new Map(prev).set(id, outcome));
+      setSafeTimeout(() => {
+        setExitingIds((prev) => {
+          const m = new Map(prev);
+          m.delete(id);
+          return m;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
+    },
+    [setSafeTimeout]
+  );
 
-  const completeTransitionMany = useCallback((ids: string[], outcome: 'success' | 'reject') => {
-    setProcessingIds((prev) => {
-      const s = new Set(prev);
-      ids.forEach((id) => s.delete(id));
-      return s;
-    });
-    setExitingIds((prev) => {
-      const m = new Map(prev);
-      ids.forEach((id) => m.set(id, outcome));
-      return m;
-    });
-    const timerId = setTimeout(() => {
+  const completeTransitionMany = useCallback(
+    (ids: string[], outcome: 'success' | 'reject') => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        ids.forEach((id) => s.delete(id));
+        return s;
+      });
       setExitingIds((prev) => {
         const m = new Map(prev);
-        ids.forEach((id) => m.delete(id));
+        ids.forEach((id) => m.set(id, outcome));
         return m;
       });
-    }, APPROVAL_MOTION.exitDurationMs);
-    pendingTimers.current.push(timerId);
-  }, []);
+      setSafeTimeout(() => {
+        setExitingIds((prev) => {
+          const m = new Map(prev);
+          ids.forEach((id) => m.delete(id));
+          return m;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
+    },
+    [setSafeTimeout]
+  );
 
   const cancelProcessing = useCallback((id: string) => {
     setProcessingIds((prev) => {
