@@ -1,24 +1,17 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-09** — tab-subroute ADR-0009 Option C 완료, calibration-cert 전 갭 완료, Sprint 2 (Tokens 봉합) 완료, 반출입 페이지 PR-1~PR-23 전체 완료 → archive 이동.
+> **마지막 정리일: 2026-05-10** — approval-row-memo-i18n-ci-cache 3건(ApprovalRow memo·dep-audit cache·HeroKPI i18n) archive 이동 완료 → 해당 항목 제거. verify-route-metadata Phase3 승격 완료, Checkouts V3 Sprint 1(Authority 4종) + Sprint 3(Perf&Cache 3종) 전부 completed/ 이동 → 해당 항목 제거.
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
 
 ---
 
-## 🟡 다음 세션 — 자동화 gate + e2e 커버리지
+## 🟡 다음 세션 — sub-route e2e 커버리지
 
-> **ADR-0009 Option C 채택 완료 (2026-05-09)**: Tab vs Sub-route 혼합 패턴 + URL SSOT 명시. `tab-subroute-architecture-decision-closure` sprint 종결.
+> **ADR-0009 Option C 채택 완료 (2026-05-09)**: Tab vs Sub-route 혼합 패턴 + URL SSOT 명시. `verify-route-metadata` Phase3 승격 완료(pre-push hook 통합 + spec).
 
-### 🟡 MEDIUM (Mode 1) — `verify-i18n-step8-automation-promotion`
-
-**상태**: `verify-i18n` Step 8a/8b는 *invariant 완전*하지만 Evaluator(contract grep) 시점 미실행 → 본 sprint 자기검토 #2에서 silent miss 사례 발생 (`route-metadata.ts` + `navigation.json` 누락이 production push 직전까지 catch 안 됨).
-
-**프롬프트 (paste 가능)**:
-> `/harness mode1` `apps/frontend/scripts/verify-route-metadata.mjs` 신설 — verify-i18n Step 8a/8b grep을 Phase 3 승격. (1) filesystem `apps/frontend/app/(dashboard)/**/page.tsx` scan + dynamic route 정규화 (`[id]` 등). (2) `lib/navigation/route-metadata.ts` regex parse → labelKey 추출. (3) `messages/{ko,en}/navigation.json` key set equality 검증. (4) page.tsx → routeMap 역방향 검증 (redirect-only 페이지 제외). pre-push hook(`.husky/pre-push` `_t "route-map"` step) 통합 — < 5초 실행. 회귀 spec `scripts/__tests__/verify-route-metadata.spec.mjs` (5+ cases — 정상 PASS / labelKey 누락 / page.tsx 미등록 / redirect-only 제외 / 동적 라우트 정규화). 기존 Phase 3 패턴 참고: `apps/frontend/scripts/verify-design-tokens.ts` + `apps/backend/scripts/verify-e2e-actor-alignment.ts`.
-
-### 🟢 LOW (Mode 1, 위 sprint 통합 권장) — `sub-route-navigation-e2e-coverage`
+### 🟢 LOW (Mode 1) — `sub-route-navigation-e2e-coverage`
 
 **상태**: sub-route(`/equipment/[id]/calibration-history`)에 Playwright e2e spec 0건. RTL spec(jsdom)이 chip/dialog 회귀 보호하지만 *URL deep-link → server prefetch → Client → Tab 통합* 전체 flow 미검증. ADR-0009 Option C 채택 기준: sub-route 직접 spec + Tab 연동 redirect spec 양쪽 필요.
 
@@ -30,18 +23,9 @@
 > **메모리**: `project_88_checkouts_v3_roadmap_20260424.md`
 > **배경**: 외부 아키텍처 리뷰 V2(18 findings) 전수 대응. 사용자 결정: 5-Sprint 전체·BFF 포함·Phase-based '1/3 phase'·편의성 U-01~U-12 전량.
 
-### Sprint 1 · Authority 수술 (Contract 5종 — 1.1 완료·1.2 스키마 선착수, 1.3~1.5 대기)
-1. `.claude/contracts/checkout-descriptor-phase-fields.md` (P1 F-3 · RentalPhase + nextStepIndex 필드) — ⚠️ 스키마 4필드 선착수 (phase/nextStepIndex/phaseIndex/totalPhases checkout-fsm.ts 추가). rental-phase.ts SSOT (getRentalPhase·RENTAL_STATUS_TO_PHASE satisfies) M3·M4 미완 → 96차 Sprint 1.2 잔여분
-3. `.claude/contracts/checkout-meta-fail-closed.md` (P0 F-2 · `?? false` 전환 + E2E 12)
-4. `.claude/contracts/legacy-actions-block-removal.md` (P0 F-1·C-1 · LegacyActionsBlock 완전 삭제)
-5. `.claude/contracts/checkout-fsm-exhaustive-satisfies.md` (§5 · satisfies 전수 전환)
-
-### Sprint 3 · Perf & Cache (Contract 3종 작성 완료 — 실행 대기)
-10. `.claude/contracts/checkout-inbound-bff-overview.md` (P-1 · BFF 신설 + canary)
-11. `.claude/contracts/checkout-query-keys-view-resource-refactor.md` (§3 · view.*/resource.*)
-12. `.claude/contracts/checkout-memo-boundary-optimization.md` (P-2·P-3·P-4)
-
 ### 🔶 다음 세션 작업 — Sprint 4·5 Contract 작성 (미착수)
+
+> Sprint 1 (Authority 4종) + Sprint 3 (Perf&Cache 3종) 전부 **completed/** 이동 완료 (2026-05-10).
 - **Sprint 4 (UX Flow)** — 15개 내외 contract 예상:
   - 4.1 NextStepPanel 단일 렌더(compact+hero+actor variant)
   - 4.2 Row 3-zone grid (`grid-cols-[3px_72px_1fr_auto]`)
@@ -51,8 +35,8 @@
 - **Sprint 5 (Visual Polish)** — 5~7개 contract:
   - 5.1 Empty state 3색 / 5.2 Typography 6단계 / 5.3 Color semantic 5축 / 5.4 Density & rhythm / 5.5 Icon & motion
 
-### 실행 순서 (Contract 작성 이후)
-Sprint 1.1 `resolveNextAction` → 1.2 → 1.3 → 1.4 → 1.5 → 2.1~2.8 (병행 가능) → 3.1+3.2(같은 PR) → 3.3 → 4.x → 5.x. 각 contract는 harness 오케스트레이터(Planner→Generator→Evaluator) 루프로 순차 구현. FE analytics instrumentation은 §10 metrics 수집 기반으로 선행.
+### 실행 순서 (Sprint 1~3 완료 기준)
+~~Sprint 1~3 완료~~ → Sprint 4 Contract 작성(4.1~4.5.12) → Sprint 5 Contract 작성(5.1~5.5) → 각 contract harness 루프 순차 구현. FE analytics instrumentation은 §10 metrics 수집 기반으로 선행.
 
 ---
 
@@ -196,100 +180,6 @@ Agent C (`name="fleet-infra"`, `subagent_type="Explore"`, `run_in_background=tru
 > - **False positive 9건**: `.env` git 추적(미추적·.env.example만 tracked), PaginationPrevious "Previous"(dead export·0 callers), TeamListContent searchInput(debounce-then-sync 표준), loading.tsx 누락 5경로((auth)/error 자체가 error route·login fast form·help 정적·visual-fixtures group·handover error.tsx 있음), Drizzle relations() 5건 미정의(approvalDelegations·rejection-presets·csp-reports·system-settings·inspection-result-sections — `db.query.<table>` 사용처 0건, leaf entity)
 > - **사용자 결정 5건**: Backend Query DTO trim/max 11건(verify-zod Step 12는 .min(N) required만 강제·c82ae0ef는 Create/Update DTO만 처리·Query optional은 정책 미정), use-inspection-template.ts TODO(Phase 1B-E 호출자 등장으로 outdated — 코멘트만 update or 제거)
 
-### 🟠 HIGH — ApprovalRow React.memo 누락 (Mode 0)
-
-```
-배경: 승인 목록 행 렌더링 ApprovalRow가 React.memo 없이 export — list re-render 시 모든 행 재렌더.
-ApprovalList.tsx:100에서 map으로 다수 렌더링됨. 동일 도메인 row 컴포넌트(YourTurnBadge·NextStepPanel·ProgressFlowSection)는 모두 memo 적용됨.
-
-위치:
-- apps/frontend/components/approvals/ApprovalRow.tsx:53 (export function ApprovalRow)
-- 호출자: apps/frontend/components/approvals/ApprovalList.tsx:100 (<ApprovalRow ...>)
-
-작업:
-1. ApprovalRow를 React.memo로 wrap:
-   const ApprovalRowComponent = (props: ApprovalRowProps) => { ... }
-   export const ApprovalRow = React.memo(ApprovalRowComponent);
-2. props에 함수형 콜백(onApprove/onReject/onToggleSelect/onViewDetail)이 매 렌더 새로 생성되지 않도록
-   ApprovalList에서 useCallback으로 안정화 검토.
-
-검증:
-- pnpm tsc --noEmit exit 0
-- grep "React.memo\|memo(" ApprovalRow.tsx → 1건 hit
-- 기존 e2e/spec PASS
-```
-
-### 🟠 HIGH — main.yml dep-audit job pnpm cache 누락 (Mode 0)
-
-```
-배경: main.yml dep-audit job(.github/workflows/main.yml:389)가 setup-node에 cache: pnpm 옵션 없이
-node_modules만 actions/cache. pnpm metadata fetch가 매 런마다 발생 → CI 시간 낭비.
-다른 job들은 setup-node cache: pnpm 또는 동등 패턴 사용.
-
-위치:
-- .github/workflows/main.yml:389-401 (dep-audit job)
-
-작업:
-1. setup-node에 cache: pnpm 추가 (다른 job 패턴 참고):
-   uses: actions/setup-node@... # v6
-   with:
-     node-version: ${{ env.NODE_VERSION }}
-     cache: pnpm
-2. 기존 actions/cache(node_modules)와 충돌 시, 한쪽 선택 (대부분 pnpm cache가 더 효율).
-
-검증:
-- main.yml dep-audit job push → cache hit log 확인 (Cache Restored)
-- CI 전체 시간 측정 (before/after)
-```
-
-### 🟡 MEDIUM — HeroKPI sr-only 한국어 하드코딩 (Mode 0)
-
-```
-배경: 트렌드 아이콘(TrendingUp/Down/Minus)의 sr-only 텍스트가 한국어 하드코딩.
-i18n SSOT(messages/{ko,en}/checkouts.json) 우회.
-
-위치:
-- apps/frontend/components/checkouts/HeroKPI.tsx:51 ("증가 추세")
-- apps/frontend/components/checkouts/HeroKPI.tsx:57 ("감소 추세")
-- apps/frontend/components/checkouts/HeroKPI.tsx:63 ("변동 없음")
-
-작업:
-1. messages/ko/checkouts.json + messages/en/checkouts.json에 키 추가:
-   "heroKpi": { "trendUp": "증가 추세", "trendDown": "감소 추세", "trendFlat": "변동 없음" }
-   en: "Trend Up" / "Trend Down" / "No Change"
-2. HeroKPI에 useTranslations('checkouts') hook 추가 + t('heroKpi.trendUp/Down/Flat') 사용
-3. 기존 sr-only 클래스 유지
-
-검증:
-- grep -E "(증가|감소|변동) 추세|변동 없음" HeroKPI.tsx → 0건
-- pnpm tsc --noEmit exit 0
-- ko/en parity: grep -c "trendUp\|trendDown\|trendFlat" messages/{ko,en}/checkouts.json → 양쪽 동일
-```
-
-### 🟡 MEDIUM — CalibrationValidityChecker 한국어 Alert 하드코딩 (Mode 0)
-
-```
-배경: 교정 유효기간 검증 Alert의 title/description이 한국어 하드코딩. 영문 환경에서 Korean 노출.
-
-위치:
-- apps/frontend/components/equipment/CalibrationValidityChecker.tsx:51,53-55 ("교정 유효기간 부족", "차기교정일...")
-- apps/frontend/components/equipment/CalibrationValidityChecker.tsx:63,65 ("교정 유효기간 확인됨", "차기교정일까지 N일...")
-
-작업:
-1. messages/ko/equipment.json + messages/en/equipment.json에 키 추가:
-   "calibrationValidity": {
-     "insufficient": { "title": "교정 유효기간 부족", "description": "..." },
-     "verified": { "title": "교정 유효기간 확인됨", "description": "차기교정일까지 {days}일..." }
-   }
-2. useTranslations('equipment') hook 적용, fmtDate/daysBuffer는 ICU 변수로 전달
-3. invalid → t('calibrationValidity.insufficient.description', { nextCalDate, endDate })
-
-검증:
-- grep "교정 유효기간\|차기교정일" CalibrationValidityChecker.tsx → 0건
-- en/ko 동일 키 셋
-- e2e: 장비 폼에서 Alert 노출 시 i18n locale 따라 변경
-```
-
 ### 🟡 MEDIUM — Large Component Refactor (3 components · Mode 2)
 
 ```
@@ -317,31 +207,6 @@ i18n SSOT(messages/{ko,en}/checkouts.json) 우회.
 
 ⚠️ Mode 2 작업. 사용자 우선순위 결정 필요.
 ```
-
-### 🟢 LOW — use-inspection-template.ts TODO 코멘트 정리 (Mode 0)
-
-```
-배경: use-inspection-template.ts:75 "Phase 1B-E TODO" 코멘트가 stale.
-1B-D 시점 "호출자 0건" 가정으로 작성됐으나, 현재 InspectionFormDialog.tsx:198·716에서
-실제로 useUpsertTemplate.mutate() 호출 중 (CAS handler까지 구현됨).
-
-위치:
-- apps/frontend/hooks/use-inspection-template.ts:75-79
-
-작업 옵션 (사용자 결정):
-A. TODO 제거 + 현재 구조(호출자가 직접 fetch-before-mutate) 정착으로 코멘트 update
-B. 정말로 useCasGuardedMutation으로 wrap 진행 (memory: useCasGuardedMutation SSOT)
-   → 호출자(InspectionFormDialog)의 latestTemplate.version+1 로직을 hook으로 흡수
-
-권장: 옵션 A — useCasGuardedMutation 패턴이 다른 도메인(checkouts/calibration-plans)에서
-이미 안정화됐고, template 영역은 SoftForkDialog 흐름 통합 후에도 호출자가 명시적 version 결정해야
-하는 도메인 특성 (inline diff 계산 후 mutate). hook wrap의 추가 가치 낮음.
-
-검증:
-- TODO 제거 후 grep "Phase 1B-E TODO" → 0건
-- 코멘트가 실제 코드 흐름과 일치
-```
-
 
 
 ## 34차 후속 — wf20-infra-debt harness 결과 review-architecture tech debt

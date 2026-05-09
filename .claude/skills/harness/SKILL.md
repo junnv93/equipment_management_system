@@ -254,6 +254,7 @@ PR 생성 후 에이전트 리뷰가 가능한 경우(review-architecture, revie
 - PASS → /git-commit 실행 후 PR 생성
 - SHOULD 실패 항목 → tech-debt-tracker.md 확인
 - FAIL → evaluations/{slug}.md 검토 후 수동 수정
+- **⚠️ example-prompts.md 정리 (필수)**: example-prompts.md에 이번 sprint 항목이 있으면 반드시 삭제 후 해당 archive-*.md로 이동. Step 7a의 "example-prompts 아카이브 이동" 4단계 참조. 누락 시 완료 항목이 example-prompts.md에 영구 잔류함.
 - 엔트로피 점검 권장: `/harness entropy` (3회 이상 반복된 경우)
 - **manage-skills 통합**: 이번 harness에서 새 패턴/규칙이 도입됐다면 Step 7 마지막에 `/manage-skills` 실행 (별도 세션 대신 현재 컨텍스트에서 흡수)
 - **다음 sprint 준비**: 바로 다음 harness 진행 예정이라면 → `/clear` 후 신선한 컨텍스트에서 시작 권장 (캐시 TTL 5분 — 공백이 생기면 cold hit 발생)
