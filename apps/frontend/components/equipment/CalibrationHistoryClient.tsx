@@ -26,6 +26,7 @@ import {
   CALIBRATION_APPROVAL_STATUS_VALUES,
   CALIBRATION_RESULT_VALUES,
   type CalibrationApprovalStatus,
+  type CalibrationResult,
 } from '@equipment-management/schemas';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
@@ -51,7 +52,7 @@ interface CalibrationHistoryClientProps {
 }
 
 type ApprovalFilter = '' | CalibrationApprovalStatus;
-type ResultFilter = '' | 'pass' | 'fail' | 'conditional';
+type ResultFilter = '' | CalibrationResult;
 
 interface DerivedStats {
   total: number;

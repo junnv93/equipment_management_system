@@ -50,6 +50,7 @@ import { SelfInspectionsModule } from './modules/self-inspections/self-inspectio
 import { InspectionFormTemplatesModule } from './modules/inspection-form-templates/inspection-form-templates.module';
 import { FormTemplateModule } from './modules/reports/form-template.module';
 import { SecurityModule } from './modules/security/security.module';
+import { SecurityTelemetryModule } from './common/security/security-telemetry.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { SecurityModule } from './modules/security/security.module';
     MetricsModule,
     AuditModule,
     I18nModule, // 글로벌 i18n 서비스 (Accept-Language 기반 로케일)
+    SecurityTelemetryModule, // sort enum reject 등 보안 이벤트 telemetry (@Global)
 
     // 데이터베이스 모듈
     DrizzleModule,
