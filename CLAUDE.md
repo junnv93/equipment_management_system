@@ -80,7 +80,7 @@ equipment_management_system/
     └── development/             # Development guides
 ```
 
-### Backend Modules (26)
+### Backend Modules (27)
 
 > SSOT 정합: `commitlint.config.js` `BACKEND_MODULE_SCOPES` 와 1:1 (`scripts/__tests__/commitlint-config.spec.mjs` fs-sync spec 자동 검증).
 
@@ -99,6 +99,7 @@ equipment_management_system/
 | `documents` | `modules/documents/` | 문서 관리 (SHA-256, Presigned URL, 버전 관리) |
 | `equipment` | `modules/equipment/` | 장비 CRUD + 폐기 + 수리이력 |
 | `equipment-imports` | `modules/equipment-imports/` | 장비 반입 (구 rental-imports) |
+| `inbound-overview` | `modules/inbound-overview/` | 반입 현황 BFF (표준반입 + 렌탈 + 공용 3섹션 집계) |
 | `inspection-form-templates` | `modules/inspection-form-templates/` | 점검 양식 템플릿 (UL-QP-18-02 시험설비이력카드) |
 | `intermediate-inspections` | `modules/intermediate-inspections/` | 중간 점검 관리 |
 | `monitoring` | `modules/monitoring/` | 시스템 모니터링 |

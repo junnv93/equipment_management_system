@@ -24,6 +24,7 @@ const BACKEND_MODULE_SCOPES = [
   'documents',
   'equipment',
   'equipment-imports',
+  'inbound-overview',
   'inspection-form-templates',
   'intermediate-inspections',
   'monitoring',
