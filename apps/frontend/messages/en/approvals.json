@@ -558,6 +558,7 @@
   },
   "errors": {
     "title": "Delegation processing failed",
+    "genericError": "An error occurred. Please try again.",
     "delegationSelfForbidden": "You cannot delegate approval to yourself.",
     "delegationInvalidPeriod": "Delegation start date must be before the end date."
   }

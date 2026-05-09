@@ -52,7 +52,7 @@ export function mapCheckoutErrorToToast(
 
   return {
     title: t('errors.title'),
-    description: error instanceof Error ? error.message : String(error),
+    description: t('errors.genericError'),
   };
 }
 

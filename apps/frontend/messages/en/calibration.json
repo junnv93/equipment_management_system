@@ -1110,6 +1110,7 @@
   },
   "planErrors": {
     "title": "Action Failed",
+    "genericError": "An error occurred. Please try again.",
     "notFound": "Calibration plan not found.",
     "itemNotFound": "Calibration plan item not found.",
     "alreadyExists": "A calibration plan for the same year/team already exists.",

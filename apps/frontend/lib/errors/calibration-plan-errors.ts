@@ -81,6 +81,6 @@ export function mapCalibrationPlanErrorToToast(
 
   return {
     title: t('planErrors.title'),
-    description: error instanceof Error ? error.message : String(error),
+    description: t('planErrors.genericError'),
   };
 }
