@@ -282,7 +282,9 @@ export class CacheInvalidationHelper {
   invalidateEquipmentImportsWithEquipment(): void {
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}*`);
-    this.logger.debug('✓ Invalidated equipment import + equipment caches');
+    // inbound-overview BFF는 equipment-imports 집계를 포함하므로 함께 무효화
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.INBOUND_OVERVIEW}*`);
+    this.logger.debug('✓ Invalidated equipment import + equipment + inbound-overview caches');
   }
 
   /**

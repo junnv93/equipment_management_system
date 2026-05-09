@@ -774,6 +774,10 @@ export class EquipmentImportsService extends VersionedBaseService {
    * return_to_vendor checkout 반납 완료 이벤트 핸들러.
    * CheckoutsService가 직접 호출하지 않고 NOTIFICATION_EVENTS.IMPORT_RETURN_COMPLETED 이벤트로 발행.
    * import status: return_requested → returned, 장비 status → inactive.
+   *
+   * SKIP_CACHE_REGISTRY: 도메인 이벤트이므로 cache-event.registry.ts 미등록.
+   * 캐시 무효화는 핸들러 내 cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment()가 직접 수행
+   * (equipment-imports:* + equipment:* + inbound-overview:* 포함).
    */
   @OnEvent(NOTIFICATION_EVENTS.IMPORT_RETURN_COMPLETED, { async: true })
   async onReturnCompleted({ checkoutId }: { checkoutId: string }): Promise<void> {
@@ -869,6 +873,8 @@ export class EquipmentImportsService extends VersionedBaseService {
    * return_to_vendor checkout 취소 이벤트 핸들러 (onReturnCompleted 의 대칭).
    * CheckoutsService가 직접 호출하지 않고 NOTIFICATION_EVENTS.IMPORT_RETURN_CANCELED 이벤트로 발행.
    * import status: return_requested → received, returnCheckoutId null 초기화.
+   *
+   * SKIP_CACHE_REGISTRY: onReturnCompleted 와 동일 — 핸들러 내 직접 캐시 무효화 수행.
    */
   @OnEvent(NOTIFICATION_EVENTS.IMPORT_RETURN_CANCELED, { async: true })
   async onReturnCanceled({ checkoutId }: { checkoutId: string }): Promise<void> {

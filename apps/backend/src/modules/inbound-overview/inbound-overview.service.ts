@@ -6,15 +6,18 @@ import { checkouts } from '@equipment-management/db/schema/checkouts';
 import {
   CheckoutStatus,
   CheckoutPurposeValues as CPVal,
+  CheckoutDirectionValues as CDVal,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   type InboundOverviewQueryInput,
 } from '@equipment-management/schemas';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 import type { CheckoutQueryDto } from '../checkouts/dto/checkout-query.dto';
 import type { CheckoutListResponse } from '../checkouts/checkouts.service';
 import { CheckoutsService } from '../checkouts/checkouts.service';
 import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
 import type { EquipmentImportListResult } from '../equipment-imports/types/equipment-import.types';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 
 export interface InboundOverviewResult {
   standard: CheckoutListResponse;
@@ -49,7 +52,7 @@ export class InboundOverviewService {
       query.statusFilter && query.statusFilter !== 'all' ? query.statusFilter : undefined;
 
     // 30초 team별 캐시 — 동일 필터 반복 요청 시 6개 병렬 DB 쿼리 절감
-    const cacheKey = `inbound-overview:t:${teamId ?? 'all'}:s:${statusFilter ?? ''}:q:${search ?? ''}:l:${limitPerSection}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.INBOUND_OVERVIEW}t:${teamId ?? 'all'}:s:${statusFilter ?? ''}:q:${search ?? ''}:l:${limitPerSection}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -69,7 +72,7 @@ export class InboundOverviewService {
           this.checkoutsService.findAll(
             {
               teamId: teamId ?? undefined,
-              direction: 'inbound',
+              direction: CDVal.INBOUND,
               search,
               statuses: statusFilter ? [statusFilter as CheckoutStatus] : undefined,
               page: 1,
@@ -117,7 +120,7 @@ export class InboundOverviewService {
           generatedAt: new Date().toISOString(),
         };
       },
-      30
+      CACHE_TTL.SHORT
     );
   }
 

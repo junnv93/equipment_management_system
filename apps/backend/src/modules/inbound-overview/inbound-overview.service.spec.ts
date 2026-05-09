@@ -4,6 +4,7 @@ import type { InboundOverviewResult } from './inbound-overview.service';
 import { CheckoutsService } from '../checkouts/checkouts.service';
 import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 const MOCK_STANDARD_LIST = {
   items: [],
@@ -114,7 +115,7 @@ describe('InboundOverviewService', () => {
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith(
         expect.stringContaining('inbound-overview:t:team-uuid-1'),
         expect.any(Function),
-        30
+        CACHE_TTL.SHORT
       );
     });
   });

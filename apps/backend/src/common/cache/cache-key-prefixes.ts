@@ -76,6 +76,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** inspection-form-templates.service.ts (Phase 1B-backend, LIMS Template Snapshot) */
   INSPECTION_FORM_TEMPLATES: 'inspection-form-templates:',
+
+  /** inbound-overview.service.ts — 반입 현황 BFF 집계 (30s TTL) */
+  INBOUND_OVERVIEW: 'inbound-overview:',
 } as const;
 
 /**
