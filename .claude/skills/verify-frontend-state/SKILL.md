@@ -474,6 +474,46 @@ grep -rn 'mode="domain"' apps/frontend/components --include="*.tsx" | grep -v "R
 
 **관련 sprint**: `reject-modal-ssot-closure` (2026-05-09) — DisposalApprovalDialog/DisposalReviewDialog 인라인 reject UI → RejectModal SSOT 통합
 
+### Step 43: useEquipmentCalibrations dual-variant hook SSOT — `calibrationApi.getEquipmentCalibrations` / `getCalibrationHistory` 직접 호출 차단 (2026-05-09 추가)
+
+**배경** (2026-05-09 phase-c-followup-closure r2 — BasicInfoTab cache config compete silent bug):
+`CalibrationHistoryTab` 과 `BasicInfoTab` 이 동일 `queryKeys.calibrations.byEquipment` queryKey 에 다른 `QUERY_CONFIG` (`HISTORY` vs `CALIBRATION_LIST`) 적용 → 마지막 caller config 가 cache override 위험.
+`apps/frontend/hooks/use-equipment-calibrations.ts` 가 `useEquipmentCalibrations` (Tab variant — `Calibration[]`) + `useEquipmentCalibrationHistory` (Sub variant — `PaginatedResponse<CalibrationHistory>`) dual export 로 queryKey/queryFn/QUERY_CONFIG pairing 결빙.
+
+**올바른 패턴**:
+```tsx
+// ✅ Tab/Detail/요약 캐러셀 (Calibration[])
+const { data: calibrations = [], isLoading, isError } = useEquipmentCalibrations(equipmentId);
+
+// ✅ Sub-route Client (PaginatedResponse<CalibrationHistory>)
+const { data: historyData, isLoading, isError } =
+  useEquipmentCalibrationHistory(equipmentId, { pageSize: SELECTOR_PAGE_SIZE });
+```
+
+**금지 패턴**: useQuery 내부에서 `calibrationApi.getEquipmentCalibrations` 또는 `calibrationApi.getCalibrationHistory({ equipmentId })` 직접 호출.
+
+**검증 grep**:
+
+```bash
+# (1) production 컴포넌트/훅에서 calibrationApi.getEquipmentCalibrations 직접 호출 0건
+#     (예외: hook 본체 use-equipment-calibrations.ts + EquipmentForm.tsx imperative form-submit 콜백)
+grep -rn "calibrationApi.getEquipmentCalibrations" apps/frontend/components apps/frontend/app apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-equipment-calibrations.ts\|EquipmentForm.tsx"
+# 기대값: 0
+
+# (2) production 컴포넌트에서 calibrationApi.getCalibrationHistory 직접 호출은 메인 /calibration page 만 정당
+#     (단일 장비 컨텍스트 sub-route 는 useEquipmentCalibrationHistory hook 경유)
+grep -rn "calibrationApi.getCalibrationHistory" apps/frontend/components apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-equipment-calibrations.ts"
+# 기대값: 0 (메인 page 는 app/(dashboard)/calibration/CalibrationContent.tsx — 본 grep 범위 외)
+```
+
+**위반 시 수정 지시**: useQuery + calibrationApi 직접 호출 → `useEquipmentCalibrations` 또는 `useEquipmentCalibrationHistory` hook 호출로 교체. 새 caller 는 hook 우선.
+
+**관련 sprint**: `phase-c-followup-closure (+ r2/r3)` (2026-05-08~09) — Tab/Sub fetch hook 추출 + BasicInfoTab cache config compete 회귀 차단
+
 ## Output Format
 
 ```markdown
@@ -520,6 +560,8 @@ grep -rn 'mode="domain"' apps/frontend/components --include="*.tsx" | grep -v "R
 | 39  | mutation version 전달      | PASS/FAIL | version 파라미터 누락 API 함수 |
 | 40  | useCasGuardedMutation + 2-step | PASS/FAIL | confirm 전 version 재조회 누락 위치 |
 | 41  | toCsvParam SSOT               | PASS/FAIL | lib/api·lib/utils 내 `.join(',')` 인라인 위치 |
+| 42  | RejectModal mode='domain' 위임 | PASS/FAIL | 인라인 showRejectInput 토글 또는 mode='domain' 누락 위치 |
+| 43  | useEquipmentCalibrations dual-variant hook | PASS/FAIL | calibrationApi.getEquipmentCalibrations/getCalibrationHistory 직접 호출 위치 |
 ```
 
 ## Exceptions

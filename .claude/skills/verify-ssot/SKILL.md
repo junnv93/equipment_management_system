@@ -721,6 +721,29 @@ grep -rln "'host-disk'\\|'configured-capacity'\\|'pg-database'\\|'pending-work-a
 Symbol DI 토큰 (`STORAGE_HEALTH_PROVIDER` 등) 으로 inject 받아 `await provider.read()` 사용.
 
 
+### Step 61 — `EquipmentTabFooterLink` SSOT — 4 도메인 footer 인라인 className 회귀 차단
+
+**배경** (2026-05-09 phase-c-followup-closure r3): 4 tab(`CalibrationHistoryTab` / `MaintenanceHistoryTab` / `CalibrationFactorsTab` /
+`IncidentHistoryTab`) 의 footer "전체 보기" 링크는 동일 className + Link + ArrowRight 패턴 5회 출현 → `EquipmentTabFooterLink` 단일 컴포넌트로 결빙.
+새 tab 추가 시 인라인 패턴 부활 회귀 차단 + 디자인 토큰/className 변경 시 단일 진입점 보장.
+
+**검증 명령** (footer 인라인 className 0건 — 신규 정의 파일 자체는 제외):
+
+```bash
+# (1) equipment 도메인 tab 컴포넌트에서 footer 인라인 className 0건
+#     EquipmentTabFooterLink.tsx 자체 정의는 제외 (--exclude)
+grep -rn "flex justify-end pt-3 border-t mt-3" apps/frontend/components/equipment --include="*.tsx" --exclude="EquipmentTabFooterLink.tsx"
+# 기대값: 0 (4 tab 모두 EquipmentTabFooterLink 컴포넌트 호출로 대체)
+
+# (2) equipment 도메인 외부에서 동일 footer 패턴 사용 시 도메인 wrapper 신설 또는 generic 추출 권고 (탐지만, 자동 FAIL 아님)
+grep -rn "flex justify-end pt-3 border-t mt-3" apps/frontend/components --include="*.tsx" | grep -v "components/equipment"
+# 결과 ≥ 1 시: 도메인 wrapper(`<Domain>TabFooterLink`) 신설 vs generic 컴포넌트 추출 트레이드오프 검토
+```
+
+**위반 시 수정 지시**: 인라인 footer JSX → `<EquipmentTabFooterLink href={FRONTEND_ROUTES.EQUIPMENT.X(id)} label={t('...')} />` 컴포넌트 호출로 교체.
+generic 컴포넌트 (다른 도메인) 추출은 4+ 도메인 출현 시 trigger.
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
