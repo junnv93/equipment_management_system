@@ -47,7 +47,7 @@ export function mapUserErrorToToast(
 
   return {
     title: t('errors.title'),
-    description: error instanceof Error ? error.message : t(USER_ERROR_FALLBACK_I18N_KEY),
+    description: t('errors.genericError'),
   };
 }
 

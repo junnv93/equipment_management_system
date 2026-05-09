@@ -32,7 +32,7 @@ type TranslationFunction = (key: string, values?: Record<string, string | number
 /**
  * Disposal 도메인 ErrorCode → i18n key 매핑 (SSOT)
  *
- * 매핑되지 않은 ErrorCode는 fallback으로 처리됨 (error.message 또는 'common.error').
+ * 매핑되지 않은 ErrorCode는 errors.genericError i18n 키로 fallback 처리됨.
  */
 const DISPOSAL_ERROR_I18N_KEYS: Partial<Record<ErrorCode, string>> = {
   [ErrorCode.DisposalRejectCommentRequired]: 'errors.rejectCommentRequired',
@@ -85,9 +85,8 @@ export function mapDisposalErrorToToast(
     if (zodToast) return zodToast;
   }
 
-  // Fallback: backend message 또는 generic
   return {
     title: t('errors.title'),
-    description: error instanceof Error ? error.message : String(error),
+    description: t('errors.genericError'),
   };
 }
