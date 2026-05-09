@@ -244,7 +244,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     },
     onError: (error: unknown) => {
       const { title, description } = mapNonConformanceErrorToToast(error, t, tErrors);
+      console.log(
+        '[ADR-0008-DEBUG] NCDetailClient.rejectMutation.onError called, title:',
+        title,
+        'description:',
+        description
+      );
       toast({ title, description, variant: 'destructive' });
+      console.log('[ADR-0008-DEBUG] toast() called with title:', title);
     },
   });
 

@@ -327,6 +327,7 @@ export function createApiError(error: unknown): ApiError {
           code?: string;
           message?: string;
           details?: unknown;
+          issues?: unknown;
         };
 
         const message = backendError.message || 'An unknown error occurred.';
@@ -334,7 +335,12 @@ export function createApiError(error: unknown): ApiError {
           mapBackendErrorCode(backendError.code) ||
           (status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR);
 
-        return new ApiError(message, errorCode, status, backendError.details);
+        // ADR-0008: top-level `issues` (VALIDATION_ERROR) 를 details 에 보존 — extractValidationIssues SSOT
+        const preservedDetails = Array.isArray(backendError.issues)
+          ? { ...((backendError.details as object) ?? {}), issues: backendError.issues }
+          : backendError.details;
+
+        return new ApiError(message, errorCode, status, preservedDetails);
       }
 
       // 백엔드 표준 에러 응답 구조 #2: { error: { code, message, details }, meta: {...} }

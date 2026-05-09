@@ -110,6 +110,7 @@ export function mapZodIssuesToToast(
   tErrors?: TranslationFunction
 ): ErrorToast | null {
   const issues = extractValidationIssues(error);
+  console.log('[ADR-0008-DEBUG] mapZodIssuesToToast issues:', issues);
   if (!issues || issues.length === 0) return null;
 
   const te = tErrors ?? t;
@@ -127,8 +128,10 @@ export function mapZodIssuesToToast(
     })
     .join(', ');
 
-  return {
+  const result = {
     title: safeTranslate(te, `${prefix}validation.title`, `${prefix}title`),
     description,
   };
+  console.log('[ADR-0008-DEBUG] mapZodIssuesToToast result:', result);
+  return result;
 }

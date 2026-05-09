@@ -16,7 +16,11 @@
  *   - `NCDetailClient.rejectMutation.onError` 가 `mapNonConformanceErrorToToast(error, t, tErrors)`
  *     hub 호출지 — 17 도메인 mapper 중 단일 mutation 으로 검증 가능
  *   - `nc-rejection-flow.spec.ts` 시드 reset 헬퍼 (`UPDATE non_conformances SET status='corrected'`)
- *     를 본 spec 도 차용해 NC_006 의 reject 버튼 가시성 보장
+ *     를 본 spec 도 차용해 NC 의 reject 버튼 가시성 보장
+ *   - NC_008_CORRECTED (EMC_RECEIVER, FCC EMC/RF 팀) 선택 근거:
+ *     tech.manager@example.com 의 team_id = FCC EMC/RF.
+ *     NC_006_WITH_REPAIR 는 Automotive EMC 팀 장비 → team scope 거부 (SCOPE_ACCESS_DENIED).
+ *     NC_008 은 동일 FCC EMC/RF 팀 장비 → scope 통과.
  *   - PATCH 응답만 page.route() 로 인터셉트 — GET (NC 상세 조회) 는 실 시드 사용
  *
  * 실행:
@@ -28,7 +32,8 @@ import { expectToastVisible } from '../../shared/helpers/toast-helpers';
 import { TEST_NC_IDS } from '../../shared/constants/shared-test-data';
 import { resetNcsToCorrected } from '../../shared/helpers/nc-seed-helpers';
 
-const TEST_NC_ID = TEST_NC_IDS.NC_006_WITH_REPAIR;
+// NC_008_CORRECTED: EMC_RECEIVER, FCC EMC/RF 팀 — techManagerPage 의 team scope 와 일치
+const TEST_NC_ID = TEST_NC_IDS.NC_008_CORRECTED;
 const REJECT_PATH = `**/api/non-conformances/${TEST_NC_ID}/reject-correction`;
 const VALID_REJECT_REASON =
   '백엔드 Zod 검증 실패 응답 후 토스트 i18n 라우팅 검증을 위한 mock 사유 (≥10자)';
@@ -53,13 +58,22 @@ async function setLocale(page: Page, locale: 'ko' | 'en'): Promise<void> {
 /**
  * 반려 다이얼로그 열기 → 사유 입력 → 제출 (page.route mock 가 응답을 가로챔).
  *
- * locale 별 라벨 매칭: ko='반려'/'조치 반려', en='Reject'/'Reject Corrective Action'.
+ * locale 별 라벨 매칭:
+ *   - 액션바 버튼: ko='조치 반려' (detail.actionBar.reject), en='Reject Action'
+ *   - 다이얼로그 타이틀: ko='조치 반려' (detail.dialog.rejectTitle), en='Reject Corrective Action'
+ *   - 다이얼로그 제출: ko='반려' (detail.dialog.rejectSubmit), en='Reject'
  */
 async function triggerRejectWithMockedFailure(
   page: Page,
   issues: ReadonlyArray<{ code: string; path: ReadonlyArray<string | number>; params?: object }>,
   locale: 'ko' | 'en' = 'ko'
 ): Promise<void> {
+  // DEBUG: capture browser console for ADR-0008 debugging
+  page.on('console', (msg) => {
+    if (msg.text().includes('ADR-0008-DEBUG')) {
+      console.log('[BROWSER]', msg.text());
+    }
+  });
   // PATCH 만 mock — GET 등 다른 메서드는 실 backend 로 위임 (테스트 격리)
   await page.route(REJECT_PATH, async (route) => {
     if (route.request().method() !== 'PATCH') return route.continue();
@@ -76,11 +90,13 @@ async function triggerRejectWithMockedFailure(
 
   await page.goto(`/non-conformances/${TEST_NC_ID}`);
 
-  // 액션바의 반려 버튼 (RejectModal 내부 submit 버튼과 구분 — 다이얼로그 열리기 전 단계)
-  const rejectBtnNameRe = locale === 'ko' ? /^반려$/ : /^Reject$/;
+  // 액션바 버튼: detail.actionBar.reject — "조치 반려"(ko) / "Reject Action"(en)
+  // 다이얼로그 제출 버튼: detail.dialog.rejectSubmit — "반려"(ko) / "Reject"(en) — 별도 변수 사용
+  const actionBarBtnNameRe = locale === 'ko' ? /조치 반려/ : /Reject Action/;
+  const dialogSubmitBtnNameRe = locale === 'ko' ? /^반려$/ : /^Reject$/;
   const rejectDialogNameRe = locale === 'ko' ? /조치 반려/ : /Reject Corrective Action/;
 
-  const rejectBtn = page.getByRole('button', { name: rejectBtnNameRe });
+  const rejectBtn = page.getByRole('button', { name: actionBarBtnNameRe });
   await expect(rejectBtn).toBeVisible({ timeout: 15_000 });
   await rejectBtn.click();
 
@@ -90,8 +106,8 @@ async function triggerRejectWithMockedFailure(
   // RejectModal 내부 textarea — RejectReasonSchema (≥10자) 통과용 mock 사유
   await dialog.getByRole('textbox').fill(VALID_REJECT_REASON);
 
-  // 다이얼로그 내부 제출 버튼 — submitLabel='반려'/'Reject', mode='domain' (액션바 버튼과 dialog scope 로 구분)
-  await dialog.getByRole('button', { name: rejectBtnNameRe }).click();
+  // 다이얼로그 내부 제출 버튼 — dialog scope 로 액션바 버튼과 구분
+  await dialog.getByRole('button', { name: dialogSubmitBtnNameRe }).click();
 }
 
 test.describe('ADR-0008 — Backend Zod fail → Frontend toast i18n routing (browser)', () => {

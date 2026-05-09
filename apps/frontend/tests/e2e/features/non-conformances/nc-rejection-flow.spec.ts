@@ -20,8 +20,8 @@ import {
   TEST_EQUIPMENT_IDS,
 } from '../../shared/constants/shared-test-data';
 import { getBackendToken } from '../../shared/helpers/api-helpers';
+import { resetNcsToCorrected } from '../../shared/helpers/nc-seed-helpers';
 import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
-import { Pool } from 'pg';
 
 const TEST_NC_ID = TEST_NC_IDS.NC_006_WITH_REPAIR;
 const TEST_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.HARNESS_COUPLER_SUW_A;
@@ -30,39 +30,6 @@ const REJECTION_REASON =
   '재교정 성적서 번호가 누락되었습니다. 교정 결과 성적서 번호를 조치 내용에 포함해주세요.';
 const BACKEND_URL = BASE_URLS.BACKEND;
 
-/** DB 직접 리셋 — 시드 데이터 멱등성 보장 */
-async function resetNcForRejectionTest(): Promise<void> {
-  const pool = new Pool({ connectionString: BASE_URLS.DATABASE, max: 2 });
-  try {
-    // NC_006을 corrected 상태로 복원 (이전 실행에서 closed로 변경되었을 수 있음)
-    await pool.query(
-      `UPDATE non_conformances
-       SET status = 'corrected', version = 1,
-           rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
-           closed_by = NULL, closed_at = NULL, closure_notes = NULL,
-           corrected_by = $2, correction_date = NOW() - INTERVAL '3 days',
-           correction_content = '내부 연결부 교체 완료',
-           updated_at = NOW()
-       WHERE id = $1`,
-      [TEST_NC_ID, '00000000-0000-0000-0000-000000000002']
-    );
-    // NC_007도 corrected 상태로 복원
-    await pool.query(
-      `UPDATE non_conformances
-       SET status = 'corrected', version = 1,
-           rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
-           closed_by = NULL, closed_at = NULL, closure_notes = NULL,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [TEST_NC_IDS.NC_007_DAMAGE_CORRECTED]
-    );
-    // 캐시 클리어
-    await fetch(`${BACKEND_URL}/api/auth/test-cache-clear`, { method: 'POST' });
-  } finally {
-    await pool.end();
-  }
-}
-
 test.describe('부적합 반려 전체 프로세스', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -70,7 +37,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
   let teToken: string;
 
   test.beforeAll(async () => {
-    await resetNcForRejectionTest();
+    await resetNcsToCorrected([TEST_NC_ID]);
   });
 
   test.beforeEach(async ({}, testInfo) => {
@@ -306,6 +273,11 @@ test.describe('이중 반려 후 종료 프로세스', () => {
   const REASON_2 = '커넥터 규격 정보가 불충분합니다. N-type 50ohm 커넥터 사양서를 첨부해주세요.';
   let tmToken: string;
   let teToken: string;
+
+  test.beforeAll(async () => {
+    // NC_007은 correction 필드 보존 — D-1 이전에 corrected_by/correction_content 불필요
+    await resetNcsToCorrected([NC_ID], { preserveCorrectionFields: true });
+  });
 
   test.beforeEach(async ({}, testInfo) => {
     if (testInfo.project.name !== 'chromium') {

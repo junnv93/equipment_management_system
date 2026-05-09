@@ -55,6 +55,7 @@ export function mapNonConformanceErrorToToast(
   // ADR-0008: ErrorCode 미매핑 시 Zod validation issues fallback
   if (extractValidationIssues(error)) {
     const zodToast = mapZodIssuesToToast(error, t, tErrors);
+    console.log('[ADR-0008-DEBUG] mapNonConformanceErrorToToast zodToast:', zodToast);
     if (zodToast) return zodToast;
   }
 

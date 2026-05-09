@@ -39,7 +39,8 @@ export function extractErrorCode(error: unknown): string | null {
  *
  * 우선순위:
  * 1. `error.issues` (직접 throw된 BackendValidationError 등)
- * 2. `error.response.data.issues` (Axios)
+ * 2. `error.response.data.issues` (Axios raw error)
+ * 3. `error.details.issues` (ApiError — createApiError 가 top-level issues 를 details 에 보존, ADR-0008)
  *
  * @returns BackendValidationIssue[] or null (issues 미존재 / non-validation 응답)
  */
@@ -47,6 +48,16 @@ export function extractValidationIssues(error: unknown): BackendValidationIssue[
   if (error === null || typeof error !== 'object') return null;
 
   const obj = error as Record<string, unknown>;
+  // DEBUG: ADR-0008 issues extraction trace
+  console.log(
+    '[ADR-0008-DEBUG] extractValidationIssues called, obj.code:',
+    obj.code,
+    'obj.issues:',
+    obj.issues,
+    'obj.details:',
+    obj.details
+  );
+
   const direct = pickIssues(obj.issues);
   if (direct) return direct;
 
@@ -57,6 +68,15 @@ export function extractValidationIssues(error: unknown): BackendValidationIssue[
       const fromAxios = pickIssues(data.issues);
       if (fromAxios) return fromAxios;
     }
+  }
+
+  // ADR-0008: ApiError.details.issues — createApiError 가 top-level issues 를 보존한 경로
+  const details = obj.details as Record<string, unknown> | undefined;
+  console.log('[ADR-0008-DEBUG] details:', details, 'typeof details:', typeof details);
+  if (details && typeof details === 'object') {
+    const fromDetails = pickIssues(details.issues);
+    console.log('[ADR-0008-DEBUG] fromDetails:', fromDetails);
+    if (fromDetails) return fromDetails;
   }
 
   return null;

@@ -4,11 +4,12 @@
  * 시드 NC 행을 특정 status 로 멱등 복원. spec 간 race condition 방지 + DRY.
  *
  * 호출지:
- *  - `tests/e2e/features/non-conformances/nc-rejection-flow.spec.ts` (NC_006 + NC_007)
+ *  - `tests/e2e/features/non-conformances/nc-rejection-flow.spec.ts` (NC_006 full + NC_007 partial)
  *  - `tests/e2e/features/i18n/zod-fail-toast.spec.ts` (NC_006 단독)
  *
  * SQL 패턴: `UPDATE non_conformances SET status=..., version=1, ... WHERE id=$1`.
- *  - status='corrected' 의 경우 corrected_by/correction_date/correction_content 채움
+ *  - 기본: corrected_by/correction_date/correction_content 포함 full reset
+ *  - `preserveCorrectionFields: true`: rejection/closure 필드만 NULL — correction 필드 유지
  *  - 다른 status 도 향후 확장 가능 (open/resolved/closed)
  *
  * 캐시 invalidation: backend `/api/auth/test-cache-clear` POST 1회 호출 (다중 NC reset 후 일괄).
@@ -21,6 +22,11 @@ interface ResetNcsToCorrectedOptions {
   readonly correctorId?: string;
   /** correction 본문 — 미지정 시 generic placeholder */
   readonly correctionContent?: string;
+  /**
+   * true: rejection/closure 필드만 NULL, corrected_by/correction_date/correction_content 유지.
+   * 시드 NC 가 correction 필드 없이 `corrected` 상태여야 하는 시나리오 (예: NC_007 이중반려 테스트).
+   */
+  readonly preserveCorrectionFields?: boolean;
 }
 
 /**
@@ -32,8 +38,8 @@ interface ResetNcsToCorrectedOptions {
  * @example
  *   await resetNcsToCorrected([TEST_NC_IDS.NC_006_WITH_REPAIR]);
  *   await resetNcsToCorrected(
- *     [TEST_NC_IDS.NC_006_WITH_REPAIR, TEST_NC_IDS.NC_007_DAMAGE_CORRECTED],
- *     { correctorId: TEST_USER_IDS.TECHNICAL_MANAGER_SUWON },
+ *     [TEST_NC_IDS.NC_007_DAMAGE_CORRECTED],
+ *     { preserveCorrectionFields: true },
  *   );
  */
 export async function resetNcsToCorrected(
@@ -42,23 +48,37 @@ export async function resetNcsToCorrected(
 ): Promise<void> {
   if (ncIds.length === 0) return;
 
-  const correctorId = options.correctorId ?? TEST_USER_IDS.TECHNICAL_MANAGER_SUWON;
-  const correctionContent = options.correctionContent ?? '내부 연결부 교체 완료';
-
   const pool = new Pool({ connectionString: BASE_URLS.DATABASE, max: 2 });
   try {
-    for (const ncId of ncIds) {
-      await pool.query(
-        `UPDATE non_conformances
-         SET status = 'corrected', version = 1,
-             rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
-             closed_by = NULL, closed_at = NULL, closure_notes = NULL,
-             corrected_by = $2, correction_date = NOW() - INTERVAL '3 days',
-             correction_content = $3,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [ncId, correctorId, correctionContent]
-      );
+    if (options.preserveCorrectionFields) {
+      for (const ncId of ncIds) {
+        await pool.query(
+          `UPDATE non_conformances
+           SET status = 'corrected', version = 1,
+               rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
+               closed_by = NULL, closed_at = NULL, closure_notes = NULL,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [ncId]
+        );
+      }
+    } else {
+      const correctorId = options.correctorId ?? TEST_USER_IDS.TECHNICAL_MANAGER_SUWON;
+      const correctionContent = options.correctionContent ?? '내부 연결부 교체 완료';
+
+      for (const ncId of ncIds) {
+        await pool.query(
+          `UPDATE non_conformances
+           SET status = 'corrected', version = 1,
+               rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
+               closed_by = NULL, closed_at = NULL, closure_notes = NULL,
+               corrected_by = $2, correction_date = NOW() - INTERVAL '3 days',
+               correction_content = $3,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [ncId, correctorId, correctionContent]
+        );
+      }
     }
     // 캐시 클리어 — 1회 일괄 (DB 갱신 후 backend 캐시 stale 방지)
     await fetch(`${BASE_URLS.BACKEND}/api/auth/test-cache-clear`, { method: 'POST' });
