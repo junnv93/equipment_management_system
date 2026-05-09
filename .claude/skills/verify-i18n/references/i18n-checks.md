@@ -262,99 +262,38 @@ grep -rn 't(`[a-zA-Z]*\.\${' apps/frontend/components apps/frontend/lib/utils --
 
 ## Step 8: routeMap labelKey ↔ navigation.json 교차 검증
 
+> **Phase 3 자동화 완료** — `apps/frontend/scripts/verify-route-metadata.mjs` 로 승격.
+> pre-push gate 통합: `.husky/pre-push` `_t "route-map"` step.
+> 수동 실행이 필요한 경우 아래 명령을 사용하세요.
+
 `route-metadata.ts`의 모든 `labelKey`가 `navigation.json`에 실제로 존재하는지 확인합니다.
 또한, `app/(dashboard)/**/page.tsx`에 대응하는 routeMap 항목이 있는지 역방향 검증합니다.
+`navigation.json`에 routeMap 참조 없는 죽은 키(orphan)도 탐지합니다.
 
-### 8a: labelKey → navigation.json 정방향 검증
-
-```bash
-# routeMap의 모든 labelKey 추출 후 navigation.json에 존재하는지 확인
-node -e "
-const fs = require('fs');
-const routeFile = fs.readFileSync('apps/frontend/lib/navigation/route-metadata.ts', 'utf8');
-const navEn = JSON.parse(fs.readFileSync('apps/frontend/messages/en/navigation.json', 'utf8'));
-
-// routeMap에서 labelKey 추출 (navigation. 접두어 제거)
-const labelKeys = [...routeFile.matchAll(/labelKey:\s*'navigation\.([^']+)'/g)].map(m => m[1]);
-
-// navigation.json의 최상위 키 (중첩 제외)
-const flatKeys = (obj, prefix = '') =>
-  Object.entries(obj).flatMap(([k, v]) =>
-    typeof v === 'object' && v !== null ? flatKeys(v, prefix + k + '.') : [prefix + k]
-  );
-const navKeys = new Set(flatKeys(navEn));
-
-const missing = labelKeys.filter(k => !navKeys.has(k));
-if (missing.length) {
-  console.log('FAIL: routeMap labelKey가 navigation.json에 없음:');
-  missing.forEach(k => console.log('  - navigation.' + k));
-} else {
-  console.log('PASS: 모든 routeMap labelKey가 navigation.json에 존재 (' + labelKeys.length + '개)');
-}
-"
-```
-
-**PASS 기준:** 누락된 labelKey 0개.
-**FAIL 기준:** routeMap에 등록된 labelKey가 navigation.json에 없으면 브레드크럼이 raw 키로 표시됨.
-
-### 8b: page.tsx → routeMap 역방향 검증
+### 자동화 실행 (권장)
 
 ```bash
-# 실제 존재하는 페이지와 routeMap 비교
-node -e "
-const { execSync } = require('child_process');
-const fs = require('fs');
+# Phase 3 스크립트 직접 실행 (pre-push에서 자동 호출)
+pnpm --filter frontend run verify:route-metadata
 
-// 실제 page.tsx 경로를 라우트 형태로 변환
-const pages = execSync('find apps/frontend/app/\\(dashboard\\) -name page.tsx -type f')
-  .toString().trim().split('\n')
-  .map(p => p
-    .replace('apps/frontend/app/(dashboard)', '')
-    .replace('/page.tsx', '') || '/')
-  .sort();
-
-// routeMap 경로 추출
-const routeFile = fs.readFileSync('apps/frontend/lib/navigation/route-metadata.ts', 'utf8');
-const routePaths = new Set([...routeFile.matchAll(/'([^']+)':\s*\{/g)].map(m => m[1]));
-
-// redirect-only 페이지 제외 (파일 내용에 redirect만 있는 경우)
-const missing = pages.filter(p => {
-  // routeMap에 이미 있으면 OK
-  if (routePaths.has(p)) return false;
-  // [param] 치환하여 동적 라우트 매칭
-  const normalized = p.replace(/\/[0-9a-f-]+/g, '/[id]');
-  if (routePaths.has(normalized)) return false;
-
-  // redirect-only 페이지인지 확인
-  const filePath = 'apps/frontend/app/(dashboard)' + p + '/page.tsx';
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    if (/^\s*import.*redirect/m.test(content) && /redirect\(/m.test(content)) return false;
-  } catch {}
-  return true;
-});
-
-if (missing.length) {
-  console.log('INFO: routeMap에 미등록된 페이지 (' + missing.length + '개):');
-  missing.forEach(p => console.log('  - ' + p));
-} else {
-  console.log('PASS: 모든 비-redirect 페이지가 routeMap에 등록됨 (' + pages.length + '개)');
-}
-"
+# 또는 저장소 루트에서
+node apps/frontend/scripts/verify-route-metadata.mjs
 ```
 
-**PASS 기준:** 미등록 페이지 0개.
-**INFO 기준:** redirect-only가 아닌 페이지가 routeMap에 없으면 브레드크럼이 해당 페이지에서 미표시.
+**검사 항목:**
 
-### 8c: 하드코딩된 한국어 폴백 탐지
+| 단계 | 내용 | FAIL 조건 |
+|------|------|----------|
+| **8a** | labelKey → ko + en navigation.json 정방향 검증 | `navigation.${key}` 가 양쪽 locale JSON에 없으면 브레드크럼 raw 키 노출 |
+| **8b** | page.tsx → routeMap 역방향 검증 | page.tsx 존재하지만 routeMap 미등록 (EXCLUDED_ROUTE_PREFIXES 제외) |
+| **8c** | navigation.json orphan 키 탐지 | routeMap이 참조하지 않는 죽은 i18n 키 — 양쪽 locale 동시 탐지 |
 
-```bash
-# 네비게이션/브레드크럼 유틸리티에서 하드코딩된 한국어 문자열 탐지
-grep -rn "'[가-힣]" apps/frontend/lib/navigation/ --include="*.ts" --include="*.tsx" | grep -v "node_modules\|// \|test\|spec\|\*.md"
-```
+**EXCLUDED_ROUTE_PREFIXES** (routeMap 등록 불필요한 경로):
+`/e/` (QR shortcode redirect), `/__visual__/`, `/visual-fixtures/`, `/~offline`, `/help`,
+`/admin/calibration-approvals` 외 legacy individual approval redirect 6개.
+예외 추가 시 `apps/frontend/scripts/verify-route-metadata.mjs` `EXCLUDED_ROUTE_PREFIXES` 배열에 추가.
 
-**PASS 기준:** 0개 결과 (네비게이션 유틸리티에 하드코딩된 한국어 없음).
-**FAIL 기준:** 발견 시 `undefined` 반환으로 대체하여 i18n 시스템에 폴백 위임.
+**회귀 spec:** `scripts/__tests__/verify-route-metadata.spec.mjs` (9 cases — Step 8a/8b/8c + Integration)
 
 ## Step 9: fieldLabels cross-namespace 중복 탐지
 

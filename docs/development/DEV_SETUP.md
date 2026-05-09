@@ -88,9 +88,10 @@ pnpm --filter backend test      # 백엔드 테스트만
 ### 데이터베이스
 
 ```bash
-pnpm --filter backend db:migrate    # 마이그레이션 실행
+pnpm --filter backend db:migrate    # 마이그레이션 실행 (journal-based)
 pnpm --filter backend db:studio     # Drizzle Studio 실행 (포트 4983)
-pnpm --filter backend db:generate   # 스키마 변경 시 마이그레이션 생성
+# ⚠️ db:generate 는 ADR-0010 에 의해 금지 — manual SQL + journal append 4 단계 절차 사용.
+# 상세: docs/adr/0010-drizzle-manual-sql-policy.md, docs/development/DRIZZLE_MIGRATIONS.md §1
 ```
 
 ### Docker
@@ -364,11 +365,11 @@ pnpm install
 **해결**:
 
 ```bash
-# 마이그레이션 실행
+# 마이그레이션 실행 (journal-based, ADR-0010 정합)
 pnpm --filter backend db:migrate
 
-# 스키마 변경 시 마이그레이션 파일 생성
-pnpm --filter backend db:generate
+# ⚠️ 스키마 변경은 manual SQL + journal append 4 단계 절차 (ADR-0010).
+# `db:generate` 는 본 레포에서 금지. 상세: docs/adr/0010-drizzle-manual-sql-policy.md
 ```
 
 ---

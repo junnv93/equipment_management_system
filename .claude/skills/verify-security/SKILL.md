@@ -375,6 +375,17 @@ awk '/async emit/,/^  \}$/' \
 
 **근거**: ADR-0010 / `drizzle-policy-csp-spec-closure` sprint 결과로 `apps/frontend/tests/e2e/security/csp-violation.spec.ts` 신설. 본 spec 은 **proxy.ts 가 emit 하는 CSP 헤더 + Report-To URL + backend `/api/security/csp-report` ingest 의 wire** 를 결빙한다. controller unit test 는 dispatch 로직만 커버하고, proxy.ts header emit + report-uri SSOT 회귀는 본 spec 만 차단한다. 삭제/우회를 자동 감지.
 
+**보안 spec 폴더 구조 의도 (2026-05-09)**:
+
+| 위치 | scope | 인증 모델 |
+|------|-------|-----------|
+| `apps/frontend/tests/e2e/security.spec.ts` (root) | NestJS Guard 레이어 (HTTP 401/403, blacklist) | 인증 없이 `request` fixture 직접 호출 |
+| `apps/frontend/tests/e2e/security/csp-violation.spec.ts` (folder) | proxy.ts CSP 헤더 + backend csp-report wire | `storageState` (lab-manager) 필수 — proxy.ts 가 auth 성공 path 만 CSP emit |
+
+신규 보안 spec 작성 시: 인증 없이 backend HTTP 직접 검증은 `security.spec.ts` 확장, 인증 + proxy.ts 통과 wire 검증은 `security/<topic>.spec.ts` 신설. 폴더 분리 이유는 단일 책임 (Guard = HTTP wire, CSP = browser-emitted header wire) + 향후 `security/guards.spec.ts` 마이그레이션 여지.
+
+**실행 환경 (2026-05-09)**: 본 spec 은 `.github/workflows/e2e-nightly.yml` (chromium shard) 에서 자동 실행 (`testMatch: '**/*.spec.ts'`). PR 의 메인 CI workflow (`.github/workflows/main.yml`) 는 e2e 분리 정책으로 본 spec 정적 검증 (grep + lint + tsc) 까지만 수행 — 실 wire 검증은 nightly 실행 결과에서 회귀 차단. 본 spec 신규 추가 시 nightly 결과 1회 확인 권장.
+
 **검증 명령**:
 
 ```bash

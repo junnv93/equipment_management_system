@@ -37,10 +37,10 @@ pnpm --filter backend run test:e2e    # Backend E2E tests
 pnpm --filter frontend run test       # Frontend tests
 pnpm --filter frontend run test:e2e   # Playwright E2E tests
 
-# Database
-pnpm --filter backend run db:generate # Generate migration SQL from schema diff
-pnpm --filter backend run db:migrate  # Apply pending migrations (drizzle-kit migrate)
-pnpm --filter backend run db:push     # Direct schema sync (dev prototyping only)
+# Database — 본 레포는 ADR-0010 (Drizzle Manual SQL Policy) 채택
+# `db:generate` / `db:push` 는 **금지**. manual SQL + journal append 4 단계 절차 사용.
+# 상세: docs/adr/0010-drizzle-manual-sql-policy.md, docs/development/DRIZZLE_MIGRATIONS.md §1
+pnpm --filter backend run db:migrate  # Apply pending migrations (drizzle-kit migrate, journal-based)
 pnpm --filter backend run db:studio   # Open Drizzle Studio
 pnpm --filter backend run db:reset    # DROP + CREATE + migrate + seed (PC 이동/꼬임 복구)
 
