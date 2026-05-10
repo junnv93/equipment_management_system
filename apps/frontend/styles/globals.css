@@ -434,6 +434,16 @@
     /* Floating action bar (BulkActionBar fixed-bottom 오프셋 SSOT) */
     --bulk-bar-offset: var(--safe-area-inset-bottom, 0px);
 
+    /* Dynamic — set by EquipmentDetailClient ResizeObserver (lib/design-tokens/css-variables.ts SSOT).
+     * Non-equipment 페이지에서는 미설정되어 fallback 0px 가 적용된다 (의도된 fallback).
+     * Consumers: EQUIPMENT_TAB_UNDERLINE_TOKENS / BULK_ACTION_BAR_TOKENS / LAYOUT_TOKENS.stickyHeaderOffset
+     *            / NCDetailClient scrollToActionBar / sticky-helpers (e2e). */
+    --sticky-header-height: 0px;
+
+    /* Dynamic — set by GuidanceCallout inline style per variant (lib/design-tokens/css-variables.ts SSOT).
+     * Consumer: CALLOUT_TOKENS.heroShadow box-shadow color (semantic.ts:710). */
+    --callout-hero-shadow: transparent;
+
     /* Semantic Colors */
     --success: 151 100% 32%;          /* #00A451 - UL Bright Green */
     --success-foreground: 0 0% 100%;

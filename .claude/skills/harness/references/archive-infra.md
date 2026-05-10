@@ -438,3 +438,34 @@ apps/frontend/.env.local.example: 파일 미존재로 생략
 ```
 
 ---
+
+## sticky-header-css-var-ssot (2026-05-10 완료)
+
+### 34차 후속 → CSS_VAR_NAMES SSOT (sticky-header + callout-hero-shadow 흡수) ✅
+
+**원본 항목** (stale 추정 "3 곳, 4번째 등장 시 상수화"):
+
+```
+배경: wf20-infra-debt harness review-architecture 검증 결과
+'--sticky-header-height' CSS 변수가 producer 1곳 + consumer 2곳에 string literal 분산
+세 지점 모두 :root 스코프로 통일되어 silent 0 반환 리스크는 없으나, 4번째 consumer 등장 시
+오타/스코프 불일치 가능성. 현재는 over-engineering — 4번째 hit 발생 시 자동 승격.
+```
+
+**실측 결과 (2026-05-10)**: 추정 "3 곳"은 stale. production 5 + e2e 1 + 주석 4. NCDetailClient.tsx:258 이 4번째 production consumer → 트리거 조건 충족. 추가로 `--callout-hero-shadow` (GuidanceCallout) 동일 SSOT 흡수 (시스템 전반 일관성).
+
+**Mode 1 harness 결과** (iter 2 PASS, MUST 12/12):
+
+- **SSOT 신설**: `apps/frontend/lib/design-tokens/css-variables.ts` — `CSS_VAR_NAMES` + `cssVar()` helper + `as const satisfies Record<string, '--${string}'>` 컴파일타임 강제 + `type CssVarName` 좁혀진 union
+- **Tailwind v4 JIT 정합 (해법 B)**: design-token 파일 (`components/equipment.ts` / `components/bulk-action-bar.ts` / `semantic.ts`) 은 string literal 유지 (JIT 정적 분석 요구), runtime 코드만 `CSS_VAR_NAMES` 마이그레이션. 회귀 차단은 verify-hardcoding skill 화이트리스트로 처리.
+- **6 location 마이그레이션**: producer (EquipmentDetailClient setProperty/removeProperty) + runtime consumer 4 (NCDetailClient scrollToActionBar / sticky-helpers e2e / GuidanceCallout inline style key — `as string` cast 제거) + design-token 3 (SSOT 참조 주석 추가)
+- **`--callout-hero-shadow` 흡수**: GuidanceCallout 1 location + semantic.ts JSDoc 갱신
+- **verify-hardcoding skill Step 36 추가**: Rule A (string literal 화이트리스트 외 금지) + Rule B (`CSS_VAR_NAMES` 등록 변수 외부 var() 차단, JSDoc 예시 제외 awk 추출) + Rule C/D (SSOT/barrel 정의 검증)
+- **`globals.css` :root fallback 보강** (자기검토 #2 발견): `--sticky-header-height: 0px` + `--callout-hero-shadow: transparent` 명시 정의 — Producer 미동작 시점 안전 fallback
+- **design-tokens README 갱신**: "CSS Variable Names SSOT" 섹션 신설 (producer/consumer/inline style 사용 예시 + 해법 B 근거 + 신규 추가 절차)
+
+**다중 세션 협업 학습**: 본 sprint 진행 중 다른 세션의 `large-component-refactor` (NCDetailClient sections/ 분리) 가 일시적으로 내 마이그레이션을 string literal로 되돌림 → 즉시 재적용 (다른 세션의 분리 작업 자체는 보존). `checkouts-sprint4-ux-u02-u08` 세션의 untracked `hooks/use-keyboard-shortcuts.ts` tsc 에러는 본 sprint MUST 격리 정책으로 처리 (사용자 명시: "다른 세션 작업 revert 하면안돼 우리 세션작업만 집중해").
+
+**관련 후속 (tech-debt-tracker.md)**: `--z-sticky` (bulk-action-bar.ts) — 별도 sprint scope (CSS_VAR_NAMES 확장 후보, JS setProperty 추가 시점에 결합).
+
+---

@@ -8,7 +8,13 @@
 export const BULK_ACTION_BAR_TOKENS = {
   /** sticky 또는 inline 배경 */
   container: 'bg-muted/30 border-border',
-  /** sticky-top 변형: z-index + CSS 변수 오프셋 */
+  /**
+   * sticky-top 변형: z-index + CSS 변수 오프셋
+   * SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts)
+   * Producer: EquipmentDetailClient ResizeObserver
+   * 주의: Tailwind v4 JIT 정적 분석 요구로 string literal 직접 유지.
+   * 참고: --z-sticky 는 별도 sprint scope (CSS_VAR_NAMES 확장 후보).
+   */
   stickyTop:
     'sticky top-[var(--sticky-header-height,0px)] z-[var(--z-sticky,20)] border-b shadow-sm',
   /** sticky-bottom 변형 */

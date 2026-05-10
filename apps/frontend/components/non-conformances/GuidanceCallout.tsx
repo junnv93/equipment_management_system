@@ -19,6 +19,7 @@ import {
   NC_GUIDANCE_STEP_BADGE_TOKENS,
   NC_GUIDANCE_CTA_TOKENS,
   CALLOUT_TOKENS,
+  CSS_VAR_NAMES,
   getCalloutClasses,
   getNCWorkflowCompactDotClasses,
   FOCUS_TOKENS,
@@ -67,9 +68,11 @@ export const GuidanceCallout = memo(function GuidanceCallout({
 
   const isHero = entry.ctaKind !== 'none';
   const size = isHero ? ('hero' as const) : ('default' as const);
+  // SSOT: CSS_VAR_NAMES.calloutHeroShadow (lib/design-tokens/css-variables.ts)
+  // Consumer: CALLOUT_TOKENS.heroShadow (또는 직접 box-shadow 적용 — semantic.ts:691 JSDoc 참조)
   const heroShadowStyle: CSSProperties | undefined = isHero
     ? ({
-        ['--callout-hero-shadow' as string]: `color-mix(in oklch, var(--brand-${entry.variant}) 30%, transparent)`,
+        [CSS_VAR_NAMES.calloutHeroShadow]: `color-mix(in oklch, var(--brand-${entry.variant}) 30%, transparent)`,
       } as CSSProperties)
     : undefined;
 

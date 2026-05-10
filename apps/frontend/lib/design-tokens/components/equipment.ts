@@ -772,7 +772,10 @@ export type KpiColorVariant = keyof typeof EQUIPMENT_KPI_STRIP_TOKENS.borderColo
 export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
   /**
    * 탭 바 컨테이너 (sticky)
-   * top: CSS 변수 --sticky-header-height (EquipmentDetailClient ResizeObserver로 동적 설정)
+   * SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts)
+   * Producer: EquipmentDetailClient ResizeObserver — `:root` 에 px 값 동적 설정
+   * 주의: Tailwind v4 JIT 정적 분석 요구로 string literal 직접 유지 (template literal interpolation 미지원).
+   *       회귀 차단은 verify-hardcoding 화이트리스트로 처리.
    * bg-background: semantic token (하드코딩 금지)
    */
   container:

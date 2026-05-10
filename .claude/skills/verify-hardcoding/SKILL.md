@@ -987,3 +987,81 @@ grep -n "sheet\\.rows\\.map" apps/frontend/components/data-migration/PreviewStep
 
 **PASS:** preview table body는 `visibleRows.map()` 등 bounded window만 렌더링하고, window size는 SSOT 상수 경유.
 **FAIL:** `sheet.rows.map()` 전체 렌더링 또는 `100` 같은 window size 리터럴이 컴포넌트에 직접 존재.
+
+---
+
+### Step 36: CSS custom property name string literal 회귀 차단 — `CSS_VAR_NAMES` SSOT 강제 (2026-05-10 추가)
+
+**배경**: `--sticky-header-height` / `--callout-hero-shadow` 같은 CSS custom property 이름이 producer
+(`element.style.setProperty(name, value)`) 와 consumer (`var(name)` / `getComputedStyle().getPropertyValue(name)` /
+inline style key) 양쪽에 string literal 로 분산 박히면, 1글자 오타가 silent 0/undefined 회귀를 유발한다.
+2026-05-10 sprint `sticky-header-css-var-ssot` 에서 `apps/frontend/lib/design-tokens/css-variables.ts` 에
+`CSS_VAR_NAMES` SSOT (+ `cssVar()` helper) 를 신설하고, 모든 runtime 호출자가 SSOT 를 경유하도록 마이그레이션했다.
+
+**Tailwind v4 JIT 정합 (해법 B 채택)**: Tailwind v4.2 의 정적 분석은 `top-[var(--sticky-header-height,0px)]`
+string literal 은 추출하지만, `` `top-[${cssVar(...)}]` `` template literal interpolation 은 추출하지 못한다 (값이 런타임 결정).
+→ **design-token 파일** (`lib/design-tokens/components/*.ts`, `lib/design-tokens/semantic.ts`) 의 Tailwind class
+문자열은 SSOT 를 import 하지 않고 string literal 을 유지하며, 위치마다 `// SSOT: CSS_VAR_NAMES.{key}` 주석으로
+참조를 명시한다 (회귀 차단은 본 Step 화이트리스트로 처리).
+
+**화이트리스트** (`'--name'` 또는 `var(--name)` literal 허용):
+- `apps/frontend/lib/design-tokens/css-variables.ts` (SSOT 정의 자체)
+- `apps/frontend/lib/design-tokens/components/*.ts` (Tailwind JIT 정적 분석 요구)
+- `apps/frontend/lib/design-tokens/semantic.ts` (Tailwind JIT 정적 분석 요구)
+
+```bash
+# (A) String literal '--name' 사용은 화이트리스트 외 0 (production + e2e)
+grep -rEn "['\"]--[a-z][a-z0-9-]*['\"]" \
+  apps/frontend --include='*.ts' --include='*.tsx' \
+  --exclude-dir=.next --exclude-dir=node_modules \
+  | grep -v "lib/design-tokens/css-variables.ts" \
+  | grep -v "lib/design-tokens/components/" \
+  | grep -v "lib/design-tokens/semantic.ts" \
+  | grep -v "process.argv.includes('--" \
+  | grep -v "^[[:space:]]*\*\|^[[:space:]]*//"
+# 기대: 0 hit. 새 CSS variable 등장 시 css-variables.ts 에 entry 추가하고 SSOT 경유.
+
+# (B) `CSS_VAR_NAMES` 에 등록된 variable name 의 var() Tailwind / CSS literal 사용은 design-token 디렉토리 내부 한정
+#     (외부 SSOT — Radix UI 자체 var, --brand-* palette, --touch-target-min 같은 globals.css :root 정의는 검사 대상 외)
+# SSOT 변수명 추출: `CSS_VAR_NAMES = { ... } as const satisfies` 객체 본체 안의 entry value 만 (JSDoc 예시 제외)
+SSOT_VARS=$(awk '/CSS_VAR_NAMES = \{/,/\} as const/' apps/frontend/lib/design-tokens/css-variables.ts \
+  | grep -oE ": '--[a-z][a-z0-9-]*'" | tr -d ": '" | paste -sd'|' -)
+grep -rEn "var\((${SSOT_VARS})[,)]" \
+  apps/frontend --include='*.ts' --include='*.tsx' \
+  --exclude-dir=.next --exclude-dir=node_modules \
+  | grep -v "lib/design-tokens/" \
+  | grep -vE "^[^:]+:[0-9]+:[[:space:]]*\*|^[^:]+:[0-9]+:[[:space:]]*//"
+# 기대: 0 hit. CSS_VAR_NAMES 등록 변수는 design-token 외부에서 var() literal 사용 금지 (해법 B 위반).
+# 신규 외부 CSS variable 은 본 SSOT 등록 후 동일 룰 적용.
+
+# (C) SSOT 정의 존재
+grep -c "CSS_VAR_NAMES" apps/frontend/lib/design-tokens/css-variables.ts
+grep -c "as const satisfies Record<string, " apps/frontend/lib/design-tokens/css-variables.ts
+# 기대: 모두 ≥ 1.
+
+# (D) barrel export (단일 진입점)
+grep -c "CSS_VAR_NAMES" apps/frontend/lib/design-tokens/index.ts
+grep -c "cssVar" apps/frontend/lib/design-tokens/index.ts
+# 기대: 모두 ≥ 1.
+```
+
+**PASS:**
+- 화이트리스트 외 production / e2e 코드에서 `'--foo'` 또는 `var(--foo)` literal 0 hit
+- `CSS_VAR_NAMES` 가 `as const satisfies Record<string, '--${string}'>` 로 정의되어 `--`-prefix 컴파일타임 강제
+- runtime 호출자(setProperty / removeProperty / getPropertyValue / inline style key)는 모두 `CSS_VAR_NAMES.<key>` 참조
+- design-token 파일은 string literal 유지하되 `// SSOT: CSS_VAR_NAMES.<key>` 주석으로 참조 명시
+
+**FAIL:**
+- 컴포넌트/훅/api/lib 코드에서 `'--sticky-header-height'` 같은 raw string literal 발견
+- design-token 디렉토리 외부에서 `var(--foo)` Tailwind class 사용
+- `cssVar()` helper 우회한 `as string` 타입 cast (예: `['--foo' as string]: ...`)
+
+**예외 인정**:
+- `process.argv.includes('--fix')` 같은 CLI flag 인자 (CSS var 아님)
+- locale message JSON 파일 안의 색상 토큰 명세 등 — `messages/**/*.json` 은 검사 대상 외
+- 주석/JSDoc 안의 변수명 reference — grep 패턴에서 `^[[:space:]]*\*` / `//` 시작 라인 제외
+
+**신규 CSS variable 추가 절차**:
+1. `apps/frontend/lib/design-tokens/css-variables.ts` `CSS_VAR_NAMES` 에 `camelCaseKey: '--kebab-name'` entry 추가
+2. `apps/frontend/styles/globals.css` `:root` (또는 `:root.dark`) 에 동일 이름 정의
+3. Producer/Consumer 가 `CSS_VAR_NAMES.camelCaseKey` 참조 (runtime) — design-token 파일은 string literal 유지 (Tailwind JIT)

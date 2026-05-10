@@ -37,6 +37,15 @@ export {
 } from './primitives';
 
 // ============================================================================
+// Layer 1: CSS Custom Property Names (코드에서 참조하는 CSS variable 식별자 SSOT)
+// ============================================================================
+// Producer (style.setProperty) / Consumer (var() / getPropertyValue / inline style key) 가
+// 같은 string identifier 를 참조하도록 강제. 1글자 오타 silent 0/undefined 회귀 차단.
+// JIT 정적 분석 한계로 design-token 파일은 string literal 유지 (해법 B) — verify-hardcoding 화이트리스트.
+
+export { CSS_VAR_NAMES, cssVar, type CssVarName } from './css-variables';
+
+// ============================================================================
 // Brand Tokens (글로벌 디자인 언어)
 // ============================================================================
 

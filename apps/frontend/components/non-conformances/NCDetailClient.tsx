@@ -63,6 +63,7 @@ import {
   isNCLongOverdue,
   NC_SPACING_TOKENS,
   ANIMATION_PRESETS,
+  CSS_VAR_NAMES,
   getStaggerFadeInStyle,
 } from '@/lib/design-tokens';
 import { deriveGuidance } from '@/lib/non-conformances/guidance';
@@ -255,7 +256,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     if (!actionBarRef.current) return;
     const rect = actionBarRef.current.getBoundingClientRect();
     const stickyHeaderHeight = parseFloat(
-      document.documentElement.style.getPropertyValue('--sticky-header-height') || '0'
+      document.documentElement.style.getPropertyValue(CSS_VAR_NAMES.stickyHeaderHeight) || '0'
     );
     window.scrollBy({ top: rect.top - stickyHeaderHeight - 12, behavior: 'smooth' });
   }, []);

@@ -517,7 +517,11 @@ export const DIMENSION_TOKENS = {
   stepDot: 'w-step-dot h-step-dot',
   /** 그룹 헤더 row hover 좌측 강조 바 (w-1 = 4px) — purposeBar(3px)보다 넓음 */
   accentBar: 'w-1',
-  /** Sticky 그룹 헤더 상단 오프셋 — ResizeObserver가 업데이트하는 CSS 변수 기반 */
+  /**
+   * Sticky 그룹 헤더 상단 오프셋 — ResizeObserver가 업데이트하는 CSS 변수 기반.
+   * SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts)
+   * 주의: Tailwind v4 JIT 정적 분석 요구로 string literal 직접 유지 (verify-hardcoding 화이트리스트).
+   */
   stickyHeaderOffset: 'top-[var(--sticky-header-height,0px)]',
   /** Equipment row zone-status 컬럼 너비 (78px — 와이어프레임 01 line 170) */
   zoneStatus: 'w-[78px] max-w-[78px]',
@@ -687,8 +691,9 @@ const CALLOUT_VARIANT_TO_SEMANTIC: Record<CalloutVariant, SemanticColorKey> = {
  *
  * size 'hero':
  *   - rounded-lg + 두꺼운 leftBorder (6px) + shadow
- *   - shadow 색상은 `--callout-hero-shadow` CSS 변수로 주입 (도메인 중립)
- *   - 호출부에서 style={{ '--callout-hero-shadow': 'color-mix(in oklch, var(--brand-*) 30%, transparent)' }} 설정
+ *   - shadow 색상은 CSS 변수로 주입 (도메인 중립).
+ *     SSOT: CSS_VAR_NAMES.calloutHeroShadow (lib/design-tokens/css-variables.ts)
+ *   - 호출부에서 style={{ [CSS_VAR_NAMES.calloutHeroShadow]: 'color-mix(in oklch, var(--brand-*) 30%, transparent)' }} 설정
  *   - "지금 할 일"을 최상위로 끌어올리는 용도 (NC 상세 GuidanceCallout 등)
  *
  * 모든 emphasis 함수는 (v, size) 통일 시그니처 — size는 현재 leftBorder만 활용하지만

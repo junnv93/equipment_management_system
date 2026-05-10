@@ -9,6 +9,8 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
+| `large-component-refactor` | 3개 대형 컴포넌트 분리 — EquipmentForm(1418) + InspectionFormDialog(1362) + NCDetailClient(1104) → ≤700. 섹션 서브컴포넌트 추출 + 훅 추출 | 2026-05-10 |
+| `checkouts-sprint4-ux-u02-u08` | Sprint 4.5 T3 — U-02 단축키 + U-03 Saved Views + U-04 inline reject + U-05 undo + U-06 QR drawer + U-08 destination combobox 통합 wiring | 2026-05-10 |
 
 ---
 
@@ -17,13 +19,13 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | slug | 설명 |
 |------|------|
 | `checkout-ux-u01-bulk-approval` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-01 — 일괄 승인 |
-| `checkout-ux-u02-keyboard-shortcuts` | Sprint 4.5 · U-02 — 전역 단축키 + `?` 치트시트 모달 |
-| `checkout-ux-u03-filter-sticky-saved-views` | Sprint 4.5 · U-03 — 필터 Sticky 헤더 + Saved Views (시스템 기본 + 사용자 |
-| `checkout-ux-u04-inline-reject-presets` | Sprint 4.5 · U-04 — 인라인 반려 사유 + 프리셋 chips |
-| `checkout-ux-u05-undo-toast` | Sprint 4.5 · U-05 — Undo 5초 토스트 + `useOptimisticMutation` `u |
-| `checkout-ux-u06-qr-drawer` | Sprint 4.5 · U-06 — QR 한 번에 꺼내기 drawer (페이지 전환 없음) |
+| `checkout-ux-u02-keyboard-shortcuts` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-02 — 전역 단축키 + `?` 치트시트 모달 |
+| `checkout-ux-u03-filter-sticky-saved-views` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-03 — 필터 Sticky 헤더 + Saved Views |
+| `checkout-ux-u04-inline-reject-presets` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-04 — 인라인 반려 사유 + 프리셋 chips |
+| `checkout-ux-u05-undo-toast` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-05 — Undo 5초 토스트 + revoke-approval |
+| `checkout-ux-u06-qr-drawer` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-06 — QR 한 번에 꺼내기 drawer (페이지 전환 없음) |
 | `checkout-ux-u07-context-restore` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-07 — 돌아가기 컨텍스트 보존 |
-| `checkout-ux-u08-destination-combobox` | Sprint 4.5 · U-08 — Destination 자동완성 combobox + 최근 목적지 + fuz |
+| `checkout-ux-u08-destination-combobox` | **(흡수됨 → `checkouts-sprint4-ux-u02-u08`)** Sprint 4.5 · U-08 — Destination 자동완성 combobox + 최근 목적지 |
 | `checkout-ux-u09-dday-color-temperature` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-09 — D-day 시각 6-level (4-tier SSOT 보존) |
 | `checkout-ux-u10-optimistic-skeleton` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-10 — Optimistic UI + Skeleton 일관성 |
 | `checkout-ux-u11-nav-your-turn-badge` | **(흡수됨 → `checkouts-v3-sprint45`)** Sprint 4.5 · U-11 — Sidebar pendingCount 배지 |

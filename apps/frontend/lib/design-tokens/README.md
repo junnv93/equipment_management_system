@@ -109,12 +109,17 @@ SIZE_PRIMITIVES.touch.minimal = { mobile: 48, desktop: 44 };
 lib/design-tokens/
 ├── index.ts                    # Public API (barrel export)
 │
-├── primitives.ts               # Layer 1: 원시값
+├── primitives.ts               # Layer 1: 원시값 (px / ms / weight)
 │   ├── SIZE_PRIMITIVES
 │   ├── SPACING_PRIMITIVES
 │   ├── MOTION_PRIMITIVES
 │   ├── ELEVATION_PRIMITIVES
 │   └── 변환 유틸리티
+│
+├── css-variables.ts            # Layer 1: CSS custom property name SSOT
+│   ├── CSS_VAR_NAMES           # `'--sticky-header-height'` 등 식별자
+│   ├── cssVar(name, fallback)  # `var(--name, fallback)` literal helper (runtime 전용)
+│   └── type CssVarName         # 좁혀진 union (임의 string 차단)
 │
 ├── semantic.ts                 # Layer 2: 의미론적 토큰
 │   ├── INTERACTIVE_TOKENS
@@ -133,6 +138,45 @@ lib/design-tokens/
     ├── notification.ts        # Notification 토큰
     └── [future] button.ts, card.ts, ...
 ```
+
+### CSS Variable Names SSOT (`css-variables.ts`)
+
+코드에서 참조하는 CSS custom property (`--foo`) 이름을 단일 진입점으로 관리합니다.
+Producer (`element.style.setProperty(name, value)`) / Consumer (`var(name)`,
+`getComputedStyle().getPropertyValue(name)`, inline style key) 양쪽이 같은 식별자를
+참조하도록 강제하여, 1글자 오타가 silent 0px / undefined 회귀로 이어지는 사고를 차단합니다.
+
+```typescript
+// ✅ Producer (값 설정)
+document.documentElement.style.setProperty(
+  CSS_VAR_NAMES.stickyHeaderHeight,
+  `${entry.contentRect.height}px`
+);
+
+// ✅ Consumer — runtime 호출
+const raw = getComputedStyle(document.documentElement)
+  .getPropertyValue(CSS_VAR_NAMES.stickyHeaderHeight);
+
+// ✅ Consumer — inline style key
+<div style={{ [CSS_VAR_NAMES.calloutHeroShadow]: 'color-mix(...)' }} />
+
+// ❌ string literal 직접 사용 금지 (verify-hardcoding Step 36 FAIL)
+element.style.setProperty('--sticky-header-height', '...');
+```
+
+**Tailwind v4 JIT 정합 (해법 B)**: design-token 파일 (`components/*.ts`, `semantic.ts`) 의
+Tailwind class 문자열에서는 SSOT 를 import 하지 않고 `'top-[var(--sticky-header-height,0px)]'`
+형식의 string literal 을 그대로 유지합니다. v4.2 의 정적 분석은 string literal 만 추출하고,
+`` `top-[${cssVar(...)}]` `` template literal interpolation 은 추출하지 못하기 때문입니다 (런타임 값).
+회귀 차단은 `verify-hardcoding` skill Step 36 의 화이트리스트로 처리하며, 위치마다 `// SSOT: CSS_VAR_NAMES.{key}`
+주석으로 참조를 명시합니다.
+
+**신규 CSS variable 추가 절차**:
+
+1. `css-variables.ts` `CSS_VAR_NAMES` 에 `camelCaseKey: '--kebab-name'` entry 추가
+2. `apps/frontend/styles/globals.css` `:root` (또는 `:root.dark`) 에 동일 이름 정의
+3. Producer / Consumer 가 `CSS_VAR_NAMES.camelCaseKey` 참조 (runtime).
+   design-token 파일은 string literal 유지 + SSOT 참조 주석.
 
 ## 🎨 주요 토큰
 

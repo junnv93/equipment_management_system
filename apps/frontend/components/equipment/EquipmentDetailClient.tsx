@@ -32,6 +32,7 @@ import { getDisposalCurrentStep } from '@/hooks/use-disposal-permissions';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   ANIMATION_PRESETS,
+  CSS_VAR_NAMES,
   NC_BANNER_TOKENS,
   SHARED_EQUIPMENT_BANNER_TOKENS,
   getPageContainerClasses,
@@ -88,20 +89,21 @@ export function EquipmentDetailClient({
   ]);
 
   // sticky 헤더 높이 → CSS 변수 동적 설정 (탭 바 top 위치 계산용)
-  // EQUIPMENT_TAB_UNDERLINE_TOKENS.container 의 --sticky-header-height 변수에 사용
+  // SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts)
+  // Consumers: EQUIPMENT_TAB_UNDERLINE_TOKENS / BULK_ACTION_BAR_TOKENS / LAYOUT_TOKENS.stickyHeaderOffset
   useEffect(() => {
     const header = document.getElementById('equipment-sticky-header');
     if (!header) return;
     const observer = new ResizeObserver(([entry]) => {
       document.documentElement.style.setProperty(
-        '--sticky-header-height',
+        CSS_VAR_NAMES.stickyHeaderHeight,
         `${entry.contentRect.height}px`
       );
     });
     observer.observe(header);
     return () => {
       observer.disconnect();
-      document.documentElement.style.removeProperty('--sticky-header-height');
+      document.documentElement.style.removeProperty(CSS_VAR_NAMES.stickyHeaderHeight);
     };
   }, []);
 
