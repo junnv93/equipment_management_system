@@ -212,6 +212,20 @@ export class CheckoutsController {
     return this.checkoutsService.getRejectionPresets();
   }
 
+  @Get('saved-view-counts')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '시스템 뷰별 반출 건수',
+    description: 'Saved Views 툴바의 시스템 뷰 3종 카운트. userId 스코핑.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '뷰별 건수' })
+  async getSavedViewCounts(
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ all: number; pendingApproval: number; overdue: number }> {
+    const userId = extractUserId(req);
+    return this.checkoutsService.getSavedViewCounts(userId);
+  }
+
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({

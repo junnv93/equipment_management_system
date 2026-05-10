@@ -916,6 +916,105 @@
       "label": "Return"
     }
   },
+  "savedViews": {
+    "title": "Saved Views",
+    "description": "Save frequently used filter combinations",
+    "saveButton": "Save Current Filters",
+    "deleteButton": "Delete",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "noViews": "No saved views",
+    "maxReached": "You can save up to {max} views",
+    "saveError": "Failed to save",
+    "saveDialog": {
+      "title": "Save View",
+      "description": "Save the current filter settings",
+      "nameLabel": "View Name",
+      "namePlaceholder": "e.g. This week's inspections",
+      "cancel": "Cancel",
+      "confirm": "Save"
+    },
+    "systemViews": {
+      "all": "All",
+      "pendingApproval": "Pending Approval",
+      "overdue": "Overdue"
+    },
+    "filterBar": {
+      "label": "Filter bar",
+      "savedViewsLabel": "Saved views"
+    }
+  },
+  "destination": {
+    "label": "Select Destination",
+    "placeholder": "Enter destination",
+    "searchPlaceholder": "Search destination...",
+    "noResults": "No results found",
+    "addNew": "+ Add new destination: {value}",
+    "recentLabel": "Recent Destinations",
+    "aria": {
+      "combobox": "Destination selection combobox"
+    }
+  },
+  "reject": {
+    "inline": {
+      "trigger": "Inline Reject",
+      "title": "Enter Rejection Reason",
+      "placeholder": "Enter rejection reason or select a preset below",
+      "presetTitle": "Quick Select",
+      "submit": "Reject",
+      "cancel": "Cancel",
+      "empty": "No presets available",
+      "submitShortcut": "Ctrl+Enter to submit"
+    }
+  },
+  "undo": {
+    "toast": {
+      "approved": "Approval processed",
+      "undo": "Undo",
+      "undoSuccess": "Approval has been cancelled",
+      "undoError": "An error occurred while cancelling",
+      "windowExpired": "The undo window has expired",
+      "revoked": "Approval has been revoked"
+    }
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "description": "Available keyboard shortcuts for the checkout management screen",
+    "close": "Close",
+    "list": {
+      "sectionTitle": "List View",
+      "navigateUp": "Navigate to previous item",
+      "navigateDown": "Navigate to next item",
+      "openItem": "Open item",
+      "focusSearch": "Focus search",
+      "filterPanel": "Open filter panel",
+      "goFirst": "Go to first item",
+      "goLast": "Go to last item",
+      "approveSelected": "Approve selected items",
+      "rejectSelected": "Reject selected items"
+    },
+    "detail": {
+      "sectionTitle": "Detail View",
+      "approve": "Approve",
+      "reject": "Reject",
+      "openQr": "Open QR code",
+      "back": "Back to list"
+    },
+    "global": {
+      "showHelp": "Show shortcuts help"
+    }
+  },
+  "qrDrawer": {
+    "trigger": "QR Code",
+    "title": "Equipment QR Codes",
+    "description": "View QR codes for checked-out equipment",
+    "close": "Close",
+    "empty": "No equipment to display QR codes for",
+    "aria": {
+      "open": "Open QR code drawer",
+      "close": "Close QR code drawer"
+    }
+  },
   "errors": {
     "title": "Error",
     "genericError": "An error occurred while processing the request.",

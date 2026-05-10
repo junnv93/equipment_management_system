@@ -555,6 +555,7 @@ export const queryKeys = {
       all: () => [...queryKeys.checkouts.all, 'resource'] as const,
       detail: (id: string) => [...queryKeys.checkouts.resource.all(), 'detail', id] as const,
       destinations: () => [...queryKeys.checkouts.resource.all(), 'destinations'] as const,
+      savedViewCounts: () => [...queryKeys.checkouts.resource.all(), 'saved-view-counts'] as const,
       /** pending checks 전체 목록 (PendingChecksClient 전용) */
       pending: (role?: string) => [...queryKeys.checkouts.resource.all(), 'pending', role] as const,
       /** 확인 필요 건수 전용 (count만 필요한 요약 위젯용) — pending 전체 목록 캐시와 분리 */
@@ -562,6 +563,9 @@ export const queryKeys = {
       returnPending: () => [...queryKeys.checkouts.resource.all(), 'return-pending'] as const,
       summary: (params: object = {}) =>
         [...queryKeys.checkouts.resource.all(), 'summary', params] as const,
+      rejectionPresets: () => [...queryKeys.checkouts.resource.all(), 'rejection-presets'] as const,
+      destinationsRecent: () =>
+        [...queryKeys.checkouts.resource.all(), 'destinations-recent'] as const,
     },
   },
   calibrations: {

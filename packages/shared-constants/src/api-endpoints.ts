@@ -149,6 +149,8 @@ export const API_ENDPOINTS = {
     DESTINATIONS_RECENT: '/api/checkouts/destinations/recent',
     /** 승인 철회 (POST) — approved 상태 + 5분 이내만 허용 */
     REVOKE_APPROVAL: (id: string) => `/api/checkouts/${id}/revoke-approval`,
+    /** 시스템 뷰별 건수 집계 (GET) — userId 스코핑, 캐시 30s */
+    SAVED_VIEW_COUNTS: '/api/checkouts/saved-view-counts',
   },
 
   // ============================================================================

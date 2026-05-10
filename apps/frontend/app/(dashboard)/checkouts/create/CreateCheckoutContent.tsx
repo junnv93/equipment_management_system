@@ -74,6 +74,7 @@ import {
   filterVisibleEquipment,
 } from '@/lib/utils/checkout-selectability';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
+import { CheckoutDestinationCombobox } from '@/components/checkouts/CheckoutDestinationCombobox';
 
 export default function CreateCheckoutContent() {
   const t = useTranslations('checkouts');
@@ -833,18 +834,10 @@ export default function CreateCheckoutContent() {
 
               {/* 반출지 입력 (필수) */}
               <div className="space-y-2">
-                <Label htmlFor="destination" className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   {t('create.destinationLabel')} <span className="text-brand-critical">*</span>
                 </Label>
-                <Input
-                  id="destination"
-                  placeholder={t('create.destinationPlaceholder')}
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  required
-                  className="h-10"
-                  autoComplete="organization"
-                />
+                <CheckoutDestinationCombobox value={destination} onChange={setDestination} />
               </div>
 
               {/* 반출 사유 입력 (필수) */}

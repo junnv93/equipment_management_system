@@ -9,7 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `checkouts-sprint4-ux-u02-u08` | Sprint 4.5 T3 — U-02 단축키 + U-03 Saved Views + U-04 inline reject + U-05 undo + U-06 QR drawer + U-08 destination combobox 통합 wiring | 2026-05-10 |
 
 ---
 

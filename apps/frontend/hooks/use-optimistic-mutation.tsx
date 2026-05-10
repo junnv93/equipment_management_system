@@ -55,7 +55,7 @@
  */
 'use client';
 
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ToastAction } from '@/components/ui/toast';
@@ -190,6 +190,12 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
    * onSettledCallback: () => router.push(`/equipment/${id}`)
    */
   onSettledCallback?: (data: TData, variables: TVariables) => void;
+
+  /**
+   * Undo 대기 윈도우 (ms). 설정 시 실제 API 호출을 delay 후 실행.
+   * 윈도우 내 abortUndo() 호출 → API 호출 취소 + invalidateQueries 롤백.
+   */
+  undoWindowMs?: number;
 }
 
 /**
@@ -220,13 +226,48 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   onSuccessCallback,
   onErrorCallback,
   onSettledCallback,
+  undoWindowMs,
 }: OptimisticMutationOptions<TData, TVariables, TCachedData>) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('errors');
   const tGlobal = useTranslations();
 
-  return useMutation<
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const abortUndo = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+  }, []);
+
+  const effectiveMutationFn = useCallback(
+    (variables: TVariables): Promise<TData> => {
+      if (!undoWindowMs) return mutationFn(variables);
+      return new Promise<TData>((resolve, reject) => {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const timer = setTimeout(async () => {
+          if (controller.signal.aborted) return;
+          try {
+            resolve(await mutationFn(variables));
+          } catch (e) {
+            reject(e instanceof Error ? e : new Error(String(e)));
+          }
+        }, undoWindowMs);
+        controller.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException('Undo aborted', 'AbortError'));
+          },
+          { once: true }
+        );
+      });
+    },
+    [mutationFn, undoWindowMs]
+  );
+
+  const mutation = useMutation<
     TData,
     Error,
     TVariables,
@@ -235,7 +276,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
       snapshots: Array<[QueryKey, TCachedData | undefined]>;
     }
   >({
-    mutationFn,
+    mutationFn: effectiveMutationFn,
 
     /**
      * ✅ Phase 1: onMutate - 즉시 캐시 업데이트
@@ -282,6 +323,9 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
      * - SSOT 원칙: onSettled의 invalidateQueries가 서버 최신 데이터로 동기화
      */
     onError: async (error, variables) => {
+      // Undo abort 경로 — 에러 토스트 없이 롤백만 (onSettled에서 처리)
+      if (error.name === 'AbortError') return;
+
       // 1. 에러 토스트 표시 (409 충돌은 전용 메시지)
       if (isConflictError(error)) {
         const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, t);
@@ -380,4 +424,6 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
       }
     },
   });
+
+  return { ...mutation, abortUndo };
 }

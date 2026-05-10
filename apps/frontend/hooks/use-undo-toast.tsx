@@ -8,6 +8,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { revokeApproval } from '@/lib/api/checkout-revoke-approval';
 
+/** undo 토스트 표시 시간 — CheckoutDetailClient.tsx의 undoWindowMs: 5000과 동기화 */
+const UNDO_TOAST_DURATION_MS = 5000;
+
 interface UseUndoToastOptions {
   checkoutId: string;
   /** invalidateQueries after undo — SSOT rollback 경로 */
@@ -33,7 +36,7 @@ export function useUndoToast({ checkoutId, invalidateKeys, abortUndo }: UseUndoT
   const showApprovalUndoToast = useCallback(() => {
     toast({
       description: t('approved'),
-      duration: 5000,
+      duration: UNDO_TOAST_DURATION_MS,
       action: (
         <ToastAction
           altText={t('undo')}

@@ -916,6 +916,105 @@
       "label": "반납"
     }
   },
+  "savedViews": {
+    "title": "저장된 보기",
+    "description": "자주 사용하는 필터 조합을 저장하세요",
+    "saveButton": "현재 필터 저장",
+    "deleteButton": "삭제",
+    "moveUp": "위로 이동",
+    "moveDown": "아래로 이동",
+    "noViews": "저장된 보기가 없습니다",
+    "maxReached": "최대 {max}개까지 저장할 수 있습니다",
+    "saveError": "저장에 실패했습니다",
+    "saveDialog": {
+      "title": "보기 저장",
+      "description": "현재 필터 설정을 저장합니다",
+      "nameLabel": "보기 이름",
+      "namePlaceholder": "예: 이번 주 점검 대상",
+      "cancel": "취소",
+      "confirm": "저장"
+    },
+    "systemViews": {
+      "all": "전체",
+      "pendingApproval": "승인 대기",
+      "overdue": "기한 초과"
+    },
+    "filterBar": {
+      "label": "필터 바",
+      "savedViewsLabel": "저장된 보기"
+    }
+  },
+  "destination": {
+    "label": "반출지 선택",
+    "placeholder": "반출지를 입력하세요",
+    "searchPlaceholder": "반출지 검색...",
+    "noResults": "검색 결과가 없습니다",
+    "addNew": "+ 새 반출지 추가: {value}",
+    "recentLabel": "최근 반출지",
+    "aria": {
+      "combobox": "반출지 선택 콤보박스"
+    }
+  },
+  "reject": {
+    "inline": {
+      "trigger": "인라인 반려",
+      "title": "반려 사유 입력",
+      "placeholder": "반려 사유를 입력하거나 아래 프리셋을 선택하세요",
+      "presetTitle": "빠른 선택",
+      "submit": "반려 처리",
+      "cancel": "취소",
+      "empty": "등록된 프리셋이 없습니다",
+      "submitShortcut": "Ctrl+Enter로 제출"
+    }
+  },
+  "undo": {
+    "toast": {
+      "approved": "승인 처리되었습니다",
+      "undo": "실행 취소",
+      "undoSuccess": "승인이 취소되었습니다",
+      "undoError": "취소 처리 중 오류가 발생했습니다",
+      "windowExpired": "취소 가능 시간이 초과되었습니다",
+      "revoked": "승인이 철회되었습니다"
+    }
+  },
+  "shortcuts": {
+    "title": "키보드 단축키",
+    "description": "반출 관리 화면에서 사용 가능한 단축키입니다",
+    "close": "닫기",
+    "list": {
+      "sectionTitle": "목록 화면",
+      "navigateUp": "이전 항목으로 이동",
+      "navigateDown": "다음 항목으로 이동",
+      "openItem": "항목 열기",
+      "focusSearch": "검색 포커스",
+      "filterPanel": "필터 패널 열기",
+      "goFirst": "첫 번째 항목",
+      "goLast": "마지막 항목",
+      "approveSelected": "선택 항목 승인",
+      "rejectSelected": "선택 항목 반려"
+    },
+    "detail": {
+      "sectionTitle": "상세 화면",
+      "approve": "승인",
+      "reject": "반려",
+      "openQr": "QR 코드 열기",
+      "back": "목록으로 돌아가기"
+    },
+    "global": {
+      "showHelp": "단축키 안내 보기"
+    }
+  },
+  "qrDrawer": {
+    "trigger": "QR 코드",
+    "title": "장비 QR 코드",
+    "description": "반출 장비의 QR 코드를 확인하세요",
+    "close": "닫기",
+    "empty": "QR 코드를 표시할 장비가 없습니다",
+    "aria": {
+      "open": "QR 코드 서랍 열기",
+      "close": "QR 코드 서랍 닫기"
+    }
+  },
   "errors": {
     "title": "오류",
     "genericError": "요청을 처리하는 중 오류가 발생했습니다.",

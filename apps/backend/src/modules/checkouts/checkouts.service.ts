@@ -3589,6 +3589,41 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
   }
 
   // ============================================================================
+  // Saved View Counts (GET /checkouts/saved-view-counts)
+  // ============================================================================
+
+  /**
+   * 시스템 뷰별 반출 건수 집계.
+   * userId 스코핑 — 사용자가 접근 가능한 반출 기준.
+   */
+  async getSavedViewCounts(
+    userId: string
+  ): Promise<{ all: number; pendingApproval: number; overdue: number }> {
+    this.validateUuid(userId, 'userId');
+
+    const [allRows, pendingRows, overdueRows] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(checkouts)
+        .where(eq(checkouts.requesterId, userId)),
+      this.db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(checkouts)
+        .where(and(eq(checkouts.requesterId, userId), eq(checkouts.status, CSVal.PENDING))),
+      this.db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(checkouts)
+        .where(and(eq(checkouts.requesterId, userId), eq(checkouts.status, CSVal.OVERDUE))),
+    ]);
+
+    return {
+      all: allRows[0]?.count ?? 0,
+      pendingApproval: pendingRows[0]?.count ?? 0,
+      overdue: overdueRows[0]?.count ?? 0,
+    };
+  }
+
+  // ============================================================================
   // M11: 승인 철회 (POST /checkouts/:id/revoke-approval)
   // ============================================================================
 

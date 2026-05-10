@@ -77,6 +77,9 @@ import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineEr
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
+import { CheckoutQrDrawerTrigger } from '@/components/checkouts/CheckoutQrDrawerTrigger';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useUndoToast } from '@/hooks/use-undo-toast';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -141,6 +144,15 @@ export default function CheckoutDetailClient({
     };
   }, [checkout.id, checkout.purpose, checkout.destination, setDynamicLabel, clearDynamicLabel, t]);
 
+  // QR drawer 상태 (단축키 Q 연동)
+  const [qrDrawerOpen, setQrDrawerOpen] = useState(false);
+  useKeyboardShortcuts(
+    {
+      OPEN_QR: () => setQrDrawerOpen((prev) => !prev),
+    },
+    'detail'
+  );
+
   // 다이얼로그 상태 (통합)
   const [dialogState, setDialogState] = useState({
     reject: false,
@@ -173,11 +185,11 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
-    successMessage: t('toasts.approveSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.approveError')),
     onSuccessCallback: () => {
       router.refresh();
     },
+    undoWindowMs: 5000,
   });
 
   // 반려 mutation
@@ -253,7 +265,6 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
-    successMessage: t('toasts.returnApproveSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.returnApproveError')),
     onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, approveReturn: false }));
@@ -262,6 +273,7 @@ export default function CheckoutDetailClient({
     onErrorCallback: () => {
       setDialogState((prev) => ({ ...prev, approveReturn: false }));
     },
+    undoWindowMs: 5000,
   });
 
   // 반출 취소 mutation (test_engineer, technical_manager — pending/approved 상태)
@@ -304,7 +316,6 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1,
       }) as Checkout,
     invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
-    successMessage: t('toasts.borrowerApproveSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.borrowerApproveError')),
     onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, borrowerApprove: false }));
@@ -313,6 +324,33 @@ export default function CheckoutDetailClient({
     onErrorCallback: () => {
       setDialogState((prev) => ({ ...prev, borrowerApprove: false }));
     },
+    undoWindowMs: 5000,
+  });
+
+  // Undo toast — 승인 계열 3종 (undoWindowMs: 5000 대응)
+  const { showApprovalUndoToast: showApproveUndoToast } = useUndoToast({
+    checkoutId: initialCheckout.id,
+    invalidateKeys: [
+      queryKeys.checkouts.resource.detail(initialCheckout.id),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
+    abortUndo: approveMutation.abortUndo,
+  });
+  const { showApprovalUndoToast: showApproveReturnUndoToast } = useUndoToast({
+    checkoutId: initialCheckout.id,
+    invalidateKeys: [
+      queryKeys.checkouts.resource.detail(initialCheckout.id),
+      ...CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
+    ],
+    abortUndo: approveReturnMutation.abortUndo,
+  });
+  const { showApprovalUndoToast: showBorrowerApproveUndoToast } = useUndoToast({
+    checkoutId: initialCheckout.id,
+    invalidateKeys: [
+      queryKeys.checkouts.resource.detail(initialCheckout.id),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
+    abortUndo: borrowerApproveMutation.abortUndo,
   });
 
   // 대여 1차 반려 mutation (rental pending → rejected, borrowerRejectionReason 기록)
@@ -399,6 +437,7 @@ export default function CheckoutDetailClient({
   // 반입 승인 처리
   const handleApproveReturn = () => {
     approveReturnMutation.mutate();
+    showApproveReturnUndoToast();
   };
 
   // 반입 반려 처리
@@ -421,6 +460,7 @@ export default function CheckoutDetailClient({
     switch (action) {
       case 'approve':
         approveMutation.mutate();
+        showApproveUndoToast();
         break;
       case 'reject':
         setDialogState((prev) => ({ ...prev, reject: true }));
@@ -505,6 +545,13 @@ export default function CheckoutDetailClient({
           <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>
         <div className="flex gap-2">
+          {checkout.equipment && checkout.equipment.length > 0 && (
+            <CheckoutQrDrawerTrigger
+              equipment={checkout.equipment}
+              open={qrDrawerOpen}
+              onOpenChange={setQrDrawerOpen}
+            />
+          )}
           {isCheckoutExportable(checkout.status) && (
             <ExportFormButton
               formNumber="UL-QP-18-06"
@@ -1084,7 +1131,10 @@ export default function CheckoutDetailClient({
             </Button>
             <Button
               className={CHECKOUT_DETAIL_TOKENS.approveButton}
-              onClick={() => borrowerApproveMutation.mutate()}
+              onClick={() => {
+                borrowerApproveMutation.mutate();
+                showBorrowerApproveUndoToast();
+              }}
               disabled={borrowerApproveMutation.isPending}
               loading={borrowerApproveMutation.isPending}
             >
