@@ -70,6 +70,35 @@ export const CSS_VAR_NAMES = {
    * Fallback: 미설정 시 box-shadow 적용 안 됨 (visually no-op)
    */
   calloutHeroShadow: '--callout-hero-shadow',
+
+  // ============================================================================
+  // 4-tier status color SSOT (qr-visual-redesign TASK 8 / 2026-05-11)
+  //
+  // brand-ok / brand-warning / brand-critical 외 2 톤 신설:
+  //  - brand-urgent: confirm_handover_* (P=115/110), non_conforming, out_of_service
+  //  - brand-mute:   spare / inactive / disposed (운영 외 장비)
+  // 각 톤은 base + weak (soft tint 배경) 2 변형.
+  // ============================================================================
+
+  brandUrgent: '--brand-urgent',
+  brandUrgentWeak: '--brand-urgent-weak',
+  brandMute: '--brand-mute',
+  brandMuteWeak: '--brand-mute-weak',
+
+  // ============================================================================
+  // Touch target + mobile typography ramp (qr-visual-redesign TASK 8)
+  // ============================================================================
+
+  /** 최소 터치 타깃 (Material baseline = 48px). 2026-05-11 raised 44→48px. */
+  touchTargetMin: '--touch-target-min',
+  /** 장갑 시나리오 터치 타깃 (opt-in, 56px). */
+  touchTargetGlove: '--touch-target-glove',
+  /** 모바일 1차 정보 size (18px) — 장비명/CTA 라벨/현황 핵심. */
+  text1Mobile: '--text-1-mobile',
+  /** 모바일 2차 정보 size (14px) — KV 값, 설명. */
+  text2Mobile: '--text-2-mobile',
+  /** Mono 텍스트 size (13px) — `.text-mono` 클래스 진입점. */
+  textMono: '--text-mono',
 } as const satisfies Record<string, `--${string}`>;
 
 /**

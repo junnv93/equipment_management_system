@@ -33,7 +33,12 @@
       }
     },
     "noActions": "수행 가능한 작업이 없습니다",
-    "noActionsDescription": "현재 계정으로 이 장비에서 가능한 작업이 없습니다. 관리자에게 문의하세요."
+    "noActionsDescription": "현재 계정으로 이 장비에서 가능한 작업이 없습니다. 관리자에게 문의하세요.",
+    "groups": {
+      "urgent": "지금 해야 할 일",
+      "primary": "또는",
+      "secondary": "기타"
+    }
   },
   "qrDisplay": {
     "title": "장비 QR 코드",
@@ -76,9 +81,23 @@
       "micro": "초소형 ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "선택한 크기가 작아 양식이 자동 조정되었습니다: {mode}",
+    "fallbackInlineNotice": "현재 선택한 크기는 작아 {mode} 양식으로 자동 전환됩니다.",
     "fallbackMode": {
       "full": "QR + 전체 정보",
       "qrOnly": "QR만"
+    },
+    "modeTab": {
+      "sampler": "샘플러 (전체 크기)",
+      "custom": "특정 크기"
+    },
+    "recommendedFor": {
+      "a4Sheet": "A4 시트 일괄 인쇄 (7×3 per sheet)",
+      "largeInstrument": "대형 계측기 / 캐비넷",
+      "midInstrument": "중형 계측기 / 책상 거치형",
+      "smallInstrument": "소형 계측기 / 휴대형",
+      "cable": "케이블 라벨 / 좁은 면",
+      "ultraCompact": "초소형 부품 / 어댑터",
+      "ultraCompactCable": "케이블 표찰 (극소)"
     },
     "downloadPdf": "PDF 다운로드",
     "downloadFailed": "PDF 생성에 실패했습니다. 잠시 후 다시 시도하세요.",
@@ -97,7 +116,48 @@
     "notFoundInvalidTitle": "유효하지 않은 관리번호",
     "notFoundInvalidBody": "관리번호 형식이 올바르지 않습니다. 예: SUW-E0001",
     "retryScan": "다시 스캔",
-    "goToEquipmentList": "전체 장비 목록"
+    "goToEquipmentList": "전체 장비 목록",
+    "autoProgress": {
+      "label": "잠시 후 {action}(으)로 이동합니다",
+      "countdown": "{seconds}초 후 자동 진행",
+      "cancel": "취소하고 다른 작업 선택"
+    }
+  },
+  "statusBadge": {
+    "status": {
+      "available": "사용 가능",
+      "checkedOut": "반출 중",
+      "nonConforming": "부적합",
+      "spare": "여분",
+      "pendingDisposal": "폐기 대기",
+      "disposed": "폐기 완료",
+      "temporary": "임시 등록",
+      "inactive": "비활성"
+    },
+    "condition": {
+      "normal": "정상",
+      "abnormal": "이상"
+    },
+    "accessories": {
+      "complete": "완비",
+      "incomplete": "불완비"
+    }
+  },
+  "calibrationDueBadge": {
+    "overdue": "교정 D+{days} (초과)",
+    "dueToday": "교정 D-0 (오늘)",
+    "dueIn": "교정 D-{days}"
+  },
+  "handoverPicker": {
+    "title": "수령/반환 대기 건 선택",
+    "description": "동시에 여러 건의 수령 또는 반환 대기가 있습니다. 처리할 건을 선택하세요.",
+    "emptyState": "현재 처리 대기 중인 건이 없습니다.",
+    "appearance": "외관",
+    "operation": "작동",
+    "accessories": "부속",
+    "unknownSite": "사이트 미상",
+    "unknownInspector": "점검자 미상",
+    "checkoutIdLabel": "반출 #{id}"
   },
   "labelPrint": {
     "title": "QR 라벨 일괄 인쇄",

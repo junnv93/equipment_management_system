@@ -33,7 +33,12 @@
       }
     },
     "noActions": "No actions available",
-    "noActionsDescription": "Your account has no available actions on this equipment. Contact an administrator."
+    "noActionsDescription": "Your account has no available actions on this equipment. Contact an administrator.",
+    "groups": {
+      "urgent": "Do this now",
+      "primary": "Or",
+      "secondary": "Other"
+    }
   },
   "qrDisplay": {
     "title": "Equipment QR code",
@@ -76,9 +81,23 @@
       "micro": "Micro ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
+    "fallbackInlineNotice": "This size is small — layout auto-switches to {mode}.",
     "fallbackMode": {
       "full": "QR + full info",
       "qrOnly": "QR only"
+    },
+    "modeTab": {
+      "sampler": "Sampler (all sizes)",
+      "custom": "Specific size"
+    },
+    "recommendedFor": {
+      "a4Sheet": "A4 batch print (7×3 per sheet)",
+      "largeInstrument": "Large instruments / cabinets",
+      "midInstrument": "Mid-size instruments / desktop units",
+      "smallInstrument": "Small instruments / portable",
+      "cable": "Cable labels / narrow surface",
+      "ultraCompact": "Ultra-compact parts / adapters",
+      "ultraCompactCable": "Cable tags (ultra compact)"
     },
     "downloadPdf": "Download PDF",
     "downloadFailed": "Failed to generate PDF. Please try again later.",
@@ -97,7 +116,48 @@
     "notFoundInvalidTitle": "Invalid management number",
     "notFoundInvalidBody": "Management number format is invalid. Example: SUW-E0001",
     "retryScan": "Scan again",
-    "goToEquipmentList": "Equipment list"
+    "goToEquipmentList": "Equipment list",
+    "autoProgress": {
+      "label": "Proceeding to {action} in a moment",
+      "countdown": "Auto-proceeding in {seconds}s",
+      "cancel": "Cancel and choose another action"
+    }
+  },
+  "statusBadge": {
+    "status": {
+      "available": "Available",
+      "checkedOut": "Checked out",
+      "nonConforming": "Non-conforming",
+      "spare": "Spare",
+      "pendingDisposal": "Pending disposal",
+      "disposed": "Disposed",
+      "temporary": "Temporary",
+      "inactive": "Inactive"
+    },
+    "condition": {
+      "normal": "Normal",
+      "abnormal": "Abnormal"
+    },
+    "accessories": {
+      "complete": "Complete",
+      "incomplete": "Incomplete"
+    }
+  },
+  "calibrationDueBadge": {
+    "overdue": "Calibration D+{days} (overdue)",
+    "dueToday": "Calibration D-0 (today)",
+    "dueIn": "Calibration D-{days}"
+  },
+  "handoverPicker": {
+    "title": "Pick a handover",
+    "description": "You have multiple handover items pending. Choose which one to process.",
+    "emptyState": "No handover items pending.",
+    "appearance": "Appearance",
+    "operation": "Operation",
+    "accessories": "Accessories",
+    "unknownSite": "Unknown site",
+    "unknownInspector": "Unknown inspector",
+    "checkoutIdLabel": "Checkout #{id}"
   },
   "labelPrint": {
     "title": "Bulk QR label print",
