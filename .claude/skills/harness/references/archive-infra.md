@@ -5,6 +5,28 @@
 
 ---
 
+## ~~2026-05-12 — ultrareview-shield-wrapper~~ ✅ 완료 (2026-05-12)
+
+> **핵심**: ultrareview-preflight Gate 1(위험 파일) 차단 시 실사용 dev `.env`(apps/frontend/.env.local, apps/backend/.env, .env.test)를 `mktemp -d -t ur-shield-XXXXXX` 격리 디렉토리로 mv → ultrareview 실행 → `trap restore_files EXIT` 자동 복원. `rm` 우회로 dev 서버 + JWT_SECRET 분실 위험 차단.
+>
+> **아키텍처 결정**:
+> - SSOT 단방향 wire: `scripts/ultrareview-preflight.mjs --list-patterns` JSON 노출 → shield는 인라인 패턴 재정의 0 (`grep -cE "\.env\.local|apps/backend/\.env|\.env\.test|\.sops\.decrypted" scripts/ultrareview-shield.sh` == 0)
+> - 격리 위치 `/tmp/` (working tree와 `.git` 외부) — ultrareview 번들 `--source .` 범위 밖이라 secret 외부 노출 0
+> - `flock(1) -n 9 → /tmp/ur-shield.lock` 동시 실행 차단 (race-free, 사고 직후 사고 학습으로 SHOULD S-4 → MUST 승격)
+> - `exec "$@"` 금지 — 현재 셸 교체 시 trap 우회 위험. 자식 프로세스 직접 호출 + 종료 코드 전파
+>
+> **사용 진입점**: `pnpm ur:shield -- node scripts/ultrareview-preflight.mjs` (POSIX `--` 인자 구분자 인식)
+>
+> **검증**: Mode 1 harness Evaluator PASS (iter 2, M-1~M-12 + S-1·S-2·S-4 PASS). iter 1 M-3 FAIL → contract rev-2 (단일라인 `A.*B` 리터럴 grep → AND-1/AND-2 분리 카운트 + OR-fallback) — memory "Prettier 멀티라인과 grep 안티패턴" 학습 적용. 시뮬 실측: 격리 3 + 검사 1/3 PASS + 복원 3 + `/tmp/ur-shield-*` 잔존 0.
+>
+> **검사 2/3 (gitleaks) 분리**: `.env` 격리 후에도 working tree 다른 secret 출처가 gitleaks 잡음 → shield 범위 외, tech-debt `ultrareview-preflight-gitleaks-allowlist` 별도 sprint로 분리.
+>
+> **사고 학습 (후속 tech-debt)**: 평가 단계 격리본 잔존 + 내가 destructive `rm -rf` 실행으로 dev .env 3개 손실 → Windows 미러 cp + JWT/NEXTAUTH secret 회전으로 복구. 후속 sprint 권장: `scripts/__tests__/ultrareview-shield.spec.mjs` integration spec (fake .env로 격리/복원 자동 검증) + shield `--self-test` 모드 (실데이터 영향 0).
+>
+> **커밋**: `94599fd4 feat(scripts): ultrareview-shield wrapper로 dev .env 자동 격리/복원` (6 files +479)
+
+---
+
 ## ~~2026-05-10 — verify-i18n-step8-automation-promotion~~ ✅ 완료 (2026-05-10)
 
 > **핵심**: `verify-i18n` Step 8a/8b가 invariant 완전하지만 Evaluator contract grep 시점 미실행 → silent miss 방지 목적. `apps/frontend/scripts/verify-route-metadata.mjs` Phase 3 승격 + pre-push `_t "route-map"` gate 통합.

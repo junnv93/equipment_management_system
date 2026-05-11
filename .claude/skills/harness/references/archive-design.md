@@ -5,6 +5,26 @@
 
 ---
 
+## ~~2026-05-11 — software-design-review-p0-p1-p2~~ ✅ 완료 (2026-05-11)
+
+> DESIGN_REVIEW.md 전수 closure (P0×3 + P1×4 + P2×3 = 10항목). UL-QP-18-07/09 시험용 소프트웨어 + 유효성 확인 도메인 시각·정보위계 개선.
+>
+> **신규 SSOT** (4): `SoftwareValidationStepper` (도메인 wrapper, `ProgressStepState` 재사용) + `use-software-validation-progress-steps` adapter hook + `software-validation-step.ts` schemas SSOT (3-step descriptor) + `SoftwareEmptyState` (도메인 wrapper, `EmptyState` SSOT 재사용) + `ResponsiveListFallback` (shared, `md` breakpoint).
+>
+> **신규 디자인 토큰** (4): `SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS` (5단계 시멘틱) + `SOFTWARE_VALIDATION_STATUS_ICON_TOKENS` + `SOFTWARE_VALIDATION_NOT_VALIDATED_BADGE` + `VALIDATION_INFO_CARD_TOKENS` (dt/dd 위계).
+>
+> **Backend BFF 확장**: `test-software.service.ts` findAll/findOne/findByEquipmentId 3 메서드에 `softwareValidations LEFT JOIN`으로 `latestValidationStatus` 노출 — N+1 query 회피.
+>
+> **i18n parity**: ko/en 315=315 키 동등.
+>
+> **검증**: Mode 1 harness (iter 1) MUST 16/16 PASS. backend tsc + frontend tsc exit 0. SHOULD S-1/S-2 PASS, S-4(e2e) tech-debt 등록.
+>
+> **Sub-tabs 적용**: SelfValidationFields 한 다이얼로그 길게 → 4탭(basic/acquisition/processing/control) 분할. ValidationCreateDialog `max-w-2xl` 단일 사이즈.
+>
+> 다른 세션 작업과 병렬 진행하면서 git stash drift 발생 → `git checkout stash@{0} -- <file>` 선별 복구로 11 파일 보존.
+
+---
+
 ## ~~반출입 관리 페이지 아키텍처 개선 — Phase 1~8 전체~~ ✅ 완료 (PR-1~PR-23 전부, 2026-04-21~05-08)
 
 > `/review-design 68/100` 기반 AP-01~10 전 항목 개선. FSM SSOT (`packages/schemas/src/fsm/`) + NextStepPanel + design token 3-layer 신설.

@@ -45,6 +45,10 @@ export const BRAND_COLORS_HEX = {
   progress: '#1d6fb8',
   /** completed/canceled 아카이브 상태 */
   archive: '#919aaa',
+  /** 시급(urgent) — confirm_handover_*, non_conforming, out_of_service (qr-visual-redesign TASK 2/8) */
+  urgent: '#cf5a31',
+  /** 비활성/여분(mute) — spare / inactive / disposed (운영 외 장비) */
+  mute: '#877f74',
 } as const;
 
 export type SemanticColorKey = keyof typeof BRAND_COLORS_HEX;
@@ -283,6 +287,28 @@ const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
     solid: 'bg-brand-archive text-white',
     dot: 'bg-brand-archive rounded-full',
     borderOpacity30: 'border-brand-archive/30',
+  },
+  urgent: {
+    text: 'text-brand-urgent',
+    bgLight: 'bg-brand-urgent/10',
+    status: 'bg-brand-urgent/10 text-brand-urgent',
+    badge: 'text-brand-urgent bg-brand-urgent/10 border-brand-urgent/20',
+    container: 'bg-brand-urgent/10 border-brand-urgent/20',
+    leftBorder: 'border-l-brand-urgent',
+    solid: 'bg-brand-urgent text-white',
+    dot: 'bg-brand-urgent rounded-full',
+    borderOpacity30: 'border-brand-urgent/30',
+  },
+  mute: {
+    text: 'text-brand-mute',
+    bgLight: 'bg-brand-mute/10',
+    status: 'bg-brand-mute/10 text-brand-mute',
+    badge: 'text-brand-mute bg-brand-mute/10 border-brand-mute/20',
+    container: 'bg-brand-mute/10 border-brand-mute/20',
+    leftBorder: 'border-l-brand-mute',
+    solid: 'bg-brand-mute text-white',
+    dot: 'bg-brand-mute rounded-full',
+    borderOpacity30: 'border-brand-mute/30',
   },
 } as const satisfies Record<SemanticColorKey, BrandClassSet>;
 

@@ -19,7 +19,8 @@
     "submitted": "Submitted",
     "approved": "Technically Approved",
     "quality_approved": "Fully Approved",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "notValidated": "Not Validated"
   },
   "list": {
     "title": "Test Software Registry",
@@ -32,10 +33,12 @@
     "columns": {
       "managementNumber": "Mgmt No.",
       "name": "Software Name",
+      "identifier": "Mgmt No. / Software Name",
       "version": "Version",
       "testField": "Test Field",
       "manager": "Manager (Primary, Secondary)",
       "requiresValidation": "Self-Validation Required",
+      "validationStatus": "Validation Status",
       "manufacturer": "Manufacturer",
       "location": "Location",
       "availability": "Availability"
@@ -44,6 +47,11 @@
     "requiresValidationNo": "X",
     "loadError": "Failed to load software list.",
     "loadErrorDesc": "Please check your network and try again.",
+    "emptyState": {
+      "title": "No test software registered",
+      "description": "Register the first test software in the UL-QP-18-07 management register.",
+      "cta": "Register Software"
+    },
     "filters": {
       "testField": "Test Field",
       "availability": "Availability",
@@ -142,6 +150,22 @@
     "empty": "No validation records",
     "loadError": "Failed to load validation records",
     "loadErrorDesc": "Please check your network and try again.",
+    "emptyState": {
+      "title": "No validation records",
+      "description": "Create the first validation record per UL-QP-18-09.",
+      "cta": "New Validation"
+    },
+    "steps": {
+      "ariaLabel": "Validation approval progress steps",
+      "submitted": "Submitted",
+      "approved": "Technical Approval",
+      "qualityApproved": "Quality Approval",
+      "rejected": "Rejected",
+      "pending": "Pending",
+      "stateDone": "Completed",
+      "stateFuture": "Upcoming",
+      "stateTerminated": "Terminated at this step"
+    },
     "backToDetail": "Back to Software Detail",
     "selfApprovalForbidden": "You cannot approve a validation you submitted",
     "dualApprovalForbidden": "Technical and quality approvals must be by different people",
@@ -235,6 +259,12 @@
       "performedByLabel": "Performed By",
       "performedByPlaceholder": "Select performer",
       "selfBasicInfoTitle": "Basic Information",
+      "selfTabs": {
+        "basic": "Basic / Test Environment",
+        "acquisition": "Acquisition Functions",
+        "processing": "Processing Functions",
+        "control": "Control Functions"
+      },
       "acquisitionTitle": "Acquisition Functions",
       "acquisitionDesc": "Verify the software data acquisition functions",
       "processingTitle": "Processing Functions",
@@ -298,6 +328,7 @@
     "documents": {
       "title": "Attachments",
       "empty": "No files attached",
+      "emptyDescription": "Attach test results, checklists, or evidence documents required for export.",
       "upload": "Upload File",
       "uploading": "Uploading...",
       "uploadSuccess": "File uploaded successfully",

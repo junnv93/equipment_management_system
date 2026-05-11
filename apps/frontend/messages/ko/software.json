@@ -19,7 +19,8 @@
     "submitted": "제출됨",
     "approved": "기술 승인",
     "quality_approved": "최종 승인",
-    "rejected": "반려됨"
+    "rejected": "반려됨",
+    "notValidated": "미검증"
   },
   "list": {
     "title": "시험용 소프트웨어 관리대장",
@@ -32,10 +33,12 @@
     "columns": {
       "managementNumber": "관리번호",
       "name": "소프트웨어명",
+      "identifier": "관리번호 / 소프트웨어명",
       "version": "버전",
       "testField": "시험분야",
       "manager": "담당자(정, 부)",
       "requiresValidation": "자체 유효성 검증 대상",
+      "validationStatus": "검증 상태",
       "manufacturer": "제작사",
       "location": "위치",
       "availability": "가용여부"
@@ -44,6 +47,11 @@
     "requiresValidationNo": "X",
     "loadError": "소프트웨어 목록을 불러오지 못했습니다.",
     "loadErrorDesc": "네트워크를 확인한 후 다시 시도해주세요.",
+    "emptyState": {
+      "title": "등록된 시험용 소프트웨어가 없습니다",
+      "description": "UL-QP-18-07 관리대장에 첫 시험용 소프트웨어를 등록하세요.",
+      "cta": "소프트웨어 등록"
+    },
     "filters": {
       "testField": "시험분야",
       "availability": "가용여부",
@@ -142,6 +150,22 @@
     "empty": "유효성 확인 기록이 없습니다",
     "loadError": "유효성 확인 기록을 불러오지 못했습니다",
     "loadErrorDesc": "네트워크를 확인한 후 다시 시도해주세요.",
+    "emptyState": {
+      "title": "유효성 확인 기록이 없습니다",
+      "description": "UL-QP-18-09 절차에 따라 첫 유효성 확인을 등록하세요.",
+      "cta": "유효성 확인 생성"
+    },
+    "steps": {
+      "ariaLabel": "유효성 확인 승인 진행 단계",
+      "submitted": "제출",
+      "approved": "기술 승인",
+      "qualityApproved": "품질 승인",
+      "rejected": "반려",
+      "pending": "대기 중",
+      "stateDone": "완료됨",
+      "stateFuture": "예정",
+      "stateTerminated": "이 단계에서 종료됨"
+    },
     "backToDetail": "소프트웨어 상세로 돌아가기",
     "selfApprovalForbidden": "본인이 제출한 유효성 확인은 본인이 승인할 수 없습니다",
     "dualApprovalForbidden": "기술 승인자와 품질 승인자는 서로 다른 사람이어야 합니다",
@@ -235,6 +259,12 @@
       "performedByLabel": "시험 수행자",
       "performedByPlaceholder": "수행자를 선택하세요",
       "selfBasicInfoTitle": "기본 정보",
+      "selfTabs": {
+        "basic": "기본 / 시험 환경",
+        "acquisition": "획득 기능",
+        "processing": "프로세싱 기능",
+        "control": "제어 기능"
+      },
       "acquisitionTitle": "획득 기능 (Acquisition Functions)",
       "acquisitionDesc": "소프트웨어의 데이터 획득 기능을 검증합니다",
       "processingTitle": "프로세싱 기능 (Processing Functions)",
@@ -298,6 +328,7 @@
     "documents": {
       "title": "첨부파일",
       "empty": "첨부된 파일이 없습니다",
+      "emptyDescription": "양식 내보내기를 위해 시험 결과·체크리스트 등 근거 문서를 첨부하세요.",
       "upload": "파일 업로드",
       "uploading": "업로드 중...",
       "uploadSuccess": "파일이 업로드되었습니다",

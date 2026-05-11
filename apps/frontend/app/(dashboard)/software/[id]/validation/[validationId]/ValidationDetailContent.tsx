@@ -10,13 +10,18 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { softwareValidationApi } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
+  SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS,
+} from '@/lib/design-tokens';
 import { FRONTEND_ROUTES, FORM_CATALOG, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isValidationExportable } from '@/lib/utils/software-validation-exportability';
 import { ValidationStatusValues, ValidationTypeValues } from '@equipment-management/schemas';
-import type { ValidationStatus } from '@equipment-management/schemas';
+import { useSoftwareValidationProgressSteps } from '@/hooks/use-software-validation-progress-steps';
+import SoftwareValidationStepper from '@/components/software/SoftwareValidationStepper';
 import { ValidationBasicInfoCard } from './_components/ValidationBasicInfoCard';
 import { ValidationVendorInfoCard } from './_components/ValidationVendorInfoCard';
 import { ValidationSelfTestInfoCard } from './_components/ValidationSelfTestInfoCard';
@@ -28,17 +33,6 @@ interface ValidationDetailContentProps {
   softwareId: string;
   validationId: string;
 }
-
-const STATUS_VARIANT: Record<
-  ValidationStatus,
-  'secondary' | 'outline' | 'default' | 'destructive'
-> = {
-  draft: 'secondary',
-  submitted: 'outline',
-  approved: 'outline',
-  quality_approved: 'default',
-  rejected: 'destructive',
-};
 
 export default function ValidationDetailContent({
   softwareId,
@@ -71,6 +65,15 @@ export default function ValidationDetailContent({
     queryKey: queryKeys.softwareValidations.detail(validationId),
     queryFn: () => softwareValidationApi.get(validationId),
     ...QUERY_CONFIG.SOFTWARE_VALIDATION_DETAIL,
+  });
+
+  // P0-1: stepper hook — early return 전 호출하여 React Hooks 순서 일관성 보장.
+  // validation 미로드 시 'draft' fallback (hook 내부가 'draft' → [] 안전 처리).
+  const stepperSteps = useSoftwareValidationProgressSteps({
+    status: validation?.status ?? 'draft',
+    submittedAt: validation?.submittedAt ?? null,
+    technicalApprovedAt: validation?.technicalApprovedAt ?? null,
+    qualityApprovedAt: validation?.qualityApprovedAt ?? null,
   });
 
   if (isLoading) {
@@ -123,25 +126,33 @@ export default function ValidationDetailContent({
               {t('validation.actions.edit')}
             </Button>
           )}
-          <Badge variant={STATUS_VARIANT[validation.status]} className="text-sm">
+          <Badge
+            className={`text-sm ${SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS[validation.status]}`}
+          >
             {t(`validationStatus.${validation.status}`)}
           </Badge>
         </div>
       </div>
 
-      <ValidationBasicInfoCard validation={validation} />
+      {/* P0-1: 승인 워크플로 진행 stepper — draft 상태에서는 hook이 빈 배열 반환 → 미렌더 */}
+      {stepperSteps.length > 0 && <SoftwareValidationStepper steps={stepperSteps} />}
 
-      {isVendor && <ValidationVendorInfoCard validation={validation} />}
-
-      {isSelf && <ValidationSelfTestInfoCard validation={validation} />}
-
-      <ValidationApprovalInfoCard validation={validation} />
-
-      <ValidationDocumentsSection
-        validationId={validationId}
-        validationType={validation.validationType}
-        validationStatus={validation.status}
-      />
+      {/* P2-2: 와이드(>= xl) 화면 2-column 배치 — 좌측 BasicInfo+Approval / 우측 Vendor or Self + Documents */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="space-y-6">
+          <ValidationBasicInfoCard validation={validation} />
+          <ValidationApprovalInfoCard validation={validation} />
+        </div>
+        <div className="space-y-6">
+          {isVendor && <ValidationVendorInfoCard validation={validation} />}
+          {isSelf && <ValidationSelfTestInfoCard validation={validation} />}
+          <ValidationDocumentsSection
+            validationId={validationId}
+            validationType={validation.validationType}
+            validationStatus={validation.status}
+          />
+        </div>
+      </div>
 
       <ValidationEditDialog
         validationId={validationId}

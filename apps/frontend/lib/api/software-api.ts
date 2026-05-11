@@ -30,6 +30,12 @@ export interface TestSoftware {
   requiresValidation: boolean;
   latestValidationId: string | null;
   latestValidatedAt: string | null;
+  /**
+   * 최신 유효성 확인 status (DESIGN_REVIEW.md P0-3).
+   * latestValidationId가 가리키는 validation row의 status.
+   * latestValidationId === null 이면 null (= 미검증).
+   */
+  latestValidationStatus: ValidationStatus | null;
   site: string | null;
   version: number;
   createdAt: string;

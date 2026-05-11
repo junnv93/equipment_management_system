@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffectiveRole } from '@/hooks/use-effective-role';
-import { User, Bell, Monitor, Calendar, Cog, ChevronRight, Shield } from 'lucide-react';
+import { User, Bell, Monitor, Calendar, Cog, ChevronRight, Shield, Keyboard } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -45,6 +45,11 @@ function getSettingsNavItems(role?: string): SettingsNavItem[] {
       href: FRONTEND_ROUTES.SETTINGS.DISPLAY,
       labelKey: 'nav.display',
       icon: Monitor,
+    },
+    {
+      href: FRONTEND_ROUTES.SETTINGS.SHORTCUTS,
+      labelKey: 'nav.shortcuts',
+      icon: Keyboard,
     },
   ];
 

@@ -89,6 +89,10 @@
   --color-brand-temporary: hsl(var(--brand-color-temporary));
   --color-brand-progress: hsl(var(--brand-color-progress));
   --color-brand-archive: hsl(var(--brand-color-archive));
+  --color-brand-urgent: hsl(var(--brand-color-urgent));
+  --color-brand-urgent-weak: var(--brand-urgent-weak);
+  --color-brand-mute: hsl(var(--brand-color-mute));
+  --color-brand-mute-weak: var(--brand-mute-weak);
 
   --color-brand-site-suw: hsl(var(--brand-color-site-suw));
   --color-brand-site-uiw: hsl(var(--brand-color-site-uiw));
@@ -418,8 +422,17 @@
 
     --radius: 0.5rem;
 
-    /* Accessibility - Touch Target (WCAG 2.5.5 AAA: 44px, 2.5.8 AA: 24px) */
-    --touch-target-min: 44px;
+    /* Accessibility - Touch Target (WCAG 2.5.5 AAA: 44px, 2.5.8 AA: 24px)
+     * UL-QP-18 현장 a11y 기준: Material Design 권장 48px (장갑 시나리오 56px opt-in).
+     * 2026-05-11 raised 44→48px per qr-visual-redesign TASK 8. */
+    --touch-target-min: 48px;
+    --touch-target-glove: 56px;
+
+    /* Mobile-first typography ramp (qr-visual-redesign TASK 8)
+     * 1차 정보 ≥18px (UL-QP-18 현장 가독성), 2차 14px, mono 13px. */
+    --text-1-mobile: 18px;
+    --text-2-mobile: 14px;
+    --text-mono: 13px;
 
     /* Mobile — iOS Safe Area Insets (노치/홈 인디케이터 대응)
      * viewport-fit=cover와 함께 사용해야 env()가 실제 값을 반환합니다.
@@ -485,6 +498,15 @@
     --brand-color-temporary: 187 72% 51%;  /* #22B8CF — 임시 장비 상태 */
     --brand-color-progress: 213 79% 48%;   /* #1d6fb8 — 진행중 블루그레이 (in_use, lender_checked) */
     --brand-color-archive: 220 9% 60%;     /* #919aaa — 완료/취소 아카이브 회색 */
+
+    /* 4-tier status separation — urgent (시급) + mute (비활성/여분)
+     * oklch(0.62 0.17 38) ≈ HSL — qr-visual-redesign TASK 8. */
+    --brand-color-urgent: 17 67% 51%;      /* #cf5a31 — confirm_handover_*, non_conforming, out_of_service */
+    --brand-color-mute: 32 8% 50%;         /* #877f74 — spare / inactive / disposed */
+    --brand-urgent: hsl(var(--brand-color-urgent));
+    --brand-urgent-weak: hsl(17 80% 96%);  /* oklch(0.96 0.04 38) 근사 — soft tint */
+    --brand-mute: hsl(var(--brand-color-mute));
+    --brand-mute-weak: hsl(32 10% 96%);    /* oklch(0.96 0.004 70) 근사 — soft tint */
 
     /* Site Identity Colors */
     --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
@@ -586,6 +608,14 @@
     --brand-color-progress: 213 79% 58%;   /* 다크모드 밝기 보정 */
     --brand-color-archive: 220 9% 55%;     /* 다크모드 밝기 보정 */
 
+    /* 4-tier status — Dark Mode (밝기 보정) */
+    --brand-color-urgent: 17 72% 58%;
+    --brand-color-mute: 32 8% 60%;
+    --brand-urgent: hsl(var(--brand-color-urgent));
+    --brand-urgent-weak: hsl(17 30% 18%);
+    --brand-mute: hsl(var(--brand-color-mute));
+    --brand-mute-weak: hsl(32 10% 18%);
+
     /* Site Identity Colors — Dark Mode (밝기 보정) */
     --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */
     --brand-color-site-uiw: 212 70% 65%;   /* 의왕 — 다크모드 밝기 보정 */
@@ -668,6 +698,15 @@
     word-break: keep-all;
     overflow-wrap: break-word;
     line-height: 1.45;
+  }
+
+  /* text-mono — 관리번호/타임스탬프 monospace 클래스 (qr-visual-redesign TASK 8)
+   * font-mono + tabular-nums + --text-mono(13px) 결합 — 자릿수 점프 방지.
+   * 기존 `font-mono tabular-nums text-xs` 패턴의 SSOT 통합 (자유 size 변경 차단). */
+  .text-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-mono);
   }
 
   /* label-mono — 영문 vendor/관리번호 라벨용 truncate 정책 (REVIEW_RESULT.md 4.4)

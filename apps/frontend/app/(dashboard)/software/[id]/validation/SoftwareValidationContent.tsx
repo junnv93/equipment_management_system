@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, FileCheck, FileEdit, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus, FileEdit, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/shared/ErrorState';
+import { ValidationListEmptyState } from '@/components/software/SoftwareEmptyState';
 import {
   softwareValidationApi,
   type SoftwareValidation,
@@ -28,7 +30,12 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useToast } from '@/components/ui/use-toast';
 import { mapSoftwareValidationErrorToToast } from '@/lib/errors/software-validation-errors';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
+  SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS,
+  SOFTWARE_VALIDATION_STATUS_ICON_TOKENS,
+} from '@/lib/design-tokens';
 import {
   DEFAULT_PAGE_SIZE,
   FRONTEND_ROUTES,
@@ -46,23 +53,19 @@ interface SoftwareValidationContentProps {
   softwareId: string;
 }
 
-const STATUS_ICON: Record<ValidationStatus, React.ReactNode> = {
-  draft: <FileEdit className="h-4 w-4 text-muted-foreground" />,
-  submitted: <Clock className="h-4 w-4 text-yellow-600" />,
-  approved: <CheckCircle2 className="h-4 w-4 text-blue-600" />,
-  quality_approved: <CheckCircle2 className="h-4 w-4 text-green-600" />,
-  rejected: <XCircle className="h-4 w-4 text-red-600" />,
-};
-
-const STATUS_VARIANT: Record<
+/**
+ * P2-1: raw Tailwind 색상(text-yellow-600 등)을 시멘틱 토큰으로 대체.
+ * 다크모드 자동 전환 보장.
+ */
+const STATUS_ICON_COMPONENT: Record<
   ValidationStatus,
-  'secondary' | 'outline' | 'default' | 'destructive'
+  React.ComponentType<{ className?: string }>
 > = {
-  draft: 'secondary',
-  submitted: 'outline',
-  approved: 'outline',
-  quality_approved: 'default',
-  rejected: 'destructive',
+  draft: FileEdit,
+  submitted: Clock,
+  approved: CheckCircle2,
+  quality_approved: CheckCircle2,
+  rejected: XCircle,
 };
 
 const EMPTY_FORM: CreateFormState = {
@@ -301,15 +304,14 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
           ))}
         </div>
       ) : isError ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <XCircle className="mb-3 h-10 w-10 text-destructive" />
-          <p>{t('validation.loadError')}</p>
+        <div className="py-16 flex justify-center">
+          <ErrorState title={t('validation.loadError')} />
         </div>
       ) : validations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <FileCheck className="mb-3 h-10 w-10" />
-          <p>{t('validation.empty')}</p>
-        </div>
+        <ValidationListEmptyState
+          canCreate={can(Permission.CREATE_SOFTWARE_VALIDATION)}
+          onCreateClick={() => setIsCreateOpen(true)}
+        />
       ) : (
         <div className="rounded-md border">
           <Table>
@@ -334,12 +336,20 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                 >
                   <TableCell>{t(`validationType.${v.validationType}`)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {STATUS_ICON[v.status]}
-                      <Badge variant={STATUS_VARIANT[v.status]}>
-                        {t(`validationStatus.${v.status}`)}
-                      </Badge>
-                    </div>
+                    {(() => {
+                      const Icon = STATUS_ICON_COMPONENT[v.status];
+                      return (
+                        <Badge
+                          className={`flex w-fit items-center gap-1 ${SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS[v.status]}`}
+                        >
+                          <Icon
+                            className={`h-3.5 w-3.5 ${SOFTWARE_VALIDATION_STATUS_ICON_TOKENS[v.status]}`}
+                            aria-hidden="true"
+                          />
+                          {t(`validationStatus.${v.status}`)}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-xs">

@@ -7,20 +7,23 @@ import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { revokeApproval } from '@/lib/api/checkout-revoke-approval';
+import { UNDO_TOAST_DURATION_MS } from '@/lib/checkouts/undo-constants';
 
-/** undo 토스트 표시 시간 — CheckoutDetailClient.tsx의 undoWindowMs: 5000과 동기화 */
-const UNDO_TOAST_DURATION_MS = 5000;
+// 단건/벌크 양쪽 hook 이 공유하는 SSOT 상수는 `lib/checkouts/undo-constants` 로 이동.
+// 본 파일은 axios(checkout-revoke-approval)에 의존하므로 jest 환경에서 import chain
+// 진입을 피해야 하는 호출자(bulk hook)는 별도 파일(use-bulk-undo-toast)에서 분리.
+export { UNDO_TOAST_DURATION_MS };
 
 interface UseUndoToastOptions {
   checkoutId: string;
   /** invalidateQueries after undo — SSOT rollback 경로 */
-  invalidateKeys: QueryKey[];
+  invalidateKeys: readonly QueryKey[];
   /** undoWindowMs 경과 전 abort 함수 */
   abortUndo: () => void;
 }
 
 /**
- * 반출 승인 Undo 토스트 훅.
+ * 반출 승인 Undo 토스트 훅 (단건).
  *
  * - abortUndo: undoWindowMs 내 undo → API 호출 취소
  * - revokeApproval: 이미 처리된 승인 철회 (5분 내)

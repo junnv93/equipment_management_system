@@ -582,6 +582,32 @@ grep -n "onReject={(item)\|onViewDetail={(item)\|onReject={() =>\|onViewDetail={
 
 **관련 파일**: `apps/frontend/components/approvals/ApprovalRow.tsx`, `ApprovalList.tsx`, `ApprovalsClient.tsx`
 
+### Step 46: `useOptimisticMutation` `undoWindowMs` 호출자는 fire-and-forget 강제 (2026-05-12 추가)
+
+**배경**: `undoWindowMs` 옵션은 mutateAsync를 5초간 timer 후 실제 실행. 호출자가 `await mutation.mutateAsync(...)` 패턴을 쓰면 5초 동안 caller가 blocking → dialog 5초 잠금/버튼 spinner 5초 유지 등 UX 손상. 표준은 **fire-and-forget** (`void mutation.mutateAsync(...).catch(() => undefined)`) + 호출자 dialog 즉시 close.
+
+**근거**: `checkouts-sprint4-followups-s1-s3-s8` (commit `f3391602`) — `useCheckoutBulkMutations` + `useApprovalsBulkMutations` 양쪽에 `undoWindowMs: UNDO_TOAST_DURATION_MS` 적용 시 `handleBulkApprove` / `handleBulkApproveWithComment` / `handleBulkReject` 모두 fire-and-forget으로 변경. `handleBulkApproveWithComment`는 추가로 `setIsBulkApproveCommentOpen(false)` + `setBulkApproveComment('')`를 mutate 호출 직전에 실행 (race-safe close — onSuccessCallback의 close는 idempotent로 안전).
+
+```bash
+# 1. undoWindowMs 사용 hook 식별
+grep -rn "undoWindowMs" apps/frontend/hooks --include="*.ts" --include="*.tsx" -l
+
+# 2. 각 hook의 handleXxx 본체에서 mutateAsync await 패턴 차단
+# 표준: void mutation.mutateAsync(...).catch(() => undefined)
+# 위반: await mutation.mutateAsync(...)
+for f in $(grep -rln "undoWindowMs" apps/frontend/hooks --include="*.ts"); do
+  awk '/undoWindowMs/,/^}$/' "$f" | grep -nE "^\s*await .+\.mutateAsync\(" && echo "  ↑ FAIL: $f"
+done
+# 기대값: 0 hit (fire-and-forget만 허용)
+
+# 3. dialog state owner인 hook은 mutate 호출 직전 즉시 close 패턴 확인
+# 예: setIsBulkApproveCommentOpen(false) + setBulkApproveComment('') → mutateAsync (이 순서)
+grep -nE "setIs.*Open\(false\)" apps/frontend/hooks/use-approvals-bulk-mutations.ts
+# 기대값: handleBulkApproveWithComment 본체에 mutate 직전 dialog close 1회 이상
+```
+
+**관련 파일**: `apps/frontend/hooks/use-optimistic-mutation.tsx`, `use-checkout-bulk-mutations.ts`, `use-approvals-bulk-mutations.ts`, `use-bulk-undo-toast.tsx`, `lib/checkouts/undo-constants.ts`
+
 ## Output Format
 
 ```markdown
@@ -632,6 +658,7 @@ grep -n "onReject={(item)\|onViewDetail={(item)\|onReject={() =>\|onViewDetail={
 | 43  | useEquipmentCalibrations dual-variant hook | PASS/FAIL | calibrationApi.getEquipmentCalibrations/getCalibrationHistory 직접 호출 위치 |
 | 44  | useSafeTimeout SSOT                        | PASS/FAIL | 신규 hooks/components 내 수동 타이머 배열 관리(useRef<setTimeout[]>) 위치 |
 | 45  | ApprovalList 4-layer memo 체인             | PASS/FAIL | ApprovalRow memo 0건 / ApprovalRowItem 래퍼 0건 / ApprovalsClient 인라인 람다 위치 |
+| 46  | undoWindowMs caller fire-and-forget        | PASS/FAIL | undoWindowMs 사용 hook의 handleXxx에서 await mutation.mutateAsync 위치 |
 ```
 
 ## Exceptions

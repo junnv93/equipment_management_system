@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { NavLink } from '@/components/navigation/nav-link';
-import { Plus, Search, Package } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,9 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
-import testSoftwareApi from '@/lib/api/software-api';
+import { ResponsiveListFallback } from '@/components/shared/ResponsiveListFallback';
+import { TestSoftwareEmptyState } from '@/components/software/SoftwareEmptyState';
+import testSoftwareApi, { type TestSoftware } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TEST_FIELD_VALUES, SOFTWARE_AVAILABILITY_VALUES } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
@@ -44,6 +46,8 @@ import {
   PAGE_HEADER_TOKENS,
   SOFTWARE_AVAILABILITY_BADGE_TOKENS,
   SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS,
+  SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS,
+  SOFTWARE_VALIDATION_NOT_VALIDATED_BADGE,
 } from '@/lib/design-tokens';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
@@ -55,6 +59,35 @@ function formatManagers(
   if (primary) return primary;
   if (secondary) return secondary;
   return '-';
+}
+
+/**
+ * 검증 상태 셀/배지 — DESIGN_REVIEW.md P0-3.
+ * `latestValidationId === null` 이면 "미검증" 강조 (warning 톤).
+ * 그 외에는 latestValidationStatus 5단계 시멘틱 배지.
+ */
+function ValidationStatusBadge({
+  sw,
+  t,
+}: {
+  sw: TestSoftware;
+  t: ReturnType<typeof useTranslations<'software'>>;
+}) {
+  if (sw.latestValidationId === null || sw.latestValidationStatus === null) {
+    if (!sw.requiresValidation) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+    return (
+      <Badge className={SOFTWARE_VALIDATION_NOT_VALIDATED_BADGE}>
+        {t('validationStatus.notValidated')}
+      </Badge>
+    );
+  }
+  return (
+    <Badge className={SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS[sw.latestValidationStatus]}>
+      {t(`validationStatus.${sw.latestValidationStatus}`)}
+    </Badge>
+  );
 }
 
 export default function TestSoftwareListContent() {
@@ -205,7 +238,7 @@ export default function TestSoftwareListContent() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Body — loading / error / empty / data */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
@@ -217,92 +250,152 @@ export default function TestSoftwareListContent() {
           <ErrorState title={t('list.loadError')} onRetry={() => void refetch()} />
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Package className="mb-3 h-10 w-10" />
-          <p>{t('list.empty')}</p>
-        </div>
+        <TestSoftwareEmptyState />
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="whitespace-nowrap">
-                  {t('list.columns.managementNumber')}
-                </TableHead>
-                <TableHead className="whitespace-nowrap">{t('list.columns.name')}</TableHead>
-                <TableHead className="whitespace-nowrap">{t('list.columns.version')}</TableHead>
-                <TableHead className="whitespace-nowrap">{t('list.columns.testField')}</TableHead>
-                <TableHead className="whitespace-nowrap">{t('list.columns.manager')}</TableHead>
-                <TableHead className="whitespace-nowrap">
-                  {t('list.columns.manufacturer')}
-                </TableHead>
-                <TableHead className="whitespace-nowrap">{t('list.columns.location')}</TableHead>
-                <TableHead className="whitespace-nowrap">
-                  {t('list.columns.requiresValidation')}
-                </TableHead>
-                <TableHead className="whitespace-nowrap">
-                  {t('list.columns.availability')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <ResponsiveListFallback
+          desktop={
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {/* P1-2: P-number + 이름 통합 컬럼 */}
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.identifier')}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">{t('list.columns.version')}</TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.testField')}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">{t('list.columns.manager')}</TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.manufacturer')}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.location')}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.requiresValidation')}
+                    </TableHead>
+                    {/* P0-3: 검증 상태 컬럼 */}
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.validationStatus')}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      {t('list.columns.availability')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((sw) => (
+                    <TableRow key={sw.id} className="relative cursor-pointer hover:bg-muted/50">
+                      {/* P1-2: P-number(meta) + 이름(primary) stacked */}
+                      <TableCell className="min-w-[220px]">
+                        <NavLink
+                          href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
+                          className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
+                          aria-label={sw.name}
+                          tabIndex={0}
+                          pendingIndicator="none"
+                        />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono text-[11px] tracking-wide text-muted-foreground">
+                            {sw.managementNumber}
+                          </span>
+                          <span className="text-sm font-semibold text-foreground truncate">
+                            {sw.name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs tabular-nums">
+                          {sw.softwareVersion || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{t(`testField.${sw.testField}`)}</TableCell>
+                      <TableCell>
+                        <span
+                          className="block max-w-[180px] truncate"
+                          title={formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                        >
+                          {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                        </span>
+                      </TableCell>
+                      <TableCell>{sw.manufacturer || '-'}</TableCell>
+                      <TableCell>{sw.location || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          className={
+                            sw.requiresValidation
+                              ? SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.yes
+                              : SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.no
+                          }
+                        >
+                          {sw.requiresValidation
+                            ? t('list.requiresValidationYes')
+                            : t('list.requiresValidationNo')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <ValidationStatusBadge sw={sw} t={t} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            SOFTWARE_AVAILABILITY_BADGE_TOKENS[sw.availability] ??
+                            SOFTWARE_AVAILABILITY_BADGE_TOKENS.unavailable
+                          }
+                        >
+                          {t(`availability.${sw.availability}`)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          }
+          mobile={
+            <ul className="space-y-2" role="list">
               {items.map((sw) => (
-                <TableRow key={sw.id} className="relative cursor-pointer hover:bg-muted/50">
-                  <TableCell>
-                    <NavLink
-                      href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
-                      className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
-                      aria-label={sw.name}
-                      tabIndex={0}
-                      pendingIndicator="none"
-                    />
-                    <span className="font-mono text-sm text-primary">{sw.managementNumber}</span>
-                  </TableCell>
-                  <TableCell className="font-medium">{sw.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs tabular-nums">
-                      {sw.softwareVersion || '-'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{t(`testField.${sw.testField}`)}</TableCell>
-                  <TableCell>
-                    <span
-                      className="block max-w-[180px] truncate"
-                      title={formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
-                    >
-                      {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
-                    </span>
-                  </TableCell>
-                  <TableCell>{sw.manufacturer || '-'}</TableCell>
-                  <TableCell>{sw.location || '-'}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      className={
-                        sw.requiresValidation
-                          ? SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.yes
-                          : SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.no
-                      }
-                    >
-                      {sw.requiresValidation
-                        ? t('list.requiresValidationYes')
-                        : t('list.requiresValidationNo')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        SOFTWARE_AVAILABILITY_BADGE_TOKENS[sw.availability] ??
-                        SOFTWARE_AVAILABILITY_BADGE_TOKENS.unavailable
-                      }
-                    >
-                      {t(`availability.${sw.availability}`)}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                <li key={sw.id}>
+                  <Link
+                    href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
+                    className="block rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono text-[11px] tracking-wide text-muted-foreground">
+                          {sw.managementNumber}
+                        </div>
+                        <div className="text-sm font-semibold text-foreground truncate">
+                          {sw.name}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span>{t(`testField.${sw.testField}`)}</span>
+                          <span aria-hidden>·</span>
+                          <span className="font-mono tabular-nums">
+                            {sw.softwareVersion ?? '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <Badge
+                          className={
+                            SOFTWARE_AVAILABILITY_BADGE_TOKENS[sw.availability] ??
+                            SOFTWARE_AVAILABILITY_BADGE_TOKENS.unavailable
+                          }
+                        >
+                          {t(`availability.${sw.availability}`)}
+                        </Badge>
+                        <ValidationStatusBadge sw={sw} t={t} />
+                      </div>
+                    </div>
+                  </Link>
+                </li>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </ul>
+          }
+        />
       )}
 
       {/* Pagination */}

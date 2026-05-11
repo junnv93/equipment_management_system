@@ -355,8 +355,19 @@ export {
   QR_ACTION_VALUES,
   QR_ACTION_I18N_KEYS,
   QR_ACTION_PRIORITY,
+  QR_ACTION_GROUP,
+  QR_ACTION_GROUP_ORDER,
   type QRAllowedAction,
+  type QRActionGroup,
 } from './qr-access';
+
+// 장비 상태 → 시각 톤 매핑 (FE/BE 공용 SSOT — 4-tier 색 분리)
+export {
+  EQUIPMENT_STATUS_TONE,
+  EQUIPMENT_STATUS_I18N_KEYS,
+  EQUIPMENT_STATUS_VALUES,
+  type EquipmentStatusTone,
+} from './equipment-status-tone';
 
 // 교정기한 초과 대상 제외 장비 상태 (Scheduler + API 공유 SSOT)
 export { EXCLUDED_OVERDUE_EQUIPMENT_STATUSES } from './calibration-overdue';

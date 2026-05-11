@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
+import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
+import { teams } from '@equipment-management/db/schema/teams';
+import { users } from '@equipment-management/db/schema/users';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import {
   Permission,
@@ -13,13 +16,35 @@ import {
   EquipmentStatusEnum,
   CheckoutStatusEnum,
   CheckoutPurposeEnum,
+  ConditionStatusEnum,
+  AccessoriesStatusEnum,
+  SITE_LABELS,
+  type Site,
+  type ConditionStatus,
+  type AccessoriesStatus,
+  type HandoverItem,
 } from '@equipment-management/schemas';
 import type { JwtUser } from '../../../types/auth';
 
-/** resolveAllowedActions 반환 타입 — actions + confirm_handover_* 에 필요한 checkoutId */
+/**
+ * resolveAllowedActions 반환 타입.
+ *
+ * `handovers` 는 confirm_handover_* 액션이 도출된 모든 checkout 의 컨텍스트.
+ * `handoverCheckoutId` 는 단일 ID backward-compat (1 release 후 제거 예정 — verify-handover-qr 회귀 감시).
+ *
+ * @see packages/schemas/src/qr-handover.ts (HandoverItem SSOT)
+ */
 export interface QRAccessResult {
   actions: QRAllowedAction[];
-  /** confirm_handover_receive / confirm_handover_return 액션 존재 시 해당 checkoutId */
+  /**
+   * confirm_handover_receive / confirm_handover_return 액션이 가리키는 checkout 목록.
+   * 사용자가 동시에 여러 건의 수령/반환 대기를 가질 때 picker UI 가 카드로 노출.
+   */
+  handovers?: HandoverItem[];
+  /**
+   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일 — 1 release 후 제거.
+   * 신규 호출자는 `handovers` 를 직접 사용할 것.
+   */
   handoverCheckoutId?: string;
 }
 
@@ -34,12 +59,15 @@ export interface QRAccessResult {
  * - `request_checkout`: CREATE_CHECKOUT 권한 + 장비 status `available` + 사용자 사이트 === 장비 사이트
  * - `mark_checkout_returned`: 사용자가 현재 이 장비를 반출 중(`checked_out`)인 경우 (cross-site 허용)
  * - `report_nc`: CREATE_NON_CONFORMANCE 권한자 (cross-site 허용)
+ * - `confirm_handover_receive`: 본인이 requester(borrower) + status `lender_checked`
+ * - `confirm_handover_return`: 본인이 approver(lender) + status `borrower_returned`
  *
  * Phase 3 확장 후보: `scan_continuous` (연속 스캔 — 재고 실사용).
  */
 @Injectable()
 export class QRAccessService {
   private readonly logger = new Logger(QRAccessService.name);
+  private deprecatedHandoverCheckoutIdLogged = false;
 
   constructor(@Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase) {}
 
@@ -49,7 +77,7 @@ export class QRAccessService {
   ): Promise<QRAccessResult> {
     const actions = new Set<QRAllowedAction>();
     const roles = user.roles ?? [];
-    let handoverCheckoutId: string | undefined;
+    let handovers: HandoverItem[] = [];
 
     // 1. 기본 뷰 액션 — VIEW_EQUIPMENT 권한자 (cross-site 허용)
     if (userHasPermission(roles, Permission.VIEW_EQUIPMENT)) {
@@ -78,25 +106,29 @@ export class QRAccessService {
     }
 
     // 5. 인수인계 확인 — rental 4-step handover 단계 (cross-site 허용)
-    const handoverInfo = await this.resolveHandoverActions(equipment.id, user.userId);
-    if (handoverInfo) {
-      actions.add(handoverInfo.action);
-      handoverCheckoutId = handoverInfo.checkoutId;
+    // 여러 lender_checked / borrower_returned checkout 동시 보유 가능 — 배열로 도출.
+    handovers = await this.resolveHandoverActions(equipment.id, user.userId);
+    for (const item of handovers) {
+      actions.add(item.type === 'receive' ? 'confirm_handover_receive' : 'confirm_handover_return');
     }
 
-    // QR_ACTION_VALUES 순서대로 정렬 (프론트 표시 우선순위는 QR_ACTION_PRIORITY로 별도 처리)
-    return {
+    const result: QRAccessResult = {
       actions: QR_ACTION_VALUES.filter((a) => actions.has(a)),
-      handoverCheckoutId,
     };
+    if (handovers.length > 0) {
+      result.handovers = handovers;
+      // Backward-compat: 단일 ID — 신규 호출자는 handovers 사용. 1 release 후 제거.
+      result.handoverCheckoutId = handovers[0].id;
+      if (!this.deprecatedHandoverCheckoutIdLogged) {
+        this.logger.debug(
+          'QRAccessResult.handoverCheckoutId 는 deprecated — 신규 코드는 handovers[].id 를 사용하라'
+        );
+        this.deprecatedHandoverCheckoutIdLogged = true;
+      }
+    }
+    return result;
   }
 
-  /**
-   * 사용자가 이 장비를 현재 반출 중(status `checked_out`)인지 확인.
-   *
-   * checkouts 테이블에 equipment_id 컬럼이 없으므로 반드시 checkout_items 조인 경유.
-   * (프로젝트 메모리: "checkouts 테이블에 equipmentId 없음 — checkoutItems 경유 join 필수")
-   */
   private async hasActiveCheckoutAsRequester(
     equipmentId: string,
     userId: string
@@ -117,36 +149,41 @@ export class QRAccessService {
       return rows.length > 0;
     } catch (error) {
       this.logger.warn(
-        `active checkout 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${error instanceof Error ? error.message : String(error)}`
+        `active checkout 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
       return false;
     }
   }
 
   /**
-   * rental 4-step 인수인계 단계에서 수행 가능한 handover action을 도출.
+   * rental 4-step 인수인계 단계에서 수행 가능한 handover 컨텍스트 목록.
    *
-   * - `confirm_handover_receive`: 본인이 requester(borrower) + status `lender_checked`
-   *   → borrower가 장비를 실제 수령하고 상태를 확인하는 단계
-   * - `confirm_handover_return`: 본인이 approver(lender, 현재 sprint scope) + status `borrower_returned`
-   *   → lender가 반환된 장비를 최종 수령하고 상태를 확인하는 단계
-   *
-   * 주의: lenderTeamId 다중 멤버 발급은 후속 sprint (현재 approverId만 확인).
+   * 사용자가 borrower(requester) 또는 lender(approver) 로 참여한 모든 checkout 중
+   * status 가 `lender_checked` 또는 `borrower_returned` 인 row 를 카드 데이터로 매핑.
    */
   private async resolveHandoverActions(
     equipmentId: string,
     userId: string
-  ): Promise<{ action: QRAllowedAction; checkoutId: string } | null> {
+  ): Promise<HandoverItem[]> {
     try {
       const rows = await this.db
         .select({
-          id: checkouts.id,
+          checkoutId: checkouts.id,
           status: checkouts.status,
           requesterId: checkouts.requesterId,
           approverId: checkouts.approverId,
+          lenderTeamId: checkouts.lenderTeamId,
+          destination: checkouts.destination,
+          lenderTeamName: teams.name,
+          lenderSite: teams.site,
+          borrowerSite: users.site,
         })
         .from(checkouts)
         .innerJoin(checkoutItems, eq(checkoutItems.checkoutId, checkouts.id))
+        .leftJoin(teams, eq(teams.id, checkouts.lenderTeamId))
+        .leftJoin(users, eq(users.id, checkouts.requesterId))
         .where(
           and(
             eq(checkoutItems.equipmentId, equipmentId),
@@ -156,24 +193,102 @@ export class QRAccessService {
               CheckoutStatusEnum.enum.borrower_returned,
             ])
           )
-        )
-        .limit(1);
+        );
 
-      if (rows.length === 0) return null;
-      const row = rows[0];
+      if (rows.length === 0) return [];
 
-      if (row.status === CheckoutStatusEnum.enum.lender_checked && row.requesterId === userId) {
-        return { action: 'confirm_handover_receive', checkoutId: row.id };
+      const items: HandoverItem[] = [];
+      for (const row of rows) {
+        const isBorrowerReceive =
+          row.status === CheckoutStatusEnum.enum.lender_checked && row.requesterId === userId;
+        const isLenderReturn =
+          row.status === CheckoutStatusEnum.enum.borrower_returned && row.approverId === userId;
+
+        if (!isBorrowerReceive && !isLenderReturn) continue;
+
+        const lastCheckStep = isBorrowerReceive ? 'lender_checkout' : 'borrower_return';
+        const lastCheck = await this.fetchLastConditionCheck(row.checkoutId, lastCheckStep);
+
+        items.push({
+          id: row.checkoutId,
+          type: isBorrowerReceive ? 'receive' : 'return',
+          lenderTeamName: row.lenderTeamName ?? '',
+          lenderSiteLabel: this.formatSiteLabel(row.lenderSite),
+          borrowerSiteLabel: this.formatSiteLabel(row.borrowerSite) || (row.destination ?? ''),
+          checkedAt: (lastCheck?.checkedAt ?? new Date()).toISOString(),
+          lastCheck: {
+            appearance: lastCheck?.appearance ?? ConditionStatusEnum.enum.normal,
+            operation: lastCheck?.operation ?? ConditionStatusEnum.enum.normal,
+            ...(lastCheck?.accessories !== undefined && { accessories: lastCheck.accessories }),
+          },
+          inspectorName: lastCheck?.inspectorName ?? '',
+        });
       }
-      if (row.status === CheckoutStatusEnum.enum.borrower_returned && row.approverId === userId) {
-        return { action: 'confirm_handover_return', checkoutId: row.id };
-      }
-      return null;
+      return items;
     } catch (error) {
       this.logger.warn(
-        `handover action 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${error instanceof Error ? error.message : String(error)}`
+        `handover action 조회 실패 (equipmentId=${equipmentId}, userId=${userId}): ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return [];
+    }
+  }
+
+  private async fetchLastConditionCheck(
+    checkoutId: string,
+    step: 'lender_checkout' | 'borrower_return'
+  ): Promise<{
+    checkedAt: Date;
+    appearance: ConditionStatus;
+    operation: ConditionStatus;
+    accessories: AccessoriesStatus | undefined;
+    inspectorName: string;
+  } | null> {
+    try {
+      const rows = await this.db
+        .select({
+          checkedAt: conditionChecks.checkedAt,
+          appearanceStatus: conditionChecks.appearanceStatus,
+          operationStatus: conditionChecks.operationStatus,
+          accessoriesStatus: conditionChecks.accessoriesStatus,
+          inspectorName: users.name,
+        })
+        .from(conditionChecks)
+        .leftJoin(users, eq(users.id, conditionChecks.checkedBy))
+        .where(and(eq(conditionChecks.checkoutId, checkoutId), eq(conditionChecks.step, step)))
+        .orderBy(desc(conditionChecks.checkedAt))
+        .limit(1);
+      if (rows.length === 0) return null;
+      const row = rows[0];
+      const appearance = ConditionStatusEnum.safeParse(row.appearanceStatus);
+      const operation = ConditionStatusEnum.safeParse(row.operationStatus);
+      const accessories =
+        row.accessoriesStatus !== null && row.accessoriesStatus !== undefined
+          ? AccessoriesStatusEnum.safeParse(row.accessoriesStatus)
+          : null;
+      return {
+        checkedAt: row.checkedAt,
+        appearance: appearance.success ? appearance.data : ConditionStatusEnum.enum.normal,
+        operation: operation.success ? operation.data : ConditionStatusEnum.enum.normal,
+        accessories: accessories && accessories.success ? accessories.data : undefined,
+        inspectorName: row.inspectorName ?? '',
+      };
+    } catch (error) {
+      this.logger.warn(
+        `lender 점검 조회 실패 (checkoutId=${checkoutId}, step=${step}): ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
       return null;
     }
+  }
+
+  private formatSiteLabel(site: string | null | undefined): string {
+    if (!site) return '';
+    if ((SITE_LABELS as Record<string, string>)[site]) {
+      return (SITE_LABELS as Record<Site, string>)[site as Site];
+    }
+    return site;
   }
 }

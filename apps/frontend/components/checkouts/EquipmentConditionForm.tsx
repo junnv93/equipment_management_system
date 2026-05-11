@@ -1,15 +1,22 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Camera, CheckCircle2, Eye, Cog, Package2 } from 'lucide-react';
+import {
+  AlertCircle,
+  Camera,
+  CheckCircle2,
+  Eye,
+  Cog,
+  Package2,
+  Image as ImageIcon,
+} from 'lucide-react';
 import {
   ConditionCheckStep,
   ConditionStatus,
@@ -21,17 +28,15 @@ import type { CreateConditionCheckDto } from '@/lib/api/checkout-api';
 import { documentApi } from '@/lib/api/document-api';
 import { CHECKOUT_FORM_TOKENS } from '@/lib/design-tokens';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
+import { StepperHeader } from './StepperHeader';
+import { CSS_VAR_NAMES, cssVar } from '@/lib/design-tokens/css-variables';
+import { cn } from '@/lib/utils';
 
 interface EquipmentConditionFormProps {
-  /** 상태 확인 단계 */
   step: ConditionCheckStep;
-  /** 제출 콜백 (version 필드 제외) */
   onSubmit: (data: Omit<CreateConditionCheckDto, 'version'>) => void;
-  /** 취소 콜백 */
   onCancel: () => void;
-  /** 로딩 상태 */
   isLoading?: boolean;
-  /** 이전 확인 기록 (비교용) */
   previousCheck?: {
     appearanceStatus: ConditionStatus;
     operationStatus: ConditionStatus;
@@ -39,17 +44,17 @@ interface EquipmentConditionFormProps {
   };
 }
 
+type ItemKind = 'appearance' | 'operation' | 'accessories';
+
 /**
- * 장비 상태 확인 폼
+ * 장비 상태 확인 폼 (qr-visual-redesign TASK 5/6 재설계).
  *
- * 대여 목적 반출 시 양측 4단계 확인을 위한 폼입니다.
- * - ① 반출 전 확인 (빌려주는 측)
- * - ② 인수 시 확인 (빌리는 측)
- * - ③ 반납 전 확인 (빌린 측)
- * - ④ 반입 시 확인 (빌려준 측)
- *
- * 각 단계에서 외관 상태, 작동 상태, 부속품 상태를 기록합니다.
- * 이상이 있는 경우 상세 내용을 기록해야 합니다.
+ * UX 흐름 (현장 데이터 90%+ 정상 가정 — 정상 우선 흐름):
+ * 1. 상단 4-step stepper로 현재 위치 항상 노출 (TASK 5)
+ * 2. "모두 정상으로 제출" 64px 단축 버튼 한 번에 폼 제출 (brand-ok solid)
+ * 3. 항목별 segmented control (정상/이상) — 이상 선택 시 같은 카드 내부에
+ *    border-brand-critical + textarea + 촬영/갤러리 분리 + 사진 그리드 인라인 전개 (TASK 5/6)
+ * 4. 폼 unmount/cancel 시 pre-upload된 orphan 사진 documentApi.deleteOrphan 호출 (TASK 6)
  */
 export default function EquipmentConditionForm({
   step,
@@ -61,44 +66,40 @@ export default function EquipmentConditionForm({
   const t = useTranslations('checkouts');
 
   // 폼 상태
-  const [appearanceStatus, setAppearanceStatus] = useState<ConditionStatus>('normal');
-  const [operationStatus, setOperationStatus] = useState<ConditionStatus>('normal');
-  const [accessoriesStatus, setAccessoriesStatus] = useState<AccessoriesStatus | undefined>(
+  const [appearanceStatus, setAppearanceStatus] = React.useState<ConditionStatus>('normal');
+  const [operationStatus, setOperationStatus] = React.useState<ConditionStatus>('normal');
+  const [accessoriesStatus, setAccessoriesStatus] = React.useState<AccessoriesStatus | undefined>(
     undefined
   );
-  const [abnormalDetails, setAbnormalDetails] = useState('');
-  const [comparisonWithPrevious, setComparisonWithPrevious] = useState('');
-  const [notes, setNotes] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [abnormalDetails, setAbnormalDetails] = React.useState('');
+  const [comparisonWithPrevious, setComparisonWithPrevious] = React.useState('');
+  const [notes, setNotes] = React.useState('');
+  const [validationError, setValidationError] = React.useState<string | null>(null);
 
-  // 사진 첨부 상태 — pre-upload 패턴: 선택 즉시 업로드 → documentId 수집
-  const [attachmentFiles, setAttachmentFiles] = useState<UploadedFile[]>([]);
-  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+  // 사진 첨부 — pre-upload 패턴
+  const [attachmentFiles, setAttachmentFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadedDocumentIds, setUploadedDocumentIds] = React.useState<string[]>([]);
+  const submittedRef = React.useRef(false);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) =>
       documentApi.uploadDocument(file, DocumentTypeValues.CONDITION_CHECK_PHOTO),
-    onError: (error, _file, _context) => {
-      // 업로드 실패는 개별 파일 status='error'로 반영 — 폼 제출 차단 안 함
+    onError: (error) => {
       console.error('Photo upload failed:', error);
     },
   });
 
-  // 파일 선택 핸들러 — 새로 추가된 파일만 즉시 업로드
-  const handleAttachmentsChange = useCallback(
+  const handleAttachmentsChange = React.useCallback(
     async (updatedFiles: UploadedFile[]) => {
-      // uuid 없음 = 아직 서버 업로드 전 신규 파일
       const newFiles = updatedFiles.filter(
         (f) => !f.uuid && !attachmentFiles.some((a) => a.file === f.file)
       );
 
-      // optimistic update — status를 uploading으로 즉시 반영
       const withUploading = updatedFiles.map((f) =>
         newFiles.includes(f) ? { ...f, status: 'uploading' as const, progress: 50 } : f
       );
       setAttachmentFiles(withUploading);
 
-      // 신규 파일 순서대로 업로드 — file 객체 참조로 추적 (stale 인덱스 경쟁 조건 방지)
       for (const uf of newFiles) {
         const targetFile = uf.file;
         try {
@@ -120,34 +121,38 @@ export default function EquipmentConditionForm({
         }
       }
 
-      // 삭제된 파일의 documentId 제거
       const remainingUuids = new Set(updatedFiles.map((f) => f.uuid).filter(Boolean));
       setUploadedDocumentIds((prev) => prev.filter((id) => remainingUuids.has(id)));
     },
     [attachmentFiles, uploadMutation]
   );
 
-  // 이상 여부 확인
+  // 이상 여부
   const hasAbnormal =
     appearanceStatus === 'abnormal' ||
     operationStatus === 'abnormal' ||
     accessoriesStatus === 'incomplete';
 
-  // 반입 확인 단계 (④단계) 여부
   const isReturnStep = step === 'lender_return';
-
-  // 이전 확인과 비교 필요 여부
   const needsComparison = isReturnStep && previousCheck;
+
+  // Orphan cleanup — submittedRef로 정상 제출 시 cleanup 회피
+  React.useEffect(() => {
+    const ids = uploadedDocumentIds;
+    return () => {
+      if (submittedRef.current) return;
+      if (ids.length > 0) {
+        void documentApi.deleteOrphan(ids);
+      }
+    };
+  }, [uploadedDocumentIds]);
 
   // 유효성 검증
   const validate = (): boolean => {
-    // 이상이 있는데 상세 내용이 없는 경우
     if (hasAbnormal && !abnormalDetails.trim()) {
       setValidationError(t('condition.validationAbnormalRequired'));
       return false;
     }
-
-    // 반입 확인 시 이전과 비교 필요
     if (needsComparison) {
       const hasChange =
         previousCheck!.appearanceStatus !== appearanceStatus ||
@@ -155,48 +160,84 @@ export default function EquipmentConditionForm({
         (previousCheck!.accessoriesStatus &&
           accessoriesStatus &&
           previousCheck!.accessoriesStatus !== accessoriesStatus);
-
       if (hasChange && !comparisonWithPrevious.trim()) {
         setValidationError(t('condition.validationComparisonRequired'));
         return false;
       }
     }
-
     setValidationError(null);
     return true;
   };
 
-  // 제출 핸들러
-  const handleSubmit = () => {
-    if (!validate()) return;
-
-    const successDocIds = uploadedDocumentIds.filter((id) =>
-      attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
-    );
-
+  const performSubmit = (
+    appearance: ConditionStatus,
+    operation: ConditionStatus,
+    accessories: AccessoriesStatus | undefined,
+    details: string,
+    comparison: string,
+    note: string,
+    docIds: string[]
+  ) => {
     const data: Omit<CreateConditionCheckDto, 'version'> = {
       step,
-      appearanceStatus,
-      operationStatus,
-      ...(accessoriesStatus && { accessoriesStatus }),
-      ...(abnormalDetails.trim() && { abnormalDetails: abnormalDetails.trim() }),
-      ...(comparisonWithPrevious.trim() && {
-        comparisonWithPrevious: comparisonWithPrevious.trim(),
-      }),
-      ...(notes.trim() && { notes: notes.trim() }),
-      ...(successDocIds.length > 0 && { attachmentIds: successDocIds }),
+      appearanceStatus: appearance,
+      operationStatus: operation,
+      ...(accessories && { accessoriesStatus: accessories }),
+      ...(details.trim() && { abnormalDetails: details.trim() }),
+      ...(comparison.trim() && { comparisonWithPrevious: comparison.trim() }),
+      ...(note.trim() && { notes: note.trim() }),
+      ...(docIds.length > 0 && { attachmentIds: docIds }),
     };
-
+    submittedRef.current = true;
     onSubmit(data);
   };
 
+  const handleSubmit = () => {
+    if (!validate()) return;
+    const successDocIds = uploadedDocumentIds.filter((id) =>
+      attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
+    );
+    performSubmit(
+      appearanceStatus,
+      operationStatus,
+      accessoriesStatus,
+      abnormalDetails,
+      comparisonWithPrevious,
+      notes,
+      successDocIds
+    );
+  };
+
+  const handleAllNormalSubmit = () => {
+    performSubmit('normal', 'normal', 'complete', '', '', '', []);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* 4-step stepper — 현장 위치 항상 노출 */}
+      <StepperHeader step={step} />
+
       {/* 단계 안내 */}
-      <div className="p-4 bg-muted rounded-lg">
-        <p className="font-medium">{t(`condition.stepLabels.${step}`)}</p>
-        <p className="text-sm text-muted-foreground mt-1">{t('condition.formGuide')}</p>
+      <div className="p-3 bg-muted/60 rounded-lg">
+        <p className="font-medium text-foreground md:text-base">
+          {t(`condition.stepLabels.${step}`)}
+        </p>
+        <p className="text-sm text-foreground/70 mt-1 label-ko">{t('condition.formGuide')}</p>
       </div>
+
+      {/* "모두 정상으로 제출" 단축 버튼 — 64px brand-ok solid */}
+      <Button
+        type="button"
+        onClick={handleAllNormalSubmit}
+        disabled={isLoading}
+        className={cn(
+          'flex w-full items-center justify-center gap-2 bg-brand-ok text-white hover:bg-brand-ok/90'
+        )}
+        style={{ minHeight: '64px' }}
+      >
+        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+        <span className="text-base font-semibold label-ko">{t('condition.allNormalShortcut')}</span>
+      </Button>
 
       {/* 유효성 검증 에러 */}
       {validationError && (
@@ -206,148 +247,96 @@ export default function EquipmentConditionForm({
         </Alert>
       )}
 
-      {/* 외관 상태 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            {t('condition.appearance')}
-          </CardTitle>
-          <CardDescription>{t('condition.appearanceDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={appearanceStatus}
-            onValueChange={(value) => setAppearanceStatus(value as ConditionStatus)}
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="normal" id="appearance-normal" />
-              <Label htmlFor="appearance-normal" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-                {t('condition.conditionStatus.normal')}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="abnormal" id="appearance-abnormal" />
-              <Label htmlFor="appearance-abnormal" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-brand-critical" />
-                {t('condition.conditionStatus.abnormal')}
-              </Label>
-            </div>
-          </RadioGroup>
-          {previousCheck && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('condition.previousCheck', {
-                status: t(`condition.conditionStatus.${previousCheck.appearanceStatus}`),
-              })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* 외관 상태 — 인라인 abnormal */}
+      <ConditionItemCard
+        kind="appearance"
+        icon={Eye}
+        titleKey="condition.appearance"
+        descriptionKey="condition.appearanceDesc"
+        value={appearanceStatus}
+        onChange={setAppearanceStatus}
+        previousValue={previousCheck?.appearanceStatus}
+      />
 
       {/* 작동 상태 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Cog className="h-4 w-4" />
-            {t('condition.operation')}
-          </CardTitle>
-          <CardDescription>{t('condition.operationDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={operationStatus}
-            onValueChange={(value) => setOperationStatus(value as ConditionStatus)}
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="normal" id="operation-normal" />
-              <Label htmlFor="operation-normal" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-                {t('condition.conditionStatus.normal')}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="abnormal" id="operation-abnormal" />
-              <Label htmlFor="operation-abnormal" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-brand-critical" />
-                {t('condition.conditionStatus.abnormal')}
-              </Label>
-            </div>
-          </RadioGroup>
-          {previousCheck && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('condition.previousCheck', {
-                status: t(`condition.conditionStatus.${previousCheck.operationStatus}`),
-              })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <ConditionItemCard
+        kind="operation"
+        icon={Cog}
+        titleKey="condition.operation"
+        descriptionKey="condition.operationDesc"
+        value={operationStatus}
+        onChange={setOperationStatus}
+        previousValue={previousCheck?.operationStatus}
+      />
 
-      {/* 부속품 상태 (선택) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Package2 className="h-4 w-4" />
-            {t('condition.accessoriesLabel')}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              {t('condition.accessoriesOptional')}
-            </span>
-          </CardTitle>
-          <CardDescription>{t('condition.accessoriesDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={accessoriesStatus || ''}
-            onValueChange={(value) =>
-              setAccessoriesStatus(value ? (value as AccessoriesStatus) : undefined)
-            }
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="complete" id="accessories-complete" />
-              <Label htmlFor="accessories-complete" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-                {t('condition.accessoriesStatusLabels.complete')}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="incomplete" id="accessories-incomplete" />
-              <Label htmlFor="accessories-incomplete" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-brand-warning" />
-                {t('condition.accessoriesStatusLabels.incomplete')}
-              </Label>
-            </div>
-          </RadioGroup>
-          {previousCheck?.accessoriesStatus && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('condition.previousCheck', {
-                status: t(`condition.accessoriesStatusLabels.${previousCheck.accessoriesStatus}`),
-              })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* 부속품 상태 — accessories enum */}
+      <AccessoriesItemCard
+        value={accessoriesStatus}
+        onChange={setAccessoriesStatus}
+        previousValue={previousCheck?.accessoriesStatus}
+      />
 
-      {/* 이상 내용 상세 */}
+      {/* 이상 시 통합 입력 영역 — abnormal 카드 내부 표시 의도지만 통합 textarea 유지 (다중 항목 abnormal 동시 입력) */}
       {hasAbnormal && (
-        <div className="space-y-2">
-          <Label htmlFor="abnormalDetails">
-            {t('condition.abnormalDetailsLabel')} <span className="text-destructive">*</span>
-          </Label>
-          <Textarea
-            id="abnormalDetails"
-            placeholder={t('condition.abnormalDetailsPlaceholder')}
-            value={abnormalDetails}
-            onChange={(e) => setAbnormalDetails(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
-            }}
-            rows={3}
-            className={`border-brand-critical/40 ${CHECKOUT_FORM_TOKENS.abnormalTextarea}`}
-          />
+        <div className="space-y-3 rounded-lg border border-brand-critical/40 bg-brand-critical/5 p-4">
+          <div className="space-y-2">
+            <Label htmlFor="abnormalDetails" className="text-sm font-semibold">
+              {t('condition.abnormalDetailsLabel')} <span className="text-brand-critical">*</span>
+            </Label>
+            <Textarea
+              id="abnormalDetails"
+              placeholder={t('condition.abnormalDetailsPlaceholder')}
+              value={abnormalDetails}
+              onChange={(e) => setAbnormalDetails(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+              }}
+              rows={3}
+              className={cn('border-brand-critical/40', CHECKOUT_FORM_TOKENS.abnormalTextarea)}
+            />
+          </div>
+
+          {/* 사진 인접화 — abnormal 카드 내부로 이동 (TASK 6) */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <Camera className="h-4 w-4" aria-hidden="true" />
+              {t('condition.attachmentsLabel')}
+            </Label>
+            <p className="text-xs text-foreground/70 label-ko">
+              {t('condition.photoRecommendedHint')}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <FileUpload
+                files={attachmentFiles}
+                onChange={handleAttachmentsChange}
+                accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+                maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+                capture="environment"
+                label={t('condition.photoCaptureLabel')}
+                description=""
+                disabled={isLoading}
+              />
+              <FileUpload
+                files={[]}
+                onChange={handleAttachmentsChange}
+                accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+                maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+                label={t('condition.photoGalleryLabel')}
+                description=""
+                disabled={isLoading}
+              />
+            </div>
+            {attachmentFiles.filter((f) => f.status === 'success').length === 0 && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-xs text-brand-warning flex items-center gap-1.5"
+              >
+                <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                {t('condition.abnormalPhotoSuggested')}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -362,7 +351,7 @@ export default function EquipmentConditionForm({
             onChange={(e) => setComparisonWithPrevious(e.target.value)}
             rows={3}
           />
-          <p className="text-sm text-muted-foreground">{t('condition.comparisonRequired')}</p>
+          <p className="text-sm text-foreground/70">{t('condition.comparisonRequired')}</p>
         </div>
       )}
 
@@ -381,91 +370,184 @@ export default function EquipmentConditionForm({
         />
       </div>
 
-      {/* 현장 사진 첨부 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Camera className="h-4 w-4" />
-            {t('condition.attachmentsLabel')}
-          </CardTitle>
-          <CardDescription>{t('condition.attachmentsHint')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* 이상 상태인데 사진 없을 때 권유 (비차단) */}
-          {hasAbnormal && attachmentFiles.filter((f) => f.status === 'success').length === 0 && (
-            <Alert
-              role="status"
-              aria-live="polite"
-              className="mb-3 border-brand-warning/40 bg-brand-warning/5"
-            >
-              <AlertCircle className="h-4 w-4 text-brand-warning" aria-hidden="true" />
-              <AlertDescription className="text-brand-warning">
-                {t('condition.abnormalPhotoSuggested')}
-              </AlertDescription>
-            </Alert>
-          )}
-          <FileUpload
-            files={attachmentFiles}
-            onChange={handleAttachmentsChange}
-            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
-            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
-            capture="environment"
-            label=""
-            description=""
-            disabled={isLoading}
-          />
-        </CardContent>
-      </Card>
-
-      {/* 상태 요약 */}
-      <div className="p-4 bg-muted rounded-lg">
-        <p className="text-sm font-medium mb-2">{t('condition.statusSummary')}</p>
-        <div className="grid gap-2 text-sm">
-          <div className="flex items-center gap-2">
-            {appearanceStatus === 'normal' ? (
-              <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-brand-critical" />
-            )}
-            <span>
-              {t('condition.appearance')}: {t(`condition.conditionStatus.${appearanceStatus}`)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {operationStatus === 'normal' ? (
-              <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-brand-critical" />
-            )}
-            <span>
-              {t('condition.operation')}: {t(`condition.conditionStatus.${operationStatus}`)}
-            </span>
-          </div>
-          {accessoriesStatus && (
-            <div className="flex items-center gap-2">
-              {accessoriesStatus === 'complete' ? (
-                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-brand-warning" />
-              )}
-              <span>
-                {t('condition.accessories')}:{' '}
-                {t(`condition.accessoriesStatusLabels.${accessoriesStatus}`)}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* 버튼 */}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+          style={{ minHeight: cssVar(CSS_VAR_NAMES.touchTargetMin) }}
+        >
           {t('actions.cancel')}
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={isLoading}>
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isLoading}
+          style={{ minHeight: cssVar(CSS_VAR_NAMES.touchTargetMin) }}
+        >
           {isLoading ? t('actions.processing') : t('condition.confirmComplete')}
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * 항목 카드 (외관/작동) — segmented control + previous value chip.
+ */
+function ConditionItemCard({
+  kind,
+  icon: Icon,
+  titleKey,
+  descriptionKey,
+  value,
+  onChange,
+  previousValue,
+}: {
+  kind: ItemKind;
+  icon: React.ComponentType<{ className?: string }>;
+  titleKey: string;
+  descriptionKey: string;
+  value: ConditionStatus;
+  onChange: (v: ConditionStatus) => void;
+  previousValue?: ConditionStatus;
+}) {
+  const t = useTranslations('checkouts');
+  return (
+    <Card className={cn(value === 'abnormal' && 'border-brand-critical/60 bg-brand-critical/5')}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 label-ko">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+          {t(titleKey)}
+        </CardTitle>
+        <CardDescription>{t(descriptionKey)}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <SegmentedConditionControl value={value} onChange={onChange} kindName={kind} />
+        {previousValue && (
+          <p className="text-sm text-foreground/70 mt-2 label-ko">
+            {t('condition.previousCheck', {
+              status: t(`condition.conditionStatus.${previousValue}`),
+            })}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AccessoriesItemCard({
+  value,
+  onChange,
+  previousValue,
+}: {
+  value: AccessoriesStatus | undefined;
+  onChange: (v: AccessoriesStatus | undefined) => void;
+  previousValue?: AccessoriesStatus;
+}) {
+  const t = useTranslations('checkouts');
+  return (
+    <Card className={cn(value === 'incomplete' && 'border-brand-critical/60 bg-brand-critical/5')}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 label-ko">
+          <Package2 className="h-4 w-4" aria-hidden="true" />
+          {t('condition.accessoriesLabel')}{' '}
+          <span className="text-sm font-normal text-foreground/70">
+            {t('condition.accessoriesOptional')}
+          </span>
+        </CardTitle>
+        <CardDescription>{t('condition.accessoriesDesc')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div role="group" aria-label={t('condition.accessoriesLabel')} className="flex gap-2">
+          <SegmentedButton
+            isActive={value === 'complete'}
+            tone="ok"
+            onClick={() => onChange('complete')}
+            label={t('condition.accessoriesStatusLabels.complete')}
+            icon={CheckCircle2}
+          />
+          <SegmentedButton
+            isActive={value === 'incomplete'}
+            tone="critical"
+            onClick={() => onChange('incomplete')}
+            label={t('condition.accessoriesStatusLabels.incomplete')}
+            icon={AlertCircle}
+          />
+        </div>
+        {previousValue && (
+          <p className="text-sm text-foreground/70 mt-2 label-ko">
+            {t('condition.previousCheck', {
+              status: t(`condition.accessoriesStatusLabels.${previousValue}`),
+            })}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SegmentedConditionControl({
+  value,
+  onChange,
+  kindName,
+}: {
+  value: ConditionStatus;
+  onChange: (v: ConditionStatus) => void;
+  kindName: string;
+}) {
+  const t = useTranslations('checkouts.condition.conditionStatus');
+  return (
+    <div role="group" aria-label={kindName} className="flex gap-2">
+      <SegmentedButton
+        isActive={value === 'normal'}
+        tone="ok"
+        onClick={() => onChange('normal')}
+        label={t('normal')}
+        icon={CheckCircle2}
+      />
+      <SegmentedButton
+        isActive={value === 'abnormal'}
+        tone="critical"
+        onClick={() => onChange('abnormal')}
+        label={t('abnormal')}
+        icon={AlertCircle}
+      />
+    </div>
+  );
+}
+
+function SegmentedButton({
+  isActive,
+  tone,
+  onClick,
+  label,
+  icon: Icon,
+}: {
+  isActive: boolean;
+  tone: 'ok' | 'critical';
+  onClick: () => void;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  const baseInactive = 'border-border bg-card text-foreground/70 hover:bg-muted';
+  const activeOk = 'border-brand-ok bg-brand-ok/10 text-brand-ok';
+  const activeCritical = 'border-brand-critical bg-brand-critical/10 text-brand-critical';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isActive}
+      className={cn(
+        'flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors',
+        isActive ? (tone === 'ok' ? activeOk : activeCritical) : baseInactive
+      )}
+      style={{ minHeight: cssVar(CSS_VAR_NAMES.touchTargetMin) }}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      <span className="label-ko">{label}</span>
+    </button>
   );
 }

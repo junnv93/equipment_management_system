@@ -17,6 +17,8 @@ import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { useBulkUndoToast } from '@/hooks/use-bulk-undo-toast';
+import { UNDO_TOAST_DURATION_MS } from '@/lib/checkouts/undo-constants';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { track } from '@/lib/analytics/track';
@@ -72,6 +74,7 @@ export function useCheckoutBulkMutations({
     optimisticUpdate: (old) => old ?? [],
     invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
     errorMessage: t('bulk.approveError'),
+    undoWindowMs: UNDO_TOAST_DURATION_MS,
     onSuccessCallback: (result) => {
       const successCount = result.approved.length;
       const failedCount = result.failed.length;
@@ -103,6 +106,7 @@ export function useCheckoutBulkMutations({
     optimisticUpdate: (old) => old ?? [],
     invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
     errorMessage: t('bulk.rejectError'),
+    undoWindowMs: UNDO_TOAST_DURATION_MS,
     onSuccessCallback: (result) => {
       const successCount = result.rejected.length;
       const failedCount = result.failed.length;
@@ -124,19 +128,40 @@ export function useCheckoutBulkMutations({
     },
   });
 
+  // 각 mutation은 abortUndo가 다르므로 hook을 2회 호출 (1회 = 1 abort 핸들)
+  const { showBulkApproveUndoToast } = useBulkUndoToast({
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    abortUndo: bulkApproveMutation.abortUndo,
+  });
+  const { showBulkRejectUndoToast } = useBulkUndoToast({
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    abortUndo: bulkRejectMutation.abortUndo,
+  });
+
+  // undoWindowMs 적용 후 mutateAsync는 5초 pending. 호출자(dialog)가 await하면 5초간 닫히지 않으므로
+  // fire-and-forget 패턴 사용 — toast가 즉시 표시되고 dialog는 즉시 close.
+  // AbortError(undo 클릭)는 정상 흐름이므로 catch swallow.
   const handleBulkApprove = useCallback(async () => {
     if (selection.count === 0) return;
-    track('checkout.bulk_approve', { count: selection.count });
-    await bulkApproveMutation.mutateAsync({ ids: Array.from(selection.selected) });
-  }, [bulkApproveMutation, selection]);
+    const count = selection.count;
+    track('checkout.bulk_approve', { count });
+    showBulkApproveUndoToast(count);
+    void bulkApproveMutation
+      .mutateAsync({ ids: Array.from(selection.selected) })
+      .catch(() => undefined);
+  }, [bulkApproveMutation, selection, showBulkApproveUndoToast]);
 
   const handleBulkReject = useCallback(
     async (reason: string) => {
       if (selection.count === 0) return;
-      track('checkout.bulk_reject', { count: selection.count });
-      await bulkRejectMutation.mutateAsync({ ids: Array.from(selection.selected), reason });
+      const count = selection.count;
+      track('checkout.bulk_reject', { count });
+      showBulkRejectUndoToast(count);
+      void bulkRejectMutation
+        .mutateAsync({ ids: Array.from(selection.selected), reason })
+        .catch(() => undefined);
     },
-    [bulkRejectMutation, selection]
+    [bulkRejectMutation, selection, showBulkRejectUndoToast]
   );
 
   return {

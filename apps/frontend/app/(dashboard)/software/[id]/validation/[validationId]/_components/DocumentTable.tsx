@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Paperclip } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
+import { ErrorState } from '@/components/shared/ErrorState';
+import { ValidationDocumentsEmptyState } from '@/components/software/SoftwareEmptyState';
+import { DOCUMENT_TABLE } from '@/lib/design-tokens';
 import type { DocumentRecord } from '@/lib/api/document-api';
 import { ValidationStatusValues } from '@equipment-management/schemas';
 import type { ValidationStatus, ValidationType } from '@equipment-management/schemas';
@@ -45,15 +46,14 @@ export function DocumentTable({
       {docsLoading ? (
         <Skeleton className="h-32 w-full" />
       ) : docsError ? (
-        <div className={DOCUMENT_EMPTY_STATE.container}>
-          <Paperclip className={DOCUMENT_EMPTY_STATE.icon} />
-          <p className={DOCUMENT_EMPTY_STATE.text}>{t('validation.documents.loadError')}</p>
+        <div className="py-8 flex justify-center">
+          <ErrorState title={t('validation.documents.loadError')} />
         </div>
       ) : docs.length === 0 ? (
-        <div className={DOCUMENT_EMPTY_STATE.container}>
-          <Paperclip className={DOCUMENT_EMPTY_STATE.icon} />
-          <p className={DOCUMENT_EMPTY_STATE.text}>{t('validation.documents.empty')}</p>
-        </div>
+        // P1-4: 빈 상태 EmptyState SSOT 적용 — DRAFT 상태에서만 업로드 CTA 노출
+        <ValidationDocumentsEmptyState
+          canUpload={validationStatus === ValidationStatusValues.DRAFT}
+        />
       ) : (
         <div className={DOCUMENT_TABLE.wrapper}>
           <Table>

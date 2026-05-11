@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-11** — (1) large-component-refactor(EquipmentForm/InspectionFormDialog/NCDetailClient ≤700줄) commit `2d94c9b4` 완료 → archive-domain.md 이동. (2) **88차 Checkouts V3 통합 로드맵 5-Sprint 전수 closure** — Sprint 4 (4.1~4.4 + U-01~U-12) 17건 + Sprint 5 (Empty/Typography/Color/Density/Icon&Motion) 5건 모두 completed/ 이동 확인. example-prompts.md "미착수" 헤더는 stale narrative였음 → 해당 블록 archive-domain.md 통합 entry로 이동.
+> **마지막 정리일: 2026-05-12** — qr-visual-redesign sprint closure (Mode 2 Full harness, 8 TASK 전체 + G-1~G-3 closure → archive-design.md). MUST 22/25 + iter 1 fix loop + senior self-audit round #2 + verify-implementation 12/13 + G-3 cherry-pick isolation. ultrareview-shield-wrapper closure (`pnpm ur:shield` preflight Gate 1 dev `.env` 자동 격리/복원 → archive-infra.md). software-design-review-p0-p1-p2 closure (DESIGN_REVIEW.md P0+P1+P2 → archive-design.md). large-component-refactor (EquipmentForm/InspectionFormDialog/NCDetailClient ≤700줄) → archive-domain.md. 88차 Checkouts V3 통합 로드맵 5-Sprint 전수 closure (Sprint 4 17건 + Sprint 5 5건 → archive-domain.md).
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -47,7 +47,10 @@
 3. (Go인 경우) Pre-upload secret gate
    node scripts/ultrareview-preflight.mjs
    - exit 0: 4단계 진행
-   - exit 1: 오류 메시지에 따라 파일 제거 또는 .gitleaks.toml allowlist 추가 후 재실행
+   - exit 1: 오류 메시지에 따라 분기
+     · 검사 1/3(dev env .env*) 차단 → `pnpm ur:shield -- node scripts/ultrareview-preflight.mjs` 로 자동 격리/복원 후 재검증 (rm 우회, dev 서버 보존)
+     · 검사 2/3(gitleaks) 차단 → `.gitleaks.toml` allowlist 또는 `.gitleaksignore` fingerprint 추가
+     · 검사 3/3(커밋 히스토리) 차단 → `git filter-repo` / BFG로 secret 제거
 
 4. (Preflight 통과 시) 사용자에게 실행 명령 제시
    - PR 번호 확인: gh pr list --state open --author @me

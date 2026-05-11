@@ -16,6 +16,9 @@
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| 2026-05-12 — qr-visual-redesign | [archive-design.md](./archive-design.md) | QR 모바일 시각 디자인 8 TASK 전체 (액션 그룹 SSOT/4-tier 상태 색/다중 핸드오버 HandoverItem Zod + Picker/자동 진행 prefers-reduced-motion/정상 우선 64px 단축/사진 capture-환경+갤러리 분리/PDF 시각 비교 row/디자인 토큰 9 CSS var + brand-urgent/mute). Mode 2 Full harness MUST 22/25 + iter 1 fix loop + senior self-audit round #2 G-1~G-3 closure (machine isolation / verify-implementation 12/13 / cherry-pick split) |
+| 2026-05-12 — ultrareview-shield-wrapper | [archive-infra.md](./archive-infra.md) | ultrareview-preflight Gate 1 차단 시 dev `.env` 자동 격리(`/tmp/ur-shield-*`)/복원(`trap EXIT`) wrapper + `--list-patterns` SSOT 단방향 + `flock` 동시 실행 차단. M-1~M-12 PASS (iter 2 contract rev-2 grep 분리 카운트) |
+| 2026-05-11 — software-design-review-p0-p1-p2 | [archive-design.md](./archive-design.md) | DESIGN_REVIEW.md P0(stepper SSOT + 검증상태 컬럼 BFF 확장 + 시멘틱 토큰) + P1(모바일 카드 fallback + P-number 셀 통합 + dialog max-w-2xl + sub-tabs + 빈 상태 EmptyState wrapper) + P2(raw 색상 토큰화 + xl 와이드 2-column + 행 클릭 패턴 통일). MUST 16/16 |
 | 2026-04-24 → 2026-05-10 — 88차 Checkouts V3 통합 로드맵 (Sprint 4 + Sprint 5) | [archive-domain.md](./archive-domain.md) | Sprint 4 (4.1 NextStepPanel · 4.2 Row 3-zone · 4.3 D-day 배지 · 4.4 Rental Phase + U-01~U-12) 17건 + Sprint 5 (Empty / Typography / Color / Density / Icon&Motion) 5건 전수 closure. Sprint 1·2·3 별도 entry |
 | 2026-05-10 — large-component-refactor | [archive-domain.md](./archive-domain.md) | EquipmentForm(1418→543) + InspectionFormDialog(1362→577) + NCDetailClient(1104→490). 3 훅 + 13 sub-section 신규. ExtractedInspectionStructure 타입 정합. M-16/16 |
 | 2026-05-10 — approval-row-memo-i18n-ci-cache | [archive-domain.md](./archive-domain.md) | ApprovalRow memo + ApprovalRowItem + ApprovalsClient stable callback (4-layer 완성) + dep-audit pnpm cache + HeroKPI i18n. M-12/12 |

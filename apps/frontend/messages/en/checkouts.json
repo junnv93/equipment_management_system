@@ -367,7 +367,8 @@
       "lender_checkout": "Pre-checkout Check",
       "borrower_receive": "Receiving Check",
       "borrower_return": "Pre-return Check",
-      "lender_return": "Return Check"
+      "lender_return": "Return Check",
+      "groupAriaLabel": "Condition check progress steps"
     },
     "conditionStatus": {
       "normal": "Normal",
@@ -380,7 +381,11 @@
     "attachmentsLabel": "Field photos",
     "attachmentsHint": "Attaching photos of any abnormalities aids UL-QP-18-06 record keeping.",
     "attachmentsTooMany": "You can attach up to {max} photos.",
-    "abnormalPhotoSuggested": "Abnormalities detected. Attaching evidence photos helps non-conformance tracking."
+    "abnormalPhotoSuggested": "Abnormalities detected. Attaching evidence photos helps non-conformance tracking.",
+    "allNormalShortcut": "Submit as all normal",
+    "photoCaptureLabel": "Camera",
+    "photoGalleryLabel": "Gallery",
+    "photoRecommendedHint": "At least 1 field photo recommended (UL-QP-18-06 record keeping)"
   },
   "returnCondition": {
     "good": "Good",
@@ -974,13 +979,20 @@
       "undoSuccess": "Approval has been cancelled",
       "undoError": "An error occurred while cancelling",
       "windowExpired": "The undo window has expired",
-      "revoked": "Approval has been revoked"
+      "revoked": "Approval has been revoked",
+      "bulkApproved": "Approving {count} items",
+      "bulkRejected": "Rejecting {count} items",
+      "bulkUndo": "Undo",
+      "bulkUndoSuccess": "Action cancelled"
     }
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
     "description": "Available keyboard shortcuts for the checkout management screen",
     "close": "Close",
+    "aria": {
+      "customMarker": "Custom"
+    },
     "list": {
       "sectionTitle": "List View",
       "navigateUp": "Navigate to previous item",

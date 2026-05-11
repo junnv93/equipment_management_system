@@ -85,11 +85,44 @@ export const QR_ACTION_I18N_KEYS: Record<QRAllowedAction, string> = {
  * 프론트엔드 정렬 시 SSOT. 하드코딩된 정렬 순서 금지.
  */
 export const QR_ACTION_PRIORITY: Record<QRAllowedAction, number> = {
-  confirm_handover_receive: 115, // rental FSM lender_checked 단계 — 현장 대면 수령 확인 가장 시급
-  confirm_handover_return: 110, // rental FSM borrower_returned 단계 — 반환 확인 시급
+  confirm_handover_receive: 115, // lender 점검 완료 후 borrower 수령 대기 — 현장 대면 가장 시급
+  confirm_handover_return: 110, // borrower 반환 후 lender 수령 대기 — 반환 확인 시급
   mark_checkout_returned: 100, // 반납 누락 방지
   request_checkout: 80,
   report_nc: 60,
   view_detail: 40,
   view_qr: 20,
 };
+
+/**
+ * QR 액션 시각 그룹화 SSOT (qr-visual-redesign TASK 1 / 2026-05-11).
+ *
+ * 서버는 우선순위(priority)로 정렬만 내려주지만, 프론트는 시각적으로
+ * "지금 해야 할 일" vs "다른 옵션" 을 한눈에 구분해야 한다.
+ *
+ * - **urgent**: 즉시 행동 필요 — 채움 버튼 + brand-urgent. `priority >= 100` 액션.
+ * - **primary**: 1차 가용 액션 — outline + ink-1 텍스트. request_checkout 류.
+ * - **secondary**: 보조/조회 액션 — outline + ink-2 톤다운. view_detail / view_qr / report_nc.
+ *
+ * 그룹 사이 small-caps 라벨로 시각 분리. urgent 그룹이 없으면 라벨 미노출.
+ *
+ * @see apps/frontend/components/mobile/EquipmentActionSheet.tsx — group rendering 소비처
+ * @see qr.mobileActionSheet.groups.{urgent|primary|secondary} — i18n 라벨
+ */
+export type QRActionGroup = 'urgent' | 'primary' | 'secondary';
+
+export const QR_ACTION_GROUP: Record<QRAllowedAction, QRActionGroup> = {
+  confirm_handover_receive: 'urgent', // 현장 대면 수령 — 즉시 행동
+  confirm_handover_return: 'urgent', // 현장 대면 반환 수령 — 즉시 행동
+  mark_checkout_returned: 'primary', // 반납 누락 방지 — 1차 가용 액션
+  request_checkout: 'primary', // 신규 반출 — 1차 가용 액션
+  report_nc: 'secondary', // 부적합 신고 — 보조 액션
+  view_detail: 'secondary', // 조회 — 보조 액션
+  view_qr: 'secondary', // 조회 — 보조 액션
+};
+
+/**
+ * 그룹 표시 순서 SSOT — urgent 가 항상 최상단, secondary 가 최하단.
+ * 그룹 내부 정렬은 `QR_ACTION_PRIORITY` desc 적용.
+ */
+export const QR_ACTION_GROUP_ORDER: readonly QRActionGroup[] = ['urgent', 'primary', 'secondary'];

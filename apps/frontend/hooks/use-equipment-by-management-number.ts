@@ -9,16 +9,24 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { QRAllowedAction } from '@equipment-management/shared-constants';
+import type { HandoverItem } from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
 
 /**
  * 서버 응답 shape: Equipment + 서버 계산 allowedActions + handover context.
  * 프론트는 이 배열을 소비하여 CTA 렌더링.
+ *
+ * `handovers` 는 동시에 여러 건의 수령/반환 대기를 표현 (qr-visual-redesign TASK 3).
+ * 단일이면 자동 라우팅, 다중이면 `HandoverPickerSheet` 노출.
  */
 export type EquipmentQRLanding = Equipment & {
   allowedActions: QRAllowedAction[];
-  /** confirm_handover_receive / confirm_handover_return 액션 존재 시 백엔드가 반환하는 checkoutId */
+  /** confirm_handover_* 액션 컨텍스트 — 카드 picker 또는 자동 라우팅 입력. */
+  handovers?: HandoverItem[];
+  /**
+   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일. 1 release 후 제거.
+   */
   handoverCheckoutId?: string;
 };
 

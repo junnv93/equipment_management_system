@@ -68,6 +68,7 @@
     "display": "Display Settings",
     "notifications": "Notification Settings",
     "profile": "My Profile",
+    "shortcuts": "Keyboard Shortcuts",
     "calibration": "Calibration Alert Settings",
     "system": "System Settings",
     "personalSection": "Personal",
@@ -172,5 +173,34 @@
   "common": {
     "saving": "Saving…",
     "save": "Save"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "description": "Customize shortcuts and view the SSOT defaults. Changes save instantly and are stored per browser.",
+    "sectionTitle": {
+      "list": "List View",
+      "detail": "Detail View",
+      "global": "Global"
+    },
+    "actions": {
+      "change": "Change",
+      "reset": "Reset",
+      "save": "Save",
+      "cancel": "Cancel",
+      "resetAll": "Reset All"
+    },
+    "help": {
+      "ariaCapture": "Press the new key (single character or Enter/Esc)",
+      "duplicate": "This key is already used by another shortcut",
+      "empty": "Key cannot be empty",
+      "invalid": "Key not allowed",
+      "allowedKeysHint": "Single character (letter/digit/symbol) or Enter / Esc only",
+      "savedNotice": "Shortcut saved",
+      "resetAllNotice": "All shortcuts restored to defaults"
+    },
+    "aria": {
+      "rowLabel": "{label} shortcut",
+      "customMarker": "Custom"
+    }
   }
 }
