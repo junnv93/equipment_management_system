@@ -2,6 +2,36 @@
 
 ---
 
+## ~~2026-04-24 → 2026-05-10 — 88차 Checkouts V3 통합 로드맵 (Sprint 4 + Sprint 5)~~ ✅ 완료 (2026-05-10)
+
+> **5-Sprint 로드맵 closure**: Sprint 1 (Authority 4종) + Sprint 2 (Tokens 봉합 4종) + Sprint 3 (Perf&Cache 3종) 은 별도 entry 참조 (2026-04-27 / 2026-04-29).
+> **Sprint 4 (UX Flow)** 4.1~4.4 + U-01~U-12 17개 contract 전수 완료:
+> - 4.1 NextStepPanel 단일 렌더 → `checkout-next-step-panel-unified` + `next-step-panel-compact` + `pr4-next-step-panel`
+> - 4.2 Row 3-zone grid (`grid-cols-[3px_72px_1fr_auto]`) → `checkout-row-3zone-grid`
+> - 4.3 상세 D-day 배지 → `checkout-detail-dday-badge`
+> - 4.4 Rental Phase-based UI → `checkout-rental-phase-ui` + `pr14-workflow-timeline`
+> - U-01/U-07/U-09/U-10/U-11/U-12 → `checkouts-v3-sprint45` 통합 흡수
+> - U-02/U-03/U-04/U-05/U-06/U-08 → `checkouts-sprint4-ux-u02-u08` 통합 흡수 (Mode 2 harness MUST 44/44 PASS, commit `c01452f3`)
+>
+> **Sprint 5 (Visual Polish)** 5/5 완료:
+> - 5.1 Empty state 3색 → `empty-state-variant-colors` + `empty-state-component`
+> - 5.2 Typography 6단계 → `typography-6-tier`
+> - 5.3 Color semantic 5축 → `color-semantic-5-axis`
+> - 5.4 Density & rhythm → `density-rhythm` + `checkout-rhythm-focus-inbound-tokens`
+> - 5.5 Icon & motion → `icon-motion-policy`
+>
+> 메모리: `project_88_checkouts_v3_roadmap_20260424.md`. 외부 아키텍처 리뷰 V2(18 findings) 전수 대응 closure.
+
+---
+
+## ~~2026-05-10 — large-component-refactor~~ ✅ 완료 (2026-05-10)
+
+> 1000줄 초과 컴포넌트 3건 분리. EquipmentForm.tsx (1418→543) + InspectionFormDialog.tsx (1362→577) + NCDetailClient.tsx (1104→490). 신규 자산: 3 훅(`use-inspection-fork` 등) + 13 sub-section 컴포넌트. `ExtractedInspectionStructure` 타입 수정 패턴으로 use-inspection-fork 정합. 단일 파일 응집도 → 섹션별 독립 props 인터페이스 + parent orchestrator 패턴.
+> 검증: Mode 2 Full harness PASS, MUST 16/16 (iter 2)
+> 커밋: `2d94c9b4 refactor(equipment): 대형 컴포넌트 3개 ≤700줄로 분리`
+
+---
+
 ## ~~2026-05-10 — approval-row-memo-i18n-ci-cache~~ ✅ 완료 (2026-05-10)
 
 > ApprovalRow `memo()` wrap + ApprovalList `ApprovalRowItem` useCallback 안정화 + ApprovalsClient `handleRejectForList/handleViewDetail` stable callback (4-layer memo 체인 완성) + dep-audit pnpm cache CI 최적화 (node_modules dead cache 제거) + HeroKPI sr-only 한국어 하드코딩 i18n化 (`checkouts.heroKpi.trendUp/Down/Flat`).

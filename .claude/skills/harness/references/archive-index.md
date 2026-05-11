@@ -16,6 +16,8 @@
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| 2026-04-24 → 2026-05-10 — 88차 Checkouts V3 통합 로드맵 (Sprint 4 + Sprint 5) | [archive-domain.md](./archive-domain.md) | Sprint 4 (4.1 NextStepPanel · 4.2 Row 3-zone · 4.3 D-day 배지 · 4.4 Rental Phase + U-01~U-12) 17건 + Sprint 5 (Empty / Typography / Color / Density / Icon&Motion) 5건 전수 closure. Sprint 1·2·3 별도 entry |
+| 2026-05-10 — large-component-refactor | [archive-domain.md](./archive-domain.md) | EquipmentForm(1418→543) + InspectionFormDialog(1362→577) + NCDetailClient(1104→490). 3 훅 + 13 sub-section 신규. ExtractedInspectionStructure 타입 정합. M-16/16 |
 | 2026-05-10 — approval-row-memo-i18n-ci-cache | [archive-domain.md](./archive-domain.md) | ApprovalRow memo + ApprovalRowItem + ApprovalsClient stable callback (4-layer 완성) + dep-audit pnpm cache + HeroKPI i18n. M-12/12 |
 | 2026-05-10 — verify-i18n-step8-automation-promotion | [archive-infra.md](./archive-infra.md) | verify-route-metadata.mjs Phase3 + pre-push gate. i18n-checks.md Step 8 구 node-e 인라인 → 스크립트 참조. Step 8c orphan 탐지 공식 문서화. M-1~M-6 6/6 |
 | 2026-04-29 — Checkouts V3 Sprint 1(1.2~1.5) + Sprint 3 · Perf&Cache (7종) | [archive-domain.md](./archive-domain.md) | Sprint 1: descriptor-phase-fields/meta-fail-closed/legacy-block-removal/fsm-satisfies. Sprint 3: inbound-bff/query-keys-view/memo-boundary |

@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-10** — sticky-header-css-var-ssot 완료(34차 후속 → archive-infra.md). approval-row-memo-i18n-ci-cache 3건(ApprovalRow memo·dep-audit cache·HeroKPI i18n) archive 이동 완료 → 해당 항목 제거. verify-route-metadata Phase3 승격 완료, Checkouts V3 Sprint 1(Authority 4종) + Sprint 3(Perf&Cache 3종) 전부 completed/ 이동 → 해당 항목 제거.
+> **마지막 정리일: 2026-05-11** — (1) large-component-refactor(EquipmentForm/InspectionFormDialog/NCDetailClient ≤700줄) commit `2d94c9b4` 완료 → archive-domain.md 이동. (2) **88차 Checkouts V3 통합 로드맵 5-Sprint 전수 closure** — Sprint 4 (4.1~4.4 + U-01~U-12) 17건 + Sprint 5 (Empty/Typography/Color/Density/Icon&Motion) 5건 모두 completed/ 이동 확인. example-prompts.md "미착수" 헤더는 stale narrative였음 → 해당 블록 archive-domain.md 통합 entry로 이동.
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -17,28 +17,11 @@
 
 ---
 
-## 🆕 88차 (2026-04-24) — Checkouts V3 통합 로드맵 (5-Sprint)
-
-> **플랜 본문**: `.claude/exec-plans/active/2026-04-24-checkouts-v3-roadmap.md` (44.8KB · 637줄)
-> **메모리**: `project_88_checkouts_v3_roadmap_20260424.md`
-> **배경**: 외부 아키텍처 리뷰 V2(18 findings) 전수 대응. 사용자 결정: 5-Sprint 전체·BFF 포함·Phase-based '1/3 phase'·편의성 U-01~U-12 전량.
-
-### 🔶 다음 세션 작업 — Sprint 4·5 Contract 작성 (미착수)
-
-> Sprint 1 (Authority 4종) + Sprint 3 (Perf&Cache 3종) 전부 **completed/** 이동 완료 (2026-05-10).
-- **Sprint 4 (UX Flow)** — 15개 내외 contract 예상:
-  - 4.1 NextStepPanel 단일 렌더(compact+hero+actor variant)
-  - 4.2 Row 3-zone grid (`grid-cols-[3px_72px_1fr_auto]`)
-  - 4.3 상세 D-day 배지 (C-3)
-  - 4.4 Rental Phase-based UI (`CheckoutPhaseIndicator` 신규 + WorkflowTimeline 접힘)
-  - 4.5.1 ~ 4.5.12 편의성 **U-01 ~ U-12 전체 12건**
-- **Sprint 5 (Visual Polish)** — 5~7개 contract:
-  - 5.1 Empty state 3색 / 5.2 Typography 6단계 / 5.3 Color semantic 5축 / 5.4 Density & rhythm / 5.5 Icon & motion
-
-### 실행 순서 (Sprint 1~3 완료 기준)
-~~Sprint 1~3 완료~~ → Sprint 4 Contract 작성(4.1~4.5.12) → Sprint 5 Contract 작성(5.1~5.5) → 각 contract harness 루프 순차 구현. FE analytics instrumentation은 §10 metrics 수집 기반으로 선행.
-
----
+<!-- 88차 Checkouts V3 통합 로드맵 (5-Sprint) — 2026-04-24 ~ 2026-05-10 전체 완료.
+     Sprint 1 (Authority 4종) + Sprint 3 (Perf&Cache 3종): archive-domain.md "2026-04-29 — Sprint 1+3" entry 참조.
+     Sprint 2 (Tokens 봉합 4종): archive-domain.md "2026-04-27 — Sprint 2" entry 참조.
+     Sprint 4 (UX Flow 4.1~4.4 + U-01~U-12) + Sprint 5 (Visual Polish 5.1~5.5): archive-domain.md "2026-05-10 — Sprint 4+5 통합" entry 참조.
+     실행 plan 본문: .claude/exec-plans/completed/2026-04-24-checkouts-v3-roadmap.md (이동 필요 시 별도 처리). -->
 
 ## UltraReview 통합 — Layer 6 머지 관문 프롬프트 (3종)
 
@@ -180,34 +163,6 @@ Agent C (`name="fleet-infra"`, `subagent_type="Explore"`, `run_in_background=tru
 > - **False positive 9건**: `.env` git 추적(미추적·.env.example만 tracked), PaginationPrevious "Previous"(dead export·0 callers), TeamListContent searchInput(debounce-then-sync 표준), loading.tsx 누락 5경로((auth)/error 자체가 error route·login fast form·help 정적·visual-fixtures group·handover error.tsx 있음), Drizzle relations() 5건 미정의(approvalDelegations·rejection-presets·csp-reports·system-settings·inspection-result-sections — `db.query.<table>` 사용처 0건, leaf entity)
 > - **사용자 결정 5건**: Backend Query DTO trim/max 11건(verify-zod Step 12는 .min(N) required만 강제·c82ae0ef는 Create/Update DTO만 처리·Query optional은 정책 미정), use-inspection-template.ts TODO(Phase 1B-E 호출자 등장으로 outdated — 코멘트만 update or 제거)
 
-### 🟡 MEDIUM — Large Component Refactor (3 components · Mode 2)
-
-```
-배경: 1000줄 초과 컴포넌트 3건. 단일 파일에 form/dialog/section 로직 응집 → 가독성·테스트성 저하.
-- apps/frontend/components/equipment/EquipmentForm.tsx (1414 lines)
-- apps/frontend/components/inspections/InspectionFormDialog.tsx (1362 lines)
-- apps/frontend/components/non-conformances/NCDetailClient.tsx (1103 lines)
-
-작업 (각 컴포넌트별 별도 PR로 분할 권장):
-1. EquipmentForm.tsx → 섹션별 sub-component 추출:
-   - BasicInfoSection / CalibrationSection / DepreciationSection / DocumentsSection
-   - 각 section은 독립 props 인터페이스, parent는 form orchestrator
-2. InspectionFormDialog.tsx → dialog/form 분리:
-   - InspectionFormDialog (wrapper) + InspectionForm (실제 form 로직)
-   - SoftFork/Gallery 핸들러는 별도 hook (use-inspection-fork.ts)
-3. NCDetailClient.tsx → 상세 섹션 분리:
-   - NCDocumentsSection / NCApprovalFlowSection / NCActionPanel
-
-검증:
-- pnpm tsc --noEmit exit 0
-- 각 컴포넌트 ≤ 700 lines (목표)
-- 기존 RTL/e2e spec 회귀 0건
-- React.memo 적용 가능 sub-component는 적용
-- 사용자 결정: 3개 동시 vs 1개씩 sprint 분할 (권장: 1개씩)
-
-⚠️ Mode 2 작업. 사용자 우선순위 결정 필요.
-```
-
-
 <!-- 34차 후속 (sticky-header CSS 변수명 SSOT) — 2026-05-10 sprint `sticky-header-css-var-ssot` 로 closure.
-     archive: archive-infra.md 참조 (CSS_VAR_NAMES SSOT + cssVar() helper + verify-hardcoding Step 36 + globals.css :root fallback). -->
+     archive: archive-infra.md 참조 (CSS_VAR_NAMES SSOT + cssVar() helper + verify-hardcoding Step 36 + globals.css :root fallback).
+     large-component-refactor — 2026-05-10 commit 2d94c9b4 로 closure. archive: archive-domain.md. -->
