@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { useSafeTimeout } from '@/hooks/use-safe-timeout';
 import {
   KEYBOARD_SHORTCUTS,
   type ShortcutDef,
@@ -81,11 +82,13 @@ export default function ShortcutsSettingsContent() {
     return map;
   }, [overrides]);
 
+  // useSafeTimeout SSOT — unmount 시 자동 clearTimeout (verify-frontend-state Step 13/44)
+  const setSafeTimeout = useSafeTimeout();
   const announce = (msg: string) => {
     setStatusMessage(msg);
     // 짧게 비우고 다시 채우면 동일 텍스트 announce 가능 (Radix toast와 동일 패턴)
-    setTimeout(() => setStatusMessage(''), 50);
-    setTimeout(() => setStatusMessage(msg), 100);
+    setSafeTimeout(() => setStatusMessage(''), 50);
+    setSafeTimeout(() => setStatusMessage(msg), 100);
   };
 
   const startEdit = (id: ShortcutId) => {
