@@ -156,6 +156,30 @@ Gate 3단계:
 설정 파일: `.gitleaks.toml` (기본 룰셋 상속 + 프로젝트별 패턴)
 관련: `infra/secrets/README.md`, ADR-0005
 
+### Gate 1 차단 시: dev env 자동 격리 wrapper (`pnpm ur:shield`)
+
+검사 1/3가 실사용 dev env(`apps/frontend/.env.local`, `apps/backend/.env`, `.env.test`)를 차단하면 `rm`은 dev/test 서버를 즉시 파괴한다. 매 ultrareview 호출마다 수동 격리/복원은 휴먼에러(JWT_SECRET 분실 → 재발급) 위험이 크다.
+
+`scripts/ultrareview-shield.sh` 가 다음을 자동화한다:
+
+- `node scripts/ultrareview-preflight.mjs --list-patterns` 로 SSOT 단방향 수신 (인라인 패턴 재정의 0)
+- 대상 파일을 `mktemp -d -t ur-shield-XXXXXX` 격리 디렉토리로 mv
+- `flock(1)` 로 동시 실행 차단 (race-free)
+- `trap restore_files EXIT` 로 정상/SIGINT/SIGTERM/SIGHUP 자동 복원 (SIGKILL만 우회 — 잔존물은 다음 실행 시 정리)
+- 자식 명령은 `exec` 대신 직접 호출하여 trap 발화 보장 + 종료 코드 전파
+
+사용:
+
+```bash
+# Gate 1만 통과 (검사 2/3 gitleaks는 별도 — .env 외 secret이면 .gitleaks.toml allowlist 필요)
+pnpm ur:shield -- node scripts/ultrareview-preflight.mjs
+
+# 또는 ultrareview 자체를 격리 wrapper로 실행
+pnpm ur:shield -- /ultrareview <PR번호>
+```
+
+격리 위치는 **/tmp/** (working tree와 .git 외부) — ultrareview 번들 도구의 `--source .` 범위 밖이라 secret이 외부로 노출되지 않는다.
+
 ---
 
 ## 전체 실행 흐름
@@ -168,6 +192,8 @@ node scripts/ultrareview-advisor.mjs
 
 # 2. Pre-upload secret gate
 node scripts/ultrareview-preflight.mjs    # exit 1이면 조치 후 재실행
+# dev env(.env.local 등)가 Gate 1 차단하면:
+pnpm ur:shield -- node scripts/ultrareview-preflight.mjs   # 자동 격리/복원
 
 # 3. 원격 리뷰 시작 (PR 모드 권장)
 /ultrareview <PR번호>

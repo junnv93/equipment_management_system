@@ -24,6 +24,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
 const VERBOSE = process.argv.includes('--verbose');
+const LIST_PATTERNS = process.argv.includes('--list-patterns');
 
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -65,6 +66,14 @@ const DANGEROUS_PATTERNS = [
   { pattern: 'infra/secrets/lan.env',  reason: 'sops 복호화된 평문 env' },
   { pattern: 'infra/secrets/prod.env', reason: 'sops 복호화된 평문 env' },
 ];
+
+// ─── SSOT 노출: --list-patterns ────────────────────────────────────────────
+// scripts/ultrareview-shield.sh 등 외부 도구가 단방향으로 동일 SSOT를 소비한다.
+// preflight가 SSOT 보유자, shield는 stdout JSON만 파싱 (인라인 재정의 금지).
+if (LIST_PATTERNS) {
+  process.stdout.write(JSON.stringify(DANGEROUS_PATTERNS) + '\n');
+  process.exit(0);
+}
 
 function findGlobFiles(rootDir, suffix) {
   const found = [];

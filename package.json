@@ -35,6 +35,7 @@
     "compose:onprem:migrate": "pnpm secrets:decrypt onprem && docker compose --env-file=/run/secrets/onprem.env -f infra/compose/base.yml -f infra/compose/onprem.override.yml --profile migration run --rm migration",
     "compose:onprem:verify": "node scripts/onprem-verify.mjs",
     "diagnostics:csrf": "node scripts/diagnostics/nextauth-csrf-trace.mjs",
+    "ur:shield": "bash scripts/ultrareview-shield.sh",
     "compose:prod": "pnpm secrets:decrypt prod && docker compose --env-file=/run/secrets/prod.env -f infra/compose/base.yml -f infra/compose/prod.override.yml up -d --wait",
     "test:e2e": "pnpm --filter frontend exec playwright test",
     "test:e2e:ui": "pnpm --filter frontend exec playwright test --ui",
