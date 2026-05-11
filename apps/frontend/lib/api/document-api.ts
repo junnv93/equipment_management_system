@@ -231,6 +231,21 @@ export const documentApi = {
   },
 
   /**
+   * Orphan 문서 일괄 삭제 (best-effort, qr-visual-redesign TASK 6).
+   *
+   * 폼 cancel / unmount 시 pre-upload 한 문서를 정리한다. 일부 실패해도 진행 — 백엔드
+   * cron(`condition_check_photo` + null FK + 24h sweep, SHOULD S-4) 가 2 중 안전망.
+   *
+   * @param documentIds 삭제 대상 문서 ID 배열 (빈 배열 무시)
+   */
+  deleteOrphan: async (documentIds: string[]): Promise<void> => {
+    if (documentIds.length === 0) return;
+    await Promise.allSettled(
+      documentIds.map((id) => apiClient.delete(API_ENDPOINTS.DOCUMENTS.DETAIL(id)))
+    );
+  },
+
+  /**
    * 문서 무결성 검증
    */
   verifyIntegrity: async (documentId: string): Promise<IntegrityResult> => {

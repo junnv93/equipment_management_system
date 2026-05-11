@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,6 +17,8 @@ import {
 import { DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { documentApi } from '@/lib/api/document-api';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
+import { StepperHeader } from './StepperHeader';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Purpose-specific inspection config — SSOT
@@ -123,6 +125,18 @@ export default function ReturnInspectionForm({
   // 사진 첨부 — pre-upload 패턴
   const [attachmentFiles, setAttachmentFiles] = useState<UploadedFile[]>([]);
   const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+  const submittedRef = useRef(false);
+
+  // Orphan cleanup (qr-visual-redesign TASK 6) — 정상 제출이 아니면 unmount 시 pre-uploaded 정리
+  useEffect(() => {
+    const ids = uploadedDocumentIds;
+    return () => {
+      if (submittedRef.current) return;
+      if (ids.length > 0) {
+        void documentApi.deleteOrphan(ids);
+      }
+    };
+  }, [uploadedDocumentIds]);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) =>
@@ -195,6 +209,7 @@ export default function ReturnInspectionForm({
       attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
     );
 
+    submittedRef.current = true;
     onSubmit({
       calibrationChecked,
       repairChecked,
@@ -208,12 +223,55 @@ export default function ReturnInspectionForm({
     });
   };
 
+  /**
+   * "모두 정상" 단축 — 필수 체크박스를 한 번에 체크 + 즉시 제출 (qr-visual-redesign TASK 5).
+   * purpose 별 required 항목만 자동 체크 — 옵션 체크박스는 그대로.
+   */
+  const handleAllNormalSubmit = () => {
+    const nextCalibration = config.calibrationRequired ? true : calibrationChecked;
+    const nextRepair = config.repairRequired ? true : repairChecked;
+    const nextWorking =
+      config.workingRequired && config.workingUserProvided ? true : workingStatusChecked;
+    setCalibrationChecked(nextCalibration);
+    setRepairChecked(nextRepair);
+    setWorkingStatusChecked(nextWorking);
+    submittedRef.current = true;
+    const successDocIds = uploadedDocumentIds.filter((id) =>
+      attachmentFiles.some((f) => f.uuid === id && f.status === 'success')
+    );
+    onSubmit({
+      calibrationChecked: nextCalibration,
+      repairChecked: nextRepair,
+      workingStatusChecked: config.workingUserProvided ? nextWorking : derivedWorkingStatusChecked,
+      inspectionNotes: '',
+      calibrationCertificateExceptionReason: '',
+      ...(successDocIds.length > 0 && { attachmentIds: successDocIds }),
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="text-sm text-muted-foreground">
+    <div className="space-y-5">
+      {/* 4-step stepper — lender_return 위치 (반입 시 확인) */}
+      <StepperHeader step="lender_return" />
+
+      <div className="text-sm text-foreground/70">
         {t('returnInspection.purposeLabel')}{' '}
-        <span className="font-medium">{t(`purpose.${purpose}`)}</span>
+        <span className="font-medium text-foreground">{t(`purpose.${purpose}`)}</span>
       </div>
+
+      {/* "모두 정상으로 제출" 단축 버튼 — 64px (qr-visual-redesign TASK 5) */}
+      <Button
+        type="button"
+        onClick={handleAllNormalSubmit}
+        disabled={isLoading}
+        className={cn(
+          'flex w-full items-center justify-center gap-2 bg-brand-ok text-white hover:bg-brand-ok/90'
+        )}
+        style={{ minHeight: '64px' }}
+      >
+        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+        <span className="text-base font-semibold label-ko">{t('condition.allNormalShortcut')}</span>
+      </Button>
 
       {validationError && (
         <Alert variant="destructive" role="alert" aria-live="assertive">
@@ -320,23 +378,34 @@ export default function ReturnInspectionForm({
         </div>
       )}
 
-      {/* 현장 사진 첨부 */}
+      {/* 현장 사진 첨부 — 촬영/갤러리 분리 (qr-visual-redesign TASK 6) */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Camera className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Camera className="h-4 w-4 text-foreground/70" aria-hidden="true" />
           <Label>{t('condition.attachmentsLabel')}</Label>
         </div>
-        <p className="text-sm text-muted-foreground">{t('condition.attachmentsHint')}</p>
-        <FileUpload
-          files={attachmentFiles}
-          onChange={handleAttachmentsChange}
-          accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
-          maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
-          capture="environment"
-          label=""
-          description=""
-          disabled={isLoading}
-        />
+        <p className="text-sm text-foreground/70 label-ko">{t('condition.photoRecommendedHint')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <FileUpload
+            files={attachmentFiles}
+            onChange={handleAttachmentsChange}
+            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+            capture="environment"
+            label={t('condition.photoCaptureLabel')}
+            description=""
+            disabled={isLoading}
+          />
+          <FileUpload
+            files={[]}
+            onChange={handleAttachmentsChange}
+            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+            label={t('condition.photoGalleryLabel')}
+            description=""
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
       {/* 검사 비고 */}
