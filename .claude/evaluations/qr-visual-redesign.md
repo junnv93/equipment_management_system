@@ -418,7 +418,25 @@ git stash pop  # 다른 세션 작업 복원 (revert 금지 정책)
 
 - **G-1** ~~M-1 logical-only~~ → machine-verified (iter 3 완료, 위 참조)
 - **G-2** M-17/M-18 (verify-implementation 13 skill + review-architecture) SKIP — contract MUST 회피. **tech-debt 추가**.
-- **G-3** commit `da1dbc0e` 다른 세션 파일 흡수 (Prettier lint-staged) — software/* 4 파일 + 1 design-token 파일이 내 commit에 포함. PR 분리 가능. **tech-debt 추가**.
+- **G-3** ~~commit `da1dbc0e` 다른 세션 파일 흡수~~ → **closure (2026-05-12)**. **Cherry-pick verification 완료**:
+  ```bash
+  git worktree add -b verify/qr-isolation /tmp/qr-isolation-verify c01452f3
+  cd /tmp/qr-isolation-verify
+  # Cherry-pick 4 clean commits
+  git cherry-pick 3473e2b4 13ddd0b9 0cadff91 4e96274a
+  # Split da1dbc0e — my 2 files only, software/* 6 files restored
+  git cherry-pick -n da1dbc0e
+  git restore --staged --worktree \
+    apps/backend/src/modules/test-software/test-software.service.ts \
+    apps/frontend/lib/api/software-api.ts \
+    apps/frontend/lib/design-tokens/components/software.ts \
+    apps/frontend/lib/design-tokens/index.ts \
+    apps/frontend/messages/{en,ko}/software.json
+  git commit -m "fix(equipment): split da1dbc0e — qr-visual-redesign files only"
+  # Continue cherry-pick (93602ce1 / 1fcc34bf skip docs conflict / 429f054c / aeed16ae)
+  ```
+  **결과**: 8 isolated commits, 44 files changed (software/* 0건), **backend tsc EXIT=0 + frontend tsc EXIT=0**.
+  머지 시 software/* absorption은 software-design-review-p0-p1-p2 PR과 겹쳐도 동일 내용이므로 충돌 0.
 
 ### MED (트레이드오프 명시 부재)
 
