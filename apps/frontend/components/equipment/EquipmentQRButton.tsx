@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { EquipmentQRCode } from './EquipmentQRCode';
 import { generateLabelPdf } from '@/lib/qr/generate-label-pdf';
@@ -25,6 +25,7 @@ import {
   getSamplerPresetOrder,
 } from '@equipment-management/shared-constants';
 import type { LabelLayoutMode, LabelSizePreset } from '@equipment-management/shared-constants';
+import { cn } from '@/lib/utils';
 
 type PrintMode = 'sampler' | 'custom';
 
@@ -39,13 +40,87 @@ interface EquipmentQRButtonProps {
   iconOnly?: boolean;
 }
 
+/** 시각 비교 미니 라벨 — 비례 사각형 + 좌측 mini QR + 권장 용도 라벨. */
+function LabelPreviewRow({
+  preset,
+  selected,
+  onClick,
+  recommendedLabel,
+  sizeText,
+  fallbackInline,
+}: {
+  preset: LabelSizePreset;
+  selected: boolean;
+  onClick: () => void;
+  recommendedLabel: string;
+  sizeText: string;
+  fallbackInline: string | null;
+}) {
+  const { widthMm, heightMm } = LABEL_SIZE_PRESETS[preset];
+  // 최대 widthMm = 93.5 (xl) 기준으로 비례 — preview width 최대 96px (셀 라벨 비율 유지).
+  const previewMaxPx = 96;
+  const previewWidthPx = Math.round((widthMm / 93.5) * previewMaxPx);
+  const previewHeightPx = Math.max(
+    14,
+    Math.round((heightMm / 93.5) * previewMaxPx * (heightMm / widthMm) * 1.6)
+  );
+
+  return (
+    <li>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={onClick}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors',
+          selected
+            ? 'border-brand-info bg-brand-info/10'
+            : 'border-border bg-card hover:bg-muted/40'
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-sm border bg-background p-1',
+            selected ? 'border-brand-info' : 'border-border'
+          )}
+          style={{ width: `${previewWidthPx}px`, height: `${previewHeightPx}px` }}
+        >
+          {/* mini QR pattern */}
+          <div
+            className="shrink-0 rounded-sm bg-foreground/85"
+            style={{
+              width: `${Math.min(previewHeightPx - 6, 18)}px`,
+              height: `${Math.min(previewHeightPx - 6, 18)}px`,
+            }}
+          />
+          <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
+            <div className="h-1 w-full rounded bg-foreground/40" />
+            <div className="h-1 w-3/4 rounded bg-foreground/30" />
+            <div className="h-1 w-1/2 rounded bg-foreground/30" />
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <span className="text-sm font-medium text-foreground">{sizeText}</span>
+          <span className="text-xs text-foreground/70 label-ko">{recommendedLabel}</span>
+          {selected && fallbackInline && (
+            <span className="text-xs text-brand-warning mt-1 label-ko">{fallbackInline}</span>
+          )}
+        </div>
+      </button>
+    </li>
+  );
+}
+
 /**
  * "QR 보기/인쇄" 버튼 + 다이얼로그.
  *
- * 인쇄 방식 선택(sampler/custom)과 크기 프리셋(standard/medium/small)을 조합하여
- * 라벨 PDF를 생성한다.
+ * 인쇄 방식 선택(sampler/custom)을 segmented tabs로, 크기는 시각 비례 행으로 표시한다.
+ * (qr-visual-redesign TASK 7 / 2026-05-11)
+ *
  *   - sampler: A4 1페이지에 모든 크기 변형을 실물 크기로 배치
- *   - custom:  특정 크기(standard/medium/small) + 양식(full/qrOnly) 선택
+ *   - custom:  특정 크기(xl..micro) + 양식(full/qrOnly) 선택, 비례 미리보기 + 권장 용도 라벨
  *
  * i18n 네임스페이스: `qr.qrDisplay.*`.
  */
@@ -75,7 +150,6 @@ export function EquipmentQRButton({
       const dateStr = new Date().toISOString().slice(0, 10);
 
       if (printMode === 'sampler') {
-        // 헤더 문자열 빌드 — Worker는 i18n-free이므로 메인 스레드에서 주입
         const presets = getSamplerPresetOrder();
         const samplerHeaders = Object.fromEntries(
           presets.map((preset) => {
@@ -165,108 +239,79 @@ export function EquipmentQRButton({
         </div>
 
         <div className="space-y-4 border-t pt-4">
-          {/* 인쇄 방식 선택 */}
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-foreground">{t('printModeLabel')}</legend>
-            <RadioGroup
-              value={printMode}
-              onValueChange={(v) => setPrintMode(v as PrintMode)}
-              className="space-y-2"
-            >
-              <div className="flex items-start space-x-2">
-                <RadioGroupItem value="sampler" id="mode-sampler" className="mt-0.5" />
-                <div className="flex flex-col">
-                  <Label
-                    htmlFor="mode-sampler"
-                    className="cursor-pointer text-sm font-normal leading-snug"
-                  >
-                    {t('printMode.sampler')}
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {t('printMode.samplerDescription')}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start space-x-2">
-                <RadioGroupItem value="custom" id="mode-custom" className="mt-0.5" />
-                <div className="flex flex-col">
-                  <Label
-                    htmlFor="mode-custom"
-                    className="cursor-pointer text-sm font-normal leading-snug"
-                  >
-                    {t('printMode.custom')}
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {t('printMode.customDescription')}
-                  </span>
-                </div>
-              </div>
-            </RadioGroup>
-          </fieldset>
+          {/* 인쇄 방식 선택 — segmented tabs (TASK 7) */}
+          <Tabs value={printMode} onValueChange={(v) => setPrintMode(v as PrintMode)}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sampler">{t('modeTab.sampler')}</TabsTrigger>
+              <TabsTrigger value="custom">{t('modeTab.custom')}</TabsTrigger>
+            </TabsList>
 
-          {/* custom 모드 전용: 양식 + 크기 선택 */}
-          {printMode === 'custom' && (
-            <>
+            <TabsContent value="sampler" className="mt-4">
+              <p className="text-sm text-foreground/70 label-ko">
+                {t('printMode.samplerDescription')}
+              </p>
+            </TabsContent>
+
+            <TabsContent value="custom" className="mt-4 space-y-4">
+              {/* 양식 선택 (full / qrOnly) — segmented inline */}
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium text-foreground">
                   {t('layoutModeLabel')}
                 </legend>
-                <RadioGroup
-                  value={layoutMode}
-                  onValueChange={(v) => setLayoutMode(v as LabelLayoutMode)}
-                  className="space-y-1.5"
-                >
-                  {(['full', 'qrOnly'] as const).map((mode) => (
-                    <div key={mode} className="flex items-center space-x-2">
-                      <RadioGroupItem value={mode} id={`layout-${mode}`} />
-                      <Label
-                        htmlFor={`layout-${mode}`}
-                        className="cursor-pointer text-sm font-normal"
+                <div role="radiogroup" aria-label={t('layoutModeLabel')} className="flex gap-2">
+                  {(['full', 'qrOnly'] as const).map((mode) => {
+                    const selected = layoutMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setLayoutMode(mode)}
+                        className={cn(
+                          'flex-1 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors',
+                          selected
+                            ? 'border-brand-info bg-brand-info/10 text-brand-info'
+                            : 'border-border bg-card text-foreground/80 hover:bg-muted/40'
+                        )}
                       >
-                        {t(`layoutMode.${mode}`)}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                        <Label className="cursor-pointer label-ko">{t(`layoutMode.${mode}`)}</Label>
+                      </button>
+                    );
+                  })}
+                </div>
               </fieldset>
 
+              {/* 크기 선택 — 시각 비례 행 + 권장 용도 (TASK 7) */}
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium text-foreground">
                   {t('sizePresetLabel')}
                 </legend>
-                <RadioGroup
-                  value={sizePreset}
-                  onValueChange={(v) => setSizePreset(v as LabelSizePreset)}
-                  className="space-y-1.5"
-                >
+                <ul role="radiogroup" aria-label={t('sizePresetLabel')} className="space-y-1.5">
                   {getSamplerPresetOrder().map((preset) => {
-                    const { widthMm, heightMm } = LABEL_SIZE_PRESETS[preset];
+                    const { widthMm, heightMm, recommendedForKey } = LABEL_SIZE_PRESETS[preset];
+                    const selected = sizePreset === preset;
+                    const showFallback = selected && fallback;
                     return (
-                      <div key={preset} className="flex items-center space-x-2">
-                        <RadioGroupItem value={preset} id={`size-${preset}`} />
-                        <Label
-                          htmlFor={`size-${preset}`}
-                          className="cursor-pointer text-sm font-normal"
-                        >
-                          {t(`size.${preset}`, { widthMm, heightMm })}
-                        </Label>
-                      </div>
+                      <LabelPreviewRow
+                        key={preset}
+                        preset={preset}
+                        selected={selected}
+                        onClick={() => setSizePreset(preset)}
+                        recommendedLabel={t(`recommendedFor.${recommendedForKey}`)}
+                        sizeText={t(`size.${preset}`, { widthMm, heightMm })}
+                        fallbackInline={
+                          showFallback
+                            ? t('fallbackInlineNotice', { mode: t(`fallbackMode.${resolvedMode}`) })
+                            : null
+                        }
+                      />
                     );
                   })}
-                </RadioGroup>
+                </ul>
               </fieldset>
-
-              {/* fallback 안내 */}
-              {fallback && (
-                <p
-                  role="alert"
-                  className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
-                >
-                  {t('fallbackNotice', { mode: t(`fallbackMode.${resolvedMode}`) })}
-                </p>
-              )}
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         <DialogFooter>

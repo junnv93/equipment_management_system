@@ -260,15 +260,15 @@ export type LabelLayoutMode = 'full' | 'qrOnly';
  */
 export const LABEL_SIZE_PRESETS: Record<
   LabelSizePreset,
-  { widthMm: number; heightMm: number; qrSizeMm: number }
+  { widthMm: number; heightMm: number; qrSizeMm: number; recommendedForKey: string }
 > = {
-  xl: { widthMm: 93.5, heightMm: XL_LABEL_HEIGHT_MM, qrSizeMm: 25 },
-  large: { widthMm: 80, heightMm: 38, qrSizeMm: 22 },
-  medium: { widthMm: 60, heightMm: 28, qrSizeMm: 18 },
-  small: { widthMm: 50, heightMm: 20, qrSizeMm: 14 },
-  xs: { widthMm: 42, heightMm: 18, qrSizeMm: 12 },
-  xxs: { widthMm: 36, heightMm: 15, qrSizeMm: 10 },
-  micro: { widthMm: 30, heightMm: 12, qrSizeMm: 8 },
+  xl: { widthMm: 93.5, heightMm: XL_LABEL_HEIGHT_MM, qrSizeMm: 25, recommendedForKey: 'a4Sheet' },
+  large: { widthMm: 80, heightMm: 38, qrSizeMm: 22, recommendedForKey: 'largeInstrument' },
+  medium: { widthMm: 60, heightMm: 28, qrSizeMm: 18, recommendedForKey: 'midInstrument' },
+  small: { widthMm: 50, heightMm: 20, qrSizeMm: 14, recommendedForKey: 'smallInstrument' },
+  xs: { widthMm: 42, heightMm: 18, qrSizeMm: 12, recommendedForKey: 'cable' },
+  xxs: { widthMm: 36, heightMm: 15, qrSizeMm: 10, recommendedForKey: 'ultraCompact' },
+  micro: { widthMm: 30, heightMm: 12, qrSizeMm: 8, recommendedForKey: 'ultraCompactCable' },
 };
 
 /**
