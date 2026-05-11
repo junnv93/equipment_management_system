@@ -10,6 +10,7 @@ import type { EquipmentRequest } from '@equipment-management/db/schema/equipment
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { users, equipment as equipmentTable } from '@equipment-management/db/schema';
 import type { QRAllowedAction } from '@equipment-management/shared-constants';
+import type { HandoverItem } from '@equipment-management/schemas';
 
 type UserSelect = typeof users.$inferSelect;
 type EquipmentSelect = typeof equipmentTable.$inferSelect;
@@ -36,7 +37,14 @@ export type EquipmentDetailResult = Omit<Equipment, never> & {
  */
 export type EquipmentQRLandingResult = EquipmentDetailResult & {
   allowedActions: QRAllowedAction[];
-  /** confirm_handover_receive / confirm_handover_return action 존재 시 해당 checkoutId */
+  /**
+   * confirm_handover_receive / confirm_handover_return 액션이 가리키는 checkout 목록.
+   * 사용자가 동시에 여러 건의 수령/반환 대기를 가질 때 picker UI 가 카드로 노출.
+   */
+  handovers?: HandoverItem[];
+  /**
+   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일. 1 release 후 제거.
+   */
   handoverCheckoutId?: string;
 };
 

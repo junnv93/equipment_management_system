@@ -360,6 +360,7 @@ export class EquipmentController {
       ...equipmentData,
       teamName: team?.name || null,
       allowedActions: qrResult.actions,
+      ...(qrResult.handovers && qrResult.handovers.length > 0 && { handovers: qrResult.handovers }),
       ...(qrResult.handoverCheckoutId && { handoverCheckoutId: qrResult.handoverCheckoutId }),
     };
   }
