@@ -199,7 +199,8 @@
       "resetAllNotice": "모든 단축키가 기본값으로 복원되었습니다"
     },
     "aria": {
-      "rowLabel": "{label} 단축키"
+      "rowLabel": "{label} 단축키",
+      "customMarker": "사용자 지정"
     }
   }
 }

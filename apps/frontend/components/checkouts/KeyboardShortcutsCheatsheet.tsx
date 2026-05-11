@@ -31,6 +31,7 @@ interface KeyBadgeProps {
 }
 
 function KeyBadge({ def, overrideKey }: KeyBadgeProps) {
+  const t = useTranslations('checkouts.shortcuts');
   const modStr = (def.modifiers ?? [])
     .map((m) => {
       if (m === 'shift') return '⇧';
@@ -49,7 +50,7 @@ function KeyBadge({ def, overrideKey }: KeyBadgeProps) {
     <Badge
       variant={isOverridden ? 'default' : 'outline'}
       className="font-mono text-xs"
-      aria-label={isOverridden ? `${display} (사용자 지정)` : display}
+      aria-label={isOverridden ? `${display} (${t('aria.customMarker')})` : display}
     >
       {display}
       {isOverridden ? <span aria-hidden="true">*</span> : null}

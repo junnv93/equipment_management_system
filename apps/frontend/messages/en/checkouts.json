@@ -985,6 +985,9 @@
     "title": "Keyboard Shortcuts",
     "description": "Available keyboard shortcuts for the checkout management screen",
     "close": "Close",
+    "aria": {
+      "customMarker": "Custom"
+    },
     "list": {
       "sectionTitle": "List View",
       "navigateUp": "Navigate to previous item",

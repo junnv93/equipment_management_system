@@ -985,6 +985,9 @@
     "title": "키보드 단축키",
     "description": "반출 관리 화면에서 사용 가능한 단축키입니다",
     "close": "닫기",
+    "aria": {
+      "customMarker": "사용자 지정"
+    },
     "list": {
       "sectionTitle": "목록 화면",
       "navigateUp": "이전 항목으로 이동",

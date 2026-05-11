@@ -34,6 +34,20 @@ jest.mock('@/lib/api/cache-invalidation', () => ({
   CheckoutCacheInvalidation: { APPROVAL_KEYS: [['checkouts'], ['dashboard']] },
 }));
 
+// undoWindowMs 5초 지연 우회 — 테스트는 mutate 즉시 호출 검증 (production 흐름 동일성은
+// CheckoutBulkActionBar 통합 spec / e2e 에서 별도 검증).
+jest.mock('@/lib/checkouts/undo-constants', () => ({
+  UNDO_TOAST_DURATION_MS: 0,
+}));
+
+// useBulkUndoToast 의 toast/invalidateQueries 부수효과는 본 hook 책임 외 — mock no-op.
+jest.mock('@/hooks/use-bulk-undo-toast', () => ({
+  useBulkUndoToast: () => ({
+    showBulkApproveUndoToast: jest.fn(),
+    showBulkRejectUndoToast: jest.fn(),
+  }),
+}));
+
 jest.mock('@/lib/api/query-config', () => ({
   queryKeys: {
     approvals: {

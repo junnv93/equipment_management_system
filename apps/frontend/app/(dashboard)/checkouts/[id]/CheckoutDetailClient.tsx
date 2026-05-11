@@ -77,9 +77,19 @@ import { WorkflowTimelineError } from '@/components/checkouts/WorkflowTimelineEr
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useCheckoutNextStep } from '@/hooks/use-checkout-next-step';
 import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
-import { CheckoutQrDrawerTrigger } from '@/components/checkouts/CheckoutQrDrawerTrigger';
+import dynamic from 'next/dynamic';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useUndoToast } from '@/hooks/use-undo-toast';
+
+// S-8 code-split — qrcode lib + EquipmentQRCode chunk를 detail 진입 초기 번들에서 분리.
+// drawer trigger 버튼은 user 상호작용 후에야 필요하므로 ssr: false + loading null 안전.
+const CheckoutQrDrawerTrigger = dynamic(
+  () =>
+    import('@/components/checkouts/CheckoutQrDrawerTrigger').then((m) => ({
+      default: m.CheckoutQrDrawerTrigger,
+    })),
+  { ssr: false, loading: () => null }
+);
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
