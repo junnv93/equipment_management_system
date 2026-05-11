@@ -1,6 +1,7 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-11** — software-design-review-p0-p1-p2 closure (DESIGN_REVIEW.md P0+P1+P2 전수 → archive-design.md). MUST 16/16 PASS. SSOT 4 신설 (SoftwareValidationStepper + SoftwareEmptyState + ResponsiveListFallback + software-validation-step.ts schemas) + 디자인 토큰 4종 (status badge/icon/not-validated/info-card dt-dd) + backend BFF latestValidationStatus LEFT JOIN. SHOULD S-4 e2e tech-debt 등록.
+> **마지막 정리일: 2026-05-12** — ultrareview-shield-wrapper closure (`pnpm ur:shield` 신설로 preflight Gate 1 dev `.env` 자동 격리/복원 → archive-infra.md). M-1~M-12 PASS (iter 2 contract rev-2 grep 분리 카운트). `--list-patterns` SSOT 단방향 + `flock` + `trap EXIT` + `/tmp` 격리. 사고 학습: shield self-test isolation tech-debt 등록.
+> **2026-05-11** — software-design-review-p0-p1-p2 closure (DESIGN_REVIEW.md P0+P1+P2 전수 → archive-design.md). MUST 16/16 PASS. SSOT 4 신설 (SoftwareValidationStepper + SoftwareEmptyState + ResponsiveListFallback + software-validation-step.ts schemas) + 디자인 토큰 4종 (status badge/icon/not-validated/info-card dt-dd) + backend BFF latestValidationStatus LEFT JOIN. SHOULD S-4 e2e tech-debt 등록.
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)

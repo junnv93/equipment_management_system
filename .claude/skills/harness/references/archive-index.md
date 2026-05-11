@@ -16,6 +16,7 @@
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| 2026-05-12 — ultrareview-shield-wrapper | [archive-infra.md](./archive-infra.md) | ultrareview-preflight Gate 1 차단 시 dev `.env` 자동 격리(`/tmp/ur-shield-*`)/복원(`trap EXIT`) wrapper + `--list-patterns` SSOT 단방향 + `flock` 동시 실행 차단. M-1~M-12 PASS (iter 2 contract rev-2 grep 분리 카운트) |
 | 2026-05-11 — software-design-review-p0-p1-p2 | [archive-design.md](./archive-design.md) | DESIGN_REVIEW.md P0(stepper SSOT + 검증상태 컬럼 BFF 확장 + 시멘틱 토큰) + P1(모바일 카드 fallback + P-number 셀 통합 + dialog max-w-2xl + sub-tabs + 빈 상태 EmptyState wrapper) + P2(raw 색상 토큰화 + xl 와이드 2-column + 행 클릭 패턴 통일). MUST 16/16 |
 | 2026-05-10 — approval-row-memo-i18n-ci-cache | [archive-domain.md](./archive-domain.md) | ApprovalRow memo + ApprovalRowItem + ApprovalsClient stable callback (4-layer 완성) + dep-audit pnpm cache + HeroKPI i18n. M-12/12 |
 | 2026-05-10 — verify-i18n-step8-automation-promotion | [archive-infra.md](./archive-infra.md) | verify-route-metadata.mjs Phase3 + pre-push gate. i18n-checks.md Step 8 구 node-e 인라인 → 스크립트 참조. Step 8c orphan 탐지 공식 문서화. M-1~M-6 6/6 |
