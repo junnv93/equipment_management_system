@@ -23,6 +23,7 @@ import {
 } from '../brand';
 import { MICRO_TYPO } from '../semantic';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
+import type { ValidationStatus } from '@equipment-management/schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
@@ -188,6 +189,50 @@ export const SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS = {
   yes: getSemanticBadgeClasses('ok'),
   no: 'border rounded-md px-2 py-0.5 text-xs font-medium border-border text-muted-foreground',
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7-c. 유효성 확인 상태 배지 (P0-2 — DESIGN_REVIEW.md)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 유효성 확인 상태 5단계 시멘틱 색 매핑 SSOT.
+ *
+ * 기존 STATUS_VARIANT(`'outline'` 두 단계 중복)와 raw `text-yellow-600` 등 하드코딩을 대체.
+ * 다크모드 자동 전환 (CSS 변수 기반 brand 토큰).
+ *
+ * - draft            : neutral border (작업 중)
+ * - submitted        : warning (검토 대기)
+ * - approved         : info (기술 승인)
+ * - quality_approved : ok (최종 승인)
+ * - rejected         : critical (반려)
+ */
+export const SOFTWARE_VALIDATION_STATUS_BADGE_TOKENS = {
+  draft:
+    'border rounded-md px-2 py-0.5 text-xs font-medium border-border text-muted-foreground bg-muted/50',
+  submitted: getSemanticBadgeClasses('warning'),
+  approved: getSemanticBadgeClasses('info'),
+  quality_approved: getSemanticBadgeClasses('ok'),
+  rejected: getSemanticBadgeClasses('critical'),
+} as const satisfies Record<ValidationStatus, string>;
+
+/**
+ * 유효성 확인 상태 아이콘 색상 SSOT — STATUS_ICON 인라인 클래스 대체.
+ * raw `text-yellow-600` / `text-blue-600` / `text-green-600` 제거 (다크모드 미지원 회피).
+ */
+export const SOFTWARE_VALIDATION_STATUS_ICON_TOKENS = {
+  draft: 'text-muted-foreground',
+  submitted: 'text-brand-warning',
+  approved: 'text-brand-info',
+  quality_approved: 'text-brand-ok',
+  rejected: 'text-brand-critical',
+} as const satisfies Record<ValidationStatus, string>;
+
+/**
+ * "미검증" (latestValidationId === null) 전용 배지 — 위 5단계 enum 외 6번째 표시.
+ * `requiresValidation === true && !latestValidationId` 인 경우 강조.
+ */
+export const SOFTWARE_VALIDATION_NOT_VALIDATED_BADGE =
+  'border rounded-md px-2 py-0.5 text-xs font-medium border-brand-warning/40 text-brand-warning bg-brand-warning/10';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 8. 승인 관리 페이지 (admin/software-approvals)

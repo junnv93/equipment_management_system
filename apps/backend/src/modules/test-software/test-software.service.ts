@@ -5,8 +5,10 @@ import {
   testSoftware,
   equipmentTestSoftware,
   equipment,
+  softwareValidations,
   type TestSoftware,
 } from '@equipment-management/db/schema';
+import type { ValidationStatus } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { resolveTestSoftwareOrderBy } from './utils/test-software-sort-mapper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -22,12 +24,18 @@ import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
 import { ErrorCode, SoftwareAvailabilityEnum } from '@equipment-management/schemas';
 import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 
-/** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
+/** findAll/findOne 응답에 users + software_validations LEFT JOIN으로 추가되는 필드 */
 export type TestSoftwareWithManagers = TestSoftware & {
   primaryManagerName: string | null;
   secondaryManagerName: string | null;
   latestValidationId?: string | null;
   latestValidatedAt?: Date | null;
+  /**
+   * 최신 유효성 확인 status (DESIGN_REVIEW.md P0-3).
+   * `latestValidationId`로 가리키는 software_validations row의 status.
+   * 미검증(latestValidationId === null) 시 null.
+   */
+  latestValidationStatus?: ValidationStatus | null;
 };
 
 @Injectable()
@@ -187,6 +195,7 @@ export class TestSoftwareService extends VersionedBaseService {
               site: testSoftware.site,
               latestValidationId: testSoftware.latestValidationId,
               latestValidatedAt: testSoftware.latestValidatedAt,
+              latestValidationStatus: softwareValidations.status,
               version: testSoftware.version,
               createdAt: testSoftware.createdAt,
               updatedAt: testSoftware.updatedAt,
@@ -196,6 +205,10 @@ export class TestSoftwareService extends VersionedBaseService {
             .from(testSoftware)
             .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
             .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
+            .leftJoin(
+              softwareValidations,
+              eq(softwareValidations.id, testSoftware.latestValidationId)
+            )
             .where(whereClause)
             .orderBy(orderBy)
             .limit(pageSize)
@@ -245,6 +258,7 @@ export class TestSoftwareService extends VersionedBaseService {
             site: testSoftware.site,
             latestValidationId: testSoftware.latestValidationId,
             latestValidatedAt: testSoftware.latestValidatedAt,
+            latestValidationStatus: softwareValidations.status,
             version: testSoftware.version,
             createdAt: testSoftware.createdAt,
             updatedAt: testSoftware.updatedAt,
@@ -254,6 +268,10 @@ export class TestSoftwareService extends VersionedBaseService {
           .from(testSoftware)
           .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
           .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
+          .leftJoin(
+            softwareValidations,
+            eq(softwareValidations.id, testSoftware.latestValidationId)
+          )
           .where(eq(testSoftware.id, id))
           .limit(1);
 
@@ -292,6 +310,7 @@ export class TestSoftwareService extends VersionedBaseService {
             site: testSoftware.site,
             latestValidationId: testSoftware.latestValidationId,
             latestValidatedAt: testSoftware.latestValidatedAt,
+            latestValidationStatus: softwareValidations.status,
             version: testSoftware.version,
             createdAt: testSoftware.createdAt,
             updatedAt: testSoftware.updatedAt,
@@ -302,6 +321,10 @@ export class TestSoftwareService extends VersionedBaseService {
           .innerJoin(testSoftware, eq(equipmentTestSoftware.testSoftwareId, testSoftware.id))
           .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
           .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
+          .leftJoin(
+            softwareValidations,
+            eq(softwareValidations.id, testSoftware.latestValidationId)
+          )
           .where(eq(equipmentTestSoftware.equipmentId, equipmentId))
           .orderBy(asc(testSoftware.managementNumber));
 

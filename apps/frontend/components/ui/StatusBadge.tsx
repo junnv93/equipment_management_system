@@ -16,10 +16,26 @@ import { useTranslations } from 'next-intl';
 import {
   EQUIPMENT_STATUS_TONE,
   EQUIPMENT_STATUS_I18N_KEYS,
+  type EquipmentStatusTone,
 } from '@equipment-management/shared-constants';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import { cn } from '@/lib/utils';
-import { getSemanticBadgeClasses, getSemanticDotClasses } from '@/lib/design-tokens/brand';
+import {
+  getSemanticBadgeClasses,
+  getSemanticDotClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens/brand';
+
+/**
+ * EquipmentStatusTone → SemanticColorKey 매핑.
+ * `warn` 약식 → `warning` 정식 (BRAND_CLASS_MATRIX 키).
+ */
+const TONE_TO_SEMANTIC: Record<EquipmentStatusTone, SemanticColorKey> = {
+  ok: 'ok',
+  warn: 'warning',
+  urgent: 'urgent',
+  mute: 'mute',
+};
 
 export interface StatusBadgeProps {
   status: EquipmentStatus;
@@ -45,6 +61,7 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   const t = useTranslations('qr.statusBadge.status');
   const tone = EQUIPMENT_STATUS_TONE[status];
+  const semanticTone = TONE_TO_SEMANTIC[tone];
   const i18nKey = EQUIPMENT_STATUS_I18N_KEYS[status];
   const displayLabel = label ?? t(i18nKey);
 
@@ -54,7 +71,7 @@ export function StatusBadge({
       aria-label={displayLabel}
       className={cn(
         'inline-flex shrink-0 items-center gap-1.5',
-        getSemanticBadgeClasses(tone),
+        getSemanticBadgeClasses(semanticTone),
         size === 'base' ? 'text-sm md:text-base' : 'text-xs',
         className
       )}
@@ -62,7 +79,7 @@ export function StatusBadge({
       {showDot && (
         <span
           aria-hidden="true"
-          className={cn(getSemanticDotClasses(tone), 'h-1.5 w-1.5 shrink-0')}
+          className={cn(getSemanticDotClasses(semanticTone), 'h-1.5 w-1.5 shrink-0')}
         />
       )}
       <span className="font-medium label-ko">{displayLabel}</span>
