@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { VALIDATION_INFO_CARD_TOKENS as TOK } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { SoftwareValidation } from '@/lib/api/software-api';
 
@@ -19,37 +20,31 @@ export function ValidationVendorInfoCard({ validation }: ValidationVendorInfoCar
         <CardTitle className="text-base">{t('validation.detail.vendorInfo')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <dl className={TOK.dl}>
           <div>
-            <dt className="text-sm text-muted-foreground">{t('validation.detail.vendorName')}</dt>
-            <dd className="text-sm font-medium">{validation.vendorName || '-'}</dd>
+            <dt className={TOK.dt}>{t('validation.detail.vendorName')}</dt>
+            <dd className={TOK.dd}>{validation.vendorName || '-'}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-sm text-muted-foreground">
-              {t('validation.detail.vendorSummary')}
-            </dt>
-            <dd className="text-sm whitespace-pre-wrap">{validation.vendorSummary || '-'}</dd>
+            <dt className={TOK.dt}>{t('validation.detail.vendorSummary')}</dt>
+            <dd className={`${TOK.dd} whitespace-pre-wrap`}>{validation.vendorSummary || '-'}</dd>
           </div>
           {validation.receivedBy && (
             <div>
-              <dt className="text-sm text-muted-foreground">{t('validation.detail.receivedBy')}</dt>
-              <dd className="text-sm">{validation.receivedBy}</dd>
+              <dt className={TOK.dt}>{t('validation.detail.receivedBy')}</dt>
+              <dd className={TOK.dd}>{validation.receivedBy}</dd>
             </div>
           )}
           {validation.receivedDate && (
             <div>
-              <dt className="text-sm text-muted-foreground">
-                {t('validation.detail.receivedDate')}
-              </dt>
-              <dd className="text-sm">{fmtDate(validation.receivedDate)}</dd>
+              <dt className={TOK.dt}>{t('validation.detail.receivedDate')}</dt>
+              <dd className={TOK.dd}>{fmtDate(validation.receivedDate)}</dd>
             </div>
           )}
           {validation.attachmentNote && (
             <div className="sm:col-span-2">
-              <dt className="text-sm text-muted-foreground">
-                {t('validation.detail.attachmentNote')}
-              </dt>
-              <dd className="text-sm whitespace-pre-wrap">{validation.attachmentNote}</dd>
+              <dt className={TOK.dt}>{t('validation.detail.attachmentNote')}</dt>
+              <dd className={`${TOK.dd} whitespace-pre-wrap`}>{validation.attachmentNote}</dd>
             </div>
           )}
         </dl>

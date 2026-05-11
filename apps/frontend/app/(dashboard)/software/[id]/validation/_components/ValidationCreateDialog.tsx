@@ -49,13 +49,8 @@ export function ValidationCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={
-          createForm.validationType === ValidationTypeValues.SELF
-            ? 'max-w-3xl max-h-[85vh] overflow-y-auto'
-            : 'max-w-md'
-        }
-      >
+      {/* P1-3: 사이즈 고정 — validationType 분기로 인한 시각 점프 제거. self는 sub-tabs로 분할 */}
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('validation.form.createTitle')}</DialogTitle>
         </DialogHeader>

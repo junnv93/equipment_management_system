@@ -7,6 +7,12 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 ## Open
 
+### 2026-05-11 software-design-review-p0-p1-p2 후속 (SHOULD S-4)
+
+> **2026-05-11 sprint `software-design-review-p0-p1-p2` closure** (Mode 1 harness, iter 1 PASS, MUST 16/16). DESIGN_REVIEW.md 전수 closure: P0(stepper / 검증상태 컬럼+BFF 확장 / 시멘틱 토큰) + P1(모바일 카드 fallback / P-number 셀 통합 / dialog max-w-2xl + sub-tabs / 빈 상태 EmptyState SSOT wrapper) + P2(raw 색상 토큰화 / xl 와이드 2-column / 행 클릭 패턴 통일).
+
+- [ ] **[2026-05-11 software-design-review S-4] 🟢 LOW software-validation-stepper-e2e** — Playwright e2e: `tests/e2e/features/software/validation-stepper.spec.ts` (페이지 로드 후 stepper 단계 노출 + draft 상태 stepper hide + rejected terminated marker). + `list-validation-status.spec.ts` (TestSoftwareListContent의 "검증 상태" 컬럼 6분류 렌더링: 미검증/draft/submitted/approved/quality_approved/rejected). 본 sprint는 manual 검증으로 대체. 트리거: e2e 인프라 후속 sprint.
+
 ### 2026-05-11 qr-visual-redesign 후속 (SHOULD S-1~S-8)
 
 > **2026-05-11 sprint `qr-visual-redesign` closure** (Mode 2 Full harness, iter 1 fix loop, MUST 22/25 PASS — M-1 병렬 세션 격리 / M-16 fix / M-25 fix). 8 TASK 전체 (액션 그룹·상태 4-tier·다중 핸드오버·자동 진행·정상 우선·사진 인접화·PDF 시각화·디자인 토큰).

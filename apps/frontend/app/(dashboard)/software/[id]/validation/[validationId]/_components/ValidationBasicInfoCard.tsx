@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { FileCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { VALIDATION_INFO_CARD_TOKENS as TOK } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { SoftwareValidation } from '@/lib/api/software-api';
 
@@ -10,6 +11,10 @@ interface ValidationBasicInfoCardProps {
   validation: SoftwareValidation;
 }
 
+/**
+ * P2-2 + 스니펫5: dt/dd 위계 강화 — 라벨은 더 작고 균등(uppercase tracking-wider),
+ * 값은 더 크고 진하게. VALIDATION_INFO_CARD_TOKENS SSOT 사용.
+ */
 export function ValidationBasicInfoCard({ validation }: ValidationBasicInfoCardProps) {
   const t = useTranslations('software');
   const { fmtDate } = useDateFormatter();
@@ -23,37 +28,29 @@ export function ValidationBasicInfoCard({ validation }: ValidationBasicInfoCardP
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <dl className={TOK.dl}>
           <div>
-            <dt className="text-sm text-muted-foreground">
-              {t('validation.detail.validationType')}
-            </dt>
-            <dd className="text-sm font-medium">
-              {t(`validationType.${validation.validationType}`)}
-            </dd>
+            <dt className={TOK.dt}>{t('validation.detail.validationType')}</dt>
+            <dd className={TOK.dd}>{t(`validationType.${validation.validationType}`)}</dd>
           </div>
           <div>
-            <dt className="text-sm text-muted-foreground">
-              {t('validation.detail.softwareVersion')}
-            </dt>
-            <dd className="text-sm font-mono">{validation.softwareVersion || '-'}</dd>
+            <dt className={TOK.dt}>{t('validation.detail.softwareVersion')}</dt>
+            <dd className={TOK.ddMono}>{validation.softwareVersion || '-'}</dd>
           </div>
           <div>
-            <dt className="text-sm text-muted-foreground">{t('validation.detail.testDate')}</dt>
-            <dd className="text-sm">{validation.testDate ? fmtDate(validation.testDate) : '-'}</dd>
+            <dt className={TOK.dt}>{t('validation.detail.testDate')}</dt>
+            <dd className={TOK.dd}>{validation.testDate ? fmtDate(validation.testDate) : '-'}</dd>
           </div>
           {validation.infoDate && (
             <div>
-              <dt className="text-sm text-muted-foreground">{t('validation.detail.infoDate')}</dt>
-              <dd className="text-sm">{fmtDate(validation.infoDate)}</dd>
+              <dt className={TOK.dt}>{t('validation.detail.infoDate')}</dt>
+              <dd className={TOK.dd}>{fmtDate(validation.infoDate)}</dd>
             </div>
           )}
           {validation.softwareAuthor && (
             <div>
-              <dt className="text-sm text-muted-foreground">
-                {t('validation.detail.softwareAuthor')}
-              </dt>
-              <dd className="text-sm">{validation.softwareAuthor}</dd>
+              <dt className={TOK.dt}>{t('validation.detail.softwareAuthor')}</dt>
+              <dd className={TOK.dd}>{validation.softwareAuthor}</dd>
             </div>
           )}
         </dl>

@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-05-10** — sticky-header-css-var-ssot 완료(34차 후속 → archive-infra.md). approval-row-memo-i18n-ci-cache 3건(ApprovalRow memo·dep-audit cache·HeroKPI i18n) archive 이동 완료 → 해당 항목 제거. verify-route-metadata Phase3 승격 완료, Checkouts V3 Sprint 1(Authority 4종) + Sprint 3(Perf&Cache 3종) 전부 completed/ 이동 → 해당 항목 제거.
+> **마지막 정리일: 2026-05-11** — software-design-review-p0-p1-p2 closure (DESIGN_REVIEW.md P0+P1+P2 전수 → archive-design.md). MUST 16/16 PASS. SSOT 4 신설 (SoftwareValidationStepper + SoftwareEmptyState + ResponsiveListFallback + software-validation-step.ts schemas) + 디자인 토큰 4종 (status badge/icon/not-validated/info-card dt-dd) + backend BFF latestValidationStatus LEFT JOIN. SHOULD S-4 e2e tech-debt 등록.
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 > **v2 설계 SSOT**: `.claude/plans/zany-swimming-feigenbaum.md` (Section 0 UX Philosophy + 시각 재구성 A~T + 신규 흡수 P~T)
@@ -64,7 +64,10 @@
 3. (Go인 경우) Pre-upload secret gate
    node scripts/ultrareview-preflight.mjs
    - exit 0: 4단계 진행
-   - exit 1: 오류 메시지에 따라 파일 제거 또는 .gitleaks.toml allowlist 추가 후 재실행
+   - exit 1: 오류 메시지에 따라 분기
+     · 검사 1/3(dev env .env*) 차단 → `pnpm ur:shield -- node scripts/ultrareview-preflight.mjs` 로 자동 격리/복원 후 재검증 (rm 우회, dev 서버 보존)
+     · 검사 2/3(gitleaks) 차단 → `.gitleaks.toml` allowlist 또는 `.gitleaksignore` fingerprint 추가
+     · 검사 3/3(커밋 히스토리) 차단 → `git filter-repo` / BFG로 secret 제거
 
 4. (Preflight 통과 시) 사용자에게 실행 명령 제시
    - PR 번호 확인: gh pr list --state open --author @me
