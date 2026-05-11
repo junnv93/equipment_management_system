@@ -141,6 +141,12 @@
     "accessories": {
       "complete": "완비",
       "incomplete": "불완비"
+    },
+    "tone": {
+      "ok": "정상",
+      "warn": "주의",
+      "urgent": "긴급",
+      "mute": "비활성"
     }
   },
   "calibrationDueBadge": {

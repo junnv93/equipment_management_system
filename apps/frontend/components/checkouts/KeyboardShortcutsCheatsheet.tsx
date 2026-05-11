@@ -11,14 +11,26 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { KEYBOARD_SHORTCUTS, type ShortcutDef } from '@/lib/constants/keyboard-shortcuts';
+import {
+  KEYBOARD_SHORTCUTS,
+  type ShortcutDef,
+  type ShortcutId,
+} from '@/lib/constants/keyboard-shortcuts';
+import type { ShortcutOverrideMap } from '@/lib/shortcuts/overrides';
 
 interface KeyboardShortcutsCheatsheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 사용자 override map — 미전달 시 SSOT key 만 표시 */
+  overrides?: ShortcutOverrideMap;
 }
 
-function KeyBadge({ def }: { def: ShortcutDef }) {
+interface KeyBadgeProps {
+  def: ShortcutDef;
+  overrideKey?: string;
+}
+
+function KeyBadge({ def, overrideKey }: KeyBadgeProps) {
   const modStr = (def.modifiers ?? [])
     .map((m) => {
       if (m === 'shift') return '⇧';
@@ -28,26 +40,35 @@ function KeyBadge({ def }: { def: ShortcutDef }) {
       return m;
     })
     .join('+');
-  const keyLabel = def.key === 'Escape' ? 'Esc' : def.key === 'Enter' ? '↵' : def.key;
+  const rawKey = overrideKey ?? def.key;
+  const keyLabel = rawKey === 'Escape' ? 'Esc' : rawKey === 'Enter' ? '↵' : rawKey;
   const display = modStr ? `${modStr}+${keyLabel}` : keyLabel;
+  const isOverridden = overrideKey !== undefined && overrideKey !== def.key;
 
   return (
-    <Badge variant="outline" className="font-mono text-xs">
+    <Badge
+      variant={isOverridden ? 'default' : 'outline'}
+      className="font-mono text-xs"
+      aria-label={isOverridden ? `${display} (사용자 지정)` : display}
+    >
       {display}
+      {isOverridden ? <span aria-hidden="true">*</span> : null}
     </Badge>
   );
 }
 
 interface ShortcutRowProps {
   def: ShortcutDef;
+  id: ShortcutId;
   label: string;
+  overrides: ShortcutOverrideMap;
 }
 
-function ShortcutRow({ def, label }: ShortcutRowProps) {
+function ShortcutRow({ def, id, label, overrides }: ShortcutRowProps) {
   return (
     <div className="flex items-center justify-between gap-4 py-1.5">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <KeyBadge def={def} />
+      <KeyBadge def={def} overrideKey={overrides[id]} />
     </div>
   );
 }
@@ -59,20 +80,21 @@ function ShortcutRow({ def, label }: ShortcutRowProps) {
 export function KeyboardShortcutsCheatsheet({
   open,
   onOpenChange,
+  overrides = {},
 }: KeyboardShortcutsCheatsheetProps) {
   const t = useTranslations('checkouts.shortcuts');
 
   const listShortcuts = Object.entries(KEYBOARD_SHORTCUTS).filter(
     ([, def]) => def.scope === 'list'
-  ) as [string, ShortcutDef][];
+  ) as [ShortcutId, ShortcutDef][];
 
   const detailShortcuts = Object.entries(KEYBOARD_SHORTCUTS).filter(
     ([, def]) => def.scope === 'detail'
-  ) as [string, ShortcutDef][];
+  ) as [ShortcutId, ShortcutDef][];
 
   const globalShortcuts = Object.entries(KEYBOARD_SHORTCUTS).filter(
     ([, def]) => def.scope === 'global'
-  ) as [string, ShortcutDef][];
+  ) as [ShortcutId, ShortcutDef][];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,8 +108,14 @@ export function KeyboardShortcutsCheatsheet({
             <h3 id="shortcuts-list-heading" className="mb-2 text-sm font-semibold">
               {t('list.sectionTitle')}
             </h3>
-            {listShortcuts.map(([, def]) => (
-              <ShortcutRow key={def.i18nKey} def={def} label={t(def.i18nKey as never)} />
+            {listShortcuts.map(([id, def]) => (
+              <ShortcutRow
+                key={def.i18nKey}
+                id={id}
+                def={def}
+                label={t(def.i18nKey as never)}
+                overrides={overrides}
+              />
             ))}
           </section>
           <Separator />
@@ -95,8 +123,14 @@ export function KeyboardShortcutsCheatsheet({
             <h3 id="shortcuts-detail-heading" className="mb-2 text-sm font-semibold">
               {t('detail.sectionTitle')}
             </h3>
-            {detailShortcuts.map(([, def]) => (
-              <ShortcutRow key={def.i18nKey} def={def} label={t(def.i18nKey as never)} />
+            {detailShortcuts.map(([id, def]) => (
+              <ShortcutRow
+                key={def.i18nKey}
+                id={id}
+                def={def}
+                label={t(def.i18nKey as never)}
+                overrides={overrides}
+              />
             ))}
           </section>
           <Separator />
@@ -104,8 +138,14 @@ export function KeyboardShortcutsCheatsheet({
             <h3 id="shortcuts-global-heading" className="mb-2 text-sm font-semibold">
               {t('global.showHelp')}
             </h3>
-            {globalShortcuts.map(([, def]) => (
-              <ShortcutRow key={def.i18nKey} def={def} label={t(def.i18nKey as never)} />
+            {globalShortcuts.map(([id, def]) => (
+              <ShortcutRow
+                key={def.i18nKey}
+                id={id}
+                def={def}
+                label={t(def.i18nKey as never)}
+                overrides={overrides}
+              />
             ))}
           </section>
         </div>

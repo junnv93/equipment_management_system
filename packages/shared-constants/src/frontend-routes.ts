@@ -308,6 +308,7 @@ export const FRONTEND_ROUTES = {
     PROFILE: '/settings/profile',
     NOTIFICATIONS: '/settings/notifications',
     DISPLAY: '/settings/display',
+    SHORTCUTS: '/settings/shortcuts',
     ADMIN_CALIBRATION: '/settings/admin/calibration',
     ADMIN_SYSTEM: '/settings/admin/system',
   },

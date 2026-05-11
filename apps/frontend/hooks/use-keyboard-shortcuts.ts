@@ -7,6 +7,7 @@ import {
   type ShortcutId,
   type ShortcutScope,
 } from '@/lib/constants/keyboard-shortcuts';
+import type { ShortcutOverrideMap } from '@/lib/shortcuts/overrides';
 
 type ShortcutHandlers = Partial<Record<ShortcutId, () => void>>;
 
@@ -17,9 +18,17 @@ function isInputFocused(target: EventTarget | null): boolean {
   return INPUT_TAGS.has(target.tagName) || target.isContentEditable;
 }
 
-function matchesShortcut(e: KeyboardEvent, shortcutId: ShortcutId): boolean {
-  const def: ShortcutDef = KEYBOARD_SHORTCUTS[shortcutId];
-  if (e.key !== def.key) return false;
+function effectiveKey(id: ShortcutId, def: ShortcutDef, overrides: ShortcutOverrideMap): string {
+  return overrides[id] ?? def.key;
+}
+
+function matchesShortcut(
+  e: KeyboardEvent,
+  id: ShortcutId,
+  overrides: ShortcutOverrideMap
+): boolean {
+  const def: ShortcutDef = KEYBOARD_SHORTCUTS[id];
+  if (e.key !== effectiveKey(id, def, overrides)) return false;
 
   const mods = def.modifiers ?? [];
   if (mods.includes('ctrl') !== e.ctrlKey) return false;
@@ -36,16 +45,22 @@ function matchesShortcut(e: KeyboardEvent, shortcutId: ShortcutId): boolean {
  * - IME 가드: e.isComposing (compositionstart 리스너 금지)
  * - 입력 포커스 가드: INPUT/TEXTAREA/SELECT/contenteditable → allowInInput 제외 skip
  * - 이벤트는 keydown (keypress deprecated)
- * - handlers는 ref로 추적 — scope/enabled 변경 시에만 리스너 재등록
+ * - handlers / overrides 는 ref 추적 — scope/enabled 변경 시에만 리스너 재등록
+ * - overrides: SSOT KEYBOARD_SHORTCUTS 위에 user 별 키 override 적용 (modifier 변경 불가)
  */
 export function useKeyboardShortcuts(
   handlers: ShortcutHandlers,
   scope: ShortcutScope,
-  enabled = true
+  enabled = true,
+  overrides: ShortcutOverrideMap = {}
 ): void {
   const handlersRef = useRef(handlers);
+  const overridesRef = useRef(overrides);
   useEffect(() => {
     handlersRef.current = handlers;
+  });
+  useEffect(() => {
+    overridesRef.current = overrides;
   });
 
   const handleKeyDown = useCallback(
@@ -62,7 +77,7 @@ export function useKeyboardShortcuts(
         const def: ShortcutDef = KEYBOARD_SHORTCUTS[id];
         if (def.scope !== scope && def.scope !== 'global') continue;
         if (focusedInInput && !def.allowInInput) continue;
-        if (!matchesShortcut(e, id)) continue;
+        if (!matchesShortcut(e, id, overridesRef.current)) continue;
 
         e.preventDefault();
         handler();

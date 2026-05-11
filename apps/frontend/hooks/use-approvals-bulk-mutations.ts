@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { useBulkUndoToast, UNDO_TOAST_DURATION_MS } from '@/hooks/use-undo-toast';
 import { getApprovalsInvalidationKeys } from '@/lib/api/approvals-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { type ApprovalCategory, type ApprovalItem, TAB_META } from '@/lib/api/approvals-api';
@@ -42,6 +43,12 @@ export function useApprovalsBulkMutations({
   const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
   const [bulkApproveComment, setBulkApproveComment] = useState('');
 
+  const approveInvalidateKeys = useMemo(
+    () => [...getApprovalsInvalidationKeys(activeTab), queryKeys.calibrations.intermediateChecks()],
+    [activeTab]
+  );
+  const rejectInvalidateKeys = useMemo(() => getApprovalsInvalidationKeys(activeTab), [activeTab]);
+
   const bulkApproveMutation = useOptimisticMutation<
     { success: string[]; failed: string[] },
     { ids: string[]; comment?: string },
@@ -50,11 +57,9 @@ export function useApprovalsBulkMutations({
     mutationFn: async ({ ids, comment }) => approvalsApi.bulkApprove(activeTab, ids, comment),
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [
-      ...getApprovalsInvalidationKeys(activeTab),
-      queryKeys.calibrations.intermediateChecks(),
-    ],
+    invalidateKeys: approveInvalidateKeys,
     errorMessage: t('toasts.bulkApproveError'),
+    undoWindowMs: UNDO_TOAST_DURATION_MS,
     onSuccessCallback: (result, { ids }) => {
       if (result.failed.length > 0 && result.success.length === 0) {
         toast({
@@ -91,8 +96,9 @@ export function useApprovalsBulkMutations({
     mutationFn: async ({ ids, reason }) => approvalsApi.bulkReject(activeTab, ids, reason),
     queryKey: queryKeys.approvals.list(activeTab),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: getApprovalsInvalidationKeys(activeTab),
+    invalidateKeys: rejectInvalidateKeys,
     errorMessage: t('toasts.bulkRejectError'),
+    undoWindowMs: UNDO_TOAST_DURATION_MS,
     onSuccessCallback: (result, { ids }) => {
       if (result.failed.length > 0 && result.success.length === 0) {
         toast({
@@ -119,6 +125,17 @@ export function useApprovalsBulkMutations({
     },
   });
 
+  // Bulk undo toast — undoWindowMs(5s) 내 abort 가능. comment-required(commentRequired) 흐름은
+  // dialog 확정 후 mutate되므로 동일하게 적용. handleBulkApproveWithComment도 분기 통합.
+  const { showBulkApproveUndoToast } = useBulkUndoToast({
+    invalidateKeys: approveInvalidateKeys,
+    abortUndo: bulkApproveMutation.abortUndo,
+  });
+  const { showBulkRejectUndoToast } = useBulkUndoToast({
+    invalidateKeys: rejectInvalidateKeys,
+    abortUndo: bulkRejectMutation.abortUndo,
+  });
+
   /** TAB_META.commentRequired 분기 — commentRequired면 dialog 열고, 아니면 즉시 처리 */
   const handleBulkApprove = useCallback(async () => {
     if (selection.count === 0) return;
@@ -130,24 +147,37 @@ export function useApprovalsBulkMutations({
       return;
     }
     onStartProcessingMany(selectedIds);
-    await bulkApproveMutation.mutateAsync({ ids: selectedIds });
-  }, [activeTab, selection, bulkApproveMutation, onStartProcessingMany]);
+    showBulkApproveUndoToast(selectedIds.length);
+    void bulkApproveMutation.mutateAsync({ ids: selectedIds }).catch(() => undefined);
+  }, [activeTab, selection, bulkApproveMutation, onStartProcessingMany, showBulkApproveUndoToast]);
 
   const handleBulkApproveWithComment = useCallback(async () => {
     if (!bulkApproveComment.trim()) return;
     const selectedIds = Array.from(selection.selected);
+    const comment = bulkApproveComment;
+    // 5초 지연 동안 dialog 잠금되지 않도록 즉시 close — onSuccessCallback의 close는 race-safe (idempotent)
+    setIsBulkApproveCommentOpen(false);
+    setBulkApproveComment('');
     onStartProcessingMany(selectedIds);
-    await bulkApproveMutation.mutateAsync({ ids: selectedIds, comment: bulkApproveComment });
-  }, [bulkApproveComment, selection, bulkApproveMutation, onStartProcessingMany]);
+    showBulkApproveUndoToast(selectedIds.length);
+    void bulkApproveMutation.mutateAsync({ ids: selectedIds, comment }).catch(() => undefined);
+  }, [
+    bulkApproveComment,
+    selection,
+    bulkApproveMutation,
+    onStartProcessingMany,
+    showBulkApproveUndoToast,
+  ]);
 
   const handleBulkReject = useCallback(
     async (reason: string) => {
       if (selection.count === 0) return;
       const selectedIds = Array.from(selection.selected);
       onStartProcessingMany(selectedIds);
-      await bulkRejectMutation.mutateAsync({ ids: selectedIds, reason });
+      showBulkRejectUndoToast(selectedIds.length);
+      void bulkRejectMutation.mutateAsync({ ids: selectedIds, reason }).catch(() => undefined);
     },
-    [selection, bulkRejectMutation, onStartProcessingMany]
+    [selection, bulkRejectMutation, onStartProcessingMany, showBulkRejectUndoToast]
   );
 
   const handleCloseBulkCommentDialog = useCallback(() => {

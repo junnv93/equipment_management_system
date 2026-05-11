@@ -68,6 +68,7 @@
     "display": "표시 설정",
     "notifications": "알림 설정",
     "profile": "내 프로필",
+    "shortcuts": "키보드 단축키",
     "calibration": "교정 알림 설정",
     "system": "시스템 설정",
     "personalSection": "개인",
@@ -172,5 +173,33 @@
   "common": {
     "saving": "저장 중…",
     "save": "저장"
+  },
+  "shortcuts": {
+    "title": "키보드 단축키",
+    "description": "단축키를 사용자화하고 SSOT 정의를 확인합니다. 변경은 즉시 저장되며 브라우저별로 적용됩니다.",
+    "sectionTitle": {
+      "list": "목록 화면",
+      "detail": "상세 화면",
+      "global": "전역"
+    },
+    "actions": {
+      "change": "변경",
+      "reset": "초기화",
+      "save": "저장",
+      "cancel": "취소",
+      "resetAll": "전체 초기화"
+    },
+    "help": {
+      "ariaCapture": "변경할 키 입력 (1글자 또는 Enter/Esc)",
+      "duplicate": "이미 다른 단축키에 사용 중인 키입니다",
+      "empty": "키가 비어 있습니다",
+      "invalid": "허용되지 않는 키입니다",
+      "allowedKeysHint": "1글자(영문/숫자/심볼) 또는 Enter / Esc 만 허용됩니다",
+      "savedNotice": "단축키가 저장되었습니다",
+      "resetAllNotice": "모든 단축키가 기본값으로 복원되었습니다"
+    },
+    "aria": {
+      "rowLabel": "{label} 단축키"
+    }
   }
 }

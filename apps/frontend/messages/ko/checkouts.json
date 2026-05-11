@@ -367,8 +367,7 @@
       "lender_checkout": "반출 전 확인",
       "borrower_receive": "인수 시 확인",
       "borrower_return": "반납 전 확인",
-      "lender_return": "반입 시 확인",
-      "groupAriaLabel": "상태 확인 진행 단계"
+      "lender_return": "반입 시 확인"
     },
     "conditionStatus": {
       "normal": "정상",
@@ -381,11 +380,7 @@
     "attachmentsLabel": "현장 사진 첨부",
     "attachmentsHint": "이상이 있는 경우 사진을 첨부하면 UL-QP-18-06 기록 보존에 도움이 됩니다.",
     "attachmentsTooMany": "사진은 최대 {max}장까지 첨부할 수 있습니다.",
-    "abnormalPhotoSuggested": "이상 항목이 있습니다. 증거 사진을 첨부하면 부적합 추적에 도움이 됩니다.",
-    "allNormalShortcut": "모두 정상으로 제출",
-    "photoCaptureLabel": "촬영",
-    "photoGalleryLabel": "갤러리",
-    "photoRecommendedHint": "현장 사진 1장 이상 권장 (UL-QP-18-06 기록 보존)"
+    "abnormalPhotoSuggested": "이상 항목이 있습니다. 증거 사진을 첨부하면 부적합 추적에 도움이 됩니다."
   },
   "returnCondition": {
     "good": "양호",
@@ -979,7 +974,11 @@
       "undoSuccess": "승인이 취소되었습니다",
       "undoError": "취소 처리 중 오류가 발생했습니다",
       "windowExpired": "취소 가능 시간이 초과되었습니다",
-      "revoked": "승인이 철회되었습니다"
+      "revoked": "승인이 철회되었습니다",
+      "bulkApproved": "{count}건 승인 처리 중",
+      "bulkRejected": "{count}건 반려 처리 중",
+      "bulkUndo": "실행 취소",
+      "bulkUndoSuccess": "처리가 취소되었습니다"
     }
   },
   "shortcuts": {

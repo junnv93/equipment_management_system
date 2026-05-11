@@ -141,6 +141,12 @@
     "accessories": {
       "complete": "Complete",
       "incomplete": "Incomplete"
+    },
+    "tone": {
+      "ok": "Normal",
+      "warn": "Caution",
+      "urgent": "Urgent",
+      "mute": "Inactive"
     }
   },
   "calibrationDueBadge": {
