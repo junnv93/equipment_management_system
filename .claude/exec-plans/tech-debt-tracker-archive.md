@@ -7,6 +7,60 @@
 | Batch | 처리일 | 항목 수 | 상태 |
 |-------|--------|---------|------|
 | tech-debt-batch-0512 | 2026-05-12 | 12 | 완료 |
+| tech-debt-batch-0513 | 2026-05-13 | 28 | 완료 |
+
+### 2026-05-13 배치 (28건)
+
+#### ultrareview-shield-wrapper sprint (2건) — `ultrareview-shield-followups` closure 2026-05-12
+
+- [x] ~~**[2026-05-12 ultrareview-shield T-1] 🟠 HIGH ultrareview-shield-self-test-isolation**~~ ✅ closure (sprint `ultrareview-shield-followups`, 2026-05-12) — shield 자체 `--self-test` 모드 신설 (`mktemp -d ur-shield-selftest-*` fixture + SSOT 단방향 fake 파일 derive + inner shield 호출 + SHA256 hash invariant + `/tmp/ur-shield-*` 잔존 0 자체 검증). `scripts/__tests__/ultrareview-shield.spec.mjs` integration spec 신설 (6 scenarios). `.husky/pre-push` root spec 게이트 통합. shield `SHIELD_PREFLIGHT` + `SHIELD_LOCK` env override 추가로 spec/self-test가 실 lock 미경쟁. self-test EXIT 0 + working tree git diff 0 invariant.
+- [x] ~~**[2026-05-12 ultrareview-shield T-2] 🟡 MED ultrareview-preflight-gitleaks-allowlist**~~ ✅ closure (sprint `ultrareview-shield-followups`, 2026-05-12) — 진단 결과 20 finding 트리아지: 4건 `.env` (root) 실 secret + 16건 placeholder/test fixture. **핵심 fix**: `.env` (root, suffix 없음)이 `DANGEROUS_PATTERNS`에 누락된 보안 갭 → preflight 추가 + shield가 자동 격리. `.gitleaks.toml` `[allowlist].paths` 확장 — gitleaks 36분 → 12초 (180배 가속). **시니어 라운드 #3** `scripts/lib/scan-exclusion-paths.mjs` SSOT 신설 + sync spec — SSOT ↔ `.gitleaks.toml` allowlist 미러 invariant.
+
+#### software-design-review-p0-p1-p2 sprint (2건) — `sw-validation-event-channel-separation` closure 2026-05-12
+
+- [x] ~~**[2026-05-12 software-design-review A2] 🟢 LOW sw-validation-cache-event-redundancy**~~ ✅ closure (sprint `sw-validation-event-channel-separation`, 2026-05-12) — calibration 도메인 채널 책임 분리 패턴 정합 채택. `cache-event.registry.ts`에서 NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_* 4 entry 제거 + 부팅타임 `validateDualChannelExclusivity()` invariant — 동일 도메인 양 채널 등록 시 NestJS bootstrap fail-fast. `verify-cache-events` Step 7 + spec 5종 추가.
+- [x] ~~**[2026-05-12 software-design-review A3] 🟢 LOW sw-validations-spec-actor-assertions**~~ ✅ closure (sprint `sw-validation-event-channel-separation`, 2026-05-12) — `software-validations.service.spec.ts` findOne 테스트 강화. `MOCK_VALIDATION_WITH_ACTORS` fixture 추가 + 2 새 spec (actor 풍부화 / LEFT JOIN null 정합).
+
+#### qr-visual-redesign 시니어 자기감사 G-4~G-12 sprint (9건) — `qr-visual-redesign-followups-g4-g12` closure 2026-05-12
+
+> Mode 2 Full harness, iter 1 PASS, MUST 28/28 + contract rev-2 명칭 정합. 9 갭 통합 closure (G-1 즉시 처리는 sprint 본체에서). 다중 세션 격리 효과 검증 (sw-validation-event-channel-separation / saved-views / cache-event-r2 / ultrareview-shield 동시 진행). 시각 회귀 0 (oklch hex 좌표 동일).
+
+- [x] ~~**[2026-05-12 qr-visual-redesign G-4] 🟡 MED text-mono-ssot-unify**~~ ✅ closure — 헬퍼 옵션 2 채택 (헬퍼 = `.text-mono` + tracking-wider 합성 진입점, EquipmentCardGrid 중복 제거).
+- [x] ~~**[2026-05-12 qr-visual-redesign G-5] 🟡 MED dead-i18n-tone-keys-usage**~~ ✅ closure — StatusBadge aria-label에 `t(\`tone.${tone}\`)` 통합 + 8 status × tone RTL spec.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-6] 🟡 MED abnormal-photo-per-card-inline**~~ ✅ closure — ConditionItemCard `abnormalSlot` prop + `AbnormalDetailsInlineSlot`. 첫 abnormal 항목 카드 내부 인라인. 데이터 모델 0 변경.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-7] 🟢 LOW oklch-precision-restore**~~ ✅ closure — brand-color-* 14 + site 3 + weak 2 oklch 마이그레이션 (CSS Color 4 정확 변환). globals.css :root + .dark + @theme + color-mix alpha 합성 + design-tokens 6 파일. `hsl()` wrapper 0건. WCAG AA 산출물 `docs/design/oklch-migration-2026-05-12.md`.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-8] 🟢 LOW autoprogress-raf-css-transition**~~ ✅ closure — rAF + setElapsed 제거. circleRef + style.strokeDashoffset 직접 + CSS transition 일임. 카운트다운 텍스트 setInterval(1000ms). re-renders 120 → 2-3.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-9] 🟢 LOW status-badge-memo**~~ ✅ closure — `React.memo(StatusBadgeImpl)` + displayName.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-10] 🟢 LOW drizzle-stub-helper-extraction**~~ ✅ closure — `apps/backend/src/common/__tests__/drizzle-stub.ts` SSOT 신설 (4 export). 2 spec 마이그레이션 (qr-access / audit.service). 24/24 jest PASS.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-11] 🟢 LOW handover-picker-formatter-i18n**~~ ✅ closure — 7 site locale 인자 추가. `verify-hardcoding` Step 37 (locale safety) 신설.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-12] 🟢 LOW label-preview-row-mini-qr-accuracy**~~ ✅ closure — `PREVIEW_QR_PATTERN` 7×7 deterministic module grid SVG. `currentColor` foreground 토큰 적응. 3-bar placeholder 제거.
+
+#### qr-visual-redesign S-1~S-8 sprint (5건) — `qr-visual-redesign-followups-batch-1` closure 2026-05-12
+
+- [x] ~~**[2026-05-11 qr-visual-redesign S-1] 🟡 MED qr-landing-regression-e2e**~~ ✅ closure 2026-05-12 (batch-1): `apps/frontend/tests/e2e/features/equipment/qr/regression-scenarios.spec.ts` 신규 — 시나리오 1/5/6 active + 2/3/4 `test.skip` (fixture setup 헬퍼 부재 사유 명시).
+- [x] ~~**[2026-05-11 qr-visual-redesign S-3] 🟢 LOW rtl-spec-handover-picker-statusbadge**~~ ✅ closure 2026-05-12 (batch-1): `StatusBadge.test.tsx` (10+ cases) + `HandoverPickerSheet.test.tsx` 7 case = 24 tests PASS.
+- [x] ~~**[2026-05-11 qr-visual-redesign S-4] 🟢 LOW orphan-photo-cron-defense**~~ ✅ closure 2026-05-12 (batch-1): `OrphanPhotoCleanupScheduler` 신설 (`@Cron(EVERY_HOUR)` + 9 다형성 FK NULL 가드 + 24h 마진). `DocumentService.sweepOrphanConditionCheckPhotos`. `MetricsService.incrementOrphanPhotoSweep` + `orphan_photo_sweep_total{result}` Prometheus Counter. 5/5 spec PASS.
+- [x] ~~**[2026-05-11 qr-visual-redesign S-6] 🟢 LOW handover-checkout-id-deprecation-cleanup**~~ ✅ closure 2026-05-12 (batch-1): production 코드 9 호출자 (backend 4 + frontend 5) + JSDoc 정리 = `handoverCheckoutId` 0건. backend test 회귀 0. 옛 handover token API production 0건 재확인.
+- [x] ~~**[2026-05-11 qr-visual-redesign S-7] 🟢 LOW touch-target-44-to-48-audit**~~ ✅ closure 2026-05-12 (batch-1): `docs/exec-plans/audits/2026-05-12-touch-target-44-to-48-audit.md`. 사용처 7 production 컴포넌트 모두 모바일/QR 한정. desktop 영향 0건. WCAG SC 2.5.5 AAA / Material 48dp / iOS HIG 44pt 충족. production 변경 0.
+
+#### checkouts-sprint4-ux-u02-u08 sprint (5건) — `checkouts-sprint4-followups-s2-s4-s5-s6` closure 2026-05-12 + `saved-views-team-share` closure 2026-05-13
+
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-2] revoke-window-extended-toast**~~ — closure `9787d245` (`checkouts-sprint4-followups-s2-s4-s5-s6`).
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-4] reject-preset-admin-ui**~~ — closure `9787d245`.
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-5] fuzzy-search-lib-decision**~~ — closure `9787d245` (ADR-0011 자체 구현 유지).
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-6] destination-inline-create**~~ — closure `9787d245`.
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-7] 🟢 LOW saved-views-team-share**~~ — closure (sprint `saved-views-team-share`, 2026-05-13). 새 backend 모듈 `saved-views` + DB 0059 manual SQL migration + scope 트리아드(PRIVATE/TEAM/GLOBAL) + CAS + RBAC + audit `saved_view` + SSOT 6위치 + frontend TanStack Query 마이그레이션 + 명시 import banner. 28/28 jest PASS, tsc EXIT=0.
+
+#### checkouts-sprint4-followups-s2-s4-s5-s6 sprint (4건) — `checkouts-sprint4-followups-sh1-sh7` closure 2026-05-13
+
+- [x] ~~**[2026-05-12 checkouts-sprint4-followups-s2-s4-s5-s6 SH-1] rejection-presets-admin-e2e**~~ — closure `47efc4e9`. systemAdmin 4 endpoint + isDefault 보호 + testOperator 권한 거부 redirect 7 step.
+- [x] ~~**[2026-05-12 checkouts-sprint4-followups-s2-s4-s5-s6 SH-2] revocation-window-e2e**~~ — closure `47efc4e9`. `page.clock.install` + `fastForward(APPROVAL_REVOCATION_WINDOW_MS + 1000)` 5분 가속.
+- [x] ~~**[2026-05-12 checkouts-sprint4-followups-s2-s4-s5-s6 SH-3] destination-create-e2e**~~ — closure `47efc4e9`. browse/create 모드 분기 + DESTINATION_MAX_LENGTH 경계 + 중복 차단 5 step.
+- [x] ~~**[2026-05-12 checkouts-sprint4-followups-s2-s4-s5-s6 SH-7] checkout-detail-revocation-integration**~~ — closure `d8c5fda2`. CheckoutDetailClient + RevocationWindowCountdown 통합 (status === APPROVED + approverId === currentUserId 가드), useOptimisticMutation, invalidateQueries 전용.
+
+#### checkouts-sprint4-followups-sh1-sh7 sprint (1건) — 라운드 #2 시니어 자기검토 closure 2026-05-13
+
+- [x] ~~**[2026-05-12 checkouts-sprint4-followups-sh1-sh7 SH-8] use-undo-toast-revoke-policy**~~ ✅ closure `e176b514`. 라운드 #2 자기검토에서 architectural fix 채택 — frontend system reason 옵션 (b) 채택. `SYSTEM_UNDO_REVOCATION_REASON` SSOT 상수 (packages/schemas) + `getCheckout` 으로 fresh version 확보. UL-QP-18 정책 "철회 시 사유 필수" 는 시스템 자동 트리거에도 시스템 명시 사유로 충족. 동반 라운드 #2 5갭 (G-1~G-5) 즉시 closure: API 단일화 + schema-infer SSOT 승격 + admin data-testid + e2e deep-test. verify-ssot Step 64 신규 (commit `f75b23f1`).
 
 ### 2026-05-12 배치 (12건)
 
