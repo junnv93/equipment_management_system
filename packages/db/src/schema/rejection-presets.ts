@@ -17,6 +17,11 @@ export const rejectionPresets = pgTable('rejection_presets', {
   /** 정렬 순서 (낮을수록 먼저 표시) */
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  /**
+   * 마지막 수정 시각. admin CRUD에서 mutation 시 갱신.
+   * race-condition 시 last-write-wins (저빈도 admin entity, CAS 미적용).
+   */
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export type RejectionPreset = typeof rejectionPresets.$inferSelect;

@@ -18,6 +18,9 @@ import { ReturnCheckoutDto } from './dto/return-checkout.dto';
 import { ApproveReturnDto } from './dto/approve-return.dto';
 import { RejectReturnDto } from './dto/reject-return.dto';
 import { CreateConditionCheckDto } from './dto/create-condition-check.dto';
+import type { CreateRejectionPresetInput } from './dto/create-rejection-preset.dto';
+import type { UpdateRejectionPresetInput } from './dto/update-rejection-preset.dto';
+import type { ReorderRejectionPresetsInput } from './dto/reorder-rejection-presets.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import {
   CheckoutStatus,
@@ -3553,6 +3556,161 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
 
     await this.cacheService.set(cacheKey, rows, CACHE_TTL.REFERENCE);
     return rows;
+  }
+
+  // ============================================================================
+  // M9b: 반려 사유 프리셋 admin CRUD (POST/PATCH/DELETE/REORDER)
+  // ============================================================================
+
+  /**
+   * 반려 사유 프리셋 캐시 키 — getRejectionPresets와 정합.
+   */
+  private readonly REJECTION_PRESETS_CACHE_KEY = `${this.CACHE_PREFIX}.rejection-presets`;
+
+  /**
+   * 반려 사유 프리셋 생성 (admin).
+   * ✅ MANAGE_SYSTEM_SETTINGS 권한 (controller decorator)
+   * ✅ isDefault=false 강제 (시드 무결성)
+   * ✅ 캐시 무효화: rejection-presets cache key
+   */
+  async createRejectionPreset(input: CreateRejectionPresetInput): Promise<{
+    id: string;
+    label: string;
+    template: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+  }> {
+    const [row] = await this.db
+      .insert(schema.rejectionPresets)
+      .values({
+        label: input.label,
+        template: input.template ?? null,
+        isDefault: false,
+        sortOrder: input.sortOrder ?? 0,
+      })
+      .returning({
+        id: schema.rejectionPresets.id,
+        label: schema.rejectionPresets.label,
+        template: schema.rejectionPresets.template,
+        isDefault: schema.rejectionPresets.isDefault,
+        sortOrder: schema.rejectionPresets.sortOrder,
+      });
+
+    await this.cacheService.delete(this.REJECTION_PRESETS_CACHE_KEY);
+    return row;
+  }
+
+  /**
+   * 반려 사유 프리셋 수정 (admin).
+   * ✅ MANAGE_SYSTEM_SETTINGS 권한 (controller decorator)
+   * ✅ isDefault 토글 금지 (서비스에서 무시)
+   * ✅ updatedAt 자동 갱신
+   * ✅ 캐시 무효화: rejection-presets cache key
+   */
+  async updateRejectionPreset(
+    uuid: string,
+    input: UpdateRejectionPresetInput
+  ): Promise<{
+    id: string;
+    label: string;
+    template: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+  }> {
+    const updates: Partial<typeof schema.rejectionPresets.$inferInsert> = { updatedAt: new Date() };
+    if (input.label !== undefined) updates.label = input.label;
+    if (input.template !== undefined) updates.template = input.template;
+    if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
+
+    const [row] = await this.db
+      .update(schema.rejectionPresets)
+      .set(updates)
+      .where(eq(schema.rejectionPresets.id, uuid))
+      .returning({
+        id: schema.rejectionPresets.id,
+        label: schema.rejectionPresets.label,
+        template: schema.rejectionPresets.template,
+        isDefault: schema.rejectionPresets.isDefault,
+        sortOrder: schema.rejectionPresets.sortOrder,
+      });
+
+    if (!row) {
+      throw new NotFoundException({
+        code: CheckoutErrorCode.NOT_FOUND,
+        message: 'Rejection preset not found',
+      });
+    }
+
+    await this.cacheService.delete(this.REJECTION_PRESETS_CACHE_KEY);
+    return row;
+  }
+
+  /**
+   * 반려 사유 프리셋 삭제 (admin).
+   * ✅ MANAGE_SYSTEM_SETTINGS 권한 (controller decorator)
+   * ✅ isDefault=true row 삭제 차단 (시드 무결성)
+   * ✅ 캐시 무효화: rejection-presets cache key
+   */
+  async deleteRejectionPreset(uuid: string): Promise<void> {
+    const [existing] = await this.db
+      .select({
+        id: schema.rejectionPresets.id,
+        isDefault: schema.rejectionPresets.isDefault,
+      })
+      .from(schema.rejectionPresets)
+      .where(eq(schema.rejectionPresets.id, uuid))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException({
+        code: CheckoutErrorCode.NOT_FOUND,
+        message: 'Rejection preset not found',
+      });
+    }
+
+    if (existing.isDefault) {
+      throw new ForbiddenException({
+        code: CheckoutErrorCode.REJECTION_PRESET_IS_DEFAULT,
+        message: 'Default rejection preset cannot be deleted',
+      });
+    }
+
+    await this.db.delete(schema.rejectionPresets).where(eq(schema.rejectionPresets.id, uuid));
+
+    await this.cacheService.delete(this.REJECTION_PRESETS_CACHE_KEY);
+  }
+
+  /**
+   * 반려 사유 프리셋 일괄 정렬 (admin).
+   * ✅ MANAGE_SYSTEM_SETTINGS 권한 (controller decorator)
+   * ✅ transaction 내 bulk UPDATE — partial 실패 시 rollback
+   * ✅ 캐시 무효화: rejection-presets cache key (한 번만)
+   */
+  async reorderRejectionPresets(input: ReorderRejectionPresetsInput): Promise<{ updated: number }> {
+    const ids = input.orders.map((o) => o.id);
+    const existing = await this.db
+      .select({ id: schema.rejectionPresets.id })
+      .from(schema.rejectionPresets)
+      .where(inArray(schema.rejectionPresets.id, ids));
+
+    if (existing.length !== ids.length) {
+      throw new NotFoundException({
+        code: CheckoutErrorCode.NOT_FOUND,
+        message: 'One or more rejection presets not found',
+      });
+    }
+
+    await this.db.transaction(async (tx) => {
+      for (const order of input.orders) {
+        await tx
+          .update(schema.rejectionPresets)
+          .set({ sortOrder: order.sortOrder, updatedAt: new Date() })
+          .where(eq(schema.rejectionPresets.id, order.id));
+      }
+    });
+
+    await this.cacheService.delete(this.REJECTION_PRESETS_CACHE_KEY);
+    return { updated: input.orders.length };
   }
 
   // ============================================================================

@@ -5,12 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-
-interface RejectionPreset {
-  id: string;
-  text: string;
-  category?: string;
-}
+import { type RejectionPreset } from '@/lib/api/checkout-api';
 
 async function fetchRejectionPresets(): Promise<RejectionPreset[]> {
   const { data } = await apiClient<RejectionPreset[]>(API_ENDPOINTS.CHECKOUTS.REJECTION_PRESETS);
@@ -20,8 +15,10 @@ async function fetchRejectionPresets(): Promise<RejectionPreset[]> {
 /**
  * 반려 사유 프리셋 조회 훅.
  *
- * SSOT: queryKeys.checkouts.resource.rejectionPresets + CACHE_TIMES.DAY
- * 프리셋은 참조 데이터 — 하루 단위 캐싱으로 불필요한 재요청 방지.
+ * SSOT:
+ * - queryKey: `queryKeys.checkouts.resource.rejectionPresets()` (admin mutation invalidate 일치)
+ * - staleTime: CACHE_TIMES.DAY — 참조 데이터, 변경 시 backend가 cache delete
+ * - 타입: `RejectionPreset` (`checkout-api.ts` SSOT — id/label/template/isDefault/sortOrder)
  */
 export function useRejectionPresets() {
   return useQuery({

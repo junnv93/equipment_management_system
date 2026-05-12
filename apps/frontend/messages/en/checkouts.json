@@ -958,6 +958,34 @@
     "recentLabel": "Recent Destinations",
     "aria": {
       "combobox": "Destination selection combobox"
+    },
+    "create": {
+      "trigger": "+ Register new destination: {value}",
+      "backToList": "Back to list",
+      "inputLabel": "New destination name",
+      "inputPlaceholder": "e.g. Korea Research Institute of Standards and Science",
+      "submit": "Register and use",
+      "cancel": "Cancel",
+      "useExisting": "Use existing",
+      "duplicate": "This destination already exists. Use the existing entry?"
+    }
+  },
+  "revocationWindow": {
+    "countdownLabel": "Revoke approval ({time})",
+    "expiredLabel": "Revocation window expired",
+    "expiredTooltip": "Cannot revoke — more than 5 minutes have passed since approval",
+    "activeTooltip": "You can revoke approval within {time}",
+    "aria": {
+      "timer": "Time remaining to revoke approval: {time}",
+      "remaining": "Time remaining for revocation: {time}"
+    },
+    "dialog": {
+      "title": "Revoke approval",
+      "description": "Enter a revocation reason within the remaining {time}.",
+      "reasonLabel": "Revocation reason",
+      "reasonPlaceholder": "Minimum {min} characters — UL-QP-18 record policy",
+      "submit": "Confirm revocation",
+      "cancel": "Cancel"
     }
   },
   "reject": {

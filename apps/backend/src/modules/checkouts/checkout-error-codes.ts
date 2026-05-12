@@ -59,6 +59,8 @@ export const CheckoutErrorCode = {
   BORROWER_TEAM_ONLY: 'CHECKOUT_BORROWER_TEAM_ONLY',
   /** 첨부 문서 소유권/타입/중복 링크 위반 (attachmentIds 검증 실패) */
   INVALID_ATTACHMENT: 'CHECKOUT_INVALID_ATTACHMENT',
+  /** 시드 반려 사유 프리셋(isDefault=true)은 삭제 불가 */
+  REJECTION_PRESET_IS_DEFAULT: 'CHECKOUT_REJECTION_PRESET_IS_DEFAULT',
 } as const;
 
 export type CheckoutErrorCode = (typeof CheckoutErrorCode)[keyof typeof CheckoutErrorCode];

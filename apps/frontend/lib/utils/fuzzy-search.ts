@@ -1,8 +1,14 @@
 /**
- * Fuzzy 검색 유틸리티
+ * Fuzzy 검색 유틸리티 (SSOT).
  *
  * NFD normalization + lowercase — 한글/영어 accent-insensitive 검색.
  * 외부 라이브러리 의존 없이 substring 매칭으로 구현.
+ *
+ * **결정 근거**: fuse.js 도입 대신 자체 구현 유지.
+ * 재검토 트리거 (dataset > 500 / 5+ 도메인 / 오타 허용 UX 요구 / p95 latency > 16ms)
+ * 충족 시 ADR-0012 신규 작성으로 supersede.
+ *
+ * @see docs/adr/0011-fuzzy-search-implementation.md
  */
 
 function normalize(str: string): string {

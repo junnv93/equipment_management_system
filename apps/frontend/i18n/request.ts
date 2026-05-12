@@ -56,6 +56,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     'qr',
     'feedback',
     'help',
+    'admin',
   ];
 
   const loadedMessages: Record<string, Record<string, unknown>> = {};

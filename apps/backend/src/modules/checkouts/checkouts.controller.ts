@@ -69,6 +69,15 @@ import {
   type BulkCancelResult,
   RevokeApprovalDto,
   RevokeApprovalValidationPipe,
+  CreateRejectionPresetDto,
+  CreateRejectionPresetValidationPipe,
+  type CreateRejectionPresetInput,
+  UpdateRejectionPresetDto,
+  UpdateRejectionPresetValidationPipe,
+  type UpdateRejectionPresetInput,
+  ReorderRejectionPresetsDto,
+  ReorderRejectionPresetsValidationPipe,
+  type ReorderRejectionPresetsInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
@@ -210,6 +219,82 @@ export class CheckoutsController {
     { id: string; label: string; template: string | null; isDefault: boolean; sortOrder: number }[]
   > {
     return this.checkoutsService.getRejectionPresets();
+  }
+
+  @Post('rejection-presets')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @UsePipes(CreateRejectionPresetValidationPipe)
+  @AuditLog({ action: 'create', entityType: 'rejection_preset', entityIdPath: 'response.id' })
+  @ApiOperation({
+    summary: '반려 사유 프리셋 추가',
+    description: '관리자가 반려 사유 프리셋을 신규 등록. isDefault=false 강제. 캐시 무효화.',
+  })
+  @ApiBody({ type: CreateRejectionPresetDto })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '생성된 반려 사유 프리셋' })
+  async createRejectionPreset(@Body() dto: CreateRejectionPresetDto): Promise<{
+    id: string;
+    label: string;
+    template: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+  }> {
+    return this.checkoutsService.createRejectionPreset(dto as CreateRejectionPresetInput);
+  }
+
+  @Patch('rejection-presets/reorder')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @UsePipes(ReorderRejectionPresetsValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'rejection_preset' })
+  @ApiOperation({
+    summary: '반려 사유 프리셋 일괄 정렬',
+    description:
+      '반려 사유 프리셋 sortOrder 일괄 갱신. transaction 내 처리. max 50건. 캐시 무효화.',
+  })
+  @ApiBody({ type: ReorderRejectionPresetsDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '갱신된 반려 사유 프리셋 행 수' })
+  @HttpCode(HttpStatus.OK)
+  async reorderRejectionPresets(
+    @Body() dto: ReorderRejectionPresetsDto
+  ): Promise<{ updated: number }> {
+    return this.checkoutsService.reorderRejectionPresets(dto as ReorderRejectionPresetsInput);
+  }
+
+  @Patch('rejection-presets/:uuid')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @UsePipes(UpdateRejectionPresetValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'rejection_preset', entityIdPath: 'params.uuid' })
+  @ApiOperation({
+    summary: '반려 사유 프리셋 수정',
+    description: '반려 사유 프리셋 부분 수정. isDefault 토글 차단. 캐시 무효화.',
+  })
+  @ApiParam({ name: 'uuid', description: '반려 사유 프리셋 UUID' })
+  @ApiBody({ type: UpdateRejectionPresetDto })
+  @ApiResponse({ status: HttpStatus.OK, description: '수정된 반려 사유 프리셋' })
+  async updateRejectionPreset(
+    @Param('uuid') uuid: string,
+    @Body() dto: UpdateRejectionPresetDto
+  ): Promise<{
+    id: string;
+    label: string;
+    template: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+  }> {
+    return this.checkoutsService.updateRejectionPreset(uuid, dto as UpdateRejectionPresetInput);
+  }
+
+  @Delete('rejection-presets/:uuid')
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @AuditLog({ action: 'delete', entityType: 'rejection_preset', entityIdPath: 'params.uuid' })
+  @ApiOperation({
+    summary: '반려 사유 프리셋 삭제',
+    description: '반려 사유 프리셋 삭제. isDefault=true row는 차단. 캐시 무효화.',
+  })
+  @ApiParam({ name: 'uuid', description: '반려 사유 프리셋 UUID' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '반려 사유 프리셋 삭제 완료' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteRejectionPreset(@Param('uuid') uuid: string): Promise<void> {
+    await this.checkoutsService.deleteRejectionPreset(uuid);
   }
 
   @Get('saved-view-counts')

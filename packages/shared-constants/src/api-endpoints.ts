@@ -145,6 +145,14 @@ export const API_ENDPOINTS = {
     BULK_CANCEL: '/api/checkouts/bulk-cancel',
     /** 반려 사유 프리셋 목록 (GET) — 관리자 등록 고정 템플릿 */
     REJECTION_PRESETS: '/api/checkouts/rejection-presets',
+    /** 반려 사유 프리셋 추가 (POST) — MANAGE_SYSTEM_SETTINGS 권한 */
+    REJECTION_PRESETS_CREATE: '/api/checkouts/rejection-presets',
+    /** 반려 사유 프리셋 수정 (PATCH) — MANAGE_SYSTEM_SETTINGS 권한 */
+    REJECTION_PRESET_UPDATE: (id: string) => `/api/checkouts/rejection-presets/${id}`,
+    /** 반려 사유 프리셋 삭제 (DELETE) — MANAGE_SYSTEM_SETTINGS 권한, isDefault=true row 보호 */
+    REJECTION_PRESET_DELETE: (id: string) => `/api/checkouts/rejection-presets/${id}`,
+    /** 반려 사유 프리셋 일괄 정렬 (PATCH) — MANAGE_SYSTEM_SETTINGS 권한, max 50건 */
+    REJECTION_PRESETS_REORDER: '/api/checkouts/rejection-presets/reorder',
     /** 최근 사용한 반출지 목록 (GET) — userId 스코핑, 캐시 60s */
     DESTINATIONS_RECENT: '/api/checkouts/destinations/recent',
     /** 승인 철회 (POST) — approved 상태 + 5분 이내만 허용 */

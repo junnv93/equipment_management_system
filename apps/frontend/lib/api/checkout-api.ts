@@ -481,6 +481,55 @@ const checkoutApi = {
   },
 
   /**
+   * 반려 사유 프리셋 추가 (admin).
+   * MANAGE_SYSTEM_SETTINGS 권한 필수.
+   */
+  async createRejectionPreset(input: {
+    label: string;
+    template?: string;
+    sortOrder?: number;
+  }): Promise<RejectionPreset> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.REJECTION_PRESETS_CREATE, input);
+    return transformSingleResponse<RejectionPreset>(response);
+  },
+
+  /**
+   * 반려 사유 프리셋 수정 (admin, 부분 수정).
+   * MANAGE_SYSTEM_SETTINGS 권한 필수. isDefault 토글 차단.
+   */
+  async updateRejectionPreset(
+    id: string,
+    input: { label?: string; template?: string | null; sortOrder?: number }
+  ): Promise<RejectionPreset> {
+    const response = await apiClient.patch(
+      API_ENDPOINTS.CHECKOUTS.REJECTION_PRESET_UPDATE(id),
+      input
+    );
+    return transformSingleResponse<RejectionPreset>(response);
+  },
+
+  /**
+   * 반려 사유 프리셋 삭제 (admin).
+   * MANAGE_SYSTEM_SETTINGS 권한 필수. isDefault=true row 차단.
+   */
+  async deleteRejectionPreset(id: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.CHECKOUTS.REJECTION_PRESET_DELETE(id));
+  },
+
+  /**
+   * 반려 사유 프리셋 일괄 정렬 (admin).
+   * MANAGE_SYSTEM_SETTINGS 권한 필수. max 50건.
+   */
+  async reorderRejectionPresets(
+    orders: Array<{ id: string; sortOrder: number }>
+  ): Promise<{ updated: number }> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECTION_PRESETS_REORDER, {
+      orders,
+    });
+    return transformSingleResponse<{ updated: number }>(response);
+  },
+
+  /**
    * 대여 반출 1차 승인 (사용 부서 TM)
    * rental 전용. pending → borrower_approved.
    * ✅ Rule 2: approverId는 서버에서 추출

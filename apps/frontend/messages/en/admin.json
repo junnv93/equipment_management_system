@@ -1,0 +1,55 @@
+{
+  "rejectionPresets": {
+    "title": "Rejection Reason Presets",
+    "description": "Manage reason templates available for one-click selection in the checkout rejection modal. System default presets (isDefault=true) cannot be deleted.",
+    "addBtn": "Add preset",
+    "editBtn": "Edit",
+    "deleteBtn": "Delete",
+    "noTemplate": "No body",
+    "isDefaultBadge": "Default",
+    "cannotDeleteDefault": "System default presets cannot be deleted",
+    "empty": "No rejection presets registered. Click 'Add preset' to register a new one.",
+    "columns": {
+      "sortOrder": "Order",
+      "label": "Label",
+      "template": "Body",
+      "flags": "Type",
+      "actions": "Actions"
+    },
+    "errors": {
+      "loadFailed": "Failed to load rejection presets."
+    },
+    "aria": {
+      "loading": "Loading rejection presets",
+      "table": "Rejection presets table",
+      "addBtn": "Add rejection preset",
+      "moveUp": "Move up one step",
+      "moveDown": "Move down one step",
+      "isDefault": "System default preset",
+      "editBtn": "Edit {label}",
+      "deleteBtn": "Delete {label}"
+    },
+    "form": {
+      "titleCreate": "Add rejection preset",
+      "titleEdit": "Edit rejection preset",
+      "descriptionCreate": "Admin-registered presets are classified as user-defined and can be deleted at any time.",
+      "descriptionEdit": "Edit preset information. Changes take effect immediately.",
+      "labelField": "Label (dropdown display text)",
+      "templateField": "Body (optional — auto-fills the textarea when selected)",
+      "templatePlaceholder": "e.g. This equipment is scheduled for calibration; checkout is restricted. Please re-apply after calibration is complete.",
+      "sortOrderField": "Sort order (lower values appear first)",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "discardTitle": "Discard changes?",
+      "discardDescription": "Your unsaved changes will be lost.",
+      "discardCancel": "Keep editing",
+      "discardConfirm": "Discard changes"
+    },
+    "delete": {
+      "title": "Delete rejection preset",
+      "description": "Delete the '{label}' preset. This action cannot be undone and does not affect rejection flows already in progress.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
+  }
+}

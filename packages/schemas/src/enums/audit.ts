@@ -115,6 +115,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'inspection_form_template', // 점검 양식 템플릿 (UL-QP-18-03/05 Build-Once Workflow snapshot)
   'data_migration_session', // 데이터 마이그레이션 세션
   'calibration_certificate', // 교정성적서 PDF (Phase A — extract dry-run)
+  'rejection_preset', // 반려 사유 프리셋 (admin CRUD)
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

@@ -75,6 +75,24 @@ export const VALIDATION_RULES = {
    * 토큰별 enum 검증은 service-layer 책임 (점진 도입).
    */
   LONG_CSV_MAX_LENGTH: 1000,
+
+  /**
+   * 반출 목적지(destination) 최대 길이 — `varchar(255)` SSOT.
+   *
+   * `packages/db/src/schema/checkouts.ts`의 `destination` 컬럼(varchar(255))과 1:1 정합.
+   * 일반 검색어 EXTENDED_TEXT_MAX_LENGTH(200)와 분리 — destination은 주소/장소명을
+   * 자유 형식으로 받는 필드라 250자 안팎이 필요할 수 있고, DB 컬럼 길이를 그대로 노출하여
+   * 의도(여기까지 허용, 그 이상은 DB가 거부) 명시.
+   */
+  DESTINATION_MAX_LENGTH: 255,
+
+  /**
+   * sortOrder 최대값 — preset/saved-views 등 사용자 정렬 entity 공통.
+   *
+   * 9999 = 4자리 정수 상한. 1만개 이상 관리 entity는 별도 UX(페이지네이션 + DnD)가
+   * 필요하므로 본 상한을 넘어가면 트리거 검토.
+   */
+  SORT_ORDER_MAX: 9999,
 } as const;
 
 // ============================================================================
