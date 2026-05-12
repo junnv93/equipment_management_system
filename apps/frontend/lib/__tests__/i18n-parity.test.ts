@@ -18,7 +18,8 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SUPPORTED_LOCALES, type SupportedLocale } from '@equipment-management/schemas';
+import { SUPPORTED_LOCALES } from '@equipment-management/schemas';
+import type { SupportedLocale } from '@equipment-management/schemas';
 
 const MESSAGES_ROOT = join(__dirname, '..', '..', 'messages');
 
