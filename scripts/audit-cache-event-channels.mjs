@@ -170,6 +170,23 @@ function extractWholesalePatterns(registrySource) {
   return wholesale;
 }
 
+/** registry source에서 `CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST` 추출 (string Set). */
+function extractWholesaleLegacyAllowlist(registrySource) {
+  const allowlist = new Set();
+  const startPattern = /export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST[^=]*=\s*new Set\(\[/;
+  const startMatch = registrySource.match(startPattern);
+  if (!startMatch) return allowlist;
+  const startIdx = startMatch.index + startMatch[0].length;
+  const endIdx = registrySource.indexOf(']);', startIdx);
+  if (endIdx < 0) return allowlist;
+  const body = registrySource.slice(startIdx, endIdx);
+  for (const line of body.split('\n')) {
+    const m = line.match(/^\s*'([^']+)'/);
+    if (m) allowlist.add(m[1]);
+  }
+  return allowlist;
+}
+
 /**
  * cache-event.registry.ts에서 registry entry signature(actions+patterns) 추출.
  *
@@ -294,16 +311,30 @@ for (const [notiKey, notiValue] of notificationEvents) {
   recordPair(cacheEnumKeyByValue.get(mirror), mirror, notiKey, notiValue);
 }
 
-// 라운드 #3 갭 O: wholesale 패턴 violation
+// 라운드 #3 갭 O: wholesale 패턴 violation (LEGACY allowlist 제외)
 const wholesalePatterns = extractWholesalePatterns(registrySrc);
+const wholesaleLegacyAllowlist = extractWholesaleLegacyAllowlist(registrySrc);
 for (const w of wholesalePatterns) {
+  if (wholesaleLegacyAllowlist.has(w.eventKey)) {
+    potential.push({
+      type: 'WHOLESALE_LEGACY',
+      eventKey: w.eventKey,
+      prefix: w.prefix,
+      message:
+        `LEGACY wholesale 패턴 (ADR-0012 §Decision-2 점진 마이그레이션 대상). ` +
+        `cache-event.registry.ts CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST에 등재됨. ` +
+        `해당 도메인의 service-local invalidateCache()와 책임 분리 후 specific sub-prefix로 마이그레이션 권장.`,
+    });
+    continue;
+  }
   violations.push({
     type: 'WHOLESALE_PATTERN',
     eventKey: w.eventKey,
     prefix: w.prefix,
     message:
       `wholesale 패턴 \${CACHE_KEY_PREFIXES.${w.prefix}}* 사용 (ADR-0012 §Decision-2 금지). ` +
-      `specific sub-prefix(list:* / pending:* / detail:* 등)로 분해 필요.`,
+      `specific sub-prefix(list:* / pending:* / detail:* 등)로 분해하거나, ` +
+      `점진 마이그레이션 대상이면 CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST 등재 (review 필수).`,
   });
 }
 
@@ -341,6 +372,9 @@ if (potential.length > 0) {
     if (p.type === 'POTENTIAL_DIVERGENCE') {
       report += `    cache: ${p.cacheEvent.key}\n`;
       report += `    noti:  ${p.notificationEvent.key}\n`;
+    } else if (p.type === 'WHOLESALE_LEGACY') {
+      report += `    event:  ${p.eventKey}\n`;
+      report += `    pattern: \${CACHE_KEY_PREFIXES.${p.prefix}}*\n`;
     } else {
       report += `    cache: ${p.cacheEvent.key} (registered=${p.cacheEvent.registered})\n`;
       report += `    noti:  ${p.notificationEvent.key} (registered=${p.notificationEvent.registered})\n`;

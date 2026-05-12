@@ -304,6 +304,55 @@ grep -nE "\[NOTIFICATION_EVENTS\.SOFTWARE_VALIDATION_" \
 
 **왜 양쪽 등록이 회귀하는가**: 새 알림 이벤트 추가 시 "캐시도 갱신해야지" 라는 자연스러운 추론으로 NOTIFICATION_EVENTS entry에 cache rule을 추가하는 경우 발생. calibration 도메인이 이미 채널 책임 분리를 확립했으므로(`cache-event.registry.ts:395-397` 주석 참조) 그 패턴을 따르면 충분.
 
+### Step 8: proactive dual-channel audit + pre-push 통합 (Critical, 라운드 #3 갭 K/D/O/C)
+
+Step 7의 boot-time invariant는 NestJS bootstrap에서만 트리거되는 reactive 안전망. `scripts/audit-cache-event-channels.mjs`가 동일 검출 로직(양방향 mirror + wholesale 패턴)을 수행하고, **`.husky/pre-push`에 `pnpm audit:cache-events`로 통합**되어야 한다 (ADR-0012).
+
+```bash
+# 1) script 존재 + EXIT 0
+test -f scripts/audit-cache-event-channels.mjs && \
+  node scripts/audit-cache-event-channels.mjs && \
+  echo "PASS: audit clean" || echo "FAIL: audit violation(s) detected"
+
+# 2) pre-push 통합 (갭 K)
+grep -cE "audit:cache-events" .husky/pre-push
+# >= 1
+
+# 3) package.json script alias
+grep -cE '"audit:cache-events":' package.json
+# >= 1
+
+# 4) 양방향 mirror 검사 (갭 D) — deriveCacheMirror 역추론 함수
+grep -cE "deriveCacheMirror" apps/backend/src/common/cache/cache-event-listener.ts
+# >= 2 (정의 + 사용)
+grep -cE "deriveCacheMirror" scripts/audit-cache-event-channels.mjs
+# >= 1
+
+# 5) wholesale 패턴 차단 (갭 O) + LEGACY allowlist
+grep -cE "extractWholesalePatterns|WHOLESALE_PATTERN" scripts/audit-cache-event-channels.mjs
+# >= 2
+grep -cE "CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST" apps/backend/src/common/cache/cache-event.registry.ts
+# >= 1
+
+# 6) jest-level redundant 검증 (갭 C — audit regex fragility 보강)
+grep -cE "validateDualChannelExclusivity" apps/backend/src/common/cache/__tests__/cache-events-naming.spec.ts
+# >= 1
+```
+
+**기대 결과**: 모두 PASS.
+
+**audit script violation 종류**:
+- **VIOLATION (mirror duplicate)**: 양 채널 mirror에 동일 actions+patterns — exit 1
+- **WHOLESALE_PATTERN**: `${PREFIX}*` 패턴 사용 — LEGACY allowlist 미등재 시 exit 1
+- **POTENTIAL_DIVERGENCE**: 양쪽 등록이지만 signature 다름 — review
+- **POTENTIAL_ONE_SIDED**: mirror 후보지만 한쪽만 등록 — 잠재 회귀
+- **WHOLESALE_LEGACY**: LEGACY allowlist 등재된 wholesale — 점진 마이그레이션 대상
+
+**3-layer defense (ADR-0012)**:
+1. **invariant (runtime, fail-fast)**: `validateDualChannelExclusivity()` 양방향 mirror 검사 (boot-time)
+2. **proactive audit (build/PR-level)**: `audit-cache-event-channels.mjs` — pre-push 게이트
+3. **naming spec (unit)**: `cache-events-naming.spec.ts` — 명명 규약 + wholesale 차단 + jest-level dual-channel 검증
+
 ## Exceptions (리포트하지 않음)
 
 1. **스케줄러의 `emit` 유지** — `schedulers/` 하위 파일은 사용자 응답 경로가 아니므로 의도적.
@@ -328,6 +377,7 @@ grep -nE "\[NOTIFICATION_EVENTS\.SOFTWARE_VALIDATION_" \
 | Step 5b composite ↔ payload 일관성 | **Warning** | payload 필드 누락 시 알림 silent drop |
 | Step 5 method 불일치 | **Info** | 런타임 에러 (타입 체크로 사전 방어됨) |
 | Step 6 BFF 집계 체인 누락 | **Warning** | BFF stale read — equipment-imports 변경 후 inbound-overview 갱신 안 됨 |
+| Step 8 audit + pre-push 통합 | **Critical** | audit-cache-event-channels.mjs 부재 또는 pre-push 미통합 시 build/PR-level 회귀 차단 무력화 (ADR-0012 라운드 #3 갭 K) |
 | Step 7 dual-channel duplication | **Critical** | 동일 status 전이마다 invalidateAllDashboard + 패턴 삭제 2x → p99 latency + dashboard cache churn |
 
 ## Learning Reference

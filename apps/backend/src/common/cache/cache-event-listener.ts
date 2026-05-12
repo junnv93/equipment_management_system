@@ -36,6 +36,30 @@ export function deriveNotificationMirror(cacheEventValue: string): string | null
 }
 
 /**
+ * 라운드 #3 갭 D — `<domain>.<verb>` → `cache.<reversedDomain>.<verb>` 으로 역추론.
+ *
+ * 회귀 차단 시나리오: NOTIFICATION_EVENTS에 `cache.foo.bar` prefix를 잘못 등록하거나
+ * 양 채널이 동일 logical 이벤트의 mirror로 의도된 경우 양방향 검사.
+ *
+ * synonym map의 reverse lookup으로 비대칭 도메인(swValidation ↔ softwareValidation)도 처리.
+ */
+export function deriveCacheMirror(notificationEventValue: string): string | null {
+  if (notificationEventValue.startsWith('cache.')) return notificationEventValue;
+  const dotIndex = notificationEventValue.indexOf('.');
+  if (dotIndex < 0) return null;
+  const notiDomain = notificationEventValue.slice(0, dotIndex);
+  const rest = notificationEventValue.slice(dotIndex);
+  let cacheDomain: string = notiDomain;
+  for (const [cacheKey, notiVal] of Object.entries(CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM)) {
+    if (notiVal === notiDomain) {
+      cacheDomain = cacheKey;
+      break;
+    }
+  }
+  return `cache.${cacheDomain}${rest}`;
+}
+
+/**
  * Dual-channel exclusivity 검증 — 부팅타임 invariant.
  *
  * 원칙(ADR-0012): 동일 logical 비즈니스 이벤트의 캐시 무효화는 단일 채널만 담당해야 한다.
@@ -68,6 +92,7 @@ export function validateDualChannelExclusivity(
   registry: Record<string, CacheInvalidationRule> = CACHE_INVALIDATION_REGISTRY
 ): void {
   const notificationEventValues = new Set<string>(Object.values(NOTIFICATION_EVENTS));
+  const cacheEventValues = new Set<string>(Object.values(CACHE_EVENTS));
 
   const signatureOf = (rule: CacheInvalidationRule): string => {
     const sortedActions = [...rule.actions]
@@ -78,23 +103,41 @@ export function validateDualChannelExclusivity(
   };
 
   const violations: string[] = [];
-  for (const cacheEventValue of Object.values(CACHE_EVENTS)) {
-    const mirror = deriveNotificationMirror(cacheEventValue);
-    if (!mirror) continue;
-    if (!notificationEventValues.has(mirror)) continue;
+  const seenPairs = new Set<string>();
+  const recordViolation = (cacheKey: string, notiKey: string): void => {
+    const pairKey = `${cacheKey}|${notiKey}`;
+    if (seenPairs.has(pairKey)) return;
+    seenPairs.add(pairKey);
+    violations.push(
+      `  CACHE_EVENTS:        ${cacheKey}\n` +
+        `  NOTIFICATION_EVENTS: ${notiKey}\n` +
+        `  → 동일 logical 이벤트의 mirror pair가 양 채널에 동일 invalidation rule로 등록됨.\n` +
+        `    NOTIFICATION_EVENTS는 알림 전용으로 유지하고 캐시 무효화는 CACHE_EVENTS 채널로 통합하세요\n` +
+        `    (cache-event.registry.ts — calibration 도메인 패턴 / ADR-0012).`
+    );
+  };
 
+  // 라운드 #3 갭 D: 양방향 mirror 검사.
+  // 방향 1: cache→noti
+  for (const cacheEventValue of cacheEventValues) {
+    const mirror = deriveNotificationMirror(cacheEventValue);
+    if (!mirror || !notificationEventValues.has(mirror)) continue;
     const cacheRule = registry[cacheEventValue];
     const notiRule = registry[mirror];
     if (!cacheRule || !notiRule) continue;
-
     if (signatureOf(cacheRule) === signatureOf(notiRule)) {
-      violations.push(
-        `  CACHE_EVENTS:        ${cacheEventValue}\n` +
-          `  NOTIFICATION_EVENTS: ${mirror}\n` +
-          `  → 동일 logical 이벤트의 mirror pair가 양 채널에 동일 invalidation rule로 등록됨.\n` +
-          `    NOTIFICATION_EVENTS는 알림 전용으로 유지하고 캐시 무효화는 CACHE_EVENTS 채널로 통합하세요\n` +
-          `    (cache-event.registry.ts — calibration 도메인 패턴 참조).`
-      );
+      recordViolation(cacheEventValue, mirror);
+    }
+  }
+  // 방향 2 (라운드 #3 갭 D): noti→cache reverse — NOTIFICATION에 cache. prefix 잘못 등록 catch
+  for (const notiEventValue of notificationEventValues) {
+    const mirror = deriveCacheMirror(notiEventValue);
+    if (!mirror || !cacheEventValues.has(mirror)) continue;
+    const notiRule = registry[notiEventValue];
+    const cacheRule = registry[mirror];
+    if (!cacheRule || !notiRule) continue;
+    if (signatureOf(cacheRule) === signatureOf(notiRule)) {
+      recordViolation(mirror, notiEventValue);
     }
   }
 

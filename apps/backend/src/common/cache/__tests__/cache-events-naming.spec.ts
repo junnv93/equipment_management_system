@@ -4,6 +4,11 @@ import {
   CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM,
 } from '../cache-events';
 import { NOTIFICATION_EVENTS } from '../../../modules/notifications/events/notification-events';
+import {
+  CACHE_INVALIDATION_REGISTRY,
+  CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST,
+} from '../cache-event.registry';
+import { validateDualChannelExclusivity } from '../cache-event-listener';
 
 /**
  * CACHE_EVENTS 명명 규약 강제 (ADR-0012 정합).
@@ -79,5 +84,56 @@ describe('CACHE_EVENTS 명명 규약 (ADR-0012)', () => {
       if (!usedDomains.has(notiDomain)) orphanTargets.push(notiDomain);
     }
     expect(orphanTargets).toEqual([]);
+  });
+
+  /**
+   * 라운드 #3 갭 O: wholesale `${PREFIX}*` 패턴 차단 (ADR-0012 §Decision-2).
+   *
+   * 신규 entry는 specific sub-prefix로 분해. historical wholesale은
+   * CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST 등재 시 통과 (점진 마이그레이션).
+   */
+  it('wholesale `${PREFIX}*` 패턴은 LEGACY allowlist에 등재된 경우만 허용', () => {
+    const violations: Array<{ event: string; pattern: string }> = [];
+    for (const [eventKey, rule] of Object.entries(CACHE_INVALIDATION_REGISTRY)) {
+      for (const { pattern } of rule.patterns ?? []) {
+        const segments = pattern.split(':');
+        const isWholesale = segments.length === 2 && segments[1] === '*';
+        if (!isWholesale) continue;
+        // wholesale entry — registry entry key namespace 추론
+        // CACHE_EVENTS는 'cache.' prefix, NOTIFICATION_EVENTS는 그 외
+        const namespace = eventKey.startsWith('cache.') ? 'CACHE_EVENTS' : 'NOTIFICATION_EVENTS';
+        // event key 이름은 인덱스로 reverse lookup
+        let enumKey: string | undefined;
+        const lookup: Record<string, string> =
+          namespace === 'CACHE_EVENTS' ? CACHE_EVENTS : NOTIFICATION_EVENTS;
+        for (const [k, v] of Object.entries(lookup)) {
+          if (v === eventKey) {
+            enumKey = k;
+            break;
+          }
+        }
+        if (!enumKey) continue;
+        const allowlistKey = `${namespace}.${enumKey}`;
+        if (!CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST.has(allowlistKey)) {
+          violations.push({ event: allowlistKey, pattern });
+        }
+      }
+    }
+    if (violations.length > 0) {
+      const detail = violations.map((v) => `  - ${v.event}: '${v.pattern}'`).join('\n');
+      throw new Error(
+        `[wholesale pattern] ADR-0012 §Decision-2 위반 ${violations.length}건 (LEGACY allowlist 미등재):\n${detail}\n\n` +
+          `해결: specific sub-prefix(list:* / pending:* / detail:*)로 분해 또는 ` +
+          `CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST 등재 (review 필수).`
+      );
+    }
+  });
+
+  /**
+   * 라운드 #3 갭 C: audit script regex fragility 보강 — jest-level redundant 검증.
+   * `validateDualChannelExclusivity`를 실 import로 호출. audit script가 깨져도 catch.
+   */
+  it('production registry는 dual-channel exclusivity invariant를 통과한다 (jest-level redundant 검증)', () => {
+    expect(() => validateDualChannelExclusivity(CACHE_INVALIDATION_REGISTRY)).not.toThrow();
   });
 });

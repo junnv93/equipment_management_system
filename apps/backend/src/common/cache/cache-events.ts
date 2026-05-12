@@ -46,6 +46,13 @@ export const CACHE_EVENTS = {
   INSPECTION_TEMPLATE_CREATED: 'cache.inspection.template.created',
   INSPECTION_TEMPLATE_UPDATED: 'cache.inspection.template.updated',
   INSPECTION_TEMPLATE_VERSION_UP: 'cache.inspection.template.versionUp',
+
+  // ─── Test Software (revalidation 자동 트리거 — 캐시 채널) ───
+  // testSoftware 버전 변경 시 software-validations 재검증 필요.
+  // NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED와 양 채널 동시 emit
+  // (NOTIFICATION = 알림/SSE, CACHE = 캐시 무효화) — ADR-0012 §Decision-1 정합
+  // (라운드 #3 갭 F closure — historical 예외 제거).
+  TEST_SOFTWARE_REVALIDATION_REQUIRED: 'cache.testSoftware.revalidationRequired',
 } as const;
 
 export type CacheEventName = (typeof CACHE_EVENTS)[keyof typeof CACHE_EVENTS];

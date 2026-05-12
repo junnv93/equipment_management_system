@@ -54,14 +54,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
-   * 도메인 캐시 동기 무효화 — SW_VALIDATIONS:* + TEST_SOFTWARE:detail
+   * 도메인 캐시 동기 무효화 — 트랜잭션 직후 read-after-write 일관성 보장.
    *
-   * 책임 경계:
-   * - 이 메서드: 도메인 로컬 캐시(sw-validations list/detail/pending, test-software detail)
-   * - cache-event.registry.ts: 크로스 도메인 캐시(dashboard:*, approvals:*)를
-   *   CACHE_EVENTS.SW_VALIDATION_* 이벤트로 비동기 처리
+   * 책임 경계 (ADR-0012 §Decision-2 / 라운드 #3 갭 A closure):
+   * - 이 메서드 (sync, service-local):
+   *     - detail prefix 단독 책임 (registry에서 detail prefix 제외됨, 라운드 #3)
+   *     - list + pending broader sub-prefix (registry와 idempotent 중복 OK, 안전망)
+   *     - test-software detail:id (cross-domain, write 직후 일관성 위해 sync)
+   * - cache-event.registry.ts CACHE_EVENTS.SW_VALIDATION_ (async, cross-domain):
+   *     - invalidateAllDashboard — dashboard + approvals
+   *     - SOFTWARE_VALIDATIONS list + pending (detail 제외 — calibration 패턴 정합)
+   *     - TEST_SOFTWARE detail (broad, cross-id)
    *
-   * APPROVALS:* 는 이벤트 발행 후 registry의 invalidateAllDashboard()가 처리하므로
+   * APPROVALS는 이벤트 발행 후 registry의 invalidateAllDashboard가 처리하므로
    * 여기서는 삭제하지 않는다 (이중 삭제 방지).
    */
   private invalidateCache(id?: string, testSoftwareId?: string): void {

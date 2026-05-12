@@ -72,6 +72,47 @@ export interface CacheInvalidationRule {
  * - 이 레지스트리: 크로스 도메인 캐시를 이벤트 발행 후 비동기 삭제
  *   (dashboard/approvals 통계 — 약간의 stale 허용 가능)
  */
+/**
+ * LEGACY allowlist — `${PREFIX}*` wholesale pattern을 사용하는 historical entry.
+ *
+ * 라운드 #3 갭 O (ADR-0012 §Decision-2): wholesale 패턴은 신규 entry에서 금지.
+ * audit script (`scripts/audit-cache-event-channels.mjs`)가 신규 wholesale 추가 시 fail.
+ * 다음 entry들은 sprint 도입 전 wholesale 사용 — 점진 마이그레이션 대상.
+ *
+ * 마이그레이션 패턴: `${PREFIX}*` → `${PREFIX}list:*` + `${PREFIX}pending:*` + `${PREFIX}detail:*` 등.
+ * 각 도메인의 service-local invalidateCache()와 책임 분리 정합 필요.
+ *
+ * 본 allowlist 갱신은 신규 wholesale 도입을 의미하므로 review 필수.
+ */
+export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST: ReadonlySet<string> = new Set([
+  // Checkouts (10 entries — checkout.service의 자체 cache가 broader, sprint별 sub-prefix 정의 미정)
+  'NOTIFICATION_EVENTS.CHECKOUT_CREATED',
+  'NOTIFICATION_EVENTS.CHECKOUT_APPROVED',
+  'NOTIFICATION_EVENTS.CHECKOUT_REJECTED',
+  'NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED',
+  'NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED',
+  'NOTIFICATION_EVENTS.CHECKOUT_STARTED',
+  'NOTIFICATION_EVENTS.CHECKOUT_RETURNED',
+  'NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED',
+  'NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED',
+  'NOTIFICATION_EVENTS.CHECKOUT_OVERDUE',
+  // Disposal (1 — disposal-requests:* prefix)
+  'NOTIFICATION_EVENTS.DISPOSAL_REJECTED',
+  // Equipment imports (3 — equipment-imports:* prefix)
+  'NOTIFICATION_EVENTS.IMPORT_CREATED',
+  'NOTIFICATION_EVENTS.IMPORT_APPROVED',
+  'NOTIFICATION_EVENTS.IMPORT_REJECTED',
+  // Calibration factors (2 — calibration-factors:* prefix)
+  'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED',
+  'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED',
+  // Intermediate inspection (1 — calibration:* prefix)
+  'NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED',
+  // Inspection form template (3 events × 3 patterns — inspection-form-templates/intermediate-inspections/self-inspections wholesale)
+  'CACHE_EVENTS.INSPECTION_TEMPLATE_CREATED',
+  'CACHE_EVENTS.INSPECTION_TEMPLATE_UPDATED',
+  'CACHE_EVENTS.INSPECTION_TEMPLATE_VERSION_UP',
+]);
+
 export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> = {
   // ─── 반출 (Checkout) ───
   // 모든 반출 이벤트는 대시보드 카운트에 영향 + checkout 캐시 무효화
@@ -335,12 +376,15 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   //   - cache-event-listener.ts `validateDualChannelExclusivity()` 부팅타임 invariant
   //   - scripts/audit-cache-event-channels.mjs proactive audit
   //   - cache-events-naming.spec.ts 명명 규약 강제
+  //
+  // 라운드 #3 갭 A: registry는 `list:*` + `pending:*` 만 무효화 (detail:* 제외).
+  // `detail:<id>` 는 service-local invalidateCache()가 sync로 단독 책임 (read-after-write).
+  // calibration registry 패턴(line ~404) 완전 정합.
   [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}list:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}pending:*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}detail:*` },
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:*` },
     ],
   },
@@ -349,7 +393,6 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}list:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}pending:*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}detail:*` },
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:*` },
     ],
   },
@@ -358,7 +401,6 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}list:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}pending:*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}detail:*` },
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:*` },
     ],
   },
@@ -367,20 +409,19 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}list:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}pending:*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}detail:*` },
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:*` },
     ],
   },
-  // 시스템 자동 재검증 트리거 — testSoftware 버전 변경 side-effect (mirror 없음).
-  // ADR-0012 §Decision-1 예외: NOTIFICATION_EVENTS 채널에서 캐시 규칙 유지 (다른 채널에 mirror 없음).
-  // dual-channel invariant는 mirror pair만 검사하므로 자동 제외됨.
-  [NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED]: {
+  // 시스템 자동 재검증 트리거 (testSoftware 버전 변경 side-effect).
+  // 라운드 #3 갭 F: ADR-0012 예외 제거 — CACHE_EVENTS 채널로 마이그레이션.
+  // NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED는 알림 발송 전용으로 유지.
+  // test-software.service.ts 가 양 채널 동시 emit.
+  [CACHE_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}list:*` },
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}pending:*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}detail:*` },
     ],
   },
 
