@@ -180,6 +180,49 @@ pnpm ur:shield -- /ultrareview <PR번호>
 
 격리 위치는 **/tmp/** (working tree와 .git 외부) — ultrareview 번들 도구의 `--source .` 범위 밖이라 secret이 외부로 노출되지 않는다.
 
+#### `--self-test` (실 working tree 영향 0인 자체 검증)
+
+shield 회귀(예: trap 미발화로 `.env` 좌초)가 실 환경에서 발생하면 dev/test 서버가 즉시 파괴된다. 변경 후 자체 검증:
+
+```bash
+pnpm ur:selftest                                  # alias 권장
+# 또는
+bash scripts/ultrareview-shield.sh --self-test
+```
+
+동작: `mktemp` 임시 fixture에 SSOT(`--list-patterns`)로 derive 한 fake `.env*`/`*.age`/`*.sops.decrypted` 파일을 만든 후, **inner shield**를 fixture 위에서 `/bin/true` 인자로 호출. 격리/복원 후 SHA256 invariant + `/tmp/ur-shield-*` 잔존 0을 자체 검증한다. EXIT 0이면 PASS.
+
+자동 회귀 차단은 pre-push gate에서 2 spec이 검증:
+
+- `scripts/__tests__/ultrareview-shield.spec.mjs` — 6 시나리오 (happy / 자식 실패 exit 1·7 / 빈 fixture / SSOT 단방향 / `--self-test` smoke)
+- `scripts/__tests__/scan-exclusion-paths-sync.spec.mjs` — SSOT(`scripts/lib/scan-exclusion-paths.mjs`) ↔ `.gitleaks.toml` allowlist 미러 invariant (둘 중 한 곳만 갱신 시 FAIL)
+
+### Gate 2 차단 시: gitleaks finding 처리
+
+검사 2/3 (gitleaks)가 차단해도 검사 1/3 (`.env`)과 별도 출처일 수 있다 (의도적 fake JWT, 테스트 fixture 등). 진단:
+
+```bash
+# pipe 금지 — gitleaks 종료 코드가 tail/grep으로 가려져 첫 진단이 PASS로 오판될 수 있음
+gitleaks detect --no-git --source . --verbose --no-banner --redact --config .gitleaks.toml
+# 또는 JSON 리포트로 fingerprint 추출
+gitleaks detect --no-git --source . --redact --no-banner --config .gitleaks.toml \
+  --report-format json --report-path /tmp/gitleaks-findings.json
+```
+
+Finding 처리 분기:
+
+| Finding 출처                              | 조치                                                                                                                    |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 진짜 secret (rotation 필요)               | sops로 이동 + 히스토리에서 제거 (git filter-repo) — ultrareview 진행 금지                                               |
+| 의도적 fake (테스트 fixture)              | `.gitleaksignore` fingerprint 추가 (`<commit-sha>:<file>:<rule-id>:<line>`) — 추가 전 fake 임을 코멘트로 명시           |
+| 프로젝트 전역 무관 경로 (예: 빌드 산출물) | `.gitleaks.toml` `[allowlist].paths` 추가 + 사유 주석 의무 + SSOT (`scripts/lib/scan-exclusion-paths.mjs`) 도 함께 갱신 |
+
+추가 후 재실행:
+
+```bash
+pnpm ur:preflight    # alias — ur:shield + preflight 3 gate 통합
+```
+
 ---
 
 ## 전체 실행 흐름
@@ -190,10 +233,10 @@ node scripts/ultrareview-advisor.mjs
 
 # Go 판정 시 →
 
-# 2. Pre-upload secret gate
-node scripts/ultrareview-preflight.mjs    # exit 1이면 조치 후 재실행
-# dev env(.env.local 등)가 Gate 1 차단하면:
-pnpm ur:shield -- node scripts/ultrareview-preflight.mjs   # 자동 격리/복원
+# 2. Pre-upload secret gate (권장 — ur:shield 자동 격리 포함)
+pnpm ur:preflight                         # ur:shield + preflight 3 gate (alias)
+# 또는 수동
+node scripts/ultrareview-preflight.mjs    # exit 1이면 조치 후 ur:preflight 재실행
 
 # 3. 원격 리뷰 시작 (PR 모드 권장)
 /ultrareview <PR번호>
