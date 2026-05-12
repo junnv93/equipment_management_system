@@ -2,6 +2,43 @@
 
 완료된 배치 이력. 상세 sprint 내용은 git log 및 `memory/` 파일 참조.
 
+## 2026년 5월 배치 이력
+
+| Batch | 처리일 | 항목 수 | 상태 |
+|-------|--------|---------|------|
+| tech-debt-batch-0512 | 2026-05-12 | 12 | 완료 |
+
+### 2026-05-12 배치 (12건)
+
+#### large-component-refactor 후속 (3건) — `section-autonomy-followup` sprint commit `4cc25ca5`
+
+- [x] ~~**[2026-05-10 large-component-refactor S-2] 🟢 LOW dynamic-import-location-ssot**~~ — `StatusLocationStep.tsx` + `CalibrationStep.tsx` 신규 wrapper (HistoryAttachmentStep 패턴), EquipmentForm `next/dynamic` 0건 달성.
+- [x] ~~**[2026-05-10 large-component-refactor S-5] 🟢 LOW inspection-basic-info-context-coupling**~~ — `inspectionCycleIsPrefilled` + `calibrationValidityPeriodIsPrefilled` boolean props 전달, section provider-free testable. VisualTableEditor는 graceful no-op SSOT 의도된 예외 — F-3 후속 ADR.
+- [x] ~~**[2026-05-10 large-component-refactor S-1] 🟢 LOW section-file-line-count-reduction**~~ — InspectionItemsSection 225→127 (InspectionItemCard 추출), NCInfoCards 260→50 (NCBasicInfoCard + NCRepairCard + NCCalibrationCard 분리). **정정**: MeasurementEquipmentSection(103) stale fact — 실측 107 lines, 200 미만으로 no-action.
+
+#### shortcuts-context-multi-tab-i18n-parity sprint (3건)
+
+- [x] ~~**[2026-05-12 followups G-15] 🟡 MED shortcuts-context-api-consistency**~~ — closure. `ShortcutsSettingsContent.tsx` 가 `useKeyboardShortcutsContext` 훅 경유로 setOverride/clearOverride/resetAllOverrides 소비 (M-4/M-5).
+- [x] ~~**[2026-05-12 followups G-16] 🟡 MED shortcut-overrides-multi-tab-sync**~~ — closure. `KeyboardShortcutsProvider` 가 `window.addEventListener('storage')` 등록 + cleanup + SSOT key guard + storageArea guard. 신규 spec 6 cases.
+- [x] ~~**[2026-05-12 followups G-17] 🟢 LOW i18n-parity-automation-spec**~~ — closure. `apps/frontend/lib/__tests__/i18n-parity.test.ts` 신규 — 25 도메인 자동 enumeration + nested key recursion. 51 cases PASS.
+
+#### qr-visual-redesign sprint (2건)
+
+- [x] ~~**[2026-05-12 qr-visual-redesign G-2] verify-implementation-run-full-13-skills**~~ — closure `429f054c`. verify-implementation 12/13 PASS (verify-bulk-action-bar N/A) + review-architecture HIGH 1건 즉시 fix.
+- [x] ~~**[2026-05-12 qr-visual-redesign G-3] commit-da1dbc0e-isolate-software-files**~~ — cherry-pick verification 완료. 4 clean cherry-pick + da1dbc0e split + 8 isolated commits, **software/* 0건**, backend tsc EXIT=0 + frontend tsc EXIT=0.
+
+#### checkouts-sprint4-ux-u02-u08 sprint (3건) — commit `f3391602`
+
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-1] shortcuts-settings-page**~~ — closure.
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-3] bulk-undo-toast**~~ — closure.
+- [x] ~~**[2026-05-10 checkouts-sprint4-ux-u02-u08 S-8] qr-drawer-code-split**~~ — closure.
+
+#### software-design-review sprint (1건)
+
+- [x] **[2026-05-11 software-design-review S-4] 🟢 LOW software-validation-stepper-e2e** — `tests/e2e/features/software/validation-stepper.spec.ts` + `list-validation-status.spec.ts` 작성 완료 (2026-05-12 시니어 자기검토 #3). 실행/healing은 e2e 인프라 후속 sprint.
+
+---
+
 ## 2026년 4월 배치 이력
 
 | Batch | 처리일 | 항목 수 | 상태 |
