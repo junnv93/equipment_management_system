@@ -52,6 +52,7 @@ import { FormTemplateModule } from './modules/reports/form-template.module';
 import { SecurityModule } from './modules/security/security.module';
 import { SecurityTelemetryModule } from './common/security/security-telemetry.module';
 import { InboundOverviewModule } from './modules/inbound-overview/inbound-overview.module';
+import { SavedViewsModule } from './modules/saved-views/saved-views.module';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { InboundOverviewModule } from './modules/inbound-overview/inbound-overvi
     SelfInspectionsModule, // 자체점검표 (UL-QP-18-05)
     InspectionFormTemplatesModule, // 점검 양식 템플릿 (UL-QP-18-03/05 Build-Once Workflow)
     FormTemplateModule, // 양식 템플릿 관리 (글로벌 — 스토리지 기반)
+    SavedViewsModule, // 사용자 저장 뷰 (PRIVATE/TEAM/GLOBAL scope + CAS, S-7 sprint)
   ],
   controllers: [],
   providers: [
