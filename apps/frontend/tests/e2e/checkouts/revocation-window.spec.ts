@@ -21,15 +21,22 @@
 
 import { test, expect } from '../shared/fixtures/auth.fixture';
 import {
+  apiGet,
   createCheckout,
   approveCheckout,
   resetEquipmentForWorkflow,
   cleanupSharedPool,
   clearBackendCache,
 } from '../workflows/helpers/workflow-helpers';
-import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
+import {
+  CheckoutPurposeValues as CPVal,
+  CheckoutStatusValues as CSVal,
+} from '@equipment-management/schemas';
 import { TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
-import { APPROVAL_REVOCATION_WINDOW_MS } from '@equipment-management/shared-constants';
+import {
+  APPROVAL_REVOCATION_WINDOW_MS,
+  VALIDATION_RULES,
+} from '@equipment-management/shared-constants';
 
 const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.RBAC_SIGNAL_GEN_SUW_E;
 
@@ -91,13 +98,70 @@ test.describe('SH-2: 승인 철회 5분 윈도우 (RevocationWindowCountdown)', 
     await expect(button).not.toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('Step 3: 5분 + 1초 가속 → 버튼 disabled + aria-disabled=true (사유 swap)', async ({
+  test('Step 3: dialog open + 사유 입력 + submit → status PENDING 전환 (deep-test)', async ({
     techManagerPage: page,
   }) => {
+    await page.goto(`/checkouts/${checkoutId}`);
+    const window_ = page.getByTestId('revocation-window');
+    await expect(window_).toBeVisible({ timeout: 15000 });
+
+    // 버튼 클릭 → 사유 dialog open
+    await window_.getByRole('button').click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // min length(REVOCATION_REASON_MIN_LENGTH) 미만 — submit 비활성
+    const textarea = dialog.locator('textarea');
+    const submitBtn = dialog.getByRole('button').last();
+    await textarea.fill('짧음');
+    await expect(submitBtn).toBeDisabled();
+
+    // 충분한 사유 입력 → submit 활성
+    const validReason = 'E2E SH-2 revocation deep-test 사유 검증';
+    expect(validReason.length).toBeGreaterThanOrEqual(
+      VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH
+    );
+    await textarea.fill(validReason);
+    await expect(submitBtn).toBeEnabled();
+
+    // submit → backend POST /revoke-approval → status PENDING 전환
+    await submitBtn.click();
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+
+    // backend 정합 확인 — 응답으로 status 검증
+    const detailResp = await apiGet(page, `/api/checkouts/${checkoutId}`, 'technical_manager');
+    expect(detailResp.ok()).toBeTruthy();
+    const body = (await detailResp.json()) as {
+      data?: { status?: string };
+      status?: string;
+    };
+    const status = body.data?.status ?? body.status;
+    expect(status).toBe(CSVal.PENDING);
+  });
+
+  test('Step 4: 5분 + 1초 가속 → 버튼 disabled + aria-disabled=true (사유 swap)', async ({
+    techManagerPage: page,
+    testOperatorPage: tePage,
+  }) => {
+    // 직전 step에서 status가 PENDING으로 되돌아갔으므로 새 시나리오 준비 — 재승인
+    const body = await createCheckout(
+      tePage,
+      [WF_EQUIPMENT_ID],
+      CPVal.CALIBRATION,
+      'KRISS',
+      'SH-2 step4 만료 검증'
+    );
+    const data = body?.data ?? body;
+    const newCheckoutId = data.id;
+    await clearBackendCache();
+    await approveCheckout(page, newCheckoutId);
+    await clearBackendCache();
+
     const baseTime = new Date();
     await page.clock.install({ time: baseTime });
 
-    await page.goto(`/checkouts/${checkoutId}`);
+    await page.goto(`/checkouts/${newCheckoutId}`);
     const window_ = page.getByTestId('revocation-window');
     await expect(window_).toBeVisible({ timeout: 15000 });
 

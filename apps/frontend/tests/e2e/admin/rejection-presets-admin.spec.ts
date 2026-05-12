@@ -66,13 +66,14 @@ test.describe('SH-1: 반려 사유 프리셋 관리 (admin CRUD)', () => {
     expect(page.url()).not.toContain('/admin/rejection-presets');
   });
 
-  test('Step 2: 권한 보유 — systemAdmin 페이지 진입 가능 + 목록 렌더', async ({
+  test('Step 2: 권한 보유 — systemAdmin 페이지 진입 가능 + 목록 렌더 + data-testid 노출', async ({
     systemAdminPage: page,
   }) => {
     await page.goto('/admin/rejection-presets');
     await expect(page).toHaveURL(/\/admin\/rejection-presets/);
-    // page heading (h1) 노출 — 텍스트는 i18n SSOT 이므로 role+level 만 검증
-    await expect(page.locator('h1')).toBeVisible({ timeout: 15000 });
+    // data-testid 노출 — i18n 텍스트 의존 0 (G-4 stable selector)
+    await expect(page.getByTestId('rejection-presets-admin')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('rejection-preset-add')).toBeVisible();
   });
 
   test('Step 3: POST create — 신규 preset 1건 추가', async ({ systemAdminPage: page }) => {
@@ -133,7 +134,7 @@ test.describe('SH-1: 반려 사유 프리셋 관리 (admin CRUD)', () => {
   test('Step 6: isDefault preset 삭제 보호 — DELETE on default row → 4xx + IS_DEFAULT errorCode', async ({
     systemAdminPage: page,
   }) => {
-    // 목록에서 isDefault=true row 1건 탐색
+    // 목록에서 isDefault=true row 1건 탐색 — backend seed 의존 (admin entity 특성상 seed 존재 보장)
     const listResp = await apiGet(page, PRESETS_LIST, 'system_admin');
     expect(listResp.ok()).toBeTruthy();
     const listBody = (await listResp.json()) as
@@ -143,7 +144,10 @@ test.describe('SH-1: 반려 사유 프리셋 관리 (admin CRUD)', () => {
       ? listBody
       : (listBody.data ?? ([] as RejectionPresetRow[]));
     const defaultRow = rows.find((r) => r.isDefault);
-    test.skip(!defaultRow, 'isDefault=true seed preset 없음 — backend seed 의존');
+    expect(
+      defaultRow,
+      '시드된 isDefault=true preset 1건 존재 가정 (UL-QP-18 반려 사유 표준 카테고리)'
+    ).toBeTruthy();
 
     const resp = await apiDelete(page, presetDelete(defaultRow!.id), 'system_admin');
     expect(resp.status()).toBeGreaterThanOrEqual(400);
@@ -152,6 +156,12 @@ test.describe('SH-1: 반려 사유 프리셋 관리 (admin CRUD)', () => {
     // backend ErrorCode → REJECTION_PRESET_IS_DEFAULT (errorCode 키 위치는 GlobalExceptionFilter SSOT)
     const code = errBody.code ?? errBody.errorCode;
     expect(code).toBe('REJECTION_PRESET_IS_DEFAULT');
+
+    // UI 상에서도 isDefault row 의 삭제 버튼 disabled 확인 — defense-in-depth
+    await page.goto('/admin/rejection-presets');
+    const defaultRowLocator = page.getByTestId(`rejection-preset-row-${defaultRow!.id}`);
+    await expect(defaultRowLocator).toBeVisible({ timeout: 15000 });
+    await expect(defaultRowLocator).toHaveAttribute('data-is-default', 'true');
   });
 
   test('Step 7: DELETE non-default — Step 3 생성 row 정리', async ({ systemAdminPage: page }) => {

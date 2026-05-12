@@ -20,6 +20,7 @@ export * from './user';
 export * from './team';
 export * from './checkout';
 export * from './checkout-display';
+export * from './revoke-approval';
 export * from './calibration';
 export * from './types/disposal';
 export * from './settings';

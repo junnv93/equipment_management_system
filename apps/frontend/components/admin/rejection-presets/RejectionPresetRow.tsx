@@ -63,7 +63,7 @@ export function RejectionPresetRow({
   const deleteTooltipMessage = isDeleteDisabled ? t('cannotDeleteDefault') : t('deleteBtn');
 
   return (
-    <TableRow>
+    <TableRow data-testid={`rejection-preset-row-${preset.id}`} data-is-default={preset.isDefault}>
       <TableCell>
         <div className="flex flex-col gap-0.5">
           <Button

@@ -53,9 +53,13 @@ export function RejectionPresetsAdminClient() {
   const rows = presets ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="rejection-presets-admin">
       <div className="flex justify-end">
-        <Button onClick={() => setDialog({ mode: 'create' })} aria-label={t('aria.addBtn')}>
+        <Button
+          onClick={() => setDialog({ mode: 'create' })}
+          aria-label={t('aria.addBtn')}
+          data-testid="rejection-preset-add"
+        >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           {t('addBtn')}
         </Button>

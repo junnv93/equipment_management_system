@@ -81,7 +81,7 @@ import dynamic from 'next/dynamic';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useUndoToast } from '@/hooks/use-undo-toast';
 import { RevocationWindowCountdown } from '@/components/checkouts/RevocationWindowCountdown';
-import { revokeApprovalWithReason } from '@/lib/api/checkout-revoke-approval-with-reason';
+import { revokeApproval } from '@/lib/api/checkout-revoke-approval';
 
 // S-8 code-split — qrcode lib + EquipmentQRCode chunk를 detail 진입 초기 번들에서 분리.
 // drawer trigger 버튼은 user 상호작용 후에야 필요하므로 ssr: false + loading null 안전.
@@ -401,7 +401,7 @@ export default function CheckoutDetailClient({
   const revokeMutation = useOptimisticMutation<void, string, Checkout>({
     mutationFn: async (reason: string) => {
       const { version } = await checkoutApi.getCheckout(checkout.id);
-      await revokeApprovalWithReason(checkout.id, { version, reason });
+      await revokeApproval(checkout.id, { version, reason });
     },
     queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>

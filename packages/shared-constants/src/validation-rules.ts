@@ -25,8 +25,14 @@ export const VALIDATION_RULES = {
   /** 반려/거부 사유 최소 글자 수 */
   REJECTION_REASON_MIN_LENGTH: 10,
 
-  /** 승인 철회 사유 최소 글자 수 (UL-QP-18 철회 기록 정책) */
-  REVOCATION_REASON_MIN_LENGTH: 10,
+  /**
+   * 승인 철회 사유 최소 글자 수 (UL-QP-18 철회 기록 정책)
+   *
+   * **SSOT 단방향**: source-of-truth는 `SCHEMA_VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH`
+   * (`packages/schemas`). revoke-approval zod schema가 schemas 패키지에 위치하므로 schemas 측
+   * 정의를 그대로 노출 — 두 값 분기 위험 0.
+   */
+  REVOCATION_REASON_MIN_LENGTH: SCHEMA_VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH,
 
   /** 장비 반입 기본 반납 예정일 (일) */
   DEFAULT_RETURN_DAYS: 7,
@@ -37,8 +43,13 @@ export const VALIDATION_RULES = {
   /** 짧은 텍스트 필드 최대 길이 (unit, cycle 등 varchar(20)) */
   SHORT_TEXT_MAX_LENGTH: 20,
 
-  /** 장기 텍스트 필드 최대 길이 (description, reason 등 varchar(500)) */
-  LONG_TEXT_MAX_LENGTH: 500,
+  /**
+   * 장기 텍스트 필드 최대 길이 (description, reason 등 varchar(500))
+   *
+   * **SSOT 단방향**: source-of-truth는 `SCHEMA_VALIDATION_RULES.LONG_TEXT_MAX_LENGTH`
+   * (`packages/schemas`). revoke-approval/calibration-comment 등 schemas 측 zod 가 직접 사용.
+   */
+  LONG_TEXT_MAX_LENGTH: SCHEMA_VALIDATION_RULES.LONG_TEXT_MAX_LENGTH,
 
   /** 전화번호 최대 길이 */
   PHONE_MAX_LENGTH: 20,

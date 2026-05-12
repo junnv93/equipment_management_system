@@ -164,6 +164,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   data_migration_session: '데이터 마이그레이션',
   calibration_certificate: '교정성적서',
   rejection_preset: '반려 사유 프리셋',
+  saved_view: '저장된 뷰',
 };
 
 // ============================================================================
