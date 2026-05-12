@@ -49,6 +49,8 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   calibration_certificate: () => `/calibration/register`,
   // 반려 사유 프리셋 — admin 페이지에서 관리 (route group `(dashboard)` 는 URL에서 제거됨)
   rejection_preset: () => `/admin/rejection-presets`,
+  // Saved View — 적용 시 해당 view ID 를 query param 으로 전달해 checkouts 화면에서 hydrate
+  saved_view: (id) => `/checkouts?savedView=${id}`,
 };
 
 /**

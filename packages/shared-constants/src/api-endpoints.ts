@@ -615,6 +615,26 @@ export const API_ENDPOINTS = {
     /** CSP violation report 수집 — proxy.ts report-uri + Report-To directive의 SSOT 경로 */
     CSP_REPORT: '/api/security/csp-report',
   },
+
+  // ============================================================================
+  // Saved Views — 사용자 저장 뷰 (PRIVATE / TEAM / GLOBAL scope)
+  // ============================================================================
+  SAVED_VIEWS: {
+    /** module 별 가시 view 목록 (본인 PRIVATE + 같은 팀 TEAM + 모든 GLOBAL) */
+    LIST: '/api/saved-views',
+    /** 단건 조회 (scope read 가드 적용) */
+    GET: (id: string) => `/api/saved-views/${id}`,
+    /** 신규 저장 (사용자당 module 별 MAX_SAVED_VIEWS_PER_MODULE 제한) */
+    CREATE: '/api/saved-views',
+    /** 메타/params 갱신 (CAS — version 동봉) */
+    UPDATE: (id: string) => `/api/saved-views/${id}`,
+    /** 삭제 (cascade 없음 — single row) */
+    DELETE: (id: string) => `/api/saved-views/${id}`,
+    /** sort_order 일괄 갱신 (드래그 정렬 / ↑↓ 키보드) */
+    REORDER: '/api/saved-views/reorder',
+    /** localStorage 백업 → 서버 일괄 import (1회성, 사용자 명시 클릭) */
+    BULK_IMPORT: '/api/saved-views/bulk-import',
+  },
 } as const;
 
 /**

@@ -79,6 +79,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** inbound-overview.service.ts — 반입 현황 BFF 집계 (30s TTL) */
   INBOUND_OVERVIEW: 'inbound-overview:',
+
+  /** saved-views.service.ts — 사용자/모듈별 view list 캐시 (SHORT TTL) */
+  SAVED_VIEWS: 'saved-views:',
 } as const;
 
 /**

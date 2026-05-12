@@ -116,6 +116,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'data_migration_session', // 데이터 마이그레이션 세션
   'calibration_certificate', // 교정성적서 PDF (Phase A — extract dry-run)
   'rejection_preset', // 반려 사유 프리셋 (admin CRUD)
+  'saved_view', // Saved Views (checkouts 필터 조합 — PRIVATE/TEAM/GLOBAL scope)
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

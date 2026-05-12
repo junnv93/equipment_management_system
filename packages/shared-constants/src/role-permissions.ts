@@ -337,6 +337,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.MANAGE_INSPECTION_TEMPLATE,
     // 문서 업로드 (장비사진·수리이력 등 다목적)
     Permission.UPLOAD_DOCUMENT,
+    // GLOBAL scope Saved View 관리 (전체 공유 뷰 등록·갱신·삭제)
+    Permission.MANAGE_SAVED_VIEWS_GLOBAL,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated

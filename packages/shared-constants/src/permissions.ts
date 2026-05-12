@@ -234,6 +234,14 @@ export enum Permission {
   // 문서 관련 권한 (다목적: 장비사진·수리이력·교정성적서 등)
   // ============================================================================
   UPLOAD_DOCUMENT = 'upload:document',
+
+  // ============================================================================
+  // Saved Views (조회 권한은 도메인 view 권한 — 예: VIEW_CHECKOUTS — 재사용)
+  //
+  // PRIVATE / TEAM scope 의 작성·수정은 행 수준(row-level) 소유권으로 가드.
+  // GLOBAL scope 만 별도 권한 필요 — admin 만 등록·갱신·삭제 허용.
+  // ============================================================================
+  MANAGE_SAVED_VIEWS_GLOBAL = 'manage:saved-views:global',
 }
 
 /**
@@ -353,6 +361,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
 
   [Permission.UPLOAD_DOCUMENT]: '문서 업로드',
+
+  [Permission.MANAGE_SAVED_VIEWS_GLOBAL]: '전체 공유 Saved View 관리',
 };
 
 /**
@@ -475,6 +485,8 @@ export const PERMISSION_LABELS_EN: Record<Permission, string> = {
   [Permission.PERFORM_DATA_MIGRATION]: 'Perform Data Migration',
 
   [Permission.UPLOAD_DOCUMENT]: 'Upload Document',
+
+  [Permission.MANAGE_SAVED_VIEWS_GLOBAL]: 'Manage Global Saved Views',
 };
 
 /**

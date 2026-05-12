@@ -678,6 +678,18 @@ export enum ErrorCode {
   UserSiteScopeOnly = 'USER_SITE_SCOPE_ONLY',
 
   // ============================================================================
+  // Saved Views 도메인 — PRIVATE/TEAM/GLOBAL scope 트리아드 + CAS
+  // ============================================================================
+  /** Saved View 가 존재하지 않음 — id mismatch 또는 cascade 삭제 후. */
+  SavedViewNotFound = 'SAVED_VIEW_NOT_FOUND',
+  /** scope 별 권한 거부 — PRIVATE: 비-owner / TEAM: 다른 팀 / GLOBAL: write 시 권한 없음. */
+  SavedViewScopeForbidden = 'SAVED_VIEW_SCOPE_FORBIDDEN',
+  /** 사용자당 모듈별 최대(MAX_SAVED_VIEWS_PER_MODULE) 초과 — 신규 생성 차단. */
+  SavedViewMaxReached = 'SAVED_VIEW_MAX_REACHED',
+  /** scope=TEAM 인데 teamId 미지정 또는 본인 팀과 불일치 — 무결성 위반. */
+  SavedViewTeamRequiredForScope = 'SAVED_VIEW_TEAM_REQUIRED_FOR_SCOPE',
+
+  // ============================================================================
   // 공통 기본 에러 (versioned-base.service.ts 기본값)
   // ============================================================================
   /** 도메인 지정 에러 코드 없을 때 updateWithVersion 기본 notFoundCode */
@@ -1019,6 +1031,12 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.UserCannotChangeSeniorRole]: 403,
   [ErrorCode.UserTeamScopeOnly]: 403,
   [ErrorCode.UserSiteScopeOnly]: 403,
+
+  // Saved Views 도메인
+  [ErrorCode.SavedViewNotFound]: 404,
+  [ErrorCode.SavedViewScopeForbidden]: 403,
+  [ErrorCode.SavedViewMaxReached]: 409,
+  [ErrorCode.SavedViewTeamRequiredForScope]: 400,
 
   // 공통 기본 에러
   [ErrorCode.EntityNotFound]: 404,
