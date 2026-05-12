@@ -40,8 +40,8 @@
     "test:e2e:setup": "pnpm run db:migrate && pnpm run db:seed"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1025.0",
-    "@aws-sdk/s3-request-presigner": "^3.1025.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@equipment-management/db": "workspace:*",
     "@equipment-management/schemas": "workspace:*",
     "@equipment-management/shared-constants": "workspace:*",
