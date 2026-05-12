@@ -64,11 +64,14 @@ import { useNonConformanceMutations } from '../use-non-conformance-mutations';
 const NC_ID = 'nc-uuid-fixture';
 const EQUIPMENT_ID = 'equip-uuid-fixture';
 
-function makeWrapper() {
+function makeWrapper(): {
+  Wrapper: React.FC<{ children: React.ReactNode }>;
+  queryClient: QueryClient;
+} {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: 0 }, queries: { retry: 0 } },
   });
-  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
   return { Wrapper, queryClient };
 }
