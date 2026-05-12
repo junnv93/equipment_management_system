@@ -781,6 +781,49 @@ awk '/function StatusBadge/,/^}$/' apps/frontend/components/ui/StatusBadge.tsx \
 **FAIL:** 로컬 재정의 발견 또는 StatusBadge 내 inline 분기 발견.
 
 
+### Step 63 — SSOT `.mjs/.ts` ↔ static config (toml/yaml/json) mirror invariant (2026-05-12 ultrareview-shield-followups)
+
+**적용 대상**: JS/TS SSOT 모듈의 `as const`/`Object.freeze` 배열이 정적 config 파일 (`.toml`, `.yaml`, `.json`, `.ini` 등)에 미러될 때. 정적 config는 동적 import 불가하므로 manual mirror가 불가피하지만, 둘 중 한 곳만 갱신되면 silent drift 발생.
+
+**현재 사례** (2026-05-12 ultrareview-shield-followups):
+- SSOT: `scripts/lib/scan-exclusion-paths.mjs` `GITLEAKS_EXCLUDED_DIRS`
+- Mirror: `.gitleaks.toml` `[allowlist].paths` (`(^|/)<dir>/` regex)
+- Invariant spec: `scripts/__tests__/scan-exclusion-paths-sync.spec.mjs` — drift 도입 시 즉시 FAIL with specific 메시지
+
+**잠재 사례** (미래 발견 가능):
+- `tsconfig.json` paths ↔ Next.js webpack alias config
+- `.eslintrc` rules ↔ ESLint custom rule plugin
+- `docker-compose.yml` service names ↔ Node script orchestrator
+- `.github/workflows/*.yml` matrix ↔ npm script SSOT
+
+**검증 패턴**:
+
+```bash
+# (1) SSOT module 신설 시 — Object.freeze 또는 as const 강제
+grep -rn "Object\.freeze\|as const satisfies" scripts/lib/*.mjs apps/*/lib/*-ssot.ts
+
+# (2) Mirror 의존 static config 파일 식별 — JSDoc/주석에 SSOT 경로 명시 필수
+grep -rn "SSOT:\|# SSOT" .gitleaks.toml .eslintrc.* docker-compose.yml \
+  | grep -v "^Binary"
+
+# (3) Sync invariant spec 존재 확인 — 신규 SSOT module 추가 시 spec 동반 필수
+for ssot in $(ls scripts/lib/*.mjs apps/*/lib/*-ssot.ts 2>/dev/null); do
+  base=$(basename "$ssot" | sed 's/\.[^.]*$//')
+  spec_count=$(find . -name "${base}-sync.spec.*" -not -path '*/node_modules/*' 2>/dev/null | wc -l)
+  [ "$spec_count" -eq 0 ] && echo "⚠  SSOT $ssot — sync spec 부재"
+done
+
+# (4) Sync spec 자체 회귀 검증 — 의도적 drift 도입 시 FAIL 발화 확인
+# (CI에 통합된 spec 이 pre-push 게이트에서 자동 실행 — node --test ... 결과 fail=0 확인)
+
+# (5) pre-push 게이트 통합 확인 — sync spec 이 root-spec batch 에 등록되어 있는지
+grep -F "sync.spec" .husky/pre-push
+```
+
+**PASS:** SSOT module + mirror static config 양쪽 정의 + sync invariant spec + pre-push 통합.
+**FAIL:** sync spec 부재 또는 pre-push 미통합 (silent drift 위험).
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

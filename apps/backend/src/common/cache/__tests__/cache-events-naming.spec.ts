@@ -34,7 +34,7 @@ describe('CACHE_EVENTS 명명 규약 (ADR-0012)', () => {
   });
 
   it('LEGACY allowlist의 모든 값은 실제 CACHE_EVENTS에 등재되어 있다 (dead allowlist 방지)', () => {
-    const cacheEventValues = new Set(Object.values(CACHE_EVENTS));
+    const cacheEventValues = new Set<string>(Object.values(CACHE_EVENTS));
     const orphans: string[] = [];
     for (const legacy of CACHE_EVENT_LEGACY_NAMING_ALLOWLIST) {
       if (!cacheEventValues.has(legacy)) orphans.push(legacy);
