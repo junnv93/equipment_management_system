@@ -19,25 +19,24 @@ export interface KeyboardShortcutsContextValue {
   resetAllOverrides: () => void;
 }
 
-const noop = () => undefined;
-
-export const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue>({
-  cheatsheetOpen: false,
-  openCheatsheet: noop,
-  closeCheatsheet: noop,
-  toggleCheatsheet: noop,
-  overrides: {},
-  setOverride: noop,
-  clearOverride: noop,
-  resetAllOverrides: noop,
-});
+// 코드베이스 표준 패턴 (BreadcrumbContext 와 동일) — createContext default = undefined.
+// 두 가지 소비 진입점 분리:
+//  - useKeyboardShortcutsContext: strict consumer, Provider 누락 시 throw
+//  - useKeyboardShortcutsScope: optional consumer, undefined 반환으로 graceful degradation
+export const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | undefined>(
+  undefined
+);
 
 /**
- * KeyboardShortcutsContext 단일 소비 진입점.
+ * KeyboardShortcutsContext 단일 소비 진입점 (strict).
  *
- * Provider mount 후 모든 consumer 가 동일 state 를 공유 — 같은 탭 내 즉시 sync.
- * Provider 미장착 시 default noop context 가 반환되어 SSR/early mount 에서도 안전.
+ * Provider mount 가 보장된 컴포넌트에서 사용. Provider 누락 시 즉시 throw 로 개발 단계 회귀 차단.
+ * (코드베이스 표준: `useBreadcrumb` 와 동일한 패턴 — React 공식 + Radix UI / shadcn 표준)
  */
 export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
-  return useContext(KeyboardShortcutsContext);
+  const context = useContext(KeyboardShortcutsContext);
+  if (!context) {
+    throw new Error('useKeyboardShortcutsContext must be used within KeyboardShortcutsProvider');
+  }
+  return context;
 }

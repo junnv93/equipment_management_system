@@ -13,9 +13,8 @@
 /// <reference types="@testing-library/jest-dom" />
 
 import { act, render, screen } from '@testing-library/react';
-import { useContext } from 'react';
 import { KeyboardShortcutsProvider } from '../KeyboardShortcutsProvider';
-import { KeyboardShortcutsContext } from '@/contexts/KeyboardShortcutsContext';
+import { useKeyboardShortcutsContext } from '@/contexts/KeyboardShortcutsContext';
 import { SHORTCUT_OVERRIDES_STORAGE_KEY } from '@/lib/shortcuts/overrides';
 
 jest.mock('next-intl', () => ({
@@ -33,7 +32,7 @@ jest.mock('@/components/checkouts/KeyboardShortcutsCheatsheet', () => ({
 }));
 
 function Inspector() {
-  const ctx = useContext(KeyboardShortcutsContext);
+  const ctx = useKeyboardShortcutsContext();
   return <div data-testid="overrides">{JSON.stringify(ctx.overrides)}</div>;
 }
 
@@ -150,6 +149,15 @@ describe('KeyboardShortcutsProvider — multi-tab storage sync (G-16)', () => {
 
     // sessionStorage 이벤트는 무시되므로 빈 객체 유지
     expect(screen.getByTestId('overrides').textContent).toBe('{}');
+  });
+
+  it('Provider 외부에서 useKeyboardShortcutsContext 호출 시 throw (strict consumer)', () => {
+    // React 가 throw 를 console.error 로 출력 — spy 로 swallow
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(() => render(<Inspector />)).toThrow(
+      /useKeyboardShortcutsContext must be used within KeyboardShortcutsProvider/
+    );
+    consoleErrorSpy.mockRestore();
   });
 
   it('Unmount 후 storage event listener 미동작', () => {
