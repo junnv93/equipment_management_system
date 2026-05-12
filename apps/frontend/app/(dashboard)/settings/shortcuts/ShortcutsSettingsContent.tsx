@@ -13,13 +13,8 @@ import {
   type ShortcutDef,
   type ShortcutId,
 } from '@/lib/constants/keyboard-shortcuts';
-import {
-  loadShortcutOverrides,
-  saveShortcutOverrides,
-  resetShortcutOverrides,
-  isValidOverrideKey,
-  type ShortcutOverrideMap,
-} from '@/lib/shortcuts/overrides';
+import { isValidOverrideKey } from '@/lib/shortcuts/overrides';
+import { useKeyboardShortcutsContext } from '@/contexts/KeyboardShortcutsContext';
 
 type Scope = 'list' | 'detail' | 'global';
 
@@ -45,17 +40,13 @@ function displayKey(rawKey: string, modifiers: ShortcutDef['modifiers']): string
 
 export default function ShortcutsSettingsContent() {
   const t = useTranslations('settings.shortcuts');
-  const [overrides, setOverrides] = useState<ShortcutOverrideMap>({});
+  const { overrides, setOverride, clearOverride, resetAllOverrides } =
+    useKeyboardShortcutsContext();
   const [editingId, setEditingId] = useState<ShortcutId | null>(null);
   const [editValue, setEditValue] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  // Mount 후 1회 read — SSR/hydration mismatch 회피
-  useEffect(() => {
-    setOverrides(loadShortcutOverrides());
-  }, []);
 
   // 편집 시작 시 input auto-focus
   useEffect(() => {
@@ -122,25 +113,19 @@ export default function ShortcutsSettingsContent() {
       setEditError(t('help.duplicate'));
       return;
     }
-    const next: ShortcutOverrideMap = { ...overrides };
-    if (trimmed === def.key) delete next[editingId];
-    else next[editingId] = trimmed;
-    setOverrides(next);
-    saveShortcutOverrides(next);
+    // SSOT key 와 동일하면 override 제거 (default 복귀), 아니면 set
+    if (trimmed === def.key) clearOverride(editingId);
+    else setOverride(editingId, trimmed);
     announce(t('help.savedNotice'));
     cancelEdit();
   };
 
   const resetOne = (id: ShortcutId) => {
-    const next = { ...overrides };
-    delete next[id];
-    setOverrides(next);
-    saveShortcutOverrides(next);
+    clearOverride(id);
   };
 
   const resetAll = () => {
-    resetShortcutOverrides();
-    setOverrides({});
+    resetAllOverrides();
     announce(t('help.resetAllNotice'));
   };
 

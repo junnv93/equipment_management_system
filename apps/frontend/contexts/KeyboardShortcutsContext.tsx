@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext } from 'react';
+import { createContext, useContext } from 'react';
 import type { ShortcutId } from '@/lib/constants/keyboard-shortcuts';
 import type { ShortcutOverrideMap } from '@/lib/shortcuts/overrides';
 
@@ -31,3 +31,13 @@ export const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextVa
   clearOverride: noop,
   resetAllOverrides: noop,
 });
+
+/**
+ * KeyboardShortcutsContext 단일 소비 진입점.
+ *
+ * Provider mount 후 모든 consumer 가 동일 state 를 공유 — 같은 탭 내 즉시 sync.
+ * Provider 미장착 시 default noop context 가 반환되어 SSR/early mount 에서도 안전.
+ */
+export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
+  return useContext(KeyboardShortcutsContext);
+}

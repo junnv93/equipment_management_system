@@ -17,12 +17,11 @@ import {
   type ShortcutId,
 } from '@/lib/constants/keyboard-shortcuts';
 import type { ShortcutOverrideMap } from '@/lib/shortcuts/overrides';
+import { useKeyboardShortcutsContext } from '@/contexts/KeyboardShortcutsContext';
 
 interface KeyboardShortcutsCheatsheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 사용자 override map — 미전달 시 SSOT key 만 표시 */
-  overrides?: ShortcutOverrideMap;
 }
 
 interface KeyBadgeProps {
@@ -77,13 +76,16 @@ function ShortcutRow({ def, id, label, overrides }: ShortcutRowProps) {
 /**
  * 키보드 단축키 치트시트 Dialog.
  * role="dialog" + aria-labelledby + Esc close는 Radix Dialog가 자동 처리.
+ *
+ * overrides 는 `KeyboardShortcutsContext` 에서 직접 consume — multi-tab storage sync
+ * 와 setOverride 액션이 Context 단일 source 로 흐르도록 prop drilling 제거 (R-2).
  */
 export function KeyboardShortcutsCheatsheet({
   open,
   onOpenChange,
-  overrides = {},
 }: KeyboardShortcutsCheatsheetProps) {
   const t = useTranslations('checkouts.shortcuts');
+  const { overrides } = useKeyboardShortcutsContext();
 
   const listShortcuts = Object.entries(KEYBOARD_SHORTCUTS).filter(
     ([, def]) => def.scope === 'list'
