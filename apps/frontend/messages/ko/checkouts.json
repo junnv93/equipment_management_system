@@ -104,6 +104,8 @@
     "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요.",
     "rejectSuccess": "반출 요청이 반려되었습니다.",
     "rejectError": "반려 처리 중 오류가 발생했습니다.",
+    "revokeApprovalSuccess": "승인을 철회했습니다. 요청을 다시 검토해 주세요.",
+    "revokeApprovalError": "승인 철회 중 오류가 발생했습니다.",
     "startSuccess": "장비 반출이 시작되었습니다.",
     "startError": "반출을 시작할 수 없습니다.",
     "returnSuccess": "장비가 정상적으로 반입되었습니다.",

@@ -104,6 +104,8 @@
     "versionConflictDesc": "Data has been updated. Please check the latest status.",
     "rejectSuccess": "Checkout request rejected.",
     "rejectError": "An error occurred during rejection.",
+    "revokeApprovalSuccess": "Approval revoked. Please review the request again.",
+    "revokeApprovalError": "An error occurred while revoking the approval.",
     "startSuccess": "Checkout started.",
     "startError": "Unable to start checkout.",
     "returnSuccess": "Return completed successfully.",

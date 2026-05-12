@@ -80,6 +80,8 @@ import ProgressFlowSection from '@/components/checkouts/ProgressFlowSection';
 import dynamic from 'next/dynamic';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useUndoToast } from '@/hooks/use-undo-toast';
+import { RevocationWindowCountdown } from '@/components/checkouts/RevocationWindowCountdown';
+import { revokeApprovalWithReason } from '@/lib/api/checkout-revoke-approval-with-reason';
 
 // S-8 code-split — qrcode lib + EquipmentQRCode chunk를 detail 진입 초기 번들에서 분리.
 // drawer trigger 버튼은 user 상호작용 후에야 필요하므로 ssr: false + loading null 안전.
@@ -114,7 +116,8 @@ export default function CheckoutDetailClient({
   const tCommon = useTranslations('common');
   const { fmtDate, fmtDateTime } = useDateFormatter();
   const router = useRouter();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const currentUserId = user?.id;
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   // verify-ssot Step 37 — useEffectiveRole SSOT (시뮬레이션 모드 반영)
@@ -391,6 +394,33 @@ export default function CheckoutDetailClient({
     },
   });
 
+  // 승인 철회 mutation (S-2 RevocationWindowCountdown 통합, SH-7).
+  // 5분 윈도우 + 사용자 입력 사유 — backend revoke-approval.dto 정합 (version + reason).
+  // 보안 가드: status === APPROVED && approverId === currentUserId 는 UI 측에서 부가 가드,
+  // 권한 fail-close는 backend가 SSOT (scope → FSM → time-window → domain 순).
+  const revokeMutation = useOptimisticMutation<void, string, Checkout>({
+    mutationFn: async (reason: string) => {
+      const { version } = await checkoutApi.getCheckout(checkout.id);
+      await revokeApprovalWithReason(checkout.id, { version, reason });
+    },
+    queryKey: queryKeys.checkouts.resource.detail(checkout.id),
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: CSVal.PENDING as CheckoutStatus,
+        approverId: undefined,
+        approvedAt: undefined,
+        approvedBy: undefined,
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    successMessage: t('toasts.revokeApprovalSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.revokeApprovalError')),
+    onSuccessCallback: () => {
+      router.refresh();
+    },
+  });
+
   // 반입 반려 mutation
   const rejectReturnMutation = useOptimisticMutation<Checkout, string, Checkout>({
     mutationFn: async (reason: string) => {
@@ -515,7 +545,8 @@ export default function CheckoutDetailClient({
     rejectReturnMutation.isPending ||
     cancelMutation.isPending ||
     borrowerApproveMutation.isPending ||
-    borrowerRejectMutation.isPending;
+    borrowerRejectMutation.isPending ||
+    revokeMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -614,6 +645,21 @@ export default function CheckoutDetailClient({
           </Button>
         </div>
       )}
+
+      {/* 승인 철회 윈도우 — SH-7. 승인 후 5분 + 본인 승인 건 한정 노출.
+          만료 후에도 disabled+tooltip 으로 사유 swap (RevocationWindowCountdown 내부 SSOT). */}
+      {checkout.status === CSVal.APPROVED &&
+        checkout.approverId &&
+        currentUserId &&
+        checkout.approverId === currentUserId && (
+          <div className="flex justify-end" data-testid="revocation-window">
+            <RevocationWindowCountdown
+              approvedAt={checkout.approvedAt}
+              onRevoke={(reason) => revokeMutation.mutate(reason)}
+              isPending={revokeMutation.isPending}
+            />
+          </div>
+        )}
 
       {/* 진행 흐름 — REVIEW_RESULT.md P0-1 통합: 기존 진행 상태 stepper + 워크플로 타임라인 두 카드를
           단일 통합 stepper로. 각 step 하단에 actor + timestamp + ⚡당신 마커. P0-2 라벨 줄바꿈은 .label-ko 적용.
