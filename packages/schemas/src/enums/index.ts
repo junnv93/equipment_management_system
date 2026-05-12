@@ -17,4 +17,5 @@ export * from './intermediate-inspection';
 export * from './cable';
 export * from './self-inspection';
 export * from './inspection-result-section';
+export * from './saved-views';
 export * from './values';

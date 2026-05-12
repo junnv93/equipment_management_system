@@ -414,6 +414,13 @@
       "when": 1747008000000,
       "tag": "0058_add_rejection_presets_updated_at",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1747094400000,
+      "tag": "0059_add_saved_views",
+      "breakpoints": true
     }
   ]
 }
