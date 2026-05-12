@@ -334,6 +334,10 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.settingsDisplay',
     parent: '/settings',
   },
+  '/settings/shortcuts': {
+    labelKey: 'navigation.settingsShortcuts',
+    parent: '/settings',
+  },
   '/settings/admin/calibration': {
     labelKey: 'navigation.settingsCalibration',
     parent: '/settings',
