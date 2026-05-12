@@ -52,23 +52,27 @@ export interface StatusBadgeProps {
   size?: 'sm' | 'base';
 }
 
-export function StatusBadge({
+function StatusBadgeImpl({
   status,
   label,
   className,
   showDot = true,
   size = 'sm',
 }: StatusBadgeProps) {
-  const t = useTranslations('qr.statusBadge.status');
+  const t = useTranslations('qr.statusBadge');
   const tone = EQUIPMENT_STATUS_TONE[status];
   const semanticTone = TONE_TO_SEMANTIC[tone];
   const i18nKey = EQUIPMENT_STATUS_I18N_KEYS[status];
-  const displayLabel = label ?? t(i18nKey);
+  const displayLabel = label ?? t(`status.${i18nKey}`);
+  // aria-label 에 tone 의미 결합 — 스크린리더가 "정상" / "긴급" 등을 함께 announce.
+  // displayLabel 이 이미 tone 의미와 동의어인 경우(예: '비활성' status·'비활성' mute)도 중복 없이 자연.
+  const toneLabel = t(`tone.${tone}`);
+  const ariaLabel = `${displayLabel} · ${toneLabel}`;
 
   return (
     <span
       role="status"
-      aria-label={displayLabel}
+      aria-label={ariaLabel}
       className={cn(
         'inline-flex shrink-0 items-center gap-1.5',
         getSemanticBadgeClasses(semanticTone),
@@ -86,3 +90,9 @@ export function StatusBadge({
     </span>
   );
 }
+
+/**
+ * StatusBadge — React.memo 적용 (G-9). props shallow equality 충분 (i18n lookup 내부).
+ */
+export const StatusBadge = React.memo(StatusBadgeImpl);
+StatusBadge.displayName = 'StatusBadge';

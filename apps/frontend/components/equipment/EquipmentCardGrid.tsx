@@ -152,10 +152,7 @@ const EquipmentCard = memo(function EquipmentCard({
             />
           )}
           <div className="min-w-0 flex-1">
-            <p
-              className={`text-xs ${getManagementNumberClasses()} tracking-wider`}
-              data-testid="management-number"
-            >
+            <p className={getManagementNumberClasses()} data-testid="management-number">
               <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
             </p>
             <CardTitle

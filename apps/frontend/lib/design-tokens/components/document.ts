@@ -42,7 +42,7 @@ export const DOCUMENT_TABLE = {
   /** Row hover: accent bar + background + motion */
   rowHover: [
     'hover:bg-brand-info/[0.04]',
-    'hover:shadow-[inset_3px_0_0_hsl(var(--brand-color-info))]',
+    'hover:shadow-[inset_3px_0_0_var(--brand-color-info)]',
     DOCUMENT_MOTION.tableRow,
   ].join(' '),
 
@@ -150,7 +150,7 @@ export const DOCUMENT_DISPLAY = {
   manualRow: [
     'flex items-center justify-between p-3 rounded-lg border bg-muted/30',
     'hover:bg-brand-purple/[0.04]',
-    'hover:shadow-[inset_3px_0_0_hsl(var(--brand-color-purple))]',
+    'hover:shadow-[inset_3px_0_0_var(--brand-color-purple)]',
     TRANSITION_PRESETS.instantBg,
   ].join(' '),
 

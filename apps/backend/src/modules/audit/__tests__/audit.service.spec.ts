@@ -4,6 +4,11 @@ import { AuditService } from '../audit.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
 import { SYSTEM_USER_UUID } from '../../../database/utils/uuid-constants';
+import {
+  createDrizzleInsertChain as createInsertChain,
+  createDrizzleSelectChain as createSelectChain,
+  createDrizzleUpdateChain as createUpdateChain,
+} from '../../../common/__tests__/drizzle-stub';
 
 describe('AuditService', () => {
   let service: AuditService;
@@ -14,34 +19,6 @@ describe('AuditService', () => {
     transaction: jest.Mock;
   };
   let mockCacheService: Record<string, jest.Mock>;
-
-  // Drizzle fluent chain builder — 모든 메서드가 this를 반환하고 then()으로 resolve
-  const createInsertChain = (): { values: jest.Mock } => {
-    const chain = { values: jest.fn().mockResolvedValue(undefined) };
-    return chain;
-  };
-
-  const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
-    const chain: Record<string, jest.Mock> = {};
-    const self = (): Record<string, jest.Mock> => chain;
-    chain.from = jest.fn().mockImplementation(self);
-    chain.where = jest.fn().mockImplementation(self);
-    chain.orderBy = jest.fn().mockImplementation(self);
-    chain.limit = jest.fn().mockImplementation(self);
-    chain.offset = jest.fn().mockImplementation(self);
-    chain.groupBy = jest.fn().mockImplementation(self);
-    // Promise-like: await 시 rows 반환
-    chain.then = jest.fn().mockImplementation((resolve: (v: unknown) => void) => resolve(rows));
-    return chain;
-  };
-
-  const createUpdateChain = (): { set: jest.Mock; where: jest.Mock } => {
-    const chain = {
-      set: jest.fn().mockReturnThis(),
-      where: jest.fn().mockResolvedValue(undefined),
-    };
-    return chain;
-  };
 
   const sampleLog = {
     id: 'log-1',

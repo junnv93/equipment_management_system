@@ -45,6 +45,9 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
+const CIRCLE_RADIUS = 28;
+const CIRCLE_CIRCUMFERENCE = Math.PI * 2 * CIRCLE_RADIUS;
+
 export function AutoProgressCountdown({
   durationMs = 2000,
   reducedMotionDurationMs = 1500,
@@ -55,15 +58,19 @@ export function AutoProgressCountdown({
 }: AutoProgressCountdownProps) {
   const t = useTranslations('qr.landing.autoProgress');
   const reduced = useReducedMotion();
-  const effectiveDuration = reduced ? reducedMotionDurationMs : durationMs;
 
-  const [elapsed, setElapsed] = React.useState(0);
-  const startRef = React.useRef<number | null>(null);
+  // G-8: rAF setState 제거 — circle 의 strokeDashoffset 은 ref + CSS transition 으로 일임 (React reconciliation 0회).
+  //      카운트다운 텍스트만 1초 tick (setInterval) — 총 re-render 수 durationMs(2s) ≈ 2~3 회.
+  const circleRef = React.useRef<SVGCircleElement | null>(null);
   const cancelledRef = React.useRef(false);
   const completeRef = React.useRef(onComplete);
   React.useEffect(() => {
     completeRef.current = onComplete;
   }, [onComplete]);
+
+  const [remainingSec, setRemainingSec] = React.useState(() =>
+    Math.ceil((reduced ? reducedMotionDurationMs : durationMs) / 1000)
+  );
 
   // reduced-motion: simple timeout, no indicator
   React.useEffect(() => {
@@ -74,24 +81,35 @@ export function AutoProgressCountdown({
     return () => window.clearTimeout(tid);
   }, [reduced, reducedMotionDurationMs]);
 
-  // standard: requestAnimationFrame tick
+  // standard: CSS transition + 1s tick for countdown text.
   React.useEffect(() => {
     if (reduced) return undefined;
-    let raf: number;
-    const tick = (now: number) => {
-      if (cancelledRef.current) return;
-      if (startRef.current === null) startRef.current = now;
-      const newElapsed = Math.min(now - startRef.current, durationMs);
-      setElapsed(newElapsed);
-      if (newElapsed >= durationMs) {
-        completeRef.current();
-        return;
+    cancelledRef.current = false;
+    // Initial state — full circumference offset (0% progress).
+    if (circleRef.current) {
+      circleRef.current.style.transition = 'none';
+      circleRef.current.style.strokeDashoffset = String(CIRCLE_CIRCUMFERENCE);
+    }
+    // Next task: switch transition to linear durationMs, drive offset to 0 (100% progress).
+    // setTimeout(0) 으로 다음 task tick 에 적용 (같은 frame 내 style 변경은 브라우저가 batch 처리하여 transition trigger 누락).
+    const startTid = window.setTimeout(() => {
+      if (circleRef.current && !cancelledRef.current) {
+        circleRef.current.style.transition = `stroke-dashoffset ${durationMs}ms linear`;
+        circleRef.current.style.strokeDashoffset = '0';
       }
-      raf = window.requestAnimationFrame(tick);
-    };
-    raf = window.requestAnimationFrame(tick);
+    }, 0);
+    // 완료 트리거 — durationMs 후 onComplete (단일 setTimeout, re-render 없음).
+    const completeTid = window.setTimeout(() => {
+      if (!cancelledRef.current) completeRef.current();
+    }, durationMs);
+    // 카운트다운 텍스트 tick — 1초마다 re-render (총 2~3회 / 2s).
+    const tickInterval = window.setInterval(() => {
+      setRemainingSec((prev) => Math.max(0, prev - 1));
+    }, 1000);
     return () => {
-      if (raf) window.cancelAnimationFrame(raf);
+      window.clearTimeout(startTid);
+      window.clearTimeout(completeTid);
+      window.clearInterval(tickInterval);
     };
   }, [reduced, durationMs]);
 
@@ -99,9 +117,6 @@ export function AutoProgressCountdown({
     cancelledRef.current = true;
     onCancel();
   }, [onCancel]);
-
-  const remainingSec = Math.max(0, Math.ceil((effectiveDuration - (reduced ? 0 : elapsed)) / 1000));
-  const progressPct = reduced ? 0 : Math.min(100, (elapsed / durationMs) * 100);
 
   return (
     <div
@@ -122,17 +137,17 @@ export function AutoProgressCountdown({
         >
           <circle cx="32" cy="32" r="28" className="stroke-border" strokeWidth="4" fill="none" />
           <circle
+            ref={circleRef}
             cx="32"
             cy="32"
             r="28"
             className="stroke-brand-urgent"
             strokeWidth="4"
             fill="none"
-            strokeDasharray={Math.PI * 2 * 28}
-            strokeDashoffset={Math.PI * 2 * 28 * (1 - progressPct / 100)}
+            strokeDasharray={CIRCLE_CIRCUMFERENCE}
+            strokeDashoffset={CIRCLE_CIRCUMFERENCE}
             strokeLinecap="round"
             transform="rotate(-90 32 32)"
-            style={{ transition: 'stroke-dashoffset 50ms linear' }}
           />
         </svg>
       )}

@@ -1064,4 +1064,43 @@ grep -c "cssVar" apps/frontend/lib/design-tokens/index.ts
 **신규 CSS variable 추가 절차**:
 1. `apps/frontend/lib/design-tokens/css-variables.ts` `CSS_VAR_NAMES` 에 `camelCaseKey: '--kebab-name'` entry 추가
 2. `apps/frontend/styles/globals.css` `:root` (또는 `:root.dark`) 에 동일 이름 정의
+
+---
+
+## Step 37: Locale Safety — `toLocaleDateString` / `toLocaleTimeString` 호출자 locale 인자 강제
+
+> 도입: 2026-05-12 qr-visual-redesign-followups-g4-g12 sprint G-11 closure. 브라우저 locale 의존성 회귀 차단.
+
+**검증 명령**:
+```bash
+# locale-less 호출 0건 (RepairHistoryTimeline.tsx 의 의도적 ko-KR 하드코딩 allow-list)
+rg -nE "toLocaleDateString\(\)|toLocaleTimeString\(\)" apps/frontend/components apps/frontend/app \
+  | grep -v "RepairHistoryTimeline.tsx"
+# EXIT: 결과 0 라인 expected
+```
+
+**PASS:**
+- 모든 `'use client'` 컴포넌트에서 `useLocale()` 또는 `useFormatter()` (next-intl) 경유 후 `toLocaleDateString(locale)` 인자 전달
+- 서버 컴포넌트는 `getLocale()` (next-intl/server) 사용
+
+**FAIL:**
+- `new Date(x).toLocaleDateString()` (locale-less)
+- `someDate.toLocaleTimeString()` (locale-less)
+
+**예외 인정** (allow-list):
+- `RepairHistoryTimeline.tsx` — `'ko-KR'` 하드코딩 (별도 후속 sprint trigger)
+- 숫자 포맷 `.toLocaleString()` — 본 Step 검증 범위 외 (별도 검토 필요 시 추가)
+
+**Why**: 한국 사용자가 브라우저 locale 을 `en-US` 로 설정 시 날짜 포맷이 `M/D/YYYY` 로 노출되어 UX 깨짐. `useLocale()` 의 명시 locale 전달로 i18n 정합성 보장.
+
+**How to apply**: 새 컴포넌트에서 날짜 표시 시:
+```typescript
+'use client';
+import { useLocale } from 'next-intl';
+
+export function MyComponent({ date }: { date: string }) {
+  const locale = useLocale();
+  return <span>{new Date(date).toLocaleDateString(locale)}</span>;
+}
+```
 3. Producer/Consumer 가 `CSS_VAR_NAMES.camelCaseKey` 참조 (runtime) — design-token 파일은 string literal 유지 (Tailwind JIT)

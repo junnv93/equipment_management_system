@@ -40,6 +40,24 @@ interface EquipmentQRButtonProps {
   iconOnly?: boolean;
 }
 
+/**
+ * Mini QR 시각 패턴 — 7×7 module grid 의 deterministic pattern.
+ *
+ * - 좌상단 / 우상단 / 좌하단 3×3 finder pattern (실 QR 코드 모서리 인식자 흉내)
+ * - 가운데 4×4 영역의 deterministic data module (사이즈 비교 시 visual hint)
+ *
+ * 1 = filled, 0 = empty. currentColor 로 채워 foreground 토큰 자동 적응.
+ */
+const PREVIEW_QR_PATTERN: readonly (readonly (0 | 1)[])[] = [
+  [1, 1, 1, 0, 1, 1, 1],
+  [1, 0, 1, 0, 1, 0, 1],
+  [1, 1, 1, 0, 1, 1, 1],
+  [0, 0, 0, 1, 0, 1, 0],
+  [1, 1, 1, 0, 1, 1, 0],
+  [1, 0, 1, 0, 0, 0, 1],
+  [1, 1, 1, 1, 0, 1, 1],
+] as const;
+
 /** 시각 비교 미니 라벨 — 비례 사각형 + 좌측 mini QR + 권장 용도 라벨. */
 function LabelPreviewRow({
   preset,
@@ -87,18 +105,40 @@ function LabelPreviewRow({
           )}
           style={{ width: `${previewWidthPx}px`, height: `${previewHeightPx}px` }}
         >
-          {/* mini QR pattern */}
-          <div
-            className="shrink-0 rounded-sm bg-foreground/85"
-            style={{
-              width: `${Math.min(previewHeightPx - 6, 18)}px`,
-              height: `${Math.min(previewHeightPx - 6, 18)}px`,
-            }}
-          />
-          <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
-            <div className="h-1 w-full rounded bg-foreground/40" />
-            <div className="h-1 w-3/4 rounded bg-foreground/30" />
-            <div className="h-1 w-1/2 rounded bg-foreground/30" />
+          {/* mini QR pattern — 7×7 deterministic module grid (G-12). */}
+          {(() => {
+            const qrSize = Math.min(previewHeightPx - 6, 18);
+            return (
+              <svg
+                viewBox="0 0 7 7"
+                width={qrSize}
+                height={qrSize}
+                className="shrink-0 text-foreground/85"
+                shapeRendering="crispEdges"
+                aria-hidden="true"
+              >
+                {PREVIEW_QR_PATTERN.flatMap((row, y) =>
+                  row.map((cell, x) =>
+                    cell === 1 ? (
+                      <rect
+                        key={`${x}-${y}`}
+                        x={x}
+                        y={y}
+                        width="1"
+                        height="1"
+                        fill="currentColor"
+                      />
+                    ) : null
+                  )
+                )}
+              </svg>
+            );
+          })()}
+          {/* 라벨 텍스트 line hint — 1차/2차 텍스트가 QR 우측에 인쇄되는 것을 시각화. */}
+          <div className="flex flex-1 flex-col gap-1 overflow-hidden">
+            <div className="h-[3px] w-full rounded-sm bg-foreground/60" />
+            <div className="h-[2px] w-3/4 rounded-sm bg-foreground/35" />
+            <div className="h-[2px] w-1/2 rounded-sm bg-foreground/25" />
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-0.5">

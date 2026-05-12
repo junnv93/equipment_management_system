@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Download, Upload, History, FilePlus, MoreHorizontal } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -41,6 +41,7 @@ interface UploadTarget {
 export default function FormTemplatesTable({ templates }: FormTemplatesTableProps) {
   const t = useTranslations('form-templates');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
   const { can } = useAuth();
   const canManage = can(Permission.MANAGE_FORM_TEMPLATES);
@@ -129,7 +130,9 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
 
                   {/* 최종 등록 */}
                   <TableCell className={FORM_TEMPLATES_TABLE_TOKENS.date}>
-                    {tpl.current ? new Date(tpl.current.uploadedAt).toLocaleDateString() : '-'}
+                    {tpl.current
+                      ? new Date(tpl.current.uploadedAt).toLocaleDateString(locale)
+                      : '-'}
                   </TableCell>
 
                   {/* 파일명 */}

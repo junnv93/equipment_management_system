@@ -247,98 +247,72 @@ export default function EquipmentConditionForm({
         </Alert>
       )}
 
-      {/* 외관 상태 — 인라인 abnormal */}
-      <ConditionItemCard
-        kind="appearance"
-        icon={Eye}
-        titleKey="condition.appearance"
-        descriptionKey="condition.appearanceDesc"
-        value={appearanceStatus}
-        onChange={setAppearanceStatus}
-        previousValue={previousCheck?.appearanceStatus}
-      />
-
-      {/* 작동 상태 */}
-      <ConditionItemCard
-        kind="operation"
-        icon={Cog}
-        titleKey="condition.operation"
-        descriptionKey="condition.operationDesc"
-        value={operationStatus}
-        onChange={setOperationStatus}
-        previousValue={previousCheck?.operationStatus}
-      />
-
-      {/* 부속품 상태 — accessories enum */}
-      <AccessoriesItemCard
-        value={accessoriesStatus}
-        onChange={setAccessoriesStatus}
-        previousValue={previousCheck?.accessoriesStatus}
-      />
-
-      {/* 이상 시 통합 입력 영역 — abnormal 카드 내부 표시 의도지만 통합 textarea 유지 (다중 항목 abnormal 동시 입력) */}
-      {hasAbnormal && (
-        <div className="space-y-3 rounded-lg border border-brand-critical/40 bg-brand-critical/5 p-4">
-          <div className="space-y-2">
-            <Label htmlFor="abnormalDetails" className="text-sm font-semibold">
-              {t('condition.abnormalDetailsLabel')} <span className="text-brand-critical">*</span>
-            </Label>
-            <Textarea
-              id="abnormalDetails"
-              placeholder={t('condition.abnormalDetailsPlaceholder')}
-              value={abnormalDetails}
-              onChange={(e) => setAbnormalDetails(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
-              }}
-              rows={3}
-              className={cn('border-brand-critical/40', CHECKOUT_FORM_TOKENS.abnormalTextarea)}
+      {/* G-6: abnormal details + photo upload slot — 첫 abnormal 항목 카드 *내부*에 인라인 렌더.
+       *
+       * 우선순위: 외관 > 작동. abnormalDetails textarea + photo upload 는 단일 SSOT state 이지만
+       * 시각적 위치만 첫 abnormal 항목 카드 안으로 이동하여 "이상 → 즉시 사진/메모" 인접성 확보.
+       * 부속(accessories) 만 abnormal 인 경우 fallback 위치 유지 (별도 inline block — AccessoriesItemCard
+       * 내부 슬롯 미지원). */}
+      {(() => {
+        const inlineSlot =
+          hasAbnormal && (appearanceStatus === 'abnormal' || operationStatus === 'abnormal') ? (
+            <AbnormalDetailsInlineSlot
+              abnormalDetails={abnormalDetails}
+              setAbnormalDetails={setAbnormalDetails}
+              attachmentFiles={attachmentFiles}
+              handleAttachmentsChange={handleAttachmentsChange}
+              isLoading={isLoading}
             />
-          </div>
+          ) : null;
+        return (
+          <>
+            <ConditionItemCard
+              kind="appearance"
+              icon={Eye}
+              titleKey="condition.appearance"
+              descriptionKey="condition.appearanceDesc"
+              value={appearanceStatus}
+              onChange={setAppearanceStatus}
+              previousValue={previousCheck?.appearanceStatus}
+              abnormalSlot={appearanceStatus === 'abnormal' ? inlineSlot : undefined}
+            />
 
-          {/* 사진 인접화 — abnormal 카드 내부로 이동 (TASK 6) */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <Camera className="h-4 w-4" aria-hidden="true" />
-              {t('condition.attachmentsLabel')}
-            </Label>
-            <p className="text-xs text-foreground/70 label-ko">
-              {t('condition.photoRecommendedHint')}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <FileUpload
-                files={attachmentFiles}
-                onChange={handleAttachmentsChange}
-                accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
-                maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
-                capture="environment"
-                label={t('condition.photoCaptureLabel')}
-                description=""
-                disabled={isLoading}
-              />
-              <FileUpload
-                files={[]}
-                onChange={handleAttachmentsChange}
-                accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
-                maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
-                label={t('condition.photoGalleryLabel')}
-                description=""
-                disabled={isLoading}
-              />
-            </div>
-            {attachmentFiles.filter((f) => f.status === 'success').length === 0 && (
-              <p
-                role="status"
-                aria-live="polite"
-                className="text-xs text-brand-warning flex items-center gap-1.5"
-              >
-                <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('condition.abnormalPhotoSuggested')}
-              </p>
+            <ConditionItemCard
+              kind="operation"
+              icon={Cog}
+              titleKey="condition.operation"
+              descriptionKey="condition.operationDesc"
+              value={operationStatus}
+              onChange={setOperationStatus}
+              previousValue={previousCheck?.operationStatus}
+              abnormalSlot={
+                operationStatus === 'abnormal' && appearanceStatus !== 'abnormal'
+                  ? inlineSlot
+                  : undefined
+              }
+            />
+
+            <AccessoriesItemCard
+              value={accessoriesStatus}
+              onChange={setAccessoriesStatus}
+              previousValue={previousCheck?.accessoriesStatus}
+            />
+
+            {/* fallback — 부속만 abnormal (외관/작동 모두 normal) 인 경우 카드 외부 영역 유지. */}
+            {hasAbnormal && appearanceStatus !== 'abnormal' && operationStatus !== 'abnormal' && (
+              <div className="space-y-3 rounded-lg border border-brand-critical/40 bg-brand-critical/5 p-4">
+                <AbnormalDetailsInlineSlot
+                  abnormalDetails={abnormalDetails}
+                  setAbnormalDetails={setAbnormalDetails}
+                  attachmentFiles={attachmentFiles}
+                  handleAttachmentsChange={handleAttachmentsChange}
+                  isLoading={isLoading}
+                />
+              </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        );
+      })()}
 
       {/* 이전 확인과 비교 (④단계) */}
       {needsComparison && (
@@ -395,6 +369,84 @@ export default function EquipmentConditionForm({
 }
 
 /**
+ * Abnormal 인라인 슬롯 — abnormalDetails textarea + photo upload (G-6).
+ * 카드 *내부* 또는 fallback 영역에 동일 컴포넌트로 렌더 (단일 SSOT state).
+ */
+function AbnormalDetailsInlineSlot({
+  abnormalDetails,
+  setAbnormalDetails,
+  attachmentFiles,
+  handleAttachmentsChange,
+  isLoading,
+}: {
+  abnormalDetails: string;
+  setAbnormalDetails: (v: string) => void;
+  attachmentFiles: UploadedFile[];
+  handleAttachmentsChange: (files: UploadedFile[]) => void;
+  isLoading: boolean;
+}) {
+  const t = useTranslations('checkouts');
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label htmlFor="abnormalDetails" className="text-sm font-semibold">
+          {t('condition.abnormalDetailsLabel')} <span className="text-brand-critical">*</span>
+        </Label>
+        <Textarea
+          id="abnormalDetails"
+          placeholder={t('condition.abnormalDetailsPlaceholder')}
+          value={abnormalDetails}
+          onChange={(e) => setAbnormalDetails(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+          }}
+          rows={3}
+          className={cn('border-brand-critical/40', CHECKOUT_FORM_TOKENS.abnormalTextarea)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold flex items-center gap-2">
+          <Camera className="h-4 w-4" aria-hidden="true" />
+          {t('condition.attachmentsLabel')}
+        </Label>
+        <p className="text-xs text-foreground/70 label-ko">{t('condition.photoRecommendedHint')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <FileUpload
+            files={attachmentFiles}
+            onChange={handleAttachmentsChange}
+            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+            capture="environment"
+            label={t('condition.photoCaptureLabel')}
+            description=""
+            disabled={isLoading}
+          />
+          <FileUpload
+            files={[]}
+            onChange={handleAttachmentsChange}
+            accept={DOCUMENT_FILE_RULES.condition_check_photo.accept}
+            maxFiles={FILE_UPLOAD_LIMITS.MAX_ATTACHMENTS_PER_CONDITION_CHECK}
+            label={t('condition.photoGalleryLabel')}
+            description=""
+            disabled={isLoading}
+          />
+        </div>
+        {attachmentFiles.filter((f) => f.status === 'success').length === 0 && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs text-brand-warning flex items-center gap-1.5"
+          >
+            <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('condition.abnormalPhotoSuggested')}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * 항목 카드 (외관/작동) — segmented control + previous value chip.
  */
 function ConditionItemCard({
@@ -405,6 +457,7 @@ function ConditionItemCard({
   value,
   onChange,
   previousValue,
+  abnormalSlot,
 }: {
   kind: ItemKind;
   icon: React.ComponentType<{ className?: string }>;
@@ -413,6 +466,8 @@ function ConditionItemCard({
   value: ConditionStatus;
   onChange: (v: ConditionStatus) => void;
   previousValue?: ConditionStatus;
+  /** G-6: abnormal 시 카드 *내부*에 인라인 렌더 — abnormalDetails textarea + photo upload 등. */
+  abnormalSlot?: React.ReactNode;
 }) {
   const t = useTranslations('checkouts');
   return (
@@ -433,6 +488,12 @@ function ConditionItemCard({
             })}
           </p>
         )}
+        {/* abnormal 인라인 슬롯 — 항목 카드 내부에 textarea/photo 영역 위치. */}
+        {value === 'abnormal' && abnormalSlot ? (
+          <div className="mt-4 space-y-3 rounded-md border-t border-brand-critical/30 pt-3">
+            {abnormalSlot}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

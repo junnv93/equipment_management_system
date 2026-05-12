@@ -276,7 +276,7 @@ export const APPROVAL_EMPTY_STATE_TOKENS = {
   container: 'text-center py-16 relative overflow-hidden',
   /** 배경 radial gradient (::before pseudo) */
   bgGradient:
-    'before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_50%_30%,hsl(var(--brand-color-ok)/0.08),transparent_70%)] before:pointer-events-none',
+    'before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_50%_30%,color-mix(in_oklch,var(--brand-color-ok)_8%,transparent),transparent_70%)] before:pointer-events-none',
 
   /** 아이콘 링 — pop 애니메이션 */
   iconRing:

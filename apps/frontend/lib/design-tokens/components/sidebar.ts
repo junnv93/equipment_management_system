@@ -137,7 +137,7 @@ export const SIDEBAR_COLORS = {
  */
 export const SIDEBAR_BRAND_MARK_TOKENS = {
   container:
-    'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,hsl(var(--brand-color-info)),hsl(var(--brand-color-purple)))] shadow-sm ring-1 ring-white/20',
+    'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,var(--brand-color-info),var(--brand-color-purple))] shadow-sm ring-1 ring-white/20',
   text: 'text-[10px] font-bold leading-none tracking-normal text-white',
 } as const;
 

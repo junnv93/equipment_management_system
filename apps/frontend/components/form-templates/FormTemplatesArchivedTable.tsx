@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Download, Lock, FileX2, AlertCircle, Archive, RefreshCw } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -35,6 +35,7 @@ import {
  */
 export default function FormTemplatesArchivedTable() {
   const t = useTranslations('form-templates');
+  const locale = useLocale();
   const { can } = useAuth();
   const canDownloadHistory = can(Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY);
 
@@ -95,7 +96,7 @@ export default function FormTemplatesArchivedTable() {
 
   // 가장 최근 아카이브 일자 (백엔드는 archivedAt desc로 정렬됨)
   const latestArchivedAt = items[0]?.archivedAt
-    ? new Date(items[0].archivedAt).toLocaleDateString()
+    ? new Date(items[0].archivedAt).toLocaleDateString(locale)
     : '-';
 
   return (
@@ -163,10 +164,10 @@ export default function FormTemplatesArchivedTable() {
                   {row.originalFilename}
                 </TableCell>
                 <TableCell className={FORM_TEMPLATES_TABLE_TOKENS.date}>
-                  {new Date(row.uploadedAt).toLocaleDateString()}
+                  {new Date(row.uploadedAt).toLocaleDateString(locale)}
                 </TableCell>
                 <TableCell className={FORM_TEMPLATES_TABLE_TOKENS.date}>
-                  {row.archivedAt ? new Date(row.archivedAt).toLocaleDateString() : '-'}
+                  {row.archivedAt ? new Date(row.archivedAt).toLocaleDateString(locale) : '-'}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className={FORM_TEMPLATES_TABLE_TOKENS.actionGroup}>

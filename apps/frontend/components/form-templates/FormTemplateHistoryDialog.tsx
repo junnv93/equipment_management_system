@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Download, Lock } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -39,6 +39,7 @@ export default function FormTemplateHistoryDialog({
   onOpenChange,
 }: FormTemplateHistoryDialogProps) {
   const t = useTranslations('form-templates');
+  const locale = useLocale();
   const { can } = useAuth();
   const canDownloadHistory = can(Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY);
 
@@ -139,7 +140,7 @@ export default function FormTemplateHistoryDialog({
                         {changeSummaryByFormNumber.get(item.formNumber) ?? '-'}
                       </TableCell>
                       <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.date}>
-                        {new Date(item.uploadedAt).toLocaleDateString()}
+                        {new Date(item.uploadedAt).toLocaleDateString(locale)}
                       </TableCell>
                       <TableCell>
                         {item.isCurrent ? (

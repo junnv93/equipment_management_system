@@ -18,7 +18,6 @@ import {
   getCheckoutDday4TierClasses,
   formatDday,
   MICRO_TYPO,
-  getManagementNumberClasses,
 } from '@/lib/design-tokens';
 import { calculateDaysRemaining } from '@/lib/utils/dday-utils';
 import {
@@ -154,9 +153,7 @@ function CheckoutEquipmentRowInner({
       <div role="gridcell" className={CHECKOUT_ITEM_ROW_TOKENS.zoneIdentity}>
         <div className={CHECKOUT_ITEM_ROW_TOKENS.nameRow}>
           <span className={CHECKOUT_ITEM_ROW_TOKENS.name}>{row.equipmentName}</span>
-          <code className={`${CHECKOUT_ITEM_ROW_TOKENS.mgmt} ${getManagementNumberClasses()}`}>
-            {row.managementNumber}
-          </code>
+          <code className={CHECKOUT_ITEM_ROW_TOKENS.mgmt}>{row.managementNumber}</code>
         </div>
         <p className={CHECKOUT_ITEM_ROW_TOKENS.meta}>
           {row.destination && <>{row.destination} · </>}

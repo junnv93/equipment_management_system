@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   Cpu,
   HardDrive,
@@ -431,6 +431,7 @@ function SystemResourcesSection({ data }: { data: MonitoringMetrics }) {
 
 function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
   const t = useTranslations('monitoring');
+  const locale = useLocale();
 
   const services = [
     {
@@ -480,7 +481,7 @@ function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             <span className="sr-only">{t('lastChecked')}:</span>
-            {t('lastChecked')}: {new Date(data.lastChecked).toLocaleTimeString()}
+            {t('lastChecked')}: {new Date(data.lastChecked).toLocaleTimeString(locale)}
           </div>
         </div>
       </CardContent>

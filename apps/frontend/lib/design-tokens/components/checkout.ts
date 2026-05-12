@@ -903,7 +903,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   /** 장비 정보 블록 (Zone 3 내부) */
   nameRow: 'flex items-center gap-1.5 flex-wrap',
   name: 'text-sm font-semibold text-foreground truncate',
-  mgmt: 'text-xs text-muted-foreground font-mono shrink-0',
+  mgmt: 'text-mono text-muted-foreground tracking-wider shrink-0',
   dday: `${MICRO_TYPO.badge} px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0`,
   meta: 'text-xs text-muted-foreground mt-0.5 truncate',
 

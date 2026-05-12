@@ -462,7 +462,7 @@ export const EQUIPMENT_TABLE_TOKENS = {
 
   /** Row hover — AP-07 좌측 accent bar 효과 (inset box-shadow) */
   rowHover: [
-    'hover:bg-brand-info/[0.03] hover:shadow-[inset_4px_0_0_hsl(var(--brand-color-info))]',
+    'hover:bg-brand-info/[0.03] hover:shadow-[inset_4px_0_0_var(--brand-color-info)]',
     TRANSITION_PRESETS.instantBg,
   ].join(' '),
 

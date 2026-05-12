@@ -101,7 +101,7 @@ export const FORM_TEMPLATES_TABLE_TOKENS = {
 
   /** Row hover — 좌측 accent bar (inset box-shadow) */
   rowHover: [
-    'hover:bg-brand-info/[0.03] hover:shadow-[inset_3px_0_0_hsl(var(--brand-color-info))]',
+    'hover:bg-brand-info/[0.03] hover:shadow-[inset_3px_0_0_var(--brand-color-info)]',
     TRANSITION_PRESETS.instantBg,
   ].join(' '),
 

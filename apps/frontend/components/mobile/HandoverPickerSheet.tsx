@@ -12,7 +12,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { ArrowRight, User } from 'lucide-react';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { HandoverItem } from '@equipment-management/schemas';
@@ -42,6 +42,7 @@ function getAccessoriesTone(status: 'complete' | 'incomplete'): 'ok' | 'urgent' 
 export function HandoverPickerSheet({ open, onOpenChange, handovers }: HandoverPickerSheetProps) {
   const t = useTranslations('qr.handoverPicker');
   const tStatus = useTranslations('qr.statusBadge');
+  const locale = useLocale();
   const router = useRouter();
 
   const handleSelect = React.useCallback(
@@ -66,7 +67,7 @@ export function HandoverPickerSheet({ open, onOpenChange, handovers }: HandoverP
           const checkedDate = new Date(item.checkedAt);
           const dateLabel = Number.isNaN(checkedDate.getTime())
             ? item.checkedAt
-            : checkedDate.toLocaleDateString();
+            : checkedDate.toLocaleDateString(locale);
           return (
             <li key={item.id}>
               <Button

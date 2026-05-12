@@ -331,13 +331,18 @@ export function getBrandSectionHeaderClasses(): string {
 }
 
 /**
- * 관리번호 표시 스타일 (SUW-E0001 형식)
+ * 관리번호 표시 스타일 (SUW-E0001 형식) — 관리번호 의미적 진입점 (SSOT)
  *
- * font-mono + tabular-nums + tracking-wider로
- * 고정 너비 숫자 + 넉넉한 자간 적용
+ * 구성:
+ * - `.text-mono` utility — font-mono + tabular-nums + var(--text-mono) 13px size primitive (globals.css)
+ * - tracking-wider — SUW-E0001 형식 자간 넉넉화
+ * - text-brand-text-primary — 1차 식별자 위계 (cross-component semantic)
+ *
+ * 호출자가 size(text-xs 등)를 별도로 명시하지 않아야 SSOT 보장 (`.text-mono` 단일 size).
+ * row-context 보조 식별자(muted)는 `CHECKOUT_ITEM_ROW_TOKENS.mgmt` 별도 진입점 사용.
  */
 export function getManagementNumberClasses(): string {
-  return 'font-mono tabular-nums text-brand-text-primary tracking-wider';
+  return 'text-mono text-brand-text-primary tracking-wider';
 }
 
 /**

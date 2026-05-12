@@ -66,7 +66,6 @@ jest.mock('@/lib/design-tokens', () => ({
   getCheckoutDday4TierClasses: () => 'dday-safe',
   formatDday: (d: number) => `D${d >= 0 ? `-${d}` : `+${Math.abs(d)}`}`,
   MICRO_TYPO: { badge: 'badge' },
-  getManagementNumberClasses: () => 'mgmt-class',
 }));
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────

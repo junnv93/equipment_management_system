@@ -10,9 +10,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | slug | 설명 | 시작일 |
 |------|------|--------|
 | `checkouts-sprint4-followups-s2-s4-s5-s6` | checkouts-sprint4-ux-u02-u08 후속 4건 — S-2 revoke 5분 countdown / S-4 reject-preset admin CRUD / S-5 fuzzy-search ADR-0011 / S-6 destination 인라인 등록 | 2026-05-12 |
-| `qr-visual-redesign-followups-g4-g12` | qr-visual-redesign 시니어 자기검토 라운드 #2 후속 9건 통합 closure — G-4 text-mono SSOT 통일 / G-5 dead i18n tone 의미화 / G-6 abnormal photo 항목별 인라인 / G-7 brand-color-* oklch 마이그레이션 + WCAG AA / G-8 AutoProgressCountdown rAF 제거 + CSS transition / G-9 StatusBadge React.memo / G-10 drizzle-stub SSOT 헬퍼 / G-11 toLocaleDateString locale safety / G-12 LabelPreview mini QR 4×4 grid SVG | 2026-05-12 |
 | `saved-views-team-share` | checkouts-sprint4-ux-u02-u08 S-7 closure — Saved Views localStorage→서버 마이그레이션 + scope 트리아드(PRIVATE/TEAM/GLOBAL) + CAS + RBAC + audit + 명시 import banner. 28~32 파일 (신규 15 + 수정 13~17), 새 backend 모듈 `saved-views`, manual SQL 0059 migration | 2026-05-12 |
-| `checkouts-sprint4-followups-sh1-sh7` | checkouts-sprint4-followups-s2-s4-s5-s6 후속 4건 — SH-1 admin presets e2e / SH-2 revocation window e2e / SH-3 destination create e2e / SH-7 CheckoutDetailClient revocation 통합 + revokeApproval API schema-infer 확장. SH-4/5/6 트리거 미도달 tech-debt 유지. SH-8 신규 (use-undo-toast 정책 결정) 분리 | 2026-05-12 |
 
 ---
 

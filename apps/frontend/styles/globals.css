@@ -78,25 +78,26 @@
   --color-brand-text-muted: hsl(var(--brand-text-muted));
   --color-brand-text-inverse: hsl(var(--brand-text-inverse));
 
-  --color-brand-ok: hsl(var(--brand-color-ok));
-  --color-brand-success: hsl(var(--brand-color-success));
-  --color-brand-warning: hsl(var(--brand-color-warning));
-  --color-brand-critical: hsl(var(--brand-color-critical));
-  --color-brand-info: hsl(var(--brand-color-info));
-  --color-brand-neutral: hsl(var(--brand-color-neutral));
-  --color-brand-purple: hsl(var(--brand-color-purple));
-  --color-brand-repair: hsl(var(--brand-color-repair));
-  --color-brand-temporary: hsl(var(--brand-color-temporary));
-  --color-brand-progress: hsl(var(--brand-color-progress));
-  --color-brand-archive: hsl(var(--brand-color-archive));
-  --color-brand-urgent: hsl(var(--brand-color-urgent));
+  /* G-7: brand-color-* 가 oklch 값으로 정의되어 hsl() wrapper 제거 (direct var alias). */
+  --color-brand-ok: var(--brand-color-ok);
+  --color-brand-success: var(--brand-color-success);
+  --color-brand-warning: var(--brand-color-warning);
+  --color-brand-critical: var(--brand-color-critical);
+  --color-brand-info: var(--brand-color-info);
+  --color-brand-neutral: var(--brand-color-neutral);
+  --color-brand-purple: var(--brand-color-purple);
+  --color-brand-repair: var(--brand-color-repair);
+  --color-brand-temporary: var(--brand-color-temporary);
+  --color-brand-progress: var(--brand-color-progress);
+  --color-brand-archive: var(--brand-color-archive);
+  --color-brand-urgent: var(--brand-color-urgent);
   --color-brand-urgent-weak: var(--brand-urgent-weak);
-  --color-brand-mute: hsl(var(--brand-color-mute));
+  --color-brand-mute: var(--brand-color-mute);
   --color-brand-mute-weak: var(--brand-mute-weak);
 
-  --color-brand-site-suw: hsl(var(--brand-color-site-suw));
-  --color-brand-site-uiw: hsl(var(--brand-color-site-uiw));
-  --color-brand-site-pyt: hsl(var(--brand-color-site-pyt));
+  --color-brand-site-suw: var(--brand-color-site-suw);
+  --color-brand-site-uiw: var(--brand-color-site-uiw);
+  --color-brand-site-pyt: var(--brand-color-site-pyt);
 
   /* Inline Action Surface — utility bridge (REVIEW_RESULT.md 4.1, P0-3)
    * 사용: bg-surface-inline-action-info-bg, hover:bg-surface-inline-action-info-bg-hover,
@@ -256,8 +257,8 @@
     50% { opacity: 0.85; box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
   }
   @keyframes timeline-glow {
-    0%, 100% { box-shadow: 0 0 0 3px hsl(var(--brand-color-info) / 0.12); }
-    50% { box-shadow: 0 0 0 5px hsl(var(--brand-color-info) / 0.06); }
+    0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-color-info) 12%, transparent); }
+    50% { box-shadow: 0 0 0 5px color-mix(in oklch, var(--brand-color-info) 6%, transparent); }
   }
   @keyframes staggerFadeIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -301,12 +302,12 @@
     50% { opacity: 1; }
   }
   @keyframes approval-exit-success {
-    0% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }
-    40% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }
-    100% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 0; transform: translateX(24px); }
+    0% { background-color: color-mix(in oklch, var(--brand-color-ok) 15%, transparent); opacity: 1; transform: translateX(0); }
+    40% { background-color: color-mix(in oklch, var(--brand-color-ok) 15%, transparent); opacity: 1; transform: translateX(0); }
+    100% { background-color: color-mix(in oklch, var(--brand-color-ok) 15%, transparent); opacity: 0; transform: translateX(24px); }
   }
   @keyframes approval-exit-reject {
-    0% { background-color: hsl(var(--brand-color-critical) / 0.08); opacity: 1; }
+    0% { background-color: color-mix(in oklch, var(--brand-color-critical) 8%, transparent); opacity: 1; }
     100% { opacity: 0; transform: translateX(-16px); }
   }
   @keyframes approval-pulse-dot {
@@ -487,53 +488,57 @@
     --brand-text-muted: 220 8% 60%;
     --brand-text-inverse: 220 15% 96%;
 
-    --brand-color-ok: 160 84% 39%;
-    --brand-color-success: 151 100% 32%;
-    --brand-color-warning: 38 92% 50%;
-    --brand-color-critical: 0 84% 60%;
-    --brand-color-info: 217 91% 60%;
-    --brand-color-neutral: 220 9% 46%;
-    --brand-color-purple: 258 90% 66%;
-    --brand-color-repair: 24 95% 53%;
-    --brand-color-temporary: 187 72% 51%;  /* #22B8CF — 임시 장비 상태 */
-    --brand-color-progress: 213 79% 48%;   /* #1d6fb8 — 진행중 블루그레이 (in_use, lender_checked) */
-    --brand-color-archive: 220 9% 60%;     /* #919aaa — 완료/취소 아카이브 회색 */
+    /* Brand Color Palette — oklch (perceptually uniform), G-7 oklch 마이그레이션 2026-05-12.
+     * 색 좌표는 BRAND_COLORS_HEX (brand.ts) hex → sRGB → linear → oklab → oklch 정확 변환.
+     * docs/design/oklch-migration-2026-05-12.md 변환 표 + WCAG AA 대비비 검증 산출물.
+     * 사용처: `var(--brand-color-X)` 직접 (hsl() wrapper 금지). alpha 합성은
+     * `color-mix(in oklch, var(--brand-color-X) NN%, transparent)` 패턴 SSOT. */
+    --brand-color-ok: oklch(0.696 0.149 162.5);          /* #10B981 */
+    --brand-color-success: oklch(0.629 0.168 151.4);     /* #00A451 */
+    --brand-color-warning: oklch(0.769 0.165 70.1);      /* #F59E0B */
+    --brand-color-critical: oklch(0.637 0.208 25.3);     /* #EF4444 */
+    --brand-color-info: oklch(0.623 0.188 259.8);        /* #3B82F6 */
+    --brand-color-neutral: oklch(0.551 0.023 264.4);     /* #6B7280 */
+    --brand-color-purple: oklch(0.606 0.219 292.7);      /* #8B5CF6 */
+    --brand-color-repair: oklch(0.705 0.187 47.6);       /* #F97316 */
+    --brand-color-temporary: oklch(0.720 0.119 211.2);   /* #22B8CF — 임시 장비 상태 */
+    --brand-color-progress: oklch(0.532 0.137 250.4);    /* #1d6fb8 — 진행중 블루그레이 */
+    --brand-color-archive: oklch(0.684 0.026 262.1);     /* #919aaa — 아카이브 회색 */
 
-    /* 4-tier status separation — urgent (시급) + mute (비활성/여분)
-     * oklch(0.62 0.17 38) ≈ HSL — qr-visual-redesign TASK 8. */
-    --brand-color-urgent: 17 67% 51%;      /* #cf5a31 — confirm_handover_*, non_conforming, out_of_service */
-    --brand-color-mute: 32 8% 50%;         /* #877f74 — spare / inactive / disposed */
-    --brand-urgent: hsl(var(--brand-color-urgent));
-    --brand-urgent-weak: hsl(17 80% 96%);  /* oklch(0.96 0.04 38) 근사 — soft tint */
-    --brand-mute: hsl(var(--brand-color-mute));
-    --brand-mute-weak: hsl(32 10% 96%);    /* oklch(0.96 0.004 70) 근사 — soft tint */
+    /* 4-tier status separation — urgent (시급) + mute (비활성/여분), qr-visual-redesign TASK 8. */
+    --brand-color-urgent: oklch(0.609 0.158 39.1);       /* #cf5a31 — confirm_handover_*, non_conforming */
+    --brand-color-mute: oklch(0.600 0.019 76.0);         /* #877f74 — spare / inactive / disposed */
+    --brand-urgent: var(--brand-color-urgent);
+    --brand-urgent-weak: oklch(0.936 0.027 47.2);        /* #fae5db — soft tint */
+    --brand-mute: var(--brand-color-mute);
+    --brand-mute-weak: oklch(0.953 0.007 80.7);          /* #f2efea — soft tint */
 
-    /* Site Identity Colors */
-    --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
-    --brand-color-site-uiw: 212 62% 56%;   /* #4A90D9 의왕 — UL Blue */
-    --brand-color-site-pyt: 152 100% 32%;  /* #00A451 평택 — UL Green */
+    /* Site Identity Colors — oklch (G-7) */
+    --brand-color-site-suw: oklch(0.289 0.062 252.9);   /* #122C49 수원 — UL Midnight */
+    --brand-color-site-uiw: oklch(0.641 0.131 251.4);   /* #4A90D9 의왕 — UL Blue */
+    --brand-color-site-pyt: oklch(0.629 0.168 151.4);   /* #00A451 평택 — UL Green */
 
     /* Inline Action Surface (REVIEW_RESULT.md 4.1 — soft-tint pattern, P0-3)
      * 행/그룹 헤더 inline action 버튼 전용. solid CTA(primary)보다 한 단계 낮은 elevation.
      * alpha를 토큰 단계에서 고정 (SSOT) — 컴포넌트는 의미명만 참조.
      * Light/Dark 동일 alpha(0.10 bg, 0.22 border) — brand-color-* 가 다크 모드 자동 보정.
      * Tailwind utility 노출은 @theme inline 블록 (line 80~ 부근) 참조. */
-    --surface-inline-action-info-bg:         hsl(var(--brand-color-info) / 0.10);
-    --surface-inline-action-info-bg-hover:   hsl(var(--brand-color-info) / 0.16);
-    --surface-inline-action-info-border:     hsl(var(--brand-color-info) / 0.22);
-    --surface-inline-action-info-fg:         hsl(var(--brand-color-info));
-    --surface-inline-action-ok-bg:           hsl(var(--brand-color-ok) / 0.10);
-    --surface-inline-action-ok-bg-hover:     hsl(var(--brand-color-ok) / 0.16);
-    --surface-inline-action-ok-border:       hsl(var(--brand-color-ok) / 0.22);
-    --surface-inline-action-ok-fg:           hsl(var(--brand-color-ok));
-    --surface-inline-action-warning-bg:      hsl(var(--brand-color-warning) / 0.12);
-    --surface-inline-action-warning-bg-hover:hsl(var(--brand-color-warning) / 0.18);
-    --surface-inline-action-warning-border:  hsl(var(--brand-color-warning) / 0.25);
-    --surface-inline-action-warning-fg:      hsl(var(--brand-color-warning));
-    --surface-inline-action-danger-bg:       hsl(var(--brand-color-critical) / 0.10);
-    --surface-inline-action-danger-bg-hover: hsl(var(--brand-color-critical) / 0.16);
-    --surface-inline-action-danger-border:   hsl(var(--brand-color-critical) / 0.22);
-    --surface-inline-action-danger-fg:       hsl(var(--brand-color-critical));
+    --surface-inline-action-info-bg:         color-mix(in oklch, var(--brand-color-info) 10%, transparent);
+    --surface-inline-action-info-bg-hover:   color-mix(in oklch, var(--brand-color-info) 16%, transparent);
+    --surface-inline-action-info-border:     color-mix(in oklch, var(--brand-color-info) 22%, transparent);
+    --surface-inline-action-info-fg:         var(--brand-color-info);
+    --surface-inline-action-ok-bg:           color-mix(in oklch, var(--brand-color-ok) 10%, transparent);
+    --surface-inline-action-ok-bg-hover:     color-mix(in oklch, var(--brand-color-ok) 16%, transparent);
+    --surface-inline-action-ok-border:       color-mix(in oklch, var(--brand-color-ok) 22%, transparent);
+    --surface-inline-action-ok-fg:           var(--brand-color-ok);
+    --surface-inline-action-warning-bg:      color-mix(in oklch, var(--brand-color-warning) 12%, transparent);
+    --surface-inline-action-warning-bg-hover:color-mix(in oklch, var(--brand-color-warning) 18%, transparent);
+    --surface-inline-action-warning-border:  color-mix(in oklch, var(--brand-color-warning) 25%, transparent);
+    --surface-inline-action-warning-fg:      var(--brand-color-warning);
+    --surface-inline-action-danger-bg:       color-mix(in oklch, var(--brand-color-critical) 10%, transparent);
+    --surface-inline-action-danger-bg-hover: color-mix(in oklch, var(--brand-color-critical) 16%, transparent);
+    --surface-inline-action-danger-border:   color-mix(in oklch, var(--brand-color-critical) 22%, transparent);
+    --surface-inline-action-danger-fg:       var(--brand-color-critical);
   }
 
   .dark {
@@ -596,50 +601,51 @@
     --brand-text-muted: 220 8% 45%;
     --brand-text-inverse: 220 15% 8%;
 
-    --brand-color-ok: 160 84% 39%;
-    --brand-color-success: 151 100% 40%;
-    --brand-color-warning: 38 92% 50%;
-    --brand-color-critical: 0 84% 60%;
-    --brand-color-info: 217 91% 60%;
-    --brand-color-neutral: 220 9% 46%;
-    --brand-color-purple: 258 90% 66%;
-    --brand-color-repair: 24 95% 53%;
-    --brand-color-temporary: 187 72% 51%;  /* 임시 — 다크모드 동일 */
-    --brand-color-progress: 213 79% 58%;   /* 다크모드 밝기 보정 */
-    --brand-color-archive: 220 9% 55%;     /* 다크모드 밝기 보정 */
+    /* Brand Color Palette — Dark Mode oklch (G-7) — 다크 lightness 보정 분기. */
+    --brand-color-ok: oklch(0.696 0.149 162.5);          /* #10B981 — 다크 동일 */
+    --brand-color-success: oklch(0.740 0.198 151.2);     /* #00CC65 — 다크 밝기 보정 */
+    --brand-color-warning: oklch(0.769 0.165 70.1);      /* #F59E0B */
+    --brand-color-critical: oklch(0.637 0.208 25.3);     /* #EF4444 */
+    --brand-color-info: oklch(0.623 0.188 259.8);        /* #3B82F6 */
+    --brand-color-neutral: oklch(0.551 0.023 264.4);     /* #6B7280 */
+    --brand-color-purple: oklch(0.606 0.219 292.7);      /* #8B5CF6 */
+    --brand-color-repair: oklch(0.705 0.187 47.6);       /* #F97316 */
+    --brand-color-temporary: oklch(0.720 0.119 211.2);   /* 다크 동일 */
+    --brand-color-progress: oklch(0.662 0.128 250.3);    /* #5097de — 다크 보정 */
+    --brand-color-archive: oklch(0.638 0.028 263.3);     /* #838c9d — 다크 보정 */
 
     /* 4-tier status — Dark Mode (밝기 보정) */
-    --brand-color-urgent: 17 72% 58%;
-    --brand-color-mute: 32 8% 60%;
-    --brand-urgent: hsl(var(--brand-color-urgent));
-    --brand-urgent-weak: hsl(17 30% 18%);
-    --brand-mute: hsl(var(--brand-color-mute));
-    --brand-mute-weak: hsl(32 10% 18%);
+    --brand-color-urgent: oklch(0.681 0.134 42.4);       /* #dc7a52 — 다크 보정 */
+    --brand-color-mute: oklch(0.688 0.016 80.7);         /* #a09a90 — 다크 보정 */
+    --brand-urgent: var(--brand-color-urgent);
+    --brand-urgent-weak: oklch(0.280 0.041 43.3);        /* #3a2218 — 다크 soft tint */
+    --brand-mute: var(--brand-color-mute);
+    --brand-mute-weak: oklch(0.304 0.016 79.6);          /* #332e26 — 다크 soft tint */
 
-    /* Site Identity Colors — Dark Mode (밝기 보정) */
-    --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */
-    --brand-color-site-uiw: 212 70% 65%;   /* 의왕 — 다크모드 밝기 보정 */
-    --brand-color-site-pyt: 152 80% 45%;   /* 평택 — 다크모드 밝기 보정 */
+    /* Site Identity Colors — Dark Mode oklch (G-7) — 다크 밝기 보정. */
+    --brand-color-site-suw: oklch(0.628 0.105 246.3);    /* #4f8ec4 수원 — 다크 보정 */
+    --brand-color-site-uiw: oklch(0.739 0.099 253.7);    /* #7eaee8 의왕 — 다크 보정 */
+    --brand-color-site-pyt: oklch(0.732 0.183 153.9);    /* #0fc870 평택 — 다크 보정 */
 
     /* Inline Action Surface — Dark Mode (REVIEW_RESULT.md 4.1)
      * Light와 동일 alpha. brand-color-* 가 다크 변형(밝기 보정)을 자동 제공하므로
      * 별도 alpha 조정 불필요. WCAG SC 1.4.3 대비비 ≥ 3:1 검증 (Phase 13). */
-    --surface-inline-action-info-bg:         hsl(var(--brand-color-info) / 0.10);
-    --surface-inline-action-info-bg-hover:   hsl(var(--brand-color-info) / 0.16);
-    --surface-inline-action-info-border:     hsl(var(--brand-color-info) / 0.22);
-    --surface-inline-action-info-fg:         hsl(var(--brand-color-info));
-    --surface-inline-action-ok-bg:           hsl(var(--brand-color-ok) / 0.10);
-    --surface-inline-action-ok-bg-hover:     hsl(var(--brand-color-ok) / 0.16);
-    --surface-inline-action-ok-border:       hsl(var(--brand-color-ok) / 0.22);
-    --surface-inline-action-ok-fg:           hsl(var(--brand-color-ok));
-    --surface-inline-action-warning-bg:      hsl(var(--brand-color-warning) / 0.12);
-    --surface-inline-action-warning-bg-hover:hsl(var(--brand-color-warning) / 0.18);
-    --surface-inline-action-warning-border:  hsl(var(--brand-color-warning) / 0.25);
-    --surface-inline-action-warning-fg:      hsl(var(--brand-color-warning));
-    --surface-inline-action-danger-bg:       hsl(var(--brand-color-critical) / 0.10);
-    --surface-inline-action-danger-bg-hover: hsl(var(--brand-color-critical) / 0.16);
-    --surface-inline-action-danger-border:   hsl(var(--brand-color-critical) / 0.22);
-    --surface-inline-action-danger-fg:       hsl(var(--brand-color-critical));
+    --surface-inline-action-info-bg:         color-mix(in oklch, var(--brand-color-info) 10%, transparent);
+    --surface-inline-action-info-bg-hover:   color-mix(in oklch, var(--brand-color-info) 16%, transparent);
+    --surface-inline-action-info-border:     color-mix(in oklch, var(--brand-color-info) 22%, transparent);
+    --surface-inline-action-info-fg:         var(--brand-color-info);
+    --surface-inline-action-ok-bg:           color-mix(in oklch, var(--brand-color-ok) 10%, transparent);
+    --surface-inline-action-ok-bg-hover:     color-mix(in oklch, var(--brand-color-ok) 16%, transparent);
+    --surface-inline-action-ok-border:       color-mix(in oklch, var(--brand-color-ok) 22%, transparent);
+    --surface-inline-action-ok-fg:           var(--brand-color-ok);
+    --surface-inline-action-warning-bg:      color-mix(in oklch, var(--brand-color-warning) 12%, transparent);
+    --surface-inline-action-warning-bg-hover:color-mix(in oklch, var(--brand-color-warning) 18%, transparent);
+    --surface-inline-action-warning-border:  color-mix(in oklch, var(--brand-color-warning) 25%, transparent);
+    --surface-inline-action-warning-fg:      var(--brand-color-warning);
+    --surface-inline-action-danger-bg:       color-mix(in oklch, var(--brand-color-critical) 10%, transparent);
+    --surface-inline-action-danger-bg-hover: color-mix(in oklch, var(--brand-color-critical) 16%, transparent);
+    --surface-inline-action-danger-border:   color-mix(in oklch, var(--brand-color-critical) 22%, transparent);
+    --surface-inline-action-danger-fg:       var(--brand-color-critical);
   }
 }
 

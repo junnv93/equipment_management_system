@@ -15,39 +15,7 @@ import {
 import { Permission } from '@equipment-management/shared-constants';
 import { QRAccessService } from './qr-access.service';
 import type { JwtUser } from '../../../types/auth';
-
-/**
- * Drizzle query builder chain stub — fluent chain 종단부 `.where()` / `.limit()` 등이
- * Promise 를 반환하도록 구성. 각 query 단위 마다 `select()` 가 새 chain 인스턴스를 만들고
- * shared `nextRows()` resolver 가 미리 주입된 row 배열을 순서대로 소진.
- */
-function makeDbStub(steps: Array<unknown[]>) {
-  let callIndex = 0;
-  function nextRows(): unknown[] {
-    const rows = steps[callIndex] ?? [];
-    callIndex += 1;
-    return rows;
-  }
-  function createChain(): unknown {
-    const chain: Record<string, unknown> = {};
-    // 모든 메서드는 chain 반환 (Drizzle fluent API) — 종단은 .then thenable 한 곳에서 처리.
-    const allMethods = ['from', 'innerJoin', 'leftJoin', 'orderBy', 'limit'];
-    for (const m of allMethods) {
-      chain[m] = () => chain;
-    }
-    // where 는 일부 query 에서 종단 (limit/orderBy 없이 await), 일부는 중간 (limit 호출).
-    // → thenable + 후속 메서드 둘 다 지원: 객체 자체를 thenable 화.
-    chain.where = () => chain;
-    chain.then = (
-      onFulfilled?: (value: unknown[]) => unknown,
-      onRejected?: (reason: unknown) => unknown
-    ) => Promise.resolve(nextRows()).then(onFulfilled, onRejected);
-    return chain;
-  }
-  return {
-    select: () => createChain(),
-  };
-}
+import { createSequentialDrizzleStub } from '../../../common/__tests__/drizzle-stub';
 
 const userId = 'u-borrower-001';
 const lenderTeamId1 = 't-lender-01';
@@ -67,7 +35,10 @@ describe('QRAccessService.resolveAllowedActions — multi-handover', () => {
 
   async function buildWithDb(dbSteps: Array<unknown[]>) {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [QRAccessService, { provide: 'DRIZZLE_INSTANCE', useValue: makeDbStub(dbSteps) }],
+      providers: [
+        QRAccessService,
+        { provide: 'DRIZZLE_INSTANCE', useValue: createSequentialDrizzleStub(dbSteps) },
+      ],
     }).compile();
     service = module.get(QRAccessService);
   }

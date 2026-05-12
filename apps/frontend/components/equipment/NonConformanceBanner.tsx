@@ -5,7 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { NC_BANNER_TOKENS } from '@/lib/design-tokens';
 import type { NonConformanceStatus } from '@equipment-management/schemas';
 
@@ -65,6 +65,7 @@ function FullBanner({
   showDetails: boolean;
 }) {
   const tBanner = useTranslations('equipment.nonConformanceBanner');
+  const locale = useLocale();
 
   return (
     <Alert variant="destructive" className={NC_BANNER_TOKENS.alert}>
@@ -82,7 +83,7 @@ function FullBanner({
                   <p className={NC_BANNER_TOKENS.detailText}>{nc.cause}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {tBanner('discoveryDate', {
-                      date: new Date(nc.discoveryDate).toLocaleDateString(),
+                      date: new Date(nc.discoveryDate).toLocaleDateString(locale),
                     })}
                   </p>
                 </div>
