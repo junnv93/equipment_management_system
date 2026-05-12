@@ -55,6 +55,9 @@ fi
 echo "▶ pre-push: TypeScript check..."
 _t "tsc" pnpm tsc --noEmit
 
+echo "▶ pre-push: cache-events dual-channel audit (ADR-0012)..."
+_t "audit-cache-events" pnpm audit:cache-events
+
 echo "▶ pre-push: backend lint..."
 _t "backend-lint" pnpm --filter backend run lint:ci
 

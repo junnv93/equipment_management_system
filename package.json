@@ -54,6 +54,7 @@
     "verify:lint-ruleset-parity": "node scripts/verify-lint-ruleset-parity.mjs",
     "verify:i18n-call-sites": "node scripts/check-i18n-call-sites.mjs --all",
     "audit:dependabot": "node ./scripts/audit-dependabot.mjs",
+    "audit:cache-events": "node ./scripts/audit-cache-event-channels.mjs",
     "measure:bundle": "node scripts/measure-bundle.mjs"
   },
   "workspaces": [

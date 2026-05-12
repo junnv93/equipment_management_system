@@ -928,6 +928,8 @@
     "description": "Save frequently used filter combinations",
     "saveButton": "Save Current Filters",
     "deleteButton": "Delete",
+    "renameButton": "Rename",
+    "renameLabel": "Edit view name",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "noViews": "No saved views",

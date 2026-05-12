@@ -111,6 +111,27 @@ export function useSavedViews() {
     invalidateKeys: INVALIDATE_KEYS,
   });
 
+  // G-1 closure: rename / scope 변경 등 메타 갱신 — CAS version 동봉.
+  const updateMutation = useOptimisticMutation<
+    SavedView,
+    { id: string; version: number; name?: string; params?: string },
+    SavedView[]
+  >({
+    mutationFn: ({ id, ...payload }) => savedViewsApi.update(id, payload),
+    queryKey: SAVED_VIEWS_LIST_KEY,
+    optimisticUpdate: (old, { id, name, params }) =>
+      (old ?? []).map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              ...(name !== undefined ? { name } : {}),
+              ...(params !== undefined ? { params } : {}),
+            }
+          : row
+      ),
+    invalidateKeys: INVALIDATE_KEYS,
+  });
+
   const bulkImportMutation = useMutation({
     mutationFn: (payload: { views: Array<{ name: string; params: string }> }) =>
       savedViewsApi.bulkImport({ module: CHECKOUTS_MODULE, views: payload.views }),
@@ -165,6 +186,30 @@ export function useSavedViews() {
     [deleteMutation, toast, t, tErrors]
   );
 
+  /**
+   * G-1 closure: 이름(또는 params) 편집. CAS 정합 — 현재 view 의 version 자동 동봉.
+   * `version` 인자를 받지 않고 hook 안에서 lookup → 호출자 단순화 (호출 시점 stale version
+   * 회피, 다른 탭이 mutate 직후엔 invalidateQueries 가 fresh 데이터로 retry).
+   */
+  const renameView = useCallback(
+    (id: string, name: string) => {
+      const current = views.find((v) => v.id === id);
+      if (!current) return;
+      updateMutation.mutate(
+        { id, version: current.version, name },
+        {
+          onError: (error: unknown) => {
+            toast({
+              ...mapSavedViewErrorToToast(error, t, tErrors),
+              variant: 'destructive',
+            });
+          },
+        }
+      );
+    },
+    [views, updateMutation, toast, t, tErrors]
+  );
+
   const moveView = useCallback(
     (id: string, direction: 'up' | 'down') => {
       const index = views.findIndex((v) => v.id === id);
@@ -208,14 +253,23 @@ export function useSavedViews() {
     );
   }, [bulkImportMutation, toast, t]);
 
+  // G-4 closure: localStorage 읽기를 한 렌더당 1회로 메모화 (JSON.parse 매 렌더 회피).
+  // data 가 바뀔 때만 재계산 (views 가 비었을 때만 의미).
+  const localBackupCount = useMemo(
+    () => (views.length === 0 ? readLocalStorageBackup().length : 0),
+    [views.length]
+  );
+
   return {
     views,
     isLoading,
     addView,
     removeView,
     moveView,
+    renameView,
     importFromLocalStorage,
     /** 배너 표시 트리거: 서버에 view 0개 + localStorage 백업 ≥ 1개 */
-    hasLocalBackup: views.length === 0 && readLocalStorageBackup().length > 0,
+    hasLocalBackup: localBackupCount > 0,
+    localBackupCount,
   };
 }

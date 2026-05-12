@@ -928,6 +928,8 @@
     "description": "자주 사용하는 필터 조합을 저장하세요",
     "saveButton": "현재 필터 저장",
     "deleteButton": "삭제",
+    "renameButton": "이름 변경",
+    "renameLabel": "보기 이름 편집",
     "moveUp": "위로 이동",
     "moveDown": "아래로 이동",
     "noViews": "저장된 보기가 없습니다",

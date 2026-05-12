@@ -173,14 +173,17 @@ export class SavedViewsService extends VersionedBaseService {
         message: 'TEAM scope 는 teamId 가 필요합니다.',
       });
     }
-    if (nextScope === 'TEAM' && nextTeamId && actor.teamId && nextTeamId !== actor.teamId) {
-      const permissions = derivePermissionsFromRoles(actor.roles);
-      if (!permissions.includes(Permission.MANAGE_SAVED_VIEWS_GLOBAL)) {
-        throw new ForbiddenException({
-          code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
-          message: '본인 팀의 view 만 TEAM scope 로 지정할 수 있습니다.',
-        });
-      }
+    if (
+      nextScope === 'TEAM' &&
+      nextTeamId &&
+      actor.teamId &&
+      nextTeamId !== actor.teamId &&
+      !this.hasGlobalScopePermission(actor)
+    ) {
+      throw new ForbiddenException({
+        code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
+        message: '본인 팀의 view 만 TEAM scope 로 지정할 수 있습니다.',
+      });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -267,11 +270,27 @@ export class SavedViewsService extends VersionedBaseService {
   }
 
   // ── 권한 / 스코프 (fail-close 우선순위 보장) ──────────────────────
+  //
+  // 4 개의 enforce/assert 함수는 모두 본 헬퍼 한 곳을 경유한다 (DRY + 회귀 차단):
+  //   - canReadScope(actor, row)             — 가시성
+  //   - canWriteOwnedRow(actor, row)         — owner 기반 write
+  //   - hasGlobalScopePermission(actor)      — GLOBAL scope write 권한
+  //
+  // 신규 scope 추가 시 헬퍼만 갱신하면 4 호출자가 자동 정합.
+
+  private hasGlobalScopePermission(actor: SavedViewActor): boolean {
+    return derivePermissionsFromRoles(actor.roles).includes(Permission.MANAGE_SAVED_VIEWS_GLOBAL);
+  }
+
+  private canReadScope(actor: SavedViewActor, row: SavedView): boolean {
+    if (row.ownerId === actor.userId) return true;
+    if (row.scope === 'GLOBAL') return true;
+    if (row.scope === 'TEAM' && actor.teamId && row.teamId === actor.teamId) return true;
+    return false;
+  }
 
   private enforceReadScope(actor: SavedViewActor, row: SavedView): void {
-    if (row.ownerId === actor.userId) return;
-    if (row.scope === 'GLOBAL') return;
-    if (row.scope === 'TEAM' && actor.teamId && row.teamId === actor.teamId) return;
+    if (this.canReadScope(actor, row)) return;
     throw new ForbiddenException({
       code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
       message: '이 saved view 에 대한 접근 권한이 없습니다.',
@@ -280,8 +299,7 @@ export class SavedViewsService extends VersionedBaseService {
 
   private enforceWriteScope(actor: SavedViewActor, row: SavedView): void {
     if (row.scope === 'GLOBAL') {
-      const permissions = derivePermissionsFromRoles(actor.roles);
-      if (!permissions.includes(Permission.MANAGE_SAVED_VIEWS_GLOBAL)) {
+      if (!this.hasGlobalScopePermission(actor)) {
         throw new ForbiddenException({
           code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
           message: '전체 공유 saved view 는 관리 권한자만 수정할 수 있습니다.',
@@ -303,8 +321,7 @@ export class SavedViewsService extends VersionedBaseService {
     nextTeamId: string | null
   ): void {
     if (nextScope === 'GLOBAL') {
-      const permissions = derivePermissionsFromRoles(actor.roles);
-      if (!permissions.includes(Permission.MANAGE_SAVED_VIEWS_GLOBAL)) {
+      if (!this.hasGlobalScopePermission(actor)) {
         throw new ForbiddenException({
           code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
           message: '전체 공유 saved view 는 관리 권한자만 작성할 수 있습니다.',
@@ -318,21 +335,16 @@ export class SavedViewsService extends VersionedBaseService {
           message: 'TEAM scope 는 teamId 가 필요합니다.',
         });
       }
-      const permissions = derivePermissionsFromRoles(actor.roles);
-      if (
-        actor.teamId &&
-        nextTeamId !== actor.teamId &&
-        !permissions.includes(Permission.MANAGE_SAVED_VIEWS_GLOBAL)
-      ) {
-        throw new ForbiddenException({
-          code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
-          message: '본인 팀의 view 만 TEAM scope 로 지정할 수 있습니다.',
-        });
-      }
       if (!actor.teamId) {
         throw new ForbiddenException({
           code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
           message: '팀에 소속된 사용자만 TEAM scope 를 사용할 수 있습니다.',
+        });
+      }
+      if (nextTeamId !== actor.teamId && !this.hasGlobalScopePermission(actor)) {
+        throw new ForbiddenException({
+          code: SAVED_VIEW_ERROR_CODES.ScopeForbidden,
+          message: '본인 팀의 view 만 TEAM scope 로 지정할 수 있습니다.',
         });
       }
     }

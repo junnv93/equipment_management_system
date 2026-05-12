@@ -4,18 +4,30 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import { Bookmark, BookmarkPlus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Bookmark,
+  BookmarkPlus,
+  Pencil,
+  Trash2,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useSavedViews } from '@/hooks/use-saved-views';
 import { SaveViewDialog } from './SaveViewDialog';
-import type { SavedView } from '@/lib/checkouts/saved-views';
+import type { SavedView } from '@/hooks/use-saved-views';
 
 export function SavedViewsToolbar() {
   const t = useTranslations('checkouts.savedViews');
-  const { views, addView, removeView, moveView } = useSavedViews();
+  const { views, addView, removeView, moveView, renameView } = useSavedViews();
   const [dialogOpen, setDialogOpen] = useState(false);
+  /** G-1 closure: inline rename — null 이 아닌 id 가 편집 중인 view */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -151,14 +163,47 @@ export function SavedViewsToolbar() {
               className="h-3 w-3 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground"
               aria-hidden="true"
             />
-            <button
-              type="button"
-              className="max-w-[120px] truncate focus:outline-none"
-              onClick={() => handleViewClick(view)}
-              tabIndex={-1}
-            >
-              {view.name}
-            </button>
+            {editingId === view.id ? (
+              <Input
+                autoFocus
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return;
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trimmed = editingName.trim();
+                    if (trimmed && trimmed !== view.name) renameView(view.id, trimmed);
+                    setEditingId(null);
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setEditingId(null);
+                  }
+                }}
+                onBlur={() => {
+                  const trimmed = editingName.trim();
+                  if (trimmed && trimmed !== view.name) renameView(view.id, trimmed);
+                  setEditingId(null);
+                }}
+                className="h-6 max-w-[140px] px-1.5 py-0 text-xs"
+                maxLength={80}
+                aria-label={t('renameLabel')}
+              />
+            ) : (
+              <button
+                type="button"
+                className="max-w-[120px] truncate focus:outline-none"
+                onClick={() => handleViewClick(view)}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  setEditingId(view.id);
+                  setEditingName(view.name);
+                }}
+                tabIndex={-1}
+              >
+                {view.name}
+              </button>
+            )}
 
             {/* 키보드 정렬 버튼 */}
             <div className="ml-1 hidden items-center gap-0.5 group-focus-within:flex group-hover:flex">
@@ -187,6 +232,19 @@ export function SavedViewsToolbar() {
                 className="rounded p-0.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronDown className="h-2.5 w-2.5" />
+              </button>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingId(view.id);
+                  setEditingName(view.name);
+                }}
+                aria-label={t('renameButton')}
+                className="rounded p-0.5 hover:bg-accent"
+              >
+                <Pencil className="h-2.5 w-2.5" />
               </button>
               <button
                 type="button"
