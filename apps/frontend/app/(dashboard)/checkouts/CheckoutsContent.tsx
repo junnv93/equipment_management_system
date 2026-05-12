@@ -76,6 +76,7 @@ import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleto
 import { HeroKPIError } from '@/components/checkouts/HeroKPIError';
 import { FilterStickyBar } from '@/components/checkouts/FilterStickyBar';
 import { SavedViewsToolbar } from '@/components/checkouts/SavedViewsToolbar';
+import { SavedViewsImportBanner } from '@/components/checkouts/SavedViewsImportBanner';
 
 // ✅ 코드 분할 (Next.js dynamic import)
 const OutboundCheckoutsTab = dynamic(() => import('./tabs/OutboundCheckoutsTab'), {
@@ -388,6 +389,7 @@ export default function CheckoutsContent({
 
         {/* ── Saved Views 바 (시스템 뷰 + 커스텀 뷰) ── */}
         <FilterStickyBar />
+        <SavedViewsImportBanner />
         <SavedViewsToolbar />
 
         {/* ── Alert-First 배너 (반출 탭만) ── */}

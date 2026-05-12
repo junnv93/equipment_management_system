@@ -933,6 +933,12 @@
     "noViews": "No saved views",
     "maxReached": "You can save up to {max} views",
     "saveError": "Failed to save",
+    "errorTitle": "An error occurred while saving the view",
+    "importTitle": "You have saved views in this browser",
+    "importDescription": "Migrate {count} views stored in this browser to the server",
+    "importButton": "Import to server",
+    "importSuccess": "Imported {count} views",
+    "importDismiss": "Not now",
     "saveDialog": {
       "title": "Save View",
       "description": "Save the current filter settings",
@@ -940,6 +946,19 @@
       "namePlaceholder": "e.g. This week's inspections",
       "cancel": "Cancel",
       "confirm": "Save"
+    },
+    "scope": {
+      "private": "Private",
+      "team": "Team",
+      "global": "Global"
+    },
+    "errors": {
+      "notFound": "Saved view not found. Please refresh the list.",
+      "scopeForbidden": "You do not have permission to access this view.",
+      "maxReached": "You can save up to 5 views per module.",
+      "teamRequiredForScope": "Team-scoped views require team information.",
+      "versionConflict": "Another user modified this view. Please refresh the list.",
+      "genericError": "An error occurred while processing the view. Please try again later."
     },
     "systemViews": {
       "all": "All",

@@ -770,4 +770,15 @@ export const queryKeys = {
     all: ['auth'] as const,
     providers: () => [...queryKeys.auth.all, 'providers'] as const,
   },
+  /**
+   * Saved Views — checkouts 등 module 별 사용자 저장 뷰 (S-7 sprint).
+   *
+   * - all/list(module): 본인 가시 view 목록 (PRIVATE+TEAM+GLOBAL 통합)
+   * - detail(id): 단건 조회 (CAS 재시도 시 invalidateQueries prefix `all`)
+   */
+  savedViews: {
+    all: ['savedViews'] as const,
+    list: (module: string) => [...queryKeys.savedViews.all, 'list', module] as const,
+    detail: (id: string) => [...queryKeys.savedViews.all, 'detail', id] as const,
+  },
 } as const;

@@ -933,6 +933,12 @@
     "noViews": "저장된 보기가 없습니다",
     "maxReached": "최대 {max}개까지 저장할 수 있습니다",
     "saveError": "저장에 실패했습니다",
+    "errorTitle": "보기 작업 중 오류가 발생했습니다",
+    "importTitle": "이전에 저장한 보기가 있습니다",
+    "importDescription": "이 브라우저에 저장된 보기 {count}개를 서버로 옮길 수 있습니다",
+    "importButton": "서버로 가져오기",
+    "importSuccess": "보기 {count}개를 가져왔습니다",
+    "importDismiss": "다음에 하기",
     "saveDialog": {
       "title": "보기 저장",
       "description": "현재 필터 설정을 저장합니다",
@@ -940,6 +946,19 @@
       "namePlaceholder": "예: 이번 주 점검 대상",
       "cancel": "취소",
       "confirm": "저장"
+    },
+    "scope": {
+      "private": "개인용",
+      "team": "팀 공유",
+      "global": "전체 공유"
+    },
+    "errors": {
+      "notFound": "저장된 보기를 찾을 수 없습니다. 목록을 새로고침 해주세요.",
+      "scopeForbidden": "이 보기에 대한 접근 권한이 없습니다.",
+      "maxReached": "한 도메인당 최대 5개까지 저장할 수 있습니다.",
+      "teamRequiredForScope": "팀 공유 보기는 팀 정보가 필요합니다.",
+      "versionConflict": "다른 사용자가 먼저 수정했습니다. 목록을 새로고침 해주세요.",
+      "genericError": "보기 작업 중 오류가 발생했습니다. 잠시 후 다시 시도하세요."
     },
     "systemViews": {
       "all": "전체",
