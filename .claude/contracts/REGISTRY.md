@@ -11,6 +11,8 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 |------|------|--------|
 | `checkouts-sprint4-followups-s2-s4-s5-s6` | checkouts-sprint4-ux-u02-u08 후속 4건 — S-2 revoke 5분 countdown / S-4 reject-preset admin CRUD / S-5 fuzzy-search ADR-0011 / S-6 destination 인라인 등록 | 2026-05-12 |
 | `qr-visual-redesign-followups-g4-g12` | qr-visual-redesign 시니어 자기검토 라운드 #2 후속 9건 통합 closure — G-4 text-mono SSOT 통일 / G-5 dead i18n tone 의미화 / G-6 abnormal photo 항목별 인라인 / G-7 brand-color-* oklch 마이그레이션 + WCAG AA / G-8 AutoProgressCountdown rAF 제거 + CSS transition / G-9 StatusBadge React.memo / G-10 drizzle-stub SSOT 헬퍼 / G-11 toLocaleDateString locale safety / G-12 LabelPreview mini QR 4×4 grid SVG | 2026-05-12 |
+| `saved-views-team-share` | checkouts-sprint4-ux-u02-u08 S-7 closure — Saved Views localStorage→서버 마이그레이션 + scope 트리아드(PRIVATE/TEAM/GLOBAL) + CAS + RBAC + audit + 명시 import banner. 28~32 파일 (신규 15 + 수정 13~17), 새 backend 모듈 `saved-views`, manual SQL 0059 migration | 2026-05-12 |
+| `cache-event-channel-architecture-r2` | sw-validation-event-channel-separation 시니어 자기검토 #2 — 5갭 통합 closure: 갭1 SW_VALIDATION registry pattern specific sub-prefix 축소 / 갭2 ADR-0012 event-channel-responsibility / 갭3 dual-channel audit script / 갭4 cache. prefix 명명 spec / 갭5 synonym map SSOT 이동 | 2026-05-12 |
 
 ---
 
