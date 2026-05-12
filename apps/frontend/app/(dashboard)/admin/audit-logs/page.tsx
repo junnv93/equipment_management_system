@@ -15,6 +15,7 @@
  * ✅ 커서 기반 무한 스크롤:
  * - SSR 첫 페이지 → useInfiniteQuery initialData로 전달
  */
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { TablePageSkeleton } from '@/components/ui/list-page-skeleton';
 import AuditLogsContent from './AuditLogsContent';
@@ -24,6 +25,9 @@ import {
   parseAuditLogFiltersFromSearchParams,
 } from '@/lib/utils/audit-log-filter-utils';
 import type { CursorPaginatedAuditLogsResponse } from '@equipment-management/schemas';
+import { getServerAuthSession } from '@/lib/auth/server-session';
+import { hasPermission, Permission } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 
 export default function AuditLogsPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -51,6 +55,14 @@ async function AuditLogsAsync({
 }: {
   searchParamsPromise: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const session = await getServerAuthSession();
+  if (!session?.user) {
+    redirect('/login');
+  }
+  if (!hasPermission(session.user.role as UserRole, Permission.VIEW_AUDIT_LOGS)) {
+    redirect('/dashboard');
+  }
+
   const searchParams = await searchParamsPromise;
   const filters = parseAuditLogFiltersFromSearchParams(searchParams);
   const cursorParams = convertFiltersToCursorParams(filters);
