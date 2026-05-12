@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +42,7 @@ function EquipmentPaginationComponent({
   className = '',
 }: EquipmentPaginationProps) {
   const t = useTranslations('equipment');
+  const locale = useLocale();
   // 표시할 페이지 번호 계산
   const pageNumbers = useMemo(() => {
     const pages: (number | 'ellipsis')[] = [];
@@ -139,7 +140,7 @@ function EquipmentPaginationComponent({
       >
         <span>
           {t('pagination.totalOf', {
-            total: totalItems.toLocaleString(),
+            total: totalItems.toLocaleString(locale),
             start: displayRange.start,
             end: displayRange.end,
           })}

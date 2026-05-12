@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   AUDIT_SUMMARY_TOKENS,
   AUDIT_SUMMARY_COLOR_MAP,
@@ -47,6 +47,7 @@ export function AuditSummaryBar({
   onActionChange,
 }: AuditSummaryBarProps) {
   const t = useTranslations('audit');
+  const locale = useLocale();
 
   return (
     <div className={AUDIT_SUMMARY_TOKENS.grid} role="radiogroup" aria-label={t('filter')}>
@@ -71,14 +72,14 @@ export function AuditSummaryBar({
               <span
                 className={cn(AUDIT_SUMMARY_TOKENS.count, AUDIT_SUMMARY_COLOR_MAP[colorKey].count)}
               >
-                {total.toLocaleString()}
+                {total.toLocaleString(locale)}
               </span>
             ) : actionCounts ? (
               /* 액션 카드: 백엔드 GROUP BY 결과로 실제 건수 표시 */
               <span
                 className={cn(AUDIT_SUMMARY_TOKENS.count, AUDIT_SUMMARY_COLOR_MAP[colorKey].count)}
               >
-                {(actionCounts[action] ?? 0).toLocaleString()}
+                {(actionCounts[action] ?? 0).toLocaleString(locale)}
               </span>
             ) : (
               /* 로딩 중 또는 summary 미제공 시 —로 대체 */

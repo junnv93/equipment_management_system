@@ -706,9 +706,16 @@
     line-height: 1.45;
   }
 
-  /* text-mono — 관리번호/타임스탬프 monospace 클래스 (qr-visual-redesign TASK 8)
-   * font-mono + tabular-nums + --text-mono(13px) 결합 — 자릿수 점프 방지.
-   * 기존 `font-mono tabular-nums text-xs` 패턴의 SSOT 통합 (자유 size 변경 차단). */
+  /* text-mono-base — 의미적 mono 진입점의 SSOT primitive (size-less, qr-visual-redesign 라운드 #3 갭 1).
+   * font-mono + tabular-nums 결합만 노출 — size는 호출부/헬퍼가 결정 (text-sm/text-mono 등 자유 조합).
+   * 사용처: getTimestampClasses (text-sm) / getKpiCounterClasses (size 미명시) 등 의미적 진입점. */
+  .text-mono-base {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* text-mono — 관리번호 size primitive (13px, qr-visual-redesign TASK 8)
+   * .text-mono-base + --text-mono(13px). 관리번호 SUW-E0001 형식 자릿수 점프 방지. */
   .text-mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;

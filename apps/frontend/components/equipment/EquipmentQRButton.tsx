@@ -58,6 +58,31 @@ const PREVIEW_QR_PATTERN: readonly (readonly (0 | 1)[])[] = [
   [1, 1, 1, 1, 0, 1, 1],
 ] as const;
 
+/**
+ * Mini QR SVG — 7×7 deterministic module grid (qr-visual-redesign 라운드 #3 갭 5).
+ * inline IIFE 대신 helper component 추출 (JSX 안티패턴 회피).
+ */
+function MiniQRPattern({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 7 7"
+      width={size}
+      height={size}
+      className="shrink-0 text-foreground/85"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      {PREVIEW_QR_PATTERN.flatMap((row, y) =>
+        row.map((cell, x) =>
+          cell === 1 ? (
+            <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill="currentColor" />
+          ) : null
+        )
+      )}
+    </svg>
+  );
+}
+
 /** 시각 비교 미니 라벨 — 비례 사각형 + 좌측 mini QR + 권장 용도 라벨. */
 function LabelPreviewRow({
   preset,
@@ -105,35 +130,8 @@ function LabelPreviewRow({
           )}
           style={{ width: `${previewWidthPx}px`, height: `${previewHeightPx}px` }}
         >
-          {/* mini QR pattern — 7×7 deterministic module grid (G-12). */}
-          {(() => {
-            const qrSize = Math.min(previewHeightPx - 6, 18);
-            return (
-              <svg
-                viewBox="0 0 7 7"
-                width={qrSize}
-                height={qrSize}
-                className="shrink-0 text-foreground/85"
-                shapeRendering="crispEdges"
-                aria-hidden="true"
-              >
-                {PREVIEW_QR_PATTERN.flatMap((row, y) =>
-                  row.map((cell, x) =>
-                    cell === 1 ? (
-                      <rect
-                        key={`${x}-${y}`}
-                        x={x}
-                        y={y}
-                        width="1"
-                        height="1"
-                        fill="currentColor"
-                      />
-                    ) : null
-                  )
-                )}
-              </svg>
-            );
-          })()}
+          {/* mini QR pattern — 7×7 deterministic module grid (G-12, helper component G-5/round#3). */}
+          <MiniQRPattern size={Math.min(previewHeightPx - 6, 18)} />
           {/* 라벨 텍스트 line hint — 1차/2차 텍스트가 QR 우측에 인쇄되는 것을 시각화. */}
           <div className="flex flex-1 flex-col gap-1 overflow-hidden">
             <div className="h-[3px] w-full rounded-sm bg-foreground/60" />

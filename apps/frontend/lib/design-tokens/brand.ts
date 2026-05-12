@@ -346,17 +346,21 @@ export function getManagementNumberClasses(): string {
 }
 
 /**
- * 타임스탬프 표시 스타일
+ * 타임스탬프 표시 스타일 (의미적 진입점)
+ *
+ * `.text-mono-base` (font-mono + tabular-nums size-less SSOT primitive) + text-sm + muted.
  */
 export function getTimestampClasses(): string {
-  return 'font-mono tabular-nums text-brand-text-muted text-sm';
+  return 'text-mono-base text-brand-text-muted text-sm';
 }
 
 /**
- * KPI 카운터 스타일 (대시보드 통계 수치)
+ * KPI 카운터 스타일 (대시보드 통계 수치, 의미적 진입점)
+ *
+ * `.text-mono-base` + font-semibold + brand-text-primary. size는 호출부 결정.
  */
 export function getKpiCounterClasses(): string {
-  return 'font-mono tabular-nums font-semibold text-brand-text-primary';
+  return 'text-mono-base font-semibold text-brand-text-primary';
 }
 
 /**

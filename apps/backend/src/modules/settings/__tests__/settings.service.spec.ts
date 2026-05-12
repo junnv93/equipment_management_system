@@ -10,35 +10,17 @@ import {
   DEFAULT_CALIBRATION_ALERT_DAYS,
   DEFAULT_SYSTEM_SETTINGS,
 } from '@equipment-management/schemas';
+import {
+  createDrizzleSelectChain as createSelectChain,
+  createDrizzleInsertChain as createInsertChain,
+  createDrizzleUpdateChain as createUpdateChain,
+} from '../../../common/__tests__/drizzle-stub';
 
 describe('SettingsService', () => {
   let service: SettingsService;
   let mockDb: Record<string, jest.Mock>;
   let mockCacheService: Record<string, jest.Mock>;
   let mockCacheInvalidation: Record<string, jest.Mock>;
-
-  // thenable chain builder
-  const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
-    const chain: Record<string, jest.Mock> = {};
-    const self = (): Record<string, jest.Mock> => chain;
-    chain.from = jest.fn().mockImplementation(self);
-    chain.where = jest.fn().mockImplementation(self);
-    chain.limit = jest.fn().mockImplementation(self);
-    chain.then = jest.fn().mockImplementation((resolve: (v: unknown) => void) => resolve(rows));
-    return chain;
-  };
-
-  const createUpdateChain = (): { set: jest.Mock; where: jest.Mock } => {
-    const chain = {
-      set: jest.fn().mockReturnThis(),
-      where: jest.fn().mockResolvedValue(undefined),
-    };
-    return chain;
-  };
-
-  const createInsertChain = (): { values: jest.Mock } => ({
-    values: jest.fn().mockResolvedValue(undefined),
-  });
 
   beforeEach(async () => {
     mockCacheService = createMockCacheService();

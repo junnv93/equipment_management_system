@@ -286,6 +286,7 @@ function HeroKpiStrip({
   httpStats: MonitoringHttpStats | undefined;
 }) {
   const t = useTranslations('monitoring');
+  const locale = useLocale();
 
   const cpuValue = metrics?.cpu.usage ?? 0;
   const memValue = metrics?.memory.percentage ?? 0;
@@ -315,7 +316,7 @@ function HeroKpiStrip({
     },
     {
       label: t('http.totalRequests'),
-      value: totalRequests.toLocaleString(),
+      value: totalRequests.toLocaleString(locale),
       icon: <TrendingUp className="h-4 w-4" />,
       colorClass: 'text-brand-info',
     },
@@ -495,6 +496,7 @@ function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
 
 function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
   const t = useTranslations('monitoring');
+  const locale = useLocale();
 
   return (
     <Card className={ELEVATION_TOKENS.shadow.subtle}>
@@ -509,7 +511,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.totalRequests')}</p>
             <p className={`text-2xl font-bold ${FONT.kpi}`}>
-              {data.totalRequests.toLocaleString()}
+              {data.totalRequests.toLocaleString(locale)}
             </p>
           </div>
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
@@ -523,7 +525,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.successRequests')}</p>
             <p className={`text-2xl font-bold ${FONT.kpi} text-brand-ok`}>
-              {data.successRequests.toLocaleString()}
+              {data.successRequests.toLocaleString(locale)}
             </p>
           </div>
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
@@ -531,7 +533,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
             <p
               className={`text-2xl font-bold ${FONT.kpi} ${data.errorRequests > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
             >
-              {data.errorRequests.toLocaleString()}
+              {data.errorRequests.toLocaleString(locale)}
             </p>
           </div>
         </div>
@@ -565,6 +567,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
 
 function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
   const t = useTranslations('monitoring');
+  const locale = useLocale();
   const hitRatePercent = data.hitRate * 100;
 
   return (
@@ -586,13 +589,13 @@ function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('cache.hits')}</p>
             <p className={`text-2xl font-bold ${FONT.kpi} text-brand-ok`}>
-              {data.hits.toLocaleString()}
+              {data.hits.toLocaleString(locale)}
             </p>
           </div>
           <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('cache.misses')}</p>
             <p className={`text-2xl font-bold ${FONT.kpi} text-brand-warning`}>
-              {data.misses.toLocaleString()}
+              {data.misses.toLocaleString(locale)}
             </p>
           </div>
         </div>
@@ -618,6 +621,7 @@ function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
 
 function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
   const t = useTranslations('monitoring');
+  const locale = useLocale();
   const db = data.services.database;
 
   return (
@@ -641,7 +645,7 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
           <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('db.connectionsAcquired')}</p>
             <p className={`text-lg font-bold ${FONT.kpi}`}>
-              {db.metrics.connectionsAcquired.toLocaleString()}
+              {db.metrics.connectionsAcquired.toLocaleString(locale)}
             </p>
           </div>
           <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
@@ -649,7 +653,7 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
             <p
               className={`text-lg font-bold ${FONT.kpi} ${db.metrics.queriesFailed > 0 ? 'text-destructive' : 'text-brand-ok'}`}
             >
-              {db.metrics.queriesFailed.toLocaleString()}
+              {db.metrics.queriesFailed.toLocaleString(locale)}
             </p>
           </div>
           <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
@@ -662,7 +666,7 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
           <div>
             <span className="text-muted-foreground">{t('db.connectionsCreated')}</span>
             <p className={`${FONT.mono} font-medium`}>
-              {db.metrics.connectionsCreated.toLocaleString()}
+              {db.metrics.connectionsCreated.toLocaleString(locale)}
             </p>
           </div>
           <div>
@@ -670,7 +674,7 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
             <p
               className={`${FONT.mono} font-medium ${db.metrics.connectionErrors > 0 ? 'text-destructive' : ''}`}
             >
-              {db.metrics.connectionErrors.toLocaleString()}
+              {db.metrics.connectionErrors.toLocaleString(locale)}
             </p>
           </div>
         </div>

@@ -56,7 +56,7 @@ import {
   getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface AuditLogsContentProps {
   initialData: CursorPaginatedAuditLogsResponse | null;
@@ -65,6 +65,7 @@ interface AuditLogsContentProps {
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const locale = useLocale();
   const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
   const { toast } = useToast();
   const router = useRouter();
@@ -196,7 +197,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
         <div className={AUDIT_HEADER_TOKENS.actionsGroup}>
           <span className={AUDIT_HEADER_TOKENS.statsBadge}>
-            {t('totalLogs', { count: totalCount.toLocaleString() })}
+            {t('totalLogs', { count: totalCount.toLocaleString(locale) })}
           </span>
           <Button
             variant="ghost"
