@@ -47,6 +47,8 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   data_migration_session: () => `/admin/data-migration`,
   // 교정성적서 PDF는 dry-run extract만 (DB row 없음) — 등록 폼으로 fallback 라우팅
   calibration_certificate: () => `/calibration/register`,
+  // 반려 사유 프리셋 — admin 페이지에서 관리 (route group `(dashboard)` 는 URL에서 제거됨)
+  rejection_preset: () => `/admin/rejection-presets`,
 };
 
 /**
