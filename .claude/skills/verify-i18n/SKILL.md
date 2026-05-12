@@ -614,6 +614,91 @@ grep -rn "tErrors" apps/frontend/lib/errors --include="*-errors.ts" | \
 
 **발생 이력 (2026-05-09 신설)**: ADR-0008 tErrors chain 완성 — 도메인 t namespace scope trap (e.g. `useTranslations('teams')`가 `errors.json` 접근 불가) 해소. `mapZodIssuesToToast` 선택적 3번째 파라미터 추가 + 17개 도메인 mapper 전파 + 11개 컴포넌트 `useTranslations('errors')` 주입.
 
+### Step 22: i18n-parity automation spec 존재 + SUPPORTED_LOCALES SSOT 경유 (2026-05-12 추가)
+
+**배경**: 2026-05-12 `shortcuts-context-multi-tab-i18n-parity` sprint(G-17 closure)에서 `apps/frontend/lib/__tests__/i18n-parity.test.ts` 신설 — 모든 도메인 `messages/<locale>/*.json` 파일의 키 sorted deep-equal 자동 검증. sprint 단위로 한쪽 locale 만 키 추가/오타 회귀 차단. spec 자체가 SSOT 회귀 메커니즘이므로 **spec 삭제 = SSOT 메커니즘 손실**. 본 Step 은 spec 존재 + SSOT 경유 일관성 보장.
+
+**검증 명령**:
+```bash
+# 1) spec 파일 존재 확인
+test -f apps/frontend/lib/__tests__/i18n-parity.test.ts && echo PASS || echo "FAIL: spec missing"
+# 기대: PASS
+
+# 2) SUPPORTED_LOCALES SSOT 경유 — 인라인 'ko'|'en' 차단
+grep -E "'ko' \| 'en'|type Locale = 'ko'|\"ko\" \| \"en\"" apps/frontend/lib/__tests__/i18n-parity.test.ts \
+  && echo "FAIL: 인라인 locale union" || echo "PASS"
+# 기대: PASS (인라인 0)
+
+# 3) @equipment-management/schemas import 존재
+grep -c "from '@equipment-management/schemas'" apps/frontend/lib/__tests__/i18n-parity.test.ts
+# 기대: ≥ 1 (SUPPORTED_LOCALES import)
+
+# 4) describe.each 도메인별 case 패턴 사용 (자동 enumeration)
+grep -c "describe.each\b" apps/frontend/lib/__tests__/i18n-parity.test.ts
+# 기대: ≥ 1
+
+# 5) spec 실행 PASS
+cd apps/frontend && npx jest --testPathPattern="i18n-parity" --no-cache 2>&1 | tail -5
+# 기대: "Test Suites: 1 passed" + "Tests: N passed"
+```
+
+**PASS**: spec 파일 존재 + 인라인 locale 0건 + schemas SSOT import + describe.each 사용 + jest 실행 PASS.
+**FAIL**: spec 삭제 → 즉시 복구. 인라인 locale → `SUPPORTED_LOCALES` import + `type Locale = SupportedLocale` 또는 직접 사용으로 교체.
+
+**주의사항**:
+- locale 추가 시 spec 코드 변경 불필요 — `SUPPORTED_LOCALES` SSOT 갱신만으로 자동 케이스 생성
+- `extractKeyPaths` 가 배열을 leaf 로 처리 — 현재 i18n 구조에 배열 없음 (silent miss 위험 0). 배열 도입 시 recursion 보강 필요 (tech-debt R-3)
+
+**관련 파일**:
+- `apps/frontend/lib/__tests__/i18n-parity.test.ts` — automation spec
+- `packages/schemas/src/settings.ts` — `SUPPORTED_LOCALES` SSOT (export const `['ko', 'en'] as const`)
+- `apps/frontend/messages/{<locale>}/*.json` — 검증 대상
+
+**발생 이력 (2026-05-12 신설)**: `shortcuts-context-multi-tab-i18n-parity` sprint G-17 closure — sprint 단위로 한쪽 locale 만 키 추가/오타 회귀 차단 자동화. 라운드 #4 자기검토에서 인라인 `'ko' | 'en'` 우회 발견 → `SUPPORTED_LOCALES` SSOT 경유로 통일.
+
+### Step 23: spec 파일 inline type-only import babel-jest 호환 (2026-05-12 추가)
+
+**배경**: 2026-05-12 `shortcuts-context-multi-tab-i18n-parity` sprint verify-implementation 진행 중 발견 — `import { value, type Identifier } from 'pkg'` TS 5.0+ 인라인 type-only import 신택스가 next/jest 의 babel-preset-typescript 와 호환 안 됨. 컴파일 시점 tsc 는 통과하지만 jest 런타임에서 `SyntaxError: Unexpected token, expected ","` FAIL. spec 파일에서는 `import` + `import type` 분리 표준 필수.
+
+**검증 명령**:
+```bash
+# spec 파일에서 inline type-only import 패턴 탐지
+grep -rEn "import\s*\{[^}]*\btype\s+[A-Z]" \
+  apps/frontend/lib/__tests__ \
+  apps/frontend/components/**/__tests__ \
+  apps/frontend/hooks/__tests__ \
+  --include="*.test.ts" --include="*.test.tsx" 2>/dev/null
+# 기대: 0건. 발견 시 `import` + `import type` 라인 분리.
+
+# 동일 검사 backend spec
+grep -rEn "import\s*\{[^}]*\btype\s+[A-Z]" \
+  apps/backend/src apps/backend/test \
+  --include="*.spec.ts" --include="*.test.ts" 2>/dev/null
+# 기대: 0건 (backend는 ts-jest 사용하므로 호환 가능성 있으나 일관성 유지 권장)
+```
+
+**PASS**: 0건.
+**FAIL**: 발견 시 분리:
+```ts
+// ❌ 호환 안 됨
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@equipment-management/schemas';
+
+// ✅ 분리
+import { SUPPORTED_LOCALES } from '@equipment-management/schemas';
+import type { SupportedLocale } from '@equipment-management/schemas';
+```
+
+**주의사항**:
+- **production 코드(`*.ts`/`*.tsx`)는 SWC 트랜스폼 사용하므로 인라인 type-only OK** — 본 검사는 spec 파일 한정
+- next/jest 가 babel-preset-typescript 사용 (Next.js 16 SWC 와 별개 트랜스폼) — TS 5.0+ syntax 일부 누락
+- spec 파일에서만 분리하면 backward-compat (오래된 babel 버전과도 호환)
+
+**관련 파일**:
+- `apps/frontend/jest.config.js` — `nextJest({ dir: './' })` 기반 (babel-preset-typescript 내부)
+- `apps/frontend/lib/__tests__/i18n-parity.test.ts` — 본 sprint 회귀 closure 사례 (commit `63d58066`)
+
+**발생 이력 (2026-05-12 신설)**: `shortcuts-context-multi-tab-i18n-parity` sprint verify-implementation 진행 중 발견. 라운드 #4 commit `b3dda09f` 에 들어간 인라인 `import { value, type Identifier }` 가 jest 런타임 SyntaxError 발생 → type-only import 분리(commit `63d58066`). 회귀 차단 자동화 필요성 식별.
+
 ## Output Format
 
 ```markdown
@@ -640,6 +725,8 @@ grep -rn "tErrors" apps/frontend/lib/errors --include="*-errors.ts" | \
 | 19  | ESLint typed linting 블록 inner ignores — `**/*.stories.{ts,tsx}` 포함 확인 | PASS/FAIL/INFO | stories 패턴 누락 시 파싱 오류 경로, typed linting block 없으면 INFO |
 | 20  | 도메인 mapper `errors.title/errors.genericError` baseline 키 존재 확인 | PASS/FAIL/WARN | 누락 locale/namespace/key 목록, mapper 파일 미존재 시 자동 스킵 |
 | 21  | ADR-0008 tErrors 3-param 주입 — mapper 호출처 2-인자 패턴 탐지 | PASS/FAIL | 2-param 호출 파일:라인, tErrors 주입 컴포넌트 수, 도메인 mapper tErrors? 파라미터 수 |
+| 22  | i18n-parity automation spec 존재 + SUPPORTED_LOCALES SSOT 경유 | PASS/FAIL | spec 미존재 / 인라인 locale union / SSOT import 부재 / describe.each 부재 / jest 실패 |
+| 23  | spec 파일 inline type-only import babel-jest 호환 | PASS/FAIL | 인라인 `import { value, type Identifier }` 발견 파일:라인 |
 ```
 
 ## Exceptions
