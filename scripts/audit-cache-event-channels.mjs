@@ -134,6 +134,42 @@ function deriveNotificationMirror(cacheEventValue, synonymMap) {
   return `${synonymMap[domain] ?? domain}${rest}`;
 }
 
+/** 라운드 #3 갭 D — noti → cache 역추론 (양방향 mirror 검사). */
+function deriveCacheMirror(notificationEventValue, synonymMap) {
+  if (notificationEventValue.startsWith('cache.')) return notificationEventValue;
+  const dotIdx = notificationEventValue.indexOf('.');
+  if (dotIdx < 0) return null;
+  const notiDomain = notificationEventValue.slice(0, dotIdx);
+  const rest = notificationEventValue.slice(dotIdx);
+  let cacheDomain = notiDomain;
+  for (const [cacheKey, notiVal] of Object.entries(synonymMap)) {
+    if (notiVal === notiDomain) {
+      cacheDomain = cacheKey;
+      break;
+    }
+  }
+  return `cache.${cacheDomain}${rest}`;
+}
+
+/** 라운드 #3 갭 O — wholesale `${PREFIX}*` 패턴 탐지 (ADR-0012 §Decision-2 금지). */
+function extractWholesalePatterns(registrySource) {
+  const wholesale = [];
+  const entryRe = /\[(NOTIFICATION_EVENTS|CACHE_EVENTS)\.([A-Z_]+)\]:\s*\{([\s\S]*?)\n\s*\},/g;
+  let m;
+  while ((m = entryRe.exec(registrySource)) !== null) {
+    const namespace = m[1];
+    const key = m[2];
+    const body = m[3];
+    const wholesaleMatches = [
+      ...body.matchAll(/pattern:\s*`\$\{CACHE_KEY_PREFIXES\.([A-Z_]+)\}\*`/g),
+    ];
+    for (const wm of wholesaleMatches) {
+      wholesale.push({ eventKey: `${namespace}.${key}`, prefix: wm[1] });
+    }
+  }
+  return wholesale;
+}
+
 /**
  * cache-event.registry.ts에서 registry entry signature(actions+patterns) 추출.
  *
@@ -191,19 +227,19 @@ if (cacheEvents.size === 0 || notificationEvents.size === 0) {
   );
 }
 
+const cacheEnumKeyByValue = new Map([...cacheEvents].map(([k, v]) => [v, k]));
 const notiEnumKeyByValue = new Map([...notificationEvents].map(([k, v]) => [v, k]));
 
 const violations = [];
 const potential = [];
+const seenPairs = new Set(); // 양방향 중복 보고 방지
 let mirrorPairsChecked = 0;
 
-for (const [cacheKey, cacheValue] of cacheEvents) {
-  const mirror = deriveNotificationMirror(cacheValue, synonymMap);
-  if (!mirror) continue;
-  if (!notiEnumKeyByValue.has(mirror)) continue;
-
+function recordPair(cacheKey, cacheValue, notiKey, notiValue) {
+  const pairId = `${cacheKey}|${notiKey}`;
+  if (seenPairs.has(pairId)) return;
+  seenPairs.add(pairId);
   mirrorPairsChecked += 1;
-  const notiKey = notiEnumKeyByValue.get(mirror);
 
   const cacheRegKey = `CACHE_EVENTS.${cacheKey}`;
   const notiRegKey = `NOTIFICATION_EVENTS.${notiKey}`;
@@ -215,7 +251,7 @@ for (const [cacheKey, cacheValue] of cacheEvents) {
       violations.push({
         type: 'VIOLATION',
         cacheEvent: { key: cacheRegKey, value: cacheValue },
-        notificationEvent: { key: notiRegKey, value: mirror },
+        notificationEvent: { key: notiRegKey, value: notiValue },
         signature: cacheSig,
         message:
           '동일 logical 이벤트의 mirror pair가 양 채널에 동일 invalidation rule로 등록됨. ' +
@@ -225,7 +261,7 @@ for (const [cacheKey, cacheValue] of cacheEvents) {
       potential.push({
         type: 'POTENTIAL_DIVERGENCE',
         cacheEvent: { key: cacheRegKey, value: cacheValue },
-        notificationEvent: { key: notiRegKey, value: mirror },
+        notificationEvent: { key: notiRegKey, value: notiValue },
         cacheSignature: cacheSig,
         notiSignature: notiSig,
         message:
@@ -234,7 +270,6 @@ for (const [cacheKey, cacheValue] of cacheEvents) {
       });
     }
   } else if (cacheSig || notiSig) {
-    // 한쪽만 등록된 mirror — invariant 미트리거지만 다른 채널 추가 시 회귀 가능
     potential.push({
       type: 'POTENTIAL_ONE_SIDED',
       cacheEvent: { key: cacheRegKey, registered: Boolean(cacheSig) },
@@ -243,6 +278,33 @@ for (const [cacheKey, cacheValue] of cacheEvents) {
         'mirror 후보 중 한쪽만 registry에 등록됨. 다른 채널이 추가되면 invariant violation 트리거.',
     });
   }
+}
+
+// 라운드 #3 갭 D: 양방향 mirror 검사
+// 방향 1: cache → noti
+for (const [cacheKey, cacheValue] of cacheEvents) {
+  const mirror = deriveNotificationMirror(cacheValue, synonymMap);
+  if (!mirror || !notiEnumKeyByValue.has(mirror)) continue;
+  recordPair(cacheKey, cacheValue, notiEnumKeyByValue.get(mirror), mirror);
+}
+// 방향 2: noti → cache reverse
+for (const [notiKey, notiValue] of notificationEvents) {
+  const mirror = deriveCacheMirror(notiValue, synonymMap);
+  if (!mirror || !cacheEnumKeyByValue.has(mirror)) continue;
+  recordPair(cacheEnumKeyByValue.get(mirror), mirror, notiKey, notiValue);
+}
+
+// 라운드 #3 갭 O: wholesale 패턴 violation
+const wholesalePatterns = extractWholesalePatterns(registrySrc);
+for (const w of wholesalePatterns) {
+  violations.push({
+    type: 'WHOLESALE_PATTERN',
+    eventKey: w.eventKey,
+    prefix: w.prefix,
+    message:
+      `wholesale 패턴 \${CACHE_KEY_PREFIXES.${w.prefix}}* 사용 (ADR-0012 §Decision-2 금지). ` +
+      `specific sub-prefix(list:* / pending:* / detail:* 등)로 분해 필요.`,
+  });
 }
 
 // ─── Report ──────────────────────────────────────────────────────────────
@@ -259,9 +321,15 @@ report += '\n';
 if (violations.length > 0) {
   report += '── VIOLATIONS (즉시 fix 필요) ─────────────────────────────────────\n';
   for (const v of violations) {
-    report += `\n  ✗ ${v.cacheEvent.key} (= '${v.cacheEvent.value}')\n`;
-    report += `    + ${v.notificationEvent.key} (= '${v.notificationEvent.value}')\n`;
-    report += `    → ${v.message}\n`;
+    if (v.type === 'WHOLESALE_PATTERN') {
+      report += `\n  ✗ [wholesale] ${v.eventKey}\n`;
+      report += `    pattern: \${CACHE_KEY_PREFIXES.${v.prefix}}*\n`;
+      report += `    → ${v.message}\n`;
+    } else {
+      report += `\n  ✗ ${v.cacheEvent.key} (= '${v.cacheEvent.value}')\n`;
+      report += `    + ${v.notificationEvent.key} (= '${v.notificationEvent.value}')\n`;
+      report += `    → ${v.message}\n`;
+    }
   }
   report += '\n';
 }

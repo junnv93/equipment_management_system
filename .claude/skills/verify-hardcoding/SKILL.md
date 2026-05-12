@@ -1074,9 +1074,9 @@ grep -c "cssVar" apps/frontend/lib/design-tokens/index.ts
 **검증 명령**:
 ```bash
 # locale-less 호출 0건 (RepairHistoryTimeline.tsx 의 의도적 ko-KR 하드코딩 allow-list)
-rg -nE "toLocaleDateString\(\)|toLocaleTimeString\(\)" apps/frontend/components apps/frontend/app \
+rg -nE "toLocaleDateString\(\)|toLocaleTimeString\(\)|\.toLocaleString\(\)" apps/frontend/components apps/frontend/app \
   | grep -v "RepairHistoryTimeline.tsx"
-# EXIT: 결과 0 라인 expected
+# EXIT: 결과 0 라인 expected (라운드 #3 2026-05-13 — toLocaleString(숫자 포맷) 포함)
 ```
 
 **PASS:**
@@ -1089,7 +1089,7 @@ rg -nE "toLocaleDateString\(\)|toLocaleTimeString\(\)" apps/frontend/components 
 
 **예외 인정** (allow-list):
 - `RepairHistoryTimeline.tsx` — `'ko-KR'` 하드코딩 (별도 후속 sprint trigger)
-- 숫자 포맷 `.toLocaleString()` — 본 Step 검증 범위 외 (별도 검토 필요 시 추가)
+- 숫자 포맷 `.toLocaleString()` — 라운드 #3 2026-05-13 sprint 부터 본 Step 검증 범위 포함 (locale 인자 강제). 14 site 마이그레이션 완료 (AuditSummaryBar / EquipmentPagination / Monitoring / AuditLogsContent).
 
 **Why**: 한국 사용자가 브라우저 locale 을 `en-US` 로 설정 시 날짜 포맷이 `M/D/YYYY` 로 노출되어 UX 깨짐. `useLocale()` 의 명시 locale 전달로 i18n 정합성 보장.
 

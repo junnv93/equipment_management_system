@@ -15,7 +15,7 @@
 # =============================================================================
 
 # ----- base ------------------------------------------------------------------
-FROM node:20-bullseye AS base
+FROM node:22-bullseye AS base
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 # poppler-utils: pdftotext binary — 교정성적서 PDF 표지 메타 추출(CertificateExtractorService) 의존.
@@ -61,7 +61,7 @@ RUN pnpm --filter schemas build \
  && pnpm --filter backend build
 
 # ----- prod-deps (alpine) ----------------------------------------------------
-FROM node:20-alpine AS prod-deps
+FROM node:22-alpine AS prod-deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -74,7 +74,7 @@ COPY packages/shared-constants/package.json ./packages/shared-constants/
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # ----- production ------------------------------------------------------------
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 WORKDIR /app
 
 # wget for HEALTHCHECK + tini for proper signal forwarding

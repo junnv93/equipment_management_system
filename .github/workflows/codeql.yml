@@ -21,7 +21,7 @@ permissions:
 
 # main.yml과 동일한 Node 버전 SSOT
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   analyze:
