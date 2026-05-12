@@ -59,7 +59,10 @@ const DANGEROUS_PATTERNS = [
   { pattern: '.env.local',           reason: 'frontend 로컬 env (DB/NextAuth secret 포함 가능)' },
   { pattern: 'apps/frontend/.env.local', reason: 'frontend 로컬 env' },
   { pattern: 'apps/backend/.env',    reason: 'backend 로컬 env (DB_URL, JWT_SECRET 등)' },
-  { pattern: '.env.test',            reason: 'test env (gitignore 대상)' },
+  // 루트 .env.test는 tracked cross-PC fixture (100% dummy 값) — bundle 포함이 정상.
+  // 실제 secret은 gitleaks(검사 2/3)가 탐지. 루트 .env.test는 패턴 제외.
+  { pattern: 'apps/backend/.env.test',  reason: 'backend test env (gitignore 대상 — 실제 DB_URL 포함 가능)' },
+  { pattern: 'apps/frontend/.env.test', reason: 'frontend test env (gitignore 대상)' },
   // sops 복호화 잔여물
   { pattern: 'run/secrets',          reason: 'sops 복호화 런타임 경로 (tmpfs 마운트 경로)' },
   // age 키 파일
