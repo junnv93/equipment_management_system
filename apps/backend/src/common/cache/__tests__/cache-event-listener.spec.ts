@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CacheEventListener } from '../cache-event-listener';
+import { CacheEventListener, validateDualChannelExclusivity } from '../cache-event-listener';
 import { CacheInvalidationHelper } from '../cache-invalidation.helper';
 import { SimpleCacheService } from '../simple-cache.service';
 import { NOTIFICATION_EVENTS } from '../../../modules/notifications/events/notification-events';
 import { CACHE_EVENTS } from '../cache-events';
-import { CACHE_INVALIDATION_REGISTRY } from '../cache-event.registry';
+import { CACHE_INVALIDATION_REGISTRY, type CacheInvalidationRule } from '../cache-event.registry';
 import { CACHE_KEY_PREFIXES } from '../cache-key-prefixes';
 
 describe('CacheEventListener', () => {
@@ -279,6 +279,86 @@ describe('CacheEventListener', () => {
 
       // 에러가 발생해도 프로세스가 중단되지 않음
       expect(mockHelper.invalidateAllDashboard).toHaveBeenCalled();
+    });
+  });
+
+  describe('dual-channel exclusivity (SOFTWARE_VALIDATION 회귀 차단)', () => {
+    it('NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_*는 CACHE_INVALIDATION_REGISTRY에 등록되어 있지 않다', () => {
+      // 채널 책임 분리: 알림 이벤트는 알림/SSE/side-effect 전용,
+      // 캐시 무효화는 CACHE_EVENTS.SW_VALIDATION_* 채널만 담당.
+      // 양 채널 등록 시 중복 invalidateAllDashboard로 p99 latency 증가.
+      const registryKeys = new Set(Object.keys(CACHE_INVALIDATION_REGISTRY));
+      expect(registryKeys.has(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED)).toBe(false);
+      expect(registryKeys.has(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED)).toBe(false);
+      expect(registryKeys.has(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED)).toBe(
+        false
+      );
+      expect(registryKeys.has(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED)).toBe(false);
+    });
+
+    it('CACHE_EVENTS.SW_VALIDATION_* 4개는 모두 CACHE_INVALIDATION_REGISTRY에 등록되어 있다', () => {
+      const registryKeys = new Set(Object.keys(CACHE_INVALIDATION_REGISTRY));
+      expect(registryKeys.has(CACHE_EVENTS.SW_VALIDATION_SUBMITTED)).toBe(true);
+      expect(registryKeys.has(CACHE_EVENTS.SW_VALIDATION_APPROVED)).toBe(true);
+      expect(registryKeys.has(CACHE_EVENTS.SW_VALIDATION_QUALITY_APPROVED)).toBe(true);
+      expect(registryKeys.has(CACHE_EVENTS.SW_VALIDATION_REJECTED)).toBe(true);
+    });
+
+    it('현재 registry 전체에 dual-channel 위반이 없다 (부팅타임 invariant baseline)', () => {
+      expect(() => validateDualChannelExclusivity(CACHE_INVALIDATION_REGISTRY)).not.toThrow();
+    });
+
+    it('CACHE_EVENTS + NOTIFICATION_EVENTS 양쪽에 동일 signature 등록 시 throw', () => {
+      // 회귀 시뮬레이션: software-validation submitted를 양 채널에 동일 규칙으로 등록.
+      const violatingRegistry: Record<string, CacheInvalidationRule> = {
+        [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
+          actions: [{ method: 'invalidateAllDashboard' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` }],
+        },
+        [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
+          actions: [{ method: 'invalidateAllDashboard' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` }],
+        },
+      };
+
+      expect(() => validateDualChannelExclusivity(violatingRegistry)).toThrow(
+        /dual-channel exclusivity 위반/
+      );
+    });
+
+    it('actions 순서가 달라도 signature는 동일하게 정규화된다', () => {
+      // sorted JSON signature 정규화 검증 — action 배열 순서가 false-negative를 만들지 않아야 함.
+      const violatingRegistry: Record<string, CacheInvalidationRule> = {
+        [CACHE_EVENTS.SW_VALIDATION_APPROVED]: {
+          actions: [{ method: 'invalidateAllDashboard' }, { method: 'invalidateAllEquipment' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` }],
+        },
+        [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
+          actions: [{ method: 'invalidateAllEquipment' }, { method: 'invalidateAllDashboard' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` }],
+        },
+      };
+
+      expect(() => validateDualChannelExclusivity(violatingRegistry)).toThrow(
+        /dual-channel exclusivity 위반/
+      );
+    });
+
+    it('동일 채널 내부 중복 signature는 violation이 아니다', () => {
+      // NOTIFICATION_EVENTS.CHECKOUT_REJECTED 와 NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED 가
+      // 동일한 actions+patterns일 수 있으나, 같은 channel이므로 정당.
+      const sameChannelRegistry: Record<string, CacheInvalidationRule> = {
+        [NOTIFICATION_EVENTS.CHECKOUT_REJECTED]: {
+          actions: [{ method: 'invalidateAllDashboard' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+        },
+        [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED]: {
+          actions: [{ method: 'invalidateAllDashboard' }],
+          patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+        },
+      };
+
+      expect(() => validateDualChannelExclusivity(sameChannelRegistry)).not.toThrow();
     });
   });
 });

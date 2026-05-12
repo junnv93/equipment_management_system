@@ -267,6 +267,43 @@ awk '/invalidateEquipmentImportsWithEquipment\(\)/,/^  }$/' \
 2. 해당 도메인의 `CacheInvalidationHelper` 메서드에 BFF prefix 삭제 추가
 3. 이 테이블에 행 추가
 
+### Step 7: dual-channel duplication 차단 (Critical)
+
+NOTIFICATION_EVENTS와 CACHE_EVENTS 채널은 책임이 분리되어 있다:
+- **NOTIFICATION_EVENTS**: 알림 발송 + SSE 푸시 + downstream side-effect (test-software 자격 부여 등) 전용
+- **CACHE_EVENTS**: 캐시 무효화 전용
+
+동일 도메인 상태 전이의 캐시 무효화가 양 채널 모두에 등록되면 `service.emitAsync(NOTIFICATION_EVENTS.X) + service.emitAsync(CACHE_EVENTS.X)` 시 동일 `invalidateAllDashboard` + 패턴 삭제가 두 번 실행 → p99 latency 증가 + 불필요한 dashboard 캐시 churn.
+
+회귀 차단은 부팅타임 `validateDualChannelExclusivity()` invariant가 담당하므로 본 Step은 (a) invariant 존재 + (b) NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_* cache registry 미등록 두 가지를 확인한다.
+
+```bash
+# (a) 부팅타임 invariant 존재
+grep -nE "validateDualChannelExclusivity" apps/backend/src/common/cache/cache-event-listener.ts \
+  && echo "PASS: dual-channel invariant 존재" \
+  || echo "FAIL: validateDualChannelExclusivity 미정의"
+
+# (b) onModuleInit에서 호출됨
+awk '/onModuleInit\(\)/,/^  }$/' apps/backend/src/common/cache/cache-event-listener.ts \
+  | grep -q "validateDualChannelExclusivity" \
+  && echo "PASS: onModuleInit에서 호출" \
+  || echo "FAIL: onModuleInit에서 invariant 미호출"
+
+# (c) NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_*가 registry에 등록되지 않음 (회귀 차단 baseline)
+grep -nE "\[NOTIFICATION_EVENTS\.SOFTWARE_VALIDATION_" \
+  apps/backend/src/common/cache/cache-event.registry.ts \
+  && echo "FAIL: NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_* 가 양 채널 등록" \
+  || echo "PASS: SOFTWARE_VALIDATION 단일 채널 유지"
+```
+
+**기대 결과**: 모두 PASS.
+
+**위반 시 조치**:
+- (a)/(b) 위반: `cache-event-listener.ts`에서 `validateDualChannelExclusivity` 함수 + `onModuleInit()` 호출 복원.
+- (c) 위반: NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_* (또는 다른 도메인) 4 entry 를 cache-event.registry에서 제거하고, 캐시 무효화 책임을 CACHE_EVENTS 채널 (예: `CACHE_EVENTS.SW_VALIDATION_*`)로 통합.
+
+**왜 양쪽 등록이 회귀하는가**: 새 알림 이벤트 추가 시 "캐시도 갱신해야지" 라는 자연스러운 추론으로 NOTIFICATION_EVENTS entry에 cache rule을 추가하는 경우 발생. calibration 도메인이 이미 채널 책임 분리를 확립했으므로(`cache-event.registry.ts:395-397` 주석 참조) 그 패턴을 따르면 충분.
+
 ## Exceptions (리포트하지 않음)
 
 1. **스케줄러의 `emit` 유지** — `schedulers/` 하위 파일은 사용자 응답 경로가 아니므로 의도적.
@@ -291,6 +328,7 @@ awk '/invalidateEquipmentImportsWithEquipment\(\)/,/^  }$/' \
 | Step 5b composite ↔ payload 일관성 | **Warning** | payload 필드 누락 시 알림 silent drop |
 | Step 5 method 불일치 | **Info** | 런타임 에러 (타입 체크로 사전 방어됨) |
 | Step 6 BFF 집계 체인 누락 | **Warning** | BFF stale read — equipment-imports 변경 후 inbound-overview 갱신 안 됨 |
+| Step 7 dual-channel duplication | **Critical** | 동일 status 전이마다 invalidateAllDashboard + 패턴 삭제 2x → p99 latency + dashboard cache churn |
 
 ## Learning Reference
 

@@ -318,12 +318,19 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
   },
 
-  // ─── 소프트웨어 유효성 확인 (Software Validation) ───
+  // ─── 소프트웨어 유효성 확인 (Software Validation — cache-only channel) ───
+  // NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_*는 알림 발송/SSE/downstream side-effect(test-software 자격 부여) 전용으로 유지.
+  // 캐시 무효화는 이 채널(CACHE_EVENTS)에서 독립 처리 — calibration 패턴 정합 (line 395-397).
+  //
   // 책임 분리:
-  // - 서비스 레이어(invalidateCache): 도메인 캐시 동기 무효화
+  // - 서비스 레이어(invalidateCache): 도메인 로컬 캐시 동기 무효화 (트랜잭션 직후 읽기 일관성)
   //     → sw-validations:list/detail/pending, test-software:detail
-  // - 이 레지스트리: 크로스 도메인 캐시 비동기 무효화 (이벤트 발행 후)
+  // - 이 레지스트리(CACHE_EVENTS 채널): 크로스 도메인 캐시 비동기 무효화
   //     → dashboard:* + approvals:* (via invalidateAllDashboard)
+  //     + SOFTWARE_VALIDATIONS:* + TEST_SOFTWARE:* (서비스 레이어와 중복되나 패턴 무효화는 멱등 — 이벤트 누락 안전망)
+  //
+  // 회귀 차단: cache-event-listener.ts `validateDualChannelExclusivity()`가 부팅타임에
+  // NOTIFICATION_EVENTS/CACHE_EVENTS 양쪽에 동일 도메인이 등록된 경우를 fail-fast로 차단한다.
   [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [
@@ -352,38 +359,8 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
     ],
   },
-
-  // ─── 소프트웨어 유효성 확인 (알림 이벤트 채널) ───
-  // NOTIFICATION_EVENTS.*를 통해 발행되는 이벤트: 크로스 도메인 캐시 비동기 무효화
-  // 대시보드 + sw-validations + test-software 캐시 갱신 (30-120s stale 방지)
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
-    actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
-    ],
-  },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
-    actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
-    ],
-  },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
-    actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
-    ],
-  },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
-    actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.TEST_SOFTWARE}*` },
-    ],
-  },
+  // 시스템 자동 재검증 트리거 — 도메인 status 전이가 아니므로 NOTIFICATION_EVENTS 채널 유지.
+  // dual-channel invariant는 SOFTWARE_VALIDATION_SUBMITTED/APPROVED/QUALITY_APPROVED/REJECTED만 검사.
   [NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [

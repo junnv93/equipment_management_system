@@ -56,6 +56,21 @@ const MOCK_VALIDATION = {
   updatedAt: new Date('2024-01-01'),
 };
 
+/**
+ * findOne 응답 풍부화 fixture — submitter/technicalApprover/qualityApprover LEFT JOIN.
+ * SoftwareValidationWithActors 타입에 대응 (`software-validations.service.ts` line 15-19).
+ * stepper actor 이름 노출이 회귀하지 않도록 spec에서 명시적으로 검증한다.
+ */
+const MOCK_VALIDATION_WITH_ACTORS = {
+  ...MOCK_VALIDATION,
+  submittedBy: 'submitter-uuid-1',
+  technicalApproverId: 'tech-approver-uuid-1',
+  qualityApproverId: 'quality-approver-uuid-1',
+  submitterName: '제출자 홍길동',
+  technicalApproverName: '기술승인자 김철수',
+  qualityApproverName: '품질승인자 이영희',
+};
+
 describe('SoftwareValidationsService', () => {
   let service: SoftwareValidationsService;
   let mockCacheService: ReturnType<typeof createMockCacheService>;
@@ -169,6 +184,37 @@ describe('SoftwareValidationsService', () => {
     it('없으면 NotFoundException을 던진다', async () => {
       mockDb.select.mockReturnValueOnce(createSelectChain([]));
       await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
+    });
+
+    it('users LEFT JOIN으로 submitter/technical/quality approver 이름을 풍부화한다', async () => {
+      // findOne은 select({...getTableColumns, submitterName, technicalApproverName, qualityApproverName})
+      // + leftJoin x3 (submitter / tech_approver / quality_approver users) 로 응답을 풍부화한다.
+      // stepper actor 이름 표시 (DESIGN_REVIEW.md P0-1 시니어 #3 갭3)가 회귀하지 않아야 함.
+      mockDb.select.mockReturnValueOnce(createSelectChain([MOCK_VALIDATION_WITH_ACTORS]));
+
+      const result = await service.findOne('val-uuid-1');
+
+      expect(result.id).toBe('val-uuid-1');
+      expect(result.submitterName).toBe('제출자 홍길동');
+      expect(result.technicalApproverName).toBe('기술승인자 김철수');
+      expect(result.qualityApproverName).toBe('품질승인자 이영희');
+    });
+
+    it('actor가 없으면 null을 반환한다 (LEFT JOIN 정합)', async () => {
+      // submitter/approver 미할당 상태의 draft validation: LEFT JOIN은 null을 돌려준다.
+      const noActorsRecord = {
+        ...MOCK_VALIDATION,
+        submitterName: null,
+        technicalApproverName: null,
+        qualityApproverName: null,
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([noActorsRecord]));
+
+      const result = await service.findOne('val-uuid-1');
+
+      expect(result.submitterName).toBeNull();
+      expect(result.technicalApproverName).toBeNull();
+      expect(result.qualityApproverName).toBeNull();
     });
   });
 
