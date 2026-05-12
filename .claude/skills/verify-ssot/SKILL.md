@@ -824,6 +824,50 @@ grep -F "sync.spec" .husky/pre-push
 **FAIL:** sync spec 부재 또는 pre-push 미통합 (silent drift 위험).
 
 
+### Step 64 — `packages/schemas` 의존 그래프 단방향 invariant (2026-05-13 checkouts-sprint4-followups-sh1-sh7)
+
+**적용 대상**: `packages/schemas` 패키지가 backend/frontend 공유 zod schema 의 최하층 SSOT 임을 보장. 신규 zod schema 가 schemas 패키지에 추가될 때 `VALIDATION_RULES.*` (shared-constants) 를 import 하려는 시도가 가장 자연스럽지만 의존 그래프 위반 (`schemas ← shared-constants ← schemas` 순환). 산업 표준: 최하층 패키지는 외부 패키지 의존 0.
+
+**현재 사례** (본 sprint):
+- 신규 `packages/schemas/src/revoke-approval.ts` — backend dto 와 frontend API client 양쪽 공유 SSOT
+- `SCHEMA_VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH` / `LONG_TEXT_MAX_LENGTH` 승격 (schemas 측 source-of-truth)
+- `VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH = SCHEMA_VALIDATION_RULES.REVOCATION_REASON_MIN_LENGTH` 단방향 wire (shared-constants 측)
+
+**잠재 회귀 시나리오**:
+- 새 zod schema 가 schemas 에 추가될 때 `import { VALIDATION_RULES } from '@equipment-management/shared-constants'` 시도 — TypeScript 컴파일은 통과할 수 있으나 빌드 순서/번들러 측면 fragile.
+- 신규 상수 추가 시 SCHEMA_VALIDATION_RULES 거치지 않고 shared-constants 측에 단독 정의 → schemas 측 mirror 분기 위험.
+
+**검증 패턴**:
+
+```bash
+# (1) schemas → shared-constants production import 0건 (JSDoc 주석 제외)
+# grep file:line:content 형식 → file:line:prefix 제거 후 content 만 검사
+grep -rn "from '@equipment-management/shared-constants'" packages/schemas/src --include="*.ts" \
+  | grep -vE ':[0-9]+:\s*\*|:[0-9]+:\s*//|@example|@see'
+# 기대: 0 lines (3건 JSDoc `* import { ... }` 예제는 제외)
+
+# (2) schemas 측 신규 zod schema 가 SCHEMA_VALIDATION_RULES 사용 — 매직넘버 직접 0건
+grep -rnE "\.min\(([0-9]+)" packages/schemas/src --include="*.ts" \
+  | grep -v "SCHEMA_VALIDATION_RULES\|VALIDATION_RULES" | head -20
+# 기대: VM (validation messages) 또는 의도적 인라인만
+
+# (3) shared-constants 측이 schemas SSOT 를 단방향 wire — mirror 분기 0건
+grep -n "SCHEMA_VALIDATION_RULES\." packages/shared-constants/src/validation-rules.ts
+# 기대: 새 SSOT 상수마다 `: SCHEMA_VALIDATION_RULES.<KEY>` 단일 wire 표현
+
+# (4) packages/schemas/package.json deps 에 shared-constants 부재 확인
+grep "shared-constants" packages/schemas/package.json
+# 기대: 0 매칭 (의존 그래프 최하층)
+```
+
+**PASS**: 4 검증 모두 invariant 충족.
+**FAIL**: schemas → shared-constants production import ≥1 (silent fragile) 또는 매직넘버 인라인 (SSOT 우회).
+
+**자가 정합 도움**:
+- `packages/schemas/src/schema-validation-rules.ts` JSDoc 주석에 "shared-constants 의존 불가(의존 그래프 최하층)" 명시
+- 새 상수 추가 시 같은 commit 으로 `validation-rules.ts` 단방향 wire 동반
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

@@ -18,6 +18,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { acquireAdvisoryXactLock } from '../../common/utils/advisory-lock';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { CACHE_EVENTS } from '../../common/cache/cache-events';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
@@ -385,6 +386,8 @@ export class TestSoftwareService extends VersionedBaseService {
     this.invalidateCache(id);
 
     if (softwareVersionChanged) {
+      // ADR-0012 채널 분리: NOTIFICATION_EVENTS = 알림/SSE/관리자 fan-out,
+      // CACHE_EVENTS = 캐시 무효화. 양 채널 동시 emit (라운드 #3 갭 F closure).
       try {
         await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, {
           testSoftwareId: id,
@@ -395,7 +398,16 @@ export class TestSoftwareService extends VersionedBaseService {
           timestamp: new Date(),
         });
       } catch (err) {
-        this.logger.error('revalidation event listener error', err);
+        this.logger.error('revalidation notification listener error', err);
+      }
+      try {
+        await this.eventEmitter.emitAsync(CACHE_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, {
+          testSoftwareId: id,
+          previousVersion: existing.softwareVersion,
+          newVersion: updateFields.softwareVersion,
+        });
+      } catch (err) {
+        this.logger.error('revalidation cache event listener error', err);
       }
     }
 
