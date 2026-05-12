@@ -35,6 +35,8 @@ import {
 
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '@equipment-management/shared-constants';
 import { SavedViewModuleEnum } from '@equipment-management/schemas';
 import type { SavedView } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -48,11 +50,14 @@ const ListQueryValidationPipe = new ZodValidationPipe(listQuerySchema, { targets
  * Saved Views REST 엔드포인트
  *
  * - 모든 mutation 은 JWT 에서 사용자 ID 추출 (Rule 2). Body 에 ownerId 받지 않음.
- * - GLOBAL scope write 가드는 service 가 derivePermissionsFromRoles 로 enforce.
- *   별도 `@RequirePermissions` 는 PRIVATE/TEAM 도 함께 막아버리므로 service-layer 동적 검사가 정합.
+ * - **권한 게이트**: 클래스 레벨 `@RequirePermissions(VIEW_CHECKOUTS)` — checkouts 도메인 view 권한자가
+ *   본인 saved view 를 자유롭게 CRUD/공유. PRIVATE/TEAM scope 의 행 수준 가드는 service 가 enforce.
+ * - **GLOBAL scope write** 는 service 가 `MANAGE_SAVED_VIEWS_GLOBAL` 권한 별도 검사 (PermissionsGuard
+ *   엔드포인트 단위로는 차단 불가 — 같은 endpoint 가 PRIVATE/TEAM/GLOBAL 모두 처리).
  * - AuditLog: create/update/delete/reorder/bulk-import 모두 saved_view 엔티티.
  */
 @Controller('saved-views')
+@RequirePermissions(Permission.VIEW_CHECKOUTS)
 export class SavedViewsController {
   constructor(private readonly savedViewsService: SavedViewsService) {}
 

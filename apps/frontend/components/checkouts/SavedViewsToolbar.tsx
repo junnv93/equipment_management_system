@@ -192,7 +192,7 @@ export function SavedViewsToolbar() {
             ) : (
               <button
                 type="button"
-                className="max-w-[120px] truncate focus:outline-none"
+                className="max-w-[120px] truncate focus-visible:outline-none"
                 onClick={() => handleViewClick(view)}
                 onDoubleClick={(e) => {
                   e.preventDefault();

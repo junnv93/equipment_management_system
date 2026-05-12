@@ -32,6 +32,7 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.IntermediateInspectionWithdrawNotSubmitter,
   ErrorCode.SelfInspectionWithdrawNotSubmitter,
   ErrorCode.EquipmentImportOnlyRequesterCanCancel,
+  ErrorCode.SavedViewScopeForbidden,
 
   // ─── 인증 / 토큰 이상 (401) ───────────────────────────────────────────
   ErrorCode.InvalidCredentials,

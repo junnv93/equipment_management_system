@@ -12,7 +12,7 @@
  * @see apps/frontend/components/checkouts/SavedViewsImportBanner.tsx
  */
 
-import { MAX_SAVED_VIEWS_PER_MODULE } from '@equipment-management/schemas';
+import { MAX_SAVED_VIEWS_PER_MODULE, type SavedViewScope } from '@equipment-management/schemas';
 
 /** 사용자당 module 별 view 최대 개수 — backend SSOT 재노출 (UI maxReached 메시지용). */
 export const MAX_VIEWS = MAX_SAVED_VIEWS_PER_MODULE;
@@ -32,7 +32,7 @@ export interface SavedView {
   params: string;
   ownerId: string;
   module: 'checkouts';
-  scope: 'PRIVATE' | 'TEAM' | 'GLOBAL';
+  scope: SavedViewScope;
   teamId: string | null;
   sortOrder: number;
   version: number;

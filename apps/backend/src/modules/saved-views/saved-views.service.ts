@@ -230,14 +230,16 @@ export class SavedViewsService extends VersionedBaseService {
       this.enforceWriteScope(actor, row);
     }
 
-    await this.db.transaction(async (tx) => {
-      for (const { id, sortOrder } of dto.orders) {
-        await tx
-          .update(savedViews)
-          .set({ sortOrder, updatedAt: new Date() })
-          .where(eq(savedViews.id, id));
-      }
-    });
+    // 단일 쿼리 batch UPDATE — verify-sql-safety Step 4 (N+1 차단).
+    // `unnest($ids::uuid[], $orders::int[])` 로 (id, sortOrder) 페어 가상 테이블 생성 후
+    // 단일 UPDATE...FROM 으로 모든 row 동시 갱신 (최대 50 → 1 round-trip).
+    const idArray = dto.orders.map((o) => o.id);
+    const sortOrderArray = dto.orders.map((o) => o.sortOrder);
+    await this.db.execute(
+      sql`UPDATE ${savedViews} SET sort_order = pairs.sort_order, updated_at = now()
+          FROM (SELECT unnest(${idArray}::uuid[]) AS id, unnest(${sortOrderArray}::int[]) AS sort_order) AS pairs
+          WHERE ${savedViews.id} = pairs.id`
+    );
 
     this.invalidateAfterMutation(actor.userId);
   }
