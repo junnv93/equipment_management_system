@@ -7,7 +7,7 @@ import { useTranslations, useFormatter } from 'next-intl';
 import { cn } from '@/lib/utils';
 import {
   type SoftwareValidationStepDescriptor,
-  type ProgressStepState,
+  type SoftwareValidationStepState,
 } from '@equipment-management/schemas';
 
 // ============================================================================
@@ -16,27 +16,27 @@ import {
 //
 // dark: prefix 금지 — :root/.dark CSS 변수 자동 전환.
 // motion-safe: prefix로 reduced-motion 사용자 보호.
+//
+// **review-architecture 갭A4 fix**: state union을 도메인별 좁힌 타입으로 변경.
+// validation 도메인은 dueAt 개념이 없어 'late' state 미사용 — Record key에서 제거.
+// type 시스템이 unreachable 보장.
 
 const STEP_CIRCLE_BASE =
   'relative grid place-items-center w-7 h-7 rounded-full border-2 ' +
   'text-xs font-bold leading-none flex-shrink-0 z-[2] bg-card transition-colors duration-150';
 
-const STEP_CIRCLE_BY_STATE: Record<ProgressStepState, string> = {
+const STEP_CIRCLE_BY_STATE: Record<SoftwareValidationStepState, string> = {
   done: 'bg-brand-ok text-white border-brand-ok',
   current:
     'bg-brand-info text-white border-brand-info ' +
     'shadow-[0_0_0_4px_hsl(var(--brand-color-info)/0.18)]',
-  late:
-    'bg-brand-critical text-white border-brand-critical ' +
-    'shadow-[0_0_0_4px_hsl(var(--brand-color-critical)/0.18)] motion-safe:animate-pulse',
   future: 'bg-card text-muted-foreground border-brand-border-strong',
   terminated: 'bg-brand-critical/10 text-brand-critical border-brand-critical opacity-90',
 };
 
-const STEP_LABEL_BY_STATE: Record<ProgressStepState, string> = {
+const STEP_LABEL_BY_STATE: Record<SoftwareValidationStepState, string> = {
   done: 'text-muted-foreground font-semibold',
   current: 'text-brand-info font-bold',
-  late: 'text-brand-critical font-bold',
   future: 'text-foreground font-semibold',
   terminated: 'text-brand-critical font-semibold',
 };
@@ -110,7 +110,7 @@ const StepNode = memo(function StepNode({
         </span>
       );
     }
-    if (state === 'current' || state === 'late') {
+    if (state === 'current') {
       return <span className="block">{t('validation.steps.pending')}</span>;
     }
     return null;
@@ -185,7 +185,7 @@ function SoftwareValidationStepper({ steps, className }: SoftwareValidationStepp
     >
       {steps.map((step, idx) => {
         const isLast = idx === steps.length - 1;
-        const ariaCurrent = step.state === 'current' || step.state === 'late';
+        const ariaCurrent = step.state === 'current';
         return (
           <StepNode
             key={`${step.key}-${step.index}`}

@@ -67,13 +67,20 @@ export default function ValidationDetailContent({
     ...QUERY_CONFIG.SOFTWARE_VALIDATION_DETAIL,
   });
 
-  // P0-1: stepper hook — early return 전 호출하여 React Hooks 순서 일관성 보장.
-  // validation 미로드 시 'draft' fallback (hook 내부가 'draft' → [] 안전 처리).
+  // P0-1 + 시니어 자기검토 #3 갭3: stepper hook — early return 전 호출하여 Hooks 순서 보장.
+  // actor 이름은 backend findOne의 LEFT JOIN으로 풍부화 (submitterName 등) → null 안전.
   const stepperSteps = useSoftwareValidationProgressSteps({
     status: validation?.status ?? 'draft',
     submittedAt: validation?.submittedAt ?? null,
+    submitter: validation?.submitterName ? { name: validation.submitterName } : null,
     technicalApprovedAt: validation?.technicalApprovedAt ?? null,
+    technicalApprover: validation?.technicalApproverName
+      ? { name: validation.technicalApproverName }
+      : null,
     qualityApprovedAt: validation?.qualityApprovedAt ?? null,
+    qualityApprover: validation?.qualityApproverName
+      ? { name: validation.qualityApproverName }
+      : null,
   });
 
   if (isLoading) {

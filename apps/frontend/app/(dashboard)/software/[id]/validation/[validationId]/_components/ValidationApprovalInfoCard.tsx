@@ -22,22 +22,46 @@ export function ValidationApprovalInfoCard({ validation }: ValidationApprovalInf
       <CardContent>
         <dl className={TOK.dl}>
           {validation.submittedAt && (
-            <div>
-              <dt className={TOK.dt}>{t('validation.detail.submittedAt')}</dt>
-              <dd className={TOK.dd}>{fmtDateTime(validation.submittedAt)}</dd>
-            </div>
+            <>
+              {validation.submitterName && (
+                <div>
+                  <dt className={TOK.dt}>{t('validation.detail.submittedBy')}</dt>
+                  <dd className={TOK.dd}>{validation.submitterName}</dd>
+                </div>
+              )}
+              <div>
+                <dt className={TOK.dt}>{t('validation.detail.submittedAt')}</dt>
+                <dd className={TOK.dd}>{fmtDateTime(validation.submittedAt)}</dd>
+              </div>
+            </>
           )}
           {validation.technicalApprovedAt && (
-            <div>
-              <dt className={TOK.dt}>{t('validation.detail.technicalApprovedAt')}</dt>
-              <dd className={TOK.dd}>{fmtDateTime(validation.technicalApprovedAt)}</dd>
-            </div>
+            <>
+              {validation.technicalApproverName && (
+                <div>
+                  <dt className={TOK.dt}>{t('validation.detail.technicalApprover')}</dt>
+                  <dd className={TOK.dd}>{validation.technicalApproverName}</dd>
+                </div>
+              )}
+              <div>
+                <dt className={TOK.dt}>{t('validation.detail.technicalApprovedAt')}</dt>
+                <dd className={TOK.dd}>{fmtDateTime(validation.technicalApprovedAt)}</dd>
+              </div>
+            </>
           )}
           {validation.qualityApprovedAt && (
-            <div>
-              <dt className={TOK.dt}>{t('validation.detail.qualityApprovedAt')}</dt>
-              <dd className={TOK.dd}>{fmtDateTime(validation.qualityApprovedAt)}</dd>
-            </div>
+            <>
+              {validation.qualityApproverName && (
+                <div>
+                  <dt className={TOK.dt}>{t('validation.detail.qualityApprover')}</dt>
+                  <dd className={TOK.dd}>{validation.qualityApproverName}</dd>
+                </div>
+              )}
+              <div>
+                <dt className={TOK.dt}>{t('validation.detail.qualityApprovedAt')}</dt>
+                <dd className={TOK.dd}>{fmtDateTime(validation.qualityApprovedAt)}</dd>
+              </div>
+            </>
           )}
           {validation.rejectionReason && (
             <div className="sm:col-span-2">

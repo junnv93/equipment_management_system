@@ -135,6 +135,19 @@ export interface SoftwareValidation {
   version: number;
   createdAt: string;
   updatedAt: string;
+  // ──────────────────────────────────────────────────────────────────────────
+  // 풍부화 필드 — findOne (detail) 응답에만 포함 (`users` LEFT JOIN)
+  // list endpoint (`listAll`) + mutation 응답에는 미포함 → optional.
+  // 출처: backend `SoftwareValidationWithActors`.
+  // 용도: stepper actor 이름 + ApprovalInfoCard 사람 이름 노출 (DESIGN_REVIEW.md P0-1).
+  // 시니어 자기검토 #3 갭A5: per-field JSDoc 강화.
+  // ──────────────────────────────────────────────────────────────────────────
+  /** 제출자 이름 (`submittedBy` UUID → `users.name` JOIN). draft 상태에서는 null. */
+  submitterName?: string | null;
+  /** 기술책임자 이름 (`technicalApproverId` UUID → `users.name` JOIN). approved 이전엔 null. */
+  technicalApproverName?: string | null;
+  /** 품질책임자 이름 (`qualityApproverId` UUID → `users.name` JOIN). quality_approved 이전엔 null. */
+  qualityApproverName?: string | null;
 }
 
 export interface CreateSoftwareValidationDto {

@@ -10,7 +10,10 @@ import {
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { SoftwareValidationsService } from './software-validations.service';
+import {
+  SoftwareValidationsService,
+  type SoftwareValidationWithActors,
+} from './software-validations.service';
 import {
   CreateValidationPipe,
   UpdateValidationPipe,
@@ -123,7 +126,9 @@ export class SoftwareValidationsController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<SoftwareValidation> {
+  findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string
+  ): Promise<SoftwareValidationWithActors> {
     return this.validationsService.findOne(uuid);
   }
 

@@ -235,6 +235,33 @@ export const SOFTWARE_VALIDATION_NOT_VALIDATED_BADGE =
   'border rounded-md px-2 py-0.5 text-xs font-medium border-brand-warning/40 text-brand-warning bg-brand-warning/10';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 7-d. 유효성 확인 InfoCard dt/dd 위계 (DESIGN_REVIEW.md 스니펫 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * `<dl><dt><dd>` 패턴의 라벨/값 위계 강화 토큰 SSOT.
+ *
+ * **DESIGN_REVIEW.md 스니펫 5**: dt와 dd가 모두 `text-sm`이라 위계 약함.
+ * 라벨은 더 작고 균등(uppercase tracking-wider), 값은 더 크고 진하게.
+ *
+ * 4개 ValidationInfoCard (Basic / Vendor / SelfTest / Approval) 통일 적용.
+ *
+ * **변형 (시니어 자기검토 #3 갭1)**: dd를 inline 합성(`${TOK.dd} whitespace-pre-wrap`)
+ * 하지 말고 `ddPreWrap` / `ddMono` / `ddDestructive` variant 직접 사용 — SSOT 정합.
+ */
+export const VALIDATION_INFO_CARD_TOKENS = {
+  dl: 'grid grid-cols-1 gap-4 sm:grid-cols-2',
+  dt: 'text-[11px] font-medium uppercase tracking-wider text-muted-foreground',
+  dd: 'mt-1 text-sm font-medium text-foreground',
+  /** 멀티라인 (벤더 요약 / 첨부파일 메모 / 자체 시험 구성 등) */
+  ddPreWrap: 'mt-1 text-sm font-medium text-foreground whitespace-pre-wrap',
+  /** 버전 등 monospace tabular */
+  ddMono: 'mt-1 font-mono text-sm font-medium text-foreground tabular-nums',
+  /** 반려 사유 등 destructive 강조 + 멀티라인 */
+  ddDestructive: 'mt-1 text-sm font-medium text-destructive whitespace-pre-wrap',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 8. 승인 관리 페이지 (admin/software-approvals)
 // ─────────────────────────────────────────────────────────────────────────────
 

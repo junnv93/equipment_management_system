@@ -11,7 +11,10 @@ import {
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { TestSoftwareService } from './test-software.service';
+import {
+  TestSoftwareService,
+  type TestSoftwareWithManagers,
+} from './test-software.service';
 import {
   CreateTestSoftwareValidationPipe,
   type CreateTestSoftwareInput,
@@ -79,7 +82,7 @@ export class TestSoftwareController {
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
   findByEquipment(
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string
-  ): Promise<TestSoftware[]> {
+  ): Promise<TestSoftwareWithManagers[]> {
     return this.testSoftwareService.findByEquipmentId(equipmentId);
   }
 

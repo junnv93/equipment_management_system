@@ -6,7 +6,7 @@ import {
   SOFTWARE_VALIDATION_STEP_VALUES,
   type SoftwareValidationStepDescriptor,
   type SoftwareValidationStepKey,
-  type ProgressStepState,
+  type SoftwareValidationStepState,
   type TerminationKind,
   deriveProgressStepState,
   deriveSoftwareValidationStepIndex,
@@ -90,13 +90,20 @@ export function useSoftwareValidationProgressSteps(
     if (currentStepIndex < 0) {
       // rejected이지만 어떤 메타도 없는 비정상 케이스 — 첫 단계 'terminated'로 표시
       return SOFTWARE_VALIDATION_STEP_VALUES.map((key, index): SoftwareValidationStepDescriptor => {
-        const state: ProgressStepState = index === 0 ? 'terminated' : 'future';
+        const state: SoftwareValidationStepState = index === 0 ? 'terminated' : 'future';
         return { key, index, state, labelKey: STEP_LABEL_KEY[key] };
       });
     }
 
     return SOFTWARE_VALIDATION_STEP_VALUES.map((key, index): SoftwareValidationStepDescriptor => {
-      const state = deriveProgressStepState(index, currentStepIndex, false, termination);
+      // isOverdue=false 호출이라 'late' 절대 미반환 — runtime invariant.
+      // type system이 모르므로 Exclude로 좁힌 SoftwareValidationStepState로 cast.
+      const state = deriveProgressStepState(
+        index,
+        currentStepIndex,
+        false,
+        termination
+      ) as SoftwareValidationStepState;
 
       // 메타 매핑 — 단계별 actor/timestamp
       let actor: string | undefined;

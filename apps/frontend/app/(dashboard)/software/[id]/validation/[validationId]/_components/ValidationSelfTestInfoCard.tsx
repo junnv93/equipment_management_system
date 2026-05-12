@@ -21,25 +21,25 @@ export function ValidationSelfTestInfoCard({ validation }: ValidationSelfTestInf
         <dl className={TOK.dl}>
           <div className="sm:col-span-2">
             <dt className={TOK.dt}>{t('validation.detail.referenceDocuments')}</dt>
-            <dd className={`${TOK.dd} whitespace-pre-wrap`}>
+            <dd className={TOK.ddPreWrap}>
               {validation.referenceDocuments || '-'}
             </dd>
           </div>
           <div className="sm:col-span-2">
             <dt className={TOK.dt}>{t('validation.detail.operatingUnitDescription')}</dt>
-            <dd className={`${TOK.dd} whitespace-pre-wrap`}>
+            <dd className={TOK.ddPreWrap}>
               {validation.operatingUnitDescription || '-'}
             </dd>
           </div>
           <div>
             <dt className={TOK.dt}>{t('validation.detail.softwareComponents')}</dt>
-            <dd className={`${TOK.dd} whitespace-pre-wrap`}>
+            <dd className={TOK.ddPreWrap}>
               {validation.softwareComponents || '-'}
             </dd>
           </div>
           <div>
             <dt className={TOK.dt}>{t('validation.detail.hardwareComponents')}</dt>
-            <dd className={`${TOK.dd} whitespace-pre-wrap`}>
+            <dd className={TOK.ddPreWrap}>
               {validation.hardwareComponents || '-'}
             </dd>
           </div>

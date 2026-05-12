@@ -1,11 +1,22 @@
 import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, or, desc, sql, inArray, count } from 'drizzle-orm';
+import { eq, and, or, desc, sql, inArray, count, getTableColumns } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,
   type SoftwareValidation,
 } from '@equipment-management/db/schema';
+
+/**
+ * findOne 응답 풍부화 타입 — submitter/approver `users` LEFT JOIN.
+ * stepper actor 이름 노출 (DESIGN_REVIEW.md P0-1 시니어 자기검토 #3 갭3).
+ * test-software.service의 `TestSoftwareWithManagers` 패턴 추종.
+ */
+export type SoftwareValidationWithActors = SoftwareValidation & {
+  submitterName: string | null;
+  technicalApproverName: string | null;
+  qualityApproverName: string | null;
+};
 import { ValidationStatusValues, ErrorCode } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { resolveSoftwareValidationOrderBy } from './utils/software-validation-sort-mapper';
@@ -233,16 +244,34 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
-   * 유효성 확인 상세 조회
+   * 유효성 확인 상세 조회 — submitter/approver `users` LEFT JOIN 풍부화.
+   * stepper actor 이름 노출 (DESIGN_REVIEW.md P0-1 시니어 자기검토 #3 갭3).
    */
-  async findOne(id: string): Promise<SoftwareValidation> {
+  async findOne(id: string): Promise<SoftwareValidationWithActors> {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         const [record] = await this.db
-          .select()
+          .select({
+            ...getTableColumns(softwareValidations),
+            submitterName: sql<string | null>`submitter.name`,
+            technicalApproverName: sql<string | null>`tech_approver.name`,
+            qualityApproverName: sql<string | null>`quality_approver.name`,
+          })
           .from(softwareValidations)
+          .leftJoin(
+            sql`users as submitter`,
+            sql`submitter.id = ${softwareValidations.submittedBy}`
+          )
+          .leftJoin(
+            sql`users as tech_approver`,
+            sql`tech_approver.id = ${softwareValidations.technicalApproverId}`
+          )
+          .leftJoin(
+            sql`users as quality_approver`,
+            sql`quality_approver.id = ${softwareValidations.qualityApproverId}`
+          )
           .where(eq(softwareValidations.id, id))
           .limit(1);
 

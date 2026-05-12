@@ -27,7 +27,7 @@ export function ValidationVendorInfoCard({ validation }: ValidationVendorInfoCar
           </div>
           <div className="sm:col-span-2">
             <dt className={TOK.dt}>{t('validation.detail.vendorSummary')}</dt>
-            <dd className={`${TOK.dd} whitespace-pre-wrap`}>{validation.vendorSummary || '-'}</dd>
+            <dd className={TOK.ddPreWrap}>{validation.vendorSummary || '-'}</dd>
           </div>
           {validation.receivedBy && (
             <div>
@@ -44,7 +44,7 @@ export function ValidationVendorInfoCard({ validation }: ValidationVendorInfoCar
           {validation.attachmentNote && (
             <div className="sm:col-span-2">
               <dt className={TOK.dt}>{t('validation.detail.attachmentNote')}</dt>
-              <dd className={`${TOK.dd} whitespace-pre-wrap`}>{validation.attachmentNote}</dd>
+              <dd className={TOK.ddPreWrap}>{validation.attachmentNote}</dd>
             </div>
           )}
         </dl>

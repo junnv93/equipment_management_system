@@ -24,18 +24,21 @@ import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
 import { ErrorCode, SoftwareAvailabilityEnum } from '@equipment-management/schemas';
 import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 
-/** findAll/findOne 응답에 users + software_validations LEFT JOIN으로 추가되는 필드 */
+/**
+ * findAll/findOne 응답에 users + software_validations LEFT JOIN으로 추가되는 필드.
+ *
+ * **시니어 자기검토 #3 갭2**: 모든 LEFT JOIN 필드는 required + nullable로 통일.
+ * `?:` optional은 frontend `TestSoftware` interface와 undefined vs null 충돌 야기.
+ */
 export type TestSoftwareWithManagers = TestSoftware & {
   primaryManagerName: string | null;
   secondaryManagerName: string | null;
-  latestValidationId?: string | null;
-  latestValidatedAt?: Date | null;
   /**
    * 최신 유효성 확인 status (DESIGN_REVIEW.md P0-3).
    * `latestValidationId`로 가리키는 software_validations row의 status.
    * 미검증(latestValidationId === null) 시 null.
    */
-  latestValidationStatus?: ValidationStatus | null;
+  latestValidationStatus: ValidationStatus | null;
 };
 
 @Injectable()

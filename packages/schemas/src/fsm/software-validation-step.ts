@@ -1,7 +1,7 @@
 /**
  * Software Validation Step Descriptor — UL-QP-18-09 유효성 확인 승인 워크플로 시각화 SSOT.
  *
- * `progress-step.ts`(checkout 도메인)와 같은 4-tier state SSOT(`PROGRESS_STEP_STATES`)를 재사용하되,
+ * `progress-step.ts`(checkout 도메인)의 `ProgressStepState` 타입을 재사용 (Exclude로 `late` 제외).
  * status enum이 다르므로 별도 descriptor 타입으로 분리. CheckoutProgressStepper 패턴 추종.
  *
  * **3-step 워크플로**:
@@ -18,12 +18,28 @@
  */
 
 import { z } from 'zod';
-import {
-  PROGRESS_STEP_STATES,
-  type ProgressStepState,
-  type TerminationKind,
-} from './progress-step';
+import { type ProgressStepState, type TerminationKind } from './progress-step';
 import { VALIDATION_STATUS_VALUES, type ValidationStatus } from '../enums/software';
+
+// ============================================================================
+// 도메인별 state subset (시니어 자기검토 #3 갭A4)
+// ============================================================================
+
+/**
+ * 도메인별 state subset — `late` 제외.
+ *
+ * **review-architecture 갭A4 fix**: validation 도메인은 dueAt 개념이 없음.
+ * `late` state는 unreachable이지만 ProgressStepState union 그대로 사용 시 dead code 발생.
+ * 좁힌 union으로 타입 시스템에서 unreachable 보장.
+ */
+export type SoftwareValidationStepState = Exclude<ProgressStepState, 'late'>;
+
+export const SOFTWARE_VALIDATION_STEP_STATES: readonly SoftwareValidationStepState[] = [
+  'done',
+  'current',
+  'future',
+  'terminated',
+];
 
 // ============================================================================
 // Software Validation Step (3-step) — 와이어프레임 04 stepper 시각 사양
@@ -61,8 +77,11 @@ export interface SoftwareValidationStepDescriptor {
   readonly key: SoftwareValidationStepKey;
   /** 0-based 인덱스 (3-step: 0..2) */
   readonly index: number;
-  /** 시각 상태 (4-tier + terminated) — `progress-step.ts`의 SSOT 재사용 */
-  readonly state: ProgressStepState;
+  /**
+   * 시각 상태 (4-tier: done/current/future/terminated) — `late` 제외.
+   * Adapter hook이 deriveProgressStepState(isOverdue=false)로 호출하여 'late' 미반환 보장.
+   */
+  readonly state: SoftwareValidationStepState;
   /** i18n 키 — `validation.steps.{key}` 형식 (예: 'validation.steps.submitted') */
   readonly labelKey: string;
 
@@ -86,7 +105,7 @@ export const SoftwareValidationStepDescriptorSchema: z.ZodType<SoftwareValidatio
       .int()
       .min(0)
       .max(SOFTWARE_VALIDATION_STEP_VALUES.length - 1),
-    state: z.enum(PROGRESS_STEP_STATES),
+    state: z.enum(['done', 'current', 'future', 'terminated']),
     labelKey: z.string(),
     actor: z.string().optional(),
     timestamp: z.string().datetime({ offset: true }).optional(),
