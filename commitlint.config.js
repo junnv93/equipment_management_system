@@ -31,6 +31,7 @@ const BACKEND_MODULE_SCOPES = [
   'non-conformances',
   'notifications',
   'reports',
+  'saved-views',
   'security',
   'self-inspections',
   'settings',

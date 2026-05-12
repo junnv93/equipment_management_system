@@ -10,7 +10,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | slug | 설명 | 시작일 |
 |------|------|--------|
 | `checkouts-sprint4-followups-s2-s4-s5-s6` | checkouts-sprint4-ux-u02-u08 후속 4건 — S-2 revoke 5분 countdown / S-4 reject-preset admin CRUD / S-5 fuzzy-search ADR-0011 / S-6 destination 인라인 등록 | 2026-05-12 |
-| `saved-views-team-share` | checkouts-sprint4-ux-u02-u08 S-7 closure — Saved Views localStorage→서버 마이그레이션 + scope 트리아드(PRIVATE/TEAM/GLOBAL) + CAS + RBAC + audit + 명시 import banner. 28~32 파일 (신규 15 + 수정 13~17), 새 backend 모듈 `saved-views`, manual SQL 0059 migration | 2026-05-12 |
+| `qr-visual-redesign-followups-batch-1` | qr-visual-redesign SHOULD 후속 5건 (S-1 QR landing e2e / S-3 RTL spec / S-4 orphan photo cron / S-6 handoverCheckoutId deprecation 제거 / S-7 touch-target audit) + WON'T-DO 3건 (S-2 Storybook / S-5 visual regression / S-8 UX 검토). g4-g12 closure 후 재진입 (RESUMED). | 2026-05-12 |
 
 ---
 

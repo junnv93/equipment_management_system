@@ -16,7 +16,7 @@ import { updateSavedViewSchema } from '../dto/update-saved-view.dto';
 import { reorderSavedViewsSchema } from '../dto/reorder-saved-views.dto';
 import { bulkImportSavedViewsSchema } from '../dto/bulk-import-saved-views.dto';
 
-const VALID_UUID = '11111111-1111-1111-1111-111111111111';
+const VALID_UUID = '11111111-1111-4111-8111-111111111111';
 
 describe('Saved Views DTOs', () => {
   describe('createSavedViewSchema', () => {
@@ -136,7 +136,7 @@ describe('Saved Views DTOs', () => {
         module: 'checkouts',
         orders: [
           { id: VALID_UUID, sortOrder: 0 },
-          { id: '22222222-2222-2222-2222-222222222222', sortOrder: 1 },
+          { id: '22222222-2222-4222-8222-222222222222', sortOrder: 1 },
         ],
       });
       expect(result.success).toBe(true);
@@ -154,7 +154,7 @@ describe('Saved Views DTOs', () => {
       const result = reorderSavedViewsSchema.safeParse({
         module: 'checkouts',
         orders: Array.from({ length: 51 }, (_, i) => ({
-          id: '11111111-1111-1111-1111-111111111111',
+          id: '11111111-1111-4111-8111-111111111111',
           sortOrder: i,
         })),
       });

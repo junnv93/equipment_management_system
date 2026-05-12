@@ -80,7 +80,7 @@ equipment_management_system/
     └── development/             # Development guides
 ```
 
-### Backend Modules (27)
+### Backend Modules (28)
 
 > SSOT 정합: `commitlint.config.js` `BACKEND_MODULE_SCOPES` 와 1:1 (`scripts/__tests__/commitlint-config.spec.mjs` fs-sync spec 자동 검증).
 
@@ -106,6 +106,7 @@ equipment_management_system/
 | `non-conformances` | `modules/non-conformances/` | 부적합 관리 |
 | `notifications` | `modules/notifications/` | 알림 서비스 |
 | `reports` | `modules/reports/` | 리포트 생성 |
+| `saved-views` | `modules/saved-views/` | 사용자 저장 뷰 (PRIVATE/TEAM/GLOBAL scope, CAS) |
 | `security` | `modules/security/` | CSP/CSRF/rate-limit/RBAC SSOT (보안 미들웨어 + 테스트 인프라) |
 | `self-inspections` | `modules/self-inspections/` | 자체 점검 관리 |
 | `settings` | `modules/settings/` | 시스템/교정 설정 관리 |
