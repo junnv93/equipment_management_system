@@ -7,26 +7,38 @@ import {
   type CacheInvalidationAction,
   type CacheInvalidationRule,
 } from './cache-event.registry';
-import { CACHE_EVENTS } from './cache-events';
+import { CACHE_EVENTS, CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM } from './cache-events';
 import { NOTIFICATION_EVENTS } from '../../modules/notifications/events/notification-events';
 
 /**
- * 도메인 이름 동의어 — CACHE_EVENTS와 NOTIFICATION_EVENTS의 네이밍이 다른 경우.
+ * `cache.<domain>.<verb>` → `<normalizedDomain>.<verb>` 으로 변환 (mirror 후보 도출).
+ * `cache.` prefix가 없으면 null (LEGACY 명명 — mirror 가능성 없음).
  *
- * CACHE_EVENTS의 도메인 표기 → NOTIFICATION_EVENTS의 도메인 표기.
- * 예: `cache.swValidation.submitted` ↔ `softwareValidation.submitted`.
+ * `validateDualChannelExclusivity` boot-time invariant + scripts/audit-cache-event-channels.mjs
+ * proactive audit이 본 함수 + synonym map(CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM)을 공유한다 (ADR-0012).
  *
- * 새 도메인 동의어가 도입되면 여기에 등록.
+ * `domain` 추출은 첫 dot 까지로 한정 — `cache.inspection.template.created`의 경우
+ * domain=`inspection`, rest=`.template.created` 로 분리되며 synonym 적용 후
+ * `inspection.template.created` 로 복원되어 NOTIFICATION_EVENTS 값과 비교된다.
  */
-const CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM: Readonly<Record<string, string>> = {
-  swValidation: 'softwareValidation',
-};
+export function deriveNotificationMirror(cacheEventValue: string): string | null {
+  if (!cacheEventValue.startsWith('cache.')) return null;
+  const stripped = cacheEventValue.slice('cache.'.length);
+  const dotIndex = stripped.indexOf('.');
+  if (dotIndex < 0) return null;
+  const domain = stripped.slice(0, dotIndex);
+  const rest = stripped.slice(dotIndex);
+  const normalizedDomain =
+    CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM[
+      domain as keyof typeof CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM
+    ] ?? domain;
+  return `${normalizedDomain}${rest}`;
+}
 
 /**
  * Dual-channel exclusivity 검증 — 부팅타임 invariant.
  *
- * 원칙: 동일 logical 비즈니스 이벤트(예: software validation submitted)의 캐시 무효화는
- * 단일 채널만 담당해야 한다.
+ * 원칙(ADR-0012): 동일 logical 비즈니스 이벤트의 캐시 무효화는 단일 채널만 담당해야 한다.
  *   - CACHE_EVENTS 채널: 캐시 무효화 전용
  *   - NOTIFICATION_EVENTS 채널: 알림 발송 + downstream side-effect 전용 (캐시 무효화 금지)
  *
@@ -37,20 +49,20 @@ const CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM: Readonly<Record<string, string>> = {
  *     → registry rule R2 실행 (R1과 동일한 무효화)
  *   동일 status 전이마다 R1 + R2가 2x 실행됨 → p99 latency 증가
  *
- * 검출 방식: 네이밍 규약 기반 mirror pair 탐지.
- *   CACHE_EVENTS의 값이 `cache.<domain>.<verb>` 형태이면, `<domain>` 동의어 변환 후
- *   `<domain>.<verb>` 형태가 NOTIFICATION_EVENTS 값에 존재하는지 검사.
+ * 검출 방식: 네이밍 규약 기반 mirror pair 탐지 (deriveNotificationMirror).
  *   양쪽 모두 registry에 등록되어 있고 actions+patterns가 일치하면 violation.
  *
- * 신규 도메인 명명 규칙:
+ * 신규 도메인 명명 규칙(cache-events-naming.spec.ts 강제):
  *   - CACHE_EVENTS: `cache.<domainCamel>.<verbCamel>` (e.g. `cache.calibration.created`)
  *   - NOTIFICATION_EVENTS: `<domainCamel>.<verbCamel>` (e.g. `calibration.created`)
- *   이 규칙을 따르면 자동으로 mirror 보호됨.
  *
  * 정당한 cross-channel rule duplication (false positive 회피):
  *   - `TEST_SOFTWARE_REVALIDATION_REQUIRED` (NOTIFICATION)와 `SW_VALIDATION_*` (CACHE)는
- *     동일 cache prefix를 무효화하지만 서로 다른 비즈니스 이벤트 (system 자동 vs 사용자 status 전이).
+ *     동일 cache prefix를 무효화하지만 서로 다른 비즈니스 이벤트.
  *     이름이 mirror가 아니므로 본 invariant에서 자동 제외됨.
+ *
+ * proactive audit: scripts/audit-cache-event-channels.mjs 가 동일 검출 로직으로
+ * mirror 후보 enumerate + 잠재 회귀 보고. 본 invariant는 reactive 안전망 역할.
  */
 export function validateDualChannelExclusivity(
   registry: Record<string, CacheInvalidationRule> = CACHE_INVALIDATION_REGISTRY
@@ -63,21 +75,6 @@ export function validateDualChannelExclusivity(
       .sort();
     const sortedPatterns = [...(rule.patterns ?? [])].map((p) => p.pattern).sort();
     return JSON.stringify({ actions: sortedActions, patterns: sortedPatterns });
-  };
-
-  /**
-   * `cache.<domain>.<verb>` → `<normalizedDomain>.<verb>` 으로 변환 (mirror 후보 도출).
-   * `cache.` prefix가 없으면 null (mirror 가능성 없음).
-   */
-  const deriveNotificationMirror = (cacheEventValue: string): string | null => {
-    if (!cacheEventValue.startsWith('cache.')) return null;
-    const stripped = cacheEventValue.slice('cache.'.length);
-    const dotIndex = stripped.indexOf('.');
-    if (dotIndex < 0) return null;
-    const domain = stripped.slice(0, dotIndex);
-    const rest = stripped.slice(dotIndex);
-    const normalizedDomain = CACHE_TO_NOTIFICATION_DOMAIN_SYNONYM[domain] ?? domain;
-    return `${normalizedDomain}${rest}`;
   };
 
   const violations: string[] = [];

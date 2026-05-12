@@ -101,6 +101,8 @@ echo "▶ pre-push: root scope spec (scripts/__tests__/*.spec.mjs)..."
 _t "root-spec" node --test --test-concurrency=4 \
   scripts/__tests__/commitlint-config.spec.mjs \
   scripts/__tests__/precommit-staged-guard.spec.mjs \
+  scripts/__tests__/scan-exclusion-paths-sync.spec.mjs \
+  scripts/__tests__/ultrareview-shield.spec.mjs \
   scripts/__tests__/verify-lint-ruleset-parity.spec.mjs \
   scripts/__tests__/verify-route-metadata.spec.mjs
 

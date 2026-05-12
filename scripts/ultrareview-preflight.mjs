@@ -21,6 +21,9 @@
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { SCAN_EXCLUDED_DIRS } from './lib/scan-exclusion-paths.mjs';
+
+const EXCLUDED_DIR_SET = new Set(SCAN_EXCLUDED_DIRS);
 
 const ROOT = process.cwd();
 const VERBOSE = process.argv.includes('--verbose');
@@ -52,6 +55,7 @@ function verbose(msg) {
 
 const DANGEROUS_PATTERNS = [
   // 로컬 환경변수 (gitignore 대상이지만 존재 확인)
+  { pattern: '.env',                 reason: 'root 로컬 env (DB_PASSWORD, AZURE_AD_CLIENT_SECRET, INTERNAL_API_KEY, webhook 등)' },
   { pattern: '.env.local',           reason: 'frontend 로컬 env (DB/NextAuth secret 포함 가능)' },
   { pattern: 'apps/frontend/.env.local', reason: 'frontend 로컬 env' },
   { pattern: 'apps/backend/.env',    reason: 'backend 로컬 env (DB_URL, JWT_SECRET 등)' },
@@ -80,7 +84,7 @@ function findGlobFiles(rootDir, suffix) {
   function walk(dir) {
     try {
       for (const entry of readdirSync(dir)) {
-        if (entry === 'node_modules' || entry === '.git' || entry === 'dist') continue;
+        if (EXCLUDED_DIR_SET.has(entry)) continue;
         const full = join(dir, entry);
         try {
           const st = statSync(full);

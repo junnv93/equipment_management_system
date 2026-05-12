@@ -39,9 +39,26 @@ title = "Equipment Management System — gitleaks 프로젝트 룰셋"
 # ─── 전역 allowlist ────────────────────────────────────────────────────────────
 
 [allowlist]
-  description = "프로젝트 전역 제외 경로 — 암호화된 파일·런타임 시크릿 경로"
+  description = "프로젝트 전역 제외 경로 — 빌드 산출물 / 의존성 / 암호화된 파일 / 런타임 시크릿"
   paths = [
-    # sops 암호화된 파일(커밋 허용) — pre-commit 1-stage가 암호화 상태 검증
+    # ── 빌드 산출물 + 의존성 (gitleaks --no-git 이 .gitignore 무시하므로 명시 차단)
+    # SSOT: scripts/lib/scan-exclusion-paths.mjs (GITLEAKS_EXCLUDED_DIRS)
+    # 회귀 차단: scripts/__tests__/scan-exclusion-paths-sync.spec.mjs
+    '''(^|/)node_modules/''',
+    '''(^|/)\.pnpm-store/''',
+    '''(^|/)dist/''',
+    '''(^|/)build/''',
+    '''(^|/)\.next/''',
+    '''(^|/)\.turbo/''',
+    '''(^|/)coverage/''',
+    '''(^|/)\.nyc_output/''',
+    '''(^|/)playwright-report/''',
+    '''(^|/)test-results/''',
+    # lockfile — hash/integrity blob 이 cryptographic-token false-positive 트리거
+    '''(^|/)pnpm-lock\.yaml$''',
+    '''(^|/)package-lock\.json$''',
+    '''(^|/)yarn\.lock$''',
+    # ── sops 암호화된 파일(커밋 허용) — pre-commit 1-stage가 암호화 상태 검증
     '''(^|/)infra/secrets/.*\.sops\.yaml$''',
     # 복호화 대상 런타임 경로 (gitignore에도 있지만 명시 방어)
     '''(^|/)run/secrets/''',
@@ -52,7 +69,21 @@ title = "Equipment Management System — gitleaks 프로젝트 룰셋"
     # 환경변수 예시 파일 (placeholder 값만)
     '''(^|/)\.env\.example$''',
     '''(^|/)apps/backend/\.env\.example$''',
+    '''(^|/)\.env\.production\.template$''',     # "강력한_비밀번호_여기에_입력" 등 한글 placeholder
+    '''(^|/)\.env\.ci\.example$''',
     # age keys 백업 문서 (경로 예시 포함, 실제 키 없음)
     '''(^|/)docs/operations/secret-backup\.md$''',
     '''(^|/)docs/operations/secret-rotation\.md$''',
+    # 문서 placeholder — "your-client-secret-here" / "postgres" 로컬 default / "강력한_비밀번호_입력" 등
+    # 실 secret 은 .env / .env.local 에서만 관리, 문서에는 placeholder만 노출 정책
+    '''(^|/)docs/archive/.*\.md$''',
+    '''(^|/)docs/development/DEV_SETUP\.md$''',
+    '''(^|/)infra/QUICKSTART_LAN\.md$''',
+    '''(^|/)infra/DEPLOYMENT_LAN\.md$''',
+    '''(^|/)apps/backend/README\.md$''',
+    # 테스트 fixture — localhost 기본값 (DB_PASSWORD='postgres' 등 dev-only)
+    '''(^|/)apps/backend/test/jest-setup\.ts$''',
+    # e2e 보안 테스트 — 의도적 fake JWT (WRONG_SIGNATURE 등 401 검증용)
+    # .gitleaksignore에 git-mode fingerprint도 등록되어 있음 (이중 방어).
+    '''(^|/)apps/frontend/tests/e2e/security\.spec\.ts$''',
   ]
