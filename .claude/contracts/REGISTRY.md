@@ -9,7 +9,6 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 
 | slug | 설명 | 시작일 |
 |------|------|--------|
-| `section-autonomy-followup` | large-component-refactor 후속 — S-2 dynamic import leaf 이주 + S-5 InspectionBasicInfoSection 컨텍스트 분리 + S-1 sub-component 추출 (≤200 line) | 2026-05-12 |
 | `checkouts-sprint4-followups-s2-s4-s5-s6` | checkouts-sprint4-ux-u02-u08 후속 4건 — S-2 revoke 5분 countdown / S-4 reject-preset admin CRUD / S-5 fuzzy-search ADR-0011 / S-6 destination 인라인 등록 | 2026-05-12 |
 
 ---
