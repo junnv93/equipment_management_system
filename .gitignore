@@ -39,7 +39,9 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
-.env.test
+# 루트 .env.test은 tracked (cross-PC e2e fixture, 100% dummy 값) — gitignore 등록 제거
+# 단일 DB 정책 (CLAUDE.md Rule 1)에 따라 모든 PC가 동일 baseline 사용.
+# 진짜 secret이 들어가야 하는 환경 override는 .env.test.local (위 line 40)로 분리.
 apps/backend/.env.test
 apps/frontend/.env.test
 
