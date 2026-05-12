@@ -100,6 +100,7 @@ function InspectionFormDialogInner({
     dismissBanner,
     addMasterPrefilledField,
     removeMasterPrefilledField,
+    isMasterPrefilledField,
   } = inspectionForm;
   const previousInspectionApplied = inspectionFormState.latest.applied;
   const prefillCounts = inspectionFormState.latest.counts;
@@ -459,6 +460,10 @@ function InspectionFormDialogInner({
             calibrationValidityPeriod={calibrationValidityPeriod}
             onCalibrationValidityPeriodChange={setCalibrationValidityPeriod}
             onRemoveMasterPrefilled={removeMasterPrefilledField}
+            inspectionCycleIsPrefilled={isMasterPrefilledField('inspectionCycle')}
+            calibrationValidityPeriodIsPrefilled={isMasterPrefilledField(
+              'calibrationValidityPeriod'
+            )}
           />
 
           <InspectionItemsSection

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
-import dynamic from 'next/dynamic';
 import {
   type EquipmentStatus,
   type Site,
@@ -12,7 +11,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { type UploadedFile } from '@/components/shared/FileUpload';
 import { BasicInfoSection, type FormValues } from './BasicInfoSection';
 import { ManagementNumberPreviewBar } from './ManagementNumberPreviewBar';
@@ -29,23 +27,13 @@ import { useTranslations } from 'next-intl';
 import { useManagementNumberCheck } from '@/hooks/use-management-number-check';
 import { useEquipmentHistoryHandlers } from '@/hooks/use-equipment-history-handlers';
 import { useEquipmentFormSubmit } from '@/hooks/use-equipment-form-submit';
-import { TemporaryEquipmentSection } from './sections/TemporaryEquipmentSection';
 import { EquipmentApprovalConfirmDialog } from './sections/EquipmentApprovalConfirmDialog';
 import { HistoryAttachmentStep } from './sections/HistoryAttachmentStep';
+import { StatusLocationStep } from './sections/StatusLocationStep';
+import { CalibrationStep } from './sections/CalibrationStep';
 
 // PendingHistoryData re-export — equipment-history-utils.ts에서 이 경로로 import 중
 export type { PendingHistoryData } from '@/hooks/use-equipment-history-handlers';
-
-// ✅ Dynamic import로 무거운 섹션 지연 로딩 (초기 번들 크기 감소)
-const CalibrationInfoSection = dynamic(
-  () => import('./CalibrationInfoSection').then((mod) => mod.CalibrationInfoSection),
-  { loading: () => <Skeleton className="h-64 w-full" />, ssr: false }
-);
-
-const StatusLocationSection = dynamic(
-  () => import('./StatusLocationSection').then((mod) => mod.StatusLocationSection),
-  { loading: () => <Skeleton className="h-48 w-full" />, ssr: false }
-);
 
 /**
  * 역할별 권한 정보 (i18n 키와 정적 속성만 유지)
@@ -394,28 +382,26 @@ export function EquipmentForm({
               FORM_WIZARD_STEP_TRANSITION.wrapper,
             ].join(' ')}
           >
-            <StatusLocationSection
+            <StatusLocationStep
               control={form.control}
               isCreateMode={!isEdit}
               selectedSite={selectedSite}
               selectedTeamId={watchedTeamId}
+              showTemporary={isTemporary && !isEdit}
+              temporaryProps={{
+                equipmentType,
+                onEquipmentTypeChange: setEquipmentType,
+                owner,
+                onOwnerChange: setOwner,
+                usagePeriodStart,
+                onUsagePeriodStartChange: setUsagePeriodStart,
+                usagePeriodEnd,
+                onUsagePeriodEndChange: setUsagePeriodEnd,
+                calibrationCertificateFile,
+                onCalibrationCertificateChange: setCalibrationCertificateFile,
+                watchedNextCalibrationDate,
+              }}
             />
-
-            {isTemporary && !isEdit && (
-              <TemporaryEquipmentSection
-                equipmentType={equipmentType}
-                onEquipmentTypeChange={setEquipmentType}
-                owner={owner}
-                onOwnerChange={setOwner}
-                usagePeriodStart={usagePeriodStart}
-                onUsagePeriodStartChange={setUsagePeriodStart}
-                usagePeriodEnd={usagePeriodEnd}
-                onUsagePeriodEndChange={setUsagePeriodEnd}
-                calibrationCertificateFile={calibrationCertificateFile}
-                onCalibrationCertificateChange={setCalibrationCertificateFile}
-                watchedNextCalibrationDate={watchedNextCalibrationDate}
-              />
-            )}
           </div>
         )}
 
@@ -428,7 +414,7 @@ export function EquipmentForm({
               FORM_WIZARD_STEP_TRANSITION.wrapper,
             ].join(' ')}
           >
-            <CalibrationInfoSection control={form.control} />
+            <CalibrationStep control={form.control} />
           </div>
         )}
 

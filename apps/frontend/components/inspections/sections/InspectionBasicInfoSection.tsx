@@ -21,7 +21,6 @@ import {
   INSPECTION_FORM_LAYOUT,
   INSPECTION_SPACING,
 } from '@/lib/design-tokens';
-import { useInspectionForm } from '@/lib/inspection/form-context';
 
 export interface InspectionBasicInfoSectionProps {
   isEquipmentError: boolean;
@@ -35,6 +34,10 @@ export interface InspectionBasicInfoSectionProps {
   calibrationValidityPeriod: string;
   onCalibrationValidityPeriodChange: (v: string) => void;
   onRemoveMasterPrefilled: (field: string) => void;
+  /** 부모(orchestrator)가 master prefill 여부를 계산해 전달 — section autonomy (props in, JSX out) */
+  inspectionCycleIsPrefilled: boolean;
+  /** 부모(orchestrator)가 master prefill 여부를 계산해 전달 */
+  calibrationValidityPeriodIsPrefilled: boolean;
 }
 
 export function InspectionBasicInfoSection({
@@ -49,12 +52,13 @@ export function InspectionBasicInfoSection({
   calibrationValidityPeriod,
   onCalibrationValidityPeriodChange,
   onRemoveMasterPrefilled,
+  inspectionCycleIsPrefilled,
+  calibrationValidityPeriodIsPrefilled,
 }: InspectionBasicInfoSectionProps) {
   const t = useTranslations('calibration');
-  const { isMasterPrefilledField } = useInspectionForm();
 
-  const renderPrefillBadge = (field: string) => {
-    if (!isMasterPrefilledField(field)) return null;
+  const renderPrefillBadge = (isPrefilled: boolean) => {
+    if (!isPrefilled) return null;
     return (
       <TooltipProvider>
         <Tooltip>
@@ -136,7 +140,7 @@ export function InspectionBasicInfoSection({
               <Label htmlFor="intermediate-inspection-cycle">
                 {t('intermediateInspection.inspectionCycle')}
               </Label>
-              {renderPrefillBadge('inspectionCycle')}
+              {renderPrefillBadge(inspectionCycleIsPrefilled)}
             </div>
             <Input
               id="intermediate-inspection-cycle"
@@ -155,7 +159,7 @@ export function InspectionBasicInfoSection({
               <Label htmlFor="intermediate-inspection-calibration-validity-period">
                 {t('intermediateInspection.calibrationValidityPeriod')}
               </Label>
-              {renderPrefillBadge('calibrationValidityPeriod')}
+              {renderPrefillBadge(calibrationValidityPeriodIsPrefilled)}
             </div>
             <Input
               id="intermediate-inspection-calibration-validity-period"
