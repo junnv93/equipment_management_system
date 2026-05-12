@@ -11,10 +11,7 @@ import {
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  TestSoftwareService,
-  type TestSoftwareWithManagers,
-} from './test-software.service';
+import { TestSoftwareService, type TestSoftwareWithManagers } from './test-software.service';
 import {
   CreateTestSoftwareValidationPipe,
   type CreateTestSoftwareInput,

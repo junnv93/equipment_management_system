@@ -126,9 +126,7 @@ export class SoftwareValidationsController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
-  findOne(
-    @Param('uuid', ParseUUIDPipe) uuid: string
-  ): Promise<SoftwareValidationWithActors> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<SoftwareValidationWithActors> {
     return this.validationsService.findOne(uuid);
   }
 

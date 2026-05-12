@@ -10,7 +10,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import {
   EquipmentStatusEnum,
   CheckoutStatusEnum,
-  CheckoutPurposeEnum,
   ConditionStatusEnum,
 } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';

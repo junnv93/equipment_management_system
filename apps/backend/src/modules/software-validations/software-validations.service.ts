@@ -260,10 +260,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
             qualityApproverName: sql<string | null>`quality_approver.name`,
           })
           .from(softwareValidations)
-          .leftJoin(
-            sql`users as submitter`,
-            sql`submitter.id = ${softwareValidations.submittedBy}`
-          )
+          .leftJoin(sql`users as submitter`, sql`submitter.id = ${softwareValidations.submittedBy}`)
           .leftJoin(
             sql`users as tech_approver`,
             sql`tech_approver.id = ${softwareValidations.technicalApproverId}`
