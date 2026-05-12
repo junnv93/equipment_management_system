@@ -868,6 +868,65 @@ grep "shared-constants" packages/schemas/package.json
 - 새 상수 추가 시 같은 commit 으로 `validation-rules.ts` 단방향 wire 동반
 
 
+## Step 65: drizzle-stub SSOT — backend spec fluent chain 로컬 정의 차단
+
+> 도입: 2026-05-13 qr-visual-redesign-followups-g4-g12 라운드 #3 (commit `d6b7cc8e`). G-10 SSOT 확장.
+
+**검증 명령**:
+
+```bash
+# (1) drizzle-stub.ts SSOT 파일 존재 + 4 export
+test -f apps/backend/src/common/__tests__/drizzle-stub.ts && \
+  grep -cE "export function (createDrizzleSelectChain|createDrizzleInsertChain|createDrizzleUpdateChain|createSequentialDrizzleStub)" apps/backend/src/common/__tests__/drizzle-stub.ts
+# 기대: 4
+
+# (2) backend spec 의 로컬 fluent chain 재정의 0건
+grep -rnE "^\s*(const|function) (createSelectChain|createInsertChain|createUpdateChain|makeDbStub)\b" \
+  apps/backend/src --include="*.spec.ts" \
+  | grep -vE "common/__tests__/drizzle-stub\.ts$" \
+  | wc -l
+# 기대: 0 (drizzle-stub SSOT 외부 정의 없음)
+
+# (3) SSOT consumer ≥ 3 spec
+grep -lrE "createDrizzleSelectChain|createDrizzleInsertChain|createDrizzleUpdateChain|createSequentialDrizzleStub" \
+  apps/backend/src --include="*.spec.ts" \
+  | wc -l
+# 기대: ≥ 3 (audit + qr-access + settings)
+```
+
+**PASS**:
+- drizzle-stub.ts SSOT 파일 존재 + 4 export 시그니처 보존
+- backend spec 의 로컬 fluent chain 재정의 0건
+- SSOT consumer ≥ 3 spec
+
+**FAIL**:
+- 신규 backend spec 이 `function createSelectChain` / `function makeDbStub` 로컬 정의 (SSOT 우회)
+
+**예외 인정** (allow-list):
+- `apps/backend/src/modules/equipment/__tests__/equipment.service.spec.ts` — monolithic mockDb 패턴 (mockReturnThis 단일 객체). drizzle-stub SSOT 와 다른 valid 스타일. tech-debt round3 PR-3 후속.
+
+**Why**: 새 backend spec 추가 시 fluent chain 로컬 재정의가 SSOT 우회. drizzle-stub.ts 가 단일 진입점 — Drizzle method 추가 시 한 곳만 갱신.
+
+**How to apply**:
+```typescript
+// ✅ CORRECT
+import {
+  createDrizzleSelectChain as createSelectChain,
+  createDrizzleInsertChain as createInsertChain,
+  createDrizzleUpdateChain as createUpdateChain,
+} from '../../../common/__tests__/drizzle-stub';
+
+// 또는 sequential pattern (qr-access spec)
+import { createSequentialDrizzleStub } from '../../../common/__tests__/drizzle-stub';
+
+// ❌ WRONG (SSOT 우회)
+const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
+  const chain: Record<string, jest.Mock> = {};
+  // ...로컬 fluent chain 정의
+};
+```
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

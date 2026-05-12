@@ -700,6 +700,95 @@ grep -rn "bg-brand-.*text-white\|text-white.*bg-brand-" \
 | 51  | text-[10px] → MICRO_TYPO.badge | PASS/FAIL | arbitrary size 위치 |
 | 52  | CharsCounter 호출자 강제       | PASS/FAIL | 인라인 분기/매직 넘버 위치 |
 | 53  | design-token 파일 내 `bg-brand-* text-white` 직접 조합 금지 | PASS/FAIL | `getSemanticSolidBgClasses()` 미경유 위치 |
+| 54  | mono 헬퍼 `.text-mono`/`.text-mono-base` utility 경유 | PASS/FAIL | `font-mono tabular-nums` 인라인 헬퍼 위치 |
+| 55  | brand-color-* oklch SSOT — hsl wrapper 0 + color-mix(in oklch) alpha | PASS/FAIL | hsl(var(--brand-color-*)) 잔존 위치 |
+```
+
+## Step 54: mono 헬퍼는 `.text-mono` 또는 `.text-mono-base` utility 경유
+
+> 도입: 2026-05-13 qr-visual-redesign-followups-g4-g12 라운드 #3 (commit `d6b7cc8e`). 갭 1 SSOT 확장.
+
+**검증 명령**:
+
+```bash
+# brand.ts 의 mono 헬퍼 (3종) 가 .text-mono / .text-mono-base utility 경유 사용
+# font-mono tabular-nums 인라인 합성 0건 (utility-first 단방향 SSOT)
+grep -nE "'[^']*font-mono[^']*tabular-nums[^']*'" apps/frontend/lib/design-tokens/brand.ts
+# 기대: 0 (헬퍼 본문에서 인라인 합성 없음, .text-mono 또는 .text-mono-base 만 사용)
+
+# .text-mono / .text-mono-base utility 정의 globals.css 존재
+grep -cE "^\s*\.text-mono(-base)?\s*\{" apps/frontend/styles/globals.css
+# 기대: ≥ 2 (.text-mono 13px size primitive + .text-mono-base size-less primitive)
+
+# 호출부에서 size override 금지 (헬퍼는 자체 size 결정)
+grep -rn "text-xs.*getManagementNumberClasses\|getManagementNumberClasses.*text-xs\|text-sm.*getManagementNumberClasses" apps/frontend/components --include="*.tsx"
+# 기대: 0 (호출부 size override 금지)
+```
+
+**PASS**:
+- brand.ts mono 헬퍼 본문에서 `font-mono tabular-nums` 인라인 합성 0건 (utility 경유)
+- globals.css `.text-mono` (13px) + `.text-mono-base` (size-less) 동시 정의
+
+**FAIL**:
+- 신규 mono 헬퍼가 `'font-mono tabular-nums ...'` 인라인 정의 (utility SSOT 우회)
+- 호출부가 헬퍼 + size 동시 명시 (e.g. `text-xs ${getManagementNumberClasses()}`)
+
+**Why**: utility-first SSOT — Tailwind `font-mono` + `tabular-nums` 반복 정의는 의미적 진입점에서 일관성 깸. `.text-mono-base` 가 size-less primitive, `.text-mono` 가 13px size variant.
+
+
+## Step 55: brand-color-* oklch SSOT — hsl wrapper 0건 + color-mix(in oklch) alpha 합성
+
+> 도입: 2026-05-13 qr-visual-redesign-followups-g4-g12 라운드 #3 (commit `d6b7cc8e`). 갭 2/7 SSOT 확장.
+
+**검증 명령**:
+
+```bash
+# (1) brand-color-* 정의 oklch 형식 (light + dark 각각 14)
+grep -cE "^\s*--brand-color-(ok|success|warning|critical|info|neutral|purple|repair|temporary|progress|archive|urgent|mute|site-suw|site-uiw|site-pyt):\s*oklch\(" apps/frontend/styles/globals.css
+# 기대: ≥ 28 (14 light + 14 dark)
+
+# (2) hsl(var(--brand-color-*)) wrapper 잔존 0 (전체 design-tokens + globals.css)
+grep -rn "hsl(var(--brand-color-" apps/frontend/lib/design-tokens apps/frontend/styles
+# 기대: 0 (모든 사용처 var(...) 직접 또는 color-mix(in oklch, ...) 경유)
+
+# (3) alpha 합성은 color-mix(in oklch) 패턴
+grep -rn "color-mix(in oklch" apps/frontend/styles/globals.css | wc -l
+# 기대: ≥ 1 (alpha 합성 SSOT)
+```
+
+**PASS**:
+- brand-color-* 14개 oklch 형식 정의 (light + dark)
+- `hsl(var(--brand-color-*))` wrapper 0건 (전체 design-tokens + globals.css)
+- alpha 합성은 `color-mix(in oklch, var(--brand-color-X) NN%, transparent)` 경유
+
+**FAIL**:
+- 신규 brand-color-* 가 HSL 형식 정의 (`--brand-color-new: 120 50% 50%;`)
+- `hsl(var(--brand-color-*))` wrapper 잔존 (oklch 값을 HSL로 wrap 시 invalid CSS)
+- alpha 합성을 `hsl(var(--brand-color-X) / 0.NN)` 패턴 사용 (oklch + hsl mix 충돌)
+
+**예외 인정**:
+- BRAND_COLORS_HEX (brand.ts) — hex 값 유지 (브라우저 폴백 + 컴포넌트 raw 사용 용)
+- `--brand-urgent-weak` / `--brand-mute-weak` 등 soft tint variant도 oklch 형식 (정합성)
+
+**Why**: CSS Color 4 oklch perceptually uniform 색공간 — design system 정확도 + WCAG AA. `hsl()` wrapper는 oklch 값을 wrap 시 invalid → 빌드 실패 또는 silent 색상 깨짐. `color-mix(in oklch)` 가 alpha 합성의 정합 SSOT.
+
+**How to apply** (신규 brand-color-* 추가 시):
+1. `brand.ts` BRAND_COLORS_HEX 에 hex 추가
+2. hex → oklch 변환 (CSS Color 4 표준 알고리즘 또는 docs/design/oklch-migration-*.md 변환 표)
+3. `globals.css` `:root` + `.dark` 양쪽에 `--brand-color-{key}: oklch(L C h);` 추가
+4. `@theme inline` block에 `--color-brand-{key}: var(--brand-color-{key});` alias 추가 (hsl() wrapper 금지)
+5. alpha 합성 필요 시 `color-mix(in oklch, var(--brand-color-{key}) NN%, transparent)` 패턴 사용
+
+```css
+/* ✅ CORRECT */
+--brand-color-ok: oklch(0.696 0.149 162.5);
+--color-brand-ok: var(--brand-color-ok);
+--surface-inline-action-ok-bg: color-mix(in oklch, var(--brand-color-ok) 10%, transparent);
+
+/* ❌ WRONG */
+--brand-color-ok: 160 84% 39%;  /* HSL legacy */
+--color-brand-ok: hsl(var(--brand-color-ok));  /* hsl wrapper */
+--surface-inline-action-ok-bg: hsl(var(--brand-color-ok) / 0.10);  /* hsl alpha */
 ```
 
 ## Exceptions
