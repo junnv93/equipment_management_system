@@ -549,6 +549,35 @@ scope → FSM(APPROVED) → reason → time-window → domain 5단계 순서.
 
 상세: [references/scope-identity.md](references/scope-identity.md#step-52-revokeapproval-5단계-fail-close-순서-검증-2026-05-03-추가)
 
+### Step 53: `StepperHeader` — `CONDITION_CHECK_STEP_VALUES` SSOT 소비 + 인라인 4-step 배열 금지 (2026-05-12 qr-visual-redesign TASK 5)
+
+**배경**: `StepperHeader` 가 Rental 4-step 진행 상태를 `CONDITION_CHECK_STEP_VALUES` 배열 기준으로 렌더.
+인라인 `['lender_checkout', 'borrower_receive', 'borrower_return', 'lender_return']` 배열을 직접 정의하면
+FSM step 추가/변경 시 UI-와 FSM 간 drift 발생.
+
+**PASS:** `StepperHeader` 가 `CONDITION_CHECK_STEP_VALUES` import + `.map()` / `.indexOf()` 소비.
+**FAIL:** 인라인 4-step 배열 또는 하드코딩 step 문자열 비교.
+
+```bash
+# (1) StepperHeader 가 CONDITION_CHECK_STEP_VALUES SSOT 소비
+grep -n "CONDITION_CHECK_STEP_VALUES" \
+  apps/frontend/components/checkouts/StepperHeader.tsx
+# 기대: ≥ 2건 (import + indexOf/map 사용)
+
+# (2) 인라인 4-step 배열 회귀 탐지
+grep -rn "\['lender_checkout'.*'borrower_receive'\|'lender_checkout'.*'lender_return'\]" \
+  apps/frontend/components/checkouts --include="*.tsx" | grep -v ".spec."
+# 기대: 0건
+
+# (3) StepperHeader 소비처가 step prop 에 올바른 ConditionCheckStep 값 전달 (schema 타입 일치)
+grep -rn "step={" \
+  apps/frontend/components/checkouts/EquipmentConditionForm.tsx \
+  apps/frontend/components/checkouts/ReturnInspectionForm.tsx
+# 기대: step prop 값이 ConditionCheckStep union 내 literal 또는 변수
+```
+
+**관련 파일**: `apps/frontend/components/checkouts/StepperHeader.tsx`, `packages/schemas/src/enums/return-condition.ts` (`CONDITION_CHECK_STEP_VALUES` SSOT)
+
 ## Output Format
 
 ```markdown
@@ -606,6 +635,7 @@ scope → FSM(APPROVED) → reason → time-window → domain 5단계 순서.
 | 50 | returnCheckout purpose-aware workingStatusChecked | PASS/FAIL | rental 면제 + priorChecks.length > 0 |
 | 51 | KPI value-filterStatus CHECKOUT_STATUS_GROUPS SSOT | PASS/FAIL | SSOT 경유 + 동일 집합 |
 | 52 | revokeApproval 5단계 fail-close 순서 | PASS/FAIL | scope → FSM → reason → window → domain |
+| 53 | StepperHeader CONDITION_CHECK_STEP_VALUES SSOT | PASS/FAIL | 인라인 4-step 배열 0건 |
 ```
 
 ## Exceptions

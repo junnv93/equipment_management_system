@@ -1,6 +1,6 @@
 ---
 name: verify-handover-qr
-description: QR SSOT 검증 — QR URL/설정/액션 SSOT(qr-url.ts, qr-config.ts, qr-access.ts) 경유 + 직접 스캔 워크플로(confirm_handover 액션 라우팅, attachment fail-close). 2026-05-09 토큰 메커니즘 제거 후 직접 스캔 방식으로 재편. 반출 QR 또는 인수인계 기능 추가·수정 후 사용.
+description: QR SSOT 검증 — QR URL/설정/액션 SSOT(qr-url.ts, qr-config.ts, qr-access.ts) 경유 + 직접 스캔 워크플로(confirm_handover 액션 라우팅, attachment fail-close). 2026-05-09 토큰 메커니즘 제거 후 직접 스캔 방식으로 재편. 2026-05-12 Step 16~18 추가: QR_ACTION_GROUP SSOT + HandoverItem Zod schema 다중 핸드오버 + LABEL_SIZE_PRESETS.recommendedForKey i18n parity. 반출 QR 또는 인수인계 기능 추가·수정 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: qr | handover | 특정 step 번호]'
 ---
@@ -309,6 +309,93 @@ ls apps/frontend/app/\(dashboard\)/handover/ 2>/dev/null && echo "FAIL: handover
 
 ---
 
+### Step 16: QR_ACTION_GROUP / QR_ACTION_GROUP_ORDER SSOT — 그룹 렌더링 인라인 분기 금지 (2026-05-12 qr-visual-redesign TASK 1)
+
+**배경**: `QR_ACTION_GROUP: Record<QRAllowedAction, QRActionGroup>` + `QR_ACTION_GROUP_ORDER: readonly QRActionGroup[]` 를
+`qr-access.ts` 에 신설 (2026-05-11). `EquipmentActionSheet` 가 이 두 SSOT 를 소비하여 그룹 렌더링.
+클라이언트에서 action 문자열 비교로 그룹을 직접 분기하면 SSOT 우회.
+
+**PASS:** `EquipmentActionSheet` 가 `QR_ACTION_GROUP` + `QR_ACTION_GROUP_ORDER` import 후 소비.
+인라인 `action === 'confirm_handover_receive' || action === 'confirm_handover_return'` 분기 0건.
+**FAIL:** 인라인 그룹 분기 발견.
+
+```bash
+# (1) QR_ACTION_GROUP, QR_ACTION_GROUP_ORDER import 존재
+grep -n "QR_ACTION_GROUP\|QR_ACTION_GROUP_ORDER" \
+  apps/frontend/components/mobile/EquipmentActionSheet.tsx
+# 기대: 2건 이상
+
+# (2) 인라인 그룹 action 리터럴 비교 회귀
+awk '/function EquipmentActionSheet/,/^}$/' apps/frontend/components/mobile/EquipmentActionSheet.tsx \
+  | grep -E "'confirm_handover_receive'|'confirm_handover_return'|'mark_checkout_returned'|'request_checkout'" \
+  | grep -v "QR_ACTION_GROUP\[" | grep -v "//"
+# 기대: 0건 (QR_ACTION_GROUP 조회 외 인라인 비교 없음)
+
+# (3) qr-access.ts 에서 SSOT 단 1곳 정의 — 로컬 재정의 0
+grep -rn "QR_ACTION_GROUP\s*=" \
+  apps/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v ".next" \
+  | grep -v "qr-access.ts"
+# 기대: 0건
+```
+
+---
+
+### Step 17: HandoverItem Zod schema + handovers array 다중 핸드오버 SSOT (2026-05-12 qr-visual-redesign TASK 3)
+
+**배경**: `packages/schemas/src/qr-handover.ts` 에 `HandoverItemSchema` + `HandoverItemsSchema` 신설.
+BE `QRAccessResult.handovers: HandoverItem[]` + FE `HandoverPickerSheet` 양측이 동일 스키마 소비.
+`handoverCheckoutId: string` 단일 값 패턴이 다시 추가되면 다중 핸드오버 선택 UI 우회.
+
+**PASS:** (1) schema 파일 단 1곳 정의, (2) BE service import 확인, (3) 로컬 재정의 0건.
+**FAIL:** 로컬 HandoverItem interface 재정의 발견 또는 `handoverCheckoutId` 단일 값 패턴 부활.
+
+```bash
+# (1) HandoverItemSchema 정의는 packages/schemas 단 1곳
+grep -rn "HandoverItemSchema\s*=" \
+  apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v ".next"
+# 기대: packages/schemas/src/qr-handover.ts 1건
+
+# (2) BE qr-access.service.ts 가 HandoverItem[] 배열 반환 (단일 handoverCheckoutId 0건)
+grep -n "HandoverItem\|handovers\s*:" \
+  apps/backend/src/modules/equipment/services/qr-access.service.ts
+# 기대: import + 반환 타입 포함 ≥ 2건
+
+# (3) 단일 handoverCheckoutId 패턴 부활 차단
+grep -rn "handoverCheckoutId\s*:" \
+  apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v ".next" \
+  | grep -v "qr-handover.ts" | grep -v "@deprecated"
+# 기대: 0건 (deprecated 주석 달린 것만 허용)
+```
+
+---
+
+### Step 18: LABEL_SIZE_PRESETS.recommendedForKey i18n 키 parity (2026-05-12 qr-visual-redesign TASK 7)
+
+**배경**: `LABEL_SIZE_PRESETS` 7 preset 의 `recommendedForKey` 값이 `qr.labelSettings.recommendedFor.*` i18n 카탈로그와 1:1 매핑.
+새 preset 추가 시 `recommendedForKey` 값이 i18n 카탈로그에 등록되지 않으면 silent undefined 노출.
+
+**PASS:** `LABEL_SIZE_PRESETS` 의 모든 `recommendedForKey` 값이 `qr.json` (ko + en) 에 존재.
+**FAIL:** i18n 키 누락 발견.
+
+```bash
+# (1) LABEL_SIZE_PRESETS recommendedForKey 값 목록 추출
+grep -oE "recommendedForKey: '[a-zA-Z]+'" \
+  packages/shared-constants/src/qr-config.ts | grep -oE "'[^']+'" | tr -d "'"
+# 출력 예: a4Sheet, largeInstrument, midInstrument, smallInstrument, cable, ultraCompact, ultraCompactCable
+
+# (2) ko/en qr.json 에 recommendedFor 섹션 7 키 모두 존재
+grep -A15 '"recommendedFor"' apps/frontend/messages/ko/qr.json
+grep -A15 '"recommendedFor"' apps/frontend/messages/en/qr.json
+# 기대: 두 파일 모두 7개 키 존재
+
+# (3) 하드코딩 recommended 라벨 직접 사용 0 (t() 경유 필수)
+grep -rn "A4 시트\|대형 계측기\|중형 계측기\|소형 계측기\|케이블 라벨\|ultra compact\|ultraCompact" \
+  apps/frontend/components --include="*.tsx" | grep -v ".next"
+# 기대: 0건 (i18n 경유)
+```
+
+---
+
 ## Output Format
 
 ```markdown
@@ -336,6 +423,9 @@ ls apps/frontend/app/\(dashboard\)/handover/ 2>/dev/null && echo "FAIL: handover
 | 13  | PURPOSE_BY_STATUS 프론트 mirror 금지      | PASS/FAIL | 프론트에 mirror 0건                           |
 | 14  | condition_check 사진 attachmentIds 3-layer| PASS/FAIL | owner+type+중복링크 fail-close 3건 존재       |
 | 15  | handover 토큰 잔재 0건                    | PASS/FAIL | 제거된 메커니즘 참조 0건                      |
+| 16  | QR_ACTION_GROUP SSOT 소비                 | PASS/FAIL | 인라인 그룹 분기 0건                          |
+| 17  | HandoverItem schema 단 1곳 정의           | PASS/FAIL | 로컬 재정의 0건 + BE import 확인              |
+| 18  | recommendedForKey i18n parity             | PASS/FAIL | 7 preset 키 ko+en 모두 존재                   |
 ```
 
 ## Exceptions

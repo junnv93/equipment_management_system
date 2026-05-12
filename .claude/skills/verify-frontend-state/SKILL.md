@@ -608,6 +608,63 @@ grep -nE "setIs.*Open\(false\)" apps/frontend/hooks/use-approvals-bulk-mutations
 
 **관련 파일**: `apps/frontend/hooks/use-optimistic-mutation.tsx`, `use-checkout-bulk-mutations.ts`, `use-approvals-bulk-mutations.ts`, `use-bulk-undo-toast.tsx`, `lib/checkouts/undo-constants.ts`
 
+### Step 47: pre-upload orphan cleanup — `submittedRef` + `documentApi.deleteOrphan` 패턴 (2026-05-12 qr-visual-redesign TASK 6)
+
+**배경**: 사진 pre-upload 후 폼을 취소하면 서버에 orphan document 가 남는다.
+`useEffect` cleanup 에서 `if (submittedRef.current) return` 패턴으로 정상 제출 시 cleanup 을 건너뛰고,
+취소/unmount 시만 `documentApi.deleteOrphan(ids)` 를 호출하도록 설계.
+`submittedRef.current = true` 는 `onSubmit` 성공 직전에 설정.
+
+```bash
+# (1) EquipmentConditionForm + ReturnInspectionForm 양쪽 패턴 존재
+grep -n "submittedRef\|deleteOrphan" \
+  apps/frontend/components/checkouts/EquipmentConditionForm.tsx
+grep -n "submittedRef\|deleteOrphan" \
+  apps/frontend/components/checkouts/ReturnInspectionForm.tsx
+# 기대: 각 파일 ≥ 3건 (ref 선언 + cleanup 가드 + submit 직전 true 설정)
+
+# (2) deleteOrphan fire-and-forget (void 호출) 확인 — await 금지
+grep -n "deleteOrphan" \
+  apps/frontend/components/checkouts/EquipmentConditionForm.tsx \
+  apps/frontend/components/checkouts/ReturnInspectionForm.tsx \
+  | grep "await"
+# 기대: 0건 (cleanup 에서 await 금지 — useEffect cleanup 은 sync)
+
+# (3) documentApi.deleteOrphan API 엔드포인트 존재
+grep -n "deleteOrphan" apps/frontend/lib/api/document-api.ts
+# 기대: ≥ 1건 (함수 정의)
+```
+
+**PASS:** submittedRef 가드 + void deleteOrphan + submit 직전 true 설정 3-piece 패턴 존재.
+**FAIL:** 패턴 누락 → pre-upload 사진이 orphan 으로 서버에 누적.
+
+**관련 파일**: `apps/frontend/components/checkouts/EquipmentConditionForm.tsx`, `ReturnInspectionForm.tsx`, `apps/frontend/lib/api/document-api.ts`
+
+### Step 48: SSR-safe `useReducedMotion` — `window.matchMedia` 직접 접근 금지 (2026-05-12 qr-visual-redesign TASK 4)
+
+**배경**: `AutoProgressCountdown` 에서 `prefers-reduced-motion: reduce` 를 감지하는 `useReducedMotion` 훅 신설.
+SSR 환경에서 `window.matchMedia` 직접 접근 시 crash → `useState(false)` + `useEffect` 에서 감지 패턴 필수.
+
+```bash
+# (1) useReducedMotion 훅이 useEffect 안에서만 matchMedia 접근
+grep -n "matchMedia\|prefers-reduced-motion" \
+  apps/frontend/components/mobile/AutoProgressCountdown.tsx
+# 기대: useEffect 내부 참조만 (useEffect 바깥 matchMedia 0)
+
+# (2) window.matchMedia 직접 접근 (SSR-unsafe) 회귀 탐지 — useEffect 외부
+grep -rn "window\.matchMedia\|window\.innerWidth" \
+  apps/frontend/components --include="*.tsx" --include="*.ts" \
+  apps/frontend/hooks --include="*.tsx" --include="*.ts" \
+  | grep -v "useEffect\|\.next\|\.spec\." \
+  | grep -v "// SSR-safe"
+# 기대: 0건 (모두 useEffect 또는 'use client' + typeof window guard 내부)
+```
+
+**PASS:** SSR-safe 패턴 유지.
+**FAIL:** useEffect 외부 matchMedia 직접 접근 발견.
+
+**관련 파일**: `apps/frontend/components/mobile/AutoProgressCountdown.tsx`
+
 ## Output Format
 
 ```markdown

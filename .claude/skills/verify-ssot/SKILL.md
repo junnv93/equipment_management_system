@@ -744,6 +744,43 @@ grep -rn "flex justify-end pt-3 border-t mt-3" apps/frontend/components --includ
 generic 컴포넌트 (다른 도메인) 추출은 4+ 도메인 출현 시 trigger.
 
 
+### Step 62 — `EQUIPMENT_STATUS_TONE` exhaustive Record 회귀 차단 (2026-05-12 qr-visual-redesign TASK 2)
+
+**배경**: `packages/shared-constants/src/equipment-status-tone.ts` 에 `EQUIPMENT_STATUS_TONE` 를 신설하고
+`as const satisfies Record<EquipmentStatus, EquipmentStatusTone>` 컴파일타임 exhaustive 강제를 도입.
+새 `EquipmentStatus` 값 추가 시 본 매핑 누락 → tsc 자동 차단.
+회귀 위험: (1) 별도 인라인 tone 매핑 재정의, (2) `StatusBadge` 직접 분기 대체.
+
+**검증 명령:**
+
+```bash
+# (1) EQUIPMENT_STATUS_TONE 정의는 shared-constants 단 1곳 (로컬 재정의 0)
+grep -rn "EQUIPMENT_STATUS_TONE\s*=" \
+  apps/ packages/ --include="*.ts" --include="*.tsx" \
+  | grep -v node_modules | grep -v ".next" \
+  | grep -v "equipment-status-tone.ts"
+# 기대: 0건. 로컬 재정의 발견 시 → shared-constants SSOT import 로 교체.
+
+# (2) satisfies Record<EquipmentStatus, EquipmentStatusTone> 컴파일타임 강제 존재
+grep -c "satisfies Record<EquipmentStatus, EquipmentStatusTone>" \
+  packages/shared-constants/src/equipment-status-tone.ts
+# 기대: ≥ 1
+
+# (3) StatusBadge 가 EQUIPMENT_STATUS_TONE + TONE_TO_SEMANTIC 경유 (직접 switch/if 분기 0)
+grep -n "EQUIPMENT_STATUS_TONE\|TONE_TO_SEMANTIC" \
+  apps/frontend/components/ui/StatusBadge.tsx
+# 기대: 2건 이상 (import + 사용)
+
+# (4) inline tone switch 회귀 탐지 — StatusBadge 내 직접 EquipmentStatus 리터럴 비교
+awk '/function StatusBadge/,/^}$/' apps/frontend/components/ui/StatusBadge.tsx \
+  | grep -E "'available'|'checked_out'|'non_conforming'|'spare'|'pending_disposal'|'disposed'|'temporary'|'inactive'"
+# 기대: 0건
+```
+
+**PASS:** SSOT import 1건 + satisfies 강제 + StatusBadge TONE_TO_SEMANTIC 경유.
+**FAIL:** 로컬 재정의 발견 또는 StatusBadge 내 inline 분기 발견.
+
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
