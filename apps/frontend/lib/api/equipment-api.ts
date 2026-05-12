@@ -250,9 +250,9 @@ const equipmentApi = {
   /**
    * 관리번호 기반 장비 단건 조회 (QR 모바일 랜딩).
    *
-   * 응답 shape에 `allowedActions: QRAllowedAction[]`, `handovers?: HandoverItem[]`,
-   * `handoverCheckoutId?: string` (deprecated) 포함 — qr-visual-redesign TASK 3
-   * 다중 핸드오버 응답 모델. 프론트는 `handovers` 배열로 picker 또는 자동 라우팅 결정.
+   * 응답 shape에 `allowedActions: QRAllowedAction[]`, `handovers?: HandoverItem[]` 포함 —
+   * qr-visual-redesign TASK 3 다중 핸드오버 응답 모델. 프론트는 `handovers` 배열로
+   * picker 또는 자동 라우팅 결정.
    */
   getEquipmentByManagementNumber: async (
     mgmt: string
@@ -260,8 +260,6 @@ const equipmentApi = {
     Equipment & {
       allowedActions: QRAllowedAction[];
       handovers?: HandoverItem[];
-      /** @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` — 1 release 후 제거. */
-      handoverCheckoutId?: string;
     }
   > => {
     const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.BY_MANAGEMENT_NUMBER(mgmt));
@@ -269,7 +267,6 @@ const equipmentApi = {
       Equipment & {
         allowedActions: QRAllowedAction[];
         handovers?: HandoverItem[];
-        handoverCheckoutId?: string;
       }
     >(response);
   },

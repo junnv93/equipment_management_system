@@ -17,6 +17,7 @@ export class MetricsService {
   private readonly zodValidationIssuesCounter: Counter;
   private readonly sortRejectionCounter: Counter;
   private readonly sortRejectionDropsCounter: Counter;
+  private readonly orphanPhotoSweepCounter: Counter;
 
   constructor() {
     this.registry = new Registry();
@@ -96,6 +97,13 @@ export class MetricsService {
       labelNames: ['reason'],
       registers: [this.registry],
     });
+
+    this.orphanPhotoSweepCounter = new Counter({
+      name: 'orphan_photo_sweep_total',
+      help: 'Total orphan condition_check_photo documents swept by cron (no polymorphic FK 24h+). Labels: result (deleted/errors/skipped). Cardinality: 3.',
+      labelNames: ['result'],
+      registers: [this.registry],
+    });
   }
 
   incrementHttpRequestTotal(method: string, route: string, status: string): void {
@@ -161,6 +169,15 @@ export class MetricsService {
 
   incrementSortRejectionDrops(reason: SortRejectionDropReason): void {
     this.sortRejectionDropsCounter.inc({ reason });
+  }
+
+  /**
+   * Orphan photo sweep Counter — 1 call 로 N count 증가 (cron batch 결과 한 번에 누적).
+   * `count <= 0` 은 no-op (defensive).
+   */
+  incrementOrphanPhotoSweep(result: 'deleted' | 'errors' | 'skipped', count: number = 1): void {
+    if (count <= 0) return;
+    this.orphanPhotoSweepCounter.inc({ result }, count);
   }
 
   observeZodIssueCount(domainRoute: string, issueCount: number): void {

@@ -42,10 +42,6 @@ export type EquipmentQRLandingResult = EquipmentDetailResult & {
    * 사용자가 동시에 여러 건의 수령/반환 대기를 가질 때 picker UI 가 카드로 노출.
    */
   handovers?: HandoverItem[];
-  /**
-   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일. 1 release 후 제거.
-   */
-  handoverCheckoutId?: string;
 };
 
 /** findRequestByUuid() — 요청 상세 + Relations */

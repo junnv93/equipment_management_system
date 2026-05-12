@@ -114,8 +114,6 @@ describe('QRAccessService.resolveAllowedActions — multi-handover', () => {
     expect(result.handovers?.[0].lastCheck.accessories).toBe('complete');
     expect(result.handovers?.[1].lastCheck.accessories).toBeUndefined();
     expect(result.actions).toContain('confirm_handover_receive');
-    // Backward-compat: handoverCheckoutId === handovers[0].id
-    expect(result.handoverCheckoutId).toBe('co-001');
   });
 
   it('returns empty handovers when user is neither requester nor approver', async () => {
@@ -142,7 +140,6 @@ describe('QRAccessService.resolveAllowedActions — multi-handover', () => {
     );
 
     expect(result.handovers).toBeUndefined();
-    expect(result.handoverCheckoutId).toBeUndefined();
     expect(result.actions).not.toContain('confirm_handover_receive');
     expect(result.actions).not.toContain('confirm_handover_return');
   });

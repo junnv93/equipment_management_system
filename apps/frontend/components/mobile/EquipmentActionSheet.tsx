@@ -38,11 +38,6 @@ interface EquipmentActionSheetProps {
    * - ≥ 2 → `HandoverPickerSheet` 카드 선택
    */
   handovers?: HandoverItem[];
-  /**
-   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일.
-   * 새 호출자는 `handovers` 만 사용. 단일 라우팅 시 fallback 으로만 참조.
-   */
-  handoverCheckoutId?: string;
 }
 
 /** 액션 → 아이콘 매핑 (하드코딩 금지 — 이 한 곳에만 정의). */
@@ -79,7 +74,6 @@ export function EquipmentActionSheet({
   teamName,
   allowedActions,
   handovers,
-  handoverCheckoutId,
 }: EquipmentActionSheetProps) {
   const t = useTranslations('qr.mobileActionSheet');
   const tQr = useTranslations('qr.qrDisplay');
@@ -103,24 +97,16 @@ export function EquipmentActionSheet({
     return groups;
   }, [allowedActions]);
 
-  const handleHandoverAction = React.useCallback(
-    (action: 'confirm_handover_receive' | 'confirm_handover_return') => {
-      const list = handovers ?? [];
-      if (list.length === 0 && handoverCheckoutId) {
-        const step = action === 'confirm_handover_receive' ? 'borrower_receive' : 'lender_return';
-        router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(handoverCheckoutId, step));
-        return;
-      }
-      if (list.length === 1) {
-        const item = list[0];
-        const step = item.type === 'receive' ? 'borrower_receive' : 'lender_return';
-        router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(item.id, step));
-        return;
-      }
-      setPickerOpen(true);
-    },
-    [handovers, handoverCheckoutId, router]
-  );
+  const handleHandoverAction = React.useCallback(() => {
+    const list = handovers ?? [];
+    if (list.length === 1) {
+      const item = list[0];
+      const step = item.type === 'receive' ? 'borrower_receive' : 'lender_return';
+      router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(item.id, step));
+      return;
+    }
+    setPickerOpen(true);
+  }, [handovers, router]);
 
   const handleActionClick = React.useCallback(
     (action: QRAllowedAction) => {
@@ -142,7 +128,7 @@ export function EquipmentActionSheet({
           return;
         case 'confirm_handover_receive':
         case 'confirm_handover_return':
-          handleHandoverAction(action);
+          handleHandoverAction();
           return;
         default:
           assertNever(action);

@@ -2,8 +2,8 @@
  * QR Handover Item — 다중 핸드오버 응답 모델 SSOT (qr-visual-redesign TASK 3 / 2026-05-11).
  *
  * 한 사용자가 동시에 여러 건의 수령/반환 대기를 가질 수 있다 (여러 시험소에서 같은 날 도착).
- * `handoverCheckoutId: string` 단일 값으로는 어느 건인지 구분 불가 — 잘못된 checkout
- * 확정 위험. 본 스키마는 array shape 으로 확장하여 picker UI 에 충분한 컨텍스트 제공.
+ * 단일 ID 값으로는 어느 건인지 구분 불가 — 잘못된 checkout 확정 위험. 본 스키마는 array
+ * shape 으로 확장하여 picker UI 에 충분한 컨텍스트 제공.
  *
  * BE 가 `QRAccessResult.handovers: HandoverItem[]` 로 반환 → FE `HandoverPickerSheet` 가
  * 카드 형태로 렌더. 단일이면 자동 라우팅, 다중이면 사용자 선택.

@@ -29,8 +29,7 @@ import type { JwtUser } from '../../../types/auth';
 /**
  * resolveAllowedActions 반환 타입.
  *
- * `handovers` 는 confirm_handover_* 액션이 도출된 모든 checkout 의 컨텍스트.
- * `handoverCheckoutId` 는 단일 ID backward-compat (1 release 후 제거 예정 — verify-handover-qr 회귀 감시).
+ * `handovers` 는 confirm_handover_* 액션이 도출된 모든 checkout 의 컨텍스트 (SSOT).
  *
  * @see packages/schemas/src/qr-handover.ts (HandoverItem SSOT)
  */
@@ -41,11 +40,6 @@ export interface QRAccessResult {
    * 사용자가 동시에 여러 건의 수령/반환 대기를 가질 때 picker UI 가 카드로 노출.
    */
   handovers?: HandoverItem[];
-  /**
-   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일 — 1 release 후 제거.
-   * 신규 호출자는 `handovers` 를 직접 사용할 것.
-   */
-  handoverCheckoutId?: string;
 }
 
 /**
@@ -67,7 +61,6 @@ export interface QRAccessResult {
 @Injectable()
 export class QRAccessService {
   private readonly logger = new Logger(QRAccessService.name);
-  private deprecatedHandoverCheckoutIdLogged = false;
 
   constructor(@Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase) {}
 
@@ -117,14 +110,6 @@ export class QRAccessService {
     };
     if (handovers.length > 0) {
       result.handovers = handovers;
-      // Backward-compat: 단일 ID — 신규 호출자는 handovers 사용. 1 release 후 제거.
-      result.handoverCheckoutId = handovers[0].id;
-      if (!this.deprecatedHandoverCheckoutIdLogged) {
-        this.logger.debug(
-          'QRAccessResult.handoverCheckoutId 는 deprecated — 신규 코드는 handovers[].id 를 사용하라'
-        );
-        this.deprecatedHandoverCheckoutIdLogged = true;
-      }
     }
     return result;
   }

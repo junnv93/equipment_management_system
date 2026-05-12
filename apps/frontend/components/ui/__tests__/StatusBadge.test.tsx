@@ -84,4 +84,45 @@ describe('StatusBadge', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((StatusBadge as any).$$typeof).toBeDefined();
   });
+
+  // ============================================================
+  // qr-visual-redesign-followups-batch-1 S-3 추가 case (≥10 MUST)
+  // ============================================================
+
+  it('size="base" applies first-tier text classes (≥16px md responsive)', () => {
+    const { container } = render(<StatusBadge status="available" size="base" />);
+    const badge = container.querySelector('[role="status"]');
+    expect(badge?.className).toContain('text-sm');
+    expect(badge?.className).toContain('md:text-base');
+  });
+
+  it('size="sm" (default) applies second-tier text-xs class', () => {
+    const { container } = render(<StatusBadge status="available" />);
+    const badge = container.querySelector('[role="status"]');
+    expect(badge?.className).toContain('text-xs');
+  });
+
+  it('className prop is merged with internal classes', () => {
+    const { container } = render(<StatusBadge status="available" className="custom-test-class" />);
+    const badge = container.querySelector('[role="status"]');
+    expect(badge?.className).toContain('custom-test-class');
+  });
+
+  it('role="status" is always present (a11y landmark for AT announce)', () => {
+    render(<StatusBadge status="non_conforming" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('showDot=true (default) renders aria-hidden dot element', () => {
+    const { container } = render(<StatusBadge status="available" />);
+    const dots = container.querySelectorAll('[aria-hidden="true"]');
+    expect(dots.length).toBe(1);
+  });
+
+  it('renders inline-flex shrink-0 layout (truncation-safe in narrow containers)', () => {
+    const { container } = render(<StatusBadge status="available" />);
+    const badge = container.querySelector('[role="status"]');
+    expect(badge?.className).toContain('inline-flex');
+    expect(badge?.className).toContain('shrink-0');
+  });
 });

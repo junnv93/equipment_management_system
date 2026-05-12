@@ -26,7 +26,7 @@
 
 ### `calibration` 도메인이 이미 채택한 패턴 (선재)
 
-calibration은 NOTIFICATION*EVENTS.CALIBRATION**를 알림 전용으로, CACHE*EVENTS.CALIBRATION**를 캐시 무효화 전용으로 분리해 사용했다. 그러나 정책 자체는 ADR로 영구 기록되지 않았다.
+calibration은 NOTIFICATION*EVENTS.CALIBRATION\*\*를 알림 전용으로, CACHE*EVENTS.CALIBRATION\*\*를 캐시 무효화 전용으로 분리해 사용했다. 그러나 정책 자체는 ADR로 영구 기록되지 않았다.
 
 ### 추가 발견: service-local vs registry 책임 모호성
 
@@ -40,17 +40,19 @@ calibration은 NOTIFICATION*EVENTS.CALIBRATION**를 알림 전용으로, CACHE*E
 
 ### 1. 채널 책임 분리 (Channel Exclusivity)
 
-- **NOTIFICATION_EVENTS** 는 알림 발송 / SSE 푸시 / downstream 도메인 side-effect 전용으로 사용한다. **캐시 무효화 규칙을 NOTIFICATION_EVENTS 키로 `CACHE_INVALIDATION_REGISTRY`에 등록하는 것을 금지한다.**
-- **CACHE_EVENTS** 는 캐시 무효화 전용으로 사용한다. 같은 status 전이를 두 채널로 발행하는 경우, registry 규칙은 CACHE_EVENTS 키에만 작성한다.
+- **NOTIFICATION_EVENTS** 는 알림 발송 / SSE 푸시 / downstream 도메인 side-effect 전용으로 사용한다. **캐시 무효화 규칙을 NOTIFICATION_EVENTS 키로 `CACHE_INVALIDATION_REGISTRY`에 등록하는 것을 금지한다.** (예외 없음 — 라운드 #3 갭 F closure로 모든 historical 예외 제거됨.)
+- **CACHE_EVENTS** 는 캐시 무효화 전용으로 사용한다. 같은 status 전이를 두 채널로 발행해야 하는 경우(예: `TEST_SOFTWARE_REVALIDATION_REQUIRED`), 양 채널에 **각각 동일 명명** (`<domain>.<verb>` ↔ `cache.<domain>.<verb>`) 키를 신설하고 서비스에서 **양 채널 동시 emit**, registry rule은 CACHE_EVENTS 키에만 작성한다.
 
-**예외**: `NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED` 처럼 알림과 캐시 무효화를 모두 트리거하는 system event (다른 채널에 mirror 없음)는 NOTIFICATION_EVENTS 채널에서 캐시 규칙을 유지한다. mirror pair만 invariant 검사 대상이므로 자동 제외된다.
+회귀 차단 — 3-layer defense:
 
-회귀 차단: `cache-event-listener.ts`의 `validateDualChannelExclusivity()`(boot-time invariant)와 `scripts/audit-cache-event-channels.mjs`(CI-friendly proactive audit)가 정책 위반을 fail-fast로 검출한다.
+1. **invariant (runtime, fail-fast)**: `cache-event-listener.ts validateDualChannelExclusivity()` — 양방향(`deriveNotificationMirror` + `deriveCacheMirror`) mirror 검사 (라운드 #3 갭 D closure)
+2. **proactive audit (build/PR)**: `scripts/audit-cache-event-channels.mjs` — pre-push에 `pnpm audit:cache-events`로 통합 (라운드 #3 갭 K closure)
+3. **naming spec (unit)**: `cache-events-naming.spec.ts` — 명명 규약 + dead synonym/legacy + wholesale 차단 + jest-level dual-channel 검증 (라운드 #3 갭 C/O closure)
 
 ### 2. service-local vs registry 책임 경계
 
-- **service-local `invalidateCache()`** (`*.service.ts` 내부): 트랜잭션 직후 동기 무효화. 도메인 로컬 sub-prefix(예: `list:` / `pending:` / `detail:<id>`)만 삭제. 쓰기 직후 같은 트랜잭션 endpoint가 stale read하지 않도록 보장하는 read-after-write 일관성 책임.
-- **CACHE_EVENTS registry rule**: 비동기 cross-domain 무효화. 다른 도메인의 derived cache (예: `dashboard:*`, `approvals:*`)와 본 도메인의 broader sub-prefix(예: `list:*` — service-local과 중복되어도 멱등이므로 안전망 역할)를 처리. **wholesale `<domain>:*` 패턴은 금지** — 도메인 내부 sub-prefix를 명시한다.
+- **service-local `invalidateCache()`** (`*.service.ts` 내부): 트랜잭션 직후 동기 무효화. **`detail:<id>` 단독 책임**(라운드 #3 갭 A — calibration 패턴 완전 정합) + `list:` + `pending:` broader sub-prefix(registry와 idempotent 중복, 안전망). 쓰기 직후 같은 트랜잭션 endpoint가 stale read하지 않도록 보장하는 read-after-write 일관성 책임.
+- **CACHE_EVENTS registry rule**: 비동기 cross-domain 무효화. 다른 도메인의 derived cache (예: `dashboard:*`, `approvals:*`)와 본 도메인의 broader sub-prefix(`list:*` + `pending:*`만 — `detail:*` 제외, service-local 단독 책임). **wholesale `<domain>:*` 패턴은 금지** — `scripts/audit-cache-event-channels.mjs` 의 `extractWholesalePatterns()` 가 빌드/PR 단계에서 violation으로 자동 fail (라운드 #3 갭 O closure).
 
 ### 3. 명명 규약 (Naming Convention)
 
@@ -86,4 +88,5 @@ calibration은 NOTIFICATION*EVENTS.CALIBRATION**를 알림 전용으로, CACHE*E
 - 관련 ADR: ADR-0010 (Drizzle Manual SQL Policy)
 - 코드 SSOT: `cache-events.ts` / `cache-event.registry.ts` / `cache-event-listener.ts` / `scripts/audit-cache-event-channels.mjs` / `cache-events-naming.spec.ts`
 - 선재 sprint: `sw-validation-event-channel-separation` (commit `06fc71d4`)
-- 시니어 자기검토 라운드 #2 후속: `cache-event-channel-architecture-r2` (2026-05-12)
+- 시니어 자기검토 라운드 #2 후속: `cache-event-channel-architecture-r2` (2026-05-12, commit `11bd5e07` + `b67b98f7`)
+- 시니어 자기검토 라운드 #3 후속: `cache-event-arch-r3` (2026-05-13) — 6갭 통합 closure: K(pre-push 통합) / A(detail:\* 책임 분리) / O(wholesale audit 강제) / F(예외 제거) / D(양방향 mirror) / C(jest fragility 보강)

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
-import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
+import { eq, and, desc, sql, or, inArray, lt, isNull } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
 import { calibrations } from '@equipment-management/db/schema';
 import { softwareValidations } from '@equipment-management/db/schema';
@@ -17,6 +17,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType } from '@equipment-management/schemas';
 import {
   DocumentStatusValues,
+  DocumentTypeEnum,
   ErrorCode,
   ValidationStatusValues,
 } from '@equipment-management/schemas';
@@ -658,6 +659,106 @@ export class DocumentService {
     }
 
     return { purged: totalPurged, failed: totalFailed };
+  }
+
+  /**
+   * Orphan `condition_check_photo` 문서 sweep (S-4 2중 안전망).
+   *
+   * Frontend `documentApi.deleteOrphan` (best-effort) 의 silent fail 회귀 차단용 backend cron.
+   * 24h 마진을 두어 in-flight 업로드/저장 cycle 의 false positive 회피.
+   *
+   * 판정 조건:
+   * - `document_type === 'condition_check_photo'` (DocumentTypeEnum SSOT)
+   * - 9 다형성 FK 전부 NULL (어떤 도메인 entity 에도 연결 안 됨)
+   * - `status !== 'deleted'` (retention scheduler 대상 row 제외)
+   * - `uploaded_at < now() - olderThanHours`
+   *
+   * 파일 + DB 양쪽 즉시 삭제 — orphan 은 user-visible 0 이므로 retention 의미 없음.
+   * 배치 100 + 연속 실패 2회 abort (purgeDeletedDocuments 패턴 차용).
+   */
+  async sweepOrphanConditionCheckPhotos(
+    olderThanHours: number,
+    batchSize: number = 100
+  ): Promise<{ deleted: number; errors: number; deletedIds: string[] }> {
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - olderThanHours);
+
+    let totalDeleted = 0;
+    let totalErrors = 0;
+    const deletedIds: string[] = [];
+    let consecutiveFullFailBatches = 0;
+    const MAX_CONSECUTIVE_FULL_FAIL = 2;
+
+    for (;;) {
+      const batch = await this.db
+        .select({ id: documents.id, filePath: documents.filePath })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.documentType, DocumentTypeEnum.enum.condition_check_photo),
+            isNull(documents.equipmentId),
+            isNull(documents.calibrationId),
+            isNull(documents.requestId),
+            isNull(documents.softwareValidationId),
+            isNull(documents.intermediateInspectionId),
+            isNull(documents.selfInspectionId),
+            isNull(documents.nonConformanceId),
+            isNull(documents.conditionCheckId),
+            isNull(documents.checkoutId),
+            sql`${documents.status} != ${DocumentStatusValues.DELETED}`,
+            lt(documents.uploadedAt, cutoff)
+          )
+        )
+        .limit(batchSize);
+
+      if (batch.length === 0) break;
+
+      let batchSucceeded = 0;
+
+      for (const doc of batch) {
+        try {
+          await this.fileUploadService.deleteFile(doc.filePath);
+        } catch (error) {
+          totalErrors++;
+          this.logger.error(
+            `sweepOrphanConditionCheckPhotos: 파일 삭제 실패 (id=${doc.id}, path=${doc.filePath}): ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          continue;
+        }
+
+        try {
+          await this.db.delete(documents).where(eq(documents.id, doc.id));
+          totalDeleted++;
+          deletedIds.push(doc.id);
+          batchSucceeded++;
+        } catch (error) {
+          totalErrors++;
+          this.logger.error(
+            `sweepOrphanConditionCheckPhotos: DB 삭제 실패 (id=${doc.id}): ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+
+      if (batchSucceeded === 0) {
+        consecutiveFullFailBatches++;
+        if (consecutiveFullFailBatches >= MAX_CONSECUTIVE_FULL_FAIL) {
+          this.logger.error(
+            `sweepOrphanConditionCheckPhotos: ${MAX_CONSECUTIVE_FULL_FAIL} consecutive full-fail batches — aborting to prevent infinite loop`
+          );
+          break;
+        }
+      } else {
+        consecutiveFullFailBatches = 0;
+      }
+
+      if (batch.length < batchSize) break;
+    }
+
+    return { deleted: totalDeleted, errors: totalErrors, deletedIds };
   }
 
   /**

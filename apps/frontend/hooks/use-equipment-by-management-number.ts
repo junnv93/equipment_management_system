@@ -24,10 +24,6 @@ export type EquipmentQRLanding = Equipment & {
   allowedActions: QRAllowedAction[];
   /** confirm_handover_* 액션 컨텍스트 — 카드 picker 또는 자동 라우팅 입력. */
   handovers?: HandoverItem[];
-  /**
-   * @deprecated qr-visual-redesign 2026-05-11. `handovers[0].id` 와 동일. 1 release 후 제거.
-   */
-  handoverCheckoutId?: string;
 };
 
 /**

@@ -81,14 +81,6 @@ export function EquipmentLandingClient({ initialData }: EquipmentLandingClientPr
         if (item) {
           const step = item.type === 'receive' ? 'borrower_receive' : 'lender_return';
           router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(item.id, step));
-          return;
-        }
-        if (data.handoverCheckoutId) {
-          const step =
-            autoProgressAction === 'confirm_handover_receive'
-              ? 'borrower_receive'
-              : 'lender_return';
-          router.push(FRONTEND_ROUTES.CHECKOUTS.CHECK_WITH_STEP(data.handoverCheckoutId, step));
         }
         return;
       }
@@ -101,7 +93,7 @@ export function EquipmentLandingClient({ initialData }: EquipmentLandingClientPr
       default:
         return;
     }
-  }, [autoProgressAction, data.handovers, data.handoverCheckoutId, data.id, router]);
+  }, [autoProgressAction, data.handovers, data.id, router]);
 
   const showAutoProgress = autoProgressAction !== null && !autoProgressCancelled;
 
@@ -167,7 +159,6 @@ export function EquipmentLandingClient({ initialData }: EquipmentLandingClientPr
           teamName={data.teamName}
           allowedActions={data.allowedActions}
           handovers={data.handovers}
-          handoverCheckoutId={data.handoverCheckoutId}
         />
       )}
 

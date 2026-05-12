@@ -369,6 +369,48 @@ grep -rn "handoverCheckoutId\s*:" \
 
 ---
 
+### Step 19: QRAccessResult.handoverCheckoutId deprecation 회귀 영구 차단 (2026-05-13 qr-visual-redesign-followups-batch-1 S-6)
+
+**배경**: `qr-visual-redesign` (2026-05-11) sprint 에서 다중 handover SSOT (`handovers: HandoverItem[]`) 도입 후
+backward-compat shim 으로 `QRAccessResult.handoverCheckoutId?: string` 1 release 유지. 2026-05-13 batch-1 sprint 에서
+9 호출자 전부 `handovers[].id` 로 마이그레이션 완료 → backward-compat shim 완전 제거. 미래 새 sprint 가 단일
+ID 패턴으로 다시 도입하면 picker UI 우회 + 잘못된 checkout 확정 위험 (다중 handover 시 어느 건인지 구분 불가).
+
+또한 2026-05-09 제거된 HandoverToken 메커니즘 (Step 15) + 2026-05-13 제거된 handoverCheckoutId 필드 패턴을
+하나의 영구 회귀 차단 grep 으로 통합 — 옛 API 식별자 재도입 차단.
+
+**PASS:** production 코드 (JSDoc/주석 제외) 에 다음 모든 식별자 0건:
+- `handoverCheckoutId` (필드명) — packages/schemas + apps/backend + apps/frontend
+- `deprecatedHandoverCheckoutIdLogged` (deprecation log ref)
+- `issueHandoverToken` (옛 토큰 발급 메서드)
+- `handover_tokens` (옛 테이블명)
+
+**FAIL:** production 1건 이상 잔존 — backward-compat shim 재도입 또는 옛 토큰 API 회귀.
+
+```bash
+# (1) handoverCheckoutId production 0건 (JSDoc/주석 제외)
+grep -rn "handoverCheckoutId" apps/backend/src apps/frontend packages/schemas/src \
+  --include="*.ts" --include="*.tsx" 2>/dev/null \
+  | grep -vE "^\S+:\s*(\*|//|/\*)"
+# 기대: 0건
+
+# (2) deprecation log ref 0건 (singleton flag 회귀 차단)
+grep -rn "deprecatedHandoverCheckoutIdLogged" apps/backend/src --include="*.ts" 2>/dev/null
+# 기대: 0건
+
+# (3) 옛 토큰 발급 API 0건 (Step 15 와 통합 — issueHandoverToken / handover_tokens)
+grep -rn "issueHandoverToken\|handover_tokens" apps/backend/src apps/frontend packages \
+  --include="*.ts" --include="*.tsx" --include="*.sql" 2>/dev/null
+# 기대: 0건
+```
+
+**회귀 시 대응**:
+- 다중 handover 시 단일 ID 로 라우팅 불가 → `handovers: HandoverItem[]` 배열 + `HandoverPickerSheet` 사용 강제
+- HandoverItem SSOT: `packages/schemas/src/qr-handover.ts`
+- 호출 패턴 SSOT: `data.handovers?.[0]` 단일 → 자동 라우팅, 다중 → picker (`EquipmentActionSheet.handleHandoverAction`)
+
+---
+
 ### Step 18: LABEL_SIZE_PRESETS.recommendedForKey i18n 키 parity (2026-05-12 qr-visual-redesign TASK 7)
 
 **배경**: `LABEL_SIZE_PRESETS` 7 preset 의 `recommendedForKey` 값이 `qr.labelSettings.recommendedFor.*` i18n 카탈로그와 1:1 매핑.
