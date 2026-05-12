@@ -377,6 +377,10 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Activity,
   },
+  '/admin/rejection-presets': {
+    labelKey: 'navigation.adminRejectionPresets',
+    parent: '/',
+  },
 
   // ========================================
   // QR 기능 페이지 (브레드크럼 제외)

@@ -59,6 +59,7 @@
   "adminAuditLogs": "감사 로그",
   "adminDataMigration": "데이터 마이그레이션",
   "adminMonitoring": "시스템 모니터링",
+  "adminRejectionPresets": "반려 사유 프리셋",
   "login": "로그인",
   "error": "오류",
   "sections": {

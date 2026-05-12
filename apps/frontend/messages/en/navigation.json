@@ -59,6 +59,7 @@
   "adminAuditLogs": "Audit Logs",
   "adminDataMigration": "Data Migration",
   "adminMonitoring": "Monitoring",
+  "adminRejectionPresets": "Rejection Presets",
   "login": "Login",
   "error": "Error",
   "sections": {
