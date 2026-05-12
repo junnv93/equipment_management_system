@@ -69,7 +69,21 @@ describe('SoftwareValidationsService', () => {
 
   const createSelectChain = (value: unknown): Record<string, jest.Mock> => {
     const chain: Record<string, jest.Mock> = {};
-    const methods = ['select', 'from', 'where', 'limit', 'orderBy', 'offset', 'inArray'];
+    const methods = [
+      'select',
+      'from',
+      'where',
+      'limit',
+      'orderBy',
+      'offset',
+      'inArray',
+      'leftJoin',
+      'innerJoin',
+      'rightJoin',
+      'fullJoin',
+      'groupBy',
+      'having',
+    ];
     for (const m of methods) {
       chain[m] = jest.fn().mockReturnValue(chain);
     }
