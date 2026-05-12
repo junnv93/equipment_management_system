@@ -36,7 +36,6 @@ import {
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { SavedViewModuleEnum } from '@equipment-management/schemas';
-import type { SavedViewModule } from '@equipment-management/schemas';
 import type { SavedView } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';

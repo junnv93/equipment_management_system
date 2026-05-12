@@ -15,15 +15,9 @@
  * 본 spec 은 직접 actor 객체를 service 에 주입해 단위 검증.
  */
 import { Test } from '@nestjs/testing';
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 
 import { SavedViewsService, type SavedViewActor } from '../saved-views.service';
-import { SAVED_VIEW_ERROR_CODES } from '../saved-views-error-codes';
 
 type Mock = jest.Mock;
 
