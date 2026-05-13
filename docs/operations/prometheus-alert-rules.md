@@ -177,23 +177,360 @@ docker compose exec alertmanager amtool config routes test \
    ```
 4. **장기 해결**: ADR-0008 supersede 또는 §Decision 갱신 (backend 응답 i18n 부분 도입 등)
 
-### HighCPUUsage / HighMemoryUsage / HighDiskUsage
+### HighCPUUsage
 
-표준 infrastructure alert. node_exporter 메트릭 기반.
-**즉시 행동**: `docker stats` + `top` 으로 hotspot 컨테이너 식별 → resource limit 검토.
+**Severity**: warning · **for**: 5m · **임계**: CPU > 80%
 
-### BackendDown
+`node_cpu_seconds_total{mode="idle"}` 기반 irate 5분 평균.
+
+**Root cause 가능성**:
+
+- 백엔드 무한 루프 / CPU-intensive 쿼리
+- 배치 작업 또는 cron 동시 실행
+- PostgreSQL VACUUM 과부하
 
 **즉시 행동**:
 
-1. `docker compose ps backend` — 컨테이너 상태 확인
-2. `docker compose logs --tail=200 backend` — startup 에러 / OOM 점검
-3. `docker compose restart backend` — 재기동 시도 (uncommitted DB 마이그레이션 없는지 확인)
-4. 5분 내 복구 미관측 시 oncall 에스컬레이션
+1. **컨테이너별 CPU 핫스팟 식별**:
+   ```bash
+   docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+   ```
+2. **호스트 프로세스 확인**:
+   ```bash
+   top -b -n1 | head -20
+   ```
+3. **백엔드 원인 시** — 느린 요청 로그 점검:
+   ```bash
+   docker compose logs --tail=100 backend | grep -i "slow\|timeout\|error"
+   ```
+4. **예약 작업** 동시 실행 여부 확인 (crontab, DB scheduled jobs)
+5. **30분 내 미회복 시** → `CriticalCPUUsage` 도달 가능 — oncall 준비
 
-### HighErrorRate / HighResponseTime
+---
 
-application 메트릭 기반. **즉시 행동**: backend 로그 + `/api/health` 엔드포인트 응답 점검.
+### CriticalCPUUsage
+
+**Severity**: critical · **for**: 2m · **임계**: CPU > 95%
+
+**즉시 행동**:
+
+1. **CPU 소모 컨테이너 특정** (정렬):
+   ```bash
+   docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}" | sort -t$'\t' -k2 -rn
+   ```
+2. **백엔드 runaway 프로세스 확인**:
+   ```bash
+   docker compose exec backend ps aux --sort=-%cpu | head -10
+   ```
+3. **단기 완화** — 백엔드 재기동 (미커밋 DB 마이그레이션 없는지 확인 후):
+   ```bash
+   docker compose restart backend
+   ```
+4. **재기동 후 5분 내 미회복 시** → 즉시 oncall 에스컬레이션
+5. **DB 슬로우 쿼리 동반 시** — PostgreSQL 연결 수 점검:
+   ```sql
+   SELECT count(*) FROM pg_stat_activity;
+   ```
+
+---
+
+### HighMemoryUsage
+
+**Severity**: warning · **for**: 5m · **임계**: 메모리 > 85%
+
+`node_memory_MemAvailable_bytes` 기반 사용률.
+
+**Root cause 가능성**:
+
+- 백엔드 메모리 누수 (Node.js 힙 증가)
+- Redis 캐시 과다 점유
+- PostgreSQL 공유 버퍼 과점유
+
+**즉시 행동**:
+
+1. **컨테이너별 메모리 현황**:
+   ```bash
+   docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}"
+   ```
+2. **호스트 메모리 전체 확인**:
+   ```bash
+   free -h
+   ```
+3. **메모리 누수 패턴 로그**:
+   ```bash
+   docker compose logs --tail=100 backend | grep -i "heap\|memory\|oom\|killed"
+   ```
+4. **PostgreSQL 버퍼 사용량 점검**:
+   ```sql
+   SELECT pg_size_pretty(sum(buffers_alloc)*8192) FROM pg_stat_bgwriter;
+   ```
+5. **30분 내 미회복 시** → `CriticalMemoryUsage` 도달 가능 — oncall 준비
+
+---
+
+### CriticalMemoryUsage
+
+**Severity**: critical · **for**: 2m · **임계**: 메모리 > 95%
+
+OOM Kill 임박 — 즉각 대응 필요.
+
+**즉시 행동**:
+
+1. **최대 메모리 소모 컨테이너 특정**:
+   ```bash
+   docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}" | sort -t$'\t' -k3 -rn
+   ```
+2. **단기 완화** — 백엔드 재기동 (DB는 데이터 보호 주의):
+   ```bash
+   docker compose restart backend
+   ```
+3. **Redis 캐시 flush** (휘발성 캐시만, 운영 판단 필요):
+   ```bash
+   docker compose exec redis redis-cli FLUSHDB
+   ```
+4. **재기동 후 2분 내 미회복 시** → 즉시 oncall 에스컬레이션
+5. **커널 OOM killer 이미 작동한 경우**:
+   ```bash
+   dmesg | grep -i "oom\|killed" | tail -20
+   ```
+
+---
+
+### HighDiskUsage
+
+**Severity**: warning · **for**: 5m · **임계**: 루트 파티션 > 80%
+
+**Root cause 가능성**:
+
+- Docker 이미지/볼륨/레이어 누적
+- 컨테이너 로그 파일 과다
+- PostgreSQL WAL 파일 누적
+
+**즉시 행동**:
+
+1. **디스크 사용량 전체 현황**:
+   ```bash
+   df -h
+   ```
+2. **대용량 디렉토리 식별** (top 10):
+   ```bash
+   du -sh /* 2>/dev/null | sort -rh | head -10
+   ```
+3. **Docker 미사용 리소스 정리**:
+   ```bash
+   docker system prune -f
+   docker volume prune -f
+   ```
+4. **컨테이너 로그 파일 크기 확인**:
+   ```bash
+   du -sh /var/lib/docker/containers/*/
+   ```
+5. **PostgreSQL DB 크기 확인**:
+   ```sql
+   SELECT pg_size_pretty(pg_database_size('equipment_management'));
+   ```
+
+---
+
+### CriticalDiskUsage
+
+**Severity**: critical · **for**: 5m · **임계**: 루트 파티션 > 90%
+
+디스크 full 시 PostgreSQL 쓰기 실패 → 데이터 손실 위험. 즉각 대응 필요.
+
+**즉시 행동**:
+
+1. **즉각 공간 확보** — Docker 전체 정리:
+   ```bash
+   docker system prune -af --volumes
+   ```
+2. **대용량 로그 파일 즉시 제거** (truncate, 삭제 아님 — FD 유지):
+   ```bash
+   find /var/log -name "*.log" -size +100M -exec truncate -s 0 {} \;
+   ```
+3. **PostgreSQL WAL 체크포인트 강제**:
+   ```sql
+   CHECKPOINT;
+   ```
+4. **임시 파일 정리**:
+   ```bash
+   rm -rf /tmp/* /var/tmp/*
+   ```
+5. **정리 후 20분 내 90% 미만 미달성 시** → 즉시 oncall 에스컬레이션 (디스크 확장 검토)
+
+---
+
+### ContainerRestarting
+
+**Severity**: warning · **임계**: 15분 내 재시작 > 1회 (`for` 없음 — 즉시 발화)
+
+**Root cause 가능성**:
+
+- OOM Kill (종료 코드 137)
+- 앱 오류 / 미처리 예외 (종료 코드 1)
+- DB/Redis 연결 실패로 인한 startup 오류
+
+**즉시 행동**:
+
+1. **컨테이너 상태 확인**:
+   ```bash
+   docker compose ps
+   ```
+2. **재시작 원인 로그 조회** (종료 직전 로그):
+   ```bash
+   docker compose logs --tail=100 <container_name>
+   ```
+3. **종료 코드 확인**:
+   ```bash
+   docker inspect <container_name> --format '{{.State.ExitCode}}'
+   # 137=OOM Kill, 1=앱 오류, 0=정상 종료
+   ```
+4. **OOM Kill(137)** → `HighMemoryUsage`/`CriticalMemoryUsage` 동시 확인
+5. **crash-loop 패턴 (5분 내 3회 이상)** → 수동 중지 후 원인 분석:
+   ```bash
+   docker compose stop <container_name>
+   # 원인 분석 후 docker compose start
+   ```
+
+---
+
+### ContainerHighMemory
+
+**Severity**: warning · **for**: 5m · **임계**: 컨테이너 메모리 한도 > 90%
+
+컨테이너별 `container_spec_memory_limit_bytes` 기준 사용률.
+
+**즉시 행동**:
+
+1. **컨테이너 메모리 상세 확인**:
+   ```bash
+   docker stats --no-stream <container_name>
+   ```
+2. **메모리 한도 확인** (docker compose 설정 기준):
+   ```bash
+   docker inspect <container_name> --format '{{.HostConfig.Memory}}'
+   ```
+3. **메모리 릭 패턴 로그 점검**:
+   ```bash
+   docker compose logs --tail=200 <container_name> | grep -i "heap\|leak\|connection"
+   ```
+4. **Node.js 백엔드인 경우** — 힙 덤프 수집:
+   ```bash
+   docker compose exec backend node --expose-gc -e "global.gc(); console.log(process.memoryUsage())"
+   ```
+5. **즉각 완화** (재기동 허용 시):
+   ```bash
+   docker compose restart <container_name>
+   ```
+
+---
+
+### BackendDown
+
+**Severity**: critical · **for**: 1m · **임계**: `up{job="backend"} == 0`
+
+Prometheus scrape 실패 — NestJS 백엔드가 완전히 응답하지 않는 상태.
+
+**Root cause 가능성**:
+
+- 컨테이너 크래시 (OOM Kill / 앱 오류)
+- DB 마이그레이션 실패로 startup 중단
+- 환경변수 누락 또는 포트 충돌
+
+**즉시 행동**:
+
+1. **컨테이너 상태 확인**:
+   ```bash
+   docker compose ps backend
+   ```
+2. **최근 로그에서 오류 원인 파악**:
+   ```bash
+   docker compose logs --tail=200 backend
+   ```
+3. **연결 실패 원인 점검** — DB/Redis 동시 장애 여부:
+   ```bash
+   docker compose ps postgres redis
+   ```
+4. **환경변수 확인**:
+   ```bash
+   docker compose exec backend env | grep -E "DATABASE_URL|REDIS_URL|PORT"
+   ```
+5. **재기동 시도** (미커밋 DB 마이그레이션 없는지 확인 후):
+   ```bash
+   docker compose restart backend
+   ```
+6. **재기동 후 5분 내 미회복 시** → 즉시 oncall 에스컬레이션
+
+---
+
+### HighErrorRate
+
+**Severity**: warning · **for**: 5m · **임계**: HTTP 5xx 비율 > 5%
+
+`http_requests_total{status=~"5.."}` 비율 기준.
+
+**Root cause 가능성**:
+
+- DB 연결 풀 고갈 (429 처리 초과 → 500)
+- 특정 엔드포인트 미처리 예외
+- Redis 연결 실패로 인한 캐시 계층 오류
+
+**즉시 행동**:
+
+1. **에러 집중 엔드포인트 식별** (Grafana 또는 PromQL):
+   ```promql
+   topk(5, sum by (route) (rate(http_requests_total{status=~"5.."}[5m])))
+   ```
+2. **백엔드 에러 로그 조회**:
+   ```bash
+   docker compose logs --tail=200 backend | grep -E "ERROR|WARN|Exception|500"
+   ```
+3. **DB 연결 풀 고갈 여부 점검**:
+   ```sql
+   SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+   ```
+4. **Redis 연결 확인**:
+   ```bash
+   docker compose exec redis redis-cli ping
+   ```
+5. **BackendDown alert 동반 시** → BackendDown runbook으로 전환
+
+---
+
+### HighResponseTime
+
+**Severity**: warning · **for**: 5m · **임계**: p95 응답 시간 > 3초
+
+`http_request_duration_seconds_bucket` p95 기준.
+
+**Root cause 가능성**:
+
+- DB 슬로우 쿼리 (N+1, 인덱스 누락)
+- Redis 캐시 히트율 저하 → DB 직접 부하
+- 외부 API 타임아웃 (Azure AD 등)
+
+**즉시 행동**:
+
+1. **느린 엔드포인트 식별** (p95 기준 PromQL):
+   ```promql
+   topk(5, histogram_quantile(0.95,
+     sum by (route, le) (rate(http_request_duration_seconds_bucket[5m]))))
+   ```
+2. **PostgreSQL 슬로우 쿼리 점검** (1초 이상):
+   ```sql
+   SELECT query, mean_exec_time, calls
+   FROM pg_stat_statements
+   ORDER BY mean_exec_time DESC
+   LIMIT 10;
+   ```
+3. **인덱스 누락 의심 시** → `EXPLAIN ANALYZE <slow_query>` 실행
+4. **Redis 캐시 히트율 확인**:
+   ```bash
+   docker compose exec redis redis-cli info stats | grep -E "keyspace_hits|keyspace_misses"
+   ```
+5. **HighErrorRate 동반 시** → HighErrorRate runbook 우선 처리
+
+---
 
 ### SortRejectionRateHigh
 
