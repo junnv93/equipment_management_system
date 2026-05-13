@@ -363,22 +363,21 @@ describe('ultrareview-shield — flock 동시 실행 (lock-contention)', () => {
 
 describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
   /**
-   * $PPID 시그널 패턴: child 명령으로 'bash -c "kill -s TERM $PPID"' 실행.
+   * SIGTERM — $PPID 패턴: shield bash가 직접 SIGTERM 수신.
    *
    * 왜 $PPID인가:
    *   - $PPID = 자식 bash의 부모 PID = shield bash PID
-   *   - kill -s TERM $PPID → shield bash가 직접 SIGTERM 수신 (실제 Ctrl+C 경로)
+   *   - kill -s TERM $PPID → shield bash가 직접 SIGTERM 수신 (kill <pid> 경로)
    *   - 자식 bash가 kill 후 정상 종료(exit 0) → shield waitpid 반환
    *   - shield bash: 대기 중 수신한 SIGTERM(pending) 처리 → EXIT trap 발화 → restore_files()
-   *   - spawnSync 기반 동기 실행 → timing race 0
+   *   - 결과: shield exit 143, 복원 완료
    *
-   * 왜 kill -s TERM $PPID vs 다른 접근 실패:
-   *   - child.kill('SIGTERM') (외부 PID): Node.js spawn 시 shield가 Node.js pgid 상속 →
-   *     bash의 SIGTERM group 전파가 SA_RESTART로 억제 → 30s 대기 (SA_RESTART 문제)
-   *   - kill -s TERM $$ (자기 PID): 자식만 종료 → set -e path → 실제 SIGTERM-to-shield 미검증
-   *   - $PPID: shield PID에 직접 전달 → pending signal → 자식 종료 후 처리 → 결정적 실행
+   * SIGINT에 $PPID를 쓰지 않는 이유:
+   *   - 비-인터랙티브 bash에서 $PPID에 SIGINT를 직접 보내면 bash가 신호를 흡수 → exit 0
+   *   - 인터랙티브 모드에서만 SIGINT가 job-control cancel 의미를 가짐
+   *   - SIGINT 시나리오는 아래 runChildSelfSignalRestoreTest로 별도 검증
    *
-   * 실증: spawnSync + kill -s TERM $PPID → 12개 파일 ✅ 복원 + exit SIGTERM 확인.
+   * 실증: spawnSync + kill -s TERM $PPID → 12개 파일 ✅ 복원 + exit 143 확인.
    */
   function runPpidSignalRestoreTest(bashSignalName) {
     const fixtureDir = makeFixture();
@@ -388,15 +387,15 @@ describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
       const records = populateFakeFiles(fixtureDir, patterns);
       const preTmp = snapshotTmpShieldDirs();
 
-      // bash -c 'kill -s SIGNAL $PPID': 자식이 shield bash(부모)에 직접 신호 전달
-      // shield는 자식 종료 후 pending signal 처리 → trap EXIT 발화 → restore_files()
+      // bash -c 'kill -s TERM $PPID': 자식이 shield bash(부모)에 직접 SIGTERM 전달
+      // shield는 자식 종료 후 pending SIGTERM 처리 → EXIT trap 발화 → restore_files()
       const r = runShieldInFixture({
         fixtureDir,
         args: ['bash', '-c', `kill -s ${bashSignalName} $PPID`],
         lockPath,
       });
 
-      // shield가 signal로 종료 (status=null) 또는 비정상 exit (signal 처리 방식에 따라)
+      // SIGTERM → shield exit 143 (또는 signal 기반 종료)
       assert.ok(r.status !== 0 || r.signal != null, `shield 비정상 종료 기대 (${bashSignalName}): status=${r.status} signal=${r.signal}`);
 
       // 복원 hash invariant — trap restore_files 발화 확인
@@ -417,12 +416,62 @@ describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
     }
   }
 
+  /**
+   * SIGINT — self-signal 패턴: 실제 Ctrl+C 시나리오 재현.
+   *
+   * 왜 self-signal(kill -s INT $$)인가:
+   *   - 실제 사용: Ctrl+C → 터미널이 SIGINT를 포그라운드 프로세스 그룹 전체에 전달
+   *     → 자식(preflight.mjs)이 SIGINT로 exit 130 → shield `set -e`로 exit 130 → EXIT trap
+   *   - $PPID 방식의 한계: 비-인터랙티브 bash는 $PPID에 INT를 직접 보내도 흡수 → exit 0
+   *     (인터랙티브 bash의 job-control cancel 의미가 없으므로 bash가 INT를 무시)
+   *   - self-signal($$): 자식이 자신에게 INT → child exit 130 → shield set -e → exit 130
+   *     이 경로가 실제 Ctrl+C 시나리오와 동일한 복원 경로를 검증함
+   *
+   * 실증: spawnSync + kill -s INT $$ → child exit 130 → shield exit 130 → 복원 ✅.
+   */
+  function runChildSelfSignalRestoreTest(bashSignalName) {
+    const fixtureDir = makeFixture();
+    const lockPath = makeUniqueLock();
+    try {
+      const patterns = fetchDangerousPatterns();
+      const records = populateFakeFiles(fixtureDir, patterns);
+      const preTmp = snapshotTmpShieldDirs();
+
+      // bash -c 'kill -s INT $$': 자식 bash가 자신에게 SIGINT → child exit 130
+      // shield `set -e`: 자식 비정상 종료(130) → shield exit 130 → EXIT trap → restore_files()
+      const r = runShieldInFixture({
+        fixtureDir,
+        args: ['bash', '-c', `kill -s ${bashSignalName} $$`],
+        lockPath,
+      });
+
+      // child exit 130 → set -e → shield exit 130 (비정상 종료)
+      assert.ok(r.status !== 0, `shield 비정상 종료 기대 (${bashSignalName} self-signal): status=${r.status}`);
+
+      // 복원 hash invariant — trap restore_files 발화 확인
+      for (const { rel, hash: expected } of records) {
+        const abs = join(fixtureDir, rel);
+        assert.ok(existsSync(abs), `${bashSignalName} self-signal 후 복원: ${rel}`);
+        const actual = createHash('sha256').update(readFileSync(abs)).digest('hex');
+        assert.equal(actual, expected, `${bashSignalName} self-signal 후 hash 일치: ${rel}`);
+      }
+
+      // /tmp 잔존물 0 — trap이 SHIELD_DIR 정리했는가?
+      const postTmp = snapshotTmpShieldDirs();
+      const newDirs = postTmp.filter((d) => !preTmp.includes(d));
+      assert.deepEqual(newDirs, [], `${bashSignalName} self-signal 후 /tmp/ur-shield-* 잔존 0`);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+      cleanupLock(lockPath);
+    }
+  }
+
   test('SIGTERM: kill -s TERM $PPID → shield bash 직접 수신 → trap EXIT 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
     runPpidSignalRestoreTest('TERM');
   });
 
-  test('SIGINT: kill -s INT $PPID → shield bash 직접 수신 → trap EXIT 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
-    runPpidSignalRestoreTest('INT');
+  test('SIGINT: kill -s INT $$ (self-signal) → child exit 130 → shield set -e → trap EXIT 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
+    runChildSelfSignalRestoreTest('INT');
   });
 });
 
