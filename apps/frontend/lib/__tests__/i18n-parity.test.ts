@@ -117,6 +117,10 @@ const KNOWN_ARRAY_KEYS: ReadonlyArray<string> = [
   'errors.json:UNKNOWN_ERROR.solutions',
   'errors.json:VALIDATION_ERROR.solutions',
   'errors.json:VERSION_CONFLICT.solutions',
+  'help.json:sections.calibration.faqs',
+  'help.json:sections.checkout.faqs',
+  'help.json:sections.nonConformance.faqs',
+  'help.json:sections.permissions.faqs',
 ] as const;
 
 function loadMessages(locale: SupportedLocale, file: string): unknown {
