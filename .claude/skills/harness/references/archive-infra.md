@@ -5,6 +5,15 @@
 
 ---
 
+## ~~2026-05-13 — z-sticky-ssot-extension (sticky-header-css-var-ssot S-4)~~ ✅ 완료 (2026-05-13)
+
+> **핵심**: `--z-sticky` CSS variable SSOT 완성. `CSS_VAR_NAMES.zSticky: '--z-sticky'` 추가 + `globals.css :root --z-sticky: 20` 정의 + `equipment.ts` `z-20` → `z-[var(--z-sticky,20)]` 마이그레이션. ELEVATION_PRIMITIVES.zIndex.dropdown(20) 기반 공용 sticky z-index SSOT 연결, fallback-only 불완전 상태 해소.
+>
+> **검증**: Mode 1 harness PASS (MUST 7/7, iter 1). tsc EXIT 0. commit `924788f1`.
+> **후속 tech-debt**: tech-debt-tracker.md S-4 항목 `[x]` 완료 처리.
+
+---
+
 ## ~~2026-05-13 — ultrareview-shield-followups-sh1-sh4~~ ✅ 완료 (2026-05-13)
 
 > **핵심**: ultrareview-shield 후속 4건 spec + 구현. SH-1 flock 동시 실행 contention (동일 lock 보유 중 두 번째 shield EXIT 1 + stderr 충돌 메시지). SH-2 SIGTERM/SIGINT trap restore spec — self-signal 패턴(`kill -s TERM $$`) 으로 race-free 동기 검증. SH-3 stale_gc() — flock 획득 직후 `find /tmp -mmin +60 -name 'ur-shield-*'` best-effort GC + spec. SH-4 `check-preflight-perf-budget.mjs` — PREFLIGHT_BUDGET_SECONDS + PREFLIGHT_CMD_OVERRIDE mock, `ur:preflight:perf-check` 스크립트.

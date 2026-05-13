@@ -16,6 +16,7 @@
 
 | 차수/섹션명 | 파일 | 핵심 내용 |
 |------------|------|----------|
+| 2026-05-13 — z-sticky-ssot-extension | [archive-infra.md](./archive-infra.md) | CSS_VAR_NAMES.zSticky + globals.css --z-sticky:20 + equipment.ts z-20 마이그레이션. BulkActionBar/탭바 공용 sticky z-index SSOT 완성. MUST 7/7 |
 | 2026-05-12 — qr-visual-redesign | [archive-design.md](./archive-design.md) | QR 모바일 시각 디자인 8 TASK 전체 (액션 그룹 SSOT/4-tier 상태 색/다중 핸드오버 HandoverItem Zod + Picker/자동 진행 prefers-reduced-motion/정상 우선 64px 단축/사진 capture-환경+갤러리 분리/PDF 시각 비교 row/디자인 토큰 9 CSS var + brand-urgent/mute). Mode 2 Full harness MUST 22/25 + iter 1 fix loop + senior self-audit round #2 G-1~G-3 closure (machine isolation / verify-implementation 12/13 / cherry-pick split) |
 | 2026-05-12 — ultrareview-shield-wrapper | [archive-infra.md](./archive-infra.md) | ultrareview-preflight Gate 1 차단 시 dev `.env` 자동 격리(`/tmp/ur-shield-*`)/복원(`trap EXIT`) wrapper + `--list-patterns` SSOT 단방향 + `flock` 동시 실행 차단. M-1~M-12 PASS (iter 2 contract rev-2 grep 분리 카운트) |
 | 2026-05-11 — software-design-review-p0-p1-p2 | [archive-design.md](./archive-design.md) | DESIGN_REVIEW.md P0(stepper SSOT + 검증상태 컬럼 BFF 확장 + 시멘틱 토큰) + P1(모바일 카드 fallback + P-number 셀 통합 + dialog max-w-2xl + sub-tabs + 빈 상태 EmptyState wrapper) + P2(raw 색상 토큰화 + xl 와이드 2-column + 행 클릭 패턴 통일). MUST 16/16 |
