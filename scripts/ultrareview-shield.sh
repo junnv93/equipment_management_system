@@ -180,8 +180,15 @@ fi
 # SIGKILL(-9) 비정상 종료로 trap EXIT이 우회된 잔존물일 가능성이 높다.
 # selftest(--self-test), spec(test runner) fixture 는 prefix 제외.
 # 주의: 격리된 파일이 내부에 있더라도 1시간 경과 후엔 개발자가 이미 복구했다고 가정 — rm -rf.
+#
+# review-architecture §3.4 closure (라운드 #5): `-user "$(id -un)"` filter 추가.
+# `/tmp` 멀티유저 공유 환경(CI runner / shared dev box)에서 다른 사용자의
+# active 격리본 데이터 손실 방지. flock 은 동일 lock-file 만 보호하므로
+# 다른 사용자가 자신의 SHIELD_LOCK env 로 shield 병행 실행 가능 → 본인 uid 만 GC.
 stale_gc() {
-  local d
+  local d current_user
+  current_user="$(id -un 2>/dev/null)" || return 0
+  [ -z "$current_user" ] && return 0
   while IFS= read -r d; do
     [ -z "$d" ] && continue
     printf '⚠  [shield GC] SIGKILL 잔존물 (1h+ 경과) → 삭제: %s\n' "$d" >&2
@@ -191,6 +198,7 @@ stale_gc() {
       -name 'ur-shield-*' \
       -not -name 'ur-shield-selftest-*' \
       -not -name 'ur-shield-spec-*' \
+      -user "$current_user" \
       -mmin +60 2>/dev/null
   )
 }

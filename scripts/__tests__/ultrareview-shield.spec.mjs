@@ -363,19 +363,24 @@ describe('ultrareview-shield — flock 동시 실행 (lock-contention)', () => {
 
 describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
   /**
-   * 자기 시그널(self-signal) 패턴: child 명령으로 'bash -c "kill -s TERM $$"' 실행.
+   * $PPID 시그널 패턴: child 명령으로 'bash -c "kill -s TERM $PPID"' 실행.
    *
-   * 왜 self-signal인가:
-   *   - bash non-interactive 모드에서 외부에서 SIGTERM/SIGINT를 보내면 waitpid() 의
-   *     SA_RESTART로 인해 shield bash가 신호를 흡수하고 sleep이 끝날 때까지 대기함.
-   *   - 자식 bash가 kill -s TERM $$ 로 자신에게만 신호를 보내면:
-   *       1. 자식 bash 즉시 SIGTERM 종료 (exit 143)
-   *       2. shield waitpid 반환 → set -e 비정상 종료 트리거 → trap EXIT 발화
-   *       3. restore_files() 실행 → SHIELD_DIR 복원
-   *   - kill $$ 는 자식 bash PID에만 전달. Node.js test runner process group 격리 유지.
-   *   - timing race 없음 — spawnSync 기반 동기 실행.
+   * 왜 $PPID인가:
+   *   - $PPID = 자식 bash의 부모 PID = shield bash PID
+   *   - kill -s TERM $PPID → shield bash가 직접 SIGTERM 수신 (실제 Ctrl+C 경로)
+   *   - 자식 bash가 kill 후 정상 종료(exit 0) → shield waitpid 반환
+   *   - shield bash: 대기 중 수신한 SIGTERM(pending) 처리 → EXIT trap 발화 → restore_files()
+   *   - spawnSync 기반 동기 실행 → timing race 0
+   *
+   * 왜 kill -s TERM $PPID vs 다른 접근 실패:
+   *   - child.kill('SIGTERM') (외부 PID): Node.js spawn 시 shield가 Node.js pgid 상속 →
+   *     bash의 SIGTERM group 전파가 SA_RESTART로 억제 → 30s 대기 (SA_RESTART 문제)
+   *   - kill -s TERM $$ (자기 PID): 자식만 종료 → set -e path → 실제 SIGTERM-to-shield 미검증
+   *   - $PPID: shield PID에 직접 전달 → pending signal → 자식 종료 후 처리 → 결정적 실행
+   *
+   * 실증: spawnSync + kill -s TERM $PPID → 12개 파일 ✅ 복원 + exit SIGTERM 확인.
    */
-  function runSelfSignalRestoreTest(bashSignalName) {
+  function runPpidSignalRestoreTest(bashSignalName) {
     const fixtureDir = makeFixture();
     const lockPath = makeUniqueLock();
     try {
@@ -383,13 +388,16 @@ describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
       const records = populateFakeFiles(fixtureDir, patterns);
       const preTmp = snapshotTmpShieldDirs();
 
+      // bash -c 'kill -s SIGNAL $PPID': 자식이 shield bash(부모)에 직접 신호 전달
+      // shield는 자식 종료 후 pending signal 처리 → trap EXIT 발화 → restore_files()
       const r = runShieldInFixture({
         fixtureDir,
-        args: ['bash', '-c', `kill -s ${bashSignalName} $$`],
+        args: ['bash', '-c', `kill -s ${bashSignalName} $PPID`],
         lockPath,
       });
 
-      assert.ok(r.status !== 0, `shield 비정상 종료 기대 (${bashSignalName}): status=${r.status}`);
+      // shield가 signal로 종료 (status=null) 또는 비정상 exit (signal 처리 방식에 따라)
+      assert.ok(r.status !== 0 || r.signal != null, `shield 비정상 종료 기대 (${bashSignalName}): status=${r.status} signal=${r.signal}`);
 
       // 복원 hash invariant — trap restore_files 발화 확인
       for (const { rel, hash: expected } of records) {
@@ -409,12 +417,12 @@ describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
     }
   }
 
-  test('SIGTERM: self-signal kill -s TERM $$ → EXIT trap 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
-    runSelfSignalRestoreTest('TERM');
+  test('SIGTERM: kill -s TERM $PPID → shield bash 직접 수신 → trap EXIT 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
+    runPpidSignalRestoreTest('TERM');
   });
 
-  test('SIGINT: self-signal kill -s INT $$ → EXIT trap 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
-    runSelfSignalRestoreTest('INT');
+  test('SIGINT: kill -s INT $PPID → shield bash 직접 수신 → trap EXIT 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
+    runPpidSignalRestoreTest('INT');
   });
 });
 
@@ -476,5 +484,36 @@ describe('ultrareview-shield — ur:preflight 성능 예산 (SH-4)', () => {
     });
     assert.equal(r.status, 1, `budget=0: EXIT 1`);
     assert.match(r.stderr, /예산 초과/, '초과 메시지');
+  });
+});
+
+// ─── SH-5: stale_gc uid filter — 멀티유저 race 회귀 차단 (review §3.4) ─────
+
+describe('ultrareview-shield — stale_gc uid filter (라운드 #5 review §3.4)', () => {
+  test('stale_gc 함수 본문에 `-user "$current_user"` find filter 존재', () => {
+    const shieldSource = readFileSync(SHIELD_SCRIPT, 'utf8');
+    // 핵심 invariant: find 옵션에 -user 필터 + current_user 변수 사용
+    assert.match(
+      shieldSource,
+      /-user\s+"?\$current_user"?/,
+      'find -user "$current_user" 필터 존재 (멀티유저 /tmp 다른 uid 격리본 보호)'
+    );
+    // current_user 변수 정의
+    assert.match(
+      shieldSource,
+      /current_user="?\$\(id -un[^)]*\)"?/,
+      'current_user="$(id -un ...)" 변수 정의 존재'
+    );
+  });
+
+  test('id -un 실패 시 GC 조기 종료 (return 0) — 보호 fail-close', () => {
+    const shieldSource = readFileSync(SHIELD_SCRIPT, 'utf8');
+    // current_user 가 빈 문자열이면 return 0 으로 GC 자체 skip
+    // (다른 사용자 디렉토리 전체 GC 회피)
+    assert.match(
+      shieldSource,
+      /\[\s+-z\s+"\$current_user"\s+\]\s+&&\s+return\s+0/,
+      'current_user 빈 문자열이면 GC skip (fail-close)'
+    );
   });
 });
