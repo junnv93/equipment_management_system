@@ -14,16 +14,19 @@
 
 ---
 
-## ~~2026-05-13 — ultrareview-shield-followups-sh1-sh4~~ ✅ 완료 (2026-05-13)
+## ~~2026-05-13 — ultrareview-shield-followups-sh1-sh4 (r2 포함)~~ ✅ 완료 (2026-05-13)
 
-> **핵심**: ultrareview-shield 후속 4건 spec + 구현. SH-1 flock 동시 실행 contention (동일 lock 보유 중 두 번째 shield EXIT 1 + stderr 충돌 메시지). SH-2 SIGTERM/SIGINT trap restore spec — self-signal 패턴(`kill -s TERM $$`) 으로 race-free 동기 검증. SH-3 stale_gc() — flock 획득 직후 `find /tmp -mmin +60 -name 'ur-shield-*'` best-effort GC + spec. SH-4 `check-preflight-perf-budget.mjs` — PREFLIGHT_BUDGET_SECONDS + PREFLIGHT_CMD_OVERRIDE mock, `ur:preflight:perf-check` 스크립트.
+> **핵심**: ultrareview-shield 후속 4건 spec + 구현 + r2 SIGINT 시맨틱 수정. SH-1 flock 동시 실행 contention (동일 lock 보유 중 두 번째 shield EXIT 1 + stderr 충돌 메시지). SH-2 SIGTERM/SIGINT trap restore — 두 신호가 서로 다른 경로를 검증 (아래 참조). SH-3 stale_gc() — flock 획득 직후 `find /tmp -mmin +60 -name 'ur-shield-*'` best-effort GC + spec. SH-4 `check-preflight-perf-budget.mjs` — PREFLIGHT_BUDGET_SECONDS + PREFLIGHT_CMD_OVERRIDE mock, `ur:preflight:perf-check` 스크립트.
 >
 > **핵심 아키텍처 결정**:
-> - SH-2 self-signal 패턴: 외부 signal + SA_RESTART 타이밍 경쟁 회피. `kill -s TERM $$`는 자식 bash PID에만 전달 → Node.js test runner process group 격리 유지. `spawnSync` 동기 실행으로 flaky 0.
+> - SH-2 SIGTERM (`runPpidSignalRestoreTest`): `bash -c 'kill -s TERM $PPID'` — 자식이 shield bash(부모)에 직접 SIGTERM 전달. shield는 pending SIGTERM을 자식 종료 후 처리 → EXIT trap → restore. 실제 `kill <shield-pid>` 시나리오 검증.
+> - SH-2 SIGINT (`runChildSelfSignalRestoreTest`): `bash -c 'kill -s INT $$'` — 자식 bash 자신에게 SIGINT → child exit 130 → shield `set -e` → exit 130 → EXIT trap → restore. 실제 Ctrl+C 시나리오(자식이 SIGINT로 종료 → shield set-e) 검증.
+> - 왜 SIGINT에 `$PPID`를 안 쓰는가: 비-인터랙티브 bash는 자식이 exit 0으로 끝나면 pending SIGINT를 discards (job-control cancel 의미 없음). `$PPID`+SIGINT → shield exit 0 → 복원 불검증.
 > - stale_gc 배치 시점: flock 획득 완료 직후 (다른 shield 미실행 보장 상태) — 격리파일·잔존물 혼동 위험 0.
+> - stale_gc `-user "$current_user"` filter (SH-5): 멀티유저 `/tmp` 환경에서 다른 uid의 active 격리본 삭제 방지.
 > - SH-4 PREFLIGHT_CMD_OVERRIDE: `/bin/true` mock으로 실 preflight 없이 budget 로직만 단위 검증 가능.
 >
-> **검증**: Mode 1 harness PASS (MUST 8/8, SHOULD 3/3, iter 1). `node --test` 12/12 PASS. commit `cb426431`.
+> **검증**: Mode 1 harness r2 PASS (MUST 8/8, SHOULD 2/2). `node --test` 14/14 PASS. commit `cb426431` (초기) → `2dcd734b` (r2 SIGINT 수정) → `df99fbd8` (lifecycle 완료).
 
 ---
 
