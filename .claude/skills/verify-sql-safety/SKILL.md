@@ -145,7 +145,11 @@ grep -rn "Promise\.all" apps/backend/src/modules apps/backend/src/common --inclu
 ```
 
 ```bash
-# for/forEach 루프 내 await db 쿼리 탐지
+# (A) 트랜잭션 루프 N+1 정밀 탐지 — reorder/bulk 패턴 (2026-05-13 reorderRejectionPresets 사례)
+# for 루프 내 await tx.update/insert 직접 사용. 해결책: unnest CTE 단일 UPDATE
+grep -rn "for.*await.*tx.*update\|for.*await.*tx.*insert" apps/backend/src/modules apps/backend/src/common --include="*.service.ts"
+
+# (B) Promise.all + map + 개별 DB 쿼리 / for-of 루프 내 await db 쿼리 광범위 탐지
 grep -rn "for.*of\|forEach" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" -A 5 | grep "await.*this\.db\.\|await.*db\."
 ```
 
