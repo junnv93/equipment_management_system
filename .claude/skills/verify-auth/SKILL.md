@@ -58,6 +58,25 @@ approve/reject 메서드에서 `@Request() req: AuthenticatedRequest`를 통해 
 POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 확인합니다.
 **PASS:** 모든 변경 엔드포인트에 데코레이터 존재. **FAIL:** 누락.
 
+> **2026-05-13 saved-views silent miss 학습**: `PermissionsGuard` 기본값은 **DENY** (`permissions.guard.ts:55`).
+> service-layer 동적 scope 검사로 row-level RBAC 를 구현하는 도메인이라도 controller 클래스/엔드포인트에
+> `@RequirePermissions(도메인_VIEW_권한)` 또는 `@SkipPermissions()` 가 반드시 명시되어야 한다.
+> 누락 시 `403 AuthPermissionsNotConfigured` 로 endpoint 자체가 차단되어 service layer 까지 도달 못 함.
+> "service 가 동적으로 검사하니까 데코레이터 불필요" 논리는 무효 — service 호출 자체가 발생 안 함.
+> 신규 controller 추가 시 클래스 레벨 `@Controller('...')` 다음 줄에 `@RequirePermissions(...)` 또는
+> `@SkipPermissions()` 명시 검토.
+
+```bash
+# 모든 controller class 가 클래스 레벨 권한 데코레이터 또는 메서드별 데코레이터 보유 확인
+# (saved-views 회귀 차단 — class-level guard 누락 silent miss 패턴)
+for ctrl in $(find apps/backend/src/modules -name "*.controller.ts" -not -path "*/__tests__/*"); do
+  # @Public/@SkipPermissions/@RequirePermissions 중 하나 이상 보유?
+  if ! grep -qE "@Public\(\)|@SkipPermissions\(\)|@RequirePermissions\(" "$ctrl"; then
+    echo "FAIL: $ctrl — class/method 레벨 권한 데코레이터 0건 (PermissionsGuard DENY 차단)"
+  fi
+done
+```
+
 상세: [references/auth-checks.md](references/auth-checks.md) Step 3
 
 ### Step 4: @AuditLog 데코레이터 확인

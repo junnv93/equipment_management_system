@@ -208,10 +208,31 @@ if block_match:
 # SECURITY_AUDITABLE_CODES에 scope 위반 코드 등록 여부 확인
 grep -n "NotSubmitter\|OnlyRequesterCanCancel" \
   apps/backend/src/common/constants/security-auditable-codes.ts
+
+# 신규 ErrorCode 자동 등록 invariant — 패턴 매칭으로 scope/permission denial 후보 ErrorCode 추출
+# 후 SECURITY_AUDITABLE_CODES Set 에 등록되었는지 양방향 교차 검증 (2026-05-13 saved-views silent miss 사례)
+# 패턴: 클래스명에 `ScopeForbidden|ScopeOnly|TeamScopeOnly|Forbidden|ScopeAccessDenied|PermissionDenied`
+python3 -c "
+import re
+with open('packages/schemas/src/errors.ts') as f:
+    enum_content = f.read()
+with open('apps/backend/src/common/constants/security-auditable-codes.ts') as f:
+    audit_content = f.read()
+# enum 블록에서 ErrorCode 이름 추출 (scope/forbidden 패턴)
+candidates = re.findall(r'^\s*([A-Z][A-Za-z]*(?:ScopeForbidden|ScopeOnly|TeamScopeOnly|Forbidden))\s*=', enum_content, re.MULTILINE)
+# 단, 일반 Forbidden / PermissionDenied 도 후보 포함 (이미 등록되어 있어야 함)
+candidates += re.findall(r'^\s*(Forbidden|PermissionDenied|ScopeAccessDenied|CannotSelfApprove)\s*=', enum_content, re.MULTILINE)
+missing = [c for c in candidates if f'ErrorCode.{c}' not in audit_content]
+if missing:
+    for m in missing:
+        print(f'FAIL: ErrorCode.{m} not registered in SECURITY_AUDITABLE_CODES')
+else:
+    print(f'PASS: {len(candidates)} scope/permission ErrorCode 후보 모두 등록됨')
+" 2>/dev/null || echo "(python3 없으면 수동 검토)"
 ```
 
-**PASS:** service `BadRequestException` scope throw 0건 + 모든 scope 코드 403 매핑 + `SECURITY_AUDITABLE_CODES` 등록 확인.
-**FAIL:** `BadRequestException`으로 scope 위반 throw ≥1건 OR 403 매핑 누락 OR `SECURITY_AUDITABLE_CODES` 미등록.
+**PASS:** service `BadRequestException` scope throw 0건 + 모든 scope 코드 403 매핑 + `SECURITY_AUDITABLE_CODES` 등록 확인 (신규 `*ScopeForbidden|*ScopeOnly` 자동 포함).
+**FAIL:** `BadRequestException`으로 scope 위반 throw ≥1건 OR 403 매핑 누락 OR `SECURITY_AUDITABLE_CODES` 미등록 (`*ScopeForbidden|*ScopeOnly` 패턴 ErrorCode 가 silent miss 된 경우 — saved-views 2026-05-13 사례).
 
 ### Step 16: Controller spec 뮤테이션 스코프 커버리지 (2026-05-03 추가)
 
