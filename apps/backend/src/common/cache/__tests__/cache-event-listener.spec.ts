@@ -242,8 +242,12 @@ describe('CacheEventListener', () => {
       await new Promise((r) => setTimeout(r, 10));
 
       expect(mockHelper.invalidateAfterEquipmentUpdate).toHaveBeenCalledWith('eq-6', true, false);
+      // wholesale 분해 (cache-wholesale-migration-equipment-imports) — list/detail sub-prefix
       expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
-        `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`
+        `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*`
+      );
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*`
       );
     });
   });

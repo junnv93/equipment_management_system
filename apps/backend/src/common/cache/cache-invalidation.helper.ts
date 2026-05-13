@@ -262,28 +262,33 @@ export class CacheInvalidationHelper {
    * 장비 반입 캐시 전체 무효화
    *
    * 사용 시점: 승인, 반려, 취소 등 장비만 변경되지 않는 반입 상태 변경 후
-   * 패턴: equipment-imports:*
+   * 패턴: equipment-imports list:* + detail:* (sub-prefix, ADR-0012 §Decision-2 정합)
+   *
+   * 참고: 현재 equipment-imports service는 cache 미사용 — 본 helper는 향후 cache 도입 시
+   * 자동 적용되는 정합성 안전망(no-op 상태). sub-prefix는 cache 도입 시 강제 사용 명세.
    *
    * Note: deleteByPattern은 동기 (in-memory cache) — Promise 반환 없음
    */
   invalidateAllEquipmentImports(): void {
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`);
-    this.logger.debug('✓ Invalidated all equipment import caches');
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*`);
+    this.logger.debug('✓ Invalidated all equipment import caches (list/detail)');
   }
 
   /**
    * 장비 반입 + 장비 캐시 동시 무효화
    *
    * 사용 시점: 수령(장비 자동 생성), 반납 시작(장비 상태 변경), 반납 완료(장비 비활성화) 등
-   * 패턴: equipment-imports:* + equipment:*
+   * 패턴: equipment-imports list:* + detail:* + equipment:* + inbound-overview t:*
    *
    * Note: deleteByPattern은 동기 (in-memory cache) — Promise 반환 없음
    */
   invalidateEquipmentImportsWithEquipment(): void {
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}*`);
-    // inbound-overview BFF는 equipment-imports 집계를 포함하므로 함께 무효화
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.INBOUND_OVERVIEW}*`);
+    // inbound-overview BFF는 equipment-imports 집계를 포함하므로 함께 무효화 (t:* sub-prefix)
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.INBOUND_OVERVIEW}t:*`);
     this.logger.debug('✓ Invalidated equipment import + equipment + inbound-overview caches');
   }
 

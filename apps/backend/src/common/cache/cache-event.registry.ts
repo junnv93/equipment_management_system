@@ -89,10 +89,8 @@ export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST: ReadonlySet<string> 
   // list:* + summary:* + detail:* specific sub-prefix로 분해됨 (allowlist 제거 완료).
   // Disposal (1 — disposal-requests:* prefix)
   'NOTIFICATION_EVENTS.DISPOSAL_REJECTED',
-  // Equipment imports (3 — equipment-imports:* prefix)
-  'NOTIFICATION_EVENTS.IMPORT_CREATED',
-  'NOTIFICATION_EVENTS.IMPORT_APPROVED',
-  'NOTIFICATION_EVENTS.IMPORT_REJECTED',
+  // Equipment imports 3 entries — 2026-05-13 `cache-wholesale-migration-equipment-imports`
+  // sprint에서 list:* + detail:* specific sub-prefix로 분해 (allowlist 제거 완료).
   // Calibration factors (2 — calibration-factors:* prefix)
   'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED',
   'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED',
@@ -371,9 +369,15 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   },
 
   // ─── 장비 반입 (Equipment Import) ───
+  // 라운드 #4 cache-wholesale-migration-equipment-imports: wholesale → specific sub-prefix.
+  // 현재 equipment-imports service는 cache 미사용 (no-op) — 향후 cache 도입 시
+  // list:* + detail:* sub-prefix 자동 적용.
   [NOTIFICATION_EVENTS.IMPORT_CREATED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.IMPORT_APPROVED]: {
     actions: [
@@ -383,11 +387,17 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.IMPORT_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}detail:*` },
+    ],
   },
 
   // ─── 소프트웨어 유효성 확인 (Software Validation — cache-only channel) ───
