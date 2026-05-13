@@ -320,28 +320,36 @@ grep -rn "export default async function" \
 
 ### Step 10: 프론트엔드 서버 컴포넌트 `session.user.role` typeof 가드 (2026-05-13 추가)
 
-서버 컴포넌트에서 `session.user.role`을 직접 `as UserRole`로 캐스팅하면 JWT에서 non-string role이 올 경우 런타임 오류 가능성이 있다. `typeof role !== 'string'` 가드를 거쳐 `const role`에 추출한 후 캐스팅해야 한다.
+서버 컴포넌트에서 `session.user.role`을 직접 `as UserRole`로 캐스팅하면 JWT에서 non-string role이 올 경우 런타임 오류 가능성이 있다. `lib/auth/server-session.ts`의 `extractValidRole(session)` SSOT 헬퍼를 사용해야 한다.
 
-**올바른 패턴:**
+**올바른 패턴 (SSOT — 2026-05-13 extractValidRole 도입):**
 ```typescript
-const role = session.user.role;
-// typeof guard 선행 — includes/hasPermission 호출 전 타입 안전성 보장
-if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.VIEW_X)) {
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
+
+const session = await getServerAuthSession();
+if (!session?.user) redirect('/login');
+
+const role = extractValidRole(session); // JWT typeof guard + UserRole | null 반환
+if (!role || !hasPermission(role, Permission.VIEW_X)) {
   redirect('/dashboard');
 }
 ```
 
 ```bash
-# session.user.role을 직접 as 캐스팅하는 패턴 탐지 (typeof 가드 분리 없음)
+# session.user.role을 직접 as 캐스팅하는 패턴 탐지
 grep -rn "session\.user\.role as " \
   apps/frontend/app --include="*.tsx" --include="*.ts" \
   | grep -v "// "
+
+# typeof guard 인라인 중복 탐지 (extractValidRole SSOT 우회)
+grep -rn "typeof.*role.*!== 'string'" \
+  apps/frontend/app --include="*.tsx"
 ```
 
-**PASS:** 0건 — 올바른 패턴은 `const role = session.user.role` 후 `role as UserRole` 사용.
-**FAIL:** `session.user.role as UserRole` 또는 `session.user.role as ` 발견.
+**PASS:** 두 grep 모두 0건.
+**FAIL:** `session.user.role as UserRole` 직접 캐스팅 발견 OR inline `typeof role !== 'string'` 발견.
 
-**배경:** `audit-logs/page.tsx`에서 `hasPermission(session.user.role as UserRole, ...)` 직접 캐스팅 발견 → `typeof role !== 'string' ||` 가드 추가로 수정 (2026-05-13 verify-implementation FAIL → 즉시 수정 commit a5246c2c).
+**배경:** `audit-logs/page.tsx` 직접 캐스팅 발견 → 6파일 typeof guard 적용 (2026-05-13 commit a5246c2c). 이후 시니어 자기검토에서 8파일 인라인 중복이 `server-session.ts` SSOT 위반임을 발견 → `extractValidRole()` 헬퍼 추출 (commit 318296bb).
 
 **예외:** `import type { UserRole }` 타입 선언 라인은 런타임 캐스트 아님.
 
