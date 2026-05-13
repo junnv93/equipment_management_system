@@ -772,14 +772,15 @@ export type KpiColorVariant = keyof typeof EQUIPMENT_KPI_STRIP_TOKENS.borderColo
 export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
   /**
    * 탭 바 컨테이너 (sticky)
-   * SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts)
-   * Producer: EquipmentDetailClient ResizeObserver — `:root` 에 px 값 동적 설정
-   * 주의: Tailwind v4 JIT 정적 분석 요구로 string literal 직접 유지 (template literal interpolation 미지원).
+   * SSOT: CSS_VAR_NAMES.stickyHeaderHeight (lib/design-tokens/css-variables.ts) — top 오프셋
+   * SSOT: CSS_VAR_NAMES.zSticky (lib/design-tokens/css-variables.ts) — z-index 레이어
+   * Producer(top): EquipmentDetailClient ResizeObserver — `:root` 에 px 값 동적 설정
+   * 주의: Tailwind v4 JIT 정적 분析 요구로 string literal 직접 유지 (template literal interpolation 미지원).
    *       회귀 차단은 verify-hardcoding 화이트리스트로 처리.
    * bg-background: semantic token (하드코딩 금지)
    */
   container:
-    'sticky top-[var(--sticky-header-height,0px)] z-20 bg-background border-b border-border',
+    'sticky top-[var(--sticky-header-height,0px)] z-[var(--z-sticky,20)] bg-background border-b border-border',
   /** 스크롤 가능한 wrapper (모바일) */
   mobileScroll: 'overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0',
   /** TabsList */

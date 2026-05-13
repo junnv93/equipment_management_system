@@ -99,6 +99,27 @@ export const CSS_VAR_NAMES = {
   text2Mobile: '--text-2-mobile',
   /** Mono 텍스트 size (13px) — `.text-mono` 클래스 진입점. */
   textMono: '--text-mono',
+
+  // ============================================================================
+  // Z-Index Layer (z-sticky-ssot-extension 2026-05-13)
+  //
+  // BulkActionBar (stickyTop / stickyBottom) 및 EQUIPMENT_TAB_UNDERLINE_TOKENS
+  // 공용 sticky z-index SSOT. 값: ELEVATION_PRIMITIVES.zIndex.dropdown = 20.
+  // header(sticky=30)보다 낮아 헤더 아래에 위치. CSS variable 동적 override 시
+  // CSS_VAR_NAMES.zSticky + setProperty 사용.
+  // ============================================================================
+
+  /**
+   * Sticky 콘텐츠 영역 z-index (BulkActionBar, tab underline bar 공용).
+   *
+   * Consumers (design-token string literal — JIT 해법 B):
+   *   - `BULK_ACTION_BAR_TOKENS.stickyTop` / `stickyBottom` (bulk-action-bar.ts)
+   *   - `EQUIPMENT_TAB_UNDERLINE_TOKENS.container` (equipment.ts)
+   * Static value: `20` (ELEVATION_PRIMITIVES.zIndex.dropdown)
+   * Header z-index(30, sticky layer)보다 낮아 헤더 아래에 렌더링됨.
+   * Fallback: `:root` 미설정 시 `var(--z-sticky,20)` fallback 으로 보호.
+   */
+  zSticky: '--z-sticky',
 } as const satisfies Record<string, `--${string}`>;
 
 /**
