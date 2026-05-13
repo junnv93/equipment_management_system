@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "rm -f dist/.tsbuildinfo && nest build",
     "predev": "pnpm --filter @equipment-management/db run build && npx drizzle-kit migrate",
     "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
