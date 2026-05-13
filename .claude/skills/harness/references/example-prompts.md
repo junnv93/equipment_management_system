@@ -64,47 +64,6 @@
 - 명령 제시 후 대기 (실제 /ultrareview 실행은 사용자 몫)
 ```
 
-### 🔴 CRITICAL — UR-2: ultrareview Finding 후속 수정 (Mode 1)
-
-```
-입력: ultrareview 완료 후 /tasks에서 확인한 finding 리포트 (file:line + 설명)
-
-finding 분류 → verify-* 2차 검증 매핑 테이블:
-  CAS / VERSION_CONFLICT    → verify-cas 스킬 실행
-  권한 / RBAC / SiteScope   → verify-auth 스킬 실행
-  이벤트 / 캐시 무효화       → verify-cache-events 스킬 실행
-  Zod / validation          → verify-zod 스킬 실행
-  트랜잭션 경계 / this.db    → review-architecture 스킬 실행
-  기타 설계 이슈             → review-architecture 스킬 실행
-
-finding별 처리:
-  **finding 3개 이상 & 도메인 독립적** → 단일 메시지에 parallel Explore 에이전트 실행:
-    - `name="verify-{domain}"`, `subagent_type="Explore"`, `run_in_background=true` (도메인별 1개)
-    - 완료 후 `SendMessage({to: "verify-{domain}"})` 로 follow-up 가능 (재스캔 불필요)
-  **finding 1~2개** → 직접 해당 verify-* 스킬 순차 호출
-
-  [true positive]
-  1. 해당 verify-* 스킬 Skill 호출로 패턴 준수 확인
-  2. CLAUDE.md Behavioral Guidelines "수술적 변경" 원칙으로 최소 fix
-  3. tsc + 관련 spec 실행 → green 확인
-  4. 변경 파일 수 ≤ finding 수 × 3 (spread 제한)
-  5. review-learnings.md 해당 섹션에 재발 기록 append:
-     형식: [YYYY-MM-DD] {패턴명} — {file:line} ({n}차 재발)
-     3회 도달 시: manage-skills 스킬로 신규 verify-* 스킬 생성 제안
-
-  [false positive]
-  1. 왜 false positive인지 근거 1문장 작성
-  2. review-learnings.md "추가된 예외" 섹션에 기록:
-     형식: [YYYY-MM-DD] ultrareview FP — {패턴명}: {근거}
-
-검증:
-- pnpm --filter backend exec tsc --noEmit
-- pnpm --filter frontend exec tsc --noEmit
-- 관련 모듈 spec 통과
-- review-learnings.md에 결과 append 확인
-- 변경 파일 수 ≤ finding 수 × 3
-```
-
 ### 🟡 MEDIUM — UR-3: 무료 Quota 소진 시 로컬 Fleet Review 대체 (Mode 2)
 
 ```
@@ -149,7 +108,7 @@ Agent C (`name="fleet-infra"`, `subagent_type="Explore"`, `run_in_background=tru
 
 검증:
   - 세 agent 결과 합산 → 중복 제거 → priority 랭킹
-  - ultrareview와 동일하게 UR-2 파이프라인으로 처리
+  - finding 분류 → verify-*/review-architecture 스킬 2차검증 → 수술적 fix → review-learnings.md 기록
 ```
 
 

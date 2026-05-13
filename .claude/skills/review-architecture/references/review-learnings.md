@@ -261,6 +261,11 @@
 - **설명**: `...QUERY_CONFIG.XXX, 추가키` 패턴으로 SSOT 밖에서 캐시 전략을 오버라이드. 추후 QUERY_CONFIG 변경 시 충돌 여부를 인지하기 어려움. SoftwareTab.tsx의 동일 쿼리는 `QUERY_CONFIG.HISTORY`를 사용하므로 같은 데이터에 서로 다른 전략이 적용되는 비대칭 발생.
 - **체크리스트 반영**: ✅ **2차 재발 → 섹션 7 "캐시 전략 SSOT" 승격**
 
+### [2026-05-13] Controller 클래스 레벨 @RequirePermissions/@SkipPermissions 누락 — PermissionsGuard DENY 차단
+- **발견 위치**: `apps/backend/src/modules/saved-views/saved-views.controller.ts` (1차, ultrareview UR-2)
+- **설명**: service-layer 동적 scope 검사(`enforceReadScope`, row-level RBAC)로 권한을 구현하는 도메인이라도 controller 클래스/엔드포인트에 `@RequirePermissions(...)` 또는 `@SkipPermissions()`가 반드시 명시되어야 한다. `PermissionsGuard` 기본값은 **DENY**(`permissions.guard.ts:55`). 누락 시 `403 AuthPermissionsNotConfigured`로 endpoint 자체가 차단되어 service layer까지 도달 못 함. "service가 동적으로 검사하니까 불필요" 논리는 무효 — service 호출 자체가 발생하지 않음.
+- **체크리스트 반영**: ✅ verify-auth SKILL.md Step 3에 전체 controller 순회 bash 스캔 추가 (회귀 차단)
+
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`
 - **설명**: `AuditLogUserRole = UserRole | 'system' | 'unknown'` 타입을 소비하는 3개 계층에서 'system'/'unknown' 특수 값을 처리하지 않아 영문 원문이 그대로 노출됨. (1) 백엔드 `USER_ROLE_LABELS[role as UserRole]`는 'system'/'unknown'에 대해 `undefined` 반환 후 fallback으로 원문 반환. (2) frontend i18n `userRoles.system` 키 미등록. 수정: 백엔드는 'system'/'unknown' 분기를 `as UserRole` 이전에 추가, frontend i18n에 키 추가.
@@ -368,6 +373,7 @@
 | 2026-04-19 | 재발 (2차) → 승격 | QUERY_CONFIG 인라인 오버라이드 — TestSoftwareDetailContent.linkedEquipment staleTime 인라인 | review-learnings.md → 섹션 7 승격 |
 | 2026-04-19 | 안티패턴 | TestSoftwareDetailContent detail 쿼리에 TEST_SOFTWARE_LIST 프리셋 오사용 (TEST_SOFTWARE_DETAIL 존재) | review-learnings.md |
 | 2026-04-20 | 재발 (4차) | mapBackendErrorCode 누락 — CALIBRATION_PLAN_* + CALIBRATION_* 18개 에러 코드 미매핑 (calibration-plans 모듈) | review-learnings.md + verify-hardcoding Step 10 누락 목록 추가 |
+| 2026-05-13 | 안티패턴 (UR-2) | Controller 클래스 레벨 @RequirePermissions 누락 — saved-views PermissionsGuard DENY silent miss. verify-auth Step 3 bash 스캔 추가 (회귀 차단). | saved-views.controller.ts + verify-auth SKILL.md Step 3 |
 | 2026-04-20 | 새 패턴 | `@OnEvent({ async: true })` 도메인 동기화 리스너 — CalibrationPlanSyncListener (best-effort, CACHE_INVALIDATION_REGISTRY 제외) | verify-cache-events Exceptions #6 추가 |
 | 2026-04-20 | 새 패턴 | `actualCalibrationId` FK 참조 시드 정합성 + bulk-confirm 2건 시나리오 보장 | verify-seed-integrity Step 8 추가 |
 | 2026-04-21 | 재발 (3차) | QUERY_CONFIG 인라인 오버라이드 — CheckoutsContent pendingCount/destinations/liveSummary 3개 쿼리에 `staleTime: CACHE_TIMES.SHORT` 인라인 (SSOT 밖 분산) | CheckoutsContent.tsx |
