@@ -95,10 +95,11 @@ export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST: ReadonlySet<string> 
   // sprint에서 list:*/registry:*/equipment:*/detail:* specific sub-prefix로 분해 (allowlist 제거 완료).
   // IntermediateCheck 1 entry — 2026-05-13 `cache-wholesale-migration-other-legacy`
   // sprint에서 calibration list:*/pending:*/detail:* specific sub-prefix로 분해.
-  // Inspection form template (3 events × 3 patterns — inspection-form-templates/intermediate-inspections/self-inspections wholesale)
-  'CACHE_EVENTS.INSPECTION_TEMPLATE_CREATED',
-  'CACHE_EVENTS.INSPECTION_TEMPLATE_UPDATED',
-  'CACHE_EVENTS.INSPECTION_TEMPLATE_VERSION_UP',
+  // Inspection form template (3 events × 3 patterns) — 2026-05-13
+  // `cache-wholesale-migration-inspection-templates` sprint에서 specific sub-prefix로 분해
+  // (intermediate-inspections list-equip:*/list:*/detail:* + self-inspections list-equip:*/detail:*).
+  // 자기-도메인(inspection-form-templates) wholesale은 service-local `invalidateAndEmit()` 로
+  // 책임 이전 — registry 는 cross-domain only (lines 69-73 책임 경계 정합). allowlist 제거 완료.
 ]);
 
 export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> = {
@@ -581,12 +582,19 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     ],
   },
 
-  // ─── Inspection Form Template (Phase 1B-backend, 사전 등록) ───
-  // frontend 1A-a/b/c 완료 — backend 출시 시 발행 시작.
+  // ─── Inspection Form Template (Phase 1B-backend) ───
   // template create/update/version_up 시:
   // - 해당 equipment의 inspection 상세 캐시 무효화 (invalidateEquipmentDetail)
-  // - template/intermediate/self inspection list 캐시 패턴 삭제
+  // - cross-domain intermediate/self inspection 캐시 sub-prefix 삭제
   // - dashboard 카운트는 영향 없음 (template 자체는 inspection record 아님)
+  //
+  // 책임 분리 (lines 69-73 정합):
+  // - 자기-도메인 inspection-form-templates 캐시: service-local `invalidateAndEmit()` 가
+  //   `deleteByPrefix(CACHE_PREFIX)` 로 트랜잭션 직후 동기 삭제 — registry 가 중복 처리하지 않음.
+  // - cross-domain (intermediate-inspections + self-inspections) 캐시: 이 레지스트리에서
+  //   specific sub-prefix 패턴으로 무효화 (ADR-0012 §Decision-2 — wholesale 금지, sub-prefix 강제).
+  //   intermediate-inspections 는 `calibration:inspections:` nested namespace 사용
+  //   (CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS = 'calibration:inspections:').
   [CACHE_EVENTS.INSPECTION_TEMPLATE_CREATED]: {
     actions: [
       {
@@ -595,9 +603,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
     patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}detail:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}detail:*` },
     ],
   },
   [CACHE_EVENTS.INSPECTION_TEMPLATE_UPDATED]: {
@@ -608,9 +618,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
     patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}detail:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}detail:*` },
     ],
   },
   [CACHE_EVENTS.INSPECTION_TEMPLATE_VERSION_UP]: {
@@ -621,9 +633,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
     patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.INSPECTION_FORM_TEMPLATES}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS}detail:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}list-equip:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.SELF_INSPECTIONS}detail:*` },
     ],
   },
 };

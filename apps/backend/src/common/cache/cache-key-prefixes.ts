@@ -71,8 +71,15 @@ export const CACHE_KEY_PREFIXES = {
   /** self-inspections.service.ts */
   SELF_INSPECTIONS: 'self-inspections:',
 
-  /** intermediate-inspections.service.ts (UL-QP-18-03) */
-  INTERMEDIATE_INSPECTIONS: 'intermediate-inspections:',
+  /**
+   * intermediate-inspections.service.ts (UL-QP-18-03)
+   *
+   * 주의: calibration 사이클 하위 nested 네임스페이스. service 가 historical 로
+   * `calibration:inspections:` prefix 를 사용 — CABLES_CACHE_PREFIX 와 동일 패턴.
+   * 2026-05-13 `cache-wholesale-migration-inspection-templates` sprint 에서
+   * SSOT 갱신 (constant value ↔ service 실제 prefix 정합).
+   */
+  INTERMEDIATE_INSPECTIONS: 'calibration:inspections:',
 
   /** inspection-form-templates.service.ts (Phase 1B-backend, LIMS Template Snapshot) */
   INSPECTION_FORM_TEMPLATES: 'inspection-form-templates:',

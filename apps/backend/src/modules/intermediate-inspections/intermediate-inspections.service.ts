@@ -40,7 +40,7 @@ import type { UpdateInspectionInput } from './dto/update-inspection.dto';
 
 @Injectable()
 export class IntermediateInspectionsService extends VersionedBaseService {
-  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:';
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS;
   private readonly logger = new Logger(IntermediateInspectionsService.name);
 
   constructor(
