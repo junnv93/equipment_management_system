@@ -175,6 +175,27 @@ if ! flock -n 9; then
   exit 1
 fi
 
+# ─── SIGKILL 잔존물 best-effort GC ──────────────────────────────────────────
+# flock 획득 완료 = 다른 shield 비실행 보장. 1시간 이상 경과한 ur-shield-* 디렉토리는
+# SIGKILL(-9) 비정상 종료로 trap EXIT이 우회된 잔존물일 가능성이 높다.
+# selftest(--self-test), spec(test runner) fixture 는 prefix 제외.
+# 주의: 격리된 파일이 내부에 있더라도 1시간 경과 후엔 개발자가 이미 복구했다고 가정 — rm -rf.
+stale_gc() {
+  local d
+  while IFS= read -r d; do
+    [ -z "$d" ] && continue
+    printf '⚠  [shield GC] SIGKILL 잔존물 (1h+ 경과) → 삭제: %s\n' "$d" >&2
+    rm -rf "$d" 2>/dev/null || true
+  done < <(
+    find /tmp -maxdepth 1 -mindepth 1 -type d \
+      -name 'ur-shield-*' \
+      -not -name 'ur-shield-selftest-*' \
+      -not -name 'ur-shield-spec-*' \
+      -mmin +60 2>/dev/null
+  )
+}
+stale_gc
+
 # ─── POSIX 인자 구분자 처리 ───────────────────────────────────────────────
 # `pnpm ur:shield -- node ...` 같은 호출에서 pnpm이 `--` 를 strip 하지 않으므로
 # shield 자체가 첫 `--` 를 무시한다 (POSIX 컨벤션: grep/cat/getopt 등과 동일).

@@ -17,7 +17,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import {
   mkdtempSync,
   mkdirSync,
@@ -27,6 +27,7 @@ import {
   rmSync,
   readdirSync,
   statSync,
+  utimesSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -37,6 +38,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
 const SHIELD_SCRIPT = join(REPO_ROOT, 'scripts', 'ultrareview-shield.sh');
 const PREFLIGHT_SCRIPT = join(REPO_ROOT, 'scripts', 'ultrareview-preflight.mjs');
+const BUDGET_SCRIPT = join(REPO_ROOT, 'scripts', 'check-preflight-perf-budget.mjs');
 
 /**
  * preflight --list-patterns 출력을 SSOT 단방향 소비.
@@ -297,5 +299,182 @@ describe('ultrareview-shield — --self-test smoke', () => {
       n.startsWith('ur-shield-selftest-')
     );
     assert.deepEqual(residuals, [], `/tmp/ur-shield-selftest-* 잔존 0`);
+  });
+});
+
+// ─── SH-1: flock 동시 실행 lock-contention ─────────────────────────────────
+
+describe('ultrareview-shield — flock 동시 실행 (lock-contention)', () => {
+  test('동일 lock 보유 중 두 번째 shield 즉시 FAIL exit 1 + stderr 충돌 메시지', async () => {
+    const lockPath = makeUniqueLock();
+    const fixtureDir = makeFixture();
+    let holder = null;
+    try {
+      // Lock holder: flock 획득 + 'LOCKED' stderr 시그널 → read(1)으로 무한 대기
+      holder = spawn(
+        'bash',
+        ['-c', `exec 9>"${lockPath}"; flock -e 9; printf 'LOCKED\\n' >&2; read -r`],
+        { stdio: ['pipe', 'ignore', 'pipe'] }
+      );
+
+      // Lock 획득 확인 (timeout 5s)
+      await new Promise((resolve, reject) => {
+        let buf = '';
+        const tid = setTimeout(
+          () => reject(new Error('lock-holder: LOCKED 시그널 timeout (5s)')),
+          5000
+        );
+        holder.stderr.on('data', (d) => {
+          buf += d.toString();
+          if (buf.includes('LOCKED')) {
+            clearTimeout(tid);
+            resolve();
+          }
+        });
+        holder.on('error', (e) => {
+          clearTimeout(tid);
+          reject(e);
+        });
+        holder.on('close', (code) => {
+          if (!buf.includes('LOCKED')) {
+            clearTimeout(tid);
+            reject(new Error(`lock-holder 비정상 종료 code=${code}`));
+          }
+        });
+      });
+
+      // 두 번째 shield: 동일 lock → 즉시 FAIL
+      const r = runShieldInFixture({ fixtureDir, args: ['/bin/true'], lockPath });
+      assert.equal(r.status, 1, `두 번째 shield EXIT 1 기대. stderr: ${r.stderr}`);
+      assert.match(r.stderr, /다른 ultrareview-shield 인스턴스/, 'lock-contention 충돌 메시지');
+    } finally {
+      if (holder) {
+        holder.stdin?.end();
+        holder.kill();
+        await new Promise((resolve) => holder.on('close', resolve));
+      }
+      rmSync(fixtureDir, { recursive: true, force: true });
+      cleanupLock(lockPath);
+    }
+  });
+});
+
+// ─── SH-2: SIGTERM/SIGINT trap restore_files ─────────────────────────────
+
+describe('ultrareview-shield — SIGTERM/SIGINT trap restore_files', () => {
+  /**
+   * 자기 시그널(self-signal) 패턴: child 명령으로 'bash -c "kill -s TERM $$"' 실행.
+   *
+   * 왜 self-signal인가:
+   *   - bash non-interactive 모드에서 외부에서 SIGTERM/SIGINT를 보내면 waitpid() 의
+   *     SA_RESTART로 인해 shield bash가 신호를 흡수하고 sleep이 끝날 때까지 대기함.
+   *   - 자식 bash가 kill -s TERM $$ 로 자신에게만 신호를 보내면:
+   *       1. 자식 bash 즉시 SIGTERM 종료 (exit 143)
+   *       2. shield waitpid 반환 → set -e 비정상 종료 트리거 → trap EXIT 발화
+   *       3. restore_files() 실행 → SHIELD_DIR 복원
+   *   - kill $$ 는 자식 bash PID에만 전달. Node.js test runner process group 격리 유지.
+   *   - timing race 없음 — spawnSync 기반 동기 실행.
+   */
+  function runSelfSignalRestoreTest(bashSignalName) {
+    const fixtureDir = makeFixture();
+    const lockPath = makeUniqueLock();
+    try {
+      const patterns = fetchDangerousPatterns();
+      const records = populateFakeFiles(fixtureDir, patterns);
+      const preTmp = snapshotTmpShieldDirs();
+
+      const r = runShieldInFixture({
+        fixtureDir,
+        args: ['bash', '-c', `kill -s ${bashSignalName} $$`],
+        lockPath,
+      });
+
+      assert.ok(r.status !== 0, `shield 비정상 종료 기대 (${bashSignalName}): status=${r.status}`);
+
+      // 복원 hash invariant — trap restore_files 발화 확인
+      for (const { rel, hash: expected } of records) {
+        const abs = join(fixtureDir, rel);
+        assert.ok(existsSync(abs), `${bashSignalName} 후 복원: ${rel}`);
+        const actual = createHash('sha256').update(readFileSync(abs)).digest('hex');
+        assert.equal(actual, expected, `${bashSignalName} 후 hash 일치: ${rel}`);
+      }
+
+      // /tmp 잔존물 0 — trap이 SHIELD_DIR 정리했는가?
+      const postTmp = snapshotTmpShieldDirs();
+      const newDirs = postTmp.filter((d) => !preTmp.includes(d));
+      assert.deepEqual(newDirs, [], `${bashSignalName} 후 /tmp/ur-shield-* 잔존 0`);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+      cleanupLock(lockPath);
+    }
+  }
+
+  test('SIGTERM: self-signal kill -s TERM $$ → EXIT trap 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
+    runSelfSignalRestoreTest('TERM');
+  });
+
+  test('SIGINT: self-signal kill -s INT $$ → EXIT trap 발화 → 격리 파일 복원 + /tmp 잔존 0', () => {
+    runSelfSignalRestoreTest('INT');
+  });
+});
+
+// ─── SH-3: stale GC spec ─────────────────────────────────────────────────
+
+describe('ultrareview-shield — stale GC (SIGKILL 잔존물 자동 정리)', () => {
+  test('1시간 이상 경과한 ur-shield-* 디렉토리 → 다음 실행 시 자동 삭제', () => {
+    const fixtureDir = makeFixture();
+    const lockPath = makeUniqueLock();
+    // ur-shield-staletest-* 네이밍: selftest/spec prefix 아님 → GC 대상
+    const staleDir = mkdtempSync(join(tmpdir(), 'ur-shield-staletest-'));
+    try {
+      // mtime을 2시간 전으로 설정 → find -mmin +60 매칭
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      utimesSync(staleDir, twoHoursAgo, twoHoursAgo);
+
+      assert.ok(existsSync(staleDir), 'stale dir 생성 확인');
+
+      const r = runShieldInFixture({ fixtureDir, args: ['/bin/true'], lockPath });
+      assert.equal(r.status, 0, `shield EXIT 0. stderr: ${r.stderr}`);
+
+      // GC 실행 확인
+      assert.ok(!existsSync(staleDir), `stale dir GC 삭제 확인: ${staleDir}`);
+      assert.match(r.stderr, /shield GC/, 'GC 로그 메시지 포함');
+    } finally {
+      rmSync(staleDir, { recursive: true, force: true });
+      rmSync(fixtureDir, { recursive: true, force: true });
+      cleanupLock(lockPath);
+    }
+  });
+});
+
+// ─── SH-4: ur:preflight 성능 예산 ────────────────────────────────────────
+
+describe('ultrareview-shield — ur:preflight 성능 예산 (SH-4)', () => {
+  test('budget=300 + /bin/true mock → EXIT 0 + "예산 이내" 메시지', () => {
+    const r = spawnSync('node', [BUDGET_SCRIPT], {
+      cwd: REPO_ROOT,
+      env: {
+        ...process.env,
+        PREFLIGHT_CMD_OVERRIDE: '/bin/true',
+        PREFLIGHT_BUDGET_SECONDS: '300',
+      },
+      encoding: 'utf8',
+    });
+    assert.equal(r.status, 0, `budget=300: EXIT 0. stderr: ${r.stderr}`);
+    assert.match(r.stderr, /예산 이내/, '예산 이내 메시지');
+  });
+
+  test('budget=0 + /bin/true mock → EXIT 1 + "예산 초과" 메시지 (어떤 실행도 0초 초과)', () => {
+    const r = spawnSync('node', [BUDGET_SCRIPT], {
+      cwd: REPO_ROOT,
+      env: {
+        ...process.env,
+        PREFLIGHT_CMD_OVERRIDE: '/bin/true',
+        PREFLIGHT_BUDGET_SECONDS: '0',
+      },
+      encoding: 'utf8',
+    });
+    assert.equal(r.status, 1, `budget=0: EXIT 1`);
+    assert.match(r.stderr, /예산 초과/, '초과 메시지');
   });
 });

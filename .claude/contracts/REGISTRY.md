@@ -12,6 +12,7 @@ Harness가 생성하는 MUST/SHOULD 평가 기준 파일 인덱스.
 | `checkouts-sprint4-followups-s2-s4-s5-s6` | checkouts-sprint4-ux-u02-u08 후속 4건 — S-2 revoke 5분 countdown / S-4 reject-preset admin CRUD / S-5 fuzzy-search ADR-0011 / S-6 destination 인라인 등록 | 2026-05-12 |
 | `qr-visual-redesign-followups-batch-1` | qr-visual-redesign SHOULD 후속 5건 (S-1 QR landing e2e / S-3 RTL spec / S-4 orphan photo cron / S-6 handoverCheckoutId deprecation 제거 / S-7 touch-target audit) + WON'T-DO 3건 (S-2 Storybook / S-5 visual regression / S-8 UX 검토). g4-g12 closure 후 재진입 (RESUMED). | 2026-05-12 |
 | `ultrareview-shield-followups-sh1-sh4` | ultrareview-shield 후속 4건 — SH-1 flock contention spec / SH-2 SIGTERM trap spec / SH-3 SIGKILL tmp GC / SH-4 preflight p95 budget | 2026-05-13 |
+| `inbound-bulk-receive-integration` | InboundCheckoutsTab standard 섹션 borrower_receive bulk 처리 — BE `POST /checkouts/bulk-receive` + FE bulk bar/모달 + CheckoutGroupCard row-selectable prop 일반화. tech-debt `2026-05-05 bulk-tabs 후속` closure | 2026-05-13 |
 
 ---
 
