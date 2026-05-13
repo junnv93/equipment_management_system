@@ -149,7 +149,7 @@ export class CheckoutsController {
   })
   @ApiBody({ type: CreateDestinationDto })
   @ApiResponse({ status: HttpStatus.OK, description: '반출지 등록 성공 (또는 기존 entity 반환)' })
-  async createDestination(@Body() body: CreateDestinationInput) {
+  async createDestination(@Body() body: CreateDestinationInput): Promise<unknown> {
     return this.checkoutsService.createDestination(body.name);
   }
 
