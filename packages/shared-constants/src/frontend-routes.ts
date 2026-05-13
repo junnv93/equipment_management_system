@@ -16,6 +16,21 @@ import type {
 } from '@equipment-management/schemas';
 
 /**
+ * 도움말 토픽 키 SSOT
+ *
+ * `messages/{locale}/help.json` 의 `sections.<key>` 와 1:1 대응.
+ * 새 토픽 추가 시 이 배열에만 추가하면 타입·라우트·i18n 키가 자동 동기화된다.
+ */
+export const HELP_TOPIC_KEYS = [
+  'checkout',
+  'calibration',
+  'nonConformance',
+  'permissions',
+] as const;
+
+export type HelpTopicKey = (typeof HELP_TOPIC_KEYS)[number];
+
+/**
  * 범용 Intent URL 쿼리 파라미터 상수 — SSOT.
  *
  * 특정 UI 상태(생성 폼 오픈, 상세 모달 오픈 등)를 URL에 표현하여 딥링크 공유·브라우저
@@ -329,12 +344,14 @@ export const FRONTEND_ROUTES = {
    * `mailto:` 외 in-app 대체 경로를 제공해 EmptyState/error fallback 등에서
    * 사용자가 "어떻게 해야 하나요?" 의문을 가질 때 진입 가능한 단일 라우트.
    *
-   * 새 도움말 토픽 추가 시 `topicKey`를 `messages/{locale}/help.json` 의
-   * `sections.<topicKey>` 와 동기화. 라우트 자체에는 토픽이 anchor(#)로 표현된다.
+   * 새 도움말 토픽 추가 시:
+   *   1. `HELP_TOPIC_KEYS` 배열에 키 추가
+   *   2. `messages/{locale}/help.json` 의 `sections.<key>` 에 동기화
+   * 라우트 자체에는 토픽이 anchor(#)로 표현된다.
    */
   HELP: {
     INDEX: '/help',
-    TOPIC: (topicKey: string) => `/help#${encodeURIComponent(topicKey)}`,
+    TOPIC: (topicKey: HelpTopicKey) => `/help#${encodeURIComponent(topicKey)}`,
   },
 } as const;
 

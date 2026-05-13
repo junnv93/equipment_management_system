@@ -236,6 +236,7 @@ export default function OutboundCheckoutsTab({
           href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
         }}
         canAct={canCreateCheckout}
+        helpTopicKey="checkout"
       />
     );
   };

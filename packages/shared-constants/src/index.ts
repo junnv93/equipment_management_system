@@ -119,6 +119,8 @@ export {
   getApprovalPageUrl,
   QUERY_INTENTS,
   CHECKOUT_QUERY_PARAMS,
+  HELP_TOPIC_KEYS,
+  type HelpTopicKey,
 } from './frontend-routes';
 
 // 반출 목적별 장비 선택 가능성 규칙

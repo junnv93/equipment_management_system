@@ -8,19 +8,23 @@
   "sections": {
     "checkout": {
       "title": "반출 신청 안내",
-      "description": "반출 신청 절차와 승인 단계는 추후 공유될 예정입니다."
+      "description": "반출 신청 절차와 승인 단계는 추후 공유될 예정입니다.",
+      "faqs": []
     },
     "calibration": {
       "title": "교정 일정 확인",
-      "description": "교정 기한 임박/초과 알림 및 점검 절차는 추후 공유될 예정입니다."
+      "description": "교정 기한 임박/초과 알림 및 점검 절차는 추후 공유될 예정입니다.",
+      "faqs": []
     },
     "nonConformance": {
       "title": "부적합 보고",
-      "description": "부적합 발견 시 보고 절차는 추후 공유될 예정입니다."
+      "description": "부적합 발견 시 보고 절차는 추후 공유될 예정입니다.",
+      "faqs": []
     },
     "permissions": {
       "title": "권한 요청",
-      "description": "역할/권한 변경 요청 절차는 추후 공유될 예정입니다."
+      "description": "역할/권한 변경 요청 절차는 추후 공유될 예정입니다.",
+      "faqs": []
     }
   },
   "ariaLandmark": "도움말 페이지 본문"

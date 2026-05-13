@@ -5,6 +5,7 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CHECKOUT_EMPTY_STATE_TOKENS, CHECKOUT_ICON_MAP } from '@/lib/design-tokens';
 import type { CheckoutEmptyStateVariant } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES, type HelpTopicKey } from '@equipment-management/shared-constants';
 
 export interface CheckoutEmptyStatePrimaryAction {
   label: string;
@@ -26,6 +27,11 @@ export interface CheckoutEmptyStateProps {
   roleLabel?: string;
   /** error variant 전용: 다시 시도 핸들러. 제공 시 자동 secondaryAction 합성. */
   onRetry?: () => void;
+  /**
+   * 제공 시 `/help#<topicKey>` 도움말 링크를 secondaryAction으로 자동 합성.
+   * 명시적 secondaryAction 또는 error+onRetry 합성이 있으면 적용되지 않는다.
+   */
+  helpTopicKey?: HelpTopicKey;
   className?: string;
 }
 
@@ -44,6 +50,7 @@ export default function CheckoutEmptyState({
   canAct,
   roleLabel,
   onRetry,
+  helpTopicKey,
   className,
 }: CheckoutEmptyStateProps) {
   const t = useTranslations('checkouts');
@@ -57,12 +64,15 @@ export default function CheckoutEmptyState({
 
   // U-12: network variant + offline → primary disabled + 사유 노출 (hide 대신 disabled+reason)
   const networkOffline = variant === 'network' && !isOnline;
-  // U-12: error variant + onRetry prop → secondary 자동 합성 (호출부 단순화)
+  // U-12: error variant + onRetry → secondary 자동 합성 (호출부 단순화)
+  // helpTopicKey → 도움말 링크 자동 합성 (명시적 secondaryAction / error+onRetry가 없을 때)
   const resolvedSecondary =
     secondaryAction ??
     (variant === 'error' && onRetry
       ? { label: t('emptyState.error.retry'), onClick: onRetry }
-      : undefined);
+      : helpTopicKey
+        ? { label: t('emptyState.helpLink'), href: FRONTEND_ROUTES.HELP.TOPIC(helpTopicKey) }
+        : undefined);
 
   return (
     <EmptyState

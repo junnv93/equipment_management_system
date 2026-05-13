@@ -769,7 +769,8 @@
       "offlineReason": "오프라인 상태에서는 새 반출을 등록할 수 없습니다. 네트워크 복구 후 다시 시도하세요.",
       "primaryCta": "다시 시도",
       "secondaryCta": ""
-    }
+    },
+    "helpLink": "반출 도움말 보기"
   },
   "yourTurn": {
     "tooltip": "{action} 필요",

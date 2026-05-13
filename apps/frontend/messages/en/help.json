@@ -8,19 +8,23 @@
   "sections": {
     "checkout": {
       "title": "Checkout Request Guide",
-      "description": "Checkout request workflow and approval steps will be shared later."
+      "description": "Checkout request workflow and approval steps will be shared later.",
+      "faqs": []
     },
     "calibration": {
       "title": "Calibration Schedule",
-      "description": "Calibration due/overdue alerts and inspection procedures will be shared later."
+      "description": "Calibration due/overdue alerts and inspection procedures will be shared later.",
+      "faqs": []
     },
     "nonConformance": {
       "title": "Non-Conformance Reporting",
-      "description": "Non-conformance reporting workflow will be shared later."
+      "description": "Non-conformance reporting workflow will be shared later.",
+      "faqs": []
     },
     "permissions": {
       "title": "Permission Request",
-      "description": "Role/permission change request workflow will be shared later."
+      "description": "Role/permission change request workflow will be shared later.",
+      "faqs": []
     }
   },
   "ariaLandmark": "Help page main content"

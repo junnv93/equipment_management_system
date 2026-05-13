@@ -769,7 +769,8 @@
       "offlineReason": "New checkout requests are unavailable while offline. Please retry when network is restored.",
       "primaryCta": "Retry",
       "secondaryCta": ""
-    }
+    },
+    "helpLink": "View Checkout Help"
   },
   "yourTurn": {
     "label": "Your Turn",
