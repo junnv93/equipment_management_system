@@ -22,8 +22,11 @@ export class ResultSectionsService {
    * IntermediateInspectionsService 와 동일한 prefix 를 공유해 부모 inspection 의
    * detail / list 캐시를 원자적으로 무효화할 수 있게 한다.
    * (self-inspections 는 현재 cache 인프라 미사용 — 별도 처리 불필요)
+   *
+   * SSOT: CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS (`calibration:inspections:`)
+   * — 2026-05-13 `cache-wholesale-migration-inspection-templates` sprint 정합.
    */
-  private readonly INTERMEDIATE_CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:';
+  private readonly INTERMEDIATE_CACHE_PREFIX = CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
