@@ -1,9 +1,8 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getServerAuthSession } from '@/lib/auth/server-session';
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
 import { getTranslations } from 'next-intl/server';
-import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -116,11 +115,10 @@ async function ApprovalsContentAsync({
     redirect('/login');
   }
 
-  const role = session.user.role;
-  if (typeof role !== 'string' || !APPROVAL_ROLES.includes(role as UserRole)) {
+  const userRole = extractValidRole(session);
+  if (!userRole || !APPROVAL_ROLES.includes(userRole)) {
     redirect('/dashboard');
   }
-  const userRole = role as UserRole;
   const userTeamId = session.user.teamId;
 
   const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : null;

@@ -124,6 +124,20 @@ _t "root-spec" node --test --test-concurrency=4 \
   scripts/__tests__/verify-lint-ruleset-parity.spec.mjs \
   scripts/__tests__/verify-route-metadata.spec.mjs
 
+# ── SH-4: preflight 성능 예산 게이트 (gitleaks config 변경 시에만) ──────────
+# 목적: build-dir allowlist 회귀 시 즉시 발견 (gitleaks 36분 → 12초 가속 보호).
+# ADR-0006 routing gate 패턴과 동일 — 관련 파일 변경 시에만 실행 (매 push 12s 추가 방지).
+# 대상 파일: .gitleaks.toml / .gitleaksignore
+_GITLEAKS_CHANGED=$(git diff --name-only "origin/main..HEAD" 2>/dev/null \
+  | grep -E "(\.gitleaks\.toml|\.gitleaksignore)" \
+  || true)
+if [ -n "$_GITLEAKS_CHANGED" ]; then
+  echo "▶ pre-push: gitleaks config 변경 감지 — preflight p95 budget 검증..."
+  printf '%s\n' "$_GITLEAKS_CHANGED" | sed 's/^/    /'
+  _t "preflight-perf-budget" node scripts/check-preflight-perf-budget.mjs
+fi
+# ──────────────────────────────────────────────────────────────────────────────
+
 echo "✔ pre-push: all checks passed"
 
 # ultrareview 권고 (정보성 — 실패해도 push는 허용)

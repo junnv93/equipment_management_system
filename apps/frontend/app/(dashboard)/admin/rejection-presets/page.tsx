@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
-import { getServerAuthSession } from '@/lib/auth/server-session';
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
 import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { RejectionPresetsAdminClient } from '@/components/admin/rejection-presets/RejectionPresetsAdminClient';
 
@@ -20,11 +19,8 @@ export default async function RejectionPresetsAdminPage() {
     redirect('/login');
   }
 
-  const role = session.user.role;
-  if (
-    typeof role !== 'string' ||
-    !hasPermission(role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)
-  ) {
+  const role = extractValidRole(session);
+  if (!role || !hasPermission(role, Permission.MANAGE_SYSTEM_SETTINGS)) {
     redirect('/dashboard');
   }
 

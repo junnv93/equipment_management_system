@@ -22,6 +22,7 @@
 import { cache } from 'react';
 import { auth } from '../auth';
 import { getInternalApiKeyHeaders } from '../config/internal-headers';
+import type { UserRole } from '@equipment-management/schemas';
 
 /**
  * Per-render deduplication: 동일 렌더 트리 내 여러 호출이 단일 Promise를 공유
@@ -171,4 +172,28 @@ export async function hasRole(roles: string[]): Promise<boolean> {
   const userRole = session?.user?.role;
   if (!userRole) return false;
   return roles.includes(userRole.toLowerCase());
+}
+
+/**
+ * JWT 런타임 typeof 가드: session.user.role을 안전하게 추출
+ *
+ * NextAuth 타입 선언에 `role: UserRole`로 선언되어 있어도,
+ * JWT 토큰 조작/손상/스키마 변경 시 런타임에 non-string이 올 수 있음.
+ * 이 함수를 통과하면 UserRole로 안전하게 캐스팅된 값을 반환.
+ *
+ * @returns 유효한 UserRole 문자열이면 UserRole, 아니면 null
+ *
+ * @example
+ * ```typescript
+ * const session = await getServerAuthSession();
+ * if (!session?.user) redirect('/login');
+ * const role = extractValidRole(session);
+ * if (!role || !hasPermission(role, Permission.VIEW_X)) redirect('/dashboard');
+ * ```
+ */
+export function extractValidRole(
+  session: Awaited<ReturnType<typeof getServerAuthSession>>
+): UserRole | null {
+  const role = session?.user?.role;
+  return typeof role === 'string' ? role : null;
 }

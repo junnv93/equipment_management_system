@@ -1,9 +1,8 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { getServerAuthSession } from '@/lib/auth/server-session';
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
 
 /**
  * SoftwareLayout — PPR-compatible defense-in-depth 1차 가드
@@ -27,8 +26,8 @@ async function SoftwarePermissionGuard({ children }: { children: ReactNode }) {
     redirect('/login');
   }
 
-  const role = session.user.role;
-  if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.VIEW_TEST_SOFTWARE)) {
+  const role = extractValidRole(session);
+  if (!role || !hasPermission(role, Permission.VIEW_TEST_SOFTWARE)) {
     redirect('/dashboard');
   }
 

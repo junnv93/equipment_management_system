@@ -13,4 +13,5 @@ export {
   getServerAuthHeaders,
   isAuthenticated,
   hasRole,
+  extractValidRole,
 } from './auth/server-session';

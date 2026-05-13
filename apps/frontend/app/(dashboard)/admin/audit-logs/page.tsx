@@ -25,9 +25,8 @@ import {
   parseAuditLogFiltersFromSearchParams,
 } from '@/lib/utils/audit-log-filter-utils';
 import type { CursorPaginatedAuditLogsResponse } from '@equipment-management/schemas';
-import { getServerAuthSession } from '@/lib/auth/server-session';
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
 
 export default function AuditLogsPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -59,8 +58,8 @@ async function AuditLogsAsync({
   if (!session?.user) {
     redirect('/login');
   }
-  const role = session.user.role;
-  if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.VIEW_AUDIT_LOGS)) {
+  const role = extractValidRole(session);
+  if (!role || !hasPermission(role, Permission.VIEW_AUDIT_LOGS)) {
     redirect('/dashboard');
   }
 

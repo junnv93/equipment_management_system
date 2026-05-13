@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { getServerAuthSession } from '@/lib/auth/server-session';
-import { type UserRole } from '@equipment-management/schemas';
+import { getServerAuthSession, extractValidRole } from '@/lib/auth/server-session';
 import { Permission, hasPermission } from '@equipment-management/shared-constants';
 import EquipmentMigrationWizard from '@/components/data-migration/EquipmentMigrationWizard';
 
@@ -13,11 +12,8 @@ export default async function DataMigrationPage() {
     redirect('/login');
   }
 
-  const role = session.user.role;
-  if (
-    typeof role !== 'string' ||
-    !hasPermission(role as UserRole, Permission.PERFORM_DATA_MIGRATION)
-  ) {
+  const role = extractValidRole(session);
+  if (!role || !hasPermission(role, Permission.PERFORM_DATA_MIGRATION)) {
     redirect('/dashboard');
   }
 
