@@ -524,7 +524,25 @@
     "status": "상태",
     "requestDate": "신청일",
     "receiveRequired": "수령확인 필요",
-    "sectionFetchError": "목록을 불러오지 못했습니다."
+    "sectionFetchError": "목록을 불러오지 못했습니다.",
+    "bulk": {
+      "receive": "선택 수령 확인",
+      "receiveTitle": "{count}건 수령 확인",
+      "receiveDescription": "선택한 {count}건의 장비를 일괄 수령 확인합니다.",
+      "receiveAll": "{count}건 수령 확인이 완료되었습니다.",
+      "receiveResult": "성공 {success}건 / 실패 {failed}건",
+      "receiveError": "수령 확인 중 오류가 발생했습니다."
+    },
+    "receive": {
+      "appearance": "외관 상태",
+      "operation": "작동 상태",
+      "accessories": "부속품 상태",
+      "accessoriesOptional": "부속품 상태 (선택)",
+      "abnormalDetails": "이상 상세",
+      "notes": "비고",
+      "submit": "수령 확인",
+      "cancel": "취소"
+    }
   },
   "outbound": {
     "searchPlaceholder": "장비 또는 사용자 검색",

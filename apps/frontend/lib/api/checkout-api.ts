@@ -472,6 +472,31 @@ const checkoutApi = {
   },
 
   /**
+   * 일괄 수령 확인 (inbound-bulk-receive-integration sprint, 2026-05-13)
+   * borrower_receive 단계 고정, Promise.allSettled, max 50건.
+   * ✅ Rule 2: checkerId는 서버에서 추출
+   */
+  async bulkReceiveCheckouts(
+    ids: string[],
+    condition: {
+      appearanceStatus: ConditionStatus;
+      operationStatus: ConditionStatus;
+      accessoriesStatus?: AccessoriesStatus;
+      abnormalDetails?: string;
+      notes?: string;
+    }
+  ): Promise<{
+    received: { id: string }[];
+    failed: { id: string; error: string }[];
+  }> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.BULK_RECEIVE, {
+      ids,
+      ...condition,
+    });
+    return transformSingleResponse(response);
+  },
+
+  /**
    * 반려 사유 프리셋 목록.
    * Backend SSOT: `/api/checkouts/rejection-presets` (`rejection_presets` table).
    */

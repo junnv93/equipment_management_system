@@ -524,7 +524,25 @@
     "status": "Status",
     "requestDate": "Request Date",
     "receiveRequired": "Receipt Required",
-    "sectionFetchError": "Failed to load list."
+    "sectionFetchError": "Failed to load list.",
+    "bulk": {
+      "receive": "Bulk Receive",
+      "receiveTitle": "Receive {count} Items",
+      "receiveDescription": "Confirm receipt of {count} selected equipment items.",
+      "receiveAll": "{count} items successfully received.",
+      "receiveResult": "{success} succeeded / {failed} failed",
+      "receiveError": "An error occurred during bulk receipt confirmation."
+    },
+    "receive": {
+      "appearance": "Appearance",
+      "operation": "Operation",
+      "accessories": "Accessories",
+      "accessoriesOptional": "Accessories (Optional)",
+      "abnormalDetails": "Abnormal Details",
+      "notes": "Notes",
+      "submit": "Confirm Receipt",
+      "cancel": "Cancel"
+    }
   },
   "outbound": {
     "searchPlaceholder": "Search equipment or user",
