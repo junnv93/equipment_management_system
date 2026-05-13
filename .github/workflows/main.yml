@@ -127,18 +127,30 @@ jobs:
         # 상세 워크플로: infra/secrets/README.md "ENV SSOT 동기화 체크리스트"
         run: pnpm verify:env-sync
 
-      - name: Drizzle — Schema Drift Check
-        # schema.ts ↔ drizzle/meta snapshot 동기화 검증.
-        # 누군가 schema.ts만 고치고 `drizzle-kit generate`를 깜빡하면 여기서 잡힙니다.
-        # 참고: docs/development/DRIZZLE_MIGRATIONS.md
+      - name: Drizzle — ADR-0010 Compliance Check
+        # ADR-0010: drizzle-kit generate / push 는 본 레포에서 금지.
+        # snapshot desync(0025까지만 존재)는 의도적 상태 — snapshot 동기화 검증 불필요.
+        # (1) generate 호출 차단 grep: 코드/스크립트에 drizzle-kit generate 가 남아있으면 FAIL
+        # (2) drizzle-kit check: journal entries ↔ SQL 파일 존재 정합성 검증
+        # 상세: docs/adr/0010-drizzle-manual-sql-policy.md
         run: |
-          pnpm --filter backend exec drizzle-kit generate --name __drift_check__ 2>&1 | tee /tmp/drizzle-gen.log
-          if git status --porcelain apps/backend/drizzle/ | grep -qE '^(\?\?|\sM|M )'; then
-            echo "::error::Schema drift detected. Run 'pnpm --filter backend run db:generate' locally and commit the result."
-            git status apps/backend/drizzle/
-            git diff apps/backend/drizzle/ | head -100
+          echo "--- (1) ADR-0010: drizzle-kit generate 호출 차단 ---"
+          VIOLATIONS=$(grep -rn "drizzle-kit generate" \
+            --include="*.ts" --include="*.js" --include="*.mjs" --include="*.sh" \
+            --include="*.yml" --include="*.yaml" --include="*.json" \
+            apps/ packages/ scripts/ .husky/ .github/ \
+            | grep -v "ADR-0010" \
+            | grep -v "^\.github/workflows/main\.yml" \
+            | grep -v "\.github/workflows/main\.yml" \
+            || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::ADR-0010 위반: drizzle-kit generate 호출 감지. docs/adr/0010-drizzle-manual-sql-policy.md 참조"
+            echo "$VIOLATIONS"
             exit 1
           fi
+          echo "✔ drizzle-kit generate 호출 없음"
+          echo "--- (2) journal ↔ SQL 파일 정합성 검증 ---"
+          pnpm --filter backend exec drizzle-kit check
 
       # ─── 인프라 린터 (셸 스크립트, Dockerfile, Compose, healthcheck 테스트) ───
 
@@ -301,7 +313,9 @@ jobs:
           name: shared-packages-dist
 
       - name: Run DB Migrations
-        run: pnpm --filter backend exec drizzle-kit push --force
+        # ADR-0010: drizzle-kit push --force 금지 → journal-based migrate 사용.
+        # db:migrate = npx drizzle-kit migrate (__drizzle_migrations 테이블 기준 미적용분만 순서대로 실행).
+        run: pnpm --filter backend run db:migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
 

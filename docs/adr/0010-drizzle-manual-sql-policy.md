@@ -109,19 +109,19 @@ SQL 손실 위험).**
   Phase 2 에서 수행)
 - **PR 체크리스트 명시** — DRIZZLE_MIGRATIONS.md §1 PR 체크리스트에 "snapshot 파일 변경 0건
   (`git diff drizzle/meta/*_snapshot.json`)" 항목 추가
-- **(SHOULD)** ESLint custom rule 또는 CI grep 으로 PR 에서 `drizzle-kit generate` /
-  `drizzle-kit push` 호출 자동 차단 — 본 ADR sprint 미구현 (over-engineering 회피),
-  트리거: 회귀 1건이라도 발생 시 별도 sprint 로 도입
+- **(SHOULD → ✅ 완료 2026-05-13)** CI grep 으로 PR 에서 `drizzle-kit generate` 호출 자동 차단 —
+  `.github/workflows/main.yml` ADR-0010 Compliance Check step 으로 구현.
+  `drizzle-kit push` 는 `package.json` 스크립트(`db:push`, `db:push:force`) 로만 남아있어
+  CI 직접 호출 0건 달성. ESLint custom rule 은 over-engineering 으로 계속 보류.
 - **테스트 인프라** — `pnpm --filter backend run db:reset` 로 baseline + 누적 manual SQL
   반복 적용 검증 가능 (PC 이동/꼬임 복구도 동일 명령)
-- **(SHOULD — known gap)** `.github/workflows/main.yml` L130-141 (Drizzle Schema Drift Check
-  step) 이 `drizzle-kit generate --name __drift_check__` 를 호출 — 본 ADR 결정 위반.
-  L303-304 (테스트 job) 의 `drizzle-kit push --force` 도 동일. **본 ADR sprint scope 외**
-  (CI workflow 변경 blast radius 큼 + 테스트 DB 정책 별도 검토 필요). 후속 sprint 권장:
-  (a) drift check step 을 `drizzle-kit check` (journal+SQL 정합성 만 검증) 로 교체,
-  (b) 테스트 job 의 `drizzle-kit push --force` 를 `drizzle-kit migrate` (journal-based)
-  로 교체, (c) 위 (a)(b) 완료 후 CI 에 `drizzle-kit generate` 호출 차단 grep 추가.
-  현재 갭은 tech-debt-tracker 에 `drizzle-policy-ci-workflow-followup` 으로 등록.
+- **(SHOULD → ✅ 완료 2026-05-13)** `.github/workflows/main.yml` CI ADR-0010 정합 완료:
+  (a) L130-141 "Drizzle Schema Drift Check" → "ADR-0010 Compliance Check" 로 교체
+  (`drizzle-kit generate --name __drift_check__` → generate 차단 grep + `drizzle-kit check`),
+  (b) L303-304 `drizzle-kit push --force` → `pnpm --filter backend run db:migrate` (journal-based),
+  (c) `apps/backend/package.json` `db:generate` 스크립트 제거,
+  (d) `.husky/pre-push` snapshot 파일 변경 차단 guard 추가.
+  tech-debt-tracker 항목 `drizzle-policy-ci-workflow-followup` + `drizzle-pre-push-snapshot-guard` closure.
 
 ### Trigger Conditions for Reconsideration
 

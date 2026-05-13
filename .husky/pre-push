@@ -52,6 +52,21 @@ if [ -n "${SOPS_AGE_KEY:-}" ] && command -v sops >/dev/null 2>&1; then
   rm -f "$_sops_tmp"
 fi
 
+# ── ADR-0010: snapshot 파일 변경 차단 ──────────────────────────────────────
+# snapshot desync(0025까지만 존재)는 의도적 상태. 변경 감지 = drizzle-kit generate 시도.
+# 상세: docs/adr/0010-drizzle-manual-sql-policy.md
+_SNAPSHOT_CHANGED=$(git diff --name-only "origin/main..HEAD" 2>/dev/null \
+  | grep 'apps/backend/drizzle/meta/.*_snapshot\.json' \
+  || true)
+if [ -n "$_SNAPSHOT_CHANGED" ]; then
+  echo "❌ pre-push: snapshot 파일 변경 감지 (ADR-0010 금지)"
+  printf '%s\n' "$_SNAPSHOT_CHANGED" | sed 's/^/    /'
+  echo "snapshot 파일은 drizzle-kit generate 없이 변경 불가 — ADR-0010 manual SQL 절차 사용."
+  echo "상세: docs/adr/0010-drizzle-manual-sql-policy.md"
+  exit 1
+fi
+# ──────────────────────────────────────────────────────────────────────────────
+
 echo "▶ pre-push: TypeScript check..."
 _t "tsc" pnpm tsc --noEmit
 
