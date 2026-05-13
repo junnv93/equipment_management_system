@@ -21,3 +21,4 @@ export * from './revoke-approval.dto';
 export * from './create-rejection-preset.dto';
 export * from './update-rejection-preset.dto';
 export * from './reorder-rejection-presets.dto';
+export * from './bulk-receive.dto';

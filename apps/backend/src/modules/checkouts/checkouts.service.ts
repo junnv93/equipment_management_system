@@ -18,6 +18,7 @@ import { ReturnCheckoutDto } from './dto/return-checkout.dto';
 import { ApproveReturnDto } from './dto/approve-return.dto';
 import { RejectReturnDto } from './dto/reject-return.dto';
 import { CreateConditionCheckDto } from './dto/create-condition-check.dto';
+import type { BulkReceiveInput, BulkReceiveResult } from './dto/bulk-receive.dto';
 import type { CreateRejectionPresetInput } from './dto/create-rejection-preset.dto';
 import type { UpdateRejectionPresetInput } from './dto/update-rejection-preset.dto';
 import type { ReorderRejectionPresetsInput } from './dto/reorder-rejection-presets.dto';
@@ -3570,6 +3571,64 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
     });
 
     return { canceled, failed };
+  }
+
+  // ============================================================================
+  // M8d: 일괄 수령 확인 (POST /checkouts/bulk-receive) — inbound-bulk-receive-integration
+  // ============================================================================
+
+  /**
+   * 일괄 수령 확인 — borrower_receive 단계 고정, Promise.allSettled로 부분 실패 허용.
+   * 단건 submitConditionCheck()의 scope/FSM/CAS 검증을 그대로 활용.
+   * ✅ Rule 2: checkerId = extractUserId(req) — 컨트롤러에서 주입
+   * ✅ Rule 11 예외: bulk UX상 per-item version 전달 불가 → DB 최신값 사용.
+   *    CAS 충돌 시 해당 항목만 Promise.allSettled failed 처리.
+   * ✅ step 고정: borrower_receive — 클라이언트 단계 선택 불가 (본 endpoint 목적 한정)
+   * ✅ attachmentIds 미포함: per-item 사진은 단건 condition-check endpoint 사용
+   */
+  async bulkReceive(
+    ids: string[],
+    condition: Omit<BulkReceiveInput, 'ids'>,
+    checkerId: string,
+    req: AuthenticatedRequest
+  ): Promise<BulkReceiveResult> {
+    const results = await Promise.allSettled(
+      ids.map(async (id) => {
+        const checkout = await this.findCheckoutEntity(id);
+        // Rule 11 예외: bulk UX상 per-item version 전달 불가 → DB 최신값 사용
+        return this.submitConditionCheck(
+          id,
+          {
+            version: checkout.version,
+            step: CCSVal.BORROWER_RECEIVE,
+            appearanceStatus: condition.appearanceStatus,
+            operationStatus: condition.operationStatus,
+            accessoriesStatus: condition.accessoriesStatus,
+            abnormalDetails: condition.abnormalDetails,
+            notes: condition.notes,
+          } as CreateConditionCheckDto,
+          checkerId,
+          req
+        );
+      })
+    );
+
+    const received: { id: string }[] = [];
+    const failed: { id: string; error: string }[] = [];
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        received.push({ id: ids[i] });
+      } else {
+        const err = result.reason as { message?: string; response?: { message?: string } };
+        failed.push({
+          id: ids[i],
+          error: err?.response?.message ?? err?.message ?? 'Unknown error',
+        });
+      }
+    });
+
+    return { received, failed };
   }
 
   // ============================================================================

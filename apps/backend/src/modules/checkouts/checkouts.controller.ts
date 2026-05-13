@@ -67,6 +67,9 @@ import {
   BulkCancelDto,
   BulkCancelValidationPipe,
   type BulkCancelResult,
+  BulkReceiveDto,
+  BulkReceiveValidationPipe,
+  type BulkReceiveResult,
   RevokeApprovalDto,
   RevokeApprovalValidationPipe,
   CreateRejectionPresetDto,
@@ -885,6 +888,35 @@ export class CheckoutsController {
   ): Promise<BulkCancelResult> {
     const cancellerId = extractUserId(req);
     return this.checkoutsService.bulkCancel(dto.ids, cancellerId, req);
+  }
+
+  // ============================================================================
+  // M8d: 일괄 수령 확인 (inbound-bulk-receive-integration sprint, 2026-05-13)
+  // ============================================================================
+
+  @Post('bulk-receive')
+  @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @UsePipes(BulkReceiveValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' })
+  @ApiOperation({
+    summary: '반출 일괄 수령 확인',
+    description:
+      'borrower_receive 단계 고정. Promise.allSettled 기반 — 부분 실패 허용. max 50건. ' +
+      '단건 submitConditionCheck의 scope/FSM/CAS 검증을 그대로 활용. checkerId는 세션에서 추출.',
+  })
+  @ApiBody({ type: BulkReceiveDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '일괄 수령 확인 결과 (received/failed 목록)',
+  })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'COMPLETE_CHECKOUT 권한 없음' })
+  @HttpCode(HttpStatus.OK)
+  async bulkReceive(
+    @Body() dto: BulkReceiveDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<BulkReceiveResult> {
+    const checkerId = extractUserId(req);
+    return this.checkoutsService.bulkReceive(dto.ids, dto, checkerId, req);
   }
 
   // ============================================================================
