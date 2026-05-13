@@ -177,9 +177,9 @@ export class CalibrationService extends VersionedBaseService {
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
     }
 
-    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain approvals 무효화는
-    // specific sub-prefix만 (ADR-0012 §Decision-2).
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+    // 라운드 #5 R2 service-local-closure: cross-domain approvals 무효화는 helper SSOT API 위임
+    // (ADR-0012 §Decision-2). helper 내부에서 specific sub-prefix 사용.
+    void this.cacheInvalidationHelper.invalidateApprovalCounts();
   }
 
   private async resolveEquipmentTeamId(equipmentId: string): Promise<string | null> {

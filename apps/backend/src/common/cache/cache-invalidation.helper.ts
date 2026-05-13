@@ -47,10 +47,12 @@ export class CacheInvalidationHelper {
    * 승인 카운트 캐시 무효화
    *
    * 사용 시점: 승인/반려 처리 후, 새 승인 요청 생성 후
-   * 패턴: approvals:*
+   * 패턴: approvals:counts:* (ADR-0012 §Decision-2 sub-prefix specific —
+   * approvals 도메인 sub-prefix `counts:` 단독 사용. 향후 새 sub-prefix 추가 시
+   * 이 함수에 패턴 1줄 추가 필요)
    */
   async invalidateApprovalCounts(): Promise<void> {
-    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}counts:*`);
     this.logger.debug('✓ Invalidated all approval count caches');
   }
 

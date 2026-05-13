@@ -83,9 +83,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
     this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}registry:`);
     this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}equipment:`);
-    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain approvals 무효화는
-    // specific sub-prefix만 (ADR-0012 §Decision-2). approvals 도메인은 counts: 단일 sub-prefix 사용.
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+    // 라운드 #5 R2 service-local-closure: cross-domain approvals 무효화는 helper SSOT API 위임
+    // (ADR-0012 §Decision-2). helper 내부에서 specific sub-prefix 사용 — 향후 sub-prefix 추가 시 단일 진입점 갱신.
+    void this.cacheInvalidationHelper.invalidateApprovalCounts();
   }
 
   /**

@@ -90,7 +90,10 @@ describe('CalibrationFactorsService', () => {
         { provide: SimpleCacheService, useValue: mockCacheService },
         {
           provide: CacheInvalidationHelper,
-          useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+            invalidateApprovalCounts: jest.fn().mockResolvedValue(undefined),
+          },
         },
         {
           provide: EventEmitter2,

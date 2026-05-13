@@ -76,6 +76,7 @@ import { conditionChecks } from '@equipment-management/db/schema/condition-check
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { EquipmentService } from '../equipment/equipment.service';
@@ -219,6 +220,7 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly equipmentService: EquipmentService,
     private readonly teamsService: TeamsService,
     private readonly eventEmitter: EventEmitter2,
@@ -460,9 +462,9 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
    * @param checkoutId 변경된 checkout의 ID (detail 캐시 무효화용)
    */
   private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
-    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain approvals 무효화는
-    // specific sub-prefix만 (ADR-0012 §Decision-2). approvals 도메인은 counts: 단일 sub-prefix 사용.
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+    // 라운드 #5 R2 service-local-closure: cross-domain approvals 무효화는 helper SSOT API 위임
+    // (ADR-0012 §Decision-2). helper 내부에서 specific sub-prefix 사용.
+    void this.cacheInvalidationHelper.invalidateApprovalCounts();
 
     // inbound-overview-cache-coherence: BFF 30s TTL 집계 캐시 stale 방지.
     // checkouts 상태 전이는 inbound-overview 집계에 영향 (status, condition_check 등).

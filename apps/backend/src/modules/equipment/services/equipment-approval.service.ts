@@ -27,8 +27,8 @@ import {
   VALIDATION_RULES,
 } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
-import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import type { AppDatabase } from '@equipment-management/db';
 import { EquipmentService } from '../equipment.service';
 import { DocumentService } from '../../../common/file-upload/document.service';
@@ -65,7 +65,8 @@ export class EquipmentApprovalService {
     private readonly equipmentService: EquipmentService,
     private readonly documentService: DocumentService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {}
 
   /**
@@ -459,7 +460,7 @@ export class EquipmentApprovalService {
           .returning();
 
         if (!casUpdated) {
-          this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+          void this.cacheInvalidationHelper.invalidateApprovalCounts();
           throw createVersionConflictException();
         }
 
@@ -518,7 +519,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
-      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+      void this.cacheInvalidationHelper.invalidateApprovalCounts();
       this.logger.log(`Request approved: ${requestUuid}`);
       return updated;
     } catch (error) {
@@ -628,7 +629,7 @@ export class EquipmentApprovalService {
         .returning();
 
       if (!updated) {
-        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+        void this.cacheInvalidationHelper.invalidateApprovalCounts();
         throw createVersionConflictException();
       }
 
@@ -647,7 +648,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
-      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
+      void this.cacheInvalidationHelper.invalidateApprovalCounts();
       this.logger.log(`Request rejected: ${requestUuid}`);
       return updated;
     } catch (error) {

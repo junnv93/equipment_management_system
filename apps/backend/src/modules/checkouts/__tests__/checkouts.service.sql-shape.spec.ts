@@ -19,6 +19,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CheckoutsService } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
 import {
@@ -28,6 +29,7 @@ import {
 } from '../../../common/testing/drizzle-mock';
 import {
   createMockCacheService,
+  createMockCacheInvalidationHelper,
   createMockEventEmitter,
 } from '../../../common/testing/mock-providers';
 import type { CheckoutQueryDto } from '../dto/checkout-query.dto';
@@ -45,6 +47,7 @@ describe('CheckoutsService — SQL shape regression', () => {
         CheckoutsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDrizzleHandle.drizzle },
         { provide: SimpleCacheService, useValue: createMockCacheService() },
+        { provide: CacheInvalidationHelper, useValue: createMockCacheInvalidationHelper() },
         {
           provide: EquipmentService,
           useValue: {

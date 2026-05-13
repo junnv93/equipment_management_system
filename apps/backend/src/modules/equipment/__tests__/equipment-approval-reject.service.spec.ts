@@ -3,6 +3,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EquipmentApprovalService } from '../services/equipment-approval.service';
 import { EquipmentService } from '../equipment.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { createMockCacheInvalidationHelper } from '../../../common/testing/mock-providers';
 import { DocumentService } from '../../../common/file-upload/document.service';
 import { rejectRequestSchema } from '../dto/reject-request.dto';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
@@ -120,6 +122,7 @@ describe('equipment-approval-reject — defense-in-depth boundary matrix', () =>
               deleteByPrefix: jest.fn(),
             },
           },
+          { provide: CacheInvalidationHelper, useValue: createMockCacheInvalidationHelper() },
         ],
       }).compile();
 

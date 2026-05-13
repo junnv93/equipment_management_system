@@ -18,6 +18,8 @@ import { ExecutionContext, ForbiddenException, BadRequestException } from '@nest
 import { Test, TestingModule } from '@nestjs/testing';
 import { CheckoutsService } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { createMockCacheInvalidationHelper } from '../../../common/testing/mock-providers';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -295,6 +297,7 @@ describe('bulkReceive — partial-failure (M-15)', () => {
         CheckoutsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDrizzle },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        { provide: CacheInvalidationHelper, useValue: createMockCacheInvalidationHelper() },
         {
           provide: EquipmentService,
           useValue: {
