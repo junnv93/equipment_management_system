@@ -5,6 +5,19 @@
 
 ---
 
+## ~~2026-05-13 — ultrareview-shield-followups-sh1-sh4~~ ✅ 완료 (2026-05-13)
+
+> **핵심**: ultrareview-shield 후속 4건 spec + 구현. SH-1 flock 동시 실행 contention (동일 lock 보유 중 두 번째 shield EXIT 1 + stderr 충돌 메시지). SH-2 SIGTERM/SIGINT trap restore spec — self-signal 패턴(`kill -s TERM $$`) 으로 race-free 동기 검증. SH-3 stale_gc() — flock 획득 직후 `find /tmp -mmin +60 -name 'ur-shield-*'` best-effort GC + spec. SH-4 `check-preflight-perf-budget.mjs` — PREFLIGHT_BUDGET_SECONDS + PREFLIGHT_CMD_OVERRIDE mock, `ur:preflight:perf-check` 스크립트.
+>
+> **핵심 아키텍처 결정**:
+> - SH-2 self-signal 패턴: 외부 signal + SA_RESTART 타이밍 경쟁 회피. `kill -s TERM $$`는 자식 bash PID에만 전달 → Node.js test runner process group 격리 유지. `spawnSync` 동기 실행으로 flaky 0.
+> - stale_gc 배치 시점: flock 획득 완료 직후 (다른 shield 미실행 보장 상태) — 격리파일·잔존물 혼동 위험 0.
+> - SH-4 PREFLIGHT_CMD_OVERRIDE: `/bin/true` mock으로 실 preflight 없이 budget 로직만 단위 검증 가능.
+>
+> **검증**: Mode 1 harness PASS (MUST 8/8, SHOULD 3/3, iter 1). `node --test` 12/12 PASS. commit `cb426431`.
+
+---
+
 ## ~~2026-05-12 — ultrareview-shield-wrapper~~ ✅ 완료 (2026-05-12)
 
 > **핵심**: ultrareview-preflight Gate 1(위험 파일) 차단 시 실사용 dev `.env`(apps/frontend/.env.local, apps/backend/.env, .env.test)를 `mktemp -d -t ur-shield-XXXXXX` 격리 디렉토리로 mv → ultrareview 실행 → `trap restore_files EXIT` 자동 복원. `rm` 우회로 dev 서버 + JWT_SECRET 분실 위험 차단.
