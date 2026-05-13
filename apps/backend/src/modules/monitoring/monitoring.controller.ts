@@ -53,6 +53,20 @@ export class MonitoringController {
   }
 
   /**
+   * 서버 현재 시각 조회 엔드포인트 (SH-5).
+   *
+   * 클라이언트 clock skew 보정용. Public — 인증 전에도 사용 가능.
+   * 호출 사이트: `useServerTimeOffset` hook (drift-once-on-mount 패턴).
+   *
+   * @AuditLog 미적용 — @Public() + 고빈도 폴링 미허용 (per-session 1회 호출) + void 효과 없음.
+   */
+  @Public()
+  @Get('server-time')
+  getServerTime(): { serverTime: string } {
+    return { serverTime: new Date().toISOString() };
+  }
+
+  /**
    * 시스템 메트릭 조회 엔드포인트
    * 시스템 설정 조회 권한 필요
    */

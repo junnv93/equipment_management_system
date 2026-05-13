@@ -368,6 +368,7 @@ export const API_ENDPOINTS = {
     STATUS: '/api/monitoring/status',
     HTTP_STATS: '/api/monitoring/http-stats',
     CACHE_STATS: '/api/monitoring/cache-stats',
+    SERVER_TIME: '/api/monitoring/server-time',
   },
 
   // ============================================================================

@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useRevocationWindow } from '@/hooks/use-revocation-window';
+import { useServerTimeOffset } from '@/hooks/use-server-time-offset';
 
 interface RevocationWindowCountdownProps {
   /** 승인 시각 ISO 8601 timestamp (서버 응답 SSOT). */
@@ -45,7 +46,8 @@ export function RevocationWindowCountdown({
   isPending,
 }: RevocationWindowCountdownProps) {
   const t = useTranslations('checkouts.revocationWindow');
-  const window_ = useRevocationWindow(approvedAt);
+  const serverTimeDeltaMs = useServerTimeOffset();
+  const window_ = useRevocationWindow(approvedAt, serverTimeDeltaMs);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState('');
   const reasonId = useId();

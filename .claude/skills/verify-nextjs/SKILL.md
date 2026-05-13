@@ -281,6 +281,70 @@ done
 | 8   | SSR-safe localStorage   | PASS/FAIL | useEffect 없는 localStorage 훅 목록 |
 ```
 
+### Step 9: PPR-compatible layout auth guard (2026-05-13 추가)
+
+`(dashboard)` 하위 layout.tsx에서 서버 세션 인증(`getServerAuthSession`)을 수행할 때, `export default async function Layout` 패턴은 해당 layout이 커버하는 route segment 전체를 dynamic 렌더링으로 강제한다 — Non-Blocking PPR 정적 셸 캐싱이 무효화됨.
+
+**올바른 패턴 (admin/layout.tsx 기준):**
+```typescript
+// ✅ sync outer: PPR 정적 셸 보존
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AdminRoleGuard>{children}</AdminRoleGuard>
+    </Suspense>
+  );
+}
+
+// ✅ async inner: 인증 로직 분리
+async function AdminRoleGuard({ children }: { children: ReactNode }) {
+  const session = await getServerAuthSession();
+  if (!session?.user) redirect('/login');
+  // ...
+}
+```
+
+```bash
+# layout.tsx에서 export default async function 탐지 (PPR 파괴)
+grep -rn "export default async function" \
+  apps/frontend/app --include="layout.tsx" \
+  | grep -v "// "
+```
+
+**PASS:** 0건 — 모든 layout.tsx가 sync outer function.
+**FAIL:** `export default async function Layout` 발견 → PPR 정적 셸 파괴.
+
+**배경:** `admin/layout.tsx` async → sync+Suspense 전환 (2026-05-13 dependabot-cascade-followups 시니어 자기검토). `dashboard/layout.tsx`는 이미 sync 패턴. PPR `cacheComponents: true` 환경에서 async layout은 route segment 전체를 dynamic으로 강제.
+
+**예외:** PPR를 적용하지 않는 `(auth)` 레이아웃 등 최상위 셸 레이아웃.
+
+### Step 10: 프론트엔드 서버 컴포넌트 `session.user.role` typeof 가드 (2026-05-13 추가)
+
+서버 컴포넌트에서 `session.user.role`을 직접 `as UserRole`로 캐스팅하면 JWT에서 non-string role이 올 경우 런타임 오류 가능성이 있다. `typeof role !== 'string'` 가드를 거쳐 `const role`에 추출한 후 캐스팅해야 한다.
+
+**올바른 패턴:**
+```typescript
+const role = session.user.role;
+// typeof guard 선행 — includes/hasPermission 호출 전 타입 안전성 보장
+if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.VIEW_X)) {
+  redirect('/dashboard');
+}
+```
+
+```bash
+# session.user.role을 직접 as 캐스팅하는 패턴 탐지 (typeof 가드 분리 없음)
+grep -rn "session\.user\.role as " \
+  apps/frontend/app --include="*.tsx" --include="*.ts" \
+  | grep -v "// "
+```
+
+**PASS:** 0건 — 올바른 패턴은 `const role = session.user.role` 후 `role as UserRole` 사용.
+**FAIL:** `session.user.role as UserRole` 또는 `session.user.role as ` 발견.
+
+**배경:** `audit-logs/page.tsx`에서 `hasPermission(session.user.role as UserRole, ...)` 직접 캐스팅 발견 → `typeof role !== 'string' ||` 가드 추가로 수정 (2026-05-13 verify-implementation FAIL → 즉시 수정 commit a5246c2c).
+
+**예외:** `import type { UserRole }` 타입 선언 라인은 런타임 캐스트 아님.
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
