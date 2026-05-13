@@ -343,26 +343,17 @@ export default function CheckoutDetailClient({
   // Undo toast — 승인 계열 3종 (undoWindowMs: 5000 대응)
   const { showApprovalUndoToast: showApproveUndoToast } = useUndoToast({
     checkoutId: initialCheckout.id,
-    invalidateKeys: [
-      queryKeys.checkouts.resource.detail(initialCheckout.id),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-    ],
+    invalidateKeys: CheckoutCacheInvalidation.approvalWithDetailKeys(initialCheckout.id),
     abortUndo: approveMutation.abortUndo,
   });
   const { showApprovalUndoToast: showApproveReturnUndoToast } = useUndoToast({
     checkoutId: initialCheckout.id,
-    invalidateKeys: [
-      queryKeys.checkouts.resource.detail(initialCheckout.id),
-      ...CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
-    ],
+    invalidateKeys: CheckoutCacheInvalidation.returnApprovalWithDetailKeys(initialCheckout.id),
     abortUndo: approveReturnMutation.abortUndo,
   });
   const { showApprovalUndoToast: showBorrowerApproveUndoToast } = useUndoToast({
     checkoutId: initialCheckout.id,
-    invalidateKeys: [
-      queryKeys.checkouts.resource.detail(initialCheckout.id),
-      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
-    ],
+    invalidateKeys: CheckoutCacheInvalidation.approvalWithDetailKeys(initialCheckout.id),
     abortUndo: borrowerApproveMutation.abortUndo,
   });
 

@@ -603,6 +603,25 @@ export class CheckoutCacheInvalidation {
   ];
 
   /**
+   * 승인 + 단건 상세 무효화 키 (useUndoToast SSOT).
+   * APPROVAL_KEYS + detail(id) — 승인 undo 후 상세 페이지 즉시 갱신.
+   */
+  static approvalWithDetailKeys(id: string): ReadonlyArray<readonly unknown[]> {
+    return [queryKeys.checkouts.resource.detail(id), ...CheckoutCacheInvalidation.APPROVAL_KEYS];
+  }
+
+  /**
+   * 반입 승인 + 단건 상세 무효화 키 (useUndoToast SSOT).
+   * RETURN_APPROVAL_KEYS + detail(id) — 반입 승인 undo 후 상세 페이지 즉시 갱신.
+   */
+  static returnApprovalWithDetailKeys(id: string): ReadonlyArray<readonly unknown[]> {
+    return [
+      queryKeys.checkouts.resource.detail(id),
+      ...CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
+    ];
+  }
+
+  /**
    * 상수 기반 캐시 무효화 범용 메서드
    *
    * *_KEYS 상수를 SSOT로 활용하여 일관된 무효화 수행.

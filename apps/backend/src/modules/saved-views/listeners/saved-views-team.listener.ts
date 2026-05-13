@@ -44,11 +44,9 @@ export class SavedViewsTeamListener {
           `[G-5] 팀 삭제(${teamId}) — orphan TEAM scope saved-views ${affected.length}건 PRIVATE 강등`
         );
 
-        // 영향받은 소유자들의 list 캐시 무효화
-        const ownerIds = [...new Set(affected.map((r) => r.ownerId))];
-        for (const ownerId of ownerIds) {
-          this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.SAVED_VIEWS}list:${ownerId}:`);
-        }
+        // saved-views prefix 전체 flush — 팀원들이 캐시한 TEAM scope 목록도 stale이 되므로
+        // 소유자별 선택 무효화보다 전체 flush가 안전 (팀 삭제는 드문 이벤트)
+        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.SAVED_VIEWS);
       }
     } catch (err) {
       this.logger.error(`[G-5] saved-views orphan cleanup 실패 (teamId=${teamId})`, err);

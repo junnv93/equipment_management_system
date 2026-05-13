@@ -78,6 +78,12 @@ interface CheckoutGroupCardProps {
    * fixture page가 row-level + group-level 두 토글 경로를 일관된 API로 노출.
    */
   onToggleRow?: (rowId: string) => void;
+  /**
+   * Row checkbox 표시/선택 가능 여부를 결정하는 외부 predicate.
+   * 미전달 시 기본값: `row.status === PENDING && row.canApproveItem` (OutboundCheckoutsTab 호환).
+   * InboundCheckoutsTab은 `status === LENDER_CHECKED && canSubmitConditionCheck` predicate 주입.
+   */
+  isRowSelectable?: (row: EquipmentRowData) => boolean;
 }
 
 // ============================================================================
@@ -91,6 +97,7 @@ function CheckoutGroupCard({
   selectedRowIds,
   onToggleGroup,
   onToggleRow,
+  isRowSelectable,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
   const tCommon = useTranslations('common');
@@ -398,7 +405,10 @@ function CheckoutGroupCard({
               >
                 {equipmentRows.map((row, rowIndex) => {
                   const rowSelectable =
-                    showRowCheckbox && row.status === CSVal.PENDING && row.canApproveItem;
+                    showRowCheckbox &&
+                    (isRowSelectable
+                      ? isRowSelectable(row)
+                      : row.status === CSVal.PENDING && row.canApproveItem);
                   const isRowSelected =
                     showRowCheckbox && (selectedRowIds?.has(row.checkoutId) ?? false);
 
