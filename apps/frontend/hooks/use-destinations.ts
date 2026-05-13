@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import checkoutApi from '@/lib/api/checkout-api';
 
 /**
@@ -17,7 +17,7 @@ export function useDestinations() {
   return useQuery({
     queryKey: queryKeys.checkouts.resource.destinations(),
     queryFn: () => checkoutApi.getDestinations(),
-    staleTime: CACHE_TIMES.DAY,
+    ...QUERY_CONFIG.CHECKOUT_DESTINATIONS,
   });
 }
 

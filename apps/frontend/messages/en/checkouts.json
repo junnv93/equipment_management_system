@@ -538,7 +538,9 @@
       "operation": "Operation",
       "accessories": "Accessories",
       "accessoriesOptional": "Accessories (Optional)",
+      "allNormal": "All Normal — Confirm Receipt",
       "abnormalDetails": "Abnormal Details",
+      "abnormalDetailsRequired": "Abnormal details are required when any item is abnormal.",
       "notes": "Notes",
       "submit": "Confirm Receipt",
       "cancel": "Cancel"

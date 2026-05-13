@@ -538,7 +538,9 @@
       "operation": "작동 상태",
       "accessories": "부속품 상태",
       "accessoriesOptional": "부속품 상태 (선택)",
+      "allNormal": "모두 정상으로 수령 확인",
       "abnormalDetails": "이상 상세",
+      "abnormalDetailsRequired": "이상 항목이 있는 경우 이상 상세를 입력해야 합니다.",
       "notes": "비고",
       "submit": "수령 확인",
       "cancel": "취소"

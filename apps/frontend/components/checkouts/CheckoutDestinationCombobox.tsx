@@ -76,10 +76,14 @@ export function CheckoutDestinationCombobox({
     [onChange, resetState]
   );
 
-  const enterCreateMode = useCallback((seed: string) => {
-    setMode('create');
-    setCreateInput(seed);
-  }, []);
+  const enterCreateMode = useCallback(
+    (seed: string) => {
+      setMode('create');
+      setCreateInput(seed);
+      setCreateError(null);
+    },
+    [setCreateError]
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -261,7 +265,7 @@ export function CheckoutDestinationCombobox({
               {createLen} / {VALIDATION_RULES.DESTINATION_MAX_LENGTH}
             </p>
             {isDuplicate && (
-              <p className="text-xs text-amber-600 dark:text-amber-400" role="status">
+              <p className="text-xs text-brand-warning" role="status">
                 {t('create.duplicate')}
               </p>
             )}
