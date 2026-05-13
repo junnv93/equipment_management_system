@@ -28,6 +28,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkFrontendEnvSync } from './check-env-sync.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(__dirname, '..');
@@ -337,6 +338,7 @@ export function runDiagnosis(repoRoot = REPO_ROOT) {
   const manifest = checkManifestSync(repoRoot);
   const nextLock = checkNextDevLock(repoRoot, snapshot);
   const ports = findDevPorts(procs, snapshot);
+  const envSync = checkFrontendEnvSync(repoRoot);
 
   const issues = [];
   if (zombies.length > 0) {
@@ -370,12 +372,34 @@ export function runDiagnosis(repoRoot = REPO_ROOT) {
       detail: nextLock,
     });
   }
+  if (envSync.state === 'no-example') {
+    issues.push({
+      severity: 'fail',
+      kind: 'env-sync',
+      message: `frontend .env.example 없음 — git 상태 확인 필요.`,
+      detail: envSync,
+    });
+  } else if (envSync.state === 'no-local') {
+    issues.push({
+      severity: 'warn',
+      kind: 'env-sync',
+      message: `frontend .env.local 없음 (${envSync.missingKeys.length}개 키 누락). pnpm setup:env 로 자동 생성.`,
+      detail: envSync,
+    });
+  } else if (envSync.state === 'missing-keys') {
+    issues.push({
+      severity: 'warn',
+      kind: 'env-sync',
+      message: `frontend .env.local 누락 키 ${envSync.missingKeys.length}개: ${envSync.missingKeys.join(', ')}. pnpm setup:env 로 보완.`,
+      detail: envSync,
+    });
+  }
 
   let level = 'ok';
   if (issues.some((i) => i.severity === 'fail')) level = 'fail';
   else if (issues.length > 0) level = 'warn';
 
-  return { level, issues, active, zombies, manifest, nextLock, ports };
+  return { level, issues, active, zombies, manifest, nextLock, ports, envSync };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,13 +480,30 @@ function printHumanReport(report) {
     }
   }
 
+  console.log(c('dim', '\n  env sync:'));
+  const env = report.envSync;
+  if (!env || env.state === 'ok') {
+    const extra = env?.extraKeys?.length ? c('dim', ` (로컬 전용 ${env.extraKeys.length}개 — 정상)`) : '';
+    console.log(`    ${c('green', 'ok')}${extra}`);
+  } else if (env.state === 'no-example') {
+    console.log(`    ${c('red', 'no-example')}  .env.example 없음 — git status 확인`);
+  } else if (env.state === 'no-local') {
+    console.log(`    ${c('yellow', 'no-local')}  .env.local 없음 (${env.missingKeys.length}개 키). pnpm setup:env 실행`);
+  } else if (env.state === 'missing-keys') {
+    console.log(
+      `    ${c('yellow', 'missing-keys')}  누락 ${env.missingKeys.length}개: ${env.missingKeys.join(', ')}. pnpm setup:env 실행`
+    );
+  }
+
   if (report.issues.length > 0) {
     console.log(c('bold', '\nissues:'));
     for (const issue of report.issues) {
       const stag = issue.severity === 'fail' ? c('red', 'FAIL') : c('yellow', 'WARN');
       console.log(`  ${stag} ${issue.kind}: ${issue.message}`);
     }
-    console.log(c('dim', '\n  복구: pnpm dev:fresh   |   진단만: pnpm dev:doctor'));
+    console.log(
+      c('dim', '\n  복구: pnpm dev:fresh / pnpm setup:env   |   진단만: pnpm dev:doctor')
+    );
   } else {
     console.log(c('green', '\n  ✓ 환경 정상'));
   }
@@ -481,7 +522,10 @@ export function formatHintLine(report) {
   const pgids = new Set((report.zombies ?? []).map((p) => p.pgid)).size;
   const m = report.manifest?.state ?? 'unknown';
   const lock = report.nextLock?.state ?? 'unknown';
-  return `[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} nextLock=${lock} — pnpm dev:doctor / pnpm dev:fresh`;
+  const env = report.envSync?.state ?? 'unknown';
+  const envPart = env !== 'ok' && env !== 'unknown' ? ` envSync=${env}` : '';
+  const setupHint = envPart ? ' / pnpm setup:env' : '';
+  return `[dev-hygiene] zombies=${z}(pgids=${pgids}) manifest=${m} nextLock=${lock}${envPart} — pnpm dev:doctor / pnpm dev:fresh${setupHint}`;
 }
 
 const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
