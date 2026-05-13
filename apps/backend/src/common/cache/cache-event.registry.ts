@@ -85,17 +85,8 @@ export interface CacheInvalidationRule {
  * 본 allowlist 갱신은 신규 wholesale 도입을 의미하므로 review 필수.
  */
 export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST: ReadonlySet<string> = new Set([
-  // Checkouts (10 entries — checkout.service의 자체 cache가 broader, sprint별 sub-prefix 정의 미정)
-  'NOTIFICATION_EVENTS.CHECKOUT_CREATED',
-  'NOTIFICATION_EVENTS.CHECKOUT_APPROVED',
-  'NOTIFICATION_EVENTS.CHECKOUT_REJECTED',
-  'NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED',
-  'NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED',
-  'NOTIFICATION_EVENTS.CHECKOUT_STARTED',
-  'NOTIFICATION_EVENTS.CHECKOUT_RETURNED',
-  'NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED',
-  'NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED',
-  'NOTIFICATION_EVENTS.CHECKOUT_OVERDUE',
+  // Checkouts 10 entries — 2026-05-13 `cache-wholesale-migration-checkouts` sprint에서
+  // list:* + summary:* + detail:* specific sub-prefix로 분해됨 (allowlist 제거 완료).
   // Disposal (1 — disposal-requests:* prefix)
   'NOTIFICATION_EVENTS.DISPOSAL_REJECTED',
   // Equipment imports (3 — equipment-imports:* prefix)
@@ -118,27 +109,47 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   // 모든 반출 이벤트는 대시보드 카운트에 영향 + checkout 캐시 무효화
   [NOTIFICATION_EVENTS.CHECKOUT_CREATED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_APPROVED]: {
     actions: [
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   // rental 2-step 승인: 장비 상태 미변경 → invalidateEquipmentDetail 불필요
   [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_APPROVED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_BORROWER_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_STARTED]: {
     actions: [
@@ -148,7 +159,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURNED]: {
     actions: [
@@ -158,7 +173,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED]: {
     actions: [
@@ -168,15 +187,27 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_OVERDUE]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*` },
+    ],
   },
 
   // ─── 교정 (Calibration) ───

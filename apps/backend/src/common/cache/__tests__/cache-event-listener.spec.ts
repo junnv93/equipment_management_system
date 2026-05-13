@@ -75,8 +75,15 @@ describe('CacheEventListener', () => {
 
       expect(mockHelper.invalidateAllDashboard).toHaveBeenCalled();
       expect(mockHelper.invalidateEquipmentDetail).toHaveBeenCalledWith('eq-1');
+      // wholesale 분해 (cache-wholesale-migration-checkouts) — list/summary/detail sub-prefix
       expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
-        `${CACHE_KEY_PREFIXES.CHECKOUTS}*`
+        `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*`
+      );
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        `${CACHE_KEY_PREFIXES.CHECKOUTS}summary:*`
+      );
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:*`
       );
     });
 
@@ -93,7 +100,7 @@ describe('CacheEventListener', () => {
 
       expect(mockHelper.invalidateAfterEquipmentUpdate).toHaveBeenCalledWith('eq-2', true, false);
       expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
-        `${CACHE_KEY_PREFIXES.CHECKOUTS}*`
+        `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*`
       );
     });
   });
@@ -255,9 +262,9 @@ describe('CacheEventListener', () => {
 
       // equipmentId가 없으므로 invalidateAfterEquipmentUpdate 호출 안됨
       expect(mockHelper.invalidateAfterEquipmentUpdate).not.toHaveBeenCalled();
-      // 패턴 삭제는 여전히 실행됨
+      // 패턴 삭제는 여전히 실행됨 (wholesale 분해 — list/summary/detail)
       expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
-        `${CACHE_KEY_PREFIXES.CHECKOUTS}*`
+        `${CACHE_KEY_PREFIXES.CHECKOUTS}list:*`
       );
     });
   });
