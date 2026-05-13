@@ -59,7 +59,8 @@ async function AuditLogsAsync({
   if (!session?.user) {
     redirect('/login');
   }
-  if (!hasPermission(session.user.role as UserRole, Permission.VIEW_AUDIT_LOGS)) {
+  const role = session.user.role;
+  if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.VIEW_AUDIT_LOGS)) {
     redirect('/dashboard');
   }
 
