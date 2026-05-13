@@ -249,15 +249,35 @@ export class AuditInterceptor implements NestInterceptor {
     const user: JwtUser | undefined = request.user;
     const ipAddress = this.getClientIp(request);
 
-    // 엔티티 ID 추출
-    const entityId = this.extractValue(metadata.entityIdPath, request, response);
-    if (!entityId) {
+    // 엔티티 ID 추출 — review §3.7 closure: array (bulk operation) 안전 처리.
+    // body.ids 같은 array entityIdPath → SYSTEM_USER_UUID sentinel + entityName aggregate
+    // (uuid NOT NULL 컬럼 INSERT 실패 silent bug 차단)
+    const rawEntityId = this.extractRawValue(metadata.entityIdPath, request, response);
+    let entityId: string;
+    let aggregateEntityName: string | undefined;
+
+    if (typeof rawEntityId === 'string') {
+      entityId = rawEntityId;
+    } else if (Array.isArray(rawEntityId)) {
+      const ids = rawEntityId.filter((v): v is string => typeof v === 'string');
+      if (ids.length === 0) {
+        this.logger.warn(
+          `Empty/non-string array entityId for ${metadata.action} ${metadata.entityType}`
+        );
+        return;
+      }
+      // SYSTEM_USER_UUID sentinel + aggregate preview — audit trail 보존
+      entityId = SYSTEM_USER_UUID;
+      const preview = ids.slice(0, 3).join(',');
+      const overflow = ids.length > 3 ? `...+${ids.length - 3}` : '';
+      aggregateEntityName = `bulk[${ids.length}]: ${preview}${overflow}`;
+    } else {
       this.logger.warn(`Could not extract entityId for ${metadata.action} ${metadata.entityType}`);
       return;
     }
 
-    // 엔티티 이름 추출
-    const entityName = this.extractValue(metadata.entityNamePath, request, response);
+    // 엔티티 이름 추출 — aggregate 우선 (bulk operation), 아니면 entityNamePath 폴백
+    const entityName = aggregateEntityName ?? this.extractValue(metadata.entityNamePath, request, response);
 
     // 상세 정보 구성 (크기 제한 적용)
     const details: AuditLogDetails = {};
@@ -302,14 +322,16 @@ export class AuditInterceptor implements NestInterceptor {
   }
 
   /**
-   * 경로에서 값 추출
-   * 예: 'params.uuid', 'body.id', 'response.uuid', 'response.data.id'
+   * 경로에서 raw value 추출 (string coercion 없음).
+   *
+   * review-architecture §3.7 closure: array 입력이 toString()으로 CSV 변환되어
+   * uuid 컬럼 INSERT 실패하는 silent bug 해소. caller 가 array 형태 직접 판별 필요 시 사용.
    */
-  private extractValue(
+  private extractRawValue(
     path: string | undefined,
     request: AuthenticatedRequest,
     response: unknown
-  ): string | undefined {
+  ): unknown {
     if (!path) return undefined;
 
     const parts = path.split('.');
@@ -346,6 +368,25 @@ export class AuditInterceptor implements NestInterceptor {
       }
     }
 
+    return value;
+  }
+
+  /**
+   * 경로에서 값 추출 (string).
+   * 예: 'params.uuid', 'body.id', 'response.uuid', 'response.data.id'
+   *
+   * review-architecture §3.7: array 는 undefined 반환 (caller 가 extractRawValue 로 처리).
+   * 기존 `value.toString()` 가 array 를 CSV 로 변환하여 uuid 컬럼 INSERT 실패하던 버그 차단.
+   */
+  private extractValue(
+    path: string | undefined,
+    request: AuthenticatedRequest,
+    response: unknown
+  ): string | undefined {
+    const value = this.extractRawValue(path, request, response);
+    if (value === undefined || value === null) return undefined;
+    // Array 는 caller 가 raw 형태로 처리 — 잘못된 CSV 변환 차단
+    if (Array.isArray(value)) return undefined;
     return typeof value === 'string' ? value : (value as { toString?: () => string })?.toString?.();
   }
 

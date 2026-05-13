@@ -216,3 +216,125 @@ describe('AuditInterceptor — access_denied path', () => {
     expect(auditService.create.mock.calls[0][0].action).toBe('create');
   });
 });
+
+// ─── review §3.7 closure: array entityIdPath 안전 처리 ─────────────────────
+
+import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
+
+describe('AuditInterceptor — bulk operation entityIdPath array (review §3.7)', () => {
+  const ID_1 = '11111111-1111-4111-8111-111111111111';
+  const ID_2 = '22222222-2222-4222-8222-222222222222';
+  const ID_3 = '33333333-3333-4333-8333-333333333333';
+  const ID_4 = '44444444-4444-4444-8444-444444444444';
+  const USER_UUID = '99999999-9999-4999-8999-999999999999';
+
+  let auditService: { create: jest.Mock };
+  let reflector: { get: jest.Mock };
+  let configService: { get: jest.Mock };
+  let interceptor: AuditInterceptor;
+
+  beforeEach(() => {
+    auditService = { create: jest.fn().mockResolvedValue(undefined) };
+    reflector = { get: jest.fn() };
+    configService = { get: jest.fn().mockReturnValue('') };
+    interceptor = new AuditInterceptor(
+      reflector as unknown as Reflector,
+      auditService as unknown as AuditService,
+      configService as unknown as ConfigService
+    );
+  });
+
+  function makeBulkContext(opts: {
+    body: Record<string, unknown>;
+    metadata: AuditLogMetadata;
+  }): ExecutionContext {
+    const request = {
+      method: 'POST',
+      url: '/api/bulk',
+      originalUrl: '/api/bulk',
+      params: {},
+      body: opts.body,
+      query: {},
+      headers: {},
+      user: { userId: USER_UUID, name: 'Bulk User', roles: ['admin'] },
+      ip: '10.0.0.1',
+    };
+    reflector.get.mockImplementation((key: string) => {
+      if (key === SKIP_AUDIT_KEY) return false;
+      if (key === AUDIT_LOG_KEY) return opts.metadata;
+      return undefined;
+    });
+    return {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => ({}),
+    } as unknown as ExecutionContext;
+  }
+
+  async function flushMicrotasks(): Promise<void> {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+
+  it('body.ids array (3 items) → SYSTEM_USER_UUID sentinel + entityName aggregate', async () => {
+    const ctx = makeBulkContext({
+      body: { ids: [ID_1, ID_2, ID_3] },
+      metadata: { action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' },
+    });
+    const callHandler = { handle: () => of({ received: [], failed: [] }) };
+
+    await firstValueFrom(interceptor.intercept(ctx, callHandler as never));
+    await flushMicrotasks();
+
+    expect(auditService.create).toHaveBeenCalledTimes(1);
+    const call = auditService.create.mock.calls[0][0];
+    expect(call.entityId).toBe(SYSTEM_USER_UUID);
+    expect(call.entityName).toMatch(/^bulk\[3\]:/);
+    expect(call.entityName).toContain(ID_1);
+    expect(call.entityName).toContain(ID_2);
+    expect(call.entityName).toContain(ID_3);
+  });
+
+  it('body.ids array (5 items) → entityName 에 첫 3개 + overflow 표기', async () => {
+    const ctx = makeBulkContext({
+      body: { ids: [ID_1, ID_2, ID_3, ID_4, ID_1] },
+      metadata: { action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' },
+    });
+    const callHandler = { handle: () => of({}) };
+
+    await firstValueFrom(interceptor.intercept(ctx, callHandler as never));
+    await flushMicrotasks();
+
+    expect(auditService.create).toHaveBeenCalledTimes(1);
+    const call = auditService.create.mock.calls[0][0];
+    expect(call.entityId).toBe(SYSTEM_USER_UUID);
+    expect(call.entityName).toMatch(/^bulk\[5\]:.*\.\.\.\+2$/);
+  });
+
+  it('body.ids empty array → audit skip (warn only, no INSERT)', async () => {
+    const ctx = makeBulkContext({
+      body: { ids: [] },
+      metadata: { action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' },
+    });
+    const callHandler = { handle: () => of({}) };
+
+    await firstValueFrom(interceptor.intercept(ctx, callHandler as never));
+    await flushMicrotasks();
+
+    expect(auditService.create).not.toHaveBeenCalled();
+  });
+
+  it('회귀 차단: body.ids array → entityId 가 CSV("uuid1,uuid2,uuid3") 가 아님', async () => {
+    const ctx = makeBulkContext({
+      body: { ids: [ID_1, ID_2] },
+      metadata: { action: 'update', entityType: 'checkout', entityIdPath: 'body.ids' },
+    });
+    const callHandler = { handle: () => of({}) };
+
+    await firstValueFrom(interceptor.intercept(ctx, callHandler as never));
+    await flushMicrotasks();
+
+    const call = auditService.create.mock.calls[0][0];
+    // 이전 버그: `value.toString()` → "uuid1,uuid2" CSV (uuid 컬럼 INSERT 실패)
+    expect(call.entityId).not.toMatch(/,/);
+    expect(call.entityId).toBe(SYSTEM_USER_UUID);
+  });
+});
