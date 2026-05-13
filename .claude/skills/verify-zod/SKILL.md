@@ -1421,6 +1421,44 @@ grep -rn "const baseValid\s*=" apps/backend/src --include="*.spec.ts" \
 
 **관련 sprint**: `approvals-ssot-closure` (2026-05-09) — disposal.service.spec.ts 8건 false-positive test 수습.
 
+### Step 26: `@Body('field')` 문자열 리터럴 추출 — ZodValidationPipe 우회 차단 (2026-05-13 추가)
+
+`@Body('fieldName') param: Type` 형태의 선택적 필드 추출은 body에 `fieldName` 키가 없으면 `param = undefined`가 서비스까지 도달한다. 서비스에서 `param.trim()` 등 호출 시 **TypeError → 500** 발생.
+올바른 패턴: `@Body() body: XxxInput` + `@UsePipes(XxxValidationPipe)` — Zod가 missing/invalid 를 4xx로 차단.
+
+**탐지 명령어:**
+```bash
+# @Body('fieldName') 문자열 인자 패턴 탐지 — ZodValidationPipe 미적용 가능성
+grep -rn "@Body('[^']*')" apps/backend/src/modules --include="*.controller.ts" \
+  | grep -v "^\s*//"
+```
+
+**판정 로직:**
+- 발견된 각 `@Body('field')` 메서드에서 `@UsePipes` 또는 `@Body.*Pipe` 적용 여부 확인
+- `@UsePipes` 없이 `@Body('field')` 단독 → **FAIL**
+
+**PASS:** 0건 또는 전체 `@Body('field')` 메서드에 ZodValidationPipe 적용.
+**FAIL:** `@Body('field')` 단독 사용 → `@Body() body: InputType` + `@UsePipes(XxxValidationPipe)` 패턴으로 교체.
+
+```typescript
+// ❌ WRONG — body에 name 키 누락 시 undefined → service.trim() TypeError
+async createDestination(@Body('name') name: string) {
+  return this.service.create(name); // name이 undefined이면 500
+}
+
+// ✅ CORRECT — ZodValidationPipe가 name 누락을 4xx로 차단
+@UsePipes(CreateDestinationValidationPipe)
+async createDestination(@Body() body: CreateDestinationInput) {
+  return this.service.create(body.name);
+}
+```
+
+**예외**: `@Param('uuid')`, `@Query('field')` 파라미터 데코레이터는 해당 없음 (URL/query 추출). 이 Step은 `@Body`에만 적용.
+
+**관련 sprint**: `tech-debt-closure-20260513` — checkouts POST /destinations controller `@Body('name')` undefined-safety hole 수정.
+
+---
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:

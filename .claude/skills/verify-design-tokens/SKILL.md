@@ -702,6 +702,7 @@ grep -rn "bg-brand-.*text-white\|text-white.*bg-brand-" \
 | 53  | design-token 파일 내 `bg-brand-* text-white` 직접 조합 금지 | PASS/FAIL | `getSemanticSolidBgClasses()` 미경유 위치 |
 | 54  | mono 헬퍼 `.text-mono`/`.text-mono-base` utility 경유 | PASS/FAIL | `font-mono tabular-nums` 인라인 헬퍼 위치 |
 | 55  | brand-color-* oklch SSOT — hsl wrapper 0 + color-mix(in oklch) alpha | PASS/FAIL | hsl(var(--brand-color-*)) 잔존 위치 |
+| 56  | raw amber/yellow → text-brand-warning SSOT | PASS/FAIL | text-amber-* 잔존 위치 |
 ```
 
 ## Step 54: mono 헬퍼는 `.text-mono` 또는 `.text-mono-base` utility 경유
@@ -790,6 +791,40 @@ grep -rn "color-mix(in oklch" apps/frontend/styles/globals.css | wc -l
 --color-brand-ok: hsl(var(--brand-color-ok));  /* hsl wrapper */
 --surface-inline-action-ok-bg: hsl(var(--brand-color-ok) / 0.10);  /* hsl alpha */
 ```
+
+## Step 56: raw Tailwind amber/yellow warning 색상 → `text-brand-warning` SSOT (2026-05-13 추가)
+
+`text-amber-N`, `bg-amber-N`, `border-amber-N` 등 raw Tailwind 색상 클래스는 `dark:` 수동 대응이 필요하고 디자인 시스템 semantic 토큰을 우회한다. Warning 계열 색상은 `text-brand-warning` / `bg-brand-warning` / `bg-brand-warning/NN` semantic token SSOT 경유 필수.
+
+**탐지 명령어:**
+```bash
+# raw amber/yellow warning 색상 탐지 (shadcn/ui 제외)
+grep -rn "text-amber-\|bg-amber-\|border-amber-\|ring-amber-\|text-yellow-[3-9]\|bg-yellow-[3-9]" \
+  apps/frontend/components apps/frontend/app apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "components/ui/\|node_modules\|globals.css\|^\s*//"
+```
+
+**PASS:** 0건.
+**FAIL:** `text-brand-warning` / `bg-brand-warning` / `bg-brand-warning/NN` 등 semantic token으로 교체.
+
+```tsx
+// ❌ WRONG — dark: 수동 매핑 + design system 우회
+<p className="text-amber-600 dark:text-amber-400">...</p>
+
+// ✅ CORRECT — CSS 변수 자동 dark 전환
+<p className="text-brand-warning">...</p>
+```
+
+**예외:**
+- `components/reports/ReportsStatsSection.tsx` — 기존 `text-amber-500` 아이콘 색상 (pre-existing, tech-debt PR-4 후속)
+- CSS 변수 정의 파일 (`globals.css`, `primitives.ts`) 내 amber → oklch 변환 참조 주석
+
+**Why**: `dark:text-amber-400` 수동 매핑은 CSS 변수 기반 자동 dark 전환 체계를 우회한다. semantic token은 `:root`와 `.dark` 양쪽에 `--brand-color-warning`을 oklch로 정의하여 한 클래스로 모드 전환이 자동화된다.
+
+**관련 sprint**: `tech-debt-closure-20260513` — `CheckoutDestinationCombobox.tsx` `text-amber-600 dark:text-amber-400` → `text-brand-warning` 수정.
+
+---
 
 ## Exceptions
 

@@ -111,6 +111,23 @@ grep -rn "casVersion" apps/frontend/components apps/frontend/hooks \
 - **5b:** `queryKeys.approvals.counts()` 대신 `queryKeys.approvals.countsAll` 사용
 - **5c:** 체크아웃 캐시 → `CheckoutCacheInvalidation` 정적 상수 사용
 
+**5 상세 — QUERY_CONFIG 스프레드 미사용 탐지 (2026-05-13 강화):**
+
+`staleTime: CACHE_TIMES.X` 를 `useQuery` 에 직접 설정하면 `gcTime`, `refetchOnWindowFocus`, `retry` 등이 누락된다. `QUERY_CONFIG.CHECKOUT_DESTINATIONS` 같은 프리셋 스프레드가 SSOT이며 이들을 함께 관리한다.
+
+```bash
+# hooks 내 staleTime을 CACHE_TIMES에서 직접 설정 (QUERY_CONFIG 프리셋 스프레드 미사용)
+grep -rn "staleTime: CACHE_TIMES\." apps/frontend/hooks --include="*.ts" \
+  | grep -v "QUERY_CONFIG\|query-config"
+```
+
+**PASS:** 0건.
+**FAIL:** 해당 CACHE_TIMES 값에 부합하는 `QUERY_CONFIG` 프리셋으로 교체.
+- `staleTime: CACHE_TIMES.DAY` → `...QUERY_CONFIG.CHECKOUT_DESTINATIONS` 등 대응 프리셋 확인
+- 대응 프리셋이 없으면 `QUERY_CONFIG`에 신규 프리셋 추가 (tech-debt 등록)
+
+**예외**: `query-config.ts` 자체 내 `QUERY_CONFIG` 프리셋 정의, 테스트 파일.
+
 ### Step 6: REFETCH_STRATEGIES 하드코딩
 
 **PASS:** `refetchInterval: 60000` 등 하드코딩 0개.
