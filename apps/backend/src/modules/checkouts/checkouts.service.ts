@@ -3700,14 +3700,13 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
       });
     }
 
-    await this.db.transaction(async (tx) => {
-      for (const order of input.orders) {
-        await tx
-          .update(schema.rejectionPresets)
-          .set({ sortOrder: order.sortOrder, updatedAt: new Date() })
-          .where(eq(schema.rejectionPresets.id, order.id));
-      }
-    });
+    const idArray = input.orders.map((o) => o.id);
+    const sortOrderArray = input.orders.map((o) => o.sortOrder);
+    await this.db.execute(
+      sql`UPDATE ${schema.rejectionPresets} SET sort_order = pairs.sort_order, updated_at = now()
+          FROM (SELECT unnest(${idArray}::uuid[]) AS id, unnest(${sortOrderArray}::int[]) AS sort_order) AS pairs
+          WHERE ${schema.rejectionPresets.id} = pairs.id`
+    );
 
     await this.cacheService.delete(this.REJECTION_PRESETS_CACHE_KEY);
     return { updated: input.orders.length };

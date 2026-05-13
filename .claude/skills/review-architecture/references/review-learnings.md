@@ -266,6 +266,11 @@
 - **설명**: service-layer 동적 scope 검사(`enforceReadScope`, row-level RBAC)로 권한을 구현하는 도메인이라도 controller 클래스/엔드포인트에 `@RequirePermissions(...)` 또는 `@SkipPermissions()`가 반드시 명시되어야 한다. `PermissionsGuard` 기본값은 **DENY**(`permissions.guard.ts:55`). 누락 시 `403 AuthPermissionsNotConfigured`로 endpoint 자체가 차단되어 service layer까지 도달 못 함. "service가 동적으로 검사하니까 불필요" 논리는 무효 — service 호출 자체가 발생하지 않음.
 - **체크리스트 반영**: ✅ verify-auth SKILL.md Step 3에 전체 controller 순회 bash 스캔 추가 (회귀 차단)
 
+### [2026-05-13] Bulk reorder N+1 트랜잭션 루프 → unnest CTE 단일 UPDATE — 도메인 간 동일 패턴 전파 위험
+- **발견 위치**: `apps/backend/src/modules/checkouts/checkouts.service.ts:3703` (ultrareview UR-2 후속 시스템 전반 스캔)
+- **설명**: `for (const item of list) { await tx.update(...).where(eq(...id, item.id)) }` 트랜잭션 루프 패턴은 N개 행을 N번 왕복하는 N+1. 첫 발견(saved-views)은 UR-2 finding으로 수정되었으나 동일 패턴이 `checkouts.service.ts`의 `reorderRejectionPresets()`에도 존재. `grep -rn "for.*await.*tx.*update" apps/backend/src/modules/ --include="*.service.ts"` 로 전체 탐지. **해법**: PostgreSQL `unnest(array::type[])` CTE로 두 배열을 행 쌍으로 변환 → 단일 UPDATE FROM SELECT. saved-views(uuid PK)와 rejection-presets(uuid PK)가 동일 패턴 적용 가능. 배열이 크면 클수록 성능 차이가 선형으로 증가.
+- **체크리스트 반영**: ✅ `grep -rn "for.*await.*tx.*update" apps/backend/src/modules/ --include="*.service.ts"` 를 신규 reorder 구현 시 회귀 탐지 명령으로 등록
+
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`
 - **설명**: `AuditLogUserRole = UserRole | 'system' | 'unknown'` 타입을 소비하는 3개 계층에서 'system'/'unknown' 특수 값을 처리하지 않아 영문 원문이 그대로 노출됨. (1) 백엔드 `USER_ROLE_LABELS[role as UserRole]`는 'system'/'unknown'에 대해 `undefined` 반환 후 fallback으로 원문 반환. (2) frontend i18n `userRoles.system` 키 미등록. 수정: 백엔드는 'system'/'unknown' 분기를 `as UserRole` 이전에 추가, frontend i18n에 키 추가.
@@ -374,6 +379,7 @@
 | 2026-04-19 | 안티패턴 | TestSoftwareDetailContent detail 쿼리에 TEST_SOFTWARE_LIST 프리셋 오사용 (TEST_SOFTWARE_DETAIL 존재) | review-learnings.md |
 | 2026-04-20 | 재발 (4차) | mapBackendErrorCode 누락 — CALIBRATION_PLAN_* + CALIBRATION_* 18개 에러 코드 미매핑 (calibration-plans 모듈) | review-learnings.md + verify-hardcoding Step 10 누락 목록 추가 |
 | 2026-05-13 | 안티패턴 (UR-2) | Controller 클래스 레벨 @RequirePermissions 누락 — saved-views PermissionsGuard DENY silent miss. verify-auth Step 3 bash 스캔 추가 (회귀 차단). | saved-views.controller.ts + verify-auth SKILL.md Step 3 |
+| 2026-05-13 | 안티패턴 (시스템 전반) | Bulk reorder N+1 트랜잭션 루프 — checkouts.reorderRejectionPresets → unnest CTE 단일 UPDATE 교체. `grep -rn "for.*await.*tx.*update"` 회귀 탐지 명령 등록. | checkouts.service.ts:3703 |
 | 2026-04-20 | 새 패턴 | `@OnEvent({ async: true })` 도메인 동기화 리스너 — CalibrationPlanSyncListener (best-effort, CACHE_INVALIDATION_REGISTRY 제외) | verify-cache-events Exceptions #6 추가 |
 | 2026-04-20 | 새 패턴 | `actualCalibrationId` FK 참조 시드 정합성 + bulk-confirm 2건 시나리오 보장 | verify-seed-integrity Step 8 추가 |
 | 2026-04-21 | 재발 (3차) | QUERY_CONFIG 인라인 오버라이드 — CheckoutsContent pendingCount/destinations/liveSummary 3개 쿼리에 `staleTime: CACHE_TIMES.SHORT` 인라인 (SSOT 밖 분산) | CheckoutsContent.tsx |
