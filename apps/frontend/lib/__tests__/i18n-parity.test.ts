@@ -23,15 +23,18 @@ import type { SupportedLocale } from '@equipment-management/schemas';
 
 const MESSAGES_ROOT = join(__dirname, '..', '..', 'messages');
 
-/** 객체에서 모든 leaf key path 를 dot-notation 으로 추출. */
+/**
+ * 객체에서 모든 leaf key path 를 dot-notation 으로 추출.
+ *
+ * R-3 정책: 배열은 leaf 로 처리 (키 자체만 포함, 내부 재귀 없음).
+ * 배열 키 스냅샷은 별도 `KNOWN_ARRAY_KEYS` 테스트로 관리.
+ * 새 배열 키 추가 시 해당 테스트가 실패하여 명시적 갱신 강제.
+ */
 function extractKeyPaths(input: unknown, prefix = ''): string[] {
   if (Array.isArray(input)) {
-    // i18n 구조에 배열 도입 시 이 spec이 명시적으로 실패해야 함 (R-3 정책).
-    // 배열 값은 locale 간 키 parity 검증 대상이 아니므로 silent-pass 금지.
-    throw new Error(
-      `i18n 구조에 배열 값이 감지됨 (key: "${prefix}"). ` +
-        '배열을 i18n 메시지로 사용하려면 이 spec 을 명시적으로 갱신하세요.'
-    );
+    // 배열은 leaf 로 취급 — 내부 인덱스 키는 검증 대상 아님.
+    // 배열 키 집합 변경 탐지는 아래 KNOWN_ARRAY_KEYS 스냅샷 테스트가 담당.
+    return prefix ? [prefix] : [];
   }
   if (input === null || typeof input !== 'object') {
     return prefix ? [prefix] : [];
@@ -43,6 +46,78 @@ function extractKeyPaths(input: unknown, prefix = ''): string[] {
   }
   return out;
 }
+
+/** 객체에서 배열 값을 가진 key path 를 dot-notation 으로 수집. */
+function extractArrayPaths(input: unknown, prefix = ''): string[] {
+  if (Array.isArray(input)) {
+    return prefix ? [prefix] : [];
+  }
+  if (input === null || typeof input !== 'object') {
+    return [];
+  }
+  const out: string[] = [];
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+    out.push(...extractArrayPaths(value, nextPrefix));
+  }
+  return out;
+}
+
+/**
+ * R-3: 배열 값을 가진 i18n 키 스냅샷.
+ * 새 배열 키 추가 시 이 목록을 반드시 갱신하세요.
+ * 삭제 시에도 동기화 필요.
+ */
+const KNOWN_ARRAY_KEYS: ReadonlyArray<string> = [
+  'common.json:reports.contents.equipment_inventory',
+  'common.json:reports.contents.calibration_status',
+  'common.json:reports.contents.utilization_report',
+  'common.json:reports.contents.team_equipment',
+  'common.json:reports.contents.maintenance_report',
+  'dashboard.json:calendar.dayLabels',
+  'errors.json:CALIBRATION_SAVE_FAILED.solutions',
+  'errors.json:DOCUMENT_NOT_FOUND.solutions',
+  'errors.json:DUPLICATE_ERROR.solutions',
+  'errors.json:DUPLICATE_MANAGEMENT_NUMBER.solutions',
+  'errors.json:DUPLICATE_SERIAL_NUMBER.solutions',
+  'errors.json:EQUIPMENT_ATTACHMENT_TYPE_REQUIRED.solutions',
+  'errors.json:EQUIPMENT_FILE_REQUIRED.solutions',
+  'errors.json:EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED.solutions',
+  'errors.json:EQUIPMENT_NOT_FOUND.solutions',
+  'errors.json:EQUIPMENT_SHARED_CANNOT_DELETE.solutions',
+  'errors.json:EQUIPMENT_SHARED_CANNOT_UPDATE.solutions',
+  'errors.json:EQUIPMENT_SITE_SCOPE_ONLY.solutions',
+  'errors.json:EQUIPMENT_TEAM_SCOPE_ONLY.solutions',
+  'errors.json:FILE_CONTENT_MISMATCH.solutions',
+  'errors.json:FILE_EMPTY.solutions',
+  'errors.json:FILE_NOT_FOUND.solutions',
+  'errors.json:FILE_TOO_LARGE.solutions',
+  'errors.json:FILE_UPLOAD_FAILED.solutions',
+  'errors.json:FORM_DATA_PARSE_FAILED.solutions',
+  'errors.json:FORM_TEMPLATE_NOT_FOUND.solutions',
+  'errors.json:HISTORY_SAVE_FAILED.solutions',
+  'errors.json:INCIDENT_HISTORY_SAVE_FAILED.solutions',
+  'errors.json:INVALID_DATE.solutions',
+  'errors.json:INVALID_FILE_TYPE.solutions',
+  'errors.json:INVALID_FORMAT.solutions',
+  'errors.json:INVALID_MANAGEMENT_NUMBER.solutions',
+  'errors.json:LOCATION_HISTORY_SAVE_FAILED.solutions',
+  'errors.json:MAINTENANCE_HISTORY_SAVE_FAILED.solutions',
+  'errors.json:NC_RECALIBRATION_REQUIRED.solutions',
+  'errors.json:NC_REPAIR_RECORD_REQUIRED.solutions',
+  'errors.json:NETWORK_ERROR.solutions',
+  'errors.json:NOT_FOUND.solutions',
+  'errors.json:PERMISSION_DENIED.solutions',
+  'errors.json:REQUIRED_FIELD_MISSING.solutions',
+  'errors.json:SCOPE_ACCESS_DENIED.solutions',
+  'errors.json:SERVER_ERROR.solutions',
+  'errors.json:SESSION_EXPIRED.solutions',
+  'errors.json:TIMEOUT_ERROR.solutions',
+  'errors.json:UNAUTHORIZED.solutions',
+  'errors.json:UNKNOWN_ERROR.solutions',
+  'errors.json:VALIDATION_ERROR.solutions',
+  'errors.json:VERSION_CONFLICT.solutions',
+] as const;
 
 function loadMessages(locale: SupportedLocale, file: string): unknown {
   const filePath = join(MESSAGES_ROOT, locale, file);
@@ -65,6 +140,17 @@ describe(`i18n parity — SUPPORTED_LOCALES SSOT (G-17, reference: ${referenceLo
 
   it('SUPPORTED_LOCALES SSOT 가 최소 2개 locale 정의', () => {
     expect(SUPPORTED_LOCALES.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('R-3: 배열 키 스냅샷 — 변경 시 KNOWN_ARRAY_KEYS 동기화 필요', () => {
+    const actual: string[] = [];
+    for (const file of referenceFiles) {
+      const messages = loadMessages(referenceLocale, file);
+      for (const path of extractArrayPaths(messages)) {
+        actual.push(`${file}:${path}`);
+      }
+    }
+    expect(actual.sort()).toEqual([...KNOWN_ARRAY_KEYS].sort());
   });
 
   describe.each(otherLocales)('locale: %s vs reference', (locale) => {

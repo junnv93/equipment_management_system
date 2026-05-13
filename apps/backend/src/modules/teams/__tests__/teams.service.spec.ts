@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TeamsService } from '../teams.service';
 
 /** Drizzle ORM 체인 메서드를 흉내내는 mock 빌더 */
@@ -84,7 +85,11 @@ describe('TeamsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TeamsService, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],
+      providers: [
+        TeamsService,
+        { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
+        { provide: EventEmitter2, useValue: { emitAsync: jest.fn().mockResolvedValue([]) } },
+      ],
     }).compile();
 
     service = module.get<TeamsService>(TeamsService);
