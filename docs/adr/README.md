@@ -19,13 +19,21 @@
 
 ## 목록
 
-| ADR                                            | 제목                                                | 상태     | 맥락       |
-| ---------------------------------------------- | --------------------------------------------------- | -------- | ---------- |
-| [0001](0001-monorepo-with-turborepo.md)        | Turborepo 기반 모노레포 구조                        | Accepted | 빌드/캐싱  |
-| [0002](0002-drizzle-orm-over-typeorm.md)       | Drizzle ORM 선택 (vs TypeORM, Prisma)               | Accepted | DB         |
-| [0003](0003-nestjs-nextjs-app-router.md)       | NestJS + Next.js App Router 프레임워크 선택         | Accepted | 프레임워크 |
-| [0004](0004-docker-compose-over-kubernetes.md) | Docker Compose 유지 vs Kubernetes 전환              | Proposed | Infra      |
-| [0005](0005-secret-management-roadmap.md)      | Secret 관리 전략 — sops/age 채택 및 Vault 이행 경로 | Accepted | Security   |
+| ADR                                                | 제목                                                | 상태     | 맥락       |
+| -------------------------------------------------- | --------------------------------------------------- | -------- | ---------- |
+| [0001](0001-monorepo-with-turborepo.md)            | Turborepo 기반 모노레포 구조                        | Accepted | 빌드/캐싱  |
+| [0002](0002-drizzle-orm-over-typeorm.md)           | Drizzle ORM 선택 (vs TypeORM, Prisma)               | Accepted | DB         |
+| [0003](0003-nestjs-nextjs-app-router.md)           | NestJS + Next.js App Router 프레임워크 선택         | Accepted | 프레임워크 |
+| [0004](0004-docker-compose-over-kubernetes.md)     | Docker Compose 유지 vs Kubernetes 전환              | Proposed | Infra      |
+| [0005](0005-secret-management-roadmap.md)          | Secret 관리 전략 — sops/age 채택 및 Vault 이행 경로 | Accepted | Security   |
+| [0006](0006-frontend-backend-routing-model.md)     | Frontend-Backend 라우팅 모델 (Proxy 패턴)           | Accepted | Frontend   |
+| [0007](0007-multi-session-working-tree-safety.md)  | 다중 세션 작업 트리 안전성                          | Accepted | Git/Ops    |
+| [0008](0008-backend-zod-error-i18n.md)             | Backend Zod 에러 i18n 전략                          | Accepted | Backend    |
+| [0009](0009-tab-subroute-architecture.md)          | 탭 서브라우트 아키텍처                              | Accepted | Frontend   |
+| [0010](0010-drizzle-manual-sql-policy.md)          | Drizzle 수동 SQL 정책                               | Accepted | DB         |
+| [0011](0011-fuzzy-search-implementation.md)        | Fuzzy Search 자체 구현 (vs 외부 라이브러리)         | Accepted | Backend    |
+| [0012](0012-cache-event-channel-responsibility.md) | Cache Event Channel 책임 분리                       | Accepted | Backend    |
+| [0013](0013-graceful-no-op-context-consumer.md)    | Graceful No-Op Context Consumer 패턴                | Accepted | Frontend   |
 
 > 기존 스키마 아키텍처 결정 문서: [schema-architecture-decision.md](../development/schema-architecture-decision.md)
 

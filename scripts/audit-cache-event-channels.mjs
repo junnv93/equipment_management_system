@@ -151,7 +151,18 @@ function deriveCacheMirror(notificationEventValue, synonymMap) {
   return `cache.${cacheDomain}${rest}`;
 }
 
-/** 라운드 #3 갭 O — wholesale `${PREFIX}*` 패턴 탐지 (ADR-0012 §Decision-2 금지). */
+/**
+ * 라운드 #3 갭 O / 라운드 #4 갭 R8 — wholesale 패턴 탐지 (ADR-0012 §Decision-2 금지).
+ *
+ * 두 형식 모두 catch:
+ * 1. template literal: `${CACHE_KEY_PREFIXES.X}*` (sub-prefix 없음)
+ * 2. raw string: `'x:*'` 또는 `"x:*"` 또는 `` `x:*` `` (sub-prefix 없음, 라운드 #4 R8)
+ *
+ * "sub-prefix 없음" 정의: 첫 ':' 다음에 '*' 만 있고 다른 문자 없음.
+ *   - 'checkouts:*' → wholesale (segments=['checkouts', '*'])
+ *   - 'checkouts:list:*' → specific (segments=['checkouts', 'list', '*'])
+ *   - 'checkouts:detail:abc' → specific (segments.length===3, 마지막 != '*')
+ */
 function extractWholesalePatterns(registrySource) {
   const wholesale = [];
   const entryRe = /\[(NOTIFICATION_EVENTS|CACHE_EVENTS)\.([A-Z_]+)\]:\s*\{([\s\S]*?)\n\s*\},/g;
@@ -160,11 +171,31 @@ function extractWholesalePatterns(registrySource) {
     const namespace = m[1];
     const key = m[2];
     const body = m[3];
-    const wholesaleMatches = [
+    // Form 1: template literal `${CACHE_KEY_PREFIXES.X}*`
+    const tplMatches = [
       ...body.matchAll(/pattern:\s*`\$\{CACHE_KEY_PREFIXES\.([A-Z_]+)\}\*`/g),
     ];
-    for (const wm of wholesaleMatches) {
-      wholesale.push({ eventKey: `${namespace}.${key}`, prefix: wm[1] });
+    for (const wm of tplMatches) {
+      wholesale.push({ eventKey: `${namespace}.${key}`, prefix: wm[1], form: 'template' });
+    }
+    // Form 2 (라운드 #4 R8): raw string wholesale — `pattern: 'x:*'` 또는 backtick 둘 다.
+    // CACHE_KEY_PREFIXES 변수 사용한 template은 위에서 catch했으므로 이건 raw literal 전용.
+    const rawMatches = [
+      ...body.matchAll(/pattern:\s*['"`]([^'"`]+):\*['"`]/g),
+    ];
+    for (const rm of rawMatches) {
+      // ${...} interpolation을 포함한 경우는 template 매치에서 이미 처리 → 제외.
+      const raw = rm[1];
+      if (raw.includes('${')) continue;
+      // segments 검증 (sub-prefix 없음만 wholesale)
+      const segments = raw.split(':');
+      if (segments.length === 1) {
+        wholesale.push({
+          eventKey: `${namespace}.${key}`,
+          prefix: `<raw:${raw}>`,
+          form: 'raw',
+        });
+      }
     }
   }
   return wholesale;

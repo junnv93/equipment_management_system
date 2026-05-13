@@ -383,3 +383,18 @@ export type NavItemBadgeConfig =
 **적용 사례:**
 
 - `apps/frontend/components/layout/NavRowWithSecondaryAction.tsx` — 사이드바 nav 행 (메인 라우트 + 선택적 yourTurn 필터 동선)
+
+### React Context 안전 등급 선택 (ADR-0013)
+
+신규 Context 작성 시 **두 패턴 중 하나를 명시적으로 선택**한다.
+
+| 패턴                            | 구현                             | 적용 조건                                     |
+| ------------------------------- | -------------------------------- | --------------------------------------------- |
+| **Graceful No-Op** (ADR-0013-A) | `useContext(Ctx) ?? NO_OP_VALUE` | 장식적/보강적 Context — 없어도 핵심 기능 동작 |
+| **Fail-Fast** (ADR-0013-B)      | `if (!v) throw new Error(...)`   | 필수 인프라 Context — 없으면 항상 버그        |
+
+**보안/인증 Context에는 Graceful No-Op 절대 사용 금지** — Provider 부재 시 권한 검사 우회 가능.
+
+정규 사례: `lib/inspection/form-context.tsx` (Graceful No-Op), `lib/api/authenticated-client-provider.tsx` (Fail-Fast)
+
+> 상세: [docs/adr/0013-graceful-no-op-context-consumer.md](../adr/0013-graceful-no-op-context-consumer.md)

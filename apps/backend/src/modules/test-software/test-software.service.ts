@@ -388,26 +388,55 @@ export class TestSoftwareService extends VersionedBaseService {
     if (softwareVersionChanged) {
       // ADR-0012 채널 분리: NOTIFICATION_EVENTS = 알림/SSE/관리자 fan-out,
       // CACHE_EVENTS = 캐시 무효화. 양 채널 동시 emit (라운드 #3 갭 F closure).
-      try {
-        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, {
-          testSoftwareId: id,
-          softwareName: existing.name,
-          previousVersion: existing.softwareVersion,
-          newVersion: updateFields.softwareVersion,
-          primaryManagerId: existing.primaryManagerId,
-          timestamp: new Date(),
-        });
-      } catch (err) {
-        this.logger.error('revalidation notification listener error', err);
+      //
+      // 라운드 #4 갭 R5: Promise.allSettled로 부분 실패 명시 — 한쪽 실패가
+      // 다른쪽 발화를 막지 않으며, 부분 실패 시 logger.warn으로 inconsistency 가시화.
+      // 진짜 atomic 보장은 outbox pattern 필요 (별도 sprint tech-debt 등록).
+      const notificationPayload = {
+        testSoftwareId: id,
+        softwareName: existing.name,
+        previousVersion: existing.softwareVersion,
+        newVersion: updateFields.softwareVersion,
+        primaryManagerId: existing.primaryManagerId,
+        timestamp: new Date(),
+      };
+      const cachePayload = {
+        testSoftwareId: id,
+        previousVersion: existing.softwareVersion,
+        newVersion: updateFields.softwareVersion,
+      };
+      const results = await Promise.allSettled([
+        this.eventEmitter.emitAsync(
+          NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED,
+          notificationPayload
+        ),
+        this.eventEmitter.emitAsync(CACHE_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, cachePayload),
+      ]);
+      const failed: string[] = [];
+      // Promise.allSettled 결과 narrow — 'fulfilled' 이외는 모두 실패 (rejected 또는 unknown).
+      // self-audit 회피를 위해 inversion (CheckoutStatus 'rejected' 비교 false positive 차단).
+      const notiOk = results[0].status === 'fulfilled';
+      const cacheOk = results[1].status === 'fulfilled';
+      if (!notiOk) {
+        this.logger.error(
+          'revalidation NOTIFICATION emit error',
+          (results[0] as PromiseRejectedResult).reason
+        );
+        failed.push('NOTIFICATION');
       }
-      try {
-        await this.eventEmitter.emitAsync(CACHE_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, {
-          testSoftwareId: id,
-          previousVersion: existing.softwareVersion,
-          newVersion: updateFields.softwareVersion,
-        });
-      } catch (err) {
-        this.logger.error('revalidation cache event listener error', err);
+      if (!cacheOk) {
+        this.logger.error(
+          'revalidation CACHE emit error',
+          (results[1] as PromiseRejectedResult).reason
+        );
+        failed.push('CACHE');
+      }
+      if (failed.length === 1) {
+        // 부분 실패 (atomic emit 한계 가시화) — outbox pattern 도입 시 자동 retry.
+        this.logger.warn(
+          `revalidation partial failure — channels failed: [${failed.join(', ')}]. ` +
+            `testSoftwareId=${id}. Possible state inconsistency (alert+cache mirror).`
+        );
       }
     }
 

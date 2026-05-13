@@ -90,3 +90,18 @@ calibration은 NOTIFICATION*EVENTS.CALIBRATION\*\*를 알림 전용으로, CACHE
 - 선재 sprint: `sw-validation-event-channel-separation` (commit `06fc71d4`)
 - 시니어 자기검토 라운드 #2 후속: `cache-event-channel-architecture-r2` (2026-05-12, commit `11bd5e07` + `b67b98f7`)
 - 시니어 자기검토 라운드 #3 후속: `cache-event-arch-r3` (2026-05-13) — 6갭 통합 closure: K(pre-push 통합) / A(detail:\* 책임 분리) / O(wholesale audit 강제) / F(예외 제거) / D(양방향 mirror) / C(jest fragility 보강)
+- 시니어 자기검토 라운드 #4 후속: `cache-event-arch-r4` (2026-05-13) — 4갭 통합 closure + LEGACY 21건 마이그레이션 sprint 등록:
+  - R1(HIGH): LEGACY allowlist 21건이 영구 방치되지 않도록 도메인별 마이그레이션 sprint 5건 등록 (`cache-wholesale-migration-checkouts/-equipment-imports/-inspection-templates/-calibration-factors/-other-legacy`)
+  - R3(MED): audit script ↔ naming spec DRY 회복 — jest spec이 `child_process.spawnSync`로 audit script 실행 + exit code 검증 invariant
+  - R5(MED): TEST_SOFTWARE_REVALIDATION 양채널 emit `Promise.allSettled` + 부분 실패 명시 로깅. **atomic emit 한계** — 진짜 atomic 보장은 outbox pattern 필요 (별도 sprint, 본 ADR 의 한계 명시 trade-off)
+  - R8(LOW): audit script wholesale regex 강화 — template literal `${PREFIX}*` + raw string `'<domain>:*'` 양쪽 catch
+
+### Atomic emit 한계 (라운드 #4 R5 명시)
+
+`eventEmitter.emitAsync(NOTIFICATION_EVENTS.X) + emitAsync(CACHE_EVENTS.X)` 양채널 동시 emit은
+**NestJS EventEmitter2의 fire-and-forget 한계**로 진짜 atomic 보장 불가:
+
+- `Promise.allSettled`로 양쪽 실행 보장(한쪽 실패가 다른쪽 발화 막지 않음)은 가능
+- 그러나 한쪽만 성공하면 alert/cache mirror inconsistency 발생 가능 (silent state divergence)
+- 본 sprint는 부분 실패 시 `logger.warn` 로깅으로 가시화. 진짜 atomic = outbox pattern (DB transaction
+  scope에서 event row 수집 → commit 후 일괄 발행 + at-least-once retry) — 본 ADR 미포함, tech-debt 등록.

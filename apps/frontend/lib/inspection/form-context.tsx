@@ -11,7 +11,8 @@
  * - prop drilling 회피: 4-5 layer 깊이 (InspectionFormDialog → InlineResultSectionsEditor →
  *   ResultSectionFormDialog → VisualTableEditor) 컴포넌트가 Context Consumer로 동작
  * - Reusable: 1B Template Version Badge / 1C SoftForkDialog / 1D TemplateGallery에서도 동일 Context 활용
- * - Graceful no-op: Provider 부재 시 NO_OP_VALUE 반환 — VisualTableEditor 단독 사용 호환
+ * - Graceful no-op: Provider 부재 시 NO_OP_VALUE 반환 (ADR-0013-A) — VisualTableEditor 단독 사용 호환
+ *   prefill 메타는 장식적(enrichment) Context이므로 graceful no-op 적용 (docs/adr/0013-graceful-no-op-context-consumer.md)
  *
  * 업계 표준: LIMS Template Snapshot의 cell-level provenance 추적 (LabWare/Veeva/Beamex)
  */

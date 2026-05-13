@@ -136,4 +136,28 @@ describe('CACHE_EVENTS 명명 규약 (ADR-0012)', () => {
   it('production registry는 dual-channel exclusivity invariant를 통과한다 (jest-level redundant 검증)', () => {
     expect(() => validateDualChannelExclusivity(CACHE_INVALIDATION_REGISTRY)).not.toThrow();
   });
+
+  /**
+   * 라운드 #4 갭 R3 (DRY 회복): audit script `scripts/audit-cache-event-channels.mjs`를
+   * child_process로 실행 + exit code 검증. audit script가 검출 SSOT — jest spec과
+   * audit script의 검출 결과 drift 차단 invariant.
+   *
+   * 양쪽이 다 통과(EXIT 0)할 때만 PASS. audit이 새 violation 보고 시 jest도 함께 깨짐.
+   */
+  it('scripts/audit-cache-event-channels.mjs가 EXIT 0으로 통과한다 (R3 DRY invariant)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+    // __dirname = apps/backend/src/common/cache/__tests__ → 5단계 위가 repo root
+    const result = spawnSync('node', ['scripts/audit-cache-event-channels.mjs'], {
+      cwd: `${__dirname}/../../../../../..`,
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+      throw new Error(
+        `audit-cache-event-channels.mjs EXIT=${result.status}\n\n` +
+          `--- stdout ---\n${result.stdout ?? ''}\n` +
+          `--- stderr ---\n${result.stderr ?? ''}\n`
+      );
+    }
+  });
 });

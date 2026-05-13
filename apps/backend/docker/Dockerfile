@@ -15,7 +15,7 @@
 # =============================================================================
 
 # ----- base ------------------------------------------------------------------
-FROM node:22-bullseye AS base
+FROM node:22-bookworm AS base
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 # poppler-utils: pdftotext binary — 교정성적서 PDF 표지 메타 추출(CertificateExtractorService) 의존.
