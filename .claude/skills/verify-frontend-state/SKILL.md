@@ -665,6 +665,39 @@ grep -rn "window\.matchMedia\|window\.innerWidth" \
 
 **관련 파일**: `apps/frontend/components/mobile/AutoProgressCountdown.tsx`
 
+### Step 49: Context 안전 등급 — 보안 Context graceful no-op 금지 (ADR-0013, 2026-05-13)
+
+인증/권한/세션 Context에 `?? NO_OP_VALUE` 또는 `ctx?.field ?? fallback` 패턴이 적용되면
+Provider 부재 시 보안 검사가 silent pass되어 취약점이 된다.
+ADR-0013-A(Graceful No-Op)는 장식적 Context에만 적용 — 보안 Context는 ADR-0013-B(Fail-Fast) 필수.
+
+```bash
+# (1) 인증/권한 관련 Context 파일이 ?? NO_OP_VALUE를 사용하면 FAIL
+grep -rn "?? NO_OP_VALUE" \
+  apps/frontend/lib/api \
+  apps/frontend/contexts \
+  apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts" \
+  | grep -iE "auth|session|permission|token|role|credential"
+# 기대: 0건 (보안 Context는 throw 패턴만 허용)
+
+# (2) NO_OP_VALUE 사용 Context가 인증/권한 함수를 포함하는지 확인
+# (장식적 Context ONLY — 정규 사례: lib/inspection/form-context.tsx)
+grep -rn "const NO_OP_VALUE" \
+  apps/frontend --include="*.tsx" --include="*.ts" \
+  | grep -v "form-context.tsx"
+# 0건이면 PASS (신규 NO_OP_VALUE 도입은 ADR-0013 리뷰 필요)
+# 1건 이상이면 INFO — 보안 Context 여부 수동 확인 필요
+```
+
+**알려진 예외 (pre-ADR-0013):**
+- `hooks/use-navigation-pending.tsx`: `ctx?.count ?? 0` / `ctx?.begin ?? (() => () => {})` — 인라인 fallback 패턴. NavigationPendingContext는 UX/성능 Context로 보안과 무관 → graceful no-op 정당. 단, `NO_OP_VALUE` 상수화는 미완(tech-debt, ADR-0013 이전 코드).
+
+**PASS:** 보안 Context graceful no-op 0건.
+**INFO:** 신규 NO_OP_VALUE 컨텍스트 발견 시 ADR-0013 적용 조건 수동 검토.
+
+**관련 파일**: `apps/frontend/lib/inspection/form-context.tsx`, `apps/frontend/lib/api/authenticated-client-provider.tsx`, `docs/adr/0013-graceful-no-op-context-consumer.md`
+
 ## Output Format
 
 ```markdown

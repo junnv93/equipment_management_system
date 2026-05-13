@@ -33,6 +33,15 @@ export const SECURITY_AUDITABLE_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.SelfInspectionWithdrawNotSubmitter,
   ErrorCode.EquipmentImportOnlyRequesterCanCancel,
   ErrorCode.SavedViewScopeForbidden,
+  // equipment / user scope 격리
+  ErrorCode.EquipmentSiteScopeOnly,
+  ErrorCode.EquipmentTeamScopeOnly,
+  ErrorCode.UserTeamScopeOnly,
+  ErrorCode.UserSiteScopeOnly,
+  // 자기승인/자기반려 bypass 차단
+  ErrorCode.ApprovalDelegationSelfDelegationForbidden,
+  ErrorCode.EquipmentRequestSelfApprovalForbidden,
+  ErrorCode.EquipmentRequestSelfRejectionForbidden,
 
   // ─── 인증 / 토큰 이상 (401) ───────────────────────────────────────────
   ErrorCode.InvalidCredentials,
