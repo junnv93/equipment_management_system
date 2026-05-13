@@ -21,13 +21,19 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { InboundSectionHeader } from '@/components/checkouts/InboundSectionHeader';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
+import { CheckoutInboundBulkActionBar } from '@/components/checkouts/CheckoutInboundBulkActionBar';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import checkoutApi from '@/lib/api/checkout-api';
+import { useAuth } from '@/hooks/use-auth';
+import { useRowSelection } from '@/hooks/use-bulk-selection';
+import { useCheckoutBulkReceiveMutation } from '@/hooks/use-checkout-bulk-receive-mutation';
+import { applyGroupToggle } from '@/lib/checkouts/group-selection';
+import checkoutApi, { type Checkout } from '@/lib/api/checkout-api';
 import {
   type EquipmentImportStatus,
   EquipmentImportStatusValues,
+  CheckoutStatusValues as CSVal,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import CheckoutListTabs from '@/components/checkouts/CheckoutListTabs';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
@@ -66,6 +72,7 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   const navigateWithPending = useNavigateWithPending();
   const router = useRouter();
   const { fmtDate } = useDateFormatter();
+  const { can } = useAuth();
 
   const handleCheckoutClick = useCallback(
     (id: string) => navigateWithPending(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id)),
@@ -74,6 +81,8 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
 
   const { subTab } = filters;
   const filterActive = countActiveFilters(filters) > 0;
+
+  const canReceiveCheckout = can(Permission.COMPLETE_CHECKOUT);
 
   const handleSubTabChange = useCallback(
     (newSubTab: CheckoutSubTab) => {
@@ -105,11 +114,50 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     ...QUERY_CONFIG.CHECKOUT_LIST,
   });
 
+  const standardItems: readonly Checkout[] = useMemo(
+    () => overviewData?.standard?.items ?? [],
+    [overviewData?.standard?.items]
+  );
+
   const inboundGroups = useMemo(() => {
-    const items = overviewData?.standard?.items;
-    if (!items) return [];
-    return groupCheckoutsByDateAndDestination(items);
-  }, [overviewData?.standard]);
+    if (standardItems.length === 0) return [];
+    return groupCheckoutsByDateAndDestination(standardItems);
+  }, [standardItems]);
+
+  // Bulk selection — 타팀 장비 대여(standard) 섹션 전용
+  // resetOn: filters 직접 전달 — useRowSelection 내부가 JSON.stringify(resetOn) 처리
+  const selection = useRowSelection<Checkout>(standardItems, (c) => c.id, {
+    isSelectable: (c) =>
+      c.status === CSVal.LENDER_CHECKED && (c.meta?.availableActions?.canBorrowerApprove ?? false),
+    resetOn: [filters],
+  });
+
+  const { isPending: isBulkPending, handleBulkReceive } = useCheckoutBulkReceiveMutation({
+    selection,
+  });
+
+  // CheckoutGroupCard 그룹·행 토글 핸들러 — SSOT 헬퍼 (lib/checkouts/group-selection.ts)
+  const handleToggleGroup = useCallback(
+    (rowIds: readonly string[], allCurrentlySelected: boolean) => {
+      applyGroupToggle(selection, standardItems, rowIds, allCurrentlySelected);
+    },
+    [standardItems, selection]
+  );
+
+  const handleToggleRow = useCallback(
+    (rowId: string) => {
+      const item = standardItems.find((c) => c.id === rowId);
+      if (item) selection.toggle(rowId, item);
+    },
+    [standardItems, selection]
+  );
+
+  // isRowSelectable predicate: lender_checked + borrower 권한 보유 행만 체크박스 노출
+  const isRowSelectable = useCallback(
+    (row: { status: string; canBorrowerApproveItem: boolean }) =>
+      row.status === CSVal.LENDER_CHECKED && row.canBorrowerApproveItem,
+    []
+  );
 
   // rental/internalShared: BFF는 EquipmentImportStatus 다중값 무시 → 클라이언트 필터
   const filteredRentalItems = useMemo(() => {
@@ -208,6 +256,10 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
                 key={group.key}
                 group={group}
                 onCheckoutClick={handleCheckoutClick}
+                selectedRowIds={canReceiveCheckout ? selection.selected : undefined}
+                onToggleGroup={canReceiveCheckout ? handleToggleGroup : undefined}
+                onToggleRow={canReceiveCheckout ? handleToggleRow : undefined}
+                isRowSelectable={canReceiveCheckout ? isRowSelectable : undefined}
               />
             ))
           )}
@@ -441,6 +493,20 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
           )}
         </div>
       </div>
+
+      {/* 타팀 장비 대여 bulk action bar — canReceiveCheckout + selection 조건부 렌더 */}
+      {canReceiveCheckout && (
+        <CheckoutInboundBulkActionBar
+          selectedCount={selection.count}
+          totalCount={standardItems.length}
+          isAllPageSelected={selection.isAllPageSelected}
+          isIndeterminate={selection.isIndeterminate}
+          onSelectAll={selection.selectAllOnPage}
+          onClearSelection={selection.clear}
+          onBulkReceive={handleBulkReceive}
+          isPending={isBulkPending}
+        />
+      )}
     </div>
   );
 }
