@@ -20,9 +20,7 @@ export interface KeyboardShortcutsContextValue {
 }
 
 // 코드베이스 표준 패턴 (BreadcrumbContext 와 동일) — createContext default = undefined.
-// 두 가지 소비 진입점 분리:
-//  - useKeyboardShortcutsContext: strict consumer, Provider 누락 시 throw
-//  - useKeyboardShortcutsScope: optional consumer, undefined 반환으로 graceful degradation
+// 소비 진입점: useKeyboardShortcutsContext (strict consumer, Provider 누락 시 throw)
 export const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | undefined>(
   undefined
 );
