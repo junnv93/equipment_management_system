@@ -353,6 +353,39 @@ grep -cE "validateDualChannelExclusivity" apps/backend/src/common/cache/__tests_
 2. **proactive audit (build/PR-level)**: `audit-cache-event-channels.mjs` — pre-push 게이트
 3. **naming spec (unit)**: `cache-events-naming.spec.ts` — 명명 규약 + wholesale 차단 + jest-level dual-channel 검증
 
+### Step 9: CACHE_KEY_PREFIXES SSOT 단일 진입점 (Warning, 2026-05-13)
+
+`CACHE_KEY_PREFIXES.X + 'literal'` 인라인 concat 패턴 차단. 동일 service prefix 가 여러 service 에 인라인 concat 으로 분산되면 `CACHE_KEY_PREFIXES.X` 값 갱신이 silent miss — `INTERMEDIATE_INSPECTIONS` SSOT mismatch 회귀 차단 (2026-05-13 `cache-wholesale-migration-inspection-templates` sprint verify-implementation 라운드에서 발견).
+
+```bash
+# 인라인 concat 패턴 0건 강제 (CACHE_KEY_PREFIXES.X + 'sub:' 형식)
+grep -rnE "CACHE_KEY_PREFIXES\.[A-Z_]+\s*\+\s*['\"][a-zA-Z][a-zA-Z0-9_-]*:" \
+  apps/backend/src/modules/ --include="*.ts" \
+  | grep -v "__tests__"
+# 결과: 빈 출력 (PASS)
+```
+
+**기대 결과**: 빈 출력. 출력이 있으면 nested namespace 가 필요한 경우 `CABLES_CACHE_PREFIX` 패턴 (cache-key-prefixes.ts:93 외부 named export) 으로 SSOT 단일 진입점 신설.
+
+**근거**: 2026-05-13 발견 `CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS = 'intermediate-inspections:'` SSOT mismatch 사례 — 실제 service 들은 `CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:'` 인라인 concat 사용. registry wholesale `${INTERMEDIATE_INSPECTIONS}*` 가 actual cache key 0건 매칭 (silent no-op). 같은 모듈 내 다중 service (intermediate-inspections.service.ts + result-sections.service.ts) 가 동일 패턴 분산 → 한 곳만 SSOT 정합 시 회귀 silent miss.
+
+**올바른 패턴**:
+```typescript
+// ❌ WRONG — 인라인 concat (SSOT 우회)
+private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:';
+
+// ✅ CORRECT — CACHE_KEY_PREFIXES 값을 nested namespace로 정의 + 상수 단일 진입점
+// cache-key-prefixes.ts
+INTERMEDIATE_INSPECTIONS: 'calibration:inspections:',  // nested namespace literal
+// 또는 CABLES_CACHE_PREFIX 패턴 (외부 const + template literal 자기참조 가능):
+export const X_CACHE_PREFIX = `${CACHE_KEY_PREFIXES.PARENT}sub:` as const;
+
+// service.ts
+private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS;
+```
+
+**예외**: 동적 segment 조립 (`${this.CACHE_PREFIX}${type}:${id}`) 은 buildCacheKey() 패턴 정상. 본 검사는 **class field 초기화** 의 인라인 concat 만 차단.
+
 ## Exceptions (리포트하지 않음)
 
 1. **스케줄러의 `emit` 유지** — `schedulers/` 하위 파일은 사용자 응답 경로가 아니므로 의도적.
@@ -379,6 +412,7 @@ grep -cE "validateDualChannelExclusivity" apps/backend/src/common/cache/__tests_
 | Step 6 BFF 집계 체인 누락 | **Warning** | BFF stale read — equipment-imports 변경 후 inbound-overview 갱신 안 됨 |
 | Step 8 audit + pre-push 통합 | **Critical** | audit-cache-event-channels.mjs 부재 또는 pre-push 미통합 시 build/PR-level 회귀 차단 무력화 (ADR-0012 라운드 #3 갭 K) |
 | Step 7 dual-channel duplication | **Critical** | 동일 status 전이마다 invalidateAllDashboard + 패턴 삭제 2x → p99 latency + dashboard cache churn |
+| Step 9 CACHE_KEY_PREFIXES 인라인 concat | **Warning** | SSOT 값 갱신이 silent miss — 동일 prefix 사용 service 다중 분산 시 한 곳만 정합되면 registry 패턴이 actual cache 미매칭 (2026-05-13 INTERMEDIATE_INSPECTIONS 회귀) |
 
 ## Learning Reference
 
