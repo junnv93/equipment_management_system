@@ -3824,39 +3824,6 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
   }
 
   // ============================================================================
-  // M10: 최근 반출지 목록 (GET /checkouts/destinations/recent)
-  // ============================================================================
-
-  /**
-   * 사용자별 최근 사용 반출지 목록 (max 5).
-   * ✅ userId 스코핑 — cross-user 노출 0
-   * ✅ 캐시: 60s TTL, key에 userId 포함
-   * ✅ MEMORY: `sql\`ANY(${arr})\`` 패턴 0 — GROUP BY 집계만 사용
-   */
-  async getRecentDestinations(userId: string, limit = 5): Promise<string[]> {
-    this.validateUuid(userId, 'userId');
-    const cacheKey = `${this.CACHE_PREFIX}.recent-destinations:${userId}`;
-    const cached = await this.cacheService.get<string[]>(cacheKey);
-    if (cached) return cached;
-
-    const rows = await this.db
-      .selectDistinct({ destination: checkouts.destination })
-      .from(checkouts)
-      .where(
-        and(
-          eq(checkouts.requesterId, userId),
-          sql`${checkouts.destination} IS NOT NULL AND ${checkouts.destination} != ''`
-        )
-      )
-      .orderBy(desc(checkouts.createdAt))
-      .limit(limit);
-
-    const destinations = rows.map((r) => r.destination).filter(Boolean) as string[];
-    await this.cacheService.set(cacheKey, destinations, 60_000);
-    return destinations;
-  }
-
-  // ============================================================================
   // Saved View Counts (GET /checkouts/saved-view-counts)
   // ============================================================================
 

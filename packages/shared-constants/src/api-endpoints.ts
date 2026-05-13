@@ -157,8 +157,6 @@ export const API_ENDPOINTS = {
     REJECTION_PRESET_DELETE: (id: string) => `/api/checkouts/rejection-presets/${id}`,
     /** 반려 사유 프리셋 일괄 정렬 (PATCH) — MANAGE_SYSTEM_SETTINGS 권한, max 50건 */
     REJECTION_PRESETS_REORDER: '/api/checkouts/rejection-presets/reorder',
-    /** 최근 사용한 반출지 목록 (GET) — userId 스코핑, 캐시 60s */
-    DESTINATIONS_RECENT: '/api/checkouts/destinations/recent',
     /** 승인 철회 (POST) — approved 상태 + 5분 이내만 허용 */
     REVOKE_APPROVAL: (id: string) => `/api/checkouts/${id}/revoke-approval`,
     /** 시스템 뷰별 건수 집계 (GET) — userId 스코핑, 캐시 30s */

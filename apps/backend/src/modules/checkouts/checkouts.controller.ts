@@ -920,22 +920,6 @@ export class CheckoutsController {
   }
 
   // ============================================================================
-  // M10: 최근 사용한 반출지 목록
-  // ============================================================================
-
-  @Get('destinations/recent')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS)
-  @ApiOperation({
-    summary: '최근 사용 반출지 목록',
-    description: '로그인 사용자 본인의 반출 이력에서 최근 5건. userId 스코핑 — cross-user 0.',
-  })
-  @ApiResponse({ status: HttpStatus.OK, description: '반출지 목록 (최대 5건)' })
-  async getRecentDestinations(@Request() req: AuthenticatedRequest): Promise<string[]> {
-    const userId = extractUserId(req);
-    return this.checkoutsService.getRecentDestinations(userId);
-  }
-
-  // ============================================================================
   // M11: 승인 철회
   // ============================================================================
 

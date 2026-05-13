@@ -564,8 +564,6 @@ export const queryKeys = {
       summary: (params: object = {}) =>
         [...queryKeys.checkouts.resource.all(), 'summary', params] as const,
       rejectionPresets: () => [...queryKeys.checkouts.resource.all(), 'rejection-presets'] as const,
-      destinationsRecent: () =>
-        [...queryKeys.checkouts.resource.all(), 'destinations-recent'] as const,
     },
   },
   calibrations: {
