@@ -388,6 +388,10 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     hintKey: 'checkedOutSubmitReturn',
     auditEventSuffix: 'return_approved',
   },
+  // ── RENTAL reject_return: lender_received → in_use ───────────────────────
+  // 설계 의도: RENTAL은 returned 상태를 거치지 않음 (lender_received에서 approve_return 시
+  //   return_approved로 직접 전환). 따라서 반납 반려(reject_return)는 이 전이에서만 처리하며,
+  //   returned 상태의 reject_return은 CAL_REPAIR 전용이다 (의도적 설계 — 도메인 갭 없음).
   {
     from: 'lender_received',
     action: 'reject_return',
@@ -435,6 +439,9 @@ export const CHECKOUT_TRANSITIONS: readonly TransitionRule[] = Object.freeze([
     hintKey: 'returnedApproveReturn',
     auditEventSuffix: 'return_approved',
   },
+  // ── CAL_REPAIR reject_return: returned → checked_out ─────────────────────
+  // 설계 의도: RENTAL은 lender_received에서 reject_return을 처리함 (위 전이 참조).
+  //   CAL_REPAIR만 returned → checked_out 반려를 허용하며, RENTAL 제외는 의도적 결정.
   {
     from: 'returned',
     action: 'reject_return',
