@@ -89,6 +89,11 @@ export class StorageHealthProviderImpl implements StorageHealthProvider {
   /**
    * MonitoringService 의 storage 메트릭 reading.
    * `diskTotal === 0` 은 df 측정 실패 (Windows 등) 를 의미 — null 반환하여 fallback 진입.
+   *
+   * 설계 결정 (stale-polling-window 허용): MonitoringService.getSystemMetrics().storage 는
+   * setInterval ~30s 주기로 갱신된 캐시 값을 읽는다. 최대 30s stale 가능성이 있으나,
+   * periodic polling은 대시보드 disk 모니터링의 산업 표준이며 초 단위 정확도 불필요.
+   * 실시간 측정이 critical 요구사항이 될 경우 on-demand `df` 직접 호출로 전환 가능.
    */
   private readHostDiskMetrics(): { used: number; total: number } | null {
     try {
