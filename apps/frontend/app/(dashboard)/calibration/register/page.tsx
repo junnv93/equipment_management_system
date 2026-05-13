@@ -13,8 +13,8 @@ export default async function CalibrationRegisterPage() {
     redirect('/login');
   }
 
-  const userRole = session.user.role as UserRole;
-  if (!hasPermission(userRole, Permission.CREATE_CALIBRATION)) {
+  const role = session.user.role;
+  if (typeof role !== 'string' || !hasPermission(role as UserRole, Permission.CREATE_CALIBRATION)) {
     redirect('/dashboard');
   }
 

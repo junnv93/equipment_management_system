@@ -20,7 +20,11 @@ export default async function RejectionPresetsAdminPage() {
     redirect('/login');
   }
 
-  if (!hasPermission(session.user.role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)) {
+  const role = session.user.role;
+  if (
+    typeof role !== 'string' ||
+    !hasPermission(role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)
+  ) {
     redirect('/dashboard');
   }
 

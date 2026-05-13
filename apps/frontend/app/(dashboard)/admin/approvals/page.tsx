@@ -116,12 +116,12 @@ async function ApprovalsContentAsync({
     redirect('/login');
   }
 
-  const userRole = session.user.role as UserRole;
-  const userTeamId = session.user.teamId;
-
-  if (!APPROVAL_ROLES.includes(userRole)) {
+  const role = session.user.role;
+  if (typeof role !== 'string' || !APPROVAL_ROLES.includes(role as UserRole)) {
     redirect('/dashboard');
   }
+  const userRole = role as UserRole;
+  const userTeamId = session.user.teamId;
 
   const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : null;
   const initialTab = tabParam ?? undefined;

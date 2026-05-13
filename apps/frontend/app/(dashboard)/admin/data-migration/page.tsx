@@ -13,7 +13,11 @@ export default async function DataMigrationPage() {
     redirect('/login');
   }
 
-  if (!hasPermission(session.user.role as UserRole, Permission.PERFORM_DATA_MIGRATION)) {
+  const role = session.user.role;
+  if (
+    typeof role !== 'string' ||
+    !hasPermission(role as UserRole, Permission.PERFORM_DATA_MIGRATION)
+  ) {
     redirect('/dashboard');
   }
 

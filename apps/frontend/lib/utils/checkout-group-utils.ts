@@ -53,7 +53,9 @@ function getGroupDate(checkout: Checkout): { date: string; hasCheckoutDate: bool
  * - 최신 날짜 그룹이 상단 (내림차순)
  * - 같은 날짜 내에서는 반출지 가나다순
  */
-export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): CheckoutGroup[] {
+export function groupCheckoutsByDateAndDestination(
+  checkouts: readonly Checkout[]
+): CheckoutGroup[] {
   const groupMap = new Map<string, { checkouts: Checkout[]; hasCheckoutDate: boolean }>();
 
   for (const checkout of checkouts) {
