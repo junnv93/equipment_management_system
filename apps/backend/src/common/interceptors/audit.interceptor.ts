@@ -277,7 +277,8 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // 엔티티 이름 추출 — aggregate 우선 (bulk operation), 아니면 entityNamePath 폴백
-    const entityName = aggregateEntityName ?? this.extractValue(metadata.entityNamePath, request, response);
+    const entityName =
+      aggregateEntityName ?? this.extractValue(metadata.entityNamePath, request, response);
 
     // 상세 정보 구성 (크기 제한 적용)
     const details: AuditLogDetails = {};
