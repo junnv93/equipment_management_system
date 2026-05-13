@@ -25,8 +25,15 @@ const MESSAGES_ROOT = join(__dirname, '..', '..', 'messages');
 
 /** 객체에서 모든 leaf key path 를 dot-notation 으로 추출. */
 function extractKeyPaths(input: unknown, prefix = ''): string[] {
-  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
-    // leaf — prefix 자체가 key path. 배열도 leaf 로 처리(현재 i18n 구조에 배열 없음 — R-3).
+  if (Array.isArray(input)) {
+    // i18n 구조에 배열 도입 시 이 spec이 명시적으로 실패해야 함 (R-3 정책).
+    // 배열 값은 locale 간 키 parity 검증 대상이 아니므로 silent-pass 금지.
+    throw new Error(
+      `i18n 구조에 배열 값이 감지됨 (key: "${prefix}"). ` +
+        '배열을 i18n 메시지로 사용하려면 이 spec 을 명시적으로 갱신하세요.'
+    );
+  }
+  if (input === null || typeof input !== 'object') {
     return prefix ? [prefix] : [];
   }
   const out: string[] = [];

@@ -588,6 +588,21 @@ export class CheckoutCacheInvalidation {
   ];
 
   /**
+   * 승인 철회(revoke) 후 무효화 대상 키.
+   *
+   * APPROVAL_KEYS + notifications (철회 시 승인자 알림 상태 갱신) 포함.
+   * revokeMutation invalidateKeys SSOT — `CheckoutDetailClient.tsx` + `useUndoToast` 공유.
+   */
+  static readonly REVOCATION_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.checkouts.all, // view.* + resource.* 전체
+    queryKeys.equipment.all, // PENDING 복원 → 장비 상태 영향
+    queryKeys.approvals.all, // 승인 이력 갱신
+    queryKeys.approvals.countsAll, // 대기 건수 변동
+    queryKeys.dashboard.all, // 대시보드 통계 영향
+    queryKeys.notifications.all, // 철회 시 승인자 알림 상태
+  ];
+
+  /**
    * 상수 기반 캐시 무효화 범용 메서드
    *
    * *_KEYS 상수를 SSOT로 활용하여 일관된 무효화 수행.

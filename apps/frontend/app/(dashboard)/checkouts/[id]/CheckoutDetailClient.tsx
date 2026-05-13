@@ -398,10 +398,10 @@ export default function CheckoutDetailClient({
   // 5분 윈도우 + 사용자 입력 사유 — backend revoke-approval.dto 정합 (version + reason).
   // 보안 가드: status === APPROVED && approverId === currentUserId 는 UI 측에서 부가 가드,
   // 권한 fail-close는 backend가 SSOT (scope → FSM → time-window → domain 순).
-  const revokeMutation = useOptimisticMutation<void, string, Checkout>({
+  const revokeMutation = useOptimisticMutation<Checkout, string, Checkout>({
     mutationFn: async (reason: string) => {
       const { version } = await checkoutApi.getCheckout(checkout.id);
-      await revokeApproval(checkout.id, { version, reason });
+      return revokeApproval(checkout.id, { version, reason });
     },
     queryKey: queryKeys.checkouts.resource.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
@@ -413,7 +413,7 @@ export default function CheckoutDetailClient({
         approvedBy: undefined,
         version: (old?.version ?? checkout.version) + 1,
       }) as Checkout,
-    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.REVOCATION_KEYS,
     successMessage: t('toasts.revokeApprovalSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.revokeApprovalError')),
     onSuccessCallback: () => {
