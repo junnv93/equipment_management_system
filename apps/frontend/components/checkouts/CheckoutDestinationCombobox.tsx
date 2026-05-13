@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useRecentDestinations } from '@/hooks/use-recent-destinations';
+import { useDestinations } from '@/hooks/use-destinations';
 import { fuzzyFilter } from '@/lib/utils/fuzzy-search';
 
 interface CheckoutDestinationComboboxProps {
@@ -26,8 +26,8 @@ type Mode = 'browse' | 'create';
  * - browse 모드: 자동완성 + 선택 (`fuzzyFilter`).
  * - create 모드: 새 목적지 등록 form — `VALIDATION_RULES.DESTINATION_MAX_LENGTH(255)` SSOT,
  *   trim, 빈값/whitespace-only 차단, 중복 체크.
- * - destination은 `varchar(255)` 단순 문자열 entity가 아님 — 등록 = onChange로 값 삽입,
- *   recent list는 백엔드 first-use 자동 누적.
+ * - destination은 `checkout_destinations` entity 테이블 기반 (SH-6) — 체크아웃 생성/수정 시
+ *   백엔드 자동 upsert, 전체 관리 목록 제공 (개인 이력 5건 제한 해제).
  *
  * 키보드: ↑↓ 항목 이동, Enter 선택/등록, Esc 닫기.
  * IME: `nativeEvent.isComposing` 가드 (React 19 표준).
@@ -51,9 +51,7 @@ export function CheckoutDestinationCombobox({
   const counterId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: recentDestinations = [] } = useRecentDestinations();
-
-  const destinations = recentDestinations.map((d) => d.destination);
+  const { data: destinations = [] } = useDestinations();
   const filtered = fuzzyFilter(destinations, query, (d) => d);
 
   const showCreateOption = query.trim().length > 0 && !filtered.includes(query.trim());

@@ -428,6 +428,13 @@
       "when": 1778631330309,
       "tag": "0060_add_rejection_presets_sort_order_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1778631600000,
+      "tag": "0061_add_checkout_destinations",
+      "breakpoints": true
     }
   ]
 }

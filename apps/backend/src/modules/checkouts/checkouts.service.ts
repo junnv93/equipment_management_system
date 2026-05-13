@@ -793,11 +793,9 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
   }
 
   /**
-   * 고유 반출지(destination) 목록 조회
-   */
-  /**
-   * 반출지 목록 조회 (필터용)
-   * ✅ 캐시: 24시간 TTL (불변 데이터)
+   * 반출지 목록 조회 — checkout_destinations entity 테이블 (SH-6).
+   * ✅ 캐시: 24시간 TTL
+   * ✅ is_active=true 필터: 비활성화 반출지 제외
    */
   async getDistinctDestinations(): Promise<string[]> {
     const cacheKey = `${this.CACHE_PREFIX}.destinations`;
@@ -806,15 +804,61 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
     if (cached) return cached;
 
     const results = await this.db
-      .selectDistinct({ destination: checkouts.destination })
-      .from(checkouts)
-      .where(sql`${checkouts.destination} IS NOT NULL AND ${checkouts.destination} != ''`)
-      .orderBy(asc(checkouts.destination));
+      .select({ name: schema.checkoutDestinations.name })
+      .from(schema.checkoutDestinations)
+      .where(eq(schema.checkoutDestinations.isActive, true))
+      .orderBy(asc(schema.checkoutDestinations.name));
 
-    const destinations = results.map((r) => r.destination).filter(Boolean) as string[];
+    const destinations = results.map((r) => r.name);
     await this.cacheService.set(cacheKey, destinations, CACHE_TTL.DAY);
 
     return destinations;
+  }
+
+  /**
+   * 반출지 upsert — 체크아웃 생성/수정 시 entity 테이블 자동 동기화 (SH-6).
+   * fire-and-forget: 실패해도 체크아웃 워크플로 차단 안 함.
+   */
+  private async upsertDestination(name: string | null | undefined): Promise<void> {
+    if (!name?.trim()) return;
+    const trimmed = name.trim();
+    try {
+      await this.db
+        .insert(schema.checkoutDestinations)
+        .values({ name: trimmed })
+        .onConflictDoUpdate({
+          target: schema.checkoutDestinations.name,
+          set: { updatedAt: sql`now()` },
+        });
+      this.cacheService.delete(`${this.CACHE_PREFIX}.destinations`);
+    } catch (err) {
+      this.logger.warn(`[SH-6] destination upsert 실패 (name=${trimmed}): ${String(err)}`);
+    }
+  }
+
+  /**
+   * 반출지 등록 또는 조회 (SH-6 — 인라인 create 플로우).
+   *
+   * 중복 이름: ON CONFLICT DO UPDATE(updatedAt touch) → 기존 entity 반환.
+   * 캐시 무효화: destinations 목록 캐시 삭제.
+   */
+  async createDestination(name: string): Promise<typeof schema.checkoutDestinations.$inferSelect> {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > VALIDATION_RULES.DESTINATION_MAX_LENGTH) {
+      throw new BadRequestException('반출지명이 유효하지 않습니다.');
+    }
+
+    const [result] = await this.db
+      .insert(schema.checkoutDestinations)
+      .values({ name: trimmed })
+      .onConflictDoUpdate({
+        target: schema.checkoutDestinations.name,
+        set: { updatedAt: sql`now()` },
+      })
+      .returning();
+
+    this.cacheService.delete(`${this.CACHE_PREFIX}.destinations`);
+    return result;
   }
 
   /**
@@ -1733,6 +1777,9 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
       const affectedTeams = [userTeamId, insertData.lenderTeamId].filter(Boolean) as string[];
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+
+      // destination entity 자동 upsert (SH-6, fire-and-forget)
+      void this.upsertDestination(createCheckoutDto.destination);
 
       // 📢 알림 이벤트 발행 (fire-and-forget) — equipmentMap 재사용 (DB 0회)
       const firstEquipment = equipmentMap.get(createCheckoutDto.equipmentIds[0]);
@@ -3298,6 +3345,11 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(existingCheckout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
+
+      // destination entity 자동 upsert (SH-6, fire-and-forget)
+      if (updateCheckoutDto.destination !== undefined) {
+        void this.upsertDestination(updateCheckoutDto.destination);
+      }
 
       return updated;
     } catch (error) {

@@ -87,3 +87,6 @@ export * from './saved-views';
 
 // 시스템 에러 이벤트 (5xx / uncaught) — dashboard getSystemHealth SSOT
 export * from './system-error-events';
+
+// 반출지 관리 엔티티 (SH-6 — autocomplete + 분석용 테이블 승격)
+export * from './checkout-destinations';
