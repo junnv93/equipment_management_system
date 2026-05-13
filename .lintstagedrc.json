@@ -8,5 +8,5 @@
     "prettier --write"
   ],
   "packages/**/*.ts": ["eslint --quiet --fix --config .eslintrc.js", "prettier --write"],
-  "*.{js,jsx,json,md,yml,yaml}": ["prettier --write"]
+  "**/*.{js,jsx,json,md,yml,yaml}": ["prettier --write"]
 }
