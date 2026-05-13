@@ -95,12 +95,18 @@ PR 에는 다음 2가지 **만** 커밋되어야 합니다:
 - [ ] **snapshot 파일 변경 0건** ✓ (`git diff drizzle/meta/*_snapshot.json` 결과 비어있음 — snapshot 재생성 시도 시 실패해야 함, ADR-0010)
 - [ ] `pnpm --filter backend run db:reset` 후 새 마이그레이션이 정상 적용되는지 검증 ✓
 
-### 2. `db:push`는 로컬 개인 프로토타이핑에만
+### 2. `db:push` — ADR-0010 금지 (2026-05-13 갱신)
 
-`drizzle-kit push`는 마이그레이션 히스토리를 건드리지 않고 스키마를 직접 동기화합니다. 편리하지만 팀 공유 DB(스테이징/프로덕션)나 커밋되는 브랜치에서 쓰면 이번 같은 불일치가 다시 생깁니다.
+**`drizzle-kit push` 는 본 레포에서 완전 금지입니다** ([ADR-0010](../adr/0010-drizzle-manual-sql-policy.md) Decision).
 
-**허용**: 개인 로컬 실험, 삭제할 feature branch  
-**금지**: main/develop 병합 전 최종 스키마, 공유 DB
+이전 §2 는 "로컬 프로토타이핑에만 허용"이라고 안내했지만, 이것은 ADR-0010 Decision 과 모순입니다.
+`drizzle-kit push` 는 `__drizzle_migrations` 히스토리를 건드리지 않고 스키마를 직접 동기화하므로
+manual SQL 4단계 절차를 우회합니다 — 로컬 환경에서도 `db:reset` 이후 불일치가 생깁니다.
+
+`package.json` 의 `db:push` / `db:push:force` 스크립트는 2026-05-13 에 제거됐습니다.
+CI ADR-0010 Compliance Check step 이 `drizzle-kit push` 호출도 차단합니다.
+
+**모든 스키마 변경은 §1 manual SQL 4단계 절차만 사용하세요.**
 
 ### 3. 백필 UPDATE 등 복잡 SQL 인라인 작성
 

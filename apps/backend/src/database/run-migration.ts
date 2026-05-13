@@ -10,9 +10,8 @@
  * - 실패: exit(1) → 배포 중단 (서비스는 기존 버전 유지)
  *
  * 설계:
- * - drizzle migrate() 사용 (drizzle-kit push가 아님)
- * - push: 스키마 직접 반영 (개발용)
- * - migrate: 마이그레이션 파일 기반 순차 적용 (프로덕션용)
+ * - drizzle migrate() 사용 (ADR-0010: drizzle-kit push 금지, journal-based 실행)
+ * - migrate: __drizzle_migrations 테이블 기준 미적용분 순차 적용 (프로덕션용)
  */
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';

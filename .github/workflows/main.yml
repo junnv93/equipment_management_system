@@ -128,27 +128,28 @@ jobs:
         run: pnpm verify:env-sync
 
       - name: Drizzle — ADR-0010 Compliance Check
-        # ADR-0010: drizzle-kit generate / push 는 본 레포에서 금지.
+        # ADR-0010: drizzle-kit generate / push 양쪽 모두 본 레포에서 금지.
         # snapshot desync(0025까지만 존재)는 의도적 상태 — snapshot 동기화 검증 불필요.
-        # (1) generate 호출 차단 grep: 코드/스크립트에 drizzle-kit generate 가 남아있으면 FAIL
+        # (1) generate + push 호출 차단: 코드/스크립트에서 감지되면 FAIL
         # (2) drizzle-kit check: journal entries ↔ SQL 파일 존재 정합성 검증
+        #     "Everything's fine" = 모든 journal entry 에 대응 SQL 파일 존재 확인 (유의미한 invariant)
         # 상세: docs/adr/0010-drizzle-manual-sql-policy.md
         run: |
-          echo "--- (1) ADR-0010: drizzle-kit generate 호출 차단 ---"
-          VIOLATIONS=$(grep -rn "drizzle-kit generate" \
+          echo "--- (1) ADR-0010: drizzle-kit generate / push 호출 차단 ---"
+          VIOLATIONS=$(grep -rn "drizzle-kit generate\|drizzle-kit push" \
             --include="*.ts" --include="*.js" --include="*.mjs" --include="*.sh" \
             --include="*.yml" --include="*.yaml" --include="*.json" \
             apps/ packages/ scripts/ .husky/ .github/ \
             | grep -v "ADR-0010" \
-            | grep -v "^\.github/workflows/main\.yml" \
             | grep -v "\.github/workflows/main\.yml" \
+            | grep -vE ":[0-9]+:[[:space:]]*(#|//|\*)" \
             || true)
           if [ -n "$VIOLATIONS" ]; then
-            echo "::error::ADR-0010 위반: drizzle-kit generate 호출 감지. docs/adr/0010-drizzle-manual-sql-policy.md 참조"
+            echo "::error::ADR-0010 위반: drizzle-kit generate 또는 push 호출 감지. docs/adr/0010-drizzle-manual-sql-policy.md 참조"
             echo "$VIOLATIONS"
             exit 1
           fi
-          echo "✔ drizzle-kit generate 호출 없음"
+          echo "✔ drizzle-kit generate / push 호출 없음"
           echo "--- (2) journal ↔ SQL 파일 정합성 검증 ---"
           pnpm --filter backend exec drizzle-kit check
 

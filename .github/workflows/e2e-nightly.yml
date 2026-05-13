@@ -83,7 +83,8 @@ jobs:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Run DB Migrations & Seed
-        run: pnpm --filter backend exec drizzle-kit push --force && pnpm --filter backend run db:seed
+        # ADR-0010: drizzle-kit push --force 금지 → journal-based migrate 사용.
+        run: pnpm --filter backend run db:migrate && pnpm --filter backend run db:seed
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
 

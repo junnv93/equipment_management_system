@@ -25,7 +25,6 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json --skipLibCheck",
     "clean": "rm -rf dist",
-    "db:generate": "drizzle-kit generate:pg",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
