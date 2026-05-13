@@ -464,6 +464,11 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
     // specific sub-prefix만 (ADR-0012 §Decision-2). approvals 도메인은 counts: 단일 sub-prefix 사용.
     this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
 
+    // inbound-overview-cache-coherence: BFF 30s TTL 집계 캐시 stale 방지.
+    // checkouts 상태 전이는 inbound-overview 집계에 영향 (status, condition_check 등).
+    // 단일 sub-prefix `t:` 사용하므로 broad prefix로 전체 team-scope 무효화.
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.INBOUND_OVERVIEW}t:`);
+
     if (checkoutId) {
       this.cacheService.delete(this.buildCacheKey('detail', { uuid: checkoutId }));
     }
