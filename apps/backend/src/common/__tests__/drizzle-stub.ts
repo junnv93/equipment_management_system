@@ -59,6 +59,29 @@ export interface DrizzleUpdateChain {
 }
 
 /**
+ * INSERT ... RETURNING chain — `.values().returning()` 패턴.
+ *
+ * CAS insert 또는 data-returning insert 에 사용.
+ * `createDrizzleInsertChain()` (returning 없음)과 구분.
+ */
+export interface DrizzleInsertWithReturningChain {
+  values: jest.Mock;
+  returning: jest.Mock;
+}
+
+/**
+ * UPDATE ... SET ... WHERE ... RETURNING chain.
+ *
+ * `updateWithVersion` base class 패턴에 사용.
+ * `createDrizzleUpdateChain()` (returning 없음)과 구분.
+ */
+export interface DrizzleUpdateWithReturningChain {
+  set: jest.Mock;
+  where: jest.Mock;
+  returning: jest.Mock;
+}
+
+/**
  * 단일 select chain — thenable + 모든 fluent 메서드가 chain 자신 반환.
  * await/`.then(resolve)` 호출 시 `rows` 가 resolve.
  */
@@ -90,6 +113,48 @@ export function createDrizzleUpdateChain(): DrizzleUpdateChain {
     set: jest.fn().mockReturnThis(),
     where: jest.fn().mockResolvedValue(undefined),
   };
+}
+
+/**
+ * INSERT ... RETURNING chain — `.values()` 가 self 반환, `.returning()` 이 `rows` resolve.
+ *
+ * ```ts
+ * mockDb.insert = jest.fn().mockReturnValue(createDrizzleInsertWithReturningChain([created]));
+ * ```
+ */
+export function createDrizzleInsertWithReturningChain<T = unknown>(
+  rows: T[]
+): DrizzleInsertWithReturningChain {
+  const chain: DrizzleInsertWithReturningChain = {
+    values: jest.fn(),
+    returning: jest.fn().mockResolvedValue(rows),
+  };
+  chain.values.mockReturnValue(chain);
+  return chain;
+}
+
+/**
+ * UPDATE ... SET ... WHERE ... RETURNING chain.
+ *
+ * `updateWithVersion` 패턴: `.set().where().returning()`. rows 가 빈 배열이면 CAS 실패 시뮬레이션.
+ *
+ * ```ts
+ * mockDb.update = jest.fn().mockReturnValue(createDrizzleUpdateWithReturningChain([updated]));
+ * // CAS 실패: []
+ * mockDb.update = jest.fn().mockReturnValue(createDrizzleUpdateWithReturningChain([]));
+ * ```
+ */
+export function createDrizzleUpdateWithReturningChain<T = unknown>(
+  rows: T[]
+): DrizzleUpdateWithReturningChain {
+  const chain: DrizzleUpdateWithReturningChain = {
+    set: jest.fn(),
+    where: jest.fn(),
+    returning: jest.fn().mockResolvedValue(rows),
+  };
+  chain.set.mockReturnValue(chain);
+  chain.where.mockReturnValue(chain);
+  return chain;
 }
 
 /**
