@@ -1078,13 +1078,17 @@ export class DataMigrationService {
       ) {
         this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.EQUIPMENT}detail:`);
       }
+      // 라운드 #5 cache-wholesale-service-local-closure: bulk import 후 cross-domain 무효화는
+      // specific sub-prefix만 (ADR-0012 §Decision-2). 1067-1068 (CALIBRATION) 와 동일 패턴.
       // 시험용 소프트웨어가 등록된 경우 목록 캐시 무효화
       if (
         sheetSummaries.some(
           (s) => s.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE && s.createdCount > 0
         )
       ) {
-        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}by-equipment:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}linked-equipment:`);
       }
       // 교정 인자가 등록된 경우 목록 캐시 무효화
       if (
@@ -1092,7 +1096,10 @@ export class DataMigrationService {
           (s) => s.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION_FACTOR && s.createdCount > 0
         )
       ) {
-        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CALIBRATION_FACTORS);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}list:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}registry:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}equipment:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}detail:`);
       }
       // 부적합이 등록된 경우 목록 캐시 무효화
       if (
@@ -1100,7 +1107,8 @@ export class DataMigrationService {
           (s) => s.sheetType === MIGRATION_SHEET_TYPE.NON_CONFORMANCE && s.createdCount > 0
         )
       ) {
-        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.NON_CONFORMANCES);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.NON_CONFORMANCES}list:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.NON_CONFORMANCES}detail:`);
       }
       // 케이블이 등록된 경우 목록 캐시 무효화
       if (
@@ -1116,13 +1124,18 @@ export class DataMigrationService {
       ) {
         await this.cacheInvalidationHelper.invalidateEquipmentLists();
       }
-      // 반출입 이력이 등록된 경우 checkout + 장비 detail 캐시 무효화
+      // 반출입 이력이 등록된 경우 checkout + 장비 detail 캐시 무효화.
+      // 라운드 #5: wholesale checkouts → specific sub-prefix (list/summary/detail).
+      // .destinations 단일 키는 별도 delete (period prefix, list:/summary:/detail: 미매칭).
       if (
         sheetSummaries.some(
           (s) => s.sheetType === MIGRATION_SHEET_TYPE.CHECKOUT && s.createdCount > 0
         )
       ) {
-        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CHECKOUTS);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CHECKOUTS}list:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CHECKOUTS}summary:`);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CHECKOUTS}detail:`);
+        this.cacheService.delete(`${CACHE_KEY_PREFIXES.CHECKOUTS}.destinations`);
         this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.EQUIPMENT}detail:`);
       }
 

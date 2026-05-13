@@ -79,7 +79,11 @@ export class SoftwareValidationsService extends VersionedBaseService {
     if (testSoftwareId) {
       this.cacheService.delete(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:${testSoftwareId}`);
     } else {
-      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+      // 라운드 #5 cache-wholesale-service-local-closure: cross-domain test-software 무효화는
+      // specific sub-prefix만 (ADR-0012 §Decision-2). test-software 도메인 sub-prefix: detail/by-equipment/linked-equipment.
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:`);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}by-equipment:`);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}linked-equipment:`);
     }
   }
 

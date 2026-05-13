@@ -64,7 +64,12 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       this.cacheService.delete(this.buildCacheKey('list-equip', equipmentId));
     }
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CALIBRATION);
+    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain calibration 무효화는
+    // specific sub-prefix만 (ADR-0012 §Decision-2). wholesale `${CALIBRATION}*`는
+    // calibration:cables:*, calibration:plans:* 등 nested namespace 침범 야기.
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}list:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}detail:`);
   }
 
   /**

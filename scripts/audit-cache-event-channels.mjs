@@ -31,13 +31,14 @@
  *   - 본 script: CI/pre-push lint-fast (production code 미실행)
  *   - cache-events-naming.spec.ts: jest 단위 — 명명 규약 + dead synonym/legacy 차단
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
+const MODULES_DIR = join(ROOT, 'apps/backend/src/modules');
 const CACHE_EVENTS_FILE = join(ROOT, 'apps/backend/src/common/cache/cache-events.ts');
 const NOTIFICATION_EVENTS_FILE = join(
   ROOT,
@@ -201,6 +202,103 @@ function extractWholesalePatterns(registrySource) {
   return wholesale;
 }
 
+/**
+ * 라운드 #5 — service-local cross-domain wholesale 검사.
+ *
+ * 책임:
+ *   modules/**\/*.service.ts 파일을 스캔하여 `deleteByPrefix(CACHE_KEY_PREFIXES.X)` 패턴이
+ *   sub-prefix concatenation 없이 단독 호출되는 경우 violation 으로 보고.
+ *
+ * 분류 규칙:
+ *   1. self-domain: X == 해당 service의 `private CACHE_PREFIX = CACHE_KEY_PREFIXES.Y` 의 Y
+ *      → ADR-0012 §Decision-2 예외 (책임 분리 정합, allowed)
+ *   2. cross-domain: X != Y
+ *      → VIOLATION (registry 채널 또는 specific sub-prefix 로 분해 필요)
+ *
+ * 검사 제외:
+ *   - common/cache/cache-invalidation.helper.ts (centralized wholesale API)
+ *   - listeners/ 디렉토리 (event listener 도메인 책임)
+ *   - .spec.ts / .test.ts (테스트 fixture)
+ */
+const SERVICE_LOCAL_WHOLESALE_ALLOWLIST = new Set([
+  // 형식: 'modules/<domain>/.../<file>.service.ts:<line>'
+  // 점진 마이그레이션 대상은 여기에 등록 + tech-debt-tracker 동시 기록.
+]);
+
+function listServiceFiles(dir) {
+  const out = [];
+  function walk(d) {
+    let entries;
+    try {
+      entries = readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = join(d, entry.name);
+      if (entry.isDirectory()) {
+        // listeners/ 디렉토리는 검사 제외 (event listener 도메인 책임)
+        if (entry.name === 'listeners') continue;
+        walk(full);
+      } else if (
+        entry.isFile() &&
+        entry.name.endsWith('.service.ts') &&
+        !entry.name.endsWith('.spec.ts') &&
+        !entry.name.endsWith('.test.ts')
+      ) {
+        out.push(full);
+      }
+    }
+  }
+  walk(dir);
+  return out;
+}
+
+function extractServiceCachePrefix(source) {
+  // `private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.<NAME>;`
+  const m = source.match(
+    /private\s+readonly\s+CACHE_PREFIX\s*=\s*CACHE_KEY_PREFIXES\.([A-Z_]+)\s*;/
+  );
+  return m ? m[1] : null;
+}
+
+function extractServiceLocalWholesaleViolations() {
+  const violations = [];
+  const files = listServiceFiles(MODULES_DIR);
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+    const ownPrefix = extractServiceCachePrefix(source);
+    const lines = source.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // 1-line pattern: `deleteByPrefix(CACHE_KEY_PREFIXES.X)` — sub-prefix concat 없음
+      const m = line.match(/deleteByPrefix\(\s*CACHE_KEY_PREFIXES\.([A-Z_]+)\s*\)/);
+      if (!m) continue;
+      const targetPrefix = m[1];
+      const lineNum = i + 1;
+      const relPath = relative(ROOT, file);
+      const allowlistKey = `${relPath}:${lineNum}`;
+      if (SERVICE_LOCAL_WHOLESALE_ALLOWLIST.has(allowlistKey)) continue;
+      // self-domain wholesale → ADR-0012 §Decision-2 예외 (책임 분리 정합)
+      if (ownPrefix && ownPrefix === targetPrefix) continue;
+      violations.push({
+        type: 'SERVICE_LOCAL_WHOLESALE',
+        file: relPath,
+        line: lineNum,
+        targetPrefix,
+        ownPrefix,
+        message:
+          ownPrefix
+            ? `cross-domain wholesale: 자기 도메인(${ownPrefix}) 아닌 ${targetPrefix} 를 wholesale 무효화. ` +
+              `\${CACHE_KEY_PREFIXES.${targetPrefix}}<sub>: 로 specific sub-prefix 분해 필요 (ADR-0012 §Decision-2).`
+            : `wholesale 패턴 \`deleteByPrefix(CACHE_KEY_PREFIXES.${targetPrefix})\` 사용 — ` +
+              `specific sub-prefix 분해 또는 SERVICE_LOCAL_WHOLESALE_ALLOWLIST 등록 필요.`,
+      });
+    }
+  }
+  return violations;
+}
+
 /** registry source에서 `CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST` 추출 (string Set). */
 function extractWholesaleLegacyAllowlist(registrySource) {
   const allowlist = new Set();
@@ -342,6 +440,12 @@ for (const [notiKey, notiValue] of notificationEvents) {
   recordPair(cacheEnumKeyByValue.get(mirror), mirror, notiKey, notiValue);
 }
 
+// 라운드 #5: service-local wholesale violation (cross-domain)
+const serviceLocalViolations = extractServiceLocalWholesaleViolations();
+for (const v of serviceLocalViolations) {
+  violations.push(v);
+}
+
 // 라운드 #3 갭 O: wholesale 패턴 violation (LEGACY allowlist 제외)
 const wholesalePatterns = extractWholesalePatterns(registrySrc);
 const wholesaleLegacyAllowlist = extractWholesaleLegacyAllowlist(registrySrc);
@@ -386,6 +490,11 @@ if (violations.length > 0) {
     if (v.type === 'WHOLESALE_PATTERN') {
       report += `\n  ✗ [wholesale] ${v.eventKey}\n`;
       report += `    pattern: \${CACHE_KEY_PREFIXES.${v.prefix}}*\n`;
+      report += `    → ${v.message}\n`;
+    } else if (v.type === 'SERVICE_LOCAL_WHOLESALE') {
+      report += `\n  ✗ [service-local wholesale] ${v.file}:${v.line}\n`;
+      report += `    target: CACHE_KEY_PREFIXES.${v.targetPrefix}`;
+      report += v.ownPrefix ? ` (own: ${v.ownPrefix})\n` : ` (own: <untracked>)\n`;
       report += `    → ${v.message}\n`;
     } else {
       report += `\n  ✗ ${v.cacheEvent.key} (= '${v.cacheEvent.value}')\n`;

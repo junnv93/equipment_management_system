@@ -460,7 +460,9 @@ export class CheckoutsService extends VersionedBaseService implements ICheckoutC
    * @param checkoutId 변경된 checkout의 ID (detail 캐시 무효화용)
    */
   private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain approvals 무효화는
+    // specific sub-prefix만 (ADR-0012 §Decision-2). approvals 도메인은 counts: 단일 sub-prefix 사용.
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
 
     if (checkoutId) {
       this.cacheService.delete(this.buildCacheKey('detail', { uuid: checkoutId }));

@@ -177,7 +177,9 @@ export class CalibrationService extends VersionedBaseService {
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
     }
 
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    // 라운드 #5 cache-wholesale-service-local-closure: cross-domain approvals 무효화는
+    // specific sub-prefix만 (ADR-0012 §Decision-2).
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
   }
 
   private async resolveEquipmentTeamId(equipmentId: string): Promise<string | null> {

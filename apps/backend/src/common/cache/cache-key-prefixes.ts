@@ -9,7 +9,13 @@
  * - 각 서비스의 CACHE_PREFIX → 이 상수 import
  * - CacheEventListener의 CACHE_INVALIDATION_REGISTRY → 이 상수 참조
  * - CacheInvalidationHelper의 패턴 매칭 → 이 상수 참조
+ *
+ * Nested namespace 합성 SSOT (라운드 #5):
+ * `calibration:` 하위 nested 도메인(cables, inspections) 은 base 상수를 직접 합성하여
+ * `CALIBRATION` 명명 변경 시 silent drift 차단. CABLES_CACHE_PREFIX (line ~) 와 일관.
  */
+const CALIBRATION_NS = 'calibration:' as const;
+
 export const CACHE_KEY_PREFIXES = {
   /** equipment.service.ts, disposal.service.ts */
   EQUIPMENT: 'equipment:',
@@ -18,7 +24,7 @@ export const CACHE_KEY_PREFIXES = {
   CHECKOUTS: 'checkouts:',
 
   /** calibration.service.ts */
-  CALIBRATION: 'calibration:',
+  CALIBRATION: CALIBRATION_NS,
 
   /** calibration-factors.service.ts */
   CALIBRATION_FACTORS: 'calibration-factors:',
@@ -74,12 +80,11 @@ export const CACHE_KEY_PREFIXES = {
   /**
    * intermediate-inspections.service.ts (UL-QP-18-03)
    *
-   * 주의: calibration 사이클 하위 nested 네임스페이스. service 가 historical 로
-   * `calibration:inspections:` prefix 를 사용 — CABLES_CACHE_PREFIX 와 동일 패턴.
-   * 2026-05-13 `cache-wholesale-migration-inspection-templates` sprint 에서
-   * SSOT 갱신 (constant value ↔ service 실제 prefix 정합).
+   * calibration 사이클 하위 nested 네임스페이스. CABLES_CACHE_PREFIX 와 동일 패턴.
+   * 라운드 #5 `cache-wholesale-service-local-closure` sprint 에서 CALIBRATION_NS 기반
+   * 합성으로 정합 — base prefix 명명 변경 시 자동 동기화.
    */
-  INTERMEDIATE_INSPECTIONS: 'calibration:inspections:',
+  INTERMEDIATE_INSPECTIONS: `${CALIBRATION_NS}inspections:`,
 
   /** inspection-form-templates.service.ts (Phase 1B-backend, LIMS Template Snapshot) */
   INSPECTION_FORM_TEMPLATES: 'inspection-form-templates:',
@@ -95,9 +100,9 @@ export const CACHE_KEY_PREFIXES = {
  * 케이블 캐시 프리픽스 — CALIBRATION 하위 네임스페이스 복합 키 SSOT
  *
  * cables.service.ts와 data-migration.service.ts 양쪽에서 참조.
- * 객체 리터럴 내 자기 참조 불가로 CACHE_KEY_PREFIXES 외부에 선언.
+ * 라운드 #5: 위 CALIBRATION_NS 기반 합성 (INTERMEDIATE_INSPECTIONS 와 동일 패턴).
  */
-export const CABLES_CACHE_PREFIX = `${CACHE_KEY_PREFIXES.CALIBRATION}cables:` as const;
+export const CABLES_CACHE_PREFIX = `${CALIBRATION_NS}cables:` as const;
 
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];
 

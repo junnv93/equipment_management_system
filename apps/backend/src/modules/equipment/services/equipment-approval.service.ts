@@ -459,7 +459,7 @@ export class EquipmentApprovalService {
           .returning();
 
         if (!casUpdated) {
-          this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+          this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
           throw createVersionConflictException();
         }
 
@@ -518,7 +518,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
-      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
       this.logger.log(`Request approved: ${requestUuid}`);
       return updated;
     } catch (error) {
@@ -628,7 +628,7 @@ export class EquipmentApprovalService {
         .returning();
 
       if (!updated) {
-        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
         throw createVersionConflictException();
       }
 
@@ -647,7 +647,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
-      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.APPROVALS}counts:`);
       this.logger.log(`Request rejected: ${requestUuid}`);
       return updated;
     } catch (error) {
