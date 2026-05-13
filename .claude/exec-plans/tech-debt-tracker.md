@@ -7,6 +7,16 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 ## Open
 
+### 2026-05-13 review-architecture closure 후속 (라운드 #5)
+
+> **2026-05-13** 4 sprint PASS (cache-wholesale-service-local-closure / inbound-overview-cache-coherence / ultrareview-shield-multiuser-race / audit-log-array-entity-id). 시니어 자기검토 R2 commit `7b9d2d23`. 다음 SHOULD 항목은 별도 sprint 분리.
+
+- [ ] **[2026-05-13 cache-invalidation-helper-internal-subprefix] 🟡 MEDIUM helper 내부 wholesale 사용 잔존** — `CacheInvalidationHelper.invalidateAllDashboard()` (line 41) 가 `${DASHBOARD}*` + `${APPROVALS}*` wholesale 사용. R2 에서 `invalidateApprovalCounts()` 만 specific sub-prefix 마이그레이션. DASHBOARD 도메인 sub-prefix 인벤토리 + helper 내부 wholesale 전수 closure 별도 sprint 필요. helper layer 도 ADR-0012 정합 강제하면 audit script 범위 확장 가능.
+- [ ] **[2026-05-13 cache-hit-rate-baseline] 🟢 LOW Sprint A SHOULD-3 cache hit rate baseline** — intermediate-inspections CRUD 후 calibration 캐시 hit rate 측정 권장 (Critical §3.2 영향 검증). production monitoring 기반 verify.
+- [ ] **[2026-05-13 ur-shield-cache-relocation] 🟢 LOW Sprint C SHOULD-1 격리 위치 마이그레이션** — `/tmp/ur-shield-*` → `$HOME/.cache/ur-shield/` 또는 `$XDG_RUNTIME_DIR` 로 격리 위치 이동. uid filter 만으로 race 해소했으나 근본 격리 위치 분리가 정공법.
+- [ ] **[2026-05-13 ur-shield-pid-embed] 🟢 LOW Sprint C SHOULD-2 PID embed + kill -0 검증** — mktemp 에 `${$}` PID 임베드 + GC 전 `kill -0 $pid` 살아있는지 확인. SIGSTOP active 프로세스의 격리본 자기 정리 방지.
+- [ ] **[2026-05-13 audit-log-array-per-item-option] 🟢 LOW Sprint E SHOULD-1 per-item N-row audit option** — `@AuditLog({ entityIdPathArray: true })` 옵션으로 bulk operation N row insert 지원. 현재 R1 은 single aggregate (SYSTEM_USER_UUID sentinel + bulk[N] entityName). per-item audit 이 필요한 비즈니스 요구 발생 시 도입.
+
 ### 2026-05-13 env-ssot-and-spec-migration 후속 (verify-implementation 발견)
 
 > **2026-05-13 sprint `env-ssot-and-spec-migration`** (PR-2/PR-3) + `env-sync-guard` Mode 1 harness PASS. verify-implementation 드라이런에서 pre-existing 2건 발견.
