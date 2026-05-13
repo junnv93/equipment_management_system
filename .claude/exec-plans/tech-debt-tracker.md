@@ -72,7 +72,7 @@ harness 세션에서 이연된 SHOULD 실패·후속 작업을 누적 관리한�
 
 - [ ] **[2026-05-12 section-autonomy-followup F-1] 🟢 LOW leaf-section-rtl-spec-backfill** — 6 신규 sub-component (InspectionItemCard, NCBasicInfoCard, NCRepairCard, NCCalibrationCard, StatusLocationStep, CalibrationStep) Provider-free testable. props-only render 스펙 작성 권장. 트리거: 다음 frontend test infra sprint.
 - [ ] **[2026-05-12 section-autonomy-followup F-2] 🟢 LOW verify-section-autonomy-skill-trigger** — section autonomy 4원칙 ts-morph 기반 invariant 검증 skill 신설 검토. 본 sprint에서는 over-engineering으로 skip. 트리거: section autonomy 회귀 2건 이상 발생 시.
-- [x] **[2026-05-12 section-autonomy-followup F-3] 🟢 LOW visual-table-editor-graceful-no-op-adr** — ADR-0013 정식화 완료 (2026-05-13). docs/adr/0013-graceful-no-op-context-consumer.md + docs/references/frontend-patterns.md 업데이트 + form-context.tsx JSDoc ADR 참조 추가.
+
 
 ### 2026-05-10 sticky-header-css-var-ssot 후속 (SHOULD S-4)
 
