@@ -31,6 +31,7 @@ export interface EquipmentRowData {
   expectedReturnDate: string | undefined;
   destination: string | undefined;
   canApproveItem: boolean;
+  canSubmitConditionCheckItem: boolean;
   canBorrowerApproveItem: boolean;
   canReturnItem: boolean;
   descriptor: NextStepDescriptor | undefined;

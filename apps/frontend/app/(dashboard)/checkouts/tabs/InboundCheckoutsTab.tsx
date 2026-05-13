@@ -129,7 +129,9 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
   // resetOn: filters 직접 전달 — useRowSelection 내부가 JSON.stringify(resetOn) 처리
   const selection = useRowSelection<Checkout>(standardItems, (c) => c.id, {
     isSelectable: (c) =>
-      c.status === CSVal.LENDER_CHECKED && (c.meta?.availableActions?.canBorrowerApprove ?? false),
+      c.status === CSVal.LENDER_CHECKED &&
+      c.purpose === CPVal.RENTAL &&
+      (c.meta?.availableActions?.canSubmitConditionCheck ?? false),
     resetOn: [filters],
   });
 
@@ -153,14 +155,14 @@ export default function InboundCheckoutsTab({ filters, onResetFilters }: Inbound
     [standardItems, selection]
   );
 
-  // isRowSelectable predicate: lender_checked + rental purpose + borrower 권한 보유 행만 체크박스 노출
+  // isRowSelectable predicate: lender_checked + rental purpose + canSubmitConditionCheck 행만 체크박스 노출
   // purpose === RENTAL 명시적 가드: standard 섹션이 direction=INBOUND만 필터하므로
-  // calibration/repair 방향 inbound 건이 포함될 수 있음 — FSM상 해당 건은 borrower_receive 불가
+  // calibration/repair inbound 건이 포함될 수 있음 — FSM상 해당 건은 borrower_receive 불가
   const isRowSelectable = useCallback(
-    (row: { status: string; purpose: string; canBorrowerApproveItem: boolean }) =>
+    (row: { status: string; purpose: string; canSubmitConditionCheckItem: boolean }) =>
       row.status === CSVal.LENDER_CHECKED &&
       row.purpose === CPVal.RENTAL &&
-      row.canBorrowerApproveItem,
+      row.canSubmitConditionCheckItem,
     []
   );
 

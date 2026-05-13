@@ -83,6 +83,7 @@ function makeRow(overrides?: Partial<EquipmentRowData>): EquipmentRowData {
     expectedReturnDate: undefined,
     destination: undefined,
     canApproveItem: false,
+    canSubmitConditionCheckItem: false,
     canBorrowerApproveItem: false,
     canReturnItem: false,
     descriptor: undefined,

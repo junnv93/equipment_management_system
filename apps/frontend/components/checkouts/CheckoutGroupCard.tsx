@@ -130,6 +130,8 @@ function CheckoutGroupCard({
           expectedReturnDate: checkout.expectedReturnDate,
           destination: checkout.destination,
           canApproveItem: checkout.meta?.availableActions?.canApprove ?? false,
+          canSubmitConditionCheckItem:
+            checkout.meta?.availableActions?.canSubmitConditionCheck ?? false,
           canBorrowerApproveItem: checkout.meta?.availableActions?.canBorrowerApprove ?? false,
           canReturnItem: checkout.meta?.availableActions?.canReturn ?? false,
           descriptor,
