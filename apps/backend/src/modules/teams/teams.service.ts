@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { eq, inArray, and, sql, SQL, count } from 'drizzle-orm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import {
@@ -11,12 +12,14 @@ import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
 import { resolveTeamOrderBy } from './utils/team-sort-mapper';
 import { ErrorCode, Team, type PaginatedResponseType } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { DOMAIN_EVENTS } from '../../common/events/domain-events';
 
 @Injectable()
 export class TeamsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   async findAll(query: TeamQueryDto): Promise<PaginatedResponseType<Team>> {
@@ -212,8 +215,15 @@ export class TeamsService {
 
   async remove(id: string): Promise<boolean> {
     const result = await this.db.delete(teamsTable).where(eq(teamsTable.id, id)).returning();
+    const deleted = result.length > 0;
 
-    return result.length > 0;
+    if (deleted) {
+      // saved-views orphan cleanup 트리거 (G-5).
+      // fire-and-forget: 팀 삭제 응답 지연 없이 listener가 비동기 처리.
+      void this.eventEmitter.emitAsync(DOMAIN_EVENTS.TEAM_DELETED, { teamId: id });
+    }
+
+    return deleted;
   }
 
   /**
