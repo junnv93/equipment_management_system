@@ -887,11 +887,11 @@ grep -rnE "^\s*(const|function) (createSelectChain|createInsertChain|createUpdat
   | wc -l
 # 기대: 0 (drizzle-stub SSOT 외부 정의 없음)
 
-# (3) SSOT consumer ≥ 3 spec
-grep -lrE "createDrizzleSelectChain|createDrizzleInsertChain|createDrizzleUpdateChain|createSequentialDrizzleStub" \
+# (3) SSOT consumer ≥ 4 spec
+grep -lrE "createDrizzleSelectChain|createDrizzleInsertChain|createDrizzleUpdateChain|createSequentialDrizzleStub|createDrizzleInsertWithReturningChain|createDrizzleUpdateWithReturningChain" \
   apps/backend/src --include="*.spec.ts" \
   | wc -l
-# 기대: ≥ 3 (audit + qr-access + settings)
+# 기대: ≥ 4 (audit + qr-access + settings + equipment)
 ```
 
 **PASS**:
@@ -903,7 +903,7 @@ grep -lrE "createDrizzleSelectChain|createDrizzleInsertChain|createDrizzleUpdate
 - 신규 backend spec 이 `function createSelectChain` / `function makeDbStub` 로컬 정의 (SSOT 우회)
 
 **예외 인정** (allow-list):
-- `apps/backend/src/modules/equipment/__tests__/equipment.service.spec.ts` — monolithic mockDb 패턴 (mockReturnThis 단일 객체). drizzle-stub SSOT 와 다른 valid 스타일. tech-debt round3 PR-3 후속.
+- 없음. `equipment.service.spec.ts` 마이그레이션 완료 (2026-05-13 env-ssot-and-spec-migration PR-3).
 
 **Why**: 새 backend spec 추가 시 fluent chain 로컬 재정의가 SSOT 우회. drizzle-stub.ts 가 단일 진입점 — Drizzle method 추가 시 한 곳만 갱신.
 
@@ -924,6 +924,49 @@ const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
   const chain: Record<string, jest.Mock> = {};
   // ...로컬 fluent chain 정의
 };
+```
+
+
+## Step 66: env-sync-guard SSOT — `check-env-sync.mjs` 단일 진입점 유지 (2026-05-13)
+
+> 도입: 2026-05-13 env-sync-guard sprint (commit `d71eb9c7`). frontend `.env.local` ↔ `.env.example` 동기화 검증 SSOT 앵커.
+
+**검증 명령**:
+
+```bash
+# (1) SSOT 파일 존재 + 두 export 시그니처 보존
+grep -c "export function parseEnvFile\|export function checkFrontendEnvSync" scripts/check-env-sync.mjs
+# 기대: 2
+
+# (2) setup-env.mjs 는 반드시 check-env-sync.mjs 에서 import (인라인 재구현 금지)
+grep -c "from './check-env-sync.mjs'" scripts/setup-env.mjs
+# 기대: ≥ 1
+
+# (3) dev-doctor.mjs runDiagnosis() 반환값에 envSync 포함
+grep -c "envSync" scripts/dev-doctor.mjs
+# 기대: ≥ 2 (할당 + return)
+
+# (4) 다른 scripts/*.mjs 가 parseEnvFile/checkFrontendEnvSync 인라인 재구현 0건
+grep -rnE "function parseEnvFile|function checkFrontendEnvSync" scripts/ | grep -v "check-env-sync.mjs"
+# 기대: 0 결과 (SSOT 외부 재구현 없음)
+```
+
+**PASS**: 4개 검증 모두 기대값 충족.
+
+**FAIL**: 신규 script 가 `parseEnvFile` 또는 env key 파싱 로직을 로컬 재구현 → SSOT 우회.
+
+**Why**: `check-env-sync.mjs` 가 env 파싱 규칙 SSOT (인라인 주석 처리, 빈 값 처리, 유효 key 패턴). 로직 중복 시 파싱 규칙 드리프트 → 진단 결과 불일치 위험.
+
+**How to apply**:
+```javascript
+// ✅ CORRECT — SSOT import
+import { parseEnvFile, checkFrontendEnvSync, REPO_ROOT } from './check-env-sync.mjs';
+
+// ❌ WRONG — 로컬 재구현
+function parseEnvFile(path) {
+  const lines = readFileSync(path).split('\n');
+  return lines.filter(l => l.includes('=')).map(l => l.split('=')[0]);
+}
 ```
 
 
