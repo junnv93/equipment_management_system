@@ -990,7 +990,8 @@
       "submit": "Register and use",
       "cancel": "Cancel",
       "useExisting": "Use existing",
-      "duplicate": "This destination already exists. Use the existing entry?"
+      "duplicate": "This destination already exists. Use the existing entry?",
+      "createError": "Failed to register destination. Please try again."
     }
   },
   "revocationWindow": {

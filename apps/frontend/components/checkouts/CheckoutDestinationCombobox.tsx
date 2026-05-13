@@ -53,6 +53,7 @@ export function CheckoutDestinationCombobox({
 
   const { data: destinations = [] } = useDestinations();
   const createDestinationMutation = useCreateDestination();
+  const [createError, setCreateError] = useState<string | null>(null);
   const filtered = fuzzyFilter(destinations, query, (d) => d);
 
   const showCreateOption = query.trim().length > 0 && !filtered.includes(query.trim());
@@ -64,6 +65,7 @@ export function CheckoutDestinationCombobox({
     setActiveIndex(-1);
     setMode('browse');
     setCreateInput('');
+    setCreateError(null);
   }, []);
 
   const handleSelect = useCallback(
@@ -120,8 +122,10 @@ export function CheckoutDestinationCombobox({
 
   const handleCreateSubmit = () => {
     if (!isCreateValid) return;
+    setCreateError(null);
     createDestinationMutation.mutate(trimmedCreate, {
       onSuccess: (savedName) => handleSelect(savedName),
+      onError: () => setCreateError(t('create.createError')),
     });
   };
 
@@ -259,6 +263,11 @@ export function CheckoutDestinationCombobox({
             {isDuplicate && (
               <p className="text-xs text-amber-600 dark:text-amber-400" role="status">
                 {t('create.duplicate')}
+              </p>
+            )}
+            {createError && (
+              <p className="text-xs text-destructive" role="alert">
+                {createError}
               </p>
             )}
             <div className="flex justify-end gap-2 pt-1">

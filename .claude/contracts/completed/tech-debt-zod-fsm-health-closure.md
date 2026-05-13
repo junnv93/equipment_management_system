@@ -30,7 +30,7 @@
 | M-3 | checkout-fsm.ts의 `reject_return` RENTAL 전이(lender_received→in_use) 근처에 의도 주석 존재 | `grep -A2 "reject_return.*RENTAL\|RENTAL.*reject_return\|lender_received.*reject_return\|in_use.*RENTAL" packages/schemas/src/fsm/checkout-fsm.ts` |
 | M-4 | checkout-fsm.ts의 `reject_return` CAL_REPAIR 전이(returned→checked_out) 근처에 의도 주석 존재 | `grep -B2 "reject_return.*CAL_REPAIR\|CAL_REPAIR.*reject_return" packages/schemas/src/fsm/checkout-fsm.ts \|\| grep -n "returned.*reject_return\|reject_return.*CAL_REPAIR\|CAL_REPAIR" packages/schemas/src/fsm/checkout-fsm.ts` |
 | M-5 | storage-health.provider.ts `readHostDiskMetrics` 메서드에 폴링 의존 설계 결정 주석 존재 | `grep -n "polling\|setInterval\|30s\|periodic\|stale" apps/backend/src/modules/dashboard/health-providers/storage-health.provider.ts` |
-| M-6 | tech-debt-tracker.md에서 4개 항목 중 ZodSerializer/FSM/storage-health 3개가 [x] 처리됨 | `grep -c "^\- \[x\].*Zod\|^\- \[x\].*FSM\|^\- \[x\].*storage\|^\- \[x\].*reject_return\|^\- \[x\].*ZodSerializer\|^\- \[x\].*polling" .claude/exec-plans/tech-debt-tracker.md` |
+| M-6 | tech-debt-tracker.md에서 3개 항목이 삭제됨 (harness 표준: [x] 후 즉시 sed 삭제, git 이력이 SSOT). git log에서 3건 처리 커밋 확인 | `git log --oneline -6 \| grep -c "ZodSerializer\|reject_return\|polling\|tech-debt"` |
 | M-7 | `pnpm --filter backend run tsc --noEmit` EXIT=0 | 빌드 검증 |
 | M-8 | `@ZodResponse` 없는 기존 컨트롤러 메서드가 글로벌 ZodSerializerInterceptor 등록 후에도 영향 없음 — nestjs-zod의 반사(reflector) 패턴으로 @ZodResponse 없으면 그대로 통과 | code 분석 (소스 레벨 확인) |
 
