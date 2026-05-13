@@ -386,6 +386,68 @@ private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS;
 
 **예외**: 동적 segment 조립 (`${this.CACHE_PREFIX}${type}:${id}`) 은 buildCacheKey() 패턴 정상. 본 검사는 **class field 초기화** 의 인라인 concat 만 차단.
 
+### Step 10: DOMAIN_EVENTS 채널 — 데이터 정합성 리스너 패턴 (Critical, 2026-05-13)
+
+`DOMAIN_EVENTS` 는 캐시 무효화(CACHE_EVENTS)·알림(NOTIFICATION_EVENTS)과 다른 **3번째 채널**: 팀 삭제→orphan row 강등처럼 데이터 정합성을 유지하는 cross-domain side effect 전용. 이 채널 리스너가 잘못 구현되면 DB 불일치(unreachable rows)·stale cache 동시 발생.
+
+**검증 명령**:
+```bash
+# 1) DOMAIN_EVENTS 상수 SSOT 경유 — 인라인 string 이벤트 명 0건
+grep -rn "OnEvent(" apps/backend/src/modules --include="*.listener.ts" \
+  | grep -vE "DOMAIN_EVENTS\.|CACHE_EVENTS\.|NOTIFICATION_EVENTS\." \
+  | grep -v "\.spec\."
+# 결과: 빈 출력 (PASS) — inline string 이벤트 발견 시 FAIL
+
+# 2) DOMAIN_EVENTS 리스너는 반드시 { async: true } fire-and-forget 옵션 — 응답 경로 블로킹 방지
+grep -rn "OnEvent(DOMAIN_EVENTS\." apps/backend/src/modules --include="*.listener.ts" \
+  | grep -v "async: true"
+# 결과: 빈 출력 (PASS) — { async: true } 누락 시 FAIL
+
+# 3) DOMAIN_EVENTS 리스너 핸들러는 try/catch 필수 — fire-and-forget이어도 uncaught rejection 방지
+grep -rn "OnEvent(DOMAIN_EVENTS\." apps/backend/src/modules --include="*.listener.ts" -l \
+  | xargs -I{} grep -L "try {" {}
+# 결과: 빈 출력 (PASS) — try/catch 없는 DOMAIN_EVENTS 리스너 파일 발견 시 FAIL
+
+# 4) DOMAIN_EVENTS emit은 fire-and-forget: void emitAsync 패턴 (응답 지연 0)
+grep -rn "emitAsync(DOMAIN_EVENTS\." apps/backend/src/modules --include="*.service.ts" \
+  | grep -v "void "
+# 결과: 빈 출력 (PASS) — await emitAsync(DOMAIN_EVENTS.*) 패턴 발견 시 FAIL
+
+# 5) 다중 사용자 영향 캐시는 per-user 선택 무효화 금지 — 도메인 prefix 전체 flush 강제
+#    (팀 삭제처럼 팀원 다수의 TEAM scope 캐시가 stale 될 때 per-user loop는 불완전)
+grep -rn "DOMAIN_EVENTS\." apps/backend/src/modules --include="*.listener.ts" -l \
+  | xargs -I{} grep -n "deleteByPrefix" {} \
+  | grep -v "CACHE_KEY_PREFIXES\.[A-Z_]*)" \
+  | grep "list:"
+# 결과: 빈 출력 (PASS) — per-user sub-prefix loop 발견 시 FAIL
+```
+
+**올바른 패턴** (saved-views-team.listener.ts G-5 기준):
+```typescript
+@OnEvent(DOMAIN_EVENTS.TEAM_DELETED, { async: true })   // ← { async: true } 필수
+async handleTeamDeleted(payload: TeamDeletedPayload): Promise<void> {
+  const { teamId } = payload;
+  try {
+    const affected = await this.db.update(...)...;
+    if (affected.length > 0) {
+      // 다중 사용자 영향 → 도메인 prefix 전체 flush (per-user loop 금지)
+      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.SAVED_VIEWS);
+    }
+  } catch (err) {
+    this.logger.error('[G-5] cleanup 실패', err);   // ← try/catch + error log 필수
+  }
+}
+```
+
+**emit 측 패턴** (teams.service.ts):
+```typescript
+void this.eventEmitter.emitAsync(DOMAIN_EVENTS.TEAM_DELETED, { teamId });  // ← void (fire-and-forget)
+```
+
+**왜 per-user selective 무효화가 불충분한가**: 팀이 삭제되면 팀원 A, B, C가 각자 캐시한 `TEAM` scope 목록이 모두 stale. 삭제된 팀의 `teamId` → 팀원 목록 역추적은 팀 테이블이 이미 삭제된 이후 불가. 도메인 prefix 전체 flush가 유일하게 안전한 선택 (팀 삭제는 드문 이벤트 — 비용 대비 정합성).
+
+**예외**: 단일 사용자만 영향받는 side effect(예: 본인 소유 리소스 갱신)는 per-user prefix 무효화 허용.
+
 ## Exceptions (리포트하지 않음)
 
 1. **스케줄러의 `emit` 유지** — `schedulers/` 하위 파일은 사용자 응답 경로가 아니므로 의도적.
@@ -413,6 +475,7 @@ private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.INTERMEDIATE_INSPECTIONS;
 | Step 8 audit + pre-push 통합 | **Critical** | audit-cache-event-channels.mjs 부재 또는 pre-push 미통합 시 build/PR-level 회귀 차단 무력화 (ADR-0012 라운드 #3 갭 K) |
 | Step 7 dual-channel duplication | **Critical** | 동일 status 전이마다 invalidateAllDashboard + 패턴 삭제 2x → p99 latency + dashboard cache churn |
 | Step 9 CACHE_KEY_PREFIXES 인라인 concat | **Warning** | SSOT 값 갱신이 silent miss — 동일 prefix 사용 service 다중 분산 시 한 곳만 정합되면 registry 패턴이 actual cache 미매칭 (2026-05-13 INTERMEDIATE_INSPECTIONS 회귀) |
+| Step 10 DOMAIN_EVENTS 채널 패턴 | **Critical** | `{ async: true }` 누락 시 응답 블로킹 / try-catch 누락 시 uncaught rejection / per-user selective flush 시 팀원 cache stale 잔존 (G-5 회귀) |
 
 ## Learning Reference
 

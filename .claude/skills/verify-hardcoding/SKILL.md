@@ -1103,4 +1103,49 @@ export function MyComponent({ date }: { date: string }) {
   return <span>{new Date(date).toLocaleDateString(locale)}</span>;
 }
 ```
-3. Producer/Consumer 가 `CSS_VAR_NAMES.camelCaseKey` 참조 (runtime) — design-token 파일은 string literal 유지 (Tailwind JIT)
+
+---
+
+## Step 38: useUndoToast invalidateKeys 팩토리 패턴 강제 (Warning, 2026-05-13)
+
+`useUndoToast` 호출 시 `invalidateKeys` 인라인 배열 구성 금지. `CheckoutCacheInvalidation` 클래스의 **팩토리 메서드**(`approvalWithDetailKeys(id)` / `returnApprovalWithDetailKeys(id)`)로만 제공해야 한다 (SSOT). 인라인 spread로 구성하면 `detail(id)` 추가 키 누락이나 APPROVAL_KEYS 드리프트를 컴파일타임에 잡지 못한다.
+
+**검증 명령**:
+```bash
+# 1) useUndoToast invalidateKeys 인라인 배열 전개 금지
+#    [queryKeys.checkouts.resource.detail(id), ...CheckoutCacheInvalidation.*] 패턴 0건
+grep -rn "invalidateKeys:" apps/frontend/app --include="*.tsx" \
+  | grep "CheckoutCacheInvalidation\." \
+  | grep -vE "approvalWithDetailKeys|returnApprovalWithDetailKeys|REVOCATION_KEYS"
+# 결과: 빈 출력 (PASS) — 인라인 spread 발견 시 FAIL
+
+# 2) 팩토리 메서드 SSOT 정의 존재
+grep -n "approvalWithDetailKeys\|returnApprovalWithDetailKeys" \
+  apps/frontend/lib/api/cache-invalidation.ts
+# 결과: ≥ 2줄 (정의 2건)
+
+# 3) CheckoutDetailClient 3 호출 모두 팩토리 경유
+grep -c "approvalWithDetailKeys\|returnApprovalWithDetailKeys" \
+  "apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx"
+# 결과: ≥ 3
+```
+
+**올바른 패턴**:
+```typescript
+// ✅ CORRECT — 팩토리 메서드 SSOT
+invalidateKeys: CheckoutCacheInvalidation.approvalWithDetailKeys(checkout.id),
+invalidateKeys: CheckoutCacheInvalidation.returnApprovalWithDetailKeys(checkout.id),
+```
+
+**금지 패턴**:
+```typescript
+// ❌ WRONG — 인라인 spread (키 드리프트 silent miss)
+invalidateKeys: [
+  queryKeys.checkouts.resource.detail(checkout.id),
+  ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+],
+```
+
+**왜**: `useUndoToast`는 낙관적 업데이트 롤백 후 서버 데이터로 re-fetch할 키 목록. `detail(id)` + `APPROVAL_KEYS` 조합이 변경될 때 인라인 호출자를 모두 찾아 갱신해야 하는 유지보수 부담. 팩토리 메서드가 단일 진입점이 되면 키 집합 변경이 자동 전파된다.
+
+**REVOCATION_KEYS 예외**: `CheckoutCacheInvalidation.REVOCATION_KEYS`는 단독 사용(취소 승인 전용)이므로 `static readonly` 직접 참조가 SSOT 패턴. 팩토리 메서드 불필요.
