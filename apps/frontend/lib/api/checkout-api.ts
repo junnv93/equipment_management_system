@@ -591,6 +591,16 @@ const checkoutApi = {
   },
 
   /**
+   * 반출지 entity 등록 (SH-6 — 인라인 create 플로우).
+   * 중복 이름: 기존 entity 반환. SSOT: API_ENDPOINTS.CHECKOUTS.DESTINATIONS_CREATE.
+   */
+  async createDestination(name: string): Promise<string> {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.DESTINATIONS_CREATE, { name });
+    const result = transformSingleResponse<{ name: string }>(response);
+    return result.name;
+  },
+
+  /**
    * 장비 반입(반납)을 처리합니다.
    * 상태: checked_out → returned (검사 완료, 기술책임자 승인 대기)
    * ✅ Phase 1: Optimistic Locking - version은 data에 포함

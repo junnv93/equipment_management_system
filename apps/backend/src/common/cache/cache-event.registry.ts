@@ -87,15 +87,14 @@ export interface CacheInvalidationRule {
 export const CACHE_INVALIDATION_WHOLESALE_LEGACY_ALLOWLIST: ReadonlySet<string> = new Set([
   // Checkouts 10 entries — 2026-05-13 `cache-wholesale-migration-checkouts` sprint에서
   // list:* + summary:* + detail:* specific sub-prefix로 분해됨 (allowlist 제거 완료).
-  // Disposal (1 — disposal-requests:* prefix)
-  'NOTIFICATION_EVENTS.DISPOSAL_REJECTED',
+  // Disposal 1 entry — 2026-05-13 `cache-wholesale-migration-other-legacy`
+  // sprint에서 list:* + detail:* specific sub-prefix로 분해 (allowlist 제거 완료).
   // Equipment imports 3 entries — 2026-05-13 `cache-wholesale-migration-equipment-imports`
   // sprint에서 list:* + detail:* specific sub-prefix로 분해 (allowlist 제거 완료).
-  // Calibration factors (2 — calibration-factors:* prefix)
-  'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED',
-  'NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED',
-  // Intermediate inspection (1 — calibration:* prefix)
-  'NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED',
+  // Calibration factors 2 entries — 2026-05-13 `cache-wholesale-migration-calibration-factors`
+  // sprint에서 list:*/registry:*/equipment:*/detail:* specific sub-prefix로 분해 (allowlist 제거 완료).
+  // IntermediateCheck 1 entry — 2026-05-13 `cache-wholesale-migration-other-legacy`
+  // sprint에서 calibration list:*/pending:*/detail:* specific sub-prefix로 분해.
   // Inspection form template (3 events × 3 patterns — inspection-form-templates/intermediate-inspections/self-inspections wholesale)
   'CACHE_EVENTS.INSPECTION_TEMPLATE_CREATED',
   'CACHE_EVENTS.INSPECTION_TEMPLATE_UPDATED',
@@ -360,12 +359,18 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   [NOTIFICATION_EVENTS.DISPOSAL_APPROVED]: {
     actions: [{ method: 'invalidateAfterDisposal', equipmentIdField: 'equipmentId' }],
   },
+  // 라운드 #4 cache-wholesale-migration-other-legacy: wholesale → specific sub-prefix.
+  // 현재 disposal-requests service는 cache 미사용 (no-op) — 향후 cache 도입 시
+  // list:* + detail:* sub-prefix 자동 적용.
   [NOTIFICATION_EVENTS.DISPOSAL_REJECTED]: {
     actions: [
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.DISPOSAL_REQUESTS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.DISPOSAL_REQUESTS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.DISPOSAL_REQUESTS}detail:*` },
+    ],
   },
 
   // ─── 장비 반입 (Equipment Import) ───
@@ -501,19 +506,34 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   },
 
   // ─── 교정 인자 (Calibration Factor) ───
+  // 라운드 #4 cache-wholesale-migration-calibration-factors: wholesale → specific sub-prefix.
+  // calibration-factors service의 4 sub-prefix(list/registry/equipment/detail) 정합.
   [NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED]: {
     actions: [
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}registry:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}equipment:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}detail:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}registry:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}equipment:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}detail:*` },
+    ],
   },
 
   // ─── 중간 점검 (Intermediate Check) ───
+  // 라운드 #4 cache-wholesale-migration-other-legacy: wholesale → specific sub-prefix.
+  // intermediate-inspections service의 invalidateCache가 `${CALIBRATION}` deleteByPrefix
+  // (line 67) → 향후 sub-prefix 정합. calibration cache는 list:*/pending:*/detail:* 구조.
   [NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED]: {
     actions: [
       {
@@ -522,7 +542,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}*` }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}detail:*` },
+    ],
   },
 
   // ─── 수리 이력 (Repair History) ───

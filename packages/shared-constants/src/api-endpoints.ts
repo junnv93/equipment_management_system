@@ -131,8 +131,10 @@ export const API_ENDPOINTS = {
     CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
     // 확인 필요 목록 조회
     PENDING_CHECKS: '/api/checkouts/pending-checks',
-    // 반출지 목록 조회 (DB에서 실제 사용된 값들)
+    /** 반출지 목록 조회 — checkout_destinations isActive=true (GET) */
     DESTINATIONS: '/api/checkouts/destinations',
+    /** 반출지 등록 — entity 생성 또는 기존 반환 (POST, SH-6) */
+    DESTINATIONS_CREATE: '/api/checkouts/destinations',
     // BFF: 반입 현황 집계 (Sprint 3.1)
     INBOUND_OVERVIEW: '/api/checkouts/inbound-overview',
     /** Nav 배지용 "내 차례" 건수 (GET) — userId/teamId 스코핑, 캐시 30s */

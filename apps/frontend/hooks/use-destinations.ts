@@ -1,15 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-
-async function fetchDestinations(): Promise<string[]> {
-  const { data } = await apiClient<string[]>(API_ENDPOINTS.CHECKOUTS.DESTINATIONS);
-  return data;
-}
+import checkoutApi from '@/lib/api/checkout-api';
 
 /**
  * 반출지 전체 목록 훅 (SH-6 entity 테이블 기반).
@@ -22,7 +16,23 @@ async function fetchDestinations(): Promise<string[]> {
 export function useDestinations() {
   return useQuery({
     queryKey: queryKeys.checkouts.resource.destinations(),
-    queryFn: fetchDestinations,
+    queryFn: () => checkoutApi.getDestinations(),
     staleTime: CACHE_TIMES.DAY,
+  });
+}
+
+/**
+ * 반출지 등록 mutation (SH-6 인라인 create 플로우).
+ *
+ * - 중복 이름: backend onConflict upsert → 기존 entity 반환
+ * - onSuccess: destinations 캐시 invalidate → 목록 즉시 갱신
+ */
+export function useCreateDestination() {
+  const queryClient = useQueryClient();
+  return useMutation<string, Error, string>({
+    mutationFn: (name: string) => checkoutApi.createDestination(name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.resource.destinations() });
+    },
   });
 }

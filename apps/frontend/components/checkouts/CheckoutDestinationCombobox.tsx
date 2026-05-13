@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useDestinations } from '@/hooks/use-destinations';
+import { useDestinations, useCreateDestination } from '@/hooks/use-destinations';
 import { fuzzyFilter } from '@/lib/utils/fuzzy-search';
 
 interface CheckoutDestinationComboboxProps {
@@ -52,6 +52,7 @@ export function CheckoutDestinationCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: destinations = [] } = useDestinations();
+  const createDestinationMutation = useCreateDestination();
   const filtered = fuzzyFilter(destinations, query, (d) => d);
 
   const showCreateOption = query.trim().length > 0 && !filtered.includes(query.trim());
@@ -119,7 +120,9 @@ export function CheckoutDestinationCombobox({
 
   const handleCreateSubmit = () => {
     if (!isCreateValid) return;
-    handleSelect(trimmedCreate);
+    createDestinationMutation.mutate(trimmedCreate, {
+      onSuccess: (savedName) => handleSelect(savedName),
+    });
   };
 
   const handleCreateKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -127,7 +130,6 @@ export function CheckoutDestinationCombobox({
     if (e.key === 'Enter') {
       e.preventDefault();
       if (isDuplicate) {
-        // 중복 시 기존 값으로 redirect
         handleSelect(trimmedCreate);
       } else {
         handleCreateSubmit();
@@ -267,7 +269,9 @@ export function CheckoutDestinationCombobox({
                 size="sm"
                 onClick={isDuplicate ? () => handleSelect(trimmedCreate) : handleCreateSubmit}
                 disabled={
-                  trimmedCreate.length === 0 || createLen > VALIDATION_RULES.DESTINATION_MAX_LENGTH
+                  trimmedCreate.length === 0 ||
+                  createLen > VALIDATION_RULES.DESTINATION_MAX_LENGTH ||
+                  createDestinationMutation.isPending
                 }
               >
                 {isDuplicate ? t('create.useExisting') : t('create.submit')}

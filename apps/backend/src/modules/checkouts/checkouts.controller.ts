@@ -126,11 +126,24 @@ export class CheckoutsController {
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
     summary: '반출지 목록 조회',
-    description: 'DB에 저장된 고유 반출지(destination) 목록을 반환합니다.',
+    description: 'checkout_destinations entity 테이블에서 isActive=true 항목을 반환합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출지 목록 조회 성공' })
   async getDestinations(): Promise<string[]> {
     return this.checkoutsService.getDistinctDestinations();
+  }
+
+  @Post('destinations')
+  @RequirePermissions(Permission.CREATE_CHECKOUT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '반출지 등록 (SH-6)',
+    description: '새 반출지를 entity 테이블에 등록합니다. 중복 이름은 기존 entity를 반환합니다.',
+  })
+  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' } } } })
+  @ApiResponse({ status: HttpStatus.OK, description: '반출지 등록 성공 (또는 기존 entity 반환)' })
+  async createDestination(@Body('name') name: string) {
+    return this.checkoutsService.createDestination(name);
   }
 
   // ⚠️ @SiteScoped 의도적 미적용: 개인 action-item 엔드포인트.
