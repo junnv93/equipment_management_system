@@ -7,6 +7,7 @@ import { InternalApiThrottlerGuard } from './common/guards/internal-api-throttle
 import { THROTTLER_CONFIGS } from './common/config/throttle.constants';
 import { validateEnv } from './config/env.validation';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ZodSerializerInterceptor } from 'nestjs-zod';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { SiteScopeInterceptor } from './common/interceptors/site-scope.interceptor';
@@ -134,6 +135,13 @@ import { SavedViewsModule } from './modules/saved-views/saved-views.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: SiteScopeInterceptor,
+    },
+    // ZodSerializerInterceptor 글로벌 승격 (2026-05-13, ADR-0017 파일럿 → 전역)
+    // @ZodResponse 데코레이터가 없는 메서드는 Reflector miss → data 그대로 pass-through (zero-impact).
+    // @ZodResponse를 붙인 메서드에서만 Zod schema 직렬화 활성화됨.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ZodSerializerInterceptor,
     },
   ],
 })
